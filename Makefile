@@ -21,10 +21,10 @@ BUILDARCH ?= $(shell uname -m)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
+	BUILDARCH=arm64
 endif
 ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+	BUILDARCH=amd64
 endif
 
 # unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
@@ -32,20 +32,68 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-        override ARCH=amd64
+	override ARCH=amd64
 endif
 
-# Build mounts for running in "local build" mode. Mount in libcalico, but null out
-# the vendor directory. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-LOCAL_BUILD_MOUNTS ?=
-ifeq ($(LOCAL_BUILD),true)
-LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro
+GO_BUILD_VER		?= v0.24
+
+EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
 endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+PHONY:local_build
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+else
+local_build:
+	@echo This is not a local build.
+endif
+
+# Figure out the users UID/GID.  These are needed to run docker containers
+# as the current user and ensure that files built inside containers are
+# owned by the current user.
+LOCAL_USER_ID:=$(shell id -u)
+LOCAL_GROUP_ID:=$(shell id -g)
+
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+	# is the default one used by go modules.
+	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+	# If gopath is empty, default to $(HOME)/go.
+	GOMOD_CACHE = $(HOME)/go/pkg/mod
+endif
+
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
+	docker run --rm \
+		--net=host \
+		$(EXTRA_DOCKER_ARGS) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-e GOCACHE=/go-cache \
+		-e GOARCH=$(ARCH) \
+		-e GOPATH=/go \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+		-w /go/src/$(PACKAGE_NAME)
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
@@ -70,20 +118,22 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 # Determine which OS.
 OS?=$(shell uname -s | tr A-Z a-z)
 ###############################################################################
-GO_BUILD_VER?=v0.20
-
 K8S_VERSION?=v1.14.1
+KUBECTL_VERSION?=v1.15.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 ETCD_VERSION?=v3.3.7
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 # If building on amd64 omit the arch in the container name.
 ifeq ($(BUILDARCH),amd64)
-        ETCD_IMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
+	ETCD_IMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
 
 # Makefile configuration options
 BUILD_IMAGE?=tigera/kube-controllers
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
+BUILD_IMAGE?=calico/kube-controllers
+FLANNEL_MIGRATION_BUILD_IMAGE?=calico/flannel-migration-controller
+
 RELEASE_IMAGES?=
 
 # If this is a release, also tag and push additional images.
@@ -101,32 +151,8 @@ DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 PACKAGE_NAME?=github.com/projectcalico/kube-controllers
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
-FOSSA_CALICO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
 LIBCALICOGO_PATH?=none
 LOCAL_USER_ID?=$(shell id -u $$USER)
-
-#This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.20
-
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-# TODO: update all the docker run commands in this make file to use this var
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
-              docker run --rm \
-                         --net=host \
-                         $(EXTRA_DOCKER_ARGS) \
-                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                         -w /go/src/$(PACKAGE_NAME)
-
-
 
 # Get version from git.
 GIT_VERSION?=$(shell git describe --tags --dirty --always)
@@ -147,8 +173,11 @@ clean:
 	rm -rf bin image.created-$(ARCH)
 	-docker rmi $(BUILD_IMAGE)
 	-docker rmi $(BUILD_IMAGE):latest-amd64
+	-docker rmi $(FLANNEL_MIGRATION_BUILD_IMAGE)
+	-docker rmi $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-amd64
 	rm -f tests/fv/fv.test
 	rm -f report/*.xml
+	rm -f tests/crds.yaml
 
 ###############################################################################
 # Building the binary
@@ -158,54 +187,25 @@ build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-# Populates the vendor directory.
-vendor: glide.yaml
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-
-	# To build without Docker just run "glide install -strip-vendor"
-	if [ "$(LIBCALICOGO_PATH)" != "none" ]; then \
-          EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
-	fi; \
-	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
-		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
-	fi; \
-	docker run --rm \
-		$$EXTRA_DOCKER_ARGS \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-		-v $(HOME)/.glide:/home/user/.glide:rw \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) glide install -strip-vendor
-
-
-bin/kube-controllers-linux-$(ARCH): vendor $(SRC_FILES)
+bin/kube-controllers-linux-$(ARCH): local_build $(SRC_FILES)
 	mkdir -p bin
-	-mkdir -p .go-pkg-cache
-	docker run --rm \
+	$(DOCKER_RUN) \
 	  -e GOOS=$(OS) -e GOARCH=$(ARCH) \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	  $(LOCAL_BUILD_MOUNTS) \
-	  -e GOCACHE=/go-cache \
-	  $(CALICO_BUILD) go build -v -o bin/kube-controllers-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/kube-controllers/
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	  go build -v -o bin/kube-controllers-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/kube-controllers/'
 
-bin/check-status-linux-$(ARCH): vendor $(SRC_FILES)
+bin/check-status-linux-$(ARCH): local_build $(SRC_FILES)
 	mkdir -p bin
-	-mkdir -p .go-pkg-cache
-	docker run --rm \
+	$(DOCKER_RUN) \
 	  -e GOOS=$(OS) -e GOARCH=$(ARCH) \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	  $(LOCAL_BUILD_MOUNTS) \
-	  -e GOCACHE=/go-cache \
-	  $(CALICO_BUILD) go build -v -o bin/check-status-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/check-status/
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	  go build -v -o bin/check-status-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/check-status/'
+
+bin/kubectl-$(ARCH):
+	wget https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/$(ARCH)/kubectl -O $@
+	chmod +x $@
 
 ###############################################################################
 # Building the image
@@ -216,12 +216,15 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH)
+image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH) bin/kubectl-$(ARCH)
 	# Build the docker image for the policy controller.
 	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
+	# Build the docker image for the flannel migration controller.
+	docker build -t $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f docker-images/flannel-migration/Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	# Need amd64 builds tagged as :latest because Semaphore depends on that
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(FLANNEL_MIGRATION_BUILD_IMAGE):latest
 endif
 	touch $@
 
@@ -259,12 +262,24 @@ endif
 ## tag images of one arch
 tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
 sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+	@if echo $* | grep -q "flannel-migration"; then \
+		echo "docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
+		docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
+	else \
+		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
+		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
+	fi
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+	@if echo $* | grep -q "flannel-migration"; then \
+		echo "docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
+		docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
+	else \
+		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
+		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
+	fi
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -291,110 +306,78 @@ sub-base-tag-images-%:
 #     PIN_BRANCH=master make update-pins
 #
 ###############################################################################
-
-## Update dependency pins in glide.yaml
-update-pins: update-felix-pin update-licensing-pin
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) glide up --strip-vendor
-
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-###############################################################################
 ## Set the default upstream repo branch to the current repo's branch,
 ## e.g. "master" or "release-vX.Y", but allow it to be overridden.
 PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
-###############################################################################
-## felix
+define get_remote_version
+$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+endef
 
-## Set the default FELIX source for this project
-FELIX_PROJECT_DEFAULT=tigera/felix-private.git
-FELIX_GLIDE_LABEL=projectcalico/felix
+# update_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for private repositories as it updates the 'replace' line in go.mod.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_pin
+	$(eval new_ver := $(shell git ls-remote ssh://git@$(2) $(3) 2>/dev/null | cut -f 1))
 
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	        if [[ ! -z "$(new_ver)" ]]; then \
+			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
+	                go mod edit -replace $(1)=$(2)@$(new_ver); \
+			go mod tidy; \
+	        fi'
+endef
+
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+                echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+                echo "$(MAKECMDGOALS)"; \
+                exit 1; \
+        fi;
+
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
 FELIX_BRANCH?=$(PIN_BRANCH)
-FELIX_REPO?=github.com/$(PIN_BRANCH)
-FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure FELIX repo and branch are reachable
-guard-git-felix:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
-		echo "ERROR: FELIX version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin in glide.yaml
-update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(FELIX_GLIDE_LABEL)" \
-		REPO="$(FELIX_REPO)" \
-		VERSION="$(FELIX_VERSION)" \
-		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
-		BRANCH="$(FELIX_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-###############################################################################
-## licensing
-
-## Set the default LICENSING source for this project
-LICENSING_PROJECT_DEFAULT=tigera/licensing
-LICENSING_GLIDE_LABEL=tigera/licensing
-
+FELIX_REPO?=github.com/tigera/felix-private
 LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
-LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+LICENSING_REPO?=github.com/tigera/licensing
 
-## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
-		echo "ERROR: LICENSING version could not be determined"; \
-		exit 1; \
-	fi;
+update-felix-pin: guard-ssh-forwarding-bug
+	$(call update_pin,"github.com/projectcalico/felix",$(FELIX_REPO),$(FELIX_BRANCH))
 
-## Update libary pin in glide.yaml
-update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LICENSING_GLIDE_LABEL)" \
-		REPO="$(LICENSING_REPO)" \
-		VERSION="$(LICENSING_VERSION)" \
-		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
-		BRANCH="$(LICENSING_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
+update-licensing-pin: guard-ssh-forwarding-bug
+	$(call update_pin,"github.com/tigera/licensing",$(LICENSING_REPO),$(LICENSING_BRANCH))
 
+update-libcalico-pin: guard-ssh-forwarding-bug
+	$(call update_pin,"github.com/projectcalico/libcalico-go",$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
+git-status:
+	git status --porcelain
 
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
+
+git-commit:
+	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+update-pins: update-felix-pin update-licensing-pin update-libcalico-pin
+
+commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Static checks
 ###############################################################################
 .PHONY: static-checks
 ## Perform static checks on the code.
-static-checks: vendor check-copyright
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) gometalinter --deadline=300s --disable-all --enable=goimports --enable=vet --enable=errcheck --vendor -s test_utils ./...
+
+static-checks:
+	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m
 
 .PHONY: fix
 ## Fix static checks
@@ -416,51 +399,39 @@ install-git-hooks:
 check-copyright:
 	./check-copyrights.sh
 
-foss-checks: vendor
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+foss-checks:
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
+
+.PHONY: remote-deps
+remote-deps:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+        go mod download; \
+        cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml tests/crds.yaml; \
+        chmod +w tests/crds.yaml'
 
 ###############################################################################
 # Tests
 ###############################################################################
 ## Run the unit tests in a container.
-ut: vendor
-	-mkdir -p .go-pkg-cache
-	docker run --rm --privileged --net=host \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		$(LOCAL_BUILD_MOUNTS) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c 'WHAT=$(WHAT) SKIP=$(SKIP) GINKGO_ARGS="$(GINKGO_ARGS)" ./run-uts'
+ut: local_build
+	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c 'WHAT=$(WHAT) SKIP=$(SKIP) GINKGO_ARGS="$(GINKGO_ARGS)" ./run-uts'
 
 .PHONY: fv
 ## Build and run the FV tests.
-fv: tests/fv/fv.test image
+fv: remote-deps tests/fv/fv.test image
 	@echo Running Go FVs.
 	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) \
 		HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) \
 		CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
 		PRIVATE_KEY=`pwd`/private.key \
-		CRDS_FILE=${PWD}/vendor/github.com/projectcalico/libcalico-go/test/crds.yaml \
+		CRDS_FILE=${PWD}/tests/crds.yaml \
+		GO111MODULE=on \
 		./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
 
-tests/fv/fv.test: $(shell find ./tests -type f -name '*.go' -print)
+tests/fv/fv.test: local_build $(shell find ./tests -type f -name '*.go' -print)
 	# We pre-build the test binary so that we can run it outside a container and allow it
 	# to interact with docker.
-	mkdir -p .go-pkg-cache && \
-		docker run --rm \
-		--net=host \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-		-v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-		$(LOCAL_BUILD_MOUNTS) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go test ./tests/fv -c --tags fvtests -o tests/fv/fv.test
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go test ./tests/fv -c --tags fvtests -o tests/fv/fv.test'
 
 ###############################################################################
 # CI
@@ -575,15 +546,15 @@ endif
 ## Display this help text.
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
 	$(info Available targets)
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
+	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
+		nb = sub( /^## /, "", helpMsg );				\
+		if(nb == 0) {						   \
+			helpMsg = $$0;					      \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
+		}							       \
+		if (nb)							 \
 			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=20                                                            \
+	}								   \
+	{ helpMsg = $$0 }'						  \
+	width=20							    \
 	$(MAKEFILE_LIST)

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,7 +72,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		defer os.Remove(kconfigfile.Name())
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
-		kconfigfile.Write([]byte(data))
+		_, err = kconfigfile.Write([]byte(data))
+		Expect(err).NotTo(HaveOccurred())
 
 		policyController = testutils.RunPolicyController(apiconfig.EtcdV3, etcd.IP, kconfigfile.Name(), "")
 
@@ -197,7 +198,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 			_, err = calicoClient.Nodes().Create(context.Background(), cn, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			err = k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() *api.Node {
 				node, _ := calicoClient.Nodes().Get(context.Background(), cNodeName, options.GetOptions{})
 				return node
@@ -229,7 +231,8 @@ var _ = Describe("kube-controllers FV tests", func() {
 			_, err = calicoClient.Nodes().Create(context.Background(), cn, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			err = k8sClient.CoreV1().Nodes().Delete(kNodeName, &metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
 			Consistently(func() *api.Node {
 				node, _ := calicoClient.Nodes().Get(context.Background(), cNodeName, options.GetOptions{})
 				return node
@@ -629,8 +632,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 			policyName = "jelly"
 			genPolicyName = "knp.default." + policyName
 			policyNamespace = "default"
-			var np *networkingv1.NetworkPolicy
-			np = &networkingv1.NetworkPolicy{
+			np := &networkingv1.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      policyName,
 					Namespace: policyNamespace,
