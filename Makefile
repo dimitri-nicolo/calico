@@ -38,7 +38,7 @@ ifeq ($(ARCH),x86_64)
 	override ARCH=amd64
 endif
 
-GO_BUILD_VER		?= v0.24
+GO_BUILD_VER		?= v0.23
 
 EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
 GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
@@ -131,7 +131,6 @@ endif
 # Makefile configuration options
 BUILD_IMAGE?=tigera/kube-controllers
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
-BUILD_IMAGE?=calico/kube-controllers
 FLANNEL_MIGRATION_BUILD_IMAGE?=calico/flannel-migration-controller
 
 RELEASE_IMAGES?=
@@ -315,16 +314,29 @@ $(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
 endef
 
 # update_pin updates the given package's version to the latest available in the specified repo and branch.
-# This routine can only be used for private repositories as it updates the 'replace' line in go.mod.
 # $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
 define update_pin
-	$(eval new_ver := $(shell git ls-remote ssh://git@$(2) $(3) 2>/dev/null | cut -f 1))
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	        if [[ ! -z "$(new_ver)" ]]; then \
+			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
+	                go get $(1)@$(new_ver); \
+			go mod download; \
+	        fi'
+endef
+
+# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_replace_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
 
 	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
 	        if [[ ! -z "$(new_ver)" ]]; then \
 			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
 	                go mod edit -replace $(1)=$(2)@$(new_ver); \
-			go mod tidy; \
+			go mod download; \
 	        fi'
 endef
 
@@ -343,13 +355,13 @@ LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
 
 update-felix-pin: guard-ssh-forwarding-bug
-	$(call update_pin,"github.com/projectcalico/felix",$(FELIX_REPO),$(FELIX_BRANCH))
+	$(call update_replace_pin,github.com/projectcalico/felix,$(FELIX_REPO),$(FELIX_BRANCH))
 
 update-licensing-pin: guard-ssh-forwarding-bug
-	$(call update_pin,"github.com/tigera/licensing",$(LICENSING_REPO),$(LICENSING_BRANCH))
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
 update-libcalico-pin: guard-ssh-forwarding-bug
-	$(call update_pin,"github.com/projectcalico/libcalico-go",$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
 git-status:
 	git status --porcelain
@@ -374,10 +386,12 @@ commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 # Static checks
 ###############################################################################
 .PHONY: static-checks
-## Perform static checks on the code.
-
+# govet uses too much memory for Semaphore
+ifdef CI
+LINT_ARGS := --disable govet
+endif
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run --deadline 5m $(LINT_ARGS)'
 
 .PHONY: fix
 ## Fix static checks
