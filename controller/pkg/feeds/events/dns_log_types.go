@@ -2,11 +2,15 @@
 
 package events
 
+import (
+	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+)
+
 // Based on github.com/tigera/felix-private/collector/dns_log_types.go
 
 type DNSLog struct {
-	StartTime       int64             `json:"start_time"`
-	EndTime         int64             `json:"end_time"`
+	StartTime       elastic.Time      `json:"start_time"`
+	EndTime         elastic.Time      `json:"end_time"`
 	Type            string            `json:"type"`
 	Count           uint              `json:"count"`
 	ClientName      string            `json:"client_name"`

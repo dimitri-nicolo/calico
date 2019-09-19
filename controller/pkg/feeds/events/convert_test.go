@@ -3,12 +3,14 @@
 package events
 
 import (
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"testing"
+	"time"
 
 	"github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	idsElastic "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -233,8 +235,8 @@ func TestConvertDNSLog_QName(t *testing.T) {
 		Id:    "111-222-333",
 	}
 	tc := DNSLog{
-		StartTime:       1,
-		EndTime:         5,
+		StartTime:       idsElastic.Time{Time: time.Unix(1, 0)},
+		EndTime:         idsElastic.Time{Time: time.Unix(5, 0)},
 		Count:           1,
 		ClientName:      "client-8888-34",
 		ClientNameAggr:  "client-8888-*",
@@ -288,8 +290,8 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 		Id:    "111-222-333",
 	}
 	tc := DNSLog{
-		StartTime:       1,
-		EndTime:         5,
+		StartTime:       idsElastic.Time{Time: time.Unix(1, 0)},
+		EndTime:         idsElastic.Time{Time: time.Unix(5, 0)},
 		Count:           1,
 		ClientName:      "-",
 		ClientNameAggr:  "client-8888-*",
@@ -366,8 +368,8 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 		Id:    "111-222-333",
 	}
 	tc := DNSLog{
-		StartTime:       1,
-		EndTime:         5,
+		StartTime:       idsElastic.Time{Time: time.Unix(1, 0)},
+		EndTime:         idsElastic.Time{Time: time.Unix(5, 0)},
 		Count:           1,
 		ClientName:      "-",
 		ClientNameAggr:  "client-8888-*",

@@ -4,12 +4,12 @@ package events
 
 import (
 	"fmt"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"strings"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -119,8 +119,9 @@ func ConvertDNSLog(l DNSLog, key db.QueryKey, hit *elastic.SearchHit, domains ma
 			strings.Join(sDomains, ", "),
 			strings.Join(feeds, ", "))
 	}
+
 	return SuspiciousDomainSecurityEvent{
-		Time:              l.StartTime,
+		Time:              l.StartTime.Unix(),
 		Type:              SuspiciousDNSQuery,
 		Description:       desc,
 		Severity:          Severity,

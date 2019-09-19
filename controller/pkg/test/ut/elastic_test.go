@@ -16,6 +16,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	idsElastic "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 )
 
@@ -71,8 +72,8 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 	i := elasticClient.Index().Index(index).Type("fluentd")
 	logs := []events.DNSLog{
 		{
-			StartTime:       123,
-			EndTime:         456,
+			StartTime:       idsElastic.Time{Time: time.Unix(123, 0)},
+			EndTime:         idsElastic.Time{Time: time.Unix(456, 0)},
 			Count:           1,
 			ClientName:      "client",
 			ClientNamespace: "test",
@@ -90,8 +91,8 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 			},
 		},
 		{
-			StartTime:       789,
-			EndTime:         101112,
+			StartTime:       idsElastic.Time{Time: time.Unix(789, 0)},
+			EndTime:         idsElastic.Time{Time: time.Unix(101112, 0)},
 			Count:           1,
 			ClientName:      "client",
 			ClientNamespace: "test",
@@ -115,8 +116,8 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 			},
 		},
 		{
-			StartTime:       789,
-			EndTime:         101112,
+			StartTime:       idsElastic.Time{Time: time.Unix(789, 0)},
+			EndTime:         idsElastic.Time{Time: time.Unix(101112, 0)},
 			Count:           1,
 			ClientName:      "client",
 			ClientNamespace: "test",
@@ -200,8 +201,8 @@ func TestPutSecurityEvent_DomainName(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	l := events.DNSLog{
-		StartTime:       123,
-		EndTime:         456,
+		StartTime:       idsElastic.Time{Time: time.Unix(123, 0)},
+		EndTime:         idsElastic.Time{Time: time.Unix(456, 0)},
 		Count:           1,
 		ClientName:      "client",
 		ClientNamespace: "test",
