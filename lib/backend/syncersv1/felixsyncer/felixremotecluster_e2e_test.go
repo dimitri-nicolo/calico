@@ -148,7 +148,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
 			// RemoteClusterStatus error. Compare with the expected events.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -167,7 +168,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					}
 				}
 
-				return u
+				return &u
 			})
 		},
 
@@ -330,7 +331,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
 			// RemoteClusterStatus error. Compare with the expected events.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -355,7 +357,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					}
 				}
 
-				return u
+				return &u
 			})
 		},
 
@@ -452,7 +454,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -463,7 +466,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
 				}
 
-				return u
+				return &u
 			})
 
 			By("Deleting the RemoteClusterConfiguration")
@@ -750,7 +753,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -761,7 +765,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
 				}
 
-				return u
+				return &u
 			})
 		})
 	})
@@ -906,7 +910,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -917,7 +922,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
 				}
 
-				return u
+				return &u
 			})
 
 			By("Deleting the remote cluster configuration")
@@ -937,7 +942,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -948,7 +954,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
 				}
 
-				return u
+				return &u
 			})
 		})
 	})
@@ -1093,7 +1099,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
 				u.Revision = ""
 				u.TTL = 0
 
@@ -1104,7 +1111,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
 				}
 
-				return u
+				return &u
 			})
 
 			By("Updating the remote cluster config (but without changing the syncer connection config)")
