@@ -166,31 +166,6 @@ func (e *Elastic) Close() {
 	e.cancel()
 }
 
-func (e *Elastic) Ready() bool {
-	select {
-	case <-e.eventMappingCreated:
-		break
-	default:
-		return false
-	}
-
-	select {
-	case <-e.ipSetMappingCreated:
-		break
-	default:
-		return false
-	}
-
-	select {
-	case <-e.domainNameSetMappingCreated:
-		break
-	default:
-		return false
-	}
-
-	return e.elasticIsAlive
-}
-
 func (e *Elastic) ListIPSets(ctx context.Context) ([]db.Meta, error) {
 	return e.listSets(ctx, IPSetIndex)
 }

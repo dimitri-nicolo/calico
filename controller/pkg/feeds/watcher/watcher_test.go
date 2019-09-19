@@ -13,7 +13,6 @@ import (
 	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
@@ -1285,42 +1284,6 @@ func TestWatcher_PingFail(t *testing.T) {
 
 	err := uut.Ping(ctx)
 	g.Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")
-}
-
-func TestWatcher_Ready(t *testing.T) {
-	g := NewWithT(t)
-
-	gtf := &calico.MockGlobalThreatFeedInterface{W: &calico.MockWatch{make(chan watch.Event)}, GlobalThreatFeedList: &v3.GlobalThreatFeedList{}, GlobalThreatFeed: &v3.GlobalThreatFeed{}}
-	ipSet := &db.MockSets{}
-	sIP := &db.MockSuspicious{}
-	gns := globalnetworksets.NewMockGlobalNetworkSetController()
-	eip := elastic.NewMockElasticIPSetController()
-	edn := elastic.NewMockDomainNameSetsController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, sIP, nil, &db.MockEvents{})
-
-	g.Expect(uut.Ready()).To(BeFalse())
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	uut.Run(ctx)
-	g.Eventually(uut.Ready).Should(BeTrue())
-
-	// Send in gtf with no error
-	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}))
-	g.Consistently(uut.Ready).Should(BeTrue())
-
-	// New gtf has error
-	sIP.Error = errors.New("test")
-	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}))
-	g.Eventually(uut.Ready).Should(BeFalse())
-
-	// Remove both GTFs
-	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}))
-	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}))
-	g.Eventually(uut.Ready).Should(BeTrue())
-
-	// Stop the watch loop
-	cancel()
-	g.Eventually(uut.Ready).Should(BeFalse())
 }
 
 type MockPuller struct {

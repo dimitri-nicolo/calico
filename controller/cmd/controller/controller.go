@@ -175,7 +175,7 @@ func main() {
 	a.Run(ctx)
 	defer a.Close()
 
-	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{s, a, e}, healthzSockPort)
+	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {
