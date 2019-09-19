@@ -1,3 +1,14 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: calico-monitoring
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
 # Tier containing policies to allow access to Tigera Secure EE.
 apiVersion: projectcalico.org/v3
 kind: Tier
@@ -80,7 +91,7 @@ spec:
 
 # This manifest creates a network policy to allow traffic to Alertmanager
 # (TCP port 9093).
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: calico-node-alertmanager
@@ -98,7 +109,7 @@ spec:
 
 # This manifest creates a network policy to allow traffic between
 # Alertmanagers for HA configuration (TCP port 6783).
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: calico-node-alertmanager-mesh
@@ -129,7 +140,7 @@ spec:
 
 # This manifest creates a network policy to allow traffic to access the
 # Prometheus (TCP port 9090).
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: prometheus
@@ -294,13 +305,33 @@ spec:
 
 ---
 
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
-apiVersion: extensions/v1beta1
 metadata:
-  name: default-deny
-  namespace: calico-monitoring
+  name: allow-cnx.intrusion-detection-controller
+  namespace: tigera-intrusion-detection
 spec:
-  podSelector:
-    matchLabels: {}
----
-
+  order: 1
+  tier: allow-cnx
+  selector: k8s-app == 'intrusion-detection-controller'
+  types:
+    - Ingress
+    - Egress
+  ingress:
+  # Intrusion detection controller doesn't listen on any external ports
+  - action: Deny
+  egress:
+  # Block any link local IPs, e.g. cloud metadata, which are often targets
+  # of server-side request forgery (SSRF) attacks
+  - action: Deny
+    protocol: TCP
+    destination:
+      nets:
+      - "169.254.0.0/16"
+  - action: Deny
+    protocol: TCP
+    destination:
+      nets:
+      - "fe80::/10"
+  # Pass to subsequent tiers or profiles for further refinement
+  - action: Pass
