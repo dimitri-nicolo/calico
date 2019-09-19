@@ -1027,10 +1027,6 @@ spec:
             command: ["/healthz", "liveness"]
           initialDelaySeconds: 5
         name: controller
-        readinessProbe:
-          exec:
-            command: ["/healthz", "readiness"]
-          initialDelaySeconds: 5
         env:
           - name: CLUSTER_NAME
             valueFrom:
