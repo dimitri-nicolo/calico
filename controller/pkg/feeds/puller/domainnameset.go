@@ -4,6 +4,7 @@ package puller
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"regexp"
@@ -34,6 +35,10 @@ type dnSetPersistence struct {
 	c elastic.DomainNameSetController
 }
 
+type dnSetGNSHandler struct {
+	enabled bool
+}
+
 func (i dnSetNewlineDelimited) parse(r io.Reader, logContext *log.Entry) interface{} {
 	var snapshot db.DomainNameSetSpec
 
@@ -56,10 +61,6 @@ func (i dnSetNewlineDelimited) parse(r io.Reader, logContext *log.Entry) interfa
 	return snapshot
 }
 
-func (i dnSetNewlineDelimited) makeGNS(name string, labels map[string]string, snapshot interface{}) *calico.GlobalNetworkSet {
-	panic("not supported")
-}
-
 func (i dnSetPersistence) lastModified(ctx context.Context, name string) (time.Time, error) {
 	return i.d.GetDomainNameSetModified(ctx, name)
 }
@@ -68,8 +69,25 @@ func (i dnSetPersistence) add(ctx context.Context, name string, snapshot interfa
 	i.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, st)
 }
 
-func (i dnSetPersistence) get(ctx context.Context, name string) (interface{}, error) {
-	panic("not supported")
+func (d *dnSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction) {
+	if d.enabled {
+		st.Error(statser.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
+	} else {
+		st.ClearError(statser.GlobalNetworkSetSyncFailed)
+	}
+}
+
+func (d *dnSetGNSHandler) syncFromDB(ctx context.Context, st statser.Statser) {
+	if d.enabled {
+		st.Error(statser.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
+	} else {
+		st.ClearError(statser.GlobalNetworkSetSyncFailed)
+	}
+}
+
+func (d *dnSetGNSHandler) setFeed(f *calico.GlobalThreatFeed) bool {
+	d.enabled = f.Spec.GlobalNetworkSet != nil
+	return false
 }
 
 func NewDomainNameSetHTTPPuller(
@@ -82,6 +100,10 @@ func NewDomainNameSetHTTPPuller(
 ) Puller {
 	d := dnSetPersistence{d: ddb, c: e}
 	c := dnSetNewlineDelimited{}
+	g := &dnSetGNSHandler{}
+	if f.Spec.GlobalNetworkSet != nil {
+		g.enabled = true
+	}
 	p := &httpPuller{
 		configMapClient: configMapClient,
 		secretsClient:   secretsClient,
@@ -90,6 +112,7 @@ func NewDomainNameSetHTTPPuller(
 		needsUpdate:     true,
 		persistence:     d,
 		content:         c,
+		gnsHandler:      g,
 	}
 
 	p.period = util.ParseFeedDuration(p.feed)

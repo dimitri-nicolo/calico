@@ -29,6 +29,14 @@ type ipSetPersistence struct {
 	c elastic.IPSetController
 }
 
+type ipSetGNSHandler struct {
+	name          string
+	labels        map[string]string
+	enabled       bool
+	gnsController globalnetworksets.Controller
+	d             db.IPSet
+}
+
 func (i ipSetNewlineDelimited) parse(r io.Reader, logContext *log.Entry) interface{} {
 	var snapshot db.IPSetSpec
 
@@ -69,17 +77,6 @@ func (i ipSetNewlineDelimited) parse(r io.Reader, logContext *log.Entry) interfa
 	return snapshot
 }
 
-func (i ipSetNewlineDelimited) makeGNS(name string, labels map[string]string, snapshot interface{}) *calico.GlobalNetworkSet {
-	nets := snapshot.(db.IPSetSpec)
-	gns := util.NewGlobalNetworkSet(name)
-	gns.Labels = make(map[string]string)
-	for k, v := range labels {
-		gns.Labels[k] = v
-	}
-	gns.Spec.Nets = append([]string{}, nets...)
-	return gns
-}
-
 func parseNewlineDelimited(r io.Reader, lineHander func(n int, l string)) {
 	// Response format is one item per line.
 	s := bufio.NewScanner(r)
@@ -110,8 +107,60 @@ func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interfa
 	i.c.Add(ctx, name, snapshot.(db.IPSetSpec), f, st)
 }
 
-func (i ipSetPersistence) get(ctx context.Context, name string) (interface{}, error) {
-	return i.d.GetIPSet(ctx, name)
+func (h ipSetGNSHandler) get(ctx context.Context) (interface{}, error) {
+	return h.d.GetIPSet(ctx, h.name)
+}
+
+func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, s statser.Statser) {
+	if h.enabled {
+		log.WithField("feed", h.name).Info("Synchronizing GlobalNetworkSet from cached feed contents")
+		ipSet, err := h.get(ctx)
+		if err != nil {
+			log.WithError(err).WithField("feed", h.name).Error("Failed to load cached feed contents")
+			s.Error(statser.GlobalNetworkSetSyncFailed, err)
+		} else {
+			g := h.makeGNS(ipSet)
+			h.gnsController.Add(g, func() {}, s)
+		}
+	} else {
+		s.ClearError(statser.GlobalNetworkSetSyncFailed)
+	}
+}
+
+func (h *ipSetGNSHandler) makeGNS(snapshot interface{}) *calico.GlobalNetworkSet {
+	nets := snapshot.(db.IPSetSpec)
+	gns := util.NewGlobalNetworkSet(h.name)
+	gns.Labels = make(map[string]string)
+	for k, v := range h.labels {
+		gns.Labels[k] = v
+	}
+	gns.Spec.Nets = append([]string{}, nets...)
+	return gns
+}
+
+func (h *ipSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction) {
+	if h.enabled {
+		g := h.makeGNS(snapshot)
+		h.gnsController.Add(g, f, st)
+	} else {
+		st.ClearError(statser.GlobalNetworkSetSyncFailed)
+	}
+}
+
+func (h *ipSetGNSHandler) setFeed(f *calico.GlobalThreatFeed) bool {
+	oldEnabled := h.enabled
+	h.name = f.Name
+	if f.Spec.GlobalNetworkSet != nil {
+		h.enabled = true
+		h.labels = make(map[string]string)
+		for k, v := range f.Spec.GlobalNetworkSet.Labels {
+			h.labels[k] = v
+		}
+	} else {
+		h.enabled = false
+		h.labels = nil
+	}
+	return h.enabled && !oldEnabled
 }
 
 func NewIPSetHTTPPuller(
@@ -125,13 +174,25 @@ func NewIPSetHTTPPuller(
 ) Puller {
 	d := ipSetPersistence{d: ipSet, c: elasticIPSet}
 	c := ipSetNewlineDelimited{}
+	g := &ipSetGNSHandler{
+		name:          f.Name,
+		gnsController: gnsController,
+		d:             ipSet,
+	}
+	if f.Spec.GlobalNetworkSet != nil {
+		g.enabled = true
+		g.labels = make(map[string]string)
+		for k, v := range f.Spec.GlobalNetworkSet.Labels {
+			g.labels[k] = v
+		}
+	}
 	p := &httpPuller{
 		configMapClient: configMapClient,
 		secretsClient:   secretsClient,
 		client:          client,
 		feed:            f.DeepCopy(),
 		needsUpdate:     true,
-		gnsController:   gnsController,
+		gnsHandler:      g,
 		persistence:     d,
 		content:         c,
 	}

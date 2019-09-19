@@ -703,13 +703,20 @@ func TestSyncGNSFromDB(t *testing.T) {
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.syncGNSFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, s)
 
 	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(0))
 	g.Expect(len(gns.Local())).Should(Equal(1))
 	g.Expect(gns.Local()).Should(HaveKey("threatfeed." + feed.Name))
 	g.Expect(gns.Local()["threatfeed."+feed.Name].Spec.Nets).Should(ConsistOf(ipSet.Value))
 
+	// modify GNS labels and resync
+	f2 := testGlobalThreatFeed.DeepCopy()
+	f2.Spec.GlobalNetworkSet.Labels["level"] = "low"
+	puller.SetFeed(f2)
+
+	puller.gnsHandler.syncFromDB(ctx, s)
+	g.Expect(gns.Local()["threatfeed."+feed.Name].Labels).Should(Equal(map[string]string{"level": "low"}))
 }
 
 func TestSyncGNSFromDBElasticError(t *testing.T) {
@@ -727,7 +734,7 @@ func TestSyncGNSFromDBElasticError(t *testing.T) {
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.syncGNSFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, s)
 
 	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(1))
 	g.Expect(len(gns.Local())).Should(Equal(0))
@@ -748,7 +755,7 @@ func TestSyncGNSFromDBNoGNS(t *testing.T) {
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.syncGNSFromDB(ctx, s)
+	puller.gnsHandler.syncFromDB(ctx, s)
 
 	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(0))
 	g.Expect(len(gns.Local())).Should(Equal(0))
