@@ -77,22 +77,22 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport
 	} else if tgt.Dest.Scheme == "https" {
-		var tlscfg *tls.Config
+		var tlsCfg *tls.Config
 
 		if tgt.CA == nil {
-			tlscfg = &tls.Config{
+			tlsCfg = &tls.Config{
 				InsecureSkipVerify: true,
 			}
 		} else {
 			ca := x509.NewCertPool()
 			ca.AddCert(tgt.CA)
-			tlscfg = &tls.Config{
+			tlsCfg = &tls.Config{
 				RootCAs: ca,
 			}
 		}
 
 		p.Transport = &http.Transport{
-			TLSClientConfig: tlscfg,
+			TLSClientConfig: tlsCfg,
 		}
 	}
 

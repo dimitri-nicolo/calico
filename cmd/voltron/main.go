@@ -37,7 +37,6 @@ type config struct {
 	K8sConfigPath     string `split_words:"true"`
 	KeepAliveEnable   bool   `default:"true" split_words:"true"`
 	KeepAliveInterval int    `default:"100" split_words:"true"`
-	DefaultK8sProxy   bool   `default:"true" split_words:"true"`
 	DefaultK8sDest    string `default:"https://kubernetes.default" split_words:"true"`
 	PProf             bool   `default:"false"`
 }
@@ -90,41 +89,39 @@ func main() {
 		server.WithAutoRegister(),
 	}
 
-	if cfg.DefaultK8sProxy {
-		tgts, err := bootstrap.ProxyTargets([]bootstrap.Target{
-			{
-				Path:         "/api/",
-				Dest:         cfg.DefaultK8sDest,
-				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-			},
-			{
-				Path:         "/apis/",
-				Dest:         cfg.DefaultK8sDest,
-				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
-			},
-			// This fixes https://tigera.atlassian.net/browse/SAAS-240
-			{
-				Path:        "/tigera-elasticsearch/",
-				Dest:        "https://cnx-es-proxy-local.calico-monitoring.svc.cluster.local:8443",
-				PathRegexp:  []byte("^/tigera-elasticsearch/?"),
-				PathReplace: []byte("/"),
-			},
-			{
-				Path: "/compliance/",
-				Dest: "https://compliance.calico-monitoring.svc.cluster.local",
-			},
-		})
+	targets, err := bootstrap.ProxyTargets([]bootstrap.Target{
+		{
+			Path:         "/api/",
+			Dest:         cfg.DefaultK8sDest,
+			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		{
+			Path:         "/apis/",
+			Dest:         cfg.DefaultK8sDest,
+			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		// This fixes https://tigera.atlassian.net/browse/SAAS-240
+		{
+			Path:        "/tigera-elasticsearch/",
+			Dest:        "https://cnx-es-proxy-local.calico-monitoring.svc.cluster.local:8443",
+			PathRegexp:  []byte("^/tigera-elasticsearch/?"),
+			PathReplace: []byte("/"),
+		},
+		{
+			Path: "/compliance/",
+			Dest: "https://compliance.calico-monitoring.svc.cluster.local",
+		},
+	})
 
-		if err != nil {
-			log.Fatalf("Failed to parse default proxy targets: %s", err)
-		}
-
-		defaultK8sProxy, err := proxy.New(tgts)
-		if err != nil {
-			log.Fatalf("Failed to create a default k8s proxy: %s", err)
-		}
-		opts = append(opts, server.WithDefaultProxy(defaultK8sProxy))
+	if err != nil {
+		log.Fatalf("Failed to parse default proxy targets: %s", err)
 	}
+
+	defaultProxy, err := proxy.New(targets)
+	if err != nil {
+		log.Fatalf("Failed to create a default k8s proxy: %s", err)
+	}
+	opts = append(opts, server.WithDefaultProxy(defaultProxy))
 
 	srv, err := server.New(
 		k8s,
