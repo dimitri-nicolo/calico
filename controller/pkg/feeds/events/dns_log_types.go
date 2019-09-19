@@ -2,11 +2,15 @@
 
 package events
 
+import (
+	"time"
+)
+
 // Based on github.com/tigera/felix-private/collector/dns_log_types.go
 
 type DNSLog struct {
-	StartTime       int64             `json:"start_time"`
-	EndTime         int64             `json:"end_time"`
+	StartTime       time.Time         `json:"start_time"`
+	EndTime         time.Time         `json:"end_time"`
 	Type            string            `json:"type"`
 	Count           uint              `json:"count"`
 	ClientName      string            `json:"client_name"`

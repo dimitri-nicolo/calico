@@ -54,7 +54,7 @@ func (i *queryIterator) Next() bool {
 				return false
 			}
 
-			log.WithField("hits", r.TotalHits()).Info("elastic query returned")
+			log.WithField("hits", r.TotalHits()).Debug("elastic query returned")
 			i.hits = r.Hits.Hits
 		}
 
