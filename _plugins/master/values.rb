@@ -380,7 +380,43 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     #   <secret_name>: <.docker/config.json contents>
     imagePullSecrets: {}
     EOF
-  else
+  elsif chart == "tigera-operator"
+    versionsYml = <<~EOF
+    # Configuration for the tigera operator
+    tigeraOperator:
+      image: tigera/operator
+      registry: quay.io/
+      version: #{versions["tigera-operator"]}
+
+    # Configuration for the tigera operator init container.
+    tigeraOperatorInit:
+      image: tigera/operator-init
+      registry: quay.io/
+      version: #{versions["tigera-operator"]}
+
+    # TODO: All of this will be removed when these components are installed by the Tigera operator.
+    fluentd:
+      image: #{imageNames["fluentd"]}
+      registry: #{imageRegistry}
+      version: #{versions["fluentd"]}
+    esCurator:
+      image: #{imageNames["es-curator"]}
+      registry: #{imageRegistry}
+      version: #{versions["es-curator"]}
+    prometheusOperator:
+      image: #{imageNames["prometheusOperator"]}
+      version: #{versions["prometheus-operator"]}
+    elasticsearchOperator:
+      image: #{imageNames["elasticsearchOperator"]}
+      version: #{versions["elasticsearch-operator"]}
+    prometheusConfigReloader:
+      image: #{imageNames["prometheusConfigReloader"]}
+      tag: #{versions["prometheus-config-reloader"]}
+    configmapReload:
+      image: #{imageNames["configMapReload"]}
+      tag: #{versions["configmap-reload"]}
+    EOF
+  else 
     versionsYml = <<~EOF
     # Configuration for federation controller
     federation:

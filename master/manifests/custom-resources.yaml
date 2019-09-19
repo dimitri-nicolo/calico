@@ -1,0 +1,190 @@
+# This section includes base Tigera Secure installation configuration.
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  name: default
+spec:
+  # Install Tigera Secure
+  variant: TigeraSecureEnterprise
+
+  # List of image pull secrets to use when installing images from a container registry.
+  # If specified, secrets must be created in the `tigera-operator` namespace.
+  imagePullSecrets:
+    - name: tigera-pull-secret
+
+  # Registry to use for pulling Tigera Secure images.
+  # registry: <my-registry>
+
+---
+
+# This section configures the Tigera web console.
+apiVersion: operator.tigera.io/v1
+kind: Console
+metadata:
+  name: tigera-secure
+spec:
+  # Authentication configuration for accessing the Tigera console.
+  # Default is to use token-based authentication.
+  auth:
+    type: Token
+
+---
+
+# This section installs and configures the Tigera Secure API server.
+apiVersion: operator.tigera.io/v1
+kind: APIServer
+metadata:
+  name: tigera-secure
+
+---
+
+# This section installs and configures Tigera Secure compliance functionality.
+apiVersion: operator.tigera.io/v1
+kind: Compliance
+metadata:
+  name: tigera-secure
+
+---
+
+# This section installs and configures Tigera Secure intrusion detection functionality.
+apiVersion: operator.tigera.io/v1
+kind: IntrusionDetection
+metadata:
+  name: tigera-secure
+
+---
+
+# This section installs and configures Tigera Secure monitoring stack access.
+apiVersion: operator.tigera.io/v1
+kind: MonitoringConfiguration
+metadata:
+  name: tigera-secure
+spec:
+  clusterName: "cluster"
+  elasticsearch:
+    endpoint: http://elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local:9200
+  kibana:
+    endpoint: http://kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local:80
+
+---
+
+# This section configures the Tigera Secure Prometheus deployment.
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: calico-node-prometheus
+  namespace: calico-monitoring
+spec:
+  baseImage: quay.io/prometheus/prometheus
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  serviceAccountName: prometheus
+  serviceMonitorSelector:
+    matchLabels:
+      team: network-operators
+  version: v2.7.1
+  retention: 24h
+  resources:
+    requests:
+      memory: 400Mi
+  ruleSelector:
+    matchLabels:
+      role: calico-prometheus-rules
+      prometheus: calico-node-prometheus
+  alerting:
+    alertmanagers:
+      - namespace: calico-monitoring
+        name: calico-node-alertmanager
+        port: web
+        scheme: http
+
+---
+
+# This section configures the Tigera Secure ElasticSearch cluster.
+# For detailed configuration options, see https://github.com/upmc-enterprises/elasticsearch-operator
+apiVersion: enterprises.upmc.com/v1
+kind: ElasticsearchCluster
+metadata:
+  name: tigera-elasticsearch
+  namespace: calico-monitoring
+spec:
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.4.3
+  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:6.4.3
+  # For production deployments, modify the number of elasticsearch replicas accordingly
+  client-node-replicas: 1
+  master-node-replicas: 1
+  data-node-replicas: 1
+  network-host: 0.0.0.0
+  zones: []
+  use-ssl: false
+  # For production volumes, consider increasing volume sizes, memory and adding backups
+  data-volume-size: 40Gi
+  java-options: "-Xms1g -Xmx1g"
+  storage:
+    storage-class: elasticsearch-storage
+
+---
+
+# This section configures Prometheus monitoring of calico/node metrics.
+# TODO: Do we need to expose this? Can we either have the operator create it or configure
+# prometheus explicitly rather than exposing this config to the user?
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: calico-node-monitor
+  namespace: calico-monitoring
+  labels:
+    team: network-operators
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+  namespaceSelector:
+    matchNames:
+    - calico-system
+  endpoints:
+  - port: calico-metrics-port
+    interval: 5s
+    scrapeTimeout: 5s
+    honorLabels: true
+
+---
+
+# This section installs a Prometheus alert manager.
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  version: v0.16.1
+  baseImage: quay.io/prometheus/alertmanager
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  replicas: 3
+
+---
+
+# This section configures denied packets alerting rules in Prometheus.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: calico-prometheus-dp-rate
+  namespace: calico-monitoring
+  labels:
+    role: calico-prometheus-rules
+    prometheus: calico-node-prometheus
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+    - alert: DeniedPacketsRate
+      expr: rate(calico_denied_packets[10s]) > 50
+      labels:
+        severity: critical
+      annotations:
+        summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+        description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."

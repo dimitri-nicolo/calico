@@ -1,0 +1,6 @@
+---
+layout: null
+---
+{% helm tigera-operator --execute templates/misc/99-elastic-curator.yaml %}
+openshift: true
+{% endhelm %}

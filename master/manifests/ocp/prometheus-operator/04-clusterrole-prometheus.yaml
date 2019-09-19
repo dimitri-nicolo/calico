@@ -1,0 +1,6 @@
+---
+layout: null
+---
+{% helm tigera-operator --execute templates/prometheus-operator/04-clusterrole-prometheus.yaml %}
+openshift: true
+{% endhelm %}

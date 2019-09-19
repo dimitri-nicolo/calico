@@ -1438,6 +1438,8 @@ v2.0:
 master:
 - title: master
   note: ""
+  tigera-operator:
+    version: master
   components:
     cnx-manager:
       version: master

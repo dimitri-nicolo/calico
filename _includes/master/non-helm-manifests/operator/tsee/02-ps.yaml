@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cnx-pull-secret
-  namespace: tigera-operator
-type: kubernetes.io/dockerconfigjson
-data:
-  .dockerconfigjson: SECRET

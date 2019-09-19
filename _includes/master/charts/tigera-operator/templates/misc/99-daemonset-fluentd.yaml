@@ -1,0 +1,204 @@
+kind: DaemonSet
+apiVersion: extensions/v1beta1
+metadata:
+  name: tigera-fluentd-node
+  namespace: calico-monitoring
+  labels:
+    k8s-app: tigera-fluentd-node
+spec:
+  selector:
+    matchLabels:
+      k8s-app: tigera-fluentd-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        k8s-app: tigera-fluentd-node
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      tolerations:
+        # Make sure fluentd-node gets scheduled on all nodes.
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      serviceAccountName: tigera-fluentd
+      imagePullSecrets:
+        - name: tigera-pull-secret
+      containers:
+        - name: fluentd
+          securityContext:
+            privileged: true
+          image: {{.Values.fluentd.registry}}{{.Values.fluentd.image}}:{{.Values.fluentd.version}}
+          env:
+            - name: FLUENT_UID
+              value: "0"
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
+            - name: ELASTIC_FLOWS_INDEX_SHARDS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.flows-index-shards
+            - name: FLUENTD_FLOW_FILTERS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.flow-filtering
+            - name: FLOW_LOG_FILE
+              value: /var/log/calico/flowlogs/flows.log
+            - name: ELASTIC_HOST
+              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+            - name: ELASTIC_PORT
+              value: "9200"
+            - name: FLUENTD_ES_SECURE
+              value: "false"
+            - name: AWS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-s3-archiving
+                  key: aws.key.id
+                  optional: true
+            - name: AWS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-s3-archiving
+                  key: aws.secret.key
+                  optional: true
+            - name: S3_STORAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.storage
+                  optional: true
+            - name: S3_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.bucket.name
+                  optional: true
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: aws.region
+                  optional: true
+            - name: S3_BUCKET_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.bucket.path
+                  optional: true
+            - name: S3_FLUSH_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.flush-interval
+                  optional: true
+            - name: SYSLOG_FLOW_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: flow-logs
+                  optional: true
+            - name: SYSLOG_AUDIT_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: audit-logs
+                  optional: true
+            - name: SYSLOG_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: host
+                  optional: true
+            - name: SYSLOG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: port
+                  optional: true
+            - name: SYSLOG_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: protocol
+                  optional: true
+            - name: SYSLOG_FLUSH_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: flush-interval
+                  optional: true
+            - name: SYSLOG_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: tls
+                  optional: true
+            - name: SYSLOG_VERIFY_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: verify_mode
+                  optional: true
+            - name: SYSLOG_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: var-log-calico
+              mountPath: /var/log/calico
+            - name: es-config
+              mountPath: /etc/fluentd/flow-filters.conf
+              subPath: tigera.elasticsearch.flow-filters.conf
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/fluentd/elastic
+            - name: syslog-config
+              mountPath: /etc/fluentd/syslog/ca.pem
+              subPath: ca
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - /bin/readiness.sh
+            initialDelaySeconds: 60
+            periodSeconds: 60
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - /usr/bin/fluentd -c /fluentd/etc/fluent.conf -p /fluentd/plugins --dry-run && curl -s http://localhost:24220/api/plugins.json
+            initialDelaySeconds: 60
+            periodSeconds: 60
+      volumes:
+        - name: var-log-calico
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/log/calico
+        - name: es-config
+          configMap:
+            name: tigera-es-config
+        # Should be created during installation process.
+        - name: elastic-ca-cert-volume
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config
+        - name: syslog-config
+          configMap:
+            name: tigera-syslog-archiving
+            defaultMode: 420
+            optional: true

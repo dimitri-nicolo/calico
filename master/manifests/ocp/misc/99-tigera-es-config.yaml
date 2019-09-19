@@ -1,0 +1,6 @@
+---
+layout: null
+---
+{% helm tigera-operator --execute templates/misc/99-tigera-es-config.yaml %}
+openshift: true
+{% endhelm %}

@@ -1,19 +1,23 @@
 ---
 title: Quickstart for Tigera Secure EE on Kubernetes
-canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/
+canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/
 ---
 
-## Overview
+### Big picture
 
-This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
-in approximately 15 minutes. You can use this cluster for testing and
-development.
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} in approximately 15 minutes.
+
+### Value
+
+You can use this quickstart to quickly and easily try {{side.prodname}} features.
 
 To deploy a cluster suitable for production, refer to [Installation](installation).
 
-## Create a Kubernetes cluster
+### How to
 
-### Host requirements
+#### Host requirements
+
+This article requires a Linux host that meets the following requirements.
 
 - AMD64 processor
 - 2CPU
@@ -23,12 +27,11 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
 - Internet access
 - [Sufficient virtual memory](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html){:target="_blank"}
 
-### Create a single-host Kubernetes cluster
+#### Install Kubernetes
 
 1. [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
-1. As a regular user with sudo privileges, open a terminal on the host that
-   you installed kubeadm on.
+1. As a regular user with sudo privileges, open a terminal on the host that you installed kubeadm on.
 
 1. Initialize the master using the following command.
 
@@ -41,8 +44,7 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
    > CIDR, replacing 192.168.0.0/16 in the above command as well as in any manifests applied below.
    {: .alert .alert-info}
 
-1. Execute the following commands to configure kubectl (also returned by
-   `kubeadm init`).
+1. Execute the following commands to configure kubectl (also returned by `kubeadm init`).
 
    ```bash
    mkdir -p $HOME/.kube
@@ -56,41 +58,61 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
    kubectl taint nodes --all node-role.kubernetes.io/master-
    ```
 
-## Install helm and tiller
+#### Install {{site.prodname}}
 
-- [Install the helm](https://helm.sh/docs/using_helm/#install-helm) binary. For
-  example:
+1. Install the Tigera operators and custom resource definitions.
 
-  ```bash
-  curl -O https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz
-  tar xzvf helm-v2.14.3-linux-amd64.tar.gz
-  sudo install linux-amd64/helm /usr/bin/
-  ```
+   ```
+   kubectl create -f {{site.url}}/master/manifests/tigera-operator.yaml
+   ```
 
-- Verify `helm` is installed:
+1. Install your pull secret.
 
-  ```bash
-  helm version -c
-  ```
+   ```
+   kubectl create secret generic tigera-pull-secret \
+       --from-file=.dockerconfigjson=<path/to/pull/secret> \
+       --type=kubernetes.io/dockerconfigjson -n tigera-operator
+   ```
 
-- Install tiller.
+1. Install the Tigera custom resources.
 
-  ```bash
-  kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-  kubectl create serviceaccount --namespace kube-system tiller
-  helm init --net-host --service-account tiller \
-    --override "spec.template.spec.tolerations[0].effect=NoSchedule" \
-    --override "spec.template.spec.tolerations[0].key=node.kubernetes.io/not-ready" \
-    --override "spec.template.spec.tolerations[0].operator=Exists"
-  ```
+   ```
+   kubectl create -f {{site.url}}/master/manifests/custom-resources.yaml
+   ```
 
->**Alert**: This creates an insecure installion of tiller and should not be used
-           for production networks.
-{: .alert .alert-info}
+   You can now monitor progress with the following command:
 
-{% include {{page.version}}/helm-install.md method="quick" %}
+   ```
+   watch kubectl get tigerastatus
+   ```
 
-### Next steps
+   When it shows the `apiserver` with status `Available`, proceed to the next section.
+
+#### Install the {{site.prodname}} license
+
+In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
+
+```
+kubectl create -f </path/to/license.yaml>
+```
+
+You can now monitor progress with the following command:
+
+```
+watch kubectl get tigerastatus
+```
+
+When it shows all components with status `Available`, proceed to the next section.
+
+#### Secure {{site.prodname}} with network policy
+
+To secure the components which make up {{site.prodname}}, install the following set of network policies.
+
+```
+kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
+```
+
+### Above and beyond
 
 **[Experiment with OIDC authentication strategy](/{{page.version}}/reference/cnx/authentication)**
 
@@ -101,7 +123,5 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
 **[Secure a simple application using the Kubernetes `NetworkPolicy` API]({{site.url}}/{{page.version}}/security/simple-policy)**
 
 **[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API]({{site.url}}/{{page.version}}/security/advanced-policy)**
-
-**[Create a user interface that shows blocked and allowed connections in real time]({{site.url}}/{{page.version}}/security/stars-policy/)**
 
 **[Install and configure calicoctl](/{{page.version}}/getting-started/calicoctl/install)**
