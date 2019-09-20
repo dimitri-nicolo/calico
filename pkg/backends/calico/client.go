@@ -120,6 +120,12 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		c.cache[k] = v
 	}
 
+	// Create secret watcher.  Must do this before the syncer, because updates from
+	// the syncer can trigger calling c.secretWatcher.MarkStale().
+	if c.secretWatcher, err = NewSecretWatcher(c); err != nil {
+		log.WithError(err).Fatal("Failed to create secret watcher")
+	}
+
 	// Create a conditional that we use to wake up all of the watcher threads when there
 	// may some actionable updates.
 	c.watcherCond = sync.NewCond(&c.cacheLock)
@@ -172,11 +178,6 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		// Use the syncer locally.
 		c.syncer = bgpsyncer.New(c.client, c, template.NodeName)
 		c.syncer.Start()
-	}
-
-	// Create secret watcher.
-	if c.secretWatcher, err = NewSecretWatcher(c); err != nil {
-		log.WithError(err).Fatal("Failed to create secret watcher")
 	}
 
 	// Create and start route generator.
