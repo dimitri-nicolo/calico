@@ -202,6 +202,46 @@ EOF
     # Expect passwords on all peerings.
     test_confd_templates password/step3
 
+    # Delete a secret.
+    kubectl delete secret my-secrets-2 -n kube-system
+
+    # Expect password-c to have disappeared.
+    test_confd_templates password/step4
+
+    # Change the passwords in the other secret.
+    kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secrets-1
+  namespace: kube-system
+type: Opaque
+stringData:
+  b: new-password-b
+  a: new-password-a
+EOF
+
+    # Expect peerings to have new passwords.
+    test_confd_templates password/step5
+
+    # Delete one of the keys from that secret.
+    kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secrets-1
+  namespace: kube-system
+type: Opaque
+stringData:
+  b: new-password-b
+EOF
+
+    # Expect new-password-a to have disappeared.
+    test_confd_templates password/step6
+
+    # Delete the remaining secret.
+    kubectl delete secret my-secrets-1 -n kube-system
+
     # Kill confd.
     kill -9 $CONFD_PID
 
