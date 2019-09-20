@@ -41,6 +41,7 @@ type secretWatchData struct {
 
 type secretWatcher struct {
 	client       *client
+	namespace    string
 	k8sClientset *kubernetes.Clientset
 	mutex        sync.Mutex
 	watches      map[string]*secretWatchData
@@ -50,6 +51,13 @@ func NewSecretWatcher(c *client) (*secretWatcher, error) {
 	sw := &secretWatcher{
 		client:  c,
 		watches: make(map[string]*secretWatchData),
+	}
+
+	// Find the namespace we're running in.
+	sw.namespace = os.Getenv("NAMESPACE")
+	if sw.namespace == "" {
+		// Default to kube-system.
+		sw.namespace = "kube-system"
 	}
 
 	// set up k8s client
@@ -84,7 +92,7 @@ func (sw *secretWatcher) MarkStale() {
 func (sw *secretWatcher) ensureWatchingSecret(name string) {
 	if _, ok := sw.watches[name]; !ok {
 		// We're not watching this secret yet, so start a watch for it.
-		watcher := cache.NewListWatchFromClient(sw.k8sClientset.CoreV1().RESTClient(), "secrets", "kube-system", fields.OneTermEqualSelector("metadata.name", name))
+		watcher := cache.NewListWatchFromClient(sw.k8sClientset.CoreV1().RESTClient(), "secrets", sw.namespace, fields.OneTermEqualSelector("metadata.name", name))
 		_, controller := cache.NewInformer(watcher, &v1.Secret{}, 0, sw)
 		sw.watches[name] = &secretWatchData{stopCh: make(chan struct{})}
 		go controller.Run(sw.watches[name].stopCh)
