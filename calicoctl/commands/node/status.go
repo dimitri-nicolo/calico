@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016, 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -287,7 +287,10 @@ func scanBIRDPeers(ipv string, conn net.Conn) ([]bgpPeer, error) {
 	peers := []bgpPeer{}
 
 	// Set a time-out for reading from the socket connection.
-	conn.SetReadDeadline(time.Now().Add(birdTimeOut))
+	err := conn.SetReadDeadline(time.Now().Add(birdTimeOut))
+	if err != nil {
+		return nil, errors.New("failed to set time-out")
+	}
 
 	for scanner.Scan() {
 		// Process the next line that has been read by the scanner.
@@ -324,7 +327,10 @@ func scanBIRDPeers(ipv string, conn net.Conn) ([]bgpPeer, error) {
 
 		// Before reading the next line, adjust the time-out for
 		// reading from the socket connection.
-		conn.SetReadDeadline(time.Now().Add(birdTimeOut))
+		err = conn.SetReadDeadline(time.Now().Add(birdTimeOut))
+		if err != nil {
+			return nil, errors.New("failed to adjust time-out")
+		}
 	}
 
 	return peers, scanner.Err()

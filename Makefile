@@ -21,10 +21,10 @@ BUILDARCH ?= $(shell uname -m)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
+	BUILDARCH=arm64
 endif
 ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+	BUILDARCH=amd64
 endif
 
 # unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
@@ -32,19 +32,10 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-        override ARCH=amd64
-endif
-
-# Build mounts for running in "local build" mode. Mount in libcalico, but null out
-# the vendor directory. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-LOCAL_BUILD_MOUNTS ?=
-ifeq ($(LOCAL_BUILD),true)
-LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro
+	override ARCH=amd64
 endif
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
@@ -71,7 +62,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 OS := $(shell uname -s | tr A-Z a-z)
 
 ###############################################################################
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.24
 ETCD_VER?=v3.3.7
 
 BUILD_IMAGE?=tigera/calicoctl
@@ -123,16 +114,16 @@ LIBCALICOGO_PATH?=none
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	rm -rf bin build certs *.tar vendor .go-pkg-cache
-	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
-	docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH) || true
+	rm -rf bin build certs *.tar
+	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
+	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	docker rmi $(BUILD_IMAGE):latest || true
-	docker rmi $(BUILD_IMAGE):$(VERSION) || true
+	-docker rmi $(BUILD_IMAGE):latest
+	-docker rmi $(BUILD_IMAGE):$(VERSION)
 endif
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#This is a version with known container with compatible versions of sed/grep etc.
+TOOLING_BUILD?=calico/go-build:v0.20
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
@@ -142,18 +133,80 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -v $(HOME)/.glide:/home/user/.glide:rw \
-                              -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -w /go/src/$(PACKAGE_NAME) \
-                              -e GOARCH=$(ARCH)
+EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+        # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+        # is the default one used by go modules.
+        GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+        # If gopath is empty, default to $(HOME)/go.
+        GOMOD_CACHE = $(HOME)/go/pkg/mod
+endif
 
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+PHONY:local_build
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go'
+else
+local_build:
+	@echo This is not a local build.
+endif
+
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
+        docker run --rm \
+                --net=host \
+                $(EXTRA_DOCKER_ARGS) \
+                -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                -e GOCACHE=/go-cache \
+                -e GOARCH=$(ARCH) \
+                -e GOPATH=/go \
+                -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+                -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+                -w /go/src/$(PACKAGE_NAME)
+
+# Default the libcalico repo and version but allow them to be overridden
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+LIBCALICO_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/libcalico-go)
+
+## Update libcalico pin in go.mod
+update-libcalico:
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
+		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
+		go mod edit -replace github.com/projectcalico/libcalico-go=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
+		if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
+			go mod edit -replace github.com/projectcalico/typha=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
+		fi;\
+	fi'
+
+git-status:
+	git status --porcelain
+
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
+
+git-commit:
+	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+commit-pin-updates: update-libcalico git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Building the binary
@@ -166,24 +219,6 @@ build-all: $(addprefix bin/calicoctl-linux-,$(VALIDARCHES)) bin/calicoctl-window
 ## Build the binary for the current architecture and platform
 build: bin/calicoctl-$(OS)-$(ARCH)
 
-## Create the vendor directory
-vendor: glide.lock
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-
-	# To build without Docker just run "glide install -strip-vendor"
-	if [ "$(LIBCALICOGO_PATH)" != "none" ]; then \
-          EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
-	fi; \
-    docker run --rm -i \
-      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-      -v $(HOME)/.glide:/home/user/.glide:rw \
-      -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-      $(CALICO_BUILD) /bin/sh -c ' \
-		  cd /go/src/$(PACKAGE_NAME) && \
-          glide install -strip-vendor'
-
 # The supported different binary names. For each, ensure that an OS and ARCH is set
 bin/calicoctl-%-amd64: ARCH=amd64
 bin/calicoctl-%-arm64: ARCH=arm64
@@ -193,22 +228,15 @@ bin/calicoctl-darwin-amd64: OS=darwin
 bin/calicoctl-windows-amd64: OS=windows
 bin/calicoctl-linux-%: OS=linux
 
-bin/calicoctl-%: $(SRC_FILES) vendor
-	mkdir -p bin
-	-mkdir -p .go-pkg-cache
-	docker run --rm \
-	  -e OS=$(OS) -e ARCH=$(ARCH) \
-	  -e GOOS=$(OS) -e GOARCH=$(ARCH) \
-	  -e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	  $(LOCAL_BUILD_MOUNTS) \
-	  -e GOCACHE=/go-cache \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) \
-	  go build -v -o bin/calicoctl-$(OS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"
+bin/calicoctl-%: local_build $(SRC_FILES)
+	$(DOCKER_RUN) \
+		-e OS=$(OS) \
+		-e ARCH=$(ARCH) \
+		-e GOOS=$(OS) \
+		-e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
+		-v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
+		$(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH); go build -v -o bin/calicoctl-$(OS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"'
 
 # Overrides for the binaries that need different output names
 bin/calicoctl: bin/calicoctl-linux-amd64
@@ -274,8 +302,6 @@ tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(P
 sub-single-tag-images-arch-%:
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
 
-
-
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
@@ -295,7 +321,6 @@ tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
 sub-base-tag-images-%:
 	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
 
-
 ###############################################################################
 # Managing the upstream library pins
 #
@@ -308,16 +333,8 @@ sub-base-tag-images-%:
 #
 ###############################################################################
 
-## Update dependency pins in glide.yaml
-update-pins: update-licensing-pin update-libcalico-pin 
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) glide up --strip-vendor
-
+## Update dependency pins in go.mod
+update-pins: update-licensing-pin update-libcalico-pin
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -332,7 +349,6 @@ guard-ssh-forwarding-bug:
 ## e.g. "master" or "release-vX.Y", but allow it to be overridden.
 PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
-
 ###############################################################################
 ## libcalico
 
@@ -346,8 +362,8 @@ LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -356,22 +372,13 @@ guard-git-libcalico:
 		exit 1; \
 	fi;
 
-## Update libary pin in glide.yaml
-update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
-		REPO="$(LIBCALICO_REPO)" \
-		VERSION="$(LIBCALICO_VERSION)" \
-		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
-		BRANCH="$(LIBCALICO_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
+## Update libary pin in go.mod
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico update-libcalico
 
 ###############################################################################
 ## licensing
 
-## Set the default LICENSING source for this project 
+## Set the default LICENSING source for this project
 LICENSING_PROJECT_DEFAULT=tigera/licensing
 LICENSING_GLIDE_LABEL=tigera/licensing
 
@@ -381,8 +388,8 @@ LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-licensing:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
 	$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -402,21 +409,13 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 		GLIDE="glide.yaml" \
 		_scripts/update-pin.sh '
 
-
-
-
 ###############################################################################
 # Static checks
 ###############################################################################
 ## Perform static checks on the code.
 .PHONY: static-checks
-static-checks: vendor
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c '\
-			cd /go/src/$(PACKAGE_NAME) && \
-			gometalinter --deadline=300s --disable-all --enable=goimports --vendor ./...'
+static-checks:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run --deadline 5m'
 
 .PHONY: fix
 ## Fix static checks
@@ -436,25 +435,17 @@ install-git-hooks:
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev.
-ut: bin/calicoctl-linux-amd64
-	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		$(LOCAL_BUILD_MOUNTS) \
-		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -cover -r --skipPackage vendor calicoctl/* $(GINKGO_ARGS)'
+ut: local_build bin/calicoctl-linux-amd64
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && ginkgo -cover -r --skipPackage vendor calicoctl/*'
 
 ###############################################################################
 # FVs
 ###############################################################################
 .PHONY: fv
 ## Run the tests in a container. Useful for CI, Mac dev.
-fv: bin/calicoctl-linux-amd64
+fv: local_build bin/calicoctl-linux-amd64
 	$(MAKE) run-etcd-host
-	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		--net=host -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		$(LOCAL_BUILD_MOUNTS) \
-	        -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-                -e GOCACHE=/go-cache \
-		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
 	$(MAKE) stop-etcd
 
 ###############################################################################
@@ -475,12 +466,12 @@ st: bin/calicoctl-linux-amd64
 	# All of code under test is mounted into the container.
 	#   - This also provides access to calicoctl and the docker client
 	docker run --net=host --privileged \
-	           -e MY_IP=$(LOCAL_IP_ENV) \
-	           --rm -t \
-	           -v $(CURDIR):/code \
-	           -v /var/run/docker.sock:/var/run/docker.sock \
-	           $(TEST_CONTAINER_NAME) \
-	           sh -c 'nosetests $(ST_TO_RUN) -sv --nologcapture  --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'
+		   -e MY_IP=$(LOCAL_IP_ENV) \
+		   --rm -t \
+		   -v $(CURDIR):/code \
+		   -v /var/run/docker.sock:/var/run/docker.sock \
+		   $(TEST_CONTAINER_NAME) \
+		   sh -c 'nosetests $(ST_TO_RUN) -sv --nologcapture  --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'
 	$(MAKE) stop-etcd
 
 ## Etcd is used by the STs
@@ -508,14 +499,9 @@ run-etcd-host:
 stop-etcd:
 	@-docker rm -f calico-etcd
 
-# Run fossa.io license checks
-foss-checks: vendor
+foss-checks:
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) /usr/local/bin/fossa
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
 
 ###############################################################################
 # CI
@@ -572,7 +558,6 @@ release-build: release-prereqs clean
 ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
-
 	$(MAKE) build-all image-all
 	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
 	$(MAKE) tag-images-all IMAGETAG=latest
@@ -587,6 +572,7 @@ release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
 	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
 	  echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) version` "\nExpected version: $(VERSION)"; \
+	  false; \
 	else \
 	  echo "Version check passed\n"; \
 	fi
@@ -662,24 +648,24 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	@echo "Dependencies: docker 1.12+; go 1.8+"
 	@echo
 	@echo "For some target, set ARCH=<target> OS=<os> to build for a given target architecture and OS."
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
+	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
+		nb = sub( /^## /, "", helpMsg );				\
+		if(nb == 0) {						   \
+			helpMsg = $$0;					      \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
+		}							       \
+		if (nb)							 \
 			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=20                                                            \
+	}								   \
+	{ helpMsg = $$0 }'						  \
+	width=20							    \
 	$(MAKEFILE_LIST)
 	@echo
 	@echo "-----------------------------------------"
 	@echo "Building for $(OS)-$(ARCH) INSTALL_FLAG=$(INSTALL_FLAG)"
 	@echo
-	@echo "ARCH (target):          $(ARCH)"
-	@echo "OS (target):            $(OS)"
+	@echo "ARCH (target):	  $(ARCH)"
+	@echo "OS (target):	    $(OS)"
 	@echo "BUILDARCH (host):       $(BUILDARCH)"
 	@echo "CALICO_BUILD:     $(CALICO_BUILD)"
 	@echo "-----------------------------------------"

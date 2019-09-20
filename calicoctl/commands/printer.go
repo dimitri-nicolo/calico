@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"text/template"
@@ -147,6 +148,9 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 					return fmt.Errorf("LicenseKey is corrupted: %s", err)
 				}
 				err = tmpl.Execute(writer, claims)
+				if err != nil {
+					panic(err)
+				}
 			}
 		} else if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKey" {
 			claims, err := licClient.Decode(*resource.(*api.LicenseKey))
@@ -154,6 +158,9 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 				return fmt.Errorf("LicenseKey is corrupted: %s", err)
 			}
 			err = tmpl.Execute(writer, claims)
+			if err != nil {
+				panic(err)
+			}
 		} else {
 			err = tmpl.Execute(writer, resource)
 			if err != nil {
@@ -236,6 +243,25 @@ func join(items interface{}, separator string) string {
 // each to its string representation, joins them together with the provided separator
 // string and (if maxLen is >0) truncates the output at the given maximum length.
 func joinAndTruncate(items interface{}, separator string, maxLen int) string {
+	// Nil types.
+	if items == nil {
+		return ""
+	}
+
+	// If it is a map, just convert key,value pairs into slice.
+	if reflect.TypeOf(items).Kind() == reflect.Map {
+		mapSlice := []string{}
+		reflectMap := reflect.ValueOf(items)
+		for _, key := range reflectMap.MapKeys() {
+			k := key.Interface()
+			v := reflectMap.MapIndex(key).Interface()
+			s := fmt.Sprintf("%v=%v", k, v)
+			mapSlice = append(mapSlice, s)
+		}
+		sort.Strings(mapSlice)
+		items = mapSlice
+	}
+
 	if reflect.TypeOf(items).Kind() != reflect.Slice {
 		// Input wasn't a slice, convert it to one so we can take advantage of shared
 		// buffer/truncation logic...

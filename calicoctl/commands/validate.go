@@ -17,7 +17,6 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/docopt/docopt-go"
@@ -49,7 +48,6 @@ Description:
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
-		os.Exit(1)
 	}
 	if len(parsedArgs) == 0 {
 		return nil
