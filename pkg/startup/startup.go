@@ -17,7 +17,6 @@ import (
 	"context"
 	cryptorand "crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -551,7 +550,7 @@ func autoDetectCIDR(method string, version int) *cnet.IPNet {
 		// Autodetect the IP from the specified interface.
 		ifStr := strings.TrimPrefix(method, AUTODETECTION_METHOD_INTERFACE)
 		// Regexes are passed in as a string separated by ","
-		ifRegexes := regexp.MustCompile("\\s*,\\s*").Split(ifStr, -1)
+		ifRegexes := regexp.MustCompile(`\s*,\s*`).Split(ifStr, -1)
 		return autoDetectCIDRByInterface(ifRegexes, version)
 	} else if strings.HasPrefix(method, AUTODETECTION_METHOD_CAN_REACH) {
 		// Autodetect the IP by connecting a UDP socket to a supplied address.
@@ -563,12 +562,12 @@ func autoDetectCIDR(method string, version int) *cnet.IPNet {
 		// matches the given regexes).
 		ifStr := strings.TrimPrefix(method, AUTODETECTION_METHOD_SKIP_INTERFACE)
 		// Regexes are passed in as a string separated by ","
-		ifRegexes := regexp.MustCompile("\\s*,\\s*").Split(ifStr, -1)
+		ifRegexes := regexp.MustCompile(`\s*,\s*`).Split(ifStr, -1)
 		return autoDetectCIDRBySkipInterface(ifRegexes, version)
 	}
 
 	// The autodetection method is not recognised and is required.  Exit.
-	log.Errorf("Invalid IP autodection method: %s", method)
+	log.Errorf("Invalid IP autodetection method: %s", method)
 	terminate()
 	return nil
 }
@@ -777,6 +776,8 @@ func createIPPool(ctx context.Context, client client.Interface, cidr *cnet.IPNet
 	switch strings.ToLower(vxlanModeName) {
 	case "", "off", "never":
 		vxlanMode = api.VXLANModeNever
+	case "crosssubnet", "cross-subnet":
+		vxlanMode = api.VXLANModeCrossSubnet
 	case "always":
 		vxlanMode = api.VXLANModeAlways
 	default:
@@ -817,7 +818,7 @@ func checkConflictingNodes(ctx context.Context, client client.Interface, node *a
 	// Get the full set of nodes.
 	var nodes []api.Node
 	if nodeList, err := client.Nodes().List(ctx, options.ListOptions{}); err != nil {
-		log.WithError(err).Errorf("Unable to query node confguration")
+		log.WithError(err).Errorf("Unable to query node configuration")
 		retErr = err
 		return
 	} else {
@@ -1019,7 +1020,7 @@ func ensureKDDMigrated(cfg *apiconfig.CalicoAPIConfig, cv3 client.Interface) err
 	} else if yes {
 		log.Infof("Running migration")
 		if _, err = m.Migrate(); err != nil {
-			return errors.New(fmt.Sprintf("Migration failed: %v", err))
+			return fmt.Errorf("Migration failed: %v", err)
 		}
 		log.Infof("Migration successful")
 	} else {

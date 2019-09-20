@@ -39,19 +39,6 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
-# Build mounts for running in "local build" mode. Mount in libcalico, confd, and felix but null out
-# their respective vendor directories. This allows an easy build of calico/node using local development code,
-# assuming that there is a local checkout of felix, confd, and libcalico in the same directory as the node repo.
-LOCAL_BUILD_MOUNTS ?=
-ifeq ($(LOCAL_BUILD),true)
-LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro \
-	-v $(CURDIR)/../confd:/go/src/$(PACKAGE_NAME)/vendor/github.com/kelseyhightower/confd:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/kelseyhightower/confd/vendor:ro \
-	-v $(CURDIR)/../felix:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix/vendor:ro
-endif
-
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
 # however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
@@ -99,12 +86,14 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.23
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+
+EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 #This is a version with known container with compatible versions of sed/grep etc.
 TOOLING_BUILD?=calico/go-build:v0.20
-
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
@@ -113,18 +102,6 @@ endif
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
-
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -v $(HOME)/.glide:/home/user/.glide:rw \
-                              -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -w /go/src/$(PACKAGE_NAME) \
-                              -e GOARCH=$(ARCH)
-
 
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
@@ -137,7 +114,7 @@ ifeq ($(LOCAL_BUILD),true)
 endif
 
 # Versions and location of dependencies used in the build.
-BIRD_VER?=v0.3.3-0-g1e8dd375
+BIRD_VER?=v0.3.3-138-ge37e4770
 BIRD_IMAGE ?= calico/bird:$(BIRD_VER)-$(ARCH)
 
 # Versions and locations of dependencies used in tests.
@@ -176,14 +153,14 @@ WINDOWS_NSSM_VERSION=2.24
 # form "$(WINDOWS_VENDORED_FILES): vendor" (otherwise, make has no way to know that the vendor
 # target produces the files we need).
 WINDOWS_VENDORED_FILES := \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.ps1 \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.psm1 \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/conf.d/blocks.toml \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/conf.d/peerings.toml \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/templates/blocks.ps1.template \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/templates/peerings.ps1.template \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.ps1 \
-    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.psm1 \
+    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.ps1 \
+    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.psm1 \
+    vendor/github.com/tigera/confd-private/windows-packaging/conf.d/blocks.toml \
+    vendor/github.com/tigera/confd-private/windows-packaging/conf.d/peerings.toml \
+    vendor/github.com/tigera/confd-private/windows-packaging/templates/blocks.ps1.template \
+    vendor/github.com/tigera/confd-private/windows-packaging/templates/peerings.ps1.template \
+    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.ps1 \
+    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.psm1 \
     vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1 \
     vendor/github.com/Microsoft/SDN/License.txt
 # Files to include in the Windows ZIP archive.  We need to list some of these explicitly
@@ -208,7 +185,6 @@ WINDOWS_ARCHIVE_FILES := \
     $(WINDOWS_ARCHIVE_ROOT)/libs/calico/calico.psm1
 
 # Variables used by the tests
-CRD_PATH=$(CURDIR)/vendor/github.com/projectcalico/libcalico-go/test/
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 ST_TO_RUN?=tests/st/
 K8ST_TO_RUN?=tests/
@@ -218,14 +194,75 @@ ST_OPTIONS?=
 # Variables for building the local binaries that go into the image
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p dist .go-pkg-cache $(NODE_CONTAINER_BIN_DIR))
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
-LDFLAGS=-ldflags "-X github.com/projectcalico/node/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X github.com/projectcalico/node/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
-                  -X main.VERSION=$(CALICO_GIT_VER) \
-                  -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitVersion=$(CALICO_GIT_VER) \
-                  -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitRevision=$(shell git rev-parse HEAD || echo '<unknown>')"
+LOCAL_USER_ID?=$(shell id -u $$USER)
+
+# Calculate a timestamp for any build artefacts.
+DATE:=$(shell date -u +'%FT%T%z')
+
+# Figure out version information.  To support builds from release tarballs, we default to
+# <unknown> if this isn't a git checkout.
+GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
+GIT_DESCRIPTION:=$(shell git describe --tags --dirty --always || echo '<unknown>')
+ifeq ($(LOCAL_BUILD),true)
+        GIT_DESCRIPTION = $(shell git describe --tags --dirty --always || echo '<unknown>')-dev-build
+endif
+
+LDFLAGS=-ldflags "\
+	-X $(PACKAGE_NAME)/pkg/startup.VERSION=$(CALICO_GIT_VER) \
+        -X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
+        -X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
+        -X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
+
 PACKAGE_NAME?=github.com/projectcalico/node
 LIBCALICOGO_PATH?=none
 
 SRC_FILES=$(shell find ./pkg -name '*.go')
+
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+	# is the default one used by go modules.
+	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+	# If gopath is empty, default to $(HOME)/go.
+	GOMOD_CACHE = $(HOME)/go/pkg/mod
+endif
+
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
+        docker run --rm \
+                --net=host \
+                $(EXTRA_DOCKER_ARGS) \
+                -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                -e GOCACHE=/go-cache \
+                -e GOARCH=$(ARCH) \
+                -e GOPATH=/go \
+                -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+                -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+                -w /go/src/$(PACKAGE_NAME)
+
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+PHONY:local_build
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw \
+	-v $(CURDIR)/../confd:/go/src/github.com/projectcalico/confd:rw \
+	-v $(CURDIR)/../felix:/go/src/github.com/projectcalico/felix:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/confd=../confd
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/felix=../felix
+else
+local_build:
+	# TODO: We can't use this in private since they revert us to using OSS versions of these repos.
+	#       Devs should manually undo any local build changes.
+	# -$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/libcalico-go
+	# -$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/confd
+	# -$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/felix
+endif
 
 # If local build is set, then always build the binary since we might not
 # detect when another local repository has been modified.
@@ -245,7 +282,7 @@ install-git-hooks:
 clean:
 	find . -name '*.created' -exec rm -f {} +
 	find . -name '*.pyc' -exec rm -f {} +
-	rm -rf certs *.tar vendor $(NODE_CONTAINER_BIN_DIR)
+	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
 	rm -f $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp*
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/*
@@ -253,7 +290,9 @@ clean:
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
 	rm -rf dist
-
+	sudo rm -rf vendor
+	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
+	rm -f crds.yaml
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -262,90 +301,88 @@ clean:
 # Building the binary
 ###############################################################################
 build:  $(NODE_CONTAINER_BINARY)
-# Use this to populate the vendor directory after checking out the repository.
-# To update upstream dependencies, delete the glide.lock file first.
 
-vendor: glide.lock
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
+git-status:
+	git status --porcelain
 
-	# To build without Docker just run "glide install -strip-vendor"
-	if [ "$(LIBCALICOGO_PATH)" != "none" ]; then \
-          EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
-	fi; \
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
 
+git-commit:
+	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+commit-pin-updates: update-felix-confd git-status ci git-config git-commit git-push
+
+.PHONY: remote-deps
+remote-deps:
+	mkdir -p filesystem/etc/calico/confd vendor/github.com/tigera vendor/github.com/Microsoft
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	go mod download; \
+	cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml crds.yaml; \
+	cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/; \
+	cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/config filesystem/etc/calico/confd/config; \
+	cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
+	cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd` vendor/github.com/tigera/confd-private; \
+	cp -r `go list -m -f "{{.Dir}}" github.com/Microsoft/SDN` vendor/github.com/Microsoft/SDN; \
+	chmod -R +w filesystem/etc/calico/confd/ crds.yaml vendor'
+
+$(NODE_CONTAINER_BINARY): local_build $(SRC_FILES)
+	mkdir -p .go-pkg-cache $(GOMOD_CACHE)
 	docker run --rm \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-		-v $(HOME)/.glide:/home/user/.glide:rw \
-		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) glide install -strip-vendor
-
-$(NODE_CONTAINER_BINARY): vendor $(SRC_FILES)
-	docker run --rm \
+		$(EXTRA_DOCKER_ARGS) \
 		-e GOARCH=$(ARCH) \
 		-e GOOS=linux \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
 		-e GOCACHE=/go-cache \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		$(LOCAL_BUILD_MOUNTS) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
 
-$(WINDOWS_BINARY): vendor
-	docker run --rm \
-		-e GOARCH=$(ARCH) \
+$(WINDOWS_BINARY):
+	$(DOCKER_RUN) \
 		-e GOOS=windows \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-		-e GOCACHE=/go-cache \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		$(LOCAL_BUILD_MOUNTS) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go'
 
-$(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe: glide.lock vendor
-	docker run --rm \
-		-e GOARCH=$(ARCH) \
+$(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe:
+	$(DOCKER_RUN) \
 		-e GOOS=windows \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-		-e GOCACHE=/go-cache \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		$(LOCAL_BUILD_MOUNTS) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -o $@ $(LDFLAGS) ./cmd/calico'
 
-$(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe: glide.lock vendor
-	docker run --rm \
-		-e GOARCH=$(ARCH) \
+$(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
+	$(DOCKER_RUN) \
 		-e GOOS=windows \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-		-e GOCACHE=/go-cache \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		$(LOCAL_BUILD_MOUNTS) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-ipam
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -o $@ $(LDFLAGS) ./cmd/calico-ipam'
 
 ###############################################################################
 # Building the image
 ###############################################################################
 ## Create the image for the current ARCH
-image: $(BUILD_IMAGE)
+image: remote-deps $(BUILD_IMAGE)
 ## Create the images for all supported ARCHes
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(BUILD_IMAGE): $(NODE_CONTAINER_CREATED)
-$(NODE_CONTAINER_CREATED): ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY)
-	$(MAKE) register
+$(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) remote-deps
 ifeq ($(LOCAL_BUILD),true)
 	# If doing a local build, copy in local confd templates in case there are changes.
-	cp -r ../confd/etc/calico/confd/templates vendor/github.com/kelseyhightower/confd/etc/calico/confd
+	rm -rf filesystem/etc/calico/confd/templates
+	cp -r ../confd/etc/calico/confd/templates filesystem/etc/calico/confd/templates
 endif
 	# Check versions of the binaries that we're going to use to build the image.
 	# Since the binaries are built for Linux, run them in a container to allow the
@@ -419,17 +456,16 @@ sub-base-tag-images-%:
 ###############################################################################
 # Windows packaging
 ###############################################################################
-
 # Pull the BGP configuration scripts and templates from the confd repo.
-$(WINDOWS_VENDORED_FILES): vendor
+$(WINDOWS_VENDORED_FILES): remote-deps
 
-$(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp%
+$(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: ./vendor/github.com/tigera/confd-private/windows-packaging/config-bgp%
 	cp $< $@
 
-$(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: vendor/github.com/kelseyhightower/confd/windows-packaging/conf.d/%
+$(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: ./vendor/github.com/tigera/confd-private/windows-packaging/conf.d/%
 	cp $< $@
 
-$(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: vendor/github.com/kelseyhightower/confd/windows-packaging/templates/%
+$(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: ./vendor/github.com/tigera/confd-private/windows-packaging/templates/%
 	cp $< $@
 
 $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1: ./vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1
@@ -474,22 +510,8 @@ $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 #
 ###############################################################################
 
-## Update dependency pins in glide.yaml
-update-pins: update-licensing-pin update-libcalico-pin update-felix-pin update-cni-plugin-pin update-confd-pin
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) glide up --strip-vendor
-
-## deprecated target alias
-update-libcalico: update-pins
-	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
-
-update-felix-confd-libcalico: update-pins
-	$(warning !! Update update-felix-confd-libcalico is deprecated, use update-pins !!)
+## Update dependency pins
+update-felix-confd update-pins: update-libcalico-pin update-licensing-pin update-felix-pin update-confd-pin update-cni-pin
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -499,58 +521,24 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-
 ###############################################################################
 ## Set the default upstream repo branch to the current repo's branch,
 ## e.g. "master" or "release-vX.Y", but allow it to be overridden.
 PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
 ###############################################################################
-## libcalico
-
-## Set the default LIBCALICO source for this project
-LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
-LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
-
-## default LIBCALICO branch to the same branch name as the current checked out repo
-LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
-		echo "ERROR: LIBCALICO version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin in glide.yaml
-update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
-		REPO="$(LIBCALICO_REPO)" \
-		VERSION="$(LIBCALICO_VERSION)" \
-		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
-		BRANCH="$(LIBCALICO_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-###############################################################################
 ## felix
 
 ## Set the default FELIX source for this project
-FELIX_PROJECT_DEFAULT=tigera/felix-private.git
-FELIX_GLIDE_LABEL=projectcalico/felix
+FELIX_PROJECT_DEFAULT=tigera/felix-private
 
 ## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
 ## default FELIX branch to the same branch name as the current checked out repo
 FELIX_BRANCH?=$(PIN_BRANCH)
 FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
 FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
+FELIX_REPLACE?=github.com/projectcalico/felix
+FELIX_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/felix)
 
 ## Guard to ensure FELIX repo and branch are reachable
 guard-git-felix:
@@ -563,63 +551,26 @@ guard-git-felix:
 		exit 1; \
 	fi;
 
-## Update libary pin in glide.yaml
+## Update libary pin
 update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(FELIX_GLIDE_LABEL)" \
-		REPO="$(FELIX_REPO)" \
-		VERSION="$(FELIX_VERSION)" \
-		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
-		BRANCH="$(FELIX_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-
-###############################################################################
-## cni-plugin
-
-## Set the default CNIPLUGIN source for this project
-CNIPLUGIN_PROJECT_DEFAULT=tigera/cni-plugin-private.git
-CNIPLUGIN_GLIDE_LABEL=projectcalico/cni-plugin
-
-# CNIPLUGIN is only used for testing and we only maintain "master" branch in cni-plugin-private
-CNIPLUGIN_BRANCH?="master"
-CNIPLUGIN_REPO?=github.com/$(CNIPLUGIN_PROJECT_DEFAULT)
-CNIPLUGIN_VERSION?=$(shell git ls-remote git@github.com:$(CNIPLUGIN_PROJECT_DEFAULT) $(CNIPLUGIN_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure CNIPLUGIN repo and branch are reachable
-guard-git-cni-plugin:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "$(CNIPLUGIN_BRANCH)" "Ensure the branch exists, or set CNIPLUGIN_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "$(CNIPLUGIN_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(CNIPLUGIN_VERSION))" = "" ]; then \
-		echo "ERROR: CNIPLUGIN version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin in glide.yaml
-update-cni-plugin-pin: guard-ssh-forwarding-bug guard-git-cni-plugin
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(CNIPLUGIN_GLIDE_LABEL)" \
-		REPO="$(CNIPLUGIN_REPO)" \
-		VERSION="$(CNIPLUGIN_VERSION)" \
-		DEFAULT_REPO="$(CNIPLUGIN_PROJECT_DEFAULT)" \
-		BRANCH="$(CNIPLUGIN_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+	$(GIT_CONFIG_SSH) && \
+	if [[ ! -z "$(FELIX_VERSION)" ]] && [[ "$(FELIX_VERSION)" != "$(FELIX_OLDVER)" ]]; then \
+		echo "Updating felix version $(FELIX_OLDVER) to $(FELIX_VERSION) from $(FELIX_REPO)"; \
+		go get $(FELIX_REPO)@$(FELIX_VERSION); \
+		go mod edit -replace $(FELIX_REPLACE)=$(FELIX_REPO)@$(FELIX_VERSION); \
+	fi;'
 
 ###############################################################################
 ## licensing
 
 ## Set the default LICENSING source for this project
 LICENSING_PROJECT_DEFAULT=tigera/licensing
-LICENSING_GLIDE_LABEL=tigera/licensing
 
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+LICENSING_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/tigera/licensing)
 
 ## Guard to ensure LICENSING repo and branch are reachable
 guard-git-licensing:
@@ -632,28 +583,58 @@ guard-git-licensing:
 		exit 1; \
 	fi;
 
-## Update libary pin in glide.yaml
+## Update libary pin
 update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LICENSING_GLIDE_LABEL)" \
-		REPO="$(LICENSING_REPO)" \
-		VERSION="$(LICENSING_VERSION)" \
-		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
-		BRANCH="$(LICENSING_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+	$(GIT_CONFIG_SSH) && \
+	if [[ ! -z "$(LICENSING_VERSION)" ]] && [[ "$(LICENSING_VERSION)" != "$(LICENSING_OLDVER)" ]]; then \
+		echo "Updating licensing version $(LICENSING_OLDVER) to $(LICENSING_VERSION) from $(LICENSING_REPO)"; \
+		go get $(LICENSING_REPO)@$(LICENSING_VERSION); \
+	fi;'
 
+###############################################################################
+## libcalico
+
+## Set the default source for this project
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private
+
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+LIBCALICO_REPLACE?=github.com/projectcalico/libcalico-go
+LIBCALICO_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" $(LIBCALICO_REPLACE))
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+	$(GIT_CONFIG_SSH) && \
+	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
+		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
+		go mod edit -replace $(LIBCALICO_REPLACE)=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
+	fi'
 
 ###############################################################################
 ## confd
 
 ## Set the default CONFD source for this project
-CONFD_PROJECT_DEFAULT=tigera/confd-private.git
-CONFD_GLIDE_LABEL=kelseyhightower/confd
+CONFD_PROJECT_DEFAULT=tigera/confd-private
 
 CONFD_BRANCH?=$(PIN_BRANCH)
 CONFD_REPO?=github.com/$(CONFD_PROJECT_DEFAULT)
 CONFD_VERSION?=$(shell git ls-remote git@github.com:$(CONFD_PROJECT_DEFAULT) $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
+CONFD_REPLACE?=github.com/kelseyhightower/confd
+CONFD_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" $(CONFD_REPLACE))
 
 ## Guard to ensure CONFD repo and branch are reachable
 guard-git-confd:
@@ -666,70 +647,77 @@ guard-git-confd:
 		exit 1; \
 	fi;
 
-## Update libary pin in glide.yaml
+## Update libary pin
 update-confd-pin: guard-ssh-forwarding-bug guard-git-confd
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(CONFD_GLIDE_LABEL)" \
-		REPO="$(CONFD_REPO)" \
-		VERSION="$(CONFD_VERSION)" \
-		DEFAULT_REPO="$(CONFD_PROJECT_DEFAULT)" \
-		BRANCH="$(CONFD_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+	$(GIT_CONFIG_SSH) && \
+	if [[ ! -z "$(CONFD_VERSION)" ]] && [[ "$(CONFD_VERSION)" != "$(CONFD_OLDVER)" ]]; then \
+		echo "Updating confd version $(CONFD_OLDVER) to $(CONFD_VERSION) from $(CONFD_REPO)"; \
+		go mod edit -replace $(CONFD_REPLACE)=$(CONFD_REPO)@$(CONFD_VERSION); \
+	fi'
 
+###############################################################################
+## CNI plugins
 
+## Set the default CNI source for this project
+CNI_PROJECT_DEFAULT=tigera/cni-plugin-private
+
+CNI_BRANCH?=$(PIN_BRANCH)
+CNI_REPO?=github.com/$(CNI_PROJECT_DEFAULT)
+CNI_VERSION?=$(shell git ls-remote git@github.com:$(CNI_PROJECT_DEFAULT) $(CNI_BRANCH) 2>/dev/null | cut -f 1)
+CNI_REPLACE?=github.com/projectcalico/cni-plugin
+CNI_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" $(CNI_REPLACE))
+
+## Guard to ensure CNI repo and branch are reachable
+guard-git-cni:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "$(CNI_BRANCH)" "Ensure the branch exists, or set CNI_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "$(CNI_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(CNI_VERSION))" = "" ]; then \
+		echo "ERROR: CNI version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin
+update-cni-pin: guard-ssh-forwarding-bug guard-git-cni
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+	$(GIT_CONFIG_SSH) && \
+	if [[ ! -z "$(CNI_VERSION)" ]] && [[ "$(CNI_VERSION)" != "$(CNI_OLDVER)" ]]; then \
+		echo "Updating cni version $(CNI_OLDVER) to $(CNI_VERSION) from $(CNI_REPO)"; \
+		go mod edit -replace $(CNI_REPLACE)=$(CNI_REPO)@$(CNI_VERSION); \
+	fi'
 
 ###############################################################################
 # Static checks
 ###############################################################################
 .PHONY: static-checks
 ## Perform static checks on the code.
-static-checks: vendor
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) gometalinter --deadline=300s --disable-all --enable=vet --enable=errcheck --enable=goimports --vendor pkg/...
+static-checks:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && golangci-lint run --deadline 5m'
 
 .PHONY: fix
 ## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
 
-foss-checks: vendor
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+foss-checks:
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
 
 ###############################################################################
 # Unit tests
 ###############################################################################
 ## Run the ginkgo UTs.
-ut: vendor
-	docker run --rm \
-	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	$(LOCAL_BUILD_MOUNTS) \
-	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	--net=host \
-	-w /go/src/$(PACKAGE_NAME) \
-	$(CALICO_BUILD) ginkgo -cover -r cmd/calico $(GINKGO_ARGS)
+ut:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); ginkgo -cover -r cmd/calico $(GINKGO_ARGS)'
 
 ###############################################################################
 # FV Tests
 ###############################################################################
 ## Run the ginkgo FVs
-fv: vendor run-k8s-apiserver
-	docker run --rm \
-	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	$(LOCAL_BUILD_MOUNTS) \
-	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
-	--net=host \
-	-w /go/src/$(PACKAGE_NAME) \
-	$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateip $(GINKGO_ARGS)
+fv: run-k8s-apiserver
+	 $(DOCKER_RUN) -e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateip $(GINKGO_ARGS)'
 
 # etcd is used by the STs
 .PHONY: run-etcd
@@ -743,21 +731,23 @@ run-etcd:
 	--listen-client-urls "http://0.0.0.0:2379"
 
 # Kubernetes apiserver used for tests
-run-k8s-apiserver: stop-k8s-apiserver run-etcd
+run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 	docker run \
 		--net=host --name st-apiserver \
-		-v  $(CRD_PATH):/manifests \
+		-v $(CURDIR):/manifests \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		--detach \
-		${HYPERKUBE_IMAGE} \
+		${HYPERKUBE_IMAGE} sh -c '\
+		go mod download; \
 		/hyperkube apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
-				--etcd-servers=http://127.0.0.1:2379 \
+			--etcd-servers=http://127.0.0.1:2379 \
 			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
 			--authorization-mode=RBAC \
 			--service-cluster-ip-range=10.101.0.0/16 \
 			--v=10 \
-			--logtostderr=true
+			--logtostderr=true'
 
 	# Wait until we can configure a cluster role binding which allows anonymous auth.
 	while ! docker exec st-apiserver kubectl create \
@@ -921,7 +911,7 @@ remove-go-build-image:
 
 .PHONY: st
 ## Run the system tests
-st: dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
+st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	docker run --rm -v $(CURDIR)/dist:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
 	  echo; echo calicoctl version;          /go/bin/calicoctl version; \

@@ -24,4 +24,3 @@ blocks:
           # Checkout the code and run the Kubernetes tests.
           - checkout
           - make k8s-test
-

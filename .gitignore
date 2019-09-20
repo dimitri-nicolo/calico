@@ -13,7 +13,10 @@ vendor
 nosetests.xml
 testfile.yaml
 testfile
+testfile.json
 calico_test.created
 release-notes*
 report/*.xml
 .empty
+crds.yaml
+filesystem/etc/calico/confd/*
