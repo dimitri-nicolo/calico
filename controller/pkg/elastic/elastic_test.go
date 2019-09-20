@@ -300,7 +300,6 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if t.e != nil {
 		return nil, t.e
 	}
-
 	switch req.Method {
 	case "HEAD":
 		switch req.URL.String() {
@@ -361,31 +360,31 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			}, nil
 
 		// GetIPSetModified
-		case baseURI + "/.tigera.ipset.cluster/_doc/test?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test?_source_includes=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.1.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset.cluster/_doc/test2?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test2?_source_includes=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.2.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset.cluster/_doc/test3?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test3?_source_includes=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.3.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset.cluster/_doc/test4?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test4?_source_includes=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.4.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset.cluster/_doc/test5?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test5?_source_includes=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
@@ -437,13 +436,13 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				}, nil
 			}
 
-		case baseURI + "/.tigera.ipset.cluster/_doc/_search?scroll=5m":
+		case baseURI + "/.tigera.ipset.cluster/_search?scroll=5m":
 			return &http.Response{
 				StatusCode: t.listStatus,
 				Request:    req,
 				Body:       mustOpen(t.listRespFile),
 			}, nil
-		case baseURI + "/.tigera.domainnameset.cluster/_doc/_search?scroll=5m":
+		case baseURI + "/.tigera.domainnameset.cluster/_search?scroll=5m":
 			return &http.Response{
 				StatusCode: t.listStatus,
 				Request:    req,

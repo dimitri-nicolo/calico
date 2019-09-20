@@ -26,7 +26,6 @@ import (
 const (
 	IPSetIndexPattern         = ".tigera.ipset.%s"
 	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
-	StandardType              = "_doc"
 	FlowLogIndexPattern       = "tigera_secure_ee_flows.%s.*"
 	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
 	EventIndexPattern         = "tigera_secure_ee_events.%s"
@@ -220,7 +219,7 @@ func (e *Elastic) putSet(ctx context.Context, name string, idx string, c <-chan 
 	}
 
 	// Put document
-	_, err := e.c.Index().Index(idx).Type(StandardType).Id(name).BodyJson(body).Do(ctx)
+	_, err := e.c.Index().Index(idx).Id(name).BodyJson(body).Do(ctx)
 	log.WithField("name", name).Info("set stored")
 
 	return err
@@ -364,27 +363,23 @@ func (e *Elastic) GetDomainNameSetModified(ctx context.Context, name string) (ti
 }
 
 func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Time, error) {
-	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
+	res, err := e.c.Get().Index(idx).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
-
 	if res.Source == nil {
 		return time.Time{}, err
 	}
-
 	var doc map[string]interface{}
 	err = json.Unmarshal(res.Source, &doc)
 	if err != nil {
 		return time.Time{}, err
 	}
-
 	createdAt, ok := doc["created_at"]
 	if !ok {
 		// missing created_at field
 		return time.Time{}, nil
 	}
-
 	switch createdAt.(type) {
 	case string:
 		return dateparse.ParseIn(createdAt.(string), time.UTC)
@@ -500,7 +495,7 @@ func (e *Elastic) DeleteDomainNameSet(ctx context.Context, m db.Meta) error {
 }
 
 func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
-	ds := e.c.Delete().Index(idx).Type(StandardType).Id(m.Name)
+	ds := e.c.Delete().Index(idx).Id(m.Name)
 	if m.Version != nil {
 		ds = ds.Version(*m.Version)
 	}
@@ -518,7 +513,7 @@ func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterf
 	case <-e.eventMappingCreated:
 		break
 	}
-	_, err := e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID()).BodyJson(f).Do(ctx)
+	_, err := e.c.Index().Index(EventIndex).Id(f.ID()).BodyJson(f).Do(ctx)
 	return err
 }
 

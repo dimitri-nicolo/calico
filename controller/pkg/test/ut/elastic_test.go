@@ -69,7 +69,7 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 
 	// Index some DNS logs
 	index := "tigera_secure_ee_dns.cluster.testquerydomainnameset_success"
-	i := elasticClient.Index().Index(index).Type("fluentd")
+	i := elasticClient.Index().Index(index)
 	logs := []events.DNSLog{
 		{
 			StartTime:       idsElastic.Time{Time: time.Unix(123, 0)},
