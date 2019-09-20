@@ -6,6 +6,10 @@ title: Amazon Elastic Kubernetes Service (EKS)
 
 Install {{ site.prodname }} in EKS managed Kubernetes service.
 
+### Before you begin
+
+Ensure that you have an EKS cluster without Calico installed and with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html) at least eks.2 (for aggregated API server support).
+
 ### How to
 
 1. Install the Tigera operators and custom resource definitions.
