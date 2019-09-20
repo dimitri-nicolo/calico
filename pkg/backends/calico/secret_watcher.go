@@ -14,7 +14,6 @@
 package calico
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"sync"
@@ -118,11 +117,7 @@ func (sw *secretWatcher) GetSecret(name, key string) (string, error) {
 		return "", fmt.Errorf("No data available for secret %v", name)
 	}
 	if data, ok := sw.watches[name].secret.Data[key]; ok {
-		if s, err := base64.StdEncoding.DecodeString(string(data)); err != nil {
-			return "", fmt.Errorf("Error decoding value for secret %v key %v: %v", name, key, err)
-		} else {
-			return string(s), nil
-		}
+		return string(data), nil
 	} else {
 		return "", fmt.Errorf("Secret %v does not have key %v", name, key)
 	}
