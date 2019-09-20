@@ -38,9 +38,29 @@ func RunServer(opts *CalicoServerOptions) error {
 		return err
 	}
 
-	// do we need to do any post api installation setup? We should have set up the api already?
-	glog.Infoln("Running the API server")
-	return server.GenericAPIServer.PrepareRun().Run(opts.StopCh)
+	allStop := make(chan struct{})
+	go func() {
+		glog.Infoln("Starting watch extension")
+		changed, err := WatchExtensionAuth(server.GenericAPIServer.LoopbackClientConfig, allStop)
+		if err != nil {
+			glog.Errorln("Unable to watch the extension auth ConfigMap: ", err)
+		}
+		if changed {
+			glog.Infoln("Detected change in extension-apiserver-authentication ConfigMap, exiting so apiserver can be restarted")
+		}
+	}()
 
-	return nil
+	go func() {
+		// do we need to do any post api installation setup? We should have set up the api already?
+		glog.Infoln("Running the API server")
+		err = server.GenericAPIServer.PrepareRun().Run(allStop)
+	}()
+
+	select {
+	case <-allStop:
+	case <-opts.StopCh:
+		close(allStop)
+	}
+
+	return err
 }
