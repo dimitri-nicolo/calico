@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// Create and start the server
-	auth := esprox.NewK8sAuth(datastore.MustGetKubernetesClient(), datastore.MustGetConfig())
+	auth := esprox.NewK8sAuth(datastore.MustGetKubernetesClient(), datastore.MustGetConfig(), cfg.EnableMultiClusterClient)
 	rbhf := server.NewStandardRbacHelperFactory(auth)
 	s := server.New(ec, clientSet, rbhf, ":"+*apiPort, *keyPath, *certPath)
 

@@ -250,8 +250,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: 1f80e3709dfafa8ca8727ba7eb392a11827ac8e2
-  repo: https://github.com/projectcalico/logrus
+  version: 839c75faf7f98a33d445d181f3018b5c3409a45e
 - name: github.com/spf13/cobra
   version: f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5
 - name: github.com/spf13/pflag
@@ -268,7 +267,7 @@ imports:
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake
 - name: github.com/tigera/es-proxy
-  version: ad8d517e8d6431c9429be735766e7b971efdad80
+  version: f7f11b92a51b38faea1cc00802984b372b35a4d7
   repo: git@github.com:tigera/es-proxy-image
   vcs: git
   subpackages:
@@ -282,7 +281,7 @@ imports:
   - client/features
   - crypto
 - name: github.com/tigera/lma
-  version: 8dc0c513dccd90868dce5024f0d12ca8e782d70e
+  version: c7e89b9f47caf4e2b4bcc11d962b735dd5e03d68
   repo: git@github.com:tigera/lma.git
   vcs: git
   subpackages:

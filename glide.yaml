@@ -3,8 +3,7 @@ import:
 - package: github.com/satori/go.uuid
   version: ^1.2.0
 - package: github.com/sirupsen/logrus
-  repo: https://github.com/projectcalico/logrus
-  version: v1.0.4-calico
+  version: 1.4.2
 - package: github.com/tigera/licensing
   version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
@@ -34,7 +33,7 @@ import:
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
 - package: github.com/tigera/es-proxy
-  version: ad8d517e8d6431c9429be735766e7b971efdad80
+  version: f7f11b92a51b38faea1cc00802984b372b35a4d7
   repo: git@github.com:tigera/es-proxy-image
   vcs: git
 - package: github.com/projectcalico/libcalico-go

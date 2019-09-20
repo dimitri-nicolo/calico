@@ -60,6 +60,9 @@ type Config struct {
 
 	// Nodename
 	NodeName string `envconfig:"NODENAME"`
+
+	// This setting is required for es proxy that performs the authentication and authorization for an user.
+	EnableMultiClusterClient bool `envconfig:"ENABLE_MULTI_CLUSTER_CLIENT" default:"false"`
 }
 
 func MustLoadConfig() *Config {
