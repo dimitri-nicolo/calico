@@ -34,7 +34,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
    watch kubectl get tigerastatus
    ```
 
-   When it shows the `apiserver` with status `Available`, proceed to the next section.
+   Wait until the `apiserver` is showing a status of `Available`, then proceed to the next section.
 
 #### Install the {{site.prodname}} license
 
