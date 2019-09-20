@@ -22,6 +22,7 @@ execute_test_suite() {
     rm $LOGPATH/rendered/*.cfg || true
 
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+	run_extra_test test_bgp_password
 	run_extra_test test_node_deletion
 	run_extra_test test_idle_peers
 	run_extra_test test_static_routes
@@ -120,7 +121,8 @@ metadata:
   name: bgppeer-1
 spec:
   nodeSelector: has(node)
-  peerSelector: has(node)
+  peerIP: 10.24.0.2
+  asNumber: 64512
   password:
     secretKeyRef:
       name: my-secrets-1
@@ -133,6 +135,7 @@ metadata:
 spec:
   nodeSelector: has(node)
   peerIP: 10.24.0.3
+  asNumber: 64512
   password:
     secretKeyRef:
       name: my-secrets-1
@@ -141,22 +144,23 @@ spec:
 kind: BGPPeer
 apiVersion: projectcalico.org/v3
 metadata:
-  name: bgppeer-2
+  name: bgppeer-3
 spec:
   node: node1
   peerIP: 10.24.10.10
+  asNumber: 64512
   password:
     secretKeyRef:
       name: my-secrets-2
       key: c
 EOF
 
-    # Expect 4 peerings, all with no password because we haven't
+    # Expect 3 peerings, all with no password because we haven't
     # created the secrets yet.
-    expect_peerings 4 ...
+    test_confd_templates password/step1
 
     # Create my-secrets-1 secret with only one of the required keys.
-    kubectl create -f <<EOF
+    kubectl create -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -167,12 +171,11 @@ stringData:
   b: password-b
 EOF
 
-    # Expect 4 peerings, all with no password because we haven't
-    # created the secrets yet.
-    expect_peerings 4
+    # Expect password now on the peering using my-secrets-1/b.
+    test_confd_templates password/step2
 
     # Update my-secrets-1 secret with the other required key.
-    kubectl apply -f <<EOF
+    kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -185,7 +188,7 @@ stringData:
 EOF
 
     # Also create my-secrets-2 secret.
-    kubectl apply -f <<EOF
+    kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -196,15 +199,8 @@ stringData:
   c: password-c
 EOF
 
-    # Expect 4 peerings, all with no password because we haven't
-    # created the secrets yet.
-    expect_peerings 4
-
-    # Delete one of the nodes.
-    calicoctl delete node node3
-
-    # Expect just 2 peerings.
-    expect_peerings 2
+    # Expect passwords on all peerings.
+    test_confd_templates password/step3
 
     # Kill confd.
     kill -9 $CONFD_PID
@@ -215,8 +211,10 @@ EOF
     # Delete remaining resources.
     calicoctl delete node node1
     calicoctl delete node node2
+    calicoctl delete node node3
     calicoctl delete node node4
     calicoctl delete bgppeer bgppeer-1
+    calicoctl delete bgppeer bgppeer-2
 }
 
 test_node_deletion() {
