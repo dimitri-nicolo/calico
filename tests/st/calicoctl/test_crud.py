@@ -34,7 +34,7 @@ class TestCalicoctlCommands(TestBase):
     BGP exported routes are hard to test and aren't expected to change much so
     write tests for them (yet)
     """
-    
+
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
         rc = calicoctl("create", data=valid_cnx_license_expires_jan_1st_2020)
@@ -1205,6 +1205,25 @@ class TestCalicoctlCommands(TestBase):
         rc.assert_output_contains("bp1")
         rc.assert_output_contains("has(rr)")
         assert "global" not in rc.output
+
+    def test_bgppeer_password(self):
+        rc = calicoctl("create", data={
+            'apiVersion': API_VERSION,
+            'kind': 'BGPPeer',
+            'metadata': {
+                'name': 'bp1'
+            },
+            'spec': {
+                'password': {'secretKeyRef': {'name': 'bgp-passwords', 'key': 'bp1p'}},
+                'peerSelector': "has(rr)",
+            },
+        })
+        rc.assert_no_error()
+
+        rc = calicoctl("get bgpp")
+        rc.assert_no_error()
+        rc.assert_output_contains("bp1")
+        rc.assert_output_contains("global")
 
     def test_label_command(self):
         """
