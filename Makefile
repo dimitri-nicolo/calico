@@ -134,17 +134,17 @@ ifdef SSH_AUTH_SOCK
 endif
 
 EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
-GIT_CONFIG_SSH	  ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
 ifneq ($(GOPATH),)
-	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
-	# is the default one used by go modules.
-	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+        # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+        # is the default one used by go modules.
+        GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
 else
-	# If gopath is empty, default to $(HOME)/go.
-	GOMOD_CACHE = $(HOME)/go/pkg/mod
+        # If gopath is empty, default to $(HOME)/go.
+        GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
 EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
@@ -163,16 +163,50 @@ local_build:
 endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
-	docker run --rm \
-		--net=host \
-		$(EXTRA_DOCKER_ARGS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-e GOCACHE=/go-cache \
-		-e GOARCH=$(ARCH) \
-		-e GOPATH=/go \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-		-w /go/src/$(PACKAGE_NAME)
+        docker run --rm \
+                --net=host \
+                $(EXTRA_DOCKER_ARGS) \
+                -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                -e GOCACHE=/go-cache \
+                -e GOARCH=$(ARCH) \
+                -e GOPATH=/go \
+                -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+                -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+                -w /go/src/$(PACKAGE_NAME)
+
+# Default the libcalico repo and version but allow them to be overridden
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+LIBCALICO_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/libcalico-go)
+
+## Update libcalico pin in go.mod
+update-libcalico:
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
+		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
+		go mod edit -replace github.com/projectcalico/libcalico-go=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
+		if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
+			go mod edit -replace github.com/projectcalico/typha=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
+		fi;\
+	fi'
+
+git-status:
+	git status --porcelain
+
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
+
+git-commit:
+	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+commit-pin-updates: update-libcalico git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Building the binary
@@ -294,45 +328,15 @@ sub-base-tag-images-%:
 # set PIN_BRANCH to the parent branch, e.g.:
 #
 #     PIN_BRANCH=release-v2.5 make update-pins
-#	- or -
+#        - or -
 #     PIN_BRANCH=master make update-pins
 #
 ###############################################################################
-## Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
-define get_remote_version
-$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
-endef
+## Update dependency pins in go.mod
+update-pins: update-licensing-pin update-libcalico-pin
 
-# update_pin updates the given package's version to the latest available in the specified repo and branch.
-# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
-define update_pin
-	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
-
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
-		if [[ ! -z "$(new_ver)" ]]; then \
-			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
-			go get $(1)@$(new_ver); \
-			go mod download; \
-		fi'
-endef
-
-# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
-# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
-# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
-define update_replace_pin
-	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
-
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
-		if [[ ! -z "$(new_ver)" ]]; then \
-			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
-			go mod edit -replace $(1)=$(2)@$(new_ver); \
-			go mod download; \
-		fi'
-endef
-
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
 		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
@@ -340,35 +344,70 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+###############################################################################
+## Set the default upstream repo branch to the current repo's branch,
+## e.g. "master" or "release-vX.Y", but allow it to be overridden.
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
+###############################################################################
+## libcalico
+
+## Set the default LIBCALICO source for this project
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
+
+## default LIBCALICO branch to the same branch name as the current checked out repo
 LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in go.mod
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico update-libcalico
+
+###############################################################################
+## licensing
+
+## Set the default LICENSING source for this project
+LICENSING_PROJECT_DEFAULT=tigera/licensing
+LICENSING_GLIDE_LABEL=tigera/licensing
+
+## default LICENSING branch to the same branch name as the current checked out repo
 LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/tigera/licensing
+LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
+LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
-update-licensing-pin: guard-ssh-forwarding-bug
-	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
+## Guard to ensure LICENSING repo and branch are reachable
+guard-git-licensing:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
+	$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
+		echo "ERROR: LICENSING version could not be determined"; \
+		exit 1; \
+	fi;
 
-update-libcalico-pin: guard-ssh-forwarding-bug
-	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
-
-git-status:
-	git status --porcelain
-
-git-config:
-ifdef CONFIRM
-	git config --global user.name "Semaphore Automatic Update"
-	git config --global user.email "marvin@tigera.io"
-endif
-
-git-commit:
-	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
-
-git-push:
-	git push
-
-update-pins: update-licensing-pin update-libcalico-pin
-
-commit-pin-updates: update-pins git-status ci git-config git-commit git-push
+## Update libary pin in glide.yaml
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LICENSING_GLIDE_LABEL)" \
+		REPO="$(LICENSING_REPO)" \
+		VERSION="$(LICENSING_VERSION)" \
+		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
+		BRANCH="$(LICENSING_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
 
 ###############################################################################
 # Static checks
@@ -406,8 +445,7 @@ ut: local_build bin/calicoctl-linux-amd64
 ## Run the tests in a container. Useful for CI, Mac dev.
 fv: local_build bin/calicoctl-linux-amd64
 	$(MAKE) run-etcd-host
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
-		cd /go/src/$(PACKAGE_NAME) && CRDS_FILE=${PWD}/tests/crds.yaml go test ./tests/fv'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
 	$(MAKE) stop-etcd
 
 ###############################################################################
@@ -462,6 +500,7 @@ stop-etcd:
 	@-docker rm -f calico-etcd
 
 foss-checks:
+	@echo Running $@...
 	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
 
 ###############################################################################
