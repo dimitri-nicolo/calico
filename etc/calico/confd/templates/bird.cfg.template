@@ -129,7 +129,7 @@ protocol bgp Global_{{$id}} from bgp_template {
   rr cluster id {{$node_cluster_id}};
 {{- end}}
 {{- if ne "" $data.password}}
-  password {{$data.password}};
+  password "{{$data.password}}";
 {{- end}}
 }
 {{- end}}
@@ -153,7 +153,7 @@ protocol bgp Node_{{$id}} from bgp_template {
   rr cluster id {{$node_cluster_id}};
 {{- end}}
 {{- if ne "" $data.password}}
-  password {{$data.password}};
+  password "{{$data.password}}";
 {{- end}}
 }
 {{- end}}
