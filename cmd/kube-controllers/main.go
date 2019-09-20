@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/config"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/flannelmigration"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/namespace"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/networkpolicy"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/node"
@@ -78,12 +79,14 @@ func init() {
 	// Add a flag to check the version.
 	flag.BoolVar(&version, "version", false, "Display version")
 
-	// Also tell klog to log to STDERR.
+	// Tell klog to log into STDERR. Otherwise, we risk
+	// certain kinds of API errors getting logged into a directory not
+	// available in a `FROM scratch` Docker container, causing us to abort
 	var flags flag.FlagSet
 	klog.InitFlags(&flags)
 	err = flags.Set("logtostderr", "true")
 	if err != nil {
-		log.WithError(err).Fatal("Failed to set logging configuration")
+		log.WithError(err).Fatal("Failed to set klog logging configuration")
 	}
 }
 
@@ -187,6 +190,18 @@ func main() {
 				threadiness:    config.FederatedServicesWorkers,
 			}
 			controllerCtrl.needLicenseMonitoring = true
+		case "flannelmigration":
+			// Attempt to load Flannel configuration.
+			flannelConfig := new(flannelmigration.Config)
+			if err := flannelConfig.Parse(); err != nil {
+				log.WithError(err).Fatal("Failed to parse Flannel config")
+			}
+			log.WithField("flannelConfig", flannelConfig).Info("Loaded Flannel configuration from environment")
+
+			flannelMigrationController := flannelmigration.NewFlannelMigrationController(ctx, k8sClientset, calicoClient, flannelConfig)
+			controllerCtrl.controllerStates["FlannelMigration"] = &controllerState{
+				controller: flannelMigrationController,
+			}
 		default:
 			log.Fatalf("Invalid controller '%s' provided.", controllerType)
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package federatedservices
 
@@ -11,7 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -346,7 +346,6 @@ func (c *federatedServicesController) startFederating(stopCh chan struct{}) {
 	case <-stopCh:
 	case <-c.inSync:
 	}
-	return
 }
 
 // OnStatusUpdated implements the syncer interface.

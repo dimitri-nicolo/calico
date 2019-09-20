@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package testutils
 
@@ -38,7 +38,7 @@ func RunFederationController(etcdIP string, localKubeconfig string, remoteKubeco
 		}...)
 	}
 
-	args = append(args, fmt.Sprintf("%s", os.Getenv("CONTAINER_NAME")))
+	args = append(args, os.Getenv("CONTAINER_NAME"))
 
 	return containers.Run("calico-federation-controller",
 		containers.RunOpts{AutoRemove: true},

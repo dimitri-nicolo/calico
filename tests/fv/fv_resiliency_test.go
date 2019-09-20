@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,7 +69,8 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		kfConfigFile, err = ioutil.TempFile("", "ginkgo-policycontroller")
 		Expect(err).NotTo(HaveOccurred())
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
-		kfConfigFile.Write([]byte(data))
+		_, err = kfConfigFile.Write([]byte(data))
+		Expect(err).NotTo(HaveOccurred())
 
 		k8sClient, err = testutils.GetK8sClient(kfConfigFile.Name())
 		Expect(err).NotTo(HaveOccurred())
@@ -84,8 +85,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		policyName = "jelly"
 		genPolicyName = "knp.default." + policyName
 		policyNamespace = "default"
-		var np *networkingv1.NetworkPolicy
-		np = &networkingv1.NetworkPolicy{
+		np := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      policyName,
 				Namespace: policyNamespace,
