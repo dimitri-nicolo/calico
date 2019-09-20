@@ -22,7 +22,7 @@ spec:
           - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
           - --config-reloader-image={{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
           - --config-reloader-memory=25Mi
-          - --namespaces={{ .Release.Namespace }}
+          - --namespaces=calico-monitoring
         resources:
           requests:
             cpu: 100m
