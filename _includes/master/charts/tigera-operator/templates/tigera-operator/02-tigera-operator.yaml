@@ -25,7 +25,7 @@ spec:
         # This initContainer is only required for OpenShift v4 when using installer-provisioned
         # infrastructure (IPI) on AWS. Otherwise it should be removed.
         - name: configure-security-groups
-          image: {{.Values.tigeraOperatorInit.registry}}{{.Values.tigeraOperatorInit.image}}:{{.Values.tigeraOperatorInit.version}}
+          image: {{ template "tigera-operator.image" .Values.tigeraOperatorInit }}
           env:
             - name: OPENSHIFT
               value: "true"
@@ -36,7 +36,7 @@ spec:
 {{- end }}
       containers:
         - name: tigera-operator
-          image: {{.Values.tigeraOperator.registry}}{{.Values.tigeraOperator.image}}:{{.Values.tigeraOperator.version}}
+          image: {{ template "tigera-operator.image" .Values.tigeraOperator}}
           imagePullPolicy: IfNotPresent
           command:
             - operator

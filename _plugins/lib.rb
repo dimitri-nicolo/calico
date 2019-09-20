@@ -1,4 +1,4 @@
-Component = Struct.new(:image, :version) do
+Component = Struct.new(:image, :version, :registry) do
 end
 
 # Takes versions_yml which is structured as follows:
@@ -35,7 +35,7 @@ def parse_versions(versions_yml, version)
 
   unless versions_yml[version][0]["tigera-operator"].nil?
           operator = versions_yml[version][0]["tigera-operator"]
-          versionsYml.merge!({"tigera-operator" => operator["version"]})
+          versionsYml["tigera-operator"] = Component.new(operator["image"], operator["version"], operator["registry"])
   end
   return versionsYml
 end

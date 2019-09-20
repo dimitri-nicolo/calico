@@ -1439,7 +1439,9 @@ master:
 - title: master
   note: ""
   tigera-operator:
+    image: tigera/operator
     version: master
+    registry: quay.io
   components:
     cnx-manager:
       image: tigera/cnx-manager
