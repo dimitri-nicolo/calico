@@ -811,6 +811,8 @@ func (c *client) onNewUpdates() {
 }
 
 func (c *client) recheckPeerConfig() {
+	log.Info("Recheck BGP peers following possible password update")
+	c.incrementCacheRevision()
 	c.updatePeersV1()
 	c.onNewUpdates()
 }
