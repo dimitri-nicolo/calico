@@ -135,6 +135,7 @@ rules:
   - apiGroups: [""]
     resources:
       - endpoints
+      - secrets
       - services
     verbs:
       # Used to discover service IPs for advertisement.
@@ -499,5 +500,3 @@ metadata:
 
 ---
 # Source: calico/templates/kdd-crds.yaml
-
-
