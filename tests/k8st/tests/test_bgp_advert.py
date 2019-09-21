@@ -78,6 +78,7 @@ template bgp bgp_template {
 protocol bgp Mesh_10_192_0_2 from bgp_template {
   neighbor 10.192.0.2 as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
+  password "very-secret";
 }
 
 
@@ -85,6 +86,7 @@ protocol bgp Mesh_10_192_0_2 from bgp_template {
 protocol bgp Mesh_10_192_0_3 from bgp_template {
   neighbor 10.192.0.3 as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
+  password "very-secret";
 }
 
 # For peer /host/kube-node-2/ip_addr_v4
