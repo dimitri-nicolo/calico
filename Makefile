@@ -217,7 +217,7 @@ build: bin/dikastes-$(ARCH) bin/healthz-$(ARCH)
 
 ## Create the vendor directory
 vendor: go.mod go.sum
-	$(DOCKER_RUN) $(CALICO_BUILD) bash -c '$(GIT_CONFIG_SSH); \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
 		go mod download; \
 		go mod vendor; \
 		mkdir -p vendor/github.com/envoyproxy; \
@@ -229,10 +229,6 @@ vendor: go.mod go.sum
 		cp -fr `go list -m -f "{{.Dir}}" github.com/lyft/protoc-gen-validate` vendor/github.com/lyft/protoc-gen-validate; \
 		cp -fr `go list -m -f "{{.Dir}}" github.com/golang/protobuf`/* vendor/github.com/golang/protobuf'
 	chmod -R +w vendor
-ifdef CI
-	# We need to checkout go.mod and go.sum since the vendor command can sometimes modify these files, causing a dirty tree.
-	git checkout go.mod go.sum
-endif
 
 bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64

@@ -14,7 +14,6 @@ require (
 	github.com/projectcalico/libcalico-go v0.0.0-00000000000000-000000000000
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
-	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb // indirect
 	google.golang.org/grpc v1.19.0
 	k8s.io/apimachinery v0.0.0-20180628120320-b593b18191da // indirect
 )
