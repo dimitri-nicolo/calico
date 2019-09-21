@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -465,7 +465,8 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 			Action: "allow",
 			HttpMatch: &proto.HTTPMatch{
 				Methods: []string{"GET", "POST"},
-				Paths:   []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/foo"}}},
+				Paths: []*proto.HTTPMatch_PathMatch{
+					{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/foo"}}},
 			},
 		},
 	}}
@@ -531,7 +532,7 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 			{
 				Action: "deny",
 				HttpMatch: &proto.HTTPMatch{
-					Paths: []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/bad"}}},
+					Paths: []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/bad"}}},
 				},
 			},
 		},
@@ -541,7 +542,7 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 			{
 				Action: "allow",
 				HttpMatch: &proto.HTTPMatch{
-					Paths: []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/foo"}}},
+					Paths: []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/foo"}}},
 				},
 			},
 		},
@@ -638,7 +639,7 @@ func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 				Action: "allow",
 				HttpMatch: &proto.HTTPMatch{
 					Methods: []string{"GET"},
-					Paths:   []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/foo"}}},
+					Paths:   []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/foo"}}},
 				},
 			},
 		},
