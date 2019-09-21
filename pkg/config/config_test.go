@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ var _ = Describe("Config", func() {
 		os.Unsetenv("WORKLOAD_ENDPOINT_WORKERS")
 		os.Unsetenv("PROFILE_WORKERS")
 		os.Unsetenv("POLICY_WORKERS")
+		os.Unsetenv("SERVICE_WORKERS")
 		os.Unsetenv("KUBECONFIG")
 	}
 
@@ -45,6 +46,7 @@ var _ = Describe("Config", func() {
 		os.Setenv("WORKLOAD_ENDPOINT_WORKERS", "3")
 		os.Setenv("PROFILE_WORKERS", "3")
 		os.Setenv("POLICY_WORKERS", "3")
+		os.Setenv("SERVICE_WORKERS", "3")
 		os.Setenv("KUBECONFIG", "/home/user/.kube/config")
 	}
 
@@ -54,6 +56,7 @@ var _ = Describe("Config", func() {
 		os.Setenv("WORKLOAD_ENDPOINT_WORKERS", "somestring")
 		os.Setenv("PROFILE_WORKERS", "somestring")
 		os.Setenv("POLICY_WORKERS", "somestring")
+		os.Setenv("SERVICE_WORKERS", "somestring")
 	}
 
 	Context("with default values", func() {
@@ -78,6 +81,7 @@ var _ = Describe("Config", func() {
 			Expect(config.WorkloadEndpointWorkers).To(Equal(1))
 			Expect(config.ProfileWorkers).To(Equal(1))
 			Expect(config.PolicyWorkers).To(Equal(1))
+			Expect(config.ServiceWorkers).To(Equal(1))
 			Expect(config.Kubeconfig).To(Equal(""))
 		})
 	})
@@ -107,6 +111,7 @@ var _ = Describe("Config", func() {
 			Expect(config.WorkloadEndpointWorkers).To(Equal(3))
 			Expect(config.ProfileWorkers).To(Equal(3))
 			Expect(config.PolicyWorkers).To(Equal(3))
+			Expect(config.ServiceWorkers).To(Equal(3))
 			Expect(config.Kubeconfig).To(Equal("/home/user/.kube/config"))
 		})
 	})

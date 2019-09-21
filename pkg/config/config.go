@@ -35,6 +35,7 @@ type Config struct {
 	WorkloadEndpointWorkers  int `default:"1" split_words:"true"`
 	ProfileWorkers           int `default:"1" split_words:"true"`
 	PolicyWorkers            int `default:"1" split_words:"true"`
+	ServiceWorkers           int `default:"1" split_words:"true"`
 	NodeWorkers              int `default:"1" split_words:"true"`
 	FederatedServicesWorkers int `default:"1" split_words:"true"`
 
