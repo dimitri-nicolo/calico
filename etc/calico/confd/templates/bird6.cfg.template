@@ -129,6 +129,9 @@ protocol bgp Global_{{$id}} from bgp_template {
   rr client;
   rr cluster id {{$node_cluster_id}};
 {{- end}}
+{{- if ne "" $data.password}}
+  password "{{$data.password}}";
+{{- end}}
 }
 {{- end}}
 {{end}}
@@ -149,6 +152,9 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;
   rr cluster id {{$node_cluster_id}};
+{{- end}}
+{{- if ne "" $data.password}}
+  password "{{$data.password}}";
 {{- end}}
 }
 {{- end}}

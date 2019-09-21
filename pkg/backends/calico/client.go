@@ -120,6 +120,12 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		c.cache[k] = v
 	}
 
+	// Create secret watcher.  Must do this before the syncer, because updates from
+	// the syncer can trigger calling c.secretWatcher.MarkStale().
+	if c.secretWatcher, err = NewSecretWatcher(c); err != nil {
+		log.WithError(err).Fatal("Failed to create secret watcher")
+	}
+
 	// Create a conditional that we use to wake up all of the watcher threads when there
 	// may some actionable updates.
 	c.watcherCond = sync.NewCond(&c.cacheLock)
@@ -281,6 +287,9 @@ type client struct {
 
 	// This node's log level key.
 	nodeLogKey string
+
+	// Subcomponent for accessing and watching secrets (that hold BGP passwords).
+	secretWatcher *secretWatcher
 }
 
 // SetPrefixes is called from confd to notify this client of the full set of prefixes that will
@@ -353,6 +362,21 @@ type bgpPeer struct {
 	ASNum       numorstring.ASNumber `json:"as_num,string"`
 	RRClusterID string               `json:"rr_cluster_id"`
 	Extensions  map[string]string    `json:"extensions"`
+	Password    string               `json:"password"`
+}
+
+func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
+	if v3res.Spec.Password != nil && v3res.Spec.Password.SecretKeyRef != nil {
+		password, err := c.secretWatcher.GetSecret(
+			v3res.Spec.Password.SecretKeyRef.Name,
+			v3res.Spec.Password.SecretKeyRef.Key,
+		)
+		if err == nil {
+			return password
+		}
+		log.WithError(err).Warningf("Can't read password for BGPPeer %v", v3res.Name)
+	}
+	return ""
 }
 
 func (c *client) updatePeersV1() {
@@ -401,6 +425,10 @@ func (c *client) updatePeersV1() {
 		peersV1[k] = string(value)
 	}
 
+	// Mark currently watched secrets as stale, so that they can be cleaned up if no
+	// longer needed.
+	c.secretWatcher.MarkStale()
+
 	// Loop through v3 BGPPeers twice, first to emit global peerings, then for
 	// node-specific ones.  The point here is to emit all of the possible global peerings
 	// _first_, so that we can then skip emitting any node-specific peerings that would
@@ -439,8 +467,15 @@ func (c *client) updatePeersV1() {
 			}
 			log.Debugf("Peers %#v", peers)
 
+			if len(peers) == 0 {
+				continue
+			}
+
+			password := c.getPassword(v3res)
+
 			for _, peer := range peers {
 				peer.Extensions = v3res.Spec.Extensions
+				peer.Password = password
 				log.Debugf("Peer: %#v", peer)
 				if globalPass {
 					key := model.GlobalBGPPeerKey{PeerIP: peer.PeerIP}
@@ -487,9 +522,16 @@ func (c *client) updatePeersV1() {
 		}
 		log.Debugf("Peers %#v", peerNodeNames)
 
+		if len(peerNodeNames) == 0 {
+			continue
+		}
+
+		password := c.getPassword(v3res)
+
 		for _, peerNodeName := range peerNodeNames {
 			for _, peer := range c.nodeAsBGPPeers(peerNodeName) {
 				peer.Extensions = v3res.Spec.Extensions
+				peer.Password = password
 				for _, localNodeName := range localNodeNames {
 					key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
 					emit(key, peer)
@@ -497,6 +539,9 @@ func (c *client) updatePeersV1() {
 			}
 		}
 	}
+
+	// Clean up any secrets that are no longer of interest.
+	c.secretWatcher.SweepStale()
 
 	// Now reconcile against the cache.
 	for k, value := range c.peeringCache {
@@ -764,6 +809,13 @@ func (c *client) onNewUpdates() {
 		log.Debug("Notify watchers of new event data")
 		c.watcherCond.Broadcast()
 	}
+}
+
+func (c *client) recheckPeerConfig() {
+	log.Info("Recheck BGP peers following possible password update")
+	c.incrementCacheRevision()
+	c.updatePeersV1()
+	c.onNewUpdates()
 }
 
 // updateChache will update a cache entry. It returns true if the entry was

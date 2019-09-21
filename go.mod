@@ -87,7 +87,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190913172157-338f687c53ee
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436
 
 replace github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20190917002945-931ed2638eb9
 
