@@ -123,7 +123,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	// Create secret watcher.  Must do this before the syncer, because updates from
 	// the syncer can trigger calling c.secretWatcher.MarkStale().
 	if c.secretWatcher, err = NewSecretWatcher(c); err != nil {
-		log.WithError(err).Fatal("Failed to create secret watcher")
+		log.WithError(err).Warning("Failed to create secret watcher, not running under Kubernetes?")
 	}
 
 	// Create a conditional that we use to wake up all of the watcher threads when there
@@ -366,7 +366,7 @@ type bgpPeer struct {
 }
 
 func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
-	if v3res.Spec.Password != nil && v3res.Spec.Password.SecretKeyRef != nil {
+	if c.secretWatcher != nil && v3res.Spec.Password != nil && v3res.Spec.Password.SecretKeyRef != nil {
 		password, err := c.secretWatcher.GetSecret(
 			v3res.Spec.Password.SecretKeyRef.Name,
 			v3res.Spec.Password.SecretKeyRef.Key,
@@ -427,7 +427,9 @@ func (c *client) updatePeersV1() {
 
 	// Mark currently watched secrets as stale, so that they can be cleaned up if no
 	// longer needed.
-	c.secretWatcher.MarkStale()
+	if c.secretWatcher != nil {
+		c.secretWatcher.MarkStale()
+	}
 
 	// Loop through v3 BGPPeers twice, first to emit global peerings, then for
 	// node-specific ones.  The point here is to emit all of the possible global peerings
@@ -541,7 +543,9 @@ func (c *client) updatePeersV1() {
 	}
 
 	// Clean up any secrets that are no longer of interest.
-	c.secretWatcher.SweepStale()
+	if c.secretWatcher != nil {
+		c.secretWatcher.SweepStale()
+	}
 
 	// Now reconcile against the cache.
 	for k, value := range c.peeringCache {
