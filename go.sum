@@ -437,6 +437,8 @@ github.com/tigera/confd-private v0.0.0-20190918061513-2b0ca2681b79 h1:StbhOYhNs8
 github.com/tigera/confd-private v0.0.0-20190918061513-2b0ca2681b79/go.mod h1:eY5MtS1hkau3ToCw8ujZZLbAGvx/7j/x1UGP1DC7gEk=
 github.com/tigera/confd-private v0.0.0-20190920224531-a21c4f6cc638 h1:aTBAQUXCL2iJZpmsg5KQ0ZAJvOzHBSM8G5F/33qLDV4=
 github.com/tigera/confd-private v0.0.0-20190920224531-a21c4f6cc638/go.mod h1:mGag9n5uaZCw6r5xrx5W0Dnijug/DreZT1Larc7+2p0=
+github.com/tigera/confd-private v0.0.0-20190921131451-f2cfad4654a0 h1:vwWla+3x2WF7IsHhTCoinqKqepV1D3PQZvEn0Z8XqFI=
+github.com/tigera/confd-private v0.0.0-20190921131451-f2cfad4654a0/go.mod h1:mGag9n5uaZCw6r5xrx5W0Dnijug/DreZT1Larc7+2p0=
 github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a h1:UGZihZgeRqCfzcCbozs4FjZmaOsXV6S0giy17R5gRIU=
 github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a/go.mod h1:hun0cDm0Yy+kP93Qpu5LTCIwtqR61zEAZ22V1Cr93yg=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
@@ -445,6 +447,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20190913172157-338f687c53ee h1:Za+
 github.com/tigera/libcalico-go-private v0.0.0-20190913172157-338f687c53ee/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
 github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436 h1:mkZoUxCenAVMbJXzqXoV4cQYPfkKSkGIQqCisOcb0Mw=
 github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
+github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27 h1:l5SKCG9Mdp0yhx4YmfxpTJOC0dCS3E3KBiRzb2TgWd8=
+github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
