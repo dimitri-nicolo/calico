@@ -110,7 +110,7 @@ EOF
 
 #### Specify secret and key name on the BGPPeer resource
 
-Then, when [configuring a BGP peers]({{site.baseurl}}/{{page.version}}/networking/bgp),
+Then, when [configuring a BGP peer]({{site.baseurl}}/{{page.version}}/networking/bgp),
 include the secret and key name in the specification of the BGPPeer resource, like this:
 
 ```
@@ -123,8 +123,8 @@ spec:
   asNumber: 64567
   password:
     secretKeyRef:
-	  name: bgp-secrets
-	  key: rr-password
+      name: bgp-secrets
+      key: rr-password
 ```
 
 ### Above and beyond
