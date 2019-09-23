@@ -31,7 +31,7 @@ It has been acknowledged by the industry for years that, beyond a
 certain size, classical Ethernet networks are unsuitable for production
 deployment. Although there have been
 [multiple](https://en.wikipedia.org/wiki/Provider_Backbone_Bridge_Traffic_Engineering)
-[attempts](https://www.cisco.com/web/about/ac123/ac147/archived_issues/ipj_14-3/143_trill.html) [to address](https://en.wikipedia.org/wiki/Virtual_Private_LAN_Service)
+[attempts](https://en.wikipedia.org/wiki/TRILL_%28computing%29) [to address](https://en.wikipedia.org/wiki/Virtual_Private_LAN_Service)
 these issues, the scale-out networking community has, largely abandoned
 Ethernet for anything other than providing physical point-to-point links
 in the networking fabric. The principal reasons for Ethernet failures at

@@ -70,4 +70,3 @@ kubectl create -f https://docs.tigera.io/master/manifests/tigera-policies.yaml
 - [Install calicoctl command line tool]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)
 - [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
-- [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)
