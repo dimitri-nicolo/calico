@@ -107,7 +107,7 @@ endif
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 # Version of this repository as reported by git.
-CALICO_GIT_VER=v3.8.0
+CALICO_GIT_VER=v3.9.0
 CNX_GIT_VER := $(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
 	CNX_GIT_VER = $(shell git describe --tags --dirty --always)-dev-build
@@ -207,13 +207,15 @@ ifeq ($(LOCAL_BUILD),true)
         GIT_DESCRIPTION = $(shell git describe --tags --dirty --always || echo '<unknown>')-dev-build
 endif
 
+PACKAGE_NAME?=github.com/projectcalico/node
+
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.VERSION=$(CALICO_GIT_VER) \
+        -X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
+        -X main.VERSION=$(CALICO_GIT_VER) \
         -X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
         -X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
         -X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
 
-PACKAGE_NAME?=github.com/projectcalico/node
 LIBCALICOGO_PATH?=none
 
 SRC_FILES=$(shell find ./pkg -name '*.go')
