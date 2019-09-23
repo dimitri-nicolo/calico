@@ -1,10 +1,10 @@
 ---
 title: Configuring Prometheus
-canonical_url: https://docs.tigera.io/v2.3/usage/configuration/prometheus
+canonical_url: https://docs.tigera.io/v2.5/security/configuration/prometheus
 ---
 
 Note: This document assumes that Prometheus and Alertmanager have been setup
-using _Prometheus Operator_ as described
+using Prometheus Operator as described
 [here](../../getting-started/kubernetes/installation/hosted/cnx/cnx).
 
 #### Updating Denied Packets Rules
@@ -28,7 +28,7 @@ Your changes should be applied in a few seconds by the prometheus-config-reloade
 container inside the prometheus pod launched by the prometheus-operator
 (usually named `prometheus-<your-prometheus-instance-name>`).
 
-As an example, the range query in this _Manifest_ is 10 seconds.
+As an example, the range query in this Manifest is 10 seconds.
 
 ```yaml
 {% raw %}
@@ -89,11 +89,11 @@ rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules
 and [Queries](https://prometheus.io/docs/querying/examples/) for more
 information.
 
-To add the new alerting rule to our Prometheus instance, define a _PrometheusRule_ manifest
+To add the new alerting rule to our Prometheus instance, define a PrometheusRule manifest
 in the `calico-monitoring` namespace with the labels
 `role: calico-prometheus-rules` and `prometheus: calico-node-prometheus`. The
 labels should match the labels defined by the `ruleSelector` field of the
-_Prometheus_ manifest.
+Prometheus manifest.
 
 As an example, to fire a alert when a {{site.noderunning}} instance has been down for
 more than 5 minutes, save the following to a file, say `calico-node-down-alert.yaml`
@@ -123,7 +123,7 @@ spec:
 {% endraw %}
 ```
 
-Then _create_/_apply_ this manifest in kubernetes.
+Then create/apply this manifest in kubernetes.
 
 ```
 kubectl apply -f calico-node-down-alert.yaml
@@ -135,10 +135,10 @@ container inside the prometheus pod launched by the prometheus-operator
 
 #### Additional Alerting Rules
 
-The Alerting Rules installed by the _CNX_ install manifest is a simple
+The Alerting Rules installed by the {{site.prodname}} install manifest is a simple
 one that fires an alert when the rate of denied packets denied by a policy on
 a node from a particular Source IP exceeds a certain packets per second
-threshold. The _Prometheus_ query used for this (ignoring the threshold value
+threshold. The Prometheus query used for this (ignoring the threshold value
 20) is:
 
 ```
@@ -194,7 +194,7 @@ which will return the following results:
 ```
 {: .no-select-button}
 
-An interesting use case is when a rogue _Pod_ is using tools such as _nmap_ to
+An interesting use case is when a rogue Pod is using tools such as nmap to
 scan a subnet for open ports. To do this, we have to execute a query that will
 aggregate across all policies on all instances while preserving the source IP
 address. This can be done using this query:
@@ -216,24 +216,24 @@ which will return results, different source IP address:
 
 To use these queries as Alerting Rules, follow the instructions defined in the
 [Creating a new Alerting Rule](#creating-a-new-alerting-rule) section and create
-a _ConfigMap_ with the appropriate query.
+a ConfigMap with the appropriate query.
 
 #### Storage
 
 Prometheus stores metrics at regular intervals. If Prometheus is restarted and
-if ephemeral storage is used, metrics will be lost. Configure the _Storage_ spec
+if ephemeral storage is used, metrics will be lost. Configure the Storage spec
 to store metrics persistently.
 
-The sample manifests do not define a _Storage_ spec. This means that if you
+The sample manifests do not define a Storage spec. This means that if you
 use the default manifest, Prometheus will be deployed with a `emptyDir`
 volume. Using a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
 supported by Kubernetes is strongly recommended.
 
-The _Prometheus_ third party resource defined by the _Prometheus Operator_
-supports defining a _StorageClass_
+The Prometheus third party resource defined by the Prometheus Operator
+supports defining a StorageClass
 
 As an example, to use GCE Persistent Disks for Prometheus storage, define a
-_StorageClass_ spec, like so:
+StorageClass spec, like so:
 
 ```yaml
 kind: StorageClass
@@ -246,7 +246,14 @@ parameters:
   zone: us-west1-b
 ```
 
-Then add the `storage` field to the _Prometheus_ manifest.
+   > **Tip**: Refer to the
+   > [Kubernetes documentation on StorageClasses](https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner)
+   > for a list of alternatives and some sample manifests. You may need to configure
+   > a provisioner or cloud provider integration.
+   {: .alert .alert-success}
+
+Then add the `storage` field to the Prometheus manifest with a persistent
+volume claim template.
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
@@ -259,7 +266,7 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       team: network-operators
-  version: v1.6.3
+  version: {{site.data.versions[page.version].first.components["prometheus"].version}}
   retention: 1h
   resources:
     requests:
@@ -275,14 +282,16 @@ spec:
         port: web
         scheme: http
   storage:
-    class: ssd
-    resources:
-      requests:
-        storage: 80Gi
+    volumeClaimTemplate:
+      spec:
+        storageClassName: ssd
+        resources:
+          requests:
+            storage: 80Gi
 ```
 
-_Prometheus Operator_ also supports other manual storage provisioning
-mechanisms. More information can be found [here](https://github.com/coreos/prometheus-operator/blob/d360a3bae5ab054732837d5a715814cd1c78d745/Documentation/user-guides/storage.md).
+Prometheus Operator also supports other manual storage provisioning
+mechanisms. More information can be found [here](https://github.com/coreos/prometheus-operator/blob/{{site.data.versions[page.version].first.components["prometheus-operator"].version}}/Documentation/user-guides/storage.md).
 
 Combining storage resource with proper retention time for metrics will ensure
 that Prometheus will use the storage effectively. The `retention` field is used
@@ -294,16 +303,16 @@ You may wish to modify the scrape interval (time between Prometheus polling each
 Increasing the interval reduces load on Prometheus and the amount of storage required, but decreases the detail of the collected metrics.
 
   The scrape interval of endpoints ({{site.noderunning}} in our case) is defined as part of
-  the _ServiceMonitor_ manifest. To change the interval:
+  the ServiceMonitor manifest. To change the interval:
 
-  - Save the current _ServiceMonitor_ manifest:
+  - Save the current ServiceMonitor manifest:
 
     ```
     kubectl -n calico-monitoring get servicemonitor calico-node-monitor -o yaml > calico-node-monitor.yaml
     ```
 
   - Update the `interval` field under `endpoints` to desired settings and
-   _apply_ the updated manifest.
+   apply the updated manifest.
 
     ```
     kubectl apply -f calico-node-monitor.yaml
@@ -313,7 +322,7 @@ Your changes should be applied in a few seconds by the prometheus-config-reloade
 container inside the prometheus pod launched by the prometheus-operator
 (usually named `prometheus-<your-prometheus-instance-name>`).
 
-As an example on what to update, the interval in this _ServiceMonitor_ manifest
+As an example on what to update, the interval in this ServiceMonitor manifest
 is 5 seconds (`5s`).
 
 ```yaml
@@ -376,5 +385,5 @@ Check config reloader logs to see if they detected any recent activity.
     ```
 
 The config-reloaders watch each pods file-system for updated config from
-_ConfigMap_'s or _Secret_'s and will perform steps necessary for reloading
+ConfigMap's or Secret's and will perform steps necessary for reloading
 the configuration.
