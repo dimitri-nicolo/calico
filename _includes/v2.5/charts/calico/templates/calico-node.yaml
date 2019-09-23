@@ -52,15 +52,6 @@ spec:
 {{- end }}
 {{- end }}
       initContainers:
-{{- if eq .Values.network "gke"  }}
-        # This container updates the version of the PTP plugin to pick up a fix needed
-        # for GKE networking to work with Calico.
-        - name: ptp-patcher
-          image: fasaxc/ptp-patcher
-          volumeMounts:
-          - name: cni-bin-dir
-            mountPath: /host
-{{- end }}
 {{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks")  }}
   {{- if and (eq .Values.network "calico") (eq .Values.datastore "kubernetes") }}
         # This container performs upgrade from host-local IPAM to calico-ipam.
@@ -302,9 +293,6 @@ spec:
               value: "none"
             - name: FELIX_INTERFACEPREFIX
               value: "gke"
-            # GKE CNI requires loose RPF because it hairpins traffic through the default gateway.
-            - name: FELIX_IGNORELOOSERPF
-              value: "true"
             # GKE CNI has its own iptables rules, defer to those after ours have run.
             - name: FELIX_IPTABLESMANGLEALLOWACTION
               value: "Return"
