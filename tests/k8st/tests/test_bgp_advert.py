@@ -78,6 +78,7 @@ template bgp bgp_template {
 protocol bgp Mesh_10_192_0_2 from bgp_template {
   neighbor 10.192.0.2 as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
+  password "very-secret";
 }
 
 
@@ -85,12 +86,14 @@ protocol bgp Mesh_10_192_0_2 from bgp_template {
 protocol bgp Mesh_10_192_0_3 from bgp_template {
   neighbor 10.192.0.3 as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
+  password "very-secret";
 }
 
 # For peer /host/kube-node-2/ip_addr_v4
 protocol bgp Mesh_10_192_0_4 from bgp_template {
   neighbor 10.192.0.4 as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
+  password "very-secret";
 }
 """
 
@@ -183,6 +186,18 @@ metadata:
 EOF
 """ % self.NODE_EXTRA_PEER_SPEC)
 
+        kubectl("""apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bgp-secrets
+  namespace: kube-system
+type: Opaque
+stringData:
+  rr-password: very-secret
+EOF
+""")
+
     def tearDown(self):
         super(_TestBGPAdvert, self).tearDown()
         self.delete_and_confirm(self.ns, "ns")
@@ -248,6 +263,10 @@ class TestBGPAdvert(_TestBGPAdvert):
 spec:
   peerIP: 10.192.0.5
   asNumber: 64512
+  password:
+    secretKeyRef:
+      name: bgp-secrets
+      key: rr-password
 """
 
     def test_mainline(self):
