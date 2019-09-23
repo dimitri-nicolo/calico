@@ -197,7 +197,7 @@ func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, 
 		DstIp:    t.DstIp,
 		SrcPort:  t.SrcPort,
 		DstPort:  t.DstPort,
-		Protocol: &proto.Protocol{&proto.Protocol_Name{t.Protocol}},
+		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: t.Protocol}},
 	}
 	if v.HTTPRequestsAllowed > 0 {
 		d.Stats = append(d.Stats, &proto.Statistic{
@@ -272,7 +272,6 @@ func processUpdate(store *policystore.PolicyStore, inSync chan<- struct{}, updat
 
 func processInSync(store *policystore.PolicyStore, inSync *proto.InSync) {
 	log.Debug("Processing InSync")
-	return
 }
 
 func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpdate) {

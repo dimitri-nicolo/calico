@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,20 +15,21 @@
 package uds
 
 import (
+	"context"
 	"net"
-	"time"
 
 	"google.golang.org/grpc"
 )
 
-func GetDialer(proto string) func(string, time.Duration) (net.Conn, error) {
-	return func(target string, timeout time.Duration) (net.Conn, error) {
-		return net.DialTimeout(proto, target, timeout)
+func getDialer(proto string) func(context.Context, string) (net.Conn, error) {
+	d := &net.Dialer{}
+	return func(ctx context.Context, target string) (net.Conn, error) {
+		return d.DialContext(ctx, proto, target)
 	}
 }
 
 func GetDialOptions() []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithDialer(GetDialer("unix"))}
+		grpc.WithContextDialer(getDialer("unix"))}
 }

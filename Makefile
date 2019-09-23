@@ -21,10 +21,10 @@ BUILDARCH ?= $(shell uname -m)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
+	BUILDARCH=arm64
 endif
 ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+	BUILDARCH=amd64
 endif
 
 # unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
@@ -32,19 +32,10 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-        override ARCH=amd64
-endif
-
-# Build mounts for running in "local build" mode. Mount in libcalico, but null out
-# the vendor directory. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-LOCAL_BUILD_MOUNTS ?=
-ifeq ($(LOCAL_BUILD),true)
-LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro
+	override ARCH=amd64
 endif
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
@@ -75,7 +66,6 @@ PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
 #This is a version with known container with compatible versions of sed/grep etc.
 TOOLING_BUILD?=calico/go-build:v0.24
-
 
 # Get version from git - used for releases.
 GIT_VERSION?=$(shell git describe --tags --dirty --always)
@@ -124,10 +114,15 @@ ifneq ($(GOPATH),)
     GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
 else
     # If gopath is empty, default to $(HOME)/go.
-    GOMOD_CACHE = $$HOME/go/pkg/mod
+    GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
+BUILD_FLAGS		+= -mod=vendor
+GINKGO_ARGS		+= -mod=vendor
+
+EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH	  ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
@@ -137,24 +132,47 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+PHONY:local_build
 
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
-              docker run --rm \
-                         --net=host \
-                         $(EXTRA_DOCKER_ARGS) \
-                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                         -e GOCACHE=/go-cache \
-                         -e GO111MODULE=off \
-                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                         -v $${PWD}/.go-pkg-cache:/go-cache:rw \
-                         -w /go/src/$(PACKAGE_NAME)
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go'
+else
+local_build:
+	@echo This is not a local build.
+endif
 
- # Pre-configured docker run command that runs as this user with the repo
- # checked out to /code, uses the --rm flag to avoid leaving the container
- # around afterwards.
-DOCKER_RUN_RM:=docker run --rm \
-               $(EXTRA_DOCKER_ARGS) \
-               --user $(LOCAL_USER_ID):$(MY_GID) -v $(CURDIR):/code
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
+	docker run --rm \
+		--net=host \
+		$(EXTRA_DOCKER_ARGS) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-e GOCACHE=/go-cache \
+		-e GOARCH=$(ARCH) \
+		-e GOPATH=/go \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+		-w /go/src/$(PACKAGE_NAME)
+
+DOCKER_RUN_RO := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
+	docker run --rm \
+		--net=host \
+		$(EXTRA_DOCKER_ARGS) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-e GOCACHE=/go-cache \
+		-e GOARCH=$(ARCH) \
+		-e GOPATH=/go \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+		-w /go/src/$(PACKAGE_NAME)
+
+DOCKER_RUN_PB := docker run --rm \
+		$(EXTRA_DOCKER_ARGS) \
+		--user $(LOCAL_USER_ID):$(MY_GID) \
+		-v $(CURDIR):/code
 
 ENVOY_API=vendor/github.com/envoyproxy/data-plane-api
 EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2/
@@ -167,11 +185,16 @@ PERCENT=$(ENVOY_API)/envoy/type/percent
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
 
+.PHONY: pre-commit
+pre-commit:
+	$(DOCKER_RUN) $(CALICO_BUILD) git-hooks/pre-commit-in-container
+
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
+	rm -rf .go-pkg-cache
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	rm -rf report/
+	rm -rf report vendor
 	# Only one pb.go file exists outside the vendor dir
 	rm -rf bin vendor proto/felixbackend.pb.go
 	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
@@ -180,6 +203,7 @@ ifeq ($(ARCH),amd64)
 	-docker rmi $(BUILD_IMAGE):latest
 	-docker rmi $(BUILD_IMAGE):$(VERSION)
 endif
+
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -192,55 +216,37 @@ build-all: $(addprefix bin/dikastes-,$(VALIDARCHES))
 build: bin/dikastes-$(ARCH) bin/healthz-$(ARCH)
 
 ## Create the vendor directory
-vendor: glide.yaml
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-
-	# To build without Docker just run "glide install -strip-vendor"
-	docker run --rm -i \
-      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-      -v $(HOME)/.glide:/home/user/.glide:rw \
-      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-      -w /go/src/$(PACKAGE_NAME) \
-      $(EXTRA_DOCKER_ARGS) \
-      $(CALICO_BUILD) glide install -strip-vendor
-
+vendor: go.mod go.sum
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		go mod download; \
+		go mod vendor; \
+		mkdir -p vendor/github.com/envoyproxy; \
+		mkdir -p vendor/github.com/gogo; \
+		mkdir -p vendor/github.com/lyft; \
+		mkdir -p vendor/github.com/golang; \
+		cp -fr `go list -m -f "{{.Dir}}" github.com/gogo/protobuf`/* vendor/github.com/gogo/protobuf; \
+		cp -fr `go list -m -f "{{.Dir}}" github.com/envoyproxy/data-plane-api` vendor/github.com/envoyproxy/data-plane-api; \
+		cp -fr `go list -m -f "{{.Dir}}" github.com/lyft/protoc-gen-validate` vendor/github.com/lyft/protoc-gen-validate; \
+		cp -fr `go list -m -f "{{.Dir}}" github.com/golang/protobuf`/* vendor/github.com/golang/protobuf'
+	chmod -R +w vendor
 
 bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64
 bin/dikastes-ppc64le: ARCH=ppc64le
 bin/dikastes-s390x: ARCH=s390x
-bin/dikastes-%: vendor proto $(SRC_FILES)
-	mkdir -p bin
-	-mkdir -p .go-pkg-cache
-	docker run --rm -ti \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
+bin/dikastes-%: local_build vendor proto $(SRC_FILES)
+	$(DOCKER_RUN_RO) -ti \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	  $(LOCAL_BUILD_MOUNTS) \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e GOCACHE=/go-cache \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(EXTRA_DOCKER_ARGS) \
-	  $(CALICO_BUILD) go build -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes'
 
 bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
 bin/healthz-ppc64le: ARCH=ppc64le
 bin/healthz-s390x: ARCH=s390x
-bin/healthz-%: vendor proto $(SRC_FILES)
-	mkdir -p bin || true
-	-mkdir -p .go-pkg-cache || true
-	docker run --rm -ti \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
+bin/healthz-%: local_build vendor proto $(SRC_FILES)
+	$(DOCKER_RUN_RO) -ti \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	  $(LOCAL_BUILD_MOUNTS) \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e GOCACHE=/go-cache \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(EXTRA_DOCKER_ARGS) \
-	  $(CALICO_BUILD) go build -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/healthz-$(ARCH) ./cmd/healthz'
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -250,69 +256,69 @@ bin/healthz-%: vendor proto $(SRC_FILES)
 # When importing, we must use gogo versions of google/protobuf and
 # google/rpc (aka googleapis).
 PROTOC_IMPORTS =  -I $(ENVOY_API) \
-                  -I vendor/github.com/gogo/protobuf/protobuf \
-                  -I vendor/github.com/gogo/protobuf \
-                  -I vendor/github.com/lyft/protoc-gen-validate\
-                  -I vendor/github.com/gogo/googleapis\
-                  -I proto\
-                  -I ./
+		  -I vendor/github.com/gogo/protobuf/protobuf \
+		  -I vendor/github.com/gogo/protobuf \
+		  -I vendor/github.com/lyft/protoc-gen-validate\
+		  -I vendor/github.com/gogo/googleapis\
+		  -I proto\
+		  -I ./
 # Also remap the output modules to gogo versions of google/protobuf and google/rpc
 PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Menvoy/type/percent.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc,Menvoy/service/auth/v2/external_auth.proto=github.com/envoyproxy/data-plane-api/envoy/service/auth/v2
 
 proto: $(EXT_AUTH)external_auth.pb.go $(EXT_AUTH_V2_ALPHA)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(PERCENT).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go proto/healthz.proto
 
 $(EXT_AUTH)external_auth.pb.go $(EXT_AUTH)attribute_context.pb.go: $(EXT_AUTH)external_auth.proto $(EXT_AUTH)attribute_context.proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(EXT_AUTH)*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      $(EXT_AUTH)*.proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(EXT_AUTH_V2_ALPHA)external_auth.pb.go: $(EXT_AUTH_V2_ALPHA)external_auth.proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(EXT_AUTH_V2_ALPHA)*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      $(EXT_AUTH_V2_ALPHA)*.proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(ADDRESS).pb.go $(V2_BASE).pb.go: $(ADDRESS).proto $(V2_BASE).proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(ADDRESS).proto $(V2_BASE).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      $(ADDRESS).proto $(V2_BASE).proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(HTTP_STATUS).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      $(HTTP_STATUS).proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(PERCENT).pb.go: $(PERCENT).proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(PERCENT).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      $(PERCENT).proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(EXT_AUTH)external_auth.proto $(EXT_AUTH_V2_ALPHA)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(PERCENT).proto $(EXT_AUTH)attribute_context.proto: vendor
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              proto/*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      proto/*.proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
 
 proto/healthz.pb.go: proto/healthz.proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              proto/*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
+	$(DOCKER_RUN_PB) -v $(CURDIR):/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      $(PROTOC_IMPORTS) \
+		      proto/*.proto \
+		      --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
 
-
+###############################################################################
 # Building the image
 ###############################################################################
 CONTAINER_CREATED=.dikastes.created-$(ARCH)
@@ -380,8 +386,6 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
-
-
 ###############################################################################
 # Managing the upstream library pins
 #
@@ -389,22 +393,32 @@ sub-tag-images-%:
 # set PIN_BRANCH to the parent branch, e.g.:
 #
 #     PIN_BRANCH=release-v2.5 make update-pins
-#        - or -
+#	- or -
 #     PIN_BRANCH=master make update-pins
 #
 ###############################################################################
+# Set the default upstream repo branch to the current repo's branch,
+## e.g. "master" or "release-vX.Y", but allow it to be overridden.
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
-## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) glide up --strip-vendor
+define get_remote_version
+$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+endef
 
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_replace_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
+			go mod edit -replace $(1)=$(2)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
 		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
@@ -412,84 +426,55 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-###############################################################################
-## Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-
-###############################################################################
-## libcalico
-
-## Set the default LIBCALICO source for this project
-LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
-LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
-
 LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
 
-## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
-		echo "ERROR: LIBCALICO version could not be determined"; \
-		exit 1; \
-	fi;
+update-libcalico-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
-## Update libary pin in glide.yaml
-update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
-		REPO="$(LIBCALICO_REPO)" \
-		VERSION="$(LIBCALICO_VERSION)" \
-		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
-		BRANCH="$(LIBCALICO_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
+git-status:
+	git status --porcelain
 
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
 
+git-commit:
+	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+update-pins: update-libcalico-pin
+
+commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Static checks
 ###############################################################################
 ## Perform static checks on the code.
-# TODO: re-enable these linters !
-LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
-
 .PHONY: static-checks
-static-checks: guard-ssh-forwarding-bug vendor
-	$(DOCKER_RUN) \
-	  $(CALICO_BUILD) \
-	  golangci-lint run --deadline 5m $(LINT_ARGS)
+static-checks: build
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'GO111MODULE=off golangci-lint run --deadline 5m'
 
 .PHONY: fix
 ## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
 
-foss-checks: vendor
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+foss-checks: build-all
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
 
 ###############################################################################
 # UTs
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: proto
+ut: local_build proto
 	mkdir -p report
-	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		$(LOCAL_BUILD_MOUNTS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /bin/bash -c "go test -v ./... | go-junit-report > ./report/tests.xml"
+	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH); go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
 
 ###############################################################################
 # CI
@@ -605,17 +590,17 @@ endif
 .PHONY: help
 ## Display this help text
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
+	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
+		nb = sub( /^## /, "", helpMsg );				\
+		if(nb == 0) {						   \
+			helpMsg = $$0;					      \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
+		}							       \
+		if (nb)							 \
 			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=20                                                            \
+	}								   \
+	{ helpMsg = $$0 }'						  \
+	width=20							    \
 	$(MAKEFILE_LIST)
 
 .PHONY: install-git-hooks
