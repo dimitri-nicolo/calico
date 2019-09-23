@@ -167,6 +167,9 @@ spec:
               port: 9080
             initialDelaySeconds: 10
             periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
       volumes:
         - name: cnx-guardian-certs
           secret:

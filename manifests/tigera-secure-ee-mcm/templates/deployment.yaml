@@ -66,6 +66,9 @@ spec:
               scheme: HTTPS
             initialDelaySeconds: 10
             periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
           volumeMounts:
             - mountPath: /certs/tunnel
               name: {{ .Values.tunnelSecret.name }}

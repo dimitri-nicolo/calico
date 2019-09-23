@@ -169,6 +169,9 @@ spec:
               scheme: HTTPS
             initialDelaySeconds: 10
             periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
       volumes:
         - name: cnx-voltron-tls
           secret:
