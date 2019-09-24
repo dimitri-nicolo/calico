@@ -1446,8 +1446,8 @@ master:
     cnx-manager:
       image: tigera/cnx-manager
       version: master
-    cnx-manager-proxy:
-      image: tigera/cnx-manager-proxy
+    voltron:
+      image: tigera/voltron
       version: master
     cnx-apiserver:
       image: tigera/cnx-apiserver
