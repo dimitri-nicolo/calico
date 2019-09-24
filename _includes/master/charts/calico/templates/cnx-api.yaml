@@ -258,6 +258,36 @@ subjects:
   namespace: kube-system
 
 ---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-extension-apiserver-auth-access
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+    resourceNames:
+      - extension-apiserver-authentication
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-extension-apiserver-auth-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-extension-apiserver-auth-access
+subjects:
+- kind: ServiceAccount
+  name: cnx-apiserver
+  namespace: kube-system
+
+---
 {{- end }}
 
 apiVersion: v1
