@@ -46,6 +46,10 @@ toc:
   #     path: /getting-started/kubernetes/hardway/end-user-rbac
   #   - title: Istio integration
   #     path: /getting-started/kubernetes/hardway/istio-integration
+  - title: Self-managed on-prem
+    section:
+    - title: Docker Enterprise
+      path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
