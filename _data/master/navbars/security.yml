@@ -54,6 +54,8 @@ toc:
     path: /security/comms/reduce-nodes
   - title: Securing Tigera Secure EE Prometheus endpoints
     path: /security/comms/secure-metrics
+  - title: Securing BGP sessions
+    path: /security/comms/secure-bgp
 - title: AWS security group integration
   section:
   - title: Overview
