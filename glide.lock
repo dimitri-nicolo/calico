@@ -1,5 +1,5 @@
-hash: e28ecbdee8dbc93971236d557000f7c872ff2b552c9974bdf7cba6c3e993ea70
-updated: 2019-09-16T10:18:37.309598715-07:00
+hash: 75cee1f920d9c0089326aa72f2cbe8ef1f23ded9b9e59e07d370648ef981b100
+updated: 2019-09-24T15:54:13.016283339-07:00
 imports:
 - name: github.com/aquasecurity/kube-bench
   version: b649588f46c54c84cd9c88510680b5a651f12d46
@@ -95,6 +95,8 @@ imports:
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
 - name: github.com/kelseyhightower/envconfig
   version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -120,10 +122,13 @@ imports:
 - name: github.com/mgutz/ansi
   version: 9520e82c474b0a04dd04f8a40959027271bab992
 - name: github.com/olivere/elastic
-  version: 407a1d940dcc89e279c579eb393d0bdde8fd9ac4
+  version: 7a9602841940976887c9041882f41e5d976fc527
+  repo: git@github.com:rene-dekker/elastic.git
+  vcs: git
   subpackages:
-  - config
-  - uritemplates
+  - v7
+  - v7/config
+  - v7/uritemplates
 - name: github.com/onsi/ginkgo
   version: 974566c482abc93ffd3df6f4626e79076c7ed290
   subpackages:
@@ -189,7 +194,6 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 338f687c53eef69e88a8d2a0276f439836c96c45
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -254,7 +258,7 @@ imports:
 - name: github.com/spf13/cobra
   version: f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5
 - name: github.com/spf13/pflag
-  version: 298182f68c66c05229eb03ac171abe6e309ee79a
+  version: 2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab
 - name: github.com/tigera/calico-k8sapiserver
   version: 8ba789c4fec19187dffa4439363b71c8bed1e2eb
   repo: git@github.com:tigera/calico-k8sapiserver.git
@@ -272,6 +276,9 @@ imports:
   vcs: git
   subpackages:
   - pkg/middleware
+  - pkg/pip
+  - pkg/pip/config
+  - pkg/pip/policycalc
 - name: github.com/tigera/licensing
   version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
@@ -281,7 +288,7 @@ imports:
   - client/features
   - crypto
 - name: github.com/tigera/lma
-  version: c7e89b9f47caf4e2b4bcc11d962b735dd5e03d68
+  version: 5fd4cb99fbc0d56ffee07235322aa943616865b5
   repo: git@github.com:tigera/lma.git
   vcs: git
   subpackages:

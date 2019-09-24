@@ -26,7 +26,7 @@ func extractAuditEvents(str string) ([]*auditv1.Event, error) {
 	events := make([]*auditv1.Event, len(doc.Hits.Hits))
 	for i, hit := range doc.Hits.Hits {
 		event := new(auditv1.Event)
-		if err = json.Unmarshal(*hit.Source, event); err != nil {
+		if err = json.Unmarshal(hit.Source, event); err != nil {
 			return nil, err
 		}
 		events[i] = event
@@ -43,7 +43,7 @@ func extractLists(str string) ([]*list.TimestampedResourceList, error) {
 	lists := make([]*list.TimestampedResourceList, len(doc.Hits.Hits))
 	for i, hit := range doc.Hits.Hits {
 		list := new(list.TimestampedResourceList)
-		if err = json.Unmarshal(*hit.Source, list); err != nil {
+		if err = json.Unmarshal(hit.Source, list); err != nil {
 			return nil, err
 		}
 		lists[i] = list
