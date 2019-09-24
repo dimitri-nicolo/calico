@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	api "github.com/tigera/lma/pkg/api"

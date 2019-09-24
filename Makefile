@@ -8,7 +8,7 @@ test: ut
 
 # Define some constants
 #############################
-ELASTIC_VERSION ?= 6.4.3
+ELASTIC_VERSION ?= 7.3.0
 
 ###############################################################################
 # Both native and cross architecture builds are supported.

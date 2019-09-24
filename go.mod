@@ -6,13 +6,13 @@ replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/olivere/elastic v6.2.23+incompatible
+	github.com/olivere/elastic/v7 v7.0.6
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
 	github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef // indirect
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee // indirect
-	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
+	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	k8s.io/api v0.0.0-20190831074750-7364b6bdad65

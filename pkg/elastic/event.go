@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
@@ -64,7 +64,7 @@ func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 			// define function that pushes the search results into the channel.
 			for _, hit := range res.Hits.Hits {
 				ev := new(auditv1.Event)
-				if err := json.Unmarshal(*hit.Source, ev); err != nil {
+				if err := json.Unmarshal(hit.Source, ev); err != nil {
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
 					continue
 				}

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
@@ -61,7 +61,7 @@ func (c *client) RetrieveArchivedReport(id string) (*api.ArchivedReportData, err
 	// Extract list from result.
 	hit := res.Hits.Hits[0]
 	r := new(api.ArchivedReportData)
-	if err = json.Unmarshal(*hit.Source, r); err != nil {
+	if err = json.Unmarshal(hit.Source, r); err != nil {
 		clog.WithError(err).Error("failed to extract report from result")
 		return nil, err
 	}
@@ -78,7 +78,6 @@ func (c *client) StoreArchivedReport(r *api.ArchivedReportData, t time.Time) err
 	}
 	res, err := c.Index().
 		Index(index).
-		Type("_doc").
 		Id(r.UID()).
 		BodyJson(r).
 		Do(context.Background())
@@ -211,7 +210,7 @@ func (c *client) RetrieveArchivedReportSummaries(cxt context.Context, q api.Repo
 	}
 
 	// Query for raw report data in a paginated fashion.
-	var count int
+	var count int64
 	for i := startIdx; ; i += DefaultPageSize {
 		// Make search query
 		res, err := base.From(i).Do(cxt)
@@ -224,13 +223,13 @@ func (c *client) RetrieveArchivedReportSummaries(cxt context.Context, q api.Repo
 
 		for _, hit := range res.Hits.Hits {
 			rep := new(api.ArchivedReportData)
-			if err := json.Unmarshal(*hit.Source, rep); err != nil {
+			if err := json.Unmarshal(hit.Source, rep); err != nil {
 				log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal report summary json")
 				continue
 			}
 			reps = append(reps, rep)
 		}
-		count = int(res.Hits.TotalHits)
+		count = res.Hits.TotalHits.Value
 
 		// Exit if either of the following are true:
 		// - MaxPerPage was specified, in this case we queried the exact number we needed, so we'll either have that
@@ -240,14 +239,14 @@ func (c *client) RetrieveArchivedReportSummaries(cxt context.Context, q api.Repo
 			log.Debug("Queried specific number per page")
 			break
 		}
-		if i+DefaultPageSize >= int(res.Hits.TotalHits) {
+		if i+DefaultPageSize >= int(res.Hits.TotalHits.Value) {
 			log.Debug("Exhausted results")
 			break
 		}
 	}
 	return &api.ArchivedReportSummaries{
 		Reports: reps,
-		Count:   count,
+		Count:   int(count),
 	}, nil
 }
 
@@ -328,7 +327,7 @@ func (c *client) retrieveArchivedReportSummary(queries []elastic.Query, includeR
 
 	// Extract list from result.
 	hit := res.Hits.Hits[0]
-	if err := json.Unmarshal(*hit.Source, rep); err != nil {
+	if err := json.Unmarshal(hit.Source, rep); err != nil {
 		log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal report summary json")
 		return nil, err
 	}

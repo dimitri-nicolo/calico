@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -65,7 +65,7 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 	// Extract list from result.
 	hit := res.Hits.Hits[0]
 	l := new(list.TimestampedResourceList)
-	if err = json.Unmarshal(*hit.Source, l); err != nil {
+	if err = json.Unmarshal(hit.Source, l); err != nil {
 		clog.WithError(err).Error("failed to extract list from result")
 		return nil, err
 	}
@@ -81,7 +81,6 @@ func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) e
 	}
 	res, err := c.Index().
 		Index(index).
-		Type("_doc").
 		Id(l.String()).
 		BodyJson(l).
 		Do(context.Background())
