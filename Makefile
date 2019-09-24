@@ -195,27 +195,10 @@ ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif
 
-MANIFESTS = manifests/voltron.yaml docker-image/voltron/templates/guardian.yaml.tmpl
+MANIFESTS = docker-image/voltron/templates/guardian.yaml.tmpl
 
 .PHONY: manifests
 manifests: $(MANIFESTS)
-
-# Handle differences in base64 between OS
-ifeq ($(shell uname -s),Linux)
-BASE64_ARGS=-w 0
-endif
-
-.PHONY: manifests/voltron.yaml
-manifests/voltron.yaml: manifests/voltron.yaml.tmpl
-	scripts/certs/clean-self-signed.sh scripts/certs
-	scripts/certs/self-signed.sh scripts/certs
-	CERT64=`base64 $(BASE64_ARGS) scripts/certs/cert` && \
-	 KEY64=`base64 $(BASE64_ARGS) scripts/certs/key` && \
-	 sed -e "s;{{VOLTRON_CRT_BASE64}};$$CERT64;" \
-	     -e "s;{{VOLTRON_KEY_BASE64}};$$KEY64;" \
-	     -e "s;{{VOLTRON_DOCKER_PUSH_REPO}};$(PUSH_REPO);" \
-	     -e "s;{{VOLTRON_DOCKER_TAG}};$(BRANCH_NAME);" $< > $@
-	scripts/certs/clean-self-signed.sh scripts/certs
 
 .PHONY: docker-image/voltron/templates/guardian.yaml.tmpl
 docker-image/voltron/templates/guardian.yaml.tmpl: manifests/guardian.yaml.tmpl

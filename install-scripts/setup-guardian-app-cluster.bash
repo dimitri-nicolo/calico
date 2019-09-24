@@ -1,52 +1,11 @@
 #!/bin/sh
 
-# Patch ES-proxy to integrate with Guardian and allow access on port 8443
+# Enable multi cluster client mode for compliance and es proxy
 kubectl patch deployment -n calico-monitoring cnx-manager --patch \
-'{"spec":{"template":{"spec":{"containers":[{"name":"tigera-es-proxy","env":[{"name":"LISTEN_ADDR","value":":8443"}],"image":"gcr.io/tigera-dev/cnx/tigera/es-proxy:v2.5.0-mcm0.1"}]}}}}'
-
-# Allow Guardian to reach ES Proxy 
-kubectl apply -f - << EOF
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    k8s-app: cnx-manager
-  name: cnx-es-proxy-local
-  namespace: calico-monitoring
-spec:
-  selector:
-    k8s-app: cnx-manager
-  ports:
-    - port: 8443
-      nodePort: 30843
-      protocol: TCP
-  type: NodePort
----
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-cnx.guardian-es-proxy
-  namespace: calico-monitoring
-spec:
-  tier: allow-cnx
-  order: 100
-  selector: k8s-app == "cnx-manager"
-  ingress:
-    - action: Allow
-      protocol: TCP
-      source:
-        nets:
-          - 0.0.0.0/0
-      destination:
-        ports:
-          - '8443'
-  types:
-    - Ingress
-EOF
-
-# Patch Compliance Server to integrate with Guardian
+'{"spec":{"template":{"spec":{"containers":[{"name":"tigera-es-proxy","env":[{"name":"ENABLE_MULTI_CLUSTER_CLIENT","value":"true"}]}]}}}}'
 kubectl patch deployment -n calico-monitoring compliance-server --patch \
-'{"spec": {"template": {"spec": {"containers": [{"name": "compliance-server", "image": "gcr.io/tigera-dev/cnx/tigera/compliance-server:v2.5.0-mcm0.1"}]}}}}'
+'{"spec":{"template":{"spec":{"containers":[{"name":"compliance-server","env":[{"name":"ENABLE_MULTI_CLUSTER_CLIENT","value":"true"}]}]}}}}'
+
 
 # Allow Guardian to reach Compliance Server
 kubectl apply -f - << EOF
