@@ -81,7 +81,7 @@ The {{site.noderunning}} pod must have permission to access that secret.  To all
 
 ```
 kubectl create -f <<EOF
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: secret-access
@@ -92,7 +92,7 @@ rules:
   resourceNames: ["bgp-secrets"]
   verbs: ["watch", "list", "get"]
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: secret-access
