@@ -29,7 +29,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
-	github.com/olivere/elastic v6.2.23+incompatible
+	github.com/olivere/elastic/v7 v7.0.6
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/projectcalico/felix v3.7.3+incompatible // indirect
@@ -40,7 +40,7 @@ require (
 	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
 	github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible
 	github.com/tigera/licensing v2.2.3+incompatible // indirect
-	github.com/tigera/lma master 
+	github.com/tigera/lma 5fd4cb99fbc0d56ffee07235322aa943616865b5
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
