@@ -80,7 +80,7 @@
 {% elsif include.platform == "eks" or include.platform == "gke" or include.platform == "aks" %}
 
 1. Create a secret containing a TLS certificate and the private key used to
-   sign it. The following commands create a self-signed certificate and key.
+   sign it. The following commands create a key and certificate signed by default Kubernetes signer.
 
    ```bash
    openssl req -out cnxmanager.csr -newkey rsa:2048 -nodes -keyout cnxmanager.key -subj "/CN=cnxmanager.cluster.local"
