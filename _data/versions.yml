@@ -1474,8 +1474,6 @@ master:
       image: calico/cni
       version: master
       registry: quay.io
-    calico/routereflector:
-      version: v0.6.1
     calico:
       version: v3.6.0
       minor_version: v3.6
