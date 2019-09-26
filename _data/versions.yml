@@ -1470,6 +1470,50 @@ master:
     cnx-node:
       image: tigera/cnx-node
       version: master
+    dikastes:
+      image: tigera/dikastes
+      version: master
+    fluentd:
+      image: tigera/fluentd
+      version: master
+    es-proxy:
+      image: tigera/es-proxy
+      version: master
+    kibana:
+      image: tigera/kibana
+      version: master
+    cloud-controllers:
+      image: tigera/cloud-controllers
+      version: master
+    elastic-tsee-installer:
+      image: tigera/intrusion-detection-job-installer
+      version: master
+    es-curator:
+      image: tigera/es-curator
+      version: master
+    intrusion-detection-controller:
+      image: tigera/intrusion-detection-controller
+      version: master
+    compliance-controller:
+      image: tigera/compliance-controller
+      version: master
+    compliance-reporter:
+      image: tigera/compliance-reporter
+      version: master
+    compliance-snapshotter:
+      image: tigera/compliance-snapshotter
+      version: master
+    compliance-server:
+      image: tigera/compliance-server
+      version: master
+    compliance-benchmarker:
+      image: tigera/compliance-benchmarker
+      version: master
+    ingress-collector:
+      image: tigera/ingress-collector
+      version: master
+    # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
+    # to the docs & manifest tooling not to default to the tigera registry.
     calico/cni:
       image: calico/cni
       version: master
@@ -1497,63 +1541,21 @@ master:
       image: coreos/configmap-reload
       version: v0.0.1
       registry: quay.io
-    dikastes:
-      image: tigera/dikastes
-      version: master
     flexvol:
       image: calico/pod2daemon-flexvol
       version: master
       registry: quay.io
-    fluentd:
-      image: tigera/fluentd
-      version: master
-    es-proxy:
-      image: tigera/es-proxy
-      version: master
     elasticsearch-operator:
       image: upmcenterprises/elasticsearch-operator
       version: 0.4.0
-    kibana:
-      image: tigera/kibana
-      version: master
     elasticsearch:
       image: elasticsearch/elasticsearch
       version: 6.4.3
       registry: docker.elastic.co
-    cloud-controllers:
-      image: tigera/cloud-controllers
-      version: master
-    elastic-tsee-installer:
-      image: tigera/intrusion-detection-job-installer
-      version: master
-    es-curator:
-      image: tigera/es-curator
-      version: master
-    intrusion-detection-controller:
-      image: tigera/intrusion-detection-controller
-      version: master
     flannel:
       image: coreos/flannel
       version: v0.11.0
       registry: quay.io
-    compliance-controller:
-      image: tigera/compliance-controller
-      version: master
-    compliance-reporter:
-      image: tigera/compliance-reporter
-      version: master
-    compliance-snapshotter:
-      image: tigera/compliance-snapshotter
-      version: master
-    compliance-server:
-      image: tigera/compliance-server
-      version: master
-    compliance-benchmarker:
-      image: tigera/compliance-benchmarker
-      version: master
-    ingress-collector:
-      image: tigera/ingress-collector
-      version: master
     busybox:
       image: busybox
       version: 1.26.2
