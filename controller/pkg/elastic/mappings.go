@@ -106,7 +106,7 @@ const eventMapping = `{
         "dns_log_id": {
             "type": "keyword"
         },
-        "suspicious_domain": {
+        "suspicious_domains": {
             "type": "keyword"
         }
       }   
