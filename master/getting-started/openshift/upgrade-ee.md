@@ -2,12 +2,12 @@
 title: Upgrading an OpenShift cluster with Calico to Tigera Secure EE
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/upgrade-ee
 ---
-
+{% assign calico_minor_version = site.data.versions[page.version].first["calico"].minor_version %}
 ## Prerequisites
 
-- Ensure that the open source Calico cluster is running the latest version of Calico {{site.data.versions[page.version].first.components["calico"].minor_version | append: '.x' }}
+- Ensure that the open source Calico cluster is running the latest version of Calico {{ calico_minor_version | append: '.x' }}
 
-  If not, follow the [Calico OpenShift installation documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/getting-started/openshift/installation)
+  If not, follow the [Calico OpenShift installation documentation](https://docs.projectcalico.org/{{ calico_minor_version }}/getting-started/openshift/installation)
   before continuing.
 
 - Ensure that you have satisfied all of the {{site.prodname}} prerequisites listed
