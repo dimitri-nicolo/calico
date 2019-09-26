@@ -24,7 +24,7 @@ var (
   "hits": {
     "total": {
       "relation": "eq",
-      "value": 1
+      "value": 1285
     },
     "max_score": 0,
     "hits": []
