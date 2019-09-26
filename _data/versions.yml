@@ -1471,34 +1471,41 @@ master:
       image: tigera/cnx-node
       version: master
     calico/cni:
-      image: quay.io/calico/cni
+      image: calico/cni
       version: master
+      registry: quay.io
     calico/routereflector:
       version: v0.6.1
     calico:
       version: v3.6.0
       minor_version: v3.6
     prometheus-operator:
-      image: quay.io/coreos/prometheus-operator
+      image: coreos/prometheus-operator
       version: v0.29.0
+      registry: quay.io
     prometheus:
-      image: quay.io/prometheus/prometheus
+      image: prometheus/prometheus
       version: v2.7.1
+      registry: quay.io
     alertmanager:
-      image: quay.io/prometheus/alertmanager
+      image: prometheus/alertmanager
       version: v0.16.1
+      registry: quay.io
     prometheus-config-reloader:
-      image: quay.io/coreos/prometheus-config-reloader
+      image: coreos/prometheus-config-reloader
       version: v0.29.0
+      registry: quay.io
     configmap-reload:
-      image: quay.io/coreos/configmap-reload
+      image: coreos/configmap-reload
       version: v0.0.1
+      registry: quay.io
     dikastes:
       image: tigera/dikastes
       version: master
     flexvol:
       image: calico/pod2daemon-flexvol
       version: master
+      registry: quay.io
     fluentd:
       image: tigera/fluentd
       version: master
@@ -1512,8 +1519,9 @@ master:
       image: tigera/kibana
       version: master
     elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch
+      image: elasticsearch/elasticsearch
       version: 6.4.3
+      registry: docker.elastic.co
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -1527,8 +1535,9 @@ master:
       image: tigera/intrusion-detection-controller
       version: master
     flannel:
-      image: quay.io/coreos/flannel
+      image: coreos/flannel
       version: v0.11.0
+      registry: quay.io
     compliance-controller:
       image: tigera/compliance-controller
       version: master
@@ -1550,9 +1559,12 @@ master:
     busybox:
       image: busybox
       version: 1.26.2
+      registry: docker.io
     cpHorizontalAutoscaler:
-      image: k8s.gcr.io/cluster-proportional-autoscaler-amd64
+      image: cluster-proportional-autoscaler-amd64
       version: 1.1.2-r2
+      registry: k8s.gcr.io
     cpVerticalAutoscaler:
-      image: k8s.gcr.io/cpvpa-amd64
+      image: cpvpa-amd64
       version: v0.6.0
+      registry: k8s.gcr.io
