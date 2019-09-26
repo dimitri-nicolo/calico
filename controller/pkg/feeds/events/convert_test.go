@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 

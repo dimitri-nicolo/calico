@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
