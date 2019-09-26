@@ -144,7 +144,7 @@ mkdir keyfiles
 ../../scripts/certs/self-signed.sh keyfiles
 
 echo "INFO: Install voltron"
-helm install ../../manifests/tigera-secure-ee-mcm/ \
+helm install tigera/tigera-secure-ee-mcm \
 --set-file certs.tunnel.provided.crt=keyfiles/cert \
 --set-file certs.tunnel.provided.key=keyfiles/key \
 --set-file certs.https.provided.crt=keyfiles/cert \

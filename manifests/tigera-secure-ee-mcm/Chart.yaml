@@ -1,5 +1,0 @@
-apiVersion: v1
-appVersion: "0.1"
-description: Tigera Secure Enterprise Edition - Multi Cluster Management
-name: tigera-secure-ee-mcm
-version: 0.1.0
