@@ -27,7 +27,7 @@ def parse_versions(versions_yml, version)
   versionsYml = components.each do |key,val|
     if val.include? "image"
       # if the "image" key is present, then imageNames should be pulled from versions.yml
-      components[key] = Component.new(val["image"], val["version"])
+      components[key] = Component.new(val["image"], val["version"], val["registry"])
     else
       components[key] = val["version"]
     end
