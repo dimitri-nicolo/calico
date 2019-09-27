@@ -86,6 +86,11 @@ func init() {
 		reflect.TypeOf(apiv3.GlobalNetworkPolicy{}),
 	)
 	registerResourceInfo(
+		apiv3.KindStagedGlobalNetworkPolicy,
+		"stagedglobalnetworkpolicies",
+		reflect.TypeOf(apiv3.StagedGlobalNetworkPolicy{}),
+	)
+	registerResourceInfo(
 		apiv3.KindHostEndpoint,
 		"hostendpoints",
 		reflect.TypeOf(apiv3.HostEndpoint{}),
@@ -104,6 +109,16 @@ func init() {
 		apiv3.KindNetworkPolicy,
 		"networkpolicies",
 		reflect.TypeOf(apiv3.NetworkPolicy{}),
+	)
+	registerResourceInfo(
+		apiv3.KindStagedNetworkPolicy,
+		"stagednetworkpolicies",
+		reflect.TypeOf(apiv3.StagedNetworkPolicy{}),
+	)
+	registerResourceInfo(
+		apiv3.KindStagedKubernetesNetworkPolicy,
+		"stagedkubernetesnetworkpolicies",
+		reflect.TypeOf(apiv3.StagedKubernetesNetworkPolicy{}),
 	)
 	registerResourceInfo(
 		apiv3.KindNetworkSet,

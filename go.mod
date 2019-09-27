@@ -29,6 +29,7 @@ require (
 	github.com/hashicorp/golang-lru v0.0.0-20160207214719-a0d98a5f2880 // indirect
 	github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
+	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/kelseyhightower/envconfig v0.0.0-20180517194557-dd1402a4d99d
 	github.com/leodido/go-urn v0.0.0-20181204092800-a67a23e1c1af // indirect

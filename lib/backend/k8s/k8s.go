@@ -76,8 +76,14 @@ func init() {
 				&apiv3.NetworkSetList{},
 				&apiv3.GlobalNetworkPolicy{},
 				&apiv3.GlobalNetworkPolicyList{},
+				&apiv3.StagedGlobalNetworkPolicy{},
+				&apiv3.StagedGlobalNetworkPolicyList{},
 				&apiv3.NetworkPolicy{},
 				&apiv3.NetworkPolicyList{},
+				&apiv3.StagedNetworkPolicy{},
+				&apiv3.StagedNetworkPolicyList{},
+				&apiv3.StagedKubernetesNetworkPolicy{},
+				&apiv3.StagedKubernetesNetworkPolicyList{},
 				&apiv3.Tier{},
 				&apiv3.TierList{},
 				&apiv3.HostEndpoint{},
@@ -169,6 +175,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindStagedGlobalNetworkPolicy,
+		resources.NewStagedGlobalNetworkPolicyClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindGlobalNetworkSet,
 		resources.NewGlobalNetworkSetClient(cs, crdClientV1),
 	)
@@ -177,6 +189,18 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindNetworkPolicy,
 		resources.NewNetworkPolicyClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindStagedNetworkPolicy,
+		resources.NewStagedNetworkPolicyClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindStagedKubernetesNetworkPolicy,
+		resources.NewStagedKubernetesNetworkPolicyClient(cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -462,10 +486,12 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindLicenseKey,
 		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
+		apiv3.KindStagedGlobalNetworkPolicy,
 		apiv3.KindNetworkPolicy,
+		apiv3.KindStagedNetworkPolicy,
+		apiv3.KindStagedKubernetesNetworkPolicy,
 		apiv3.KindTier,
 		apiv3.KindGlobalNetworkSet,
-		apiv3.KindNetworkPolicy,
 		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
 		apiv3.KindHostEndpoint,
@@ -571,6 +597,12 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv3.GlobalNetworkPolicyList{},
 				&apiv3.NetworkPolicy{},
 				&apiv3.NetworkPolicyList{},
+				&apiv3.StagedGlobalNetworkPolicy{},
+				&apiv3.StagedGlobalNetworkPolicyList{},
+				&apiv3.StagedNetworkPolicy{},
+				&apiv3.StagedNetworkPolicyList{},
+				&apiv3.StagedKubernetesNetworkPolicy{},
+				&apiv3.StagedKubernetesNetworkPolicyList{},
 				&apiv3.HostEndpoint{},
 				&apiv3.HostEndpointList{},
 				&apiv3.BlockAffinity{},

@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/sirupsen/logrus"
 )

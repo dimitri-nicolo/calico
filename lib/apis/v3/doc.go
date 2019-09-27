@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@ The valid resource types are:
 	-  Profile
 	-  WorkloadEndpoint
 	-  Tier
+	-  StagedGlobalNetworkPolicy
+	-  StagedNetworkPolicy
+	-  StagedKubernetesNetworkPolicy
 
 The resource structures include the JSON tags for each exposed field.  These are standard
 golang tags that define the JSON format of the structures as used by calicoctl.  The YAML

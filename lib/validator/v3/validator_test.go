@@ -1766,6 +1766,92 @@ func init() {
 			}, false,
 		),
 
+		// StagedGlobalNetworkPolicySpec Types field checks.
+		Entry("disallow name with invalid character", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
+			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
+		Entry("disallow name with mixed case characters", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
+			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
+		Entry("allow valid name", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
+			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, true),
+		Entry("disallow k8s policy name", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
+			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
+		Entry("disallow name with dot", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
+			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
+		Entry("should accept a valid StagedAction value 'Set'",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: api.StagedActionSet,
+					Selector:     "foo == \"bar\"",
+				},
+			}, true,
+		),
+		Entry("should accept an unset StagedAction",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					Selector: "foo == \"bar\"",
+				},
+			}, true,
+		),
+		Entry("should accept a valid StagedAction value 'Delete'",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: api.StagedActionDelete,
+				},
+			}, true,
+		),
+		Entry("should reject a valid StagedAction value 'Delete' if any other Spec field is set",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: api.StagedActionDelete,
+					Selector:     "foo == \"bar\"",
+				},
+			}, false,
+		),
+		Entry("should reject a StagedAction value 'Warning'",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: "Warning",
+					Selector:     "foo == \"bar\"",
+				},
+			}, false,
+		),
+		Entry("should accept an empty StagedAction value",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: "",
+					Selector:     "foo == \"bar\"",
+				},
+			}, true,
+		),
+		Entry("should reject an empty selector value when StagedAction is Set",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: api.StagedActionSet,
+				},
+			}, false,
+		),
+		Entry("should accept an empty selector value when StagedAction is Delete",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedGlobalNetworkPolicySpec{
+					StagedAction: "Delete",
+				},
+			}, true,
+		),
+		Entry("should reject an empty selector value when StagedAction is not set",
+			&api.StagedGlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec:       api.StagedGlobalNetworkPolicySpec{},
+			}, false,
+		),
+
 		// NetworkPolicySpec Types field checks.
 		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
 		Entry("disallow name with dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"}}, false),
@@ -1825,6 +1911,102 @@ func init() {
 				Spec: api.NetworkPolicySpec{
 					Types: []api.PolicyType{"unexpected"},
 				},
+			}, false,
+		),
+
+		// StagedNetworkPolicySpec Types field checks.
+		Entry("allow valid name", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
+		Entry("disallow name with dot", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
+		Entry("disallow name with mixed case", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
+		Entry("allow valid name of 253 chars", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])},
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
+		Entry("disallow a name of 254 chars", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])},
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
+		Entry("allow k8s policy name", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
+		Entry("allow missing Types",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: api.StagedActionDelete,
+				},
+			}, true,
+		),
+		Entry("should accept a valid StagedAction value 'Set'",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: api.StagedActionSet,
+					Selector:     "foo == \"bar\"",
+				},
+			}, true,
+		),
+		Entry("should accept a StagedAction not set",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					Selector: "foo == \"bar\"",
+				},
+			}, true,
+		),
+		Entry("should accept a valid StagedAction value 'Delete'",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: api.StagedActionDelete,
+				},
+			}, true,
+		),
+		Entry("should reject a valid StagedAction value 'Delete' if any other Spec field is set",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: api.StagedActionDelete,
+					Selector:     "foo == \"bar\"",
+				},
+			}, false,
+		),
+		Entry("should reject a StagedAction value 'Warning'",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: "Warning",
+					Selector:     "foo == \"bar\"",
+				},
+			}, false,
+		),
+		Entry("should accept an empty StagedAction value",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: "",
+					Selector:     "foo == \"bar\"",
+				},
+			}, true,
+		),
+		Entry("should reject an empty Selector when StagedAction is Set",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: api.StagedActionSet,
+				},
+			}, false,
+		),
+		Entry("should accept an empty Selector when StagedAction is Delete",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.StagedNetworkPolicySpec{
+					StagedAction: api.StagedActionDelete,
+				},
+			}, true,
+		),
+		Entry("should reject an empty Selector when StagedAction is not set",
+			&api.StagedNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec:       api.StagedNetworkPolicySpec{},
 			}, false,
 		),
 

@@ -187,3 +187,10 @@ const (
 	Log          = "Log"
 	Pass         = "Pass"
 )
+
+type StagedAction string
+
+const (
+	StagedActionSet    StagedAction = "Set"
+	StagedActionDelete StagedAction = "Delete"
+)

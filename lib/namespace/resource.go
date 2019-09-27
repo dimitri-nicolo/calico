@@ -20,7 +20,7 @@ import (
 
 func IsNamespaced(kind string) bool {
 	switch kind {
-	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints, apiv3.KindNetworkSet:
+	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindStagedNetworkPolicy, apiv3.KindStagedKubernetesNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints, apiv3.KindNetworkSet:
 		return true
 	default:
 		return false
