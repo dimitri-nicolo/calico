@@ -10,7 +10,7 @@ test: ut
 
 # Define some constants
 #############################
-ELASTIC_VERSION ?= 6.4.3
+ELASTIC_VERSION ?= 7.3.2
 K8S_VERSION      ?= v1.11.3
 ETCD_VERSION     ?= v3.3.7
 
