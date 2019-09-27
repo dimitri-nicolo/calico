@@ -64,9 +64,9 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       kibanaURL: ''
  
     # Configuration for the manager UI proxy.
-    managerProxy:
-      image: #{imageRegistry}#{versions["cnx-manager-proxy"].image}
-      tag: #{versions["cnx-manager-proxy"].version}
+    voltron:
+      image: #{imageRegistry}#{versions["voltron"].image}
+      tag: #{versions["voltron"].version}
       env:
         # Optional environment variables for configuring the manager proxy.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -80,7 +80,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         limits:
           cpu: #"500m"
           memory: #"1024Mi"
-    
+
     # Configuration for the esProxy container.
     esProxy:
       image: #{imageRegistry}#{versions["es-proxy"].image}
