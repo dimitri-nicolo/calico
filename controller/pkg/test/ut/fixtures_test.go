@@ -28,7 +28,7 @@ import (
 var uut *elastic.Elastic
 var elasticClient *oElastic.Client
 
-const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:7.3.0"
+const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:7.3.2"
 
 func TestMain(m *testing.M) {
 	d, err := client.NewEnvClient()
