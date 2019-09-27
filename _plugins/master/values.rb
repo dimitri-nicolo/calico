@@ -253,7 +253,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
           memory: #"1024Mi"
     
     alertmanager:
-      image: #{versions["alertmanager"].image}
+      image: #{versions["alertmanager"].registry}/#{versions["alertmanager"].image}
       tag: #{versions["alertmanager"].version}
       # Configuration for the service which exposes the Prometheus alertmanager.
       service:
@@ -261,7 +261,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         nodePort:
     
     prometheus:
-      image: #{versions["prometheus"].image}
+      image: #{versions["prometheus"].registry}/#{versions["prometheus"].image}
       tag: #{versions["prometheus"].version}
       scrapeTargets:
         # Node settings grant control over the Prometheus instance tasked with
@@ -290,7 +290,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         clusterIP:
     
     elasticsearch:
-      image: #{versions["elasticsearch"].image}
+      image: #{versions["elasticsearch"].registry}/#{versions["elasticsearch"].image}
       tag: #{versions["elasticsearch"].version}
       # Information for configuring connections to a BYO elasticsearch cluster.
       # Leave all fields blank to deploy a self-hosted elasticsearch instance.
@@ -353,15 +353,15 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       tag: #{versions["intrusion-detection-controller"].version}
 
     prometheusOperator:
-      image: #{versions["prometheus-operator"].image}
+      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
       tag: #{versions["prometheus-operator"].version}
 
     prometheusConfigReloader:
-      image: #{versions["prometheus-config-reloader"].image}
+      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
 
     configmapReload:
-      image: #{versions["configmap-reload"].image}
+      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
       tag: #{versions["configmap-reload"].version}
 
     elasticsearchOperator:
@@ -404,16 +404,16 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       registry: #{imageRegistry}
       version: #{versions["es-curator"].version}
     prometheusOperator:
-      image: #{versions["prometheus-operator"].image}
+      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
       version: #{versions["prometheus-operator"].version}
     elasticsearchOperator:
       image: #{versions["elasticsearch-operator"].image}
       version: #{versions["elasticsearch-operator"].version}
     prometheusConfigReloader:
-      image: #{versions["prometheus-config-reloader"].image}
+      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
     configmapReload:
-      image: #{versions["configmap-reload"].image}
+      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
       tag: #{versions["configmap-reload"].version}
     EOF
   else 
@@ -494,7 +494,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
     # Configuration for setting up Calico CNI.
     cni:
       # cni does not use imageRegistry as it is an external OS image
-      image: #{versions["calico/cni"].image}
+      image: #{versions["calico/cni"].registry}/#{versions["calico/cni"].image}
       tag: #{versions["calico/cni"].version}
       env:
         # Optional environment variables for configuring Calico CNI.
@@ -504,7 +504,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
     
     # Configuration for setting up Flannel.
     flannel:
-      image: #{versions["flannel"].image}
+      image: #{versions["flannel"].registry}/#{versions["flannel"].image}
       tag: #{versions["flannel"].version}
       env:
         # Optional environment variables for configuring Flannel.
@@ -621,15 +621,15 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
 
     flexvol:
       # flexvol does not use imageRegistry as it is an external OS image
-      image: #{versions["flexvol"].image}
+      image: #{versions["flexvol"].registry}/#{versions["flexvol"].image}
       tag: #{versions["flexvol"].version}
 
     cpHorizontalAutoscaler:
-      image: #{versions["cpHorizontalAutoscaler"].image}
+      image: #{versions["cpHorizontalAutoscaler"].registry}/#{versions["cpHorizontalAutoscaler"].image}
       tag: #{versions["cpHorizontalAutoscaler"].version}
 
     cpVerticalAutoscaler:
-      image: #{versions["cpVerticalAutoscaler"].image}
+      image: #{versions["cpVerticalAutoscaler"].registry}/#{versions["cpVerticalAutoscaler"].image}
       tag: #{versions["cpVerticalAutoscaler"].version}
 
     # Optional configuration for setting custom BGP templates

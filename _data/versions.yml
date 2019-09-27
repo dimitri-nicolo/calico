@@ -1470,34 +1470,8 @@ master:
     cnx-node:
       image: tigera/cnx-node
       version: master
-    calico/cni:
-      image: quay.io/calico/cni
-      version: master
-    calico/routereflector:
-      version: v0.6.1
-    calico:
-      version: v3.6.0
-      minor_version: v3.6
-    prometheus-operator:
-      image: quay.io/coreos/prometheus-operator
-      version: v0.29.0
-    prometheus:
-      image: quay.io/prometheus/prometheus
-      version: v2.7.1
-    alertmanager:
-      image: quay.io/prometheus/alertmanager
-      version: v0.16.1
-    prometheus-config-reloader:
-      image: quay.io/coreos/prometheus-config-reloader
-      version: v0.29.0
-    configmap-reload:
-      image: quay.io/coreos/configmap-reload
-      version: v0.0.1
     dikastes:
       image: tigera/dikastes
-      version: master
-    flexvol:
-      image: calico/pod2daemon-flexvol
       version: master
     fluentd:
       image: tigera/fluentd
@@ -1505,15 +1479,9 @@ master:
     es-proxy:
       image: tigera/es-proxy
       version: master
-    elasticsearch-operator:
-      image: upmcenterprises/elasticsearch-operator
-      version: 0.4.0
     kibana:
       image: tigera/kibana
       version: master
-    elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch
-      version: 6.4.3
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -1526,9 +1494,6 @@ master:
     intrusion-detection-controller:
       image: tigera/intrusion-detection-controller
       version: master
-    flannel:
-      image: quay.io/coreos/flannel
-      version: v0.11.0
     compliance-controller:
       image: tigera/compliance-controller
       version: master
@@ -1547,12 +1512,59 @@ master:
     ingress-collector:
       image: tigera/ingress-collector
       version: master
+    # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
+    # to the docs & manifest tooling not to default to the tigera registry.
+    calico/cni:
+      image: calico/cni
+      version: master
+      registry: quay.io
+    calico:
+      version: v3.6.0
+      minor_version: v3.6
+    prometheus-operator:
+      image: coreos/prometheus-operator
+      version: v0.29.0
+      registry: quay.io
+    prometheus:
+      image: prometheus/prometheus
+      version: v2.7.1
+      registry: quay.io
+    alertmanager:
+      image: prometheus/alertmanager
+      version: v0.16.1
+      registry: quay.io
+    prometheus-config-reloader:
+      image: coreos/prometheus-config-reloader
+      version: v0.29.0
+      registry: quay.io
+    configmap-reload:
+      image: coreos/configmap-reload
+      version: v0.0.1
+      registry: quay.io
+    flexvol:
+      image: calico/pod2daemon-flexvol
+      version: master
+      registry: quay.io
+    elasticsearch-operator:
+      image: upmcenterprises/elasticsearch-operator
+      version: 0.4.0
+    elasticsearch:
+      image: elasticsearch/elasticsearch
+      version: 6.4.3
+      registry: docker.elastic.co
+    flannel:
+      image: coreos/flannel
+      version: v0.11.0
+      registry: quay.io
     busybox:
       image: busybox
       version: 1.26.2
+      registry: docker.io
     cpHorizontalAutoscaler:
-      image: k8s.gcr.io/cluster-proportional-autoscaler-amd64
+      image: cluster-proportional-autoscaler-amd64
       version: 1.1.2-r2
+      registry: k8s.gcr.io
     cpVerticalAutoscaler:
-      image: k8s.gcr.io/cpvpa-amd64
+      image: cpvpa-amd64
       version: v0.6.0
+      registry: k8s.gcr.io
