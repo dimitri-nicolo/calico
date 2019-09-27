@@ -23,7 +23,9 @@ import:
 - package: k8s.io/apiserver
   version: kubernetes-1.10.0
 - package: k8s.io/apimachinery
-  version: 302974c03f7e50f16561ba237db776ab93594ef6 
+  version: 302974c03f7e50f16561ba237db776ab93594ef6
+  # Once this repo starts using go modules, we can import olivere/elastic like the line below:
+  # require ( ... github.com/olivere/elastic/v7 v7.0.6 ... )
 - package: github.com/olivere/elastic
   repo: git@github.com:tigera/elastic-private.git
   version: 7a9602841940976887c9041882f41e5d976fc527
