@@ -38,8 +38,6 @@ use {{site.prodname}} networking.
 
 {{site.prodname}} supports the following kube-proxy modes:
 - `iptables` (default)
-- `ipvs` Requires Kubernetes >=v1.9.3. Refer to
-  [Enabling IPVS in Kubernetes](../../networking/enabling-ipvs) for more details.
 
 #### IP pool configuration
 
