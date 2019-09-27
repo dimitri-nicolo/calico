@@ -22,7 +22,10 @@ var (
     "failed": 0
   },
   "hits": {
-    "total": 1285,
+    "total": {
+      "relation": "eq",
+      "value": 1285
+    },
     "max_score": 0,
     "hits": []
   },
@@ -96,7 +99,10 @@ var (
     "failed": 0
   },
   "hits": {
-    "total": 1285,
+		"total": {
+      "relation": "eq",
+      "value": 1
+    },
     "max_score": 0,
     "hits": []
   },
@@ -123,7 +129,10 @@ var (
     "failed": 0
   },
   "hits": {
-    "total": 1285,
+    "total": {
+      "relation": "eq",
+      "value": 1
+    },
     "max_score": 0,
     "hits": []
   },
@@ -150,7 +159,10 @@ var (
     "failed": 0
   },
   "hits": {
-    "total": 1285,
+    "total": {
+      "relation": "eq",
+      "value": 1
+    },
     "max_score": 0,
     "hits": []
   },
@@ -294,7 +306,10 @@ var (
     "failed": 0
   },
   "hits": {
-    "total": 1285,
+    "total": {
+      "relation": "eq",
+      "value": 1
+    },
     "max_score": 0,
     "hits": []
   },

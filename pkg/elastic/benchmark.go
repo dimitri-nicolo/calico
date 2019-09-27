@@ -8,7 +8,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
@@ -51,7 +51,7 @@ func (c *client) GetBenchmarks(cxt context.Context, id string) (*api.Benchmarks,
 	// Extract list from result.
 	hit := res.Hits.Hits[0]
 	b := new(api.Benchmarks)
-	if err = json.Unmarshal(*hit.Source, b); err != nil {
+	if err = json.Unmarshal(hit.Source, b); err != nil {
 		clog.WithError(err).Error("failed to extract benchmarks from result")
 		return nil, err
 	}
@@ -68,7 +68,6 @@ func (c *client) StoreBenchmarks(ctx context.Context, b *api.Benchmarks) error {
 	}
 	res, err := c.Index().
 		Index(index).
-		Type("_doc").
 		Id(b.UID()).
 		BodyJson(b).
 		Do(ctx)
@@ -137,7 +136,7 @@ func (c *client) RetrieveLatestBenchmarks(ctx context.Context, ct api.BenchmarkT
 			// earlier run within the time frame may have been successful.
 			for _, hit := range res.Hits.Hits {
 				benchmarks := new(api.Benchmarks)
-				if err := json.Unmarshal(*hit.Source, benchmarks); err != nil {
+				if err := json.Unmarshal(hit.Source, benchmarks); err != nil {
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal benchmark result json")
 					continue
 				}
