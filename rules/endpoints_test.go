@@ -14,17 +14,16 @@
 
 package rules_test
 
-/*
 import (
 	"strings"
-
-	. "github.com/projectcalico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/ipsets"
 	. "github.com/projectcalico/felix/iptables"
+	"github.com/projectcalico/felix/proto"
+	. "github.com/projectcalico/felix/rules"
 )
 
 var _ = Describe("Endpoints", func() {
@@ -46,6 +45,7 @@ var _ = Describe("Endpoints", func() {
 			IptablesMarkPass:            0x10,
 			IptablesMarkScratch0:        0x20,
 			IptablesMarkScratch1:        0x40,
+			IptablesMarkDrop:            0x80,
 			IptablesMarkEndpoint:        0xff00,
 			IptablesMarkNonCaliEndpoint: 0x0100,
 			KubeIPVSSupportEnabled:      kubeIPVSEnabled,
@@ -63,6 +63,7 @@ var _ = Describe("Endpoints", func() {
 			IptablesMarkPass:            0x10,
 			IptablesMarkScratch0:        0x20,
 			IptablesMarkScratch1:        0x40,
+			IptablesMarkDrop:            0x80,
 			IptablesMarkEndpoint:        0xff00,
 			IptablesMarkNonCaliEndpoint: 0x0100,
 			KubeIPVSSupportEnabled:      kubeIPVSEnabled,
@@ -99,7 +100,6 @@ var _ = Describe("Endpoints", func() {
 					"cali1234", epMarkMapper,
 					true,
 					nil,
-					nil,
 					nil)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -110,7 +110,8 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: DropAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -124,9 +125,10 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: DropAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 							dropVXLANRule,
 							dropIPIPRule,
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -144,7 +146,6 @@ var _ = Describe("Endpoints", func() {
 				Expect(renderer.WorkloadEndpointToIptablesChains(
 					"cali1234", epMarkMapper,
 					false,
-					nil,
 					nil,
 					nil,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
@@ -176,8 +177,11 @@ var _ = Describe("Endpoints", func() {
 					"cali1234",
 					epMarkMapper,
 					true,
-					[]string{"ai", "bi"},
-					[]string{"ae", "be"},
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"ai", "bi"},
+						EgressPolicies:  []string{"ae", "be"},
+					}},
 					[]string{"prof1", "prof2"},
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -189,20 +193,22 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: DropAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-ai"}},
+								Action: JumpAction{Target: "cali-pi-default/ai"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-bi"}},
+								Action: JumpAction{Target: "cali-pi-default/bi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
 								Comment: "Drop if no policies passed packet"},
@@ -216,6 +222,7 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: "Return if profile accepted"},
 
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -229,22 +236,24 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: DropAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 							dropVXLANRule,
 							dropIPIPRule,
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-ae"}},
+								Action: JumpAction{Target: "cali-po-default/ae"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-be"}},
+								Action: JumpAction{Target: "cali-po-default/be"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
 								Comment: "Drop if no policies passed packet"},
@@ -258,6 +267,7 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: "Return if profile accepted"},
 
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -273,10 +283,19 @@ var _ = Describe("Endpoints", func() {
 
 			It("should render a host endpoint", func() {
 				Expect(renderer.HostEndpointToFilterChains("eth0",
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"ai", "bi"},
+						EgressPolicies:  []string{"ae", "be"},
+					}},
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"afi", "bfi"},
+						EgressPolicies:  []string{"afe", "bfe"},
+					}},
 					epMarkMapper,
-					[]string{"ai", "bi"}, []string{"ae", "be"},
-					[]string{"afi", "bfi"}, []string{"afe", "bfe"},
-					[]string{"prof1", "prof2"})).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					[]string{"prof1", "prof2"},
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-th-eth0",
 						Rules: []Rule{
@@ -289,20 +308,22 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-out"}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-ae"}},
+								Action: JumpAction{Target: "cali-po-default/ae"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-be"}},
+								Action: JumpAction{Target: "cali-po-default/be"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
 								Comment: "Drop if no policies passed packet"},
@@ -316,6 +337,7 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: "Return if profile accepted"},
 
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -332,20 +354,22 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-ai"}},
+								Action: JumpAction{Target: "cali-pi-default/ai"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-bi"}},
+								Action: JumpAction{Target: "cali-pi-default/bi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
 								Comment: "Drop if no policies passed packet"},
@@ -359,6 +383,7 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: "Return if profile accepted"},
 
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -372,20 +397,22 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: DropAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-afe"}},
+								Action: JumpAction{Target: "cali-po-default/afe"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-bfe"}},
+								Action: JumpAction{Target: "cali-po-default/bfe"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
 								Comment: "Drop if no policies passed packet"},
@@ -400,20 +427,22 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("INVALID"),
 								Action: DropAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-afi"}},
+								Action: JumpAction{Target: "cali-pi-default/afi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-bfi"}},
+								Action: JumpAction{Target: "cali-pi-default/bfi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
 								Comment: "Drop if no policies passed packet"},
@@ -429,19 +458,25 @@ var _ = Describe("Endpoints", func() {
 			})
 
 			It("should render host endpoint raw chains with untracked policies", func() {
-				Expect(renderer.HostEndpointToRawChains("eth0", []string{"c"}, []string{"c"})).To(Equal([]*Chain{
+				Expect(renderer.HostEndpointToRawChains("eth0",
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"c"},
+						EgressPolicies:  []string{"c"},
+					}},
+				)).To(Equal([]*Chain{
 					{
 						Name: "cali-th-eth0",
 						Rules: []Rule{
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-out"}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-po-c"}},
+								Action: JumpAction{Target: "cali-po-default/c"}},
 							// Extra NOTRACK action before returning in raw table.
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action: NoTrackAction{}},
@@ -458,12 +493,12 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-c"}},
+								Action: JumpAction{Target: "cali-pi-default/c"}},
 							// Extra NOTRACK action before returning in raw table.
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action: NoTrackAction{}},
@@ -480,7 +515,10 @@ var _ = Describe("Endpoints", func() {
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
 				Expect(renderer.HostEndpointToMangleChains(
 					"eth0",
-					[]string{"c"},
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"c"},
+					}},
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-fh-eth0",
@@ -496,12 +534,12 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-c"}},
+								Action: JumpAction{Target: "cali-pi-default/c"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
@@ -527,7 +565,6 @@ var _ = Describe("Endpoints", func() {
 					true,
 					nil,
 					nil,
-					nil,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -538,8 +575,9 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: ReturnAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -553,10 +591,11 @@ var _ = Describe("Endpoints", func() {
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: ReturnAction{}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 							dropVXLANRule,
 							dropIPIPRule,
 
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: "Drop if no profiles matched"},
 						},
@@ -573,7 +612,10 @@ var _ = Describe("Endpoints", func() {
 			It("should render host endpoint mangle chains with pre-DNAT policies", func() {
 				Expect(renderer.HostEndpointToMangleChains(
 					"eth0",
-					[]string{"c"},
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"c"},
+					}},
 				)).To(Equal([]*Chain{
 					{
 						Name: "cali-fh-eth0",
@@ -585,12 +627,12 @@ var _ = Describe("Endpoints", func() {
 							// Host endpoints get extra failsafe rules.
 							{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-							{Action: ClearMarkAction{Mark: 0x8}},
+							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of policies",
+							{Comment: "Start of tier default",
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-c"}},
+								Action: JumpAction{Target: "cali-pi-default/c"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
 								Comment: "Return if policy accepted"},
@@ -615,4 +657,3 @@ func trimSMChain(ipvsEnable bool, chains []*Chain) []*Chain {
 
 	return result
 }
-*/
