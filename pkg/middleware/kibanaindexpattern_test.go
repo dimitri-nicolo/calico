@@ -35,6 +35,7 @@ var _ = Describe("Test extracting resource from kibana request", func() {
 		Entry("audit_ee", "tigera_secure_ee_audit_ee", true, "audit_ee"),
 		Entry("audit_kube", "tigera_secure_ee_audit_kube", true, "audit_kube"),
 		Entry("events", "tigera_secure_ee_events", true, "events"),
+		Entry("dns", "tigera_secure_ee_dns", true, "dns"),
 		Entry("fakeindex", "fakeindex", false, ""),
 		Entry("badjson", "\"{}", false, ""),
 	)
