@@ -4,9 +4,10 @@ package elastic
 
 import (
 	"context"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 )
 
 type MockSetQuerier struct {

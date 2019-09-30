@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	oElastic "github.com/olivere/elastic"
+	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -69,7 +69,7 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 
 	// Index some DNS logs
 	index := "tigera_secure_ee_dns.cluster.testquerydomainnameset_success"
-	i := elasticClient.Index().Index(index).Type("fluentd")
+	i := elasticClient.Index().Index(index)
 	logs := []events.DNSLog{
 		{
 			StartTime:       idsElastic.Time{Time: time.Unix(123, 0)},
@@ -167,7 +167,7 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 		k, h := iter.Value()
 		keys = append(keys, k)
 		var al events.DNSLog
-		err := json.Unmarshal(*h.Source, &al)
+		err := json.Unmarshal(h.Source, &al)
 		g.Expect(err).ToNot(HaveOccurred())
 		actual = append(actual, al)
 	}

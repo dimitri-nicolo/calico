@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	oElastic "github.com/olivere/elastic"
+	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -43,12 +43,12 @@ func TestSuspiciousIP_Success(t *testing.T) {
 		src, err := json.Marshal(&l)
 		g.Expect(err).ToNot(HaveOccurred())
 		raw := json.RawMessage(src)
-		h.Source = &raw
+		h.Source = raw
 		hits = append(hits, h)
 	}
 	// Add an extra malformed hit, which is ignored in results
 	junk := json.RawMessage([]byte("{"))
-	hits = append(hits, &oElastic.SearchHit{Source: &junk})
+	hits = append(hits, &oElastic.SearchHit{Source: junk})
 	i := &elastic.MockIterator{
 		ErrorIndex: -1,
 		Hits:       hits,
@@ -111,7 +111,7 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 		src, err := json.Marshal(&l)
 		g.Expect(err).ToNot(HaveOccurred())
 		raw := json.RawMessage(src)
-		h.Source = &raw
+		h.Source = raw
 		hits = append(hits, h)
 	}
 	i := &elastic.MockIterator{
@@ -176,11 +176,11 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 		src, err := json.Marshal(&l)
 		g.Expect(err).ToNot(HaveOccurred())
 		raw := json.RawMessage(src)
-		h.Source = &raw
+		h.Source = raw
 	}
 	// Add an extra malformed hit, which is ignored in results
 	junk := json.RawMessage([]byte("{"))
-	hits = append(hits, &oElastic.SearchHit{Index: "junk", Id: "junk", Source: &junk})
+	hits = append(hits, &oElastic.SearchHit{Index: "junk", Id: "junk", Source: junk})
 	i := &elastic.MockIterator{
 		ErrorIndex: -1,
 		Hits:       hits,
@@ -222,7 +222,7 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 		src, err := json.Marshal(&l)
 		g.Expect(err).ToNot(HaveOccurred())
 		raw := json.RawMessage(src)
-		h.Source = &raw
+		h.Source = raw
 	}
 	i := &elastic.MockIterator{
 		Error:      errors.New("iteration failed"),

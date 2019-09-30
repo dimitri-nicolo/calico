@@ -4,10 +4,11 @@ package elastic
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"io"
 
-	"github.com/olivere/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 )
 

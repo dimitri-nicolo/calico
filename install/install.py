@@ -62,14 +62,14 @@ if __name__ == '__main__':
         with open("./version.txt") as f:
             print("Version: ", f.read())
             sys.exit(0)
-
     elastic_url = "%s://%s:%s" % (os.getenv("ELASTIC_SCHEME", "https"), os.environ["ELASTIC_HOST"], os.getenv("ELASTIC_PORT", "9200"))
     kibana_url = "%s://%s:%s" % (os.getenv("KIBANA_SCHEME", "https"), os.environ["KIBANA_HOST"], os.getenv("KIBANA_PORT", "5601"))
     user = os.getenv("USER", None)
     password = os.getenv("PASSWORD", None)
-    ca_cert = os.getenv("CA_CERT", None)
+    es_ca_cert = os.getenv("ES_CA_CERT", None)
+    kb_ca_cert = os.getenv("KB_CA_CERT", es_ca_cert) # Fall back on default behavior where kb and es use the same cert.
 
-    elastic = RESTClient(elastic_url, user, password, ca_cert)
+    elastic = RESTClient(elastic_url, user, password, es_ca_cert)
 
     # Optionally, start the X-Pack trial (an XPack license is required for the ML jobs.)
     install_trial = os.getenv("START_XPACK_TRIAL", "false").lower()
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         elastic.exec("POST", "_xpack/license/start_trial?acknowledge=true", "")
 
     # Kibana requires kbn-xsrf header to mitigate cross-site request forgery
-    kibana = RESTClient(kibana_url, user, password, ca_cert, {"kbn-xsrf": "reporting"})
+    kibana = RESTClient(kibana_url, user, password, kb_ca_cert, {"kbn-xsrf": "reporting"})
     with open("./config.yaml") as f:
         cfg = yaml.load(f)
     try:
@@ -89,3 +89,4 @@ if __name__ == '__main__':
         print("Failed to install")
         print(e)
         sys.exit(1)
+

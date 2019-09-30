@@ -5,7 +5,6 @@
   "indices": [
     "tigera_secure_ee_flows*"
   ],
-  "types": [],
   "query": {
     "bool": {
       "filter": [

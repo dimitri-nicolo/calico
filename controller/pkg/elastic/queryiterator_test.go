@@ -5,11 +5,12 @@ package elastic
 import (
 	"context"
 	"errors"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"io"
 	"testing"
 
-	"github.com/olivere/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+
+	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 )
 

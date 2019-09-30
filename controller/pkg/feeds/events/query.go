@@ -27,9 +27,9 @@ func (i ipSetQuerier) QuerySet(ctx context.Context, name string) ([]db.SecurityE
 		c++
 		key, hit := iter.Value()
 		var l FlowLogJSONOutput
-		err := json.Unmarshal(*hit.Source, &l)
+		err := json.Unmarshal(hit.Source, &l)
 		if err != nil {
-			log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
+			log.WithError(err).WithField("raw", hit.Source).Error("could not unmarshal")
 			continue
 		}
 		sEvent := ConvertFlowLog(l, key, hit, name)
@@ -70,9 +70,9 @@ func (d domainNameSetQuerier) QuerySet(ctx context.Context, name string) ([]db.S
 		key, hit := iter.Value()
 		if filt.pass(hit.Index, hit.Id) {
 			var l DNSLog
-			err := json.Unmarshal(*hit.Source, &l)
+			err := json.Unmarshal(hit.Source, &l)
 			if err != nil {
-				log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
+				log.WithError(err).WithField("raw", hit.Source).Error("could not unmarshal")
 				continue
 			}
 			sEvent := ConvertDNSLog(l, key, hit, domains, name)
