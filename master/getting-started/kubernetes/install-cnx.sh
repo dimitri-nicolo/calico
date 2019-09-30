@@ -1416,8 +1416,13 @@ deleteMonitorCalicoManifest() {
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
-  openssl req -x509 -newkey rsa:4096 \
-                  -keyout manager.key \
+  # Note the below sequence for cert generation is different from all others in this script because of an issue 
+  # with parsing a key generated using openssl -newkey flag inside Voltron (the new proxy for CNX Manager). 
+  # For more details on this problem please see: https://tigera.atlassian.net/browse/SAAS-390
+  # Generating the key separately from the openssl cert generation appears to get around this problem. 
+  ssh-keygen -m PEM -b 4096 -t rsa -f manager.key -N ""
+  openssl req -x509 -new \
+                  -key manager.key \
                   -nodes \
                   -out manager.crt \
                   -subj "/CN=cnx-manager.calico-monitoring.svc" \
@@ -1425,6 +1430,8 @@ createCNXManagerSecret() {
 
   runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert=./manager.crt --from-file=key=./manager.key -n calico-monitoring
   countDownSecs 5 "Creating cnx-manager-tls secret"
+
+  run rm -f manager.key 
 }
 
 #
