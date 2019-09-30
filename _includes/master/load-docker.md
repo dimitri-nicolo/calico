@@ -41,7 +41,7 @@
 
    ```bash
    {% for component in site.data.versions[page.version].first.components -%}
-   {% if component[1].image and component[0] != "flannel" -%}
+   {% if component[1].image -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%}{% endif -%}
    docker pull {{ registry }}{{ component[1].image }}:{{component[1].version}}
    {% endif -%}
@@ -53,7 +53,7 @@
 
    ```bash
    {% for component in site.data.versions[page.version].first.components -%}
-   {% if component[1].image and component[0] != "flannel" -%}
+   {% if component[1].image -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%}{% endif -%}
    docker tag {{ registry }}{{ component[1].image }}:{{component[1].version}} <YOUR-REGISTRY>/{{ component[1].image }}:{{component[1].version}}
    {% endif -%}
@@ -68,7 +68,7 @@
 
    ```bash
    {% for component in site.data.versions[page.version].first.components -%}
-   {% if component[1].image and component[0] != "flannel" -%}
+   {% if component[1].image -%}
    docker push <YOUR-REGISTRY>/{{ component[1].image }}:{{component[1].version}}
    {% endif -%}
    {% endfor -%}
