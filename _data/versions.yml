@@ -1552,10 +1552,6 @@ master:
       image: elasticsearch/elasticsearch
       version: 6.4.3
       registry: docker.elastic.co
-    flannel:
-      image: coreos/flannel
-      version: v0.11.0
-      registry: quay.io
     busybox:
       image: busybox
       version: 1.26.2

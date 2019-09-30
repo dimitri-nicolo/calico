@@ -444,17 +444,6 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       # Can be "Never", "CrossSubnet", or "Always"
       ipIpMode: Always
     
-    # Configuration for Canal config job 
-    configureCanal: 
-      # Optional configuration for setting resource limits on the Canal config job container.
-      resources:
-        requests:
-          cpu: #"100m"
-          memory: #"128Mi"
-        limits:
-          cpu: #"2000m"
-          memory: #"1024Mi"
-    
     # Sets the ipam. Can be 'calico-ipam' or 'host-local'
     ipam: calico-ipam
     
@@ -501,24 +490,6 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: FOO
         #   value: bar
-    
-    # Configuration for setting up Flannel.
-    flannel:
-      image: #{versions["flannel"].registry}/#{versions["flannel"].image}
-      tag: #{versions["flannel"].version}
-      env:
-        # Optional environment variables for configuring Flannel.
-        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
-        # - name: FOO
-        #   value: bar
-      # Optional configuration for setting resource limits on the Flannel container.
-      resources:
-        requests:
-          cpu: #"100m"
-          memory: #"128Mi"
-        limits:
-          cpu: #"2000m"
-          memory: #"1024Mi"
     
     # Configuration for setting up Calico kube controllers
     kubeControllers:

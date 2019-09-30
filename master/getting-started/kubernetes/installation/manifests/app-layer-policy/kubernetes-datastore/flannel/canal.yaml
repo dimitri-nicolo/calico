@@ -1,9 +1,0 @@
----
-layout: null
----
-{% helm %}
-datastore: kubernetes
-network: flannel
-app_layer_policy: true
-ipam: host-local
-{% endhelm %}
