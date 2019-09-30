@@ -20,7 +20,7 @@ KUBERNETES_SERVICE_PORT=${KUBERNETES_SERVICE_PORT:-"6443"}
 TEST_CONTAINER_NAME="fv-proxy-test"
 ELASTICSEARCH_CONTAINER_NAME="fv-elasticsearch"
 # LC_CTYPE required to work on macOS.
-BOOTSTRAP_PASSWORD=$(cat /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | head -c16)
+BOOTSTRAP_PASSWORD=pancake
 
 function run_fvs()
 {
@@ -105,7 +105,7 @@ function run_proxy()
 		-e ELASTIC_PORT=${ELASTIC_PORT} \
 		-e ELASTIC_USERNAME=${ELASTIC_USERNAME} \
 		-e ELASTIC_PASSWORD=${ELASTIC_PASSWORD} \
-		-e ELASTIC_ENABLE_TRACE=true \
+		-e ELASTIC_ENABLE_TRACE=false \
 		-e KUBECONFIG=/test/test-apiserver-kubeconfig.conf \
 		-e TIGERA_INTERNAL_RUNNING_FUNCTIONAL_VERIFICATION=true \
 		--name ${TEST_CONTAINER_NAME} \

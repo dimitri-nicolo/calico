@@ -60,17 +60,17 @@ var _ = Describe("Kibana Elasticsearch", func() {
 			Expect(resp.StatusCode).To(Equal(expectedStatusCode))
 
 		},
-		Entry("flows index pattern is accessible by user all", basciUserAll, kibanaBody("tigera_secure_ee_flows"), http.StatusOK),
-		Entry("audit index pattern is accessible by user all", basciUserAll, kibanaBody("tigera_secure_ee_audit"), http.StatusOK),
-		Entry("events index patern is accessible by user all", basciUserAll, kibanaBody("tigera_secure_ee_events"), http.StatusOK),
+		Entry("flows index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_flows"), http.StatusOK),
+		Entry("audit index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_audit"), http.StatusOK),
+		Entry("events index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_events"), http.StatusOK),
 
 		Entry("flows index pattern is accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_flows"), http.StatusOK),
 		Entry("audit index pattern is not accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_audit"), http.StatusForbidden),
-		Entry("events index patern is not accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_events"), http.StatusForbidden),
+		Entry("events index pattern is not accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_events"), http.StatusForbidden),
 
 		Entry("flows index pattern is not accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_flows"), http.StatusForbidden),
 		Entry("audit index pattern is accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_audit"), http.StatusOK),
-		Entry("events index patern is not accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_events"), http.StatusForbidden),
+		Entry("events index pattern is not accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_events"), http.StatusForbidden),
 	)
 })
 
@@ -81,7 +81,7 @@ func kibanaBody(indexPattern string) string {
 const kibanaReqBody = `{ "query": { "bool": { "filter": [ { "match": { "index-pattern.title":"{{.IndexPatternTitle}}" } } ] } } }`
 
 var (
-	basciUserAll       = basicAuthMech{"basicuserall", "basicpw"}
+	basicUserAll       = basicAuthMech{"basicuserall", "basicpw"}
 	basicAuditOnlyUser = basicAuthMech{"basicuserauditonly", "basicpwaa"}
 	basicFlowOnlyUser  = basicAuthMech{"basicuserflowonly", "basicpwf"}
 )
