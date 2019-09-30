@@ -1442,6 +1442,8 @@ master:
     image: tigera/operator
     version: master
     registry: quay.io
+  calico:
+    minor_version: v3.6
   components:
     cnx-manager:
       image: tigera/cnx-manager
@@ -1518,9 +1520,6 @@ master:
       image: calico/cni
       version: master
       registry: quay.io
-    calico:
-      version: v3.6.0
-      minor_version: v3.6
     prometheus-operator:
       image: coreos/prometheus-operator
       version: v0.29.0
