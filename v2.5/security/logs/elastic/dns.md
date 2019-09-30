@@ -4,7 +4,7 @@ redirect_from: latest/security/logs/elastic/dns
 canonical_url: https://docs.tigera.io/master/security/logs/elastic/dns
 ---
 
-{{site.prodname}} pushes DNS activity logs to Elasticsearch. The following table
+{{site.prodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.url}}/{{page.version}}/security/domain-based-policy#trusted-dns-servers). The following table
 details the key/value pairs in the JSON blob, including their
 [Elasticsearch datatype](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html).
 This information should assist you in constructing queries.
