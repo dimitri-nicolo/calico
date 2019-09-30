@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/Microsoft/go-winio v0.0.0-20190408173621-84b4ab48a507 // indirect
 	github.com/Microsoft/hcsshim v0.0.0-20190408221605-063ae4a83d78
-	github.com/Workiva/go-datastructures v1.0.50
 	github.com/aws/aws-sdk-go v1.13.54
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/containernetworking/cni v0.5.2
@@ -19,7 +18,6 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/gopacket v0.0.0-20190313190028-b7586607157b
-	github.com/google/pprof v0.0.0-20190908185732-236ed259b199 // indirect
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/gophercloud/gophercloud v0.4.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
@@ -28,7 +26,6 @@ require (
 	github.com/gxed/eventfd v0.0.0-20160916113412-80a92cca79a8 // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/ipfs/go-log v0.0.0-20180611222144-5dc2060baaf8 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20151117175822-3433f3ea46d9 // indirect
@@ -55,7 +52,6 @@ require (
 	github.com/vishvananda/netlink v1.0.0
 	github.com/vishvananda/netns v0.0.0-20160430053723-8ba1072b58e0 // indirect
 	github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc // indirect
-	golang.org/x/arch v0.0.0-20190909030613-46d78d1859ac // indirect
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
 	golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
