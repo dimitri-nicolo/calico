@@ -84,6 +84,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeer(ref common.ReferenceCallback) commo
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "BGPPeer contains information about a BGP peer resource that is a peer of a Calico compute node.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -116,6 +117,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerList(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "BGPPeerList contains a list of BGP Peer resources.  List types are returned from List() enumerations in the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -153,6 +155,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref common.ReferenceCallbac
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "BGPPeerMetadata contains the metadata for a BGPPeer resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -193,6 +196,7 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "BGPPeerSpec contains the specification for a BGPPeer resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"asNumber": {
 						SchemaProps: spec.SchemaProps{
@@ -205,7 +209,6 @@ func schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref common.ReferenceCallback) c
 				Required: []string{"asNumber"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -214,6 +217,7 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref common.ReferenceCallbac
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CalicoAPIConfig contains the connection information for a Calico CalicoAPIConfig resource",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -244,6 +248,7 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfigMetadata(ref common.Referenc
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CalicoAPIConfigMetadata contains the metadata for a Calico CalicoAPIConfig resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -264,6 +269,7 @@ func schema_libcalico_go_lib_apis_v1_CalicoAPIConfigSpec(ref common.ReferenceCal
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "CalicoAPIConfigSpec contains the specification for a Calico CalicoAPIConfig resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"datastoreType": {
 						SchemaProps: spec.SchemaProps{
@@ -296,6 +302,7 @@ func schema_libcalico_go_lib_apis_v1_EndpointPort(ref common.ReferenceCallback) 
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
@@ -328,6 +335,7 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "An EntityRule is a sub-component of a Rule comprising the match criteria specific to a particular entity (that is either the source or destination).\n\nA source EntityRule matches the source endpoint and originating traffic. A destination EntityRule matches the destination endpoint and terminating traffic.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"tag": {
 						SchemaProps: spec.SchemaProps{
@@ -433,6 +441,7 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
 					"etcdScheme": {
 						SchemaProps: spec.SchemaProps{
@@ -492,7 +501,6 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -501,6 +509,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpoint(ref common.ReferenceCallback) 
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "HostEndpoint contains information about a “bare-metal” interfaces attached to the host that is running Calico’s agent, Felix. By default, Calico doesn’t apply any policy to such interfaces.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -531,6 +540,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointList(ref common.ReferenceCallba
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "HostEndpointList contains a list of Host Endpoint resources.  List types are returned from List() enumerations in the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -568,6 +578,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref common.ReferenceCa
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "HostEndpointMetadata contains the Metadata for a HostEndpoint resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -593,6 +604,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref common.ReferenceCa
 							Description: "The labels applied to the host endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -616,6 +628,7 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallba
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "HostEndpointSpec contains the specification for a HostEndpoint resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"interfaceName": {
 						SchemaProps: spec.SchemaProps{
@@ -677,6 +690,7 @@ func schema_libcalico_go_lib_apis_v1_ICMPFields(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
@@ -695,7 +709,6 @@ func schema_libcalico_go_lib_apis_v1_ICMPFields(ref common.ReferenceCallback) co
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -703,6 +716,7 @@ func schema_libcalico_go_lib_apis_v1_IPIPConfiguration(ref common.ReferenceCallb
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
 						SchemaProps: spec.SchemaProps{
@@ -721,7 +735,6 @@ func schema_libcalico_go_lib_apis_v1_IPIPConfiguration(ref common.ReferenceCallb
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -730,6 +743,7 @@ func schema_libcalico_go_lib_apis_v1_IPNAT(ref common.ReferenceCallback) common.
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "IPNat contains a single NAT mapping for a WorkloadEndpoint resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"internalIP": {
 						SchemaProps: spec.SchemaProps{
@@ -757,6 +771,7 @@ func schema_libcalico_go_lib_apis_v1_IPPool(ref common.ReferenceCallback) common
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "IPPool contains the details of a Calico IP pool resource. A pool resource is used by Calico in two ways:\n\t- to provide a set of IP addresses from which Calico IPAM assigns addresses\n\t  for workloads.\n\t- to provide configuration specific to IP address range, such as configuration\n\t  for the BGP daemon (e.g. when to use a GRE tunnel to encapsulate packets\n\t  between compute hosts).",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -787,6 +802,7 @@ func schema_libcalico_go_lib_apis_v1_IPPoolList(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "IPPoolList contains a list of IP pool resources.  List types are returned from List() enumerations in the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -824,6 +840,7 @@ func schema_libcalico_go_lib_apis_v1_IPPoolMetadata(ref common.ReferenceCallback
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "IPPoolMetadata contains the metadata for an IP pool resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -849,6 +866,7 @@ func schema_libcalico_go_lib_apis_v1_IPPoolSpec(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "IPPoolSpec contains the specification for an IP pool resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ipip": {
 						SchemaProps: spec.SchemaProps{
@@ -882,6 +900,7 @@ func schema_libcalico_go_lib_apis_v1_KubeConfig(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kubeconfig": {
 						SchemaProps: spec.SchemaProps{
@@ -935,7 +954,6 @@ func schema_libcalico_go_lib_apis_v1_KubeConfig(ref common.ReferenceCallback) co
 				Required: []string{"kubeconfig", "k8sAPIEndpoint", "k8sKeyFile", "k8sCertFile", "k8sCAFile", "k8sAPIToken", "k8sInsecureSkipTLSVerify", "k8sDisableNodePoll"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -944,6 +962,7 @@ func schema_libcalico_go_lib_apis_v1_Node(ref common.ReferenceCallback) common.O
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Node contains the details of a node resource which contains the configuration for a Calico node instance running on a compute host.\n\nIn addition to creating a Node resource through calicoctl or the Calico API, the Calico node instance must also be running on the specific host and should be provided the same Name as that configured on the Node resource.  Note that, by default, the Calico node instance uses the hostname of the compute host when it is not explicitly specified - in this case, the equivalent Node resource should be created using the same hostname as the Name of the Node resource.\n\nOperations on the Node resources is expected to be required when adding a new host into a Calico network, and when removing a host from a Calico network, and occasionally to modify certain configuration.  Care should be taken when operating on Node resources: deleting a Node resource will remove all Node specific data.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -974,6 +993,7 @@ func schema_libcalico_go_lib_apis_v1_NodeBGPSpec(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "NodeSpec contains the specification for a Calico Node resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"asNumber": {
 						SchemaProps: spec.SchemaProps{
@@ -1007,6 +1027,7 @@ func schema_libcalico_go_lib_apis_v1_NodeList(ref common.ReferenceCallback) comm
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "A NodeList contains a list of Node resources.  List types are returned from List() enumerations on the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1044,6 +1065,7 @@ func schema_libcalico_go_lib_apis_v1_NodeMetadata(ref common.ReferenceCallback) 
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "NodeMetadata contains the metadata for a Calico Node resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1071,6 +1093,7 @@ func schema_libcalico_go_lib_apis_v1_NodeSpec(ref common.ReferenceCallback) comm
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "NodeSpec contains the specification for a Calico Node resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"bgp": {
 						SchemaProps: spec.SchemaProps{
@@ -1104,6 +1127,7 @@ func schema_libcalico_go_lib_apis_v1_OrchRef(ref common.ReferenceCallback) commo
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "OrchRef is used to correlate a Calico node to its corresponding representation in a given orchestrator",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"nodeName": {
 						SchemaProps: spec.SchemaProps{
@@ -1123,7 +1147,6 @@ func schema_libcalico_go_lib_apis_v1_OrchRef(ref common.ReferenceCallback) commo
 				Required: []string{"orchestrator"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1132,6 +1155,7 @@ func schema_libcalico_go_lib_apis_v1_Policy(ref common.ReferenceCallback) common
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Policy contains information about a tiered security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring\n       to the next tier (or the explicit profiles if this is the last tier.\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further tiers and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all\n       further tiers and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.\n       If there are no more policies in the tier then the packet is dropped.\n\nNote:\n\tIf no policies in a tier match an endpoint then the packet skips the tier completely. The\n\t“default deny” behavior described above only applies if some of the policies in a tier match\n\tthe endpoint.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy. If no policies in a tier match a given endpoint then that tier is skipped.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1162,6 +1186,7 @@ func schema_libcalico_go_lib_apis_v1_PolicyList(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "PolicyList contains a list of selector-based security Policy resources.  List types are returned from List() enumerations on the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1199,6 +1224,7 @@ func schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref common.ReferenceCallback
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "PolicyMetadata contains the metadata for a selector-based security Policy resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1224,6 +1250,7 @@ func schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref common.ReferenceCallback
 							Description: "Arbitrary key-value information to be used by clients.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -1247,6 +1274,7 @@ func schema_libcalico_go_lib_apis_v1_PolicySpec(ref common.ReferenceCallback) co
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "PolicySpec contains the specification for a selector-based security Policy resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"order": {
 						SchemaProps: spec.SchemaProps{
@@ -1330,6 +1358,7 @@ func schema_libcalico_go_lib_apis_v1_Profile(ref common.ReferenceCallback) commo
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Profile contains the details a security profile resource.  A profile is set of security rules to apply on an endpoint.  An endpoint (either a host endpoint or an endpoint on a workload) can reference zero or more profiles.  The profile rules are applied directly to the endpoint *after* the selector-based security policy has been applied, and in the order the profiles are declared on the endpoint.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1360,6 +1389,7 @@ func schema_libcalico_go_lib_apis_v1_ProfileList(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "A ProfileList contains a list of security Profile resources.  List types are returned from List() enumerations on the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1397,6 +1427,7 @@ func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallbac
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ProfileMetadata contains the metadata for a security Profile resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1429,6 +1460,7 @@ func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallbac
 							Description: "The labels to apply to each endpoint that references this profile.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -1452,6 +1484,7 @@ func schema_libcalico_go_lib_apis_v1_ProfileSpec(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "ProfileSpec contains the specification for a security Profile resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ingress": {
 						SchemaProps: spec.SchemaProps{
@@ -1492,6 +1525,7 @@ func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.O
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with ”Not”. All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"action": {
 						SchemaProps: spec.SchemaProps{
@@ -1556,6 +1590,7 @@ func schema_libcalico_go_lib_apis_v1_Tier(ref common.ReferenceCallback) common.O
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Tier contains the details of a security policy tier resource.  A tier contains a set of policies that are applied to packets. Multiple tiers may be created and each tier is applied in the order specified in the tier specification.\n\nSee Policy for more information.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1586,6 +1621,7 @@ func schema_libcalico_go_lib_apis_v1_TierList(ref common.ReferenceCallback) comm
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "A TierList contains a list of tier resources.  List types are returned from List() enumerations in the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1623,6 +1659,7 @@ func schema_libcalico_go_lib_apis_v1_TierMetadata(ref common.ReferenceCallback) 
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "TierMetadata contains the metadata for a security policy Tier.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1649,6 +1686,7 @@ func schema_libcalico_go_lib_apis_v1_TierSpec(ref common.ReferenceCallback) comm
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "TierSpec contains the specification for a security policy Tier.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"order": {
 						SchemaProps: spec.SchemaProps{
@@ -1660,7 +1698,6 @@ func schema_libcalico_go_lib_apis_v1_TierSpec(ref common.ReferenceCallback) comm
 				},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -1668,6 +1705,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1698,6 +1736,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref common.ReferenceCa
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkloadEndpointList contains a list of Workload Endpoint resources.  List types are returned from List() enumerations in the client interface.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"TypeMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1735,6 +1774,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref common.Referen
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkloadEndpointMetadata contains the Metadata for a WorkloadEndpoint resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ObjectMetadata": {
 						SchemaProps: spec.SchemaProps{
@@ -1781,6 +1821,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref common.Referen
 							Description: "The labels applied to the workload endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -1804,6 +1845,7 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"ipNetworks": {
 						SchemaProps: spec.SchemaProps{
