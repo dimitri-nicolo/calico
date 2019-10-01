@@ -183,6 +183,9 @@ spec:
             httpGet:
               path: /liveness
               port: 9099
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
       volumes:
         - name: elastic-ca-cert-volume
           secret:
