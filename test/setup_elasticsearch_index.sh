@@ -46,7 +46,7 @@ function create_index_pattern()
 {
     local INDEX_NAME=$1
 	
-	curl -XPOST "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/.kibana/doc/index-pattern:$INDEX_NAME"  -H 'Content-Type: application/json' -d' {  "type" : "index-pattern",  "index-pattern" : {    "title": "${INDEX_NAME}*"  }}'
+	curl -XPOST "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/.kibana/doc/index-pattern:$INDEX_NAME"  -H 'Content-Type: application/json' -d " {  \"type\" : \"index-pattern\",  \"index-pattern\" : {    \"title\": \"${INDEX_NAME}*\"  }}" ${EXTRA_CURL_ARGS}
 }
 
 

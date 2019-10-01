@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 	pelastic "github.com/tigera/lma/pkg/elastic"

@@ -3,7 +3,7 @@
 set -xe
 
 FV_ES_PROXY_TEST_IMAGE=${FV_ES_PROXY_TEST_IMAGE:-"tigera/es-proxy:latest"}
-FV_ELASTICSEARCH_IMAGE=${FV_ELASTICSEARCH_IMAGE:-"docker.elastic.co/elasticsearch/elasticsearch:6.4.3"}
+FV_ELASTICSEARCH_IMAGE=${FV_ELASTICSEARCH_IMAGE:-"docker.elastic.co/elasticsearch/elasticsearch:7.3.0"}
 FV_GINKGO_ARGS=${FV_GINKGO_ARGS:-""}
 PACKAGE_ROOT=${PACKAGE_ROOT:-$(pwd)/..}
 

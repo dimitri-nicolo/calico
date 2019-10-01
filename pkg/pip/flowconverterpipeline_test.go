@@ -77,7 +77,10 @@ var (
     "failed": 0
   },
   "hits": {
-    "total": 26095,
+    "total": {
+      "relation": "eq",
+      "value": 26095
+    },
     "max_score": 0,
     "hits": []
   },

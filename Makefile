@@ -86,7 +86,7 @@ ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 K8S_VERSION?=v1.11.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 
-ELASTICSEARCH_VERSION?=6.4.3
+ELASTICSEARCH_VERSION?=7.3.2
 ELASTICSEARCH_IMAGE?=docker.elastic.co/elasticsearch/elasticsearch:$(ELASTICSEARCH_VERSION)
 
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
