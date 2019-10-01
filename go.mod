@@ -32,14 +32,14 @@ require (
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/projectcalico/felix v3.7.3+incompatible // indirect
-	github.com/projectcalico/libcalico-go master
+	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/client_golang v0.9.4 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
 	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
 	github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible
 	github.com/tigera/licensing v2.2.3+incompatible // indirect
-	github.com/tigera/lma master
+	github.com/tigera/lma v0.0.0-20190927175333-26298c8c50e3
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
