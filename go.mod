@@ -32,7 +32,7 @@ require (
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/projectcalico/felix v3.7.3+incompatible // indirect
-	github.com/projectcalico/libcalico-go v1.7.3
+	github.com/projectcalico/libcalico-go master
 	github.com/prometheus/client_golang v0.9.4 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
