@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/Masterminds/semver v1.2.2 // indirect
 	github.com/Workiva/go-datastructures v1.0.50
-	github.com/aokoli/goutils v1.1.0 // indirect
 	github.com/docopt/docopt-go v0.0.0-20160216232012-784ddc588536
 	github.com/go-ini/ini v0.0.0-20190327024845-3be5ad479f69
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
@@ -24,11 +23,10 @@ require (
 	go.etcd.io/bbolt v1.3.3 // indirect
 	gopkg.in/go-playground/validator.v9 v9.28.0 // indirect
 	gopkg.in/ini.v1 v1.46.0 // indirect
-	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
 	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
 	k8s.io/client-go v8.0.0+incompatible
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190913172157-338f687c53ee
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190927100432-f0e4e03dabf5
 
 replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
