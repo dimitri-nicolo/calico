@@ -18,6 +18,7 @@ In {{site.prodname}}, resources are associated with the Kubernetes API group `lm
 | tigera_secure_ee_audit_ee    | audit_ee                      | Access to EE Audit logs                                                                                                         |
 | tigera_secure_ee_audit_kube  | audit_kube                    | Access to K8s Audit logs                                                                                                        |
 | tigera_secure_ee_events      | events                        | Access to intrusion detection events                                                                                            |
+| tigera_secure_ee_dns         | dns                           | Access to EE DNS logs                                                                                                           |
 
 Each Elasticsearch index used within Tigera Secure EE is mapped to a specific RBAC resource name within the `lma.tigera.io` API group.
 
