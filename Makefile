@@ -14,7 +14,7 @@ ETCD_VERSION     ?= v3.3.7
 COREDNS_VERSION  ?= 1.5.2
 GO_BUILD_VER     ?= v0.23
 CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
-PACKAGE_NAME     ?= projectcalico/libcalico-go
+PACKAGE_NAME     ?= github.com/projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
 BINDIR           ?= bin
 LIBCALICO-GO_PKG  = github.com/projectcalico/libcalico-go
@@ -95,7 +95,7 @@ $(BINDIR)/deepcopy-gen: vendor
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "./lib/upgrade/migrator/clients/v1/k8s/custom" \
+		--input-dirs "$(LIBCALICO-GO_PKG)/lib/upgrade/migrator/clients/v1/k8s/custom" \
 		--bounding-dirs "github.com/projectcalico/libcalico-go" \
 		--output-file-base zz_generated.deepcopy'
 
@@ -103,7 +103,7 @@ $(BINDIR)/deepcopy-gen: vendor
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "./lib/apis/v3" \
+		--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v3" \
 		--bounding-dirs "github.com/projectcalico/libcalico-go" \
 		--output-file-base zz_generated.deepcopy'
 
