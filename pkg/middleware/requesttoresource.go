@@ -102,6 +102,7 @@ func queryToResource(query string) (string, bool) {
 		"tigera_secure_ee_audit_ee":   "audit_ee",
 		"tigera_secure_ee_audit_kube": "audit_kube",
 		"tigera_secure_ee_events":     "events",
+		"tigera_secure_ee_dns":        "dns",
 	}
 	str, ok := queryResourceMap[query]
 	return str, ok
