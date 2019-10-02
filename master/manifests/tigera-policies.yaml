@@ -173,7 +173,8 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'tigera-fluentd-node'
+      selector: k8s-app == 'fluentd-node'
+      namespaceSelector: name == 'tigera-fluentd'
     destination:
       ports: [9200]
   - action: Allow

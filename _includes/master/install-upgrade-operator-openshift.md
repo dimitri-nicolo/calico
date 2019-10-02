@@ -81,6 +81,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-elasticsearchcluste
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-installation.yaml -o manifests/01-crd-installation.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-intrusiondetection.yaml -o manifests/01-crd-intrusiondetection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-monitoringconfiguration.yaml -o manifests/01-crd-monitoringconfiguration.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-logcollector.yaml -o manifests/01-crd-logcollector.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheusrule.yaml -o manifests/01-crd-prometheusrule.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheus.yaml -o manifests/01-crd-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-servicemonitor.yaml -o manifests/01-crd-servicemonitor.yaml
@@ -104,11 +105,9 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-servicea
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/00-namespace-calico-monitoring.yaml -o manifests/00-namespace-calico-monitoring.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-alertmanager-secret.yaml -o manifests/99-alertmanager-secret.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-alertmanager-service.yaml -o manifests/99-alertmanager-service.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-daemonset-fluentd.yaml -o manifests/99-daemonset-fluentd.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-elastic-curator.yaml -o manifests/99-elastic-curator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-kibana-service.yaml -o manifests/99-kibana-service.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-prometheus-service.yaml -o manifests/99-prometheus-service.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-serviceaccount-fluentd.yaml -o manifests/99-serviceaccount-fluentd.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-tigera-es-config.yaml -o manifests/99-tigera-es-config.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-apiserver.yaml -o manifests/01-cr-apiserver.yaml
@@ -118,6 +117,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-intrusiondetection.yaml -
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-elasticsearchcluster.yaml -o manifests/01-cr-elasticsearchcluster.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-monitoringconfiguration.yaml -o manifests/01-cr-monitoringconfiguration.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logcollector.yaml -o manifests/01-cr-logcollector.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheus.yaml -o manifests/01-cr-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheusrule.yaml -o manifests/01-cr-prometheusrule.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o manifests/01-cr-servicemonitor.yaml

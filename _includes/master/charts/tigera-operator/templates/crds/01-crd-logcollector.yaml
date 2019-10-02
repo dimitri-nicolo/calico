@@ -32,10 +32,12 @@ spec:
         status:
           properties:
             state:
+              description: State indicates the state of the daemonset by the LogCollector
+                controller
               type: string
           type: object
   version: v1
   versions:
-    - name: v1
-      served: true
-      storage: true
+  - name: v1
+    served: true
+    storage: true
