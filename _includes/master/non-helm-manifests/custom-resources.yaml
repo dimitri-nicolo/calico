@@ -72,6 +72,13 @@ spec:
 
 ---
 
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
+metadata:
+  name: tigera-secure
+
+---
+
 # This section configures the Tigera Secure Prometheus deployment.
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
