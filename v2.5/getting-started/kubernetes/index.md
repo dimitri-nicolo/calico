@@ -63,8 +63,8 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
   example:
 
   ```bash
-  curl -O https://get.helm.sh/helm-v2.14.2-linux-amd64.tar.gz
-  tar xzvf helm-v2.14.2-linux-amd64.tar.gz
+  curl -O https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz
+  tar xzvf helm-v2.14.3-linux-amd64.tar.gz
   sudo install linux-amd64/helm /usr/bin/
   ```
 
