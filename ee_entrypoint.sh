@@ -1,6 +1,28 @@
 #!/bin/sh
 set -e
 
+if [ "${MANAGED_K8S}" == "true" ]; then
+  # start from scratch
+  > /fluentd/etc/fluent.conf
+
+  # source
+  if [ "${K8S_PLATFORM}" == "eks" ]; then
+    export EKS_CLOUDWATCH_LOG_STREAM_PREFIX=${EKS_CLOUDWATCH_LOG_STREAM_PREFIX:-"kube-apiserver-audit-"}
+    cat /fluentd/etc/inputs/in-eks.conf >> /fluentd/etc/fluent.conf
+  fi
+
+  # match
+  echo >> /fluentd/etc/fluent.conf
+  cat /fluentd/etc/outputs/out-eks-audit-es.conf >> /fluentd/etc/fluent.conf
+  echo >> /fluentd/etc/fluent.conf
+
+  # Run fluentd
+  "$@"
+
+  # bail earlier
+  exit $?
+fi
+
 # Set the number of shards for index tigera_secure_ee_flows
 sed -i 's|"number_of_shards": \d*|"number_of_shards": '"$ELASTIC_FLOWS_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_flows.template
 

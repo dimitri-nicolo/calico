@@ -24,6 +24,7 @@ COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY fluent_output.conf /fluentd/etc/fluent_output.conf
 COPY outputs /fluentd/etc/outputs
+COPY inputs /fluentd/etc/inputs
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log

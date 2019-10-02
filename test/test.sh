@@ -5,6 +5,7 @@
 # below and then compare to previously captured configurations to ensure
 # only expected changes have happened.
 
+DEBUG="false"
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 mkdir -p $TEST_DIR/tmp
 
@@ -36,14 +37,14 @@ function checkConfiguration() {
 
   echo "#### Testing configuration of $READABLE_NAME"
 
-  generateAndCollectConfig $ENV_FILE $TEST_DIR/tmp/$CFG_NAME.cfg
+  generateAndCollectConfig $ENV_FILE $UUT
 
   diff $EXPECTED $UUT &> /dev/null
   if [ $? -eq 0 ]; then
     echo "  ## configuration is correct"
   else
     echo " XXX configuration is not correct"
-    diff $EXPECTED $UUT
+    $DEBUG && diff $EXPECTED $UUT
   fi
 }
 
@@ -97,6 +98,13 @@ SYSLOG_PROTOCOL=tcp
 SYSLOG_TLS=true
 SYSLOG_VERIFY_MODE=\${OPENSSL::SSL::VERIFY_NONE}
 SYSLOG_HOSTNAME=nodename
+EOM
+)
+
+EKS_VARS=$(cat <<EOM
+MANAGED_K8S=true
+K8S_PLATFORM=eks
+EKS_CLOUDWATCH_LOG_GROUP=/aws/eks/eks-audit-test/cluster/
 EOM
 )
 
@@ -167,5 +175,18 @@ $S3_VARS
 EOM
 
 checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-and-s3.env es-secure-with-syslog-and-s3 "ES secure with syslog and S3"
+
+# Test with EKS
+cat > $TEST_DIR/tmp/eks.env <<EOM
+$EKS_VARS
+EOM
+checkConfiguration $TEST_DIR/tmp/eks.env eks "EKS"
+
+# Test with EKS, Log Stream Prefix overwritten
+cat > $TEST_DIR/tmp/eks-log-stream-pfx.env <<EOM
+$EKS_VARS
+EKS_CLOUDWATCH_LOG_STREAM_PREFIX=kube-apiserver-audit-overwritten-
+EOM
+checkConfiguration $TEST_DIR/tmp/eks-log-stream-pfx.env eks-log-stream-pfx "EKS - Log Stream Prefix overwritten"
 
 rm -f $TMP
