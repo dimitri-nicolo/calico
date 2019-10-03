@@ -1,3 +1,4 @@
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -124,6 +125,16 @@ spec:
                 configMapKeyRef:
                   name: tigera-es-config
                   key: tigera.elasticsearch.port
+{{- if eq $elasticMode "operator" }}
+            - name: ELASTIC_USER
+              value: "elastic"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-elasticsearch-es-elastic-user
+                  key: elastic
+                  optional: true
+{{- else }}
             - name: ELASTIC_USER
               valueFrom:
                 secretKeyRef:
@@ -136,6 +147,7 @@ spec:
                   name: elastic-compliance-user
                   key: server.password
                   optional: true
+{{- end}}
             - name: ELASTIC_SSL_VERIFY
               value: "true"
             - name: ELASTIC_CA
@@ -157,7 +169,15 @@ spec:
         - name: elastic-ca-cert-volume
           secret:
             optional: true
+{{- if eq $elasticMode "operator" }}
+            defaultMode: 420
             items:
-            - key: tigera.elasticsearch.ca
-              path: ca.pem
+              - key: tls.crt
+                path: ca.pem
+            secretName: tigera-elasticsearch-es-http-certs-public
+{{- else }}
+            items:
+              - key: tigera.elasticsearch.ca
+                path: ca.pem
             secretName: tigera-es-config
+{{- end}}

@@ -20,11 +20,28 @@ metadata:
   namespace: calico-monitoring
 spec:
   capacity:
-    storage: 10Gi
+    storage: 40Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
     path: /var/tigera/elastic-data/1
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: elasticsearch-storage
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: tigera-elasticsearch-2
+  namespace: calico-monitoring
+spec:
+  capacity:
+    storage: 40Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /var/tigera/elastic-data/2
   persistentVolumeReclaimPolicy: Recycle
   storageClassName: elasticsearch-storage
 {{- end }}

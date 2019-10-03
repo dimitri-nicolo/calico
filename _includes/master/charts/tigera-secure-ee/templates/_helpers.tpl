@@ -80,6 +80,6 @@ resources:
 {{- else if .Values.kibana.host -}}
   https://{{ .Values.kibana.host }}:{{ .Values.kibana.port }}
 {{- else -}}
-  http://localhost:5601
+  https://127.0.0.1:5601
 {{- end }}
 {{- end }}
