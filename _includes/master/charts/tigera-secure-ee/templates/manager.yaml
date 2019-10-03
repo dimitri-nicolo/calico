@@ -416,7 +416,7 @@ rules:
   verbs: ["get","create"]
 - apiGroups: ["lma.tigera.io"]
   resources: ["index"]
-  resourceNames: ["flows", "audit*", "events"]
+  resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 # Access to policies in the default tier
 - apiGroups: ["projectcalico.org"]
@@ -457,7 +457,7 @@ rules:
 # Access to flow logs, audit logs, and statistics
 - apiGroups: ["lma.tigera.io"]
   resources: ["index"]
-  resourceNames: ["flows", "audit*", "events"]
+  resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 # Manage globalreport configuration, view report generation status, and list reports in the UI.
 - apiGroups: ["projectcalico.org"]
