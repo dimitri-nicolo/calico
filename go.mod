@@ -99,9 +99,9 @@ require (
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190919092259-cdf8bc64068e
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20190917002945-931ed2638eb9
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20190930195253-274e777a2f69
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191001180844-80bdc7c2bee3
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20191001104204-33e4233e9f3f
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )
