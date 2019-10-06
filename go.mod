@@ -39,6 +39,7 @@ require (
 	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436
-
-replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
+replace (
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436
+	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
+)
