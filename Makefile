@@ -12,7 +12,7 @@ test: vendor ut fv
 K8S_VERSION      ?= v1.14.1
 ETCD_VERSION     ?= v3.3.7
 COREDNS_VERSION  ?= 1.5.2
-GO_BUILD_VER     ?= v0.23
+GO_BUILD_VER     ?= v0.24
 CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME     ?= github.com/projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
@@ -20,8 +20,6 @@ BINDIR           ?= bin
 LIBCALICO-GO_PKG  = github.com/projectcalico/libcalico-go
 TOP_SRC_DIR       = lib
 MY_UID           := $(shell id -u)
-GINKGO_ARGS      := -mod=vendor
-EXTRA_DOCKER_ARGS := -e GO111MODULE=on
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
@@ -34,7 +32,9 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+GINKGO_ARGS		:= -mod=vendor
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -80,7 +80,7 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 
 $(BINDIR)/openapi-gen: vendor
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+		sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
@@ -89,7 +89,7 @@ gen-files:
 	$(MAKE) $(GENERATED_FILES)
 
 $(BINDIR)/deepcopy-gen: vendor
-	$(DOCKER_GO_BUILD) sh -c 'go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: $(UPGRADE_SRCS) $(BINDIR)/deepcopy-gen
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
@@ -138,7 +138,7 @@ $(BINDIR)/deepcopy-gen: vendor
 # Static checks
 ###############################################################################
 .PHONY: static-checks
-static-checks: check-format check-gen-files
+static-checks: check-format check-gen-files golangci-lint
 
 .PHONY: check-gen-files
 check-gen-files: $(GENERATED_FILES)
@@ -154,6 +154,11 @@ check-format: vendor
 	  echo "All files in ./lib are goimported"; \
 	fi
 
+LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
+golangci-lint:
+	@echo "linting is currently disabled"
+	#$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); GO111MODULE=off golangci-lint run $(LINT_ARGS)'
+
 .PHONY: goimports go-fmt format-code
 # Format the code using goimports.  Depends on the vendor directory because goimports needs
 # to be able to resolve the imports.
@@ -164,7 +169,6 @@ goimports go-fmt format-code fix: vendor
 hooks_installed:=$(shell ./install-git-hooks)
 
 .PHONY: install-git-hooks
-## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
 
@@ -182,15 +186,15 @@ GINKGO_FOCUS?=.*
 .PHONY:ut
 ## Run the fast set of unit tests in a container.
 ut: vendor
-	$(DOCKER_RUN) --privileged $(CALICO_BUILD) \
-		sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -skip "\[Datastore\]" -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
+	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -skip "\[Datastore\]" -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 
 .PHONY:fv
 ## Run functional tests against a real datastore in a container.
 fv: vendor run-etcd run-etcd-tls run-kubernetes-master run-coredns
 	$(DOCKER_RUN) --privileged --dns \
 		$(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' coredns) \
-		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 	$(MAKE) stop-etcd-tls
 
 ## Run etcd, with tls enabled, as a container (calico-etcd-tls)
@@ -314,9 +318,12 @@ stop-coredns:
 ###############################################################################
 # CI
 ###############################################################################
+.PHONY: mod-download
+mod-download:
+	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
+
 .PHONY: ci
-## Run what CI runs
-ci: clean static-checks test
+ci: clean mod-download static-checks test
 
 .PHONY: help
 ## Display this help text
