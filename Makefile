@@ -36,13 +36,14 @@ ifeq ($(ARCH),aarch64)
 	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
+	override ARCH=amd64
 endif
 
 BIN=bin/$(ARCH)
 
 GO_BUILD_VER?=v0.24
 CALICO_BUILD = calico/go-build:$(GO_BUILD_VER)
+PACKAGE_NAME ?= github.com/projectcalico/confd
 
 CALICOCTL_VER=master
 CALICOCTL_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/calicoctl:$(CALICOCTL_VER)-$(ARCH)
@@ -63,17 +64,13 @@ LOCAL_USER_ID?=$(shell id -u $$USER)
 
 EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
 GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-PACKAGE_NAME		?= github.com/kelseyhightower/confd
 
 # All go files.
 SRC_FILES:=$(shell find . -name '*.go' -not -path "./vendor/*" )
 
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
+# Allow the ssh auth sock to be mapped into the build container.
 ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
@@ -87,7 +84,25 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+PHONY:local_build
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw \
+	-v $(CURDIR)/../typha-private:/go/src/github.com/projectcalico/typha:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/typha=../typha
+else
+# Note that update_replace_pin invokes `go mod download`, which will fail for all but the last call in this target. That's
+# expected since the local directories are not volume mounted anymore.
+local_build:
+	-$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
+	$(call update_replace_pin,github.com/projectcalico/typha,github.com/tigera/typha-private,master)
+endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) tests/logs && \
 	docker run --rm \
@@ -101,20 +116,6 @@ DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) tests/logs && \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
 		-w /go/src/$(PACKAGE_NAME)
 
-# TODO: re-enable local builds
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-PHONY:local_build
-
-ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
-local_build:
-	@echo Local builds are currently not supported.
-else
-local_build:
-	@echo This is not a local build.
-endif
-
 .PHONY: clean
 clean:
 	rm -rf vendor
@@ -122,14 +123,13 @@ clean:
 	rm -rf tests/logs
 
 .PHONY: install-git-hooks
-## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
 
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/confd
+build: local_build bin/confd
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -153,7 +153,39 @@ windows-packaging/tigera-confd.exe: $(SRC_FILES)
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+###############################################################################
+# Updating pins
+###############################################################################
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
+define get_remote_version
+	$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+endef
+
+# update_pin updates the given package's version to the latest available in the specified repo and branch.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			go get $(1)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
+# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_replace_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			go mod edit -replace $(1)=$(2)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
 		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
@@ -161,57 +193,16 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-###############################################################################
-## typha
-
-## Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-
-## Set the default TYPHA source for this project
-TYPHA_PROJECT_DEFAULT=tigera/typha-private.git
-TYPHA_GLIDE_LABEL=projectcalico/typha
-
+LICENSING_BRANCH?=$(PIN_BRANCH)
+LICENSING_REPO?=github.com/tigera/licensing
 TYPHA_BRANCH?=$(PIN_BRANCH)
-TYPHA_REPO?=github.com/$(TYPHA_PROJECT_DEFAULT)
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:$(TYPHA_PROJECT_DEFAULT) $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
+TYPHA_REPO?=github.com/tigera/typha-private
 
-## Guard to ensure TYPHA repo and branch are reachable
-guard-git-typha:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Ensure the branch exists, or set TYPHA_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(TYPHA_VERSION))" = "" ]; then \
-		echo "ERROR: TYPHA version could not be determined"; \
-		exit 1; \
-	fi;
+update-licensing-pin: guard-ssh-forwarding-bug
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-## Update libary pin in glide.yaml
-update-typha-pin: guard-ssh-forwarding-bug guard-git-typha
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(TYPHA_GLIDE_LABEL)" \
-		REPO="$(TYPHA_REPO)" \
-		VERSION="$(TYPHA_VERSION)" \
-		DEFAULT_REPO="$(TYPHA_PROJECT_DEFAULT)" \
-		BRANCH="$(TYPHA_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-###############################################################################
-## Update libary pin in go.mod
-update-typha-pin: guard-ssh-forwarding-bug commit-pin-updates
-
-# Default the typha repo and version but allow them to be overridden
-TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/typha)
-
-## Update typha pin in go.mod
-update-typha:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(TYPHA_VERSION)" ]] && [[ "$(TYPHA_VERSION)" != "$(TYPHA_OLDVER)" ]]; then \
-        	echo "Updating typha version $(TYPHA_OLDVER) to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
-                go mod edit -replace github.com/projectcalico/typha=>$(TYPHA_REPO)@$(TYPHA_VERSION); \
-	fi'
+update-typha-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/typha,$(TYPHA_REPO),$(TYPHA_BRANCH))
 
 git-status:
 	git status --porcelain
@@ -223,22 +214,24 @@ ifdef CONFIRM
 endif
 
 git-commit:
-	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
 
 git-push:
 	git push
 
-commit-pin-updates: update-typha git-status ci git-config git-commit git-push
+update-pins: update-licensing-pin update-typha-pin
+
+commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Static checks
 ###############################################################################
 .PHONY: static-checks
+LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run --deadline 5m'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run $(LINT_ARGS)'
 
 .PHONY: fix
-## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
 
@@ -306,7 +299,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 
 .PHONY: ut
 ## Run the fast set of unit tests in a container.
-ut:
+ut: local_build
 	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && cd /go/src/$(PACKAGE_NAME) && ginkgo -r .'
 
 ## Etcd is used by the kubernetes
@@ -394,9 +387,12 @@ bin/typha:
 ###############################################################################
 # CI
 ###############################################################################
+.PHONY: mod-download
+mod-download:
+	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
+
 .PHONY: ci
-## Run what CI runs
-ci: clean static-checks test
+ci: clean mod-download static-checks test
 
 ###############################################################################
 # Release
