@@ -160,6 +160,10 @@ func (c client) RemoteClusterConfigurations() RemoteClusterConfigurationInterfac
 	return remoteClusterConfiguration{client: c}
 }
 
+func (c client) GlobalAlerts() GlobalAlertInterface {
+	return globalAlerts{client: c}
+}
+
 func (c client) GlobalThreatFeeds() GlobalThreatFeedInterface {
 	return globalThreatFeeds{client: c}
 }

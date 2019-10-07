@@ -92,6 +92,8 @@ func init() {
 				&apiv3.IPAMHandleList{},
 				&apiv3.IPAMConfig{},
 				&apiv3.IPAMConfigList{},
+				&apiv3.GlobalAlert{},
+				&apiv3.GlobalAlertList{},
 				&apiv3.GlobalThreatFeed{},
 				&apiv3.GlobalThreatFeedList{},
 				&apiv3.GlobalReport{},
@@ -241,6 +243,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindWorkloadEndpoint,
 		resources.NewWorkloadEndpointClient(cs),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindGlobalAlert,
+		resources.NewGlobalAlertClient(cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -462,6 +470,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindIPPool,
 		apiv3.KindHostEndpoint,
 		apiv3.KindRemoteClusterConfiguration,
+		apiv3.KindGlobalAlert,
 		apiv3.KindGlobalThreatFeed,
 		apiv3.KindGlobalReport,
 		apiv3.KindGlobalReportType,

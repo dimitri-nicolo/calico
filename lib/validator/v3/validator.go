@@ -24,7 +24,7 @@ import (
 
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/go-playground/validator.v9"
+	validator "gopkg.in/go-playground/validator.v9"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
@@ -219,6 +219,7 @@ func init() {
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
 	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
+	registerStructValidator(validate, validateGlobalAlertSpec, api.GlobalAlertSpec{})
 	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeedSpec{})
 	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})

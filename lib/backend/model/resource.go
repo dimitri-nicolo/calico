@@ -147,6 +147,11 @@ func init() {
 		reflect.TypeOf(kapiv1.Endpoints{}),
 	)
 	registerResourceInfo(
+		apiv3.KindGlobalAlert,
+		"globalalerts",
+		reflect.TypeOf(apiv3.GlobalAlert{}),
+	)
+	registerResourceInfo(
 		apiv3.KindGlobalThreatFeed,
 		"globalthreatfeeds",
 		reflect.TypeOf(apiv3.GlobalThreatFeed{}),

@@ -55,6 +55,8 @@ type Interface interface {
 	RemoteClusterConfigurations() RemoteClusterConfigurationInterface
 	// LicenseKey returns an interface for managing the license key resource.
 	LicenseKey() LicenseKeyInterface
+	// GlobalAlerts returns an interface for managing the alert resources.
+	GlobalAlerts() GlobalAlertInterface
 	// GlobalThreatFeeds returns an interface for managing the Threat feed resources.
 	GlobalThreatFeeds() GlobalThreatFeedInterface
 	// GlobalReportTypes returns an interface for managing the report types resources.
