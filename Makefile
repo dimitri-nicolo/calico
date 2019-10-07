@@ -22,10 +22,10 @@ BUILDOS ?= $(shell uname -s | tr A-Z a-z)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
+	BUILDARCH=arm64
 endif
 ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+	BUILDARCH=amd64
 endif
 
 # unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
@@ -33,10 +33,10 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
+	override ARCH=amd64
 endif
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
@@ -86,21 +86,16 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-GO_BUILD_VER?=v0.23
+GO_BUILD_VER?=v0.24
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+PACKAGE_NAME?=github.com/projectcalico/node
 
 EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
 GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
-#This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.20
-
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
+# Allow the ssh auth sock to be mapped into the build container.
 ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
 # location of docker credentials to push manifests
@@ -127,7 +122,7 @@ ETCD_VERSION?=v3.3.7
 # If building on amd64 omit the arch in the container name.  Fixme!
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 ifneq ($(BUILDARCH),amd64)
-        ETCD_IMAGE=$(ETCD_IMAGE)-$(ARCH)
+	ETCD_IMAGE=$(ETCD_IMAGE)-$(ARCH)
 endif
 
 K8S_VERSION?=v1.14.1
@@ -204,19 +199,15 @@ DATE:=$(shell date -u +'%FT%T%z')
 GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
 GIT_DESCRIPTION:=$(shell git describe --tags --dirty --always || echo '<unknown>')
 ifeq ($(LOCAL_BUILD),true)
-        GIT_DESCRIPTION = $(shell git describe --tags --dirty --always || echo '<unknown>')-dev-build
+	GIT_DESCRIPTION = $(shell git describe --tags --dirty --always || echo '<unknown>')-dev-build
 endif
 
-PACKAGE_NAME?=github.com/projectcalico/node
-
 LDFLAGS=-ldflags "\
-        -X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
-        -X main.VERSION=$(CALICO_GIT_VER) \
-        -X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
-        -X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
-        -X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
-
-LIBCALICOGO_PATH?=none
+	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
+	-X main.VERSION=$(CALICO_GIT_VER) \
+	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
+	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
+	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
 
 SRC_FILES=$(shell find ./pkg -name '*.go')
 
@@ -231,40 +222,46 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
-
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
-        docker run --rm \
-                --net=host \
-                $(EXTRA_DOCKER_ARGS) \
-                -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                -e GOCACHE=/go-cache \
-                -e GOARCH=$(ARCH) \
-                -e GOPATH=/go \
-                -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-                -w /go/src/$(PACKAGE_NAME)
+EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
 PHONY:local_build
 
 ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw \
-	-v $(CURDIR)/../confd:/go/src/github.com/projectcalico/confd:rw \
-	-v $(CURDIR)/../felix:/go/src/github.com/projectcalico/felix:rw
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw \
+	-v $(CURDIR)/../typha-private:/go/src/github.com/projectcalico/typha:rw \
+	-v $(CURDIR)/../felix-private:/go/src/github.com/projectcalico/felix:rw \
+	-v $(CURDIR)/../cni-plugin-private:/go/src/github.com/projectcalico/cni-plugin:rw \
+	-v $(CURDIR)/../confd-private:/go/src/github.com/projectcalico/confd:rw
 local_build:
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/confd=../confd
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/typha=../typha
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/felix=../felix
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/cni-plugin=../cni-plugin
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/kelseyhightower/confd=../confd
 else
+# Note that update_replace_pin invokes `go mod download`, which will fail for all but the last call in this target. That's
+# expected since the local directories are not volume mounted anymore.
 local_build:
-	# TODO: We can't use this in private since they revert us to using OSS versions of these repos.
-	#       Devs should manually undo any local build changes.
-	# -$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/libcalico-go
-	# -$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/confd
-	# -$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/felix
+	-$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
+	-$(call update_replace_pin,github.com/projectcalico/typha,github.com/tigera/typha-private,master)
+	-$(call update_replace_pin,github.com/projectcalico/felix,github.com/tigera/felix-private,master)
+	-$(call update_replace_pin,github.com/projectcalico/cni-plugin,github.com/tigera/cni-plugin-private,master)
+	$(call update_replace_pin,github.com/kelseyhightower/confd,github.com/tigera/confd-private,master)
 endif
+
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
+	docker run --rm \
+		--net=host \
+		$(EXTRA_DOCKER_ARGS) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-e GOCACHE=/go-cache \
+		-e GOARCH=$(ARCH) \
+		-e GOPATH=/go \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+		-w /go/src/$(PACKAGE_NAME)
 
 # If local build is set, then always build the binary since we might not
 # detect when another local repository has been modified.
@@ -276,7 +273,6 @@ endif
 hooks_installed:=$(shell ./install-git-hooks)
 
 .PHONY: install-git-hooks
-## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
 
@@ -291,10 +287,8 @@ clean:
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/templates/*
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
-	rm -rf dist
-	sudo rm -rf vendor
+	rm -rf dist vendor crds.yaml
 	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
-	rm -f crds.yaml
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -303,23 +297,6 @@ clean:
 # Building the binary
 ###############################################################################
 build:  $(NODE_CONTAINER_BINARY)
-
-git-status:
-	git status --porcelain
-
-git-config:
-ifdef CONFIRM
-	git config --global user.name "Semaphore Automatic Update"
-	git config --global user.email "marvin@tigera.io"
-endif
-
-git-commit:
-	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
-
-git-push:
-	git push
-
-commit-pin-updates: update-felix-confd git-status ci git-config git-commit git-push
 
 .PHONY: remote-deps
 remote-deps:
@@ -390,7 +367,7 @@ endif
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
 	docker run --rm -v $(CURDIR)/dist/bin:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
-	  echo; echo calico-node-$(ARCH) -v;         /go/bin/calico-node-$(ARCH) -v; \
+	  echo; echo calico-node-$(ARCH) -v;	 /go/bin/calico-node-$(ARCH) -v; \
 	"
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg ver=$(CALICO_GIT_VER) -f ./Dockerfile.$(ARCH)
 	touch $@
@@ -498,24 +475,40 @@ build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
 
-
-
 ###############################################################################
-# Managing the upstream library pins
-#
-# If you're updating the pins with a non-release branch checked out,
-# set PIN_BRANCH to the parent branch, e.g.:
-#
-#     PIN_BRANCH=release-v2.5 make update-pins
-#        - or -
-#     PIN_BRANCH=master make update-pins
-#
+# Updating pins
 ###############################################################################
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
-## Update dependency pins
-update-felix-confd update-pins: update-libcalico-pin update-licensing-pin update-felix-pin update-confd-pin update-cni-pin
+define get_remote_version
+	$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+endef
 
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+# update_pin updates the given package's version to the latest available in the specified repo and branch.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			go get $(1)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
+# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_replace_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			go mod edit -replace $(1)=$(2)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
 		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
@@ -523,183 +516,60 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-###############################################################################
-## Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-
-###############################################################################
-## felix
-
-## Set the default FELIX source for this project
-FELIX_PROJECT_DEFAULT=tigera/felix-private
-
-## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
-## default FELIX branch to the same branch name as the current checked out repo
-FELIX_BRANCH?=$(PIN_BRANCH)
-FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
-FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
-FELIX_REPLACE?=github.com/projectcalico/felix
-FELIX_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/felix)
-
-## Guard to ensure FELIX repo and branch are reachable
-guard-git-felix:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
-		echo "ERROR: FELIX version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin
-update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-	$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(FELIX_VERSION)" ]] && [[ "$(FELIX_VERSION)" != "$(FELIX_OLDVER)" ]]; then \
-		echo "Updating felix version $(FELIX_OLDVER) to $(FELIX_VERSION) from $(FELIX_REPO)"; \
-		go get $(FELIX_REPO)@$(FELIX_VERSION); \
-		go mod edit -replace $(FELIX_REPLACE)=$(FELIX_REPO)@$(FELIX_VERSION); \
-	fi;'
-
-###############################################################################
-## licensing
-
-## Set the default LICENSING source for this project
-LICENSING_PROJECT_DEFAULT=tigera/licensing
-
-LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
-LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
-LICENSING_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/tigera/licensing)
-
-## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
-	@$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
-		echo "ERROR: LICENSING version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin
-update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-	$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(LICENSING_VERSION)" ]] && [[ "$(LICENSING_VERSION)" != "$(LICENSING_OLDVER)" ]]; then \
-		echo "Updating licensing version $(LICENSING_OLDVER) to $(LICENSING_VERSION) from $(LICENSING_REPO)"; \
-		go get $(LICENSING_REPO)@$(LICENSING_VERSION); \
-	fi;'
-
-###############################################################################
-## libcalico
-
-## Set the default source for this project
-LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private
-
 LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-LIBCALICO_REPLACE?=github.com/projectcalico/libcalico-go
-LIBCALICO_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" $(LIBCALICO_REPLACE))
-
-## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
-		echo "ERROR: LIBCALICO version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin
-update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-	$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
-		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-		go mod edit -replace $(LIBCALICO_REPLACE)=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
-	fi'
-
-###############################################################################
-## confd
-
-## Set the default CONFD source for this project
-CONFD_PROJECT_DEFAULT=tigera/confd-private
-
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LICENSING_BRANCH?=$(PIN_BRANCH)
+LICENSING_REPO?=github.com/tigera/licensing
+FELIX_BRANCH?=$(PIN_BRANCH)
+FELIX_REPO?=github.com/tigera/felix-private
 CONFD_BRANCH?=$(PIN_BRANCH)
-CONFD_REPO?=github.com/$(CONFD_PROJECT_DEFAULT)
-CONFD_VERSION?=$(shell git ls-remote git@github.com:$(CONFD_PROJECT_DEFAULT) $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
-CONFD_REPLACE?=github.com/kelseyhightower/confd
-CONFD_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" $(CONFD_REPLACE))
-
-## Guard to ensure CONFD repo and branch are reachable
-guard-git-confd:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "$(CONFD_BRANCH)" "Ensure the branch exists, or set CONFD_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "$(CONFD_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(CONFD_VERSION))" = "" ]; then \
-		echo "ERROR: CONFD version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin
-update-confd-pin: guard-ssh-forwarding-bug guard-git-confd
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-	$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(CONFD_VERSION)" ]] && [[ "$(CONFD_VERSION)" != "$(CONFD_OLDVER)" ]]; then \
-		echo "Updating confd version $(CONFD_OLDVER) to $(CONFD_VERSION) from $(CONFD_REPO)"; \
-		go mod edit -replace $(CONFD_REPLACE)=$(CONFD_REPO)@$(CONFD_VERSION); \
-	fi'
-
-###############################################################################
-## CNI plugins
-
-## Set the default CNI source for this project
-CNI_PROJECT_DEFAULT=tigera/cni-plugin-private
-
+CONFD_REPO?=github.com/tigera/confd-private
 CNI_BRANCH?=$(PIN_BRANCH)
-CNI_REPO?=github.com/$(CNI_PROJECT_DEFAULT)
-CNI_VERSION?=$(shell git ls-remote git@github.com:$(CNI_PROJECT_DEFAULT) $(CNI_BRANCH) 2>/dev/null | cut -f 1)
-CNI_REPLACE?=github.com/projectcalico/cni-plugin
-CNI_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" $(CNI_REPLACE))
+CNI_REPO?=github.com/tigera/cni-plugin-private
 
-## Guard to ensure CNI repo and branch are reachable
-guard-git-cni:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "$(CNI_BRANCH)" "Ensure the branch exists, or set CNI_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNI_PROJECT_DEFAULT) "$(CNI_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(CNI_VERSION))" = "" ]; then \
-		echo "ERROR: CNI version could not be determined"; \
-		exit 1; \
-	fi;
+update-libcalico-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
-## Update libary pin
-update-cni-pin: guard-ssh-forwarding-bug guard-git-cni
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-	$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(CNI_VERSION)" ]] && [[ "$(CNI_VERSION)" != "$(CNI_OLDVER)" ]]; then \
-		echo "Updating cni version $(CNI_OLDVER) to $(CNI_VERSION) from $(CNI_REPO)"; \
-		go mod edit -replace $(CNI_REPLACE)=$(CNI_REPO)@$(CNI_VERSION); \
-	fi'
+update-licensing-pin: guard-ssh-forwarding-bug
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
+
+update-felix-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/felix,$(FELIX_REPO),$(FELIX_BRANCH))
+
+update-confd-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/kelseyhightower/confd,$(CONFD_REPO),$(CONFD_BRANCH))
+
+update-cni-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/cni-plugin,$(CNI_REPO),$(CNI_BRANCH))
+
+git-status:
+	git status --porcelain
+
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
+
+git-commit:
+	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+update-felix-confd update-pins: update-libcalico-pin update-licensing-pin update-felix-pin update-confd-pin update-cni-pin
+
+commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Static checks
 ###############################################################################
 .PHONY: static-checks
-## Perform static checks on the code.
+LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && golangci-lint run --deadline 5m'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run $(LINT_ARGS)'
 
 .PHONY: fix
-## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
 
@@ -826,7 +696,7 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
 	docker run --rm $(BUILD_IMAGE):latest-$(ARCH) /bin/sh -c "\
-	  echo bird --version;         /bin/bird --version; \
+	  echo bird --version;	 /bin/bird --version; \
 	"
 	docker save --output $@ $(BUILD_IMAGE):latest-$(ARCH)
 
@@ -901,9 +771,9 @@ endif
 	    -v /home/$(USER)/.kubeadm-dind-cluster:/root/.kubeadm-dind-cluster \
 	    --privileged \
 	    --net host \
-        $(TEST_CONTAINER_NAME) \
+	$(TEST_CONTAINER_NAME) \
 	    sh -c 'cp /root/.kubeadm-dind-cluster/kubectl /bin/kubectl && cd /code/tests/k8st && \
-	           nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+		   nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
 
 # Needed for Semaphore CI (where disk space is a real issue during k8s-test)
 .PHONY: remove-go-build-image
@@ -916,7 +786,7 @@ remove-go-build-image:
 st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	docker run --rm -v $(CURDIR)/dist:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
-	  echo; echo calicoctl version;          /go/bin/calicoctl version; \
+	  echo; echo calicoctl version;	  /go/bin/calicoctl version; \
 	  echo; echo calico-cni-plugin -v;       /go/bin/calico-cni-plugin -v; \
 	  echo; echo calico-ipam-plugin -v;      /go/bin/calico-ipam-plugin -v; echo; \
 	"
@@ -928,26 +798,29 @@ st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd ca
 	#   - This also provides access to calicoctl and the docker client
 	# $(MAKE) st-checks
 	docker run --uts=host \
-	           --pid=host \
-	           --net=host \
-	           --privileged \
-	           -v $(CURDIR):/code \
-	           -e HOST_CHECKOUT_DIR=$(CURDIR) \
-	           -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
-	           -e MY_IP=$(LOCAL_IP_ENV) \
-	           -e NODE_CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
-	           --rm -t \
-	           -v /var/run/docker.sock:/var/run/docker.sock \
-	           $(TEST_CONTAINER_NAME) \
-	           sh -c 'nosetests $(ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'
+		   --pid=host \
+		   --net=host \
+		   --privileged \
+		   -v $(CURDIR):/code \
+		   -e HOST_CHECKOUT_DIR=$(CURDIR) \
+		   -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
+		   -e MY_IP=$(LOCAL_IP_ENV) \
+		   -e NODE_CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
+		   --rm -t \
+		   -v /var/run/docker.sock:/var/run/docker.sock \
+		   $(TEST_CONTAINER_NAME) \
+		   sh -c 'nosetests $(ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'
 	$(MAKE) stop-etcd
 
 ###############################################################################
 # CI/CD
 ###############################################################################
+.PHONY: mod-download
+mod-download:
+	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
+
 .PHONY: ci
-## Run what CI runs
-ci: static-checks ut fv image-all build-windows-archive st
+ci: mod-download static-checks ut fv image-all build-windows-archive st
 
 ## Deploys images to registry
 cd:
@@ -1067,17 +940,17 @@ endif
 ## Display this help text
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
 	$(info Available targets)
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
+	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
+		nb = sub( /^## /, "", helpMsg );				\
+		if(nb == 0) {						   \
+			helpMsg = $$0;					      \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
+		}							       \
+		if (nb)							 \
 			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=20                                                            \
+	}								   \
+	{ helpMsg = $$0 }'						  \
+	width=20							    \
 	$(MAKEFILE_LIST)
 
 $(info "Build dependency versions")
