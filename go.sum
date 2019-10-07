@@ -30,6 +30,7 @@ github.com/emicklei/go-restful v2.9.5+incompatible/go.mod h1:otzb+WCGbkyDHkqmQmT
 github.com/envoyproxy/data-plane-api v0.0.0-20190513203724-4a93c6d2d917 h1:TEjtUmUDE/u196IVL0q+hQudGM685WC0zcRiNJ4WasI=
 github.com/envoyproxy/data-plane-api v0.0.0-20190513203724-4a93c6d2d917/go.mod h1:ysQJ12w0R8EJ2rE11wHBGdm+4q7Ft5RTmABx23SOscc=
 github.com/envoyproxy/data-plane-api v0.0.0-20190920201403-619157fd6fde h1:crs/W+F3geKTidCYfiE9hTraVGmU5J7kgkmjKDHPX1E=
+github.com/envoyproxy/data-plane-api v0.0.0-20191001212645-93bc80088e45 h1:70qWEOycQeqQ2kCOP/dZGAM1fz+vOXEj0VwgmA6B1Aw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=

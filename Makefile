@@ -109,12 +109,12 @@ DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
 ifneq ($(GOPATH),)
-    # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
-    # is the default one used by go modules.
-    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+	# is the default one used by go modules.
+	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
 else
-    # If gopath is empty, default to $(HOME)/go.
-    GOMOD_CACHE = $(HOME)/go/pkg/mod
+	# If gopath is empty, default to $(HOME)/go.
+	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
 EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
@@ -122,14 +122,11 @@ BUILD_FLAGS		+= -mod=vendor
 GINKGO_ARGS		+= -mod=vendor
 
 EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
-GIT_CONFIG_SSH	  ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
+# Allow the ssh auth sock to be mapped into the build container.
 ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
@@ -137,12 +134,12 @@ endif
 PHONY:local_build
 
 ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw
 local_build:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go'
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
 local_build:
-	@echo This is not a local build.
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
 endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) bin && \
@@ -387,22 +384,12 @@ sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ###############################################################################
-# Managing the upstream library pins
-#
-# If you're updating the pins with a non-release branch checked out,
-# set PIN_BRANCH to the parent branch, e.g.:
-#
-#     PIN_BRANCH=release-v2.5 make update-pins
-#	- or -
-#     PIN_BRANCH=master make update-pins
-#
+# Updating pins
 ###############################################################################
-# Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
 PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
 define get_remote_version
-$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+	$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
 endef
 
 # update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
@@ -413,7 +400,6 @@ define update_replace_pin
 
 	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
 		if [[ ! -z "$(new_ver)" ]]; then \
-			echo "Updating $(1) to version $(new_ver) from $(2):$(3)"; \
 			go mod edit -replace $(1)=$(2)@$(new_ver); \
 			go mod download; \
 		fi'
@@ -442,7 +428,7 @@ ifdef CONFIRM
 endif
 
 git-commit:
-	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
 
 git-push:
 	git push
@@ -454,13 +440,12 @@ commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 ###############################################################################
 # Static checks
 ###############################################################################
-## Perform static checks on the code.
 .PHONY: static-checks
+LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
 static-checks: build
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'GO111MODULE=off golangci-lint run --deadline 5m'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); GO111MODULE=off golangci-lint run $(LINT_ARGS)'
 
 .PHONY: fix
-## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
 
@@ -479,9 +464,12 @@ ut: local_build proto
 ###############################################################################
 # CI
 ###############################################################################
+.PHONY: mod-download
+mod-download:
+	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
+
 .PHONY: ci
-## Run what CI runs
-ci: clean build-all static-checks ut
+ci: clean mod-download build-all static-checks ut
 
 ###############################################################################
 # CD
