@@ -1,5 +1,5 @@
-hash: d8822fed39880f1c2bcf48a97886283ece4b7c272f2dea9c9410074e2c5e0f35
-updated: 2019-09-13T17:28:40.917309584-07:00
+hash: b62e4d48ba0de0df2e02ac9d3f3d972221f12c8cf4a46f2d69e8e87a361e418a
+updated: 2019-10-07T18:02:16.365545483Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -72,7 +72,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 2223ab324566e4ace63ab69b9c8fff1b81a40eeb
+  version: 1de3e0542de65ad8d75452a595886fdd0befb363
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/go-playground/locales
@@ -125,7 +125,7 @@ imports:
 - name: github.com/huandu/xstrings
   version: f02667b379e2fb5916c3cda2cf31e0eb885d79f8
 - name: github.com/imdario/mergo
-  version: 7c29201646fa3de8506f701213473dd407f19646
+  version: 1afb36080aec31e0d1528973ebe6721b191b0369
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/json-iterator/go
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 338f687c53eef69e88a8d2a0276f439836c96c45
+  version: 5cc9448298e3f2c0de4d6be96cb6d98d29c940eb
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -232,7 +232,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/tigera/licensing
-  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
+  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
