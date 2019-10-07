@@ -47,7 +47,7 @@
         "null_value": "0.0.0.0"
       },
       "client_labels": {
-        "type": "object",
+        "type": "object"
       },
       "servers": {
         "type": "nested",
@@ -65,7 +65,7 @@
             "normalizer": "lowercase"
           },
           "labels": {
-            "type": "object",
+            "type": "object"
           },
           "ip": {
             "type": "ip",
