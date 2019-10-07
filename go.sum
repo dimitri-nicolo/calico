@@ -289,8 +289,12 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a h1:UGZihZgeRqCfzcCbozs4FjZmaOsXV6S0giy17R5gRIU=
 github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a/go.mod h1:hun0cDm0Yy+kP93Qpu5LTCIwtqR61zEAZ22V1Cr93yg=
+github.com/tigera/felix-private v0.0.0-20190930195253-274e777a2f69 h1:eKainIywbfDqY3XkdQIhrmvhhLmgPeIW0Y7ZhdMqM68=
+github.com/tigera/felix-private v0.0.0-20190930195253-274e777a2f69/go.mod h1:tayOGKVE1bBpqFd8uP4B+r1sPCQwIQoy22SRhc+tP/8=
 github.com/tigera/libcalico-go-private v0.0.0-20190919092259-cdf8bc64068e h1:pnTdymgdbzH5lMfp8xNZ3OltBaV42Sc3K5i6UfjV6Dw=
 github.com/tigera/libcalico-go-private v0.0.0-20190919092259-cdf8bc64068e/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
+github.com/tigera/libcalico-go-private v0.0.0-20191001180844-80bdc7c2bee3 h1:y1kkzWGZcRV3UGC9ZfUWPJGCw7Q8G7Kt/RIczFPHQ50=
+github.com/tigera/libcalico-go-private v0.0.0-20191001180844-80bdc7c2bee3/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
 github.com/tigera/licensing v0.0.0-20190625224811-8231bc094478 h1:CqhMniPh0p9/G1p+DWdd9FuCPXkB+1ElifrqlHWKog8=
 github.com/tigera/licensing v0.0.0-20190625224811-8231bc094478/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
@@ -301,6 +305,7 @@ github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be h1:hNMFGLnP0DCUPS
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.0.0-20190917002945-931ed2638eb9 h1:3y5rSl1anqY1NXFNaE11OTPhwq7mchEuEkNwfruyq0E=
 github.com/tigera/typha-private v0.0.0-20190917002945-931ed2638eb9/go.mod h1:WbLoanosBpmIsq5bVvayZAZvDS5d/oPjIhDnPx8E+pI=
+github.com/tigera/typha-private v0.0.0-20191001104204-33e4233e9f3f/go.mod h1:f51cp0zm2m9unQi0tpsyVeyDJ4UoRnBgRbrireHOgW4=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v0.0.0-20171019201919-bdcc60b419d1/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
