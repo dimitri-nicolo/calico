@@ -40,4 +40,10 @@ type ProfileExpansion interface{}
 
 type RemoteClusterConfigurationExpansion interface{}
 
+type StagedGlobalNetworkPolicyExpansion interface{}
+
+type StagedKubernetesNetworkPolicyExpansion interface{}
+
+type StagedNetworkPolicyExpansion interface{}
+
 type TierExpansion interface{}

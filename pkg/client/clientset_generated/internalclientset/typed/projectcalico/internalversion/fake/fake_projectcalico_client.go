@@ -86,6 +86,18 @@ func (c *FakeProjectcalico) RemoteClusterConfigurations() internalversion.Remote
 	return &FakeRemoteClusterConfigurations{c}
 }
 
+func (c *FakeProjectcalico) StagedGlobalNetworkPolicies() internalversion.StagedGlobalNetworkPolicyInterface {
+	return &FakeStagedGlobalNetworkPolicies{c}
+}
+
+func (c *FakeProjectcalico) StagedKubernetesNetworkPolicies(namespace string) internalversion.StagedKubernetesNetworkPolicyInterface {
+	return &FakeStagedKubernetesNetworkPolicies{c, namespace}
+}
+
+func (c *FakeProjectcalico) StagedNetworkPolicies(namespace string) internalversion.StagedNetworkPolicyInterface {
+	return &FakeStagedNetworkPolicies{c, namespace}
+}
+
 func (c *FakeProjectcalico) Tiers() internalversion.TierInterface {
 	return &FakeTiers{c}
 }

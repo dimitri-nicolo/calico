@@ -46,6 +46,12 @@ type Interface interface {
 	Profiles() ProfileInformer
 	// RemoteClusterConfigurations returns a RemoteClusterConfigurationInformer.
 	RemoteClusterConfigurations() RemoteClusterConfigurationInformer
+	// StagedGlobalNetworkPolicies returns a StagedGlobalNetworkPolicyInformer.
+	StagedGlobalNetworkPolicies() StagedGlobalNetworkPolicyInformer
+	// StagedKubernetesNetworkPolicies returns a StagedKubernetesNetworkPolicyInformer.
+	StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInformer
+	// StagedNetworkPolicies returns a StagedNetworkPolicyInformer.
+	StagedNetworkPolicies() StagedNetworkPolicyInformer
 	// Tiers returns a TierInformer.
 	Tiers() TierInformer
 }
@@ -149,6 +155,21 @@ func (v *version) Profiles() ProfileInformer {
 // RemoteClusterConfigurations returns a RemoteClusterConfigurationInformer.
 func (v *version) RemoteClusterConfigurations() RemoteClusterConfigurationInformer {
 	return &remoteClusterConfigurationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// StagedGlobalNetworkPolicies returns a StagedGlobalNetworkPolicyInformer.
+func (v *version) StagedGlobalNetworkPolicies() StagedGlobalNetworkPolicyInformer {
+	return &stagedGlobalNetworkPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// StagedKubernetesNetworkPolicies returns a StagedKubernetesNetworkPolicyInformer.
+func (v *version) StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInformer {
+	return &stagedKubernetesNetworkPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// StagedNetworkPolicies returns a StagedNetworkPolicyInformer.
+func (v *version) StagedNetworkPolicies() StagedNetworkPolicyInformer {
+	return &stagedNetworkPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Tiers returns a TierInformer.

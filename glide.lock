@@ -1,5 +1,5 @@
-hash: b62e4d48ba0de0df2e02ac9d3f3d972221f12c8cf4a46f2d69e8e87a361e418a
-updated: 2019-10-07T18:02:16.365545483Z
+hash: c3b0e5c6de5d932cc823de7b228f938f866c202cef92b9373ce0eaa18fbd11f8
+updated: 2019-10-18T15:15:13.621385014-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -104,7 +104,7 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/google/gopacket
-  version: 991e069c3f085b6f1050e24cb5d0141c7effddf9
+  version: 0ad7f2610e344e58c1c95e2adda5c3258da8e97b
   subpackages:
   - layers
 - name: github.com/google/uuid
@@ -136,6 +136,8 @@ imports:
   version: 1afb36080aec31e0d1528973ebe6721b191b0369
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/jinzhu/copier
+  version: b57f9002281ac48ed8cbc489b1e91121e1a0824c
 - name: github.com/json-iterator/go
   version: 13f86432b882000a51c6e610c620974462691a97
 - name: github.com/kelseyhightower/envconfig
@@ -155,11 +157,15 @@ imports:
 - name: github.com/Masterminds/semver
   version: 805c489aa98f412e79eb308a37996bf9d8b1c91e
 - name: github.com/Masterminds/sprig
-  version: 385f7602702f504a4e0c1aea833c3c2498e1fed9
+  version: e4c0945838d570720d876a6ad9b4568ed32317b4
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
   - pbutil
+- name: github.com/mitchellh/copystructure
+  version: 9a1b6f44e8da0e0e374624fb0a825a231b00c537
+- name: github.com/mitchellh/reflectwalk
+  version: 3e2c75dfad4fbf904b58782a80fd595c760ad185
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/opencontainers/go-digest
@@ -175,7 +181,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 60ba728ac4c5c60d9644ea874c55e09b50f91867
+  version: a11e66b78538cb02b97157a989a5afb4fa7def88
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -241,7 +247,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/tigera/licensing
-  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:

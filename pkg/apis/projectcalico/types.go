@@ -28,6 +28,46 @@ type NetworkPolicy struct {
 	Spec calico.NetworkPolicySpec
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// StagedKubernetesNetworkPolicyList is a list of Policy objects.
+type StagedKubernetesNetworkPolicyList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []StagedKubernetesNetworkPolicy
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type StagedKubernetesNetworkPolicy struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.StagedKubernetesNetworkPolicySpec
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// StagedNetworkPolicyList is a list of Policy objects.
+type StagedNetworkPolicyList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []StagedNetworkPolicy
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type StagedNetworkPolicy struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.StagedNetworkPolicySpec
+}
+
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -70,6 +110,24 @@ type GlobalNetworkPolicy struct {
 	metav1.ObjectMeta
 
 	Spec calico.GlobalNetworkPolicySpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// StagedGlobalNetworkPolicyList is a list of Policy objects.
+type StagedGlobalNetworkPolicyList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+	Items []StagedGlobalNetworkPolicy
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type StagedGlobalNetworkPolicy struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+	Spec calico.StagedGlobalNetworkPolicySpec
 }
 
 // +genclient:nonNamespaced

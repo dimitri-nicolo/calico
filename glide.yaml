@@ -1,6 +1,5 @@
 package: github.com/tigera/calico-k8sapiserver
 import:
-# Pin to the version requested by the API server
 - package: github.com/coreos/etcd
   version: 95a726a27e09030f9ccbd9982a1508f5a6d25ada
   subpackages:
@@ -9,8 +8,8 @@ import:
   - mvcc/mvccpb
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
-  repo: git@github.com:tigera/libcalico-go-private.git
   version: master
+  repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -20,7 +19,7 @@ import:
   - lib/options
   - lib/watch
 - package: github.com/tigera/licensing
-  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -31,30 +30,19 @@ import:
   version: kubernetes-1.10.0
 - package: k8s.io/kubernetes
   version: v1.10.0
-# Pin to kubernetes 1.10.8.
-# k8s.io/client-go also imports this package and it complains if the version is
-# set to the tag name. To work around this the *EXACT* hash of the tag is used.
 - package: k8s.io/apimachinery
   version: 302974c03f7e50f16561ba237db776ab93594ef6
-# Pin to kubernetes 1.10.8.
-# k8s.io/client-go also imports this package and it complains if the version is
-# set to the tag name. To work around this the *EXACT* hash of the tag is used.
 - package: k8s.io/api
   version: 73d903622b7391f3312dcbac6483fed484e185f8
-# Pin client-go to the exact tag release for K8s 1.10.8
 - package: k8s.io/client-go
   version: 23781f4d6632d88e869066eaebb743857aa1ef9b
-# Pin to kubernetes 1.10.8.
-# k8s.io/client-go doesn't import this package so it's OK to use the tag name.
 - package: k8s.io/code-generator
   version: kubernetes-1.10.0
-# Note: code-generator (deepcopy-gen) relies on this, but it isn't picked up
-# since we only reference it from out Makefile.
-- package: golang.org/x/tools/import
-# Pin to the version requested by the API server
+- package: golang.org/x/tools
+  subpackages:
+  - import
 - package: k8s.io/gengo
   version: 4242d8e6c5dba56827bb7bcf14ad11cda38f3991
-## Pin to a compiling version of grpc.
 - package: google.golang.org/grpc
   version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
 - package: github.com/spf13/cobra
@@ -66,9 +54,11 @@ import:
   subpackages:
   - codec
 - package: github.com/kubernetes/repo-infra
-# Using the pin used by Masterminds/sprig to address missing function issue.
 - package: github.com/imdario/mergo
   version: ~0.3.7
-# Explicitly specify vcs
 - package: bitbucket.org/ww/goautoneg
   vcs: hg
+- package: github.com/Masterminds/sprig
+  version: v2.22.0
+- package: github.com/Masterminds/semver
+  version: ~1.5.0

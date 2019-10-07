@@ -38,6 +38,52 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
+	// Add non-generated conversion functions
+	//TODO: mgianluc StagedAction field
+	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "StagedNetworkPolicy",
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace":
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Add non-generated conversion functions
+	//TODO: mgianluc StagedAction field
+	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "StagedKubernetesNetworkPolicy",
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace":
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "StagedGlobalNetworkPolicy",
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name":
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "Tier",
 		func(label, value string) (string, string, error) {
 			switch label {

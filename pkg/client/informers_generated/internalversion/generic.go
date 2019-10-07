@@ -75,6 +75,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().Profiles().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("remoteclusterconfigurations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().RemoteClusterConfigurations().Informer()}, nil
+	case projectcalico.SchemeGroupVersion.WithResource("stagedglobalnetworkpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().StagedGlobalNetworkPolicies().Informer()}, nil
+	case projectcalico.SchemeGroupVersion.WithResource("stagedkubernetesnetworkpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().StagedKubernetesNetworkPolicies().Informer()}, nil
+	case projectcalico.SchemeGroupVersion.WithResource("stagednetworkpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().StagedNetworkPolicies().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("tiers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().Tiers().Informer()}, nil
 
