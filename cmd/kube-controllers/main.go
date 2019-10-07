@@ -44,6 +44,7 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/networkpolicy"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/node"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/pod"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/serviceaccount"
 	"github.com/projectcalico/kube-controllers/pkg/status"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -175,6 +176,12 @@ func main() {
 			controllerCtrl.controllerStates["Node"] = &controllerState{
 				controller:  nodeController,
 				threadiness: config.NodeWorkers,
+			}
+		case "service":
+			serviceController := service.NewServiceController(ctx, k8sClientset, calicoClient)
+			controllerCtrl.controllerStates["Service"] = &controllerState{
+				controller:  serviceController,
+				threadiness: config.ServiceWorkers,
 			}
 		case "serviceaccount":
 			serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient)
