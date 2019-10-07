@@ -11,12 +11,12 @@ analyze:
   - name: github.com/projectcalico/cni-plugin/cmd/calico
     type: go
     target: github.com/projectcalico/cni-plugin/cmd/calico
-    path: /go/src/github.com/tigera/cni-plugin-private
+    path: cmd/calico
     options:
       allow-unresolved: true
   - name: github.com/projectcalico/cni-plugin/cmd/calico-ipam
     type: go
     target: github.com/projectcalico/cni-plugin/cmd/calico-ipam
-    path: /go/src/github.com/projectcalico/cni-plugin/ipam
+    path: cmd/calico-ipam
     options:
       allow-unresolved: true
