@@ -4,7 +4,7 @@
 # - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
-
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 # Update this ConfigMap with the Google login client id.
 kind: ConfigMap
 apiVersion: v1
@@ -346,6 +346,7 @@ spec:
                 key: tigera.elasticsearch.port
           - name: ELASTIC_INSECURE_SKIP_VERIFY
             value: "false"
+            {{- if eq $elasticMode "external" }}
           - name: ELASTIC_USERNAME
             valueFrom:
               secretKeyRef:
@@ -358,6 +359,15 @@ spec:
                 name: tigera-es-config
                 key: tigera.elasticsearch.password
                 optional: true
+            {{- else }}
+          - name: ELASTIC_USERNAME
+            value: "elastic"
+          - name: ELASTIC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tigera-elasticsearch-es-elastic-user
+                key: elastic
+            {{- end }}
           - name: ELASTIC_CA
             valueFrom:
               configMapKeyRef:
@@ -392,9 +402,15 @@ spec:
         secret:
           optional: true
           items:
+{{- if eq $elasticMode "operator" }}
+          - key: tls.crt
+            path: ca.pem
+          secretName: tigera-elasticsearch-es-http-certs-public
+{{- else }}
           - key: tigera.elasticsearch.ca
             path: ca.pem
           secretName: tigera-es-config
+{{- end}}
 ---
 
 kind: ClusterRole

@@ -1,3 +1,4 @@
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -89,6 +90,16 @@ template:
             name: tigera-es-config
             key: tigera.elasticsearch.port
             optional: true
+{{- if eq $elasticMode "operator" }}
+      - name: ELASTIC_USER
+        value: "elastic"
+      - name: ELASTIC_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: tigera-elasticsearch-es-elastic-user
+            key: elastic
+            optional: true
+{{- else }}
       - name: ELASTIC_USER
         valueFrom:
           secretKeyRef:
@@ -101,6 +112,7 @@ template:
             name: elastic-compliance-user
             key: reporter.password
             optional: true
+{{- end }}
       - name: ELASTIC_SSL_VERIFY
         value: "true"
       - name: ELASTIC_CA
@@ -120,10 +132,18 @@ template:
           path: /liveness
           port: 9099
     volumes:
-    - name: elastic-ca-cert-volume
-      secret:
-        optional: true
-        items:
-        - key: tigera.elasticsearch.ca
-          path: ca.pem
-        secretName: tigera-es-config
+      - name: elastic-ca-cert-volume
+        secret:
+          optional: true
+          defaultMode: 420
+{{- if eq $elasticMode "operator" }}
+          items:
+            - key: tls.crt
+              path: ca.pem
+          secretName: tigera-elasticsearch-es-http-certs-public
+{{- else }}
+          items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+          secretName: tigera-es-config
+{{- end}}

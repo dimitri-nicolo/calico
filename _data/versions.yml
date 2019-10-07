@@ -1248,10 +1248,6 @@ v2.0:
     calico:
       version: v3.0.1
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
-    calico:
-      version: v3.0.1
-      url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
-
 - title: v2.0.0
   note: |
     15 January 2018
@@ -1428,9 +1424,6 @@ v2.0:
     calico:
       version: v3.0.1
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
-    calico:
-      version: v3.0.1
-      url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
 
 # The master release stream is used to generate the master version of the docs,
 # as well as for builds of `calico/node:master` via CI.  Submit PRs to update the
@@ -1482,8 +1475,17 @@ master:
       image: tigera/es-proxy
       version: master
     kibana:
-      image: tigera/kibana
-      version: master
+      registry: docker.elastic.co
+      image: kibana/kibana
+      version: 7.3.2
+    elasticsearch-operator:
+      registry: docker.elastic.co
+      image: eck/eck-operator
+      version: 0.9.0
+    elasticsearch:
+      registry: docker.elastic.co
+      image: elasticsearch/elasticsearch
+      version: 7.3.2
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -1544,13 +1546,6 @@ master:
       image: calico/pod2daemon-flexvol
       version: master
       registry: quay.io
-    elasticsearch-operator:
-      image: upmcenterprises/elasticsearch-operator
-      version: 0.4.0
-    elasticsearch:
-      image: elasticsearch/elasticsearch
-      version: 6.4.3
-      registry: docker.elastic.co
     busybox:
       image: busybox
       version: 1.26.2

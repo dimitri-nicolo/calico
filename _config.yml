@@ -54,7 +54,7 @@ imageNames:
   configMapReload: quay.io/coreos/configmap-reload
   alertManager: quay.io/prometheus/alertmanager
   prometheus: quay.io/prometheus/prometheus
-  elasticsearchOperator: upmcenterprises/elasticsearch-operator
+  elasticsearchOperator: docker.elastic.co/eck/eck-operator
   elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
   prometheusOperator: quay.io/coreos/prometheus-operator
   busybox: busybox

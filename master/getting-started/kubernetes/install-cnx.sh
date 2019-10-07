@@ -1351,13 +1351,14 @@ checkCRDs() {
   alertCRD="alertmanagers.monitoring.coreos.com"
   promCRD="prometheuses.monitoring.coreos.com"
   svcCRD="servicemonitors.monitoring.coreos.com"
-  elasticCRD="elasticsearchclusters.enterprises.upmc.com"
+  elasticCRD="elasticsearches.elasticsearch.k8s.elastic.co"
+  kibanaCRD="kibanas.kibana.k8s.elastic.co"
 
   count=60
   echo -n "waiting up to $count seconds for Custom Resource Definitions to be created: "
 
   while [[ $count -ne 0 ]]; do
-    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD) && (doesCRDExist $elasticCRD); then
+    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD) && (doesCRDExist $elasticCRD) && (doesCRDExist $kibanaCRD); then
         echo "all CRDs exist!"
         return
     fi
@@ -1377,6 +1378,7 @@ applyOperatorManifest() {
   echo -n "Applying \"operator.yaml\" manifest: "
   run kubectl apply -f operator.yaml
   checkCRDs
+  blockUntilPodIsReady "control-plane=elastic-operator" 180 "elastic-operator-0"      # Block until prometheus-calico-nod pod is running & ready
 }
 
 #
@@ -1737,8 +1739,8 @@ installCNX() {
   applyLicenseManifest            # If the user specified a license file, apply it
 
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
-  applyOperatorManifest           # Apply operator.yaml
   applyElasticStorageManifest     # Apply elastic-storage.yaml
+  applyOperatorManifest           # Apply operator.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx.yaml
@@ -1756,8 +1758,8 @@ uninstallCNX() {
   deleteCNXManagerSecret         # Delete TLS secret
 
   deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
-  deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteOperatorManifest         # Delete operator.yaml
+  deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
   deleteCNXAPIManifest           # Delete cnx-api-[etcd|kdd].yaml

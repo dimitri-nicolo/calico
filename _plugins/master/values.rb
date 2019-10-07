@@ -276,7 +276,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       createFinalizers: false
     
     kibana:
-      image: #{imageRegistry}#{versions["kibana"].image}
+      image: #{versions["kibana"].registry}/#{versions["kibana"].image}
       tag: #{versions["kibana"].version}
       # The address of your kibana instance.
       host:
@@ -288,7 +288,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         nodePort:
         loadBalancerIP:
         clusterIP:
-    
+
     elasticsearch:
       image: #{versions["elasticsearch"].registry}/#{versions["elasticsearch"].image}
       tag: #{versions["elasticsearch"].version}
@@ -306,6 +306,8 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         # Leave blank to use self-signed certs.
         crt:
         key:
+        selfSignedCertificate:
+          dns: cluster.local
       fluentd:
         # The username and password fluentd should use when connecting to elasticsearch.
         username: tigera-ee-fluentd
@@ -347,6 +349,9 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         # Username and password for the job installer to authenticate with elasticsearch.
         username: tigera-ee-installer
         password: ""
+      persistentVolume:
+        capacity: 10Gi
+      nodeCount: 1
     
     intrusionDetectionController:
       image: #{imageRegistry}#{versions["intrusion-detection-controller"].image}
@@ -365,7 +370,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       tag: #{versions["configmap-reload"].version}
 
     elasticsearchOperator:
-      image: #{versions["elasticsearch-operator"].image}
+      image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
       tag: #{versions["elasticsearch-operator"].version}
 
     busybox:
@@ -407,7 +412,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
       version: #{versions["prometheus-operator"].version}
     elasticsearchOperator:
-      image: #{versions["elasticsearch-operator"].image}
+      image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
       version: #{versions["elasticsearch-operator"].version}
     prometheusConfigReloader:
       image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
