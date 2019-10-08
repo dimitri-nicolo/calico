@@ -28,6 +28,7 @@ import (
 	calicobgppeer "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgppeer"
 	calicoclusterinformation "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/clusterinformation"
 	calicofelixconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/felixconfig"
+	calicogalert "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalalert"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
 	calicoglobalreport "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalreport"
@@ -158,6 +159,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions: licenseKeyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	gAlertRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalalerts"))
+	if err != nil {
+		return nil, err
+	}
+	gAlertOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   gAlertRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicogalert.EmptyObject(),
+			ScopeStrategy: calicogalert.NewStrategy(scheme),
+			NewListFunc:   calicogalert.NewList,
+			GetAttrsFunc:  calicogalert.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: gAlertRESTOptions,
 		},
 		p.StorageType,
 		authorizer,
@@ -421,6 +443,10 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
+
+	globalAlertsStorage, globalAlertsStatusStorage := calicogalert.NewREST(scheme, *gAlertOpts)
+	storage["globalalerts"] = globalAlertsStorage
+	storage["globalalerts/status"] = globalAlertsStatusStorage
 
 	globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
 	storage["globalthreatfeeds"] = globalThreatFeedsStorage

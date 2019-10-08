@@ -30,6 +30,10 @@ func (c *FakeProjectcalico) FelixConfigurations() internalversion.FelixConfigura
 	return &FakeFelixConfigurations{c}
 }
 
+func (c *FakeProjectcalico) GlobalAlerts() internalversion.GlobalAlertInterface {
+	return &FakeGlobalAlerts{c}
+}
+
 func (c *FakeProjectcalico) GlobalNetworkPolicies() internalversion.GlobalNetworkPolicyInterface {
 	return &FakeGlobalNetworkPolicies{c}
 }

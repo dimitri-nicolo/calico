@@ -119,6 +119,30 @@ type LicenseKey struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// GlobalAlertList is a list of Policy objects.
+type GlobalAlertList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []GlobalAlert
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+
+type GlobalAlert struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec   calico.GlobalAlertSpec
+	Status calico.GlobalAlertStatus
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // GlobalThreatFeedList is a list of Policy objects.
 type GlobalThreatFeedList struct {
 	metav1.TypeMeta

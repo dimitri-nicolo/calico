@@ -49,7 +49,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 PACKAGE_NAME?=github.com/tigera/calico-k8sapiserver
 
-GO_BUILD_VER?=v0.24
+GO_BUILD_VER?=v0.25
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -57,7 +57,7 @@ CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 
 #This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.24
+TOOLING_BUILD?=calico/go-build:v0.25
 
 
 

@@ -9,6 +9,10 @@ imports:
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/alecthomas/participle
+  version: 47e04ebc2ece1467df41ac58619473b857008ad1
+  subpackages:
+  - lexer
 - name: github.com/Azure/go-autorest
   version: d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab
   subpackages:
@@ -99,6 +103,10 @@ imports:
   - ptypes/timestamp
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
+- name: github.com/google/gopacket
+  version: 991e069c3f085b6f1050e24cb5d0141c7effddf9
+  subpackages:
+  - layers
 - name: github.com/google/uuid
   version: 8c31c18f31ede9fc8eae72290a7e7a8064e9b3e3
 - name: github.com/googleapis/gnostic
@@ -167,7 +175,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5cc9448298e3f2c0de4d6be96cb6d98d29c940eb
+  version: 9aba36dd882c6d7f1067ac6ded4c4da54431ae2c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -198,6 +206,7 @@ imports:
   - lib/selector/tokenizer
   - lib/set
   - lib/validator/v3
+  - lib/validator/v3/query
   - lib/watch
 - name: github.com/prometheus/client_golang
   version: e7e903064f5e9eb5da98208bae10b475d4db0f8c

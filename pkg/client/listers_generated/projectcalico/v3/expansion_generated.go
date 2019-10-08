@@ -20,6 +20,10 @@ type ClusterInformationListerExpansion interface{}
 // FelixConfigurationLister.
 type FelixConfigurationListerExpansion interface{}
 
+// GlobalAlertListerExpansion allows custom methods to be added to
+// GlobalAlertLister.
+type GlobalAlertListerExpansion interface{}
+
 // GlobalNetworkPolicyListerExpansion allows custom methods to be added to
 // GlobalNetworkPolicyLister.
 type GlobalNetworkPolicyListerExpansion interface{}

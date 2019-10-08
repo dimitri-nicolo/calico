@@ -57,6 +57,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiLicenseKey := &aapi.LicenseKey{}
 		LicenseKeyConverter{}.convertToAAPI(lcgLicense, aapiLicenseKey)
 		return aapiLicenseKey
+	case *libcalicoapi.GlobalAlert:
+		lcg := libcalicoObject.(*libcalicoapi.GlobalAlert)
+		aapi := &aapi.GlobalAlert{}
+		GlobalAlertConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	case *libcalicoapi.GlobalThreatFeed:
 		lcg := libcalicoObject.(*libcalicoapi.GlobalThreatFeed)
 		aapi := &aapi.GlobalThreatFeed{}

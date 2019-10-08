@@ -12,6 +12,8 @@ type ClusterInformationExpansion interface{}
 
 type FelixConfigurationExpansion interface{}
 
+type GlobalAlertExpansion interface{}
+
 type GlobalNetworkPolicyExpansion interface{}
 
 type GlobalNetworkSetExpansion interface{}

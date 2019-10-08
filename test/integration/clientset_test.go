@@ -604,6 +604,172 @@ func getExpiredLicenseKey(name string) *v3.LicenseKey {
 	return expiredLicenseKey
 }
 
+// TestGlobalAlertClient exercises the GlobalAlert client.
+func TestGlobalAlertClient(t *testing.T) {
+	const name = "test-globalalert"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalAlert{}
+			})
+			defer shutdownServer()
+			if err := testGlobalAlertClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-globalalert test failed")
+	}
+}
+
+func testGlobalAlertClient(client calicoclient.Interface, name string) error {
+	globalAlertClient := client.ProjectcalicoV3().GlobalAlerts()
+	globalAlert := &v3.GlobalAlert{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.GlobalAlertSpec{
+			DataSet:     "dns",
+			Description: "test",
+			Severity:    100,
+		},
+		Status: calico.GlobalAlertStatus{
+			LastUpdate:     v1.Time{Time: time.Now()},
+			Active:         false,
+			ExecutionState: "test",
+			LastFired:      v1.Time{Time: time.Now()},
+			LastTriggered:  v1.Time{Time: time.Now()},
+			ErrorConditions: []calico.ErrorCondition{
+				{Type: "foo", Message: "bar"},
+			},
+		},
+	}
+
+	// start from scratch
+	globalAlerts, err := globalAlertClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalAlerts (%s)", err)
+	}
+	if globalAlerts.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	globalAlertServer, err := globalAlertClient.Create(globalAlert)
+	if nil != err {
+		return fmt.Errorf("error creating the globalAlert '%v' (%v)", globalAlert, err)
+	}
+	if name != globalAlertServer.Name {
+		return fmt.Errorf("didn't get the same globalAlert back from the server \n%+v\n%+v", globalAlert, globalAlertServer)
+	}
+	if !reflect.DeepEqual(globalAlertServer.Status, calico.GlobalAlertStatus{}) {
+		return fmt.Errorf("status was set on create to %#v", globalAlertServer.Status)
+	}
+
+	globalAlerts, err = globalAlertClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalAlerts (%s)", err)
+	}
+	if len(globalAlerts.Items) != 1 {
+		return fmt.Errorf("expected 1 globalAlert got %d", len(globalAlerts.Items))
+	}
+
+	globalAlertServer, err = globalAlertClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalAlert %s (%s)", name, err)
+	}
+	if name != globalAlertServer.Name &&
+		globalAlert.ResourceVersion == globalAlertServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalAlert back from the server \n%+v\n%+v", globalAlert, globalAlertServer)
+	}
+
+	globalAlertUpdate := globalAlertServer.DeepCopy()
+	globalAlertUpdate.Spec.Metric = "count"
+	globalAlertUpdate.Status.LastUpdate = v1.Time{Time: time.Now()}
+	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
+	}
+	if globalAlertServer.Spec.Metric != globalAlertUpdate.Spec.Metric {
+		return errors.New("didn't update spec.content")
+	}
+	if !globalAlertServer.Status.LastUpdate.Time.Equal(time.Time{}) {
+		return errors.New("status was updated by Update()")
+	}
+
+	globalAlertUpdate = globalAlertServer.DeepCopy()
+	globalAlertUpdate.Status.LastUpdate = v1.Time{Time: time.Now()}
+	globalAlertUpdate.Labels = map[string]string{"foo": "bar"}
+	globalAlertUpdate.Spec.Metric = ""
+	globalAlertServer, err = globalAlertClient.UpdateStatus(globalAlertUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
+	}
+	if globalAlertServer.Status.LastUpdate.Time.Equal(time.Time{}) {
+		return fmt.Errorf("didn't update status. %v != %v", globalAlertUpdate.Status, globalAlertServer.Status)
+	}
+	if _, ok := globalAlertServer.Labels["foo"]; ok {
+		return fmt.Errorf("updatestatus updated labels")
+	}
+	if globalAlertServer.Spec.Metric == "" {
+		return fmt.Errorf("updatestatus updated spec")
+	}
+
+	err = globalAlertClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalAlert should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().GlobalAlerts().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching GlobalAlerts (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two GlobalAlerts
+	for i := 0; i < 2; i++ {
+		ga := &v3.GlobalAlert{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
+			Spec: calico.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "dns",
+			},
+		}
+		_, err = globalAlertClient.Create(ga)
+		if err != nil {
+			return fmt.Errorf("error creating the globalAlert '%v' (%v)", ga, err)
+		}
+	}
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
 // TestGlobalThreatFeedClient exercises the GlobalThreatFeed client.
 func TestGlobalThreatFeedClient(t *testing.T) {
 	const name = "test-globalthreatfeed"
