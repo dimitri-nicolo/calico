@@ -490,6 +490,10 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["globalreporttypes"]
   verbs: ["get"]
+# Access to cluster information containing Calico and EE versions from the UI.
+- apiGroups: ["projectcalico.org"]
+  resources: ["clusterinformations"]
+  verbs: ["get","list"]
 
 ---
 
