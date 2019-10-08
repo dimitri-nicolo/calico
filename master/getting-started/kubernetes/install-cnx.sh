@@ -1324,6 +1324,14 @@ applyElasticStorageManifest() {
 }
 
 #
+# deleteElasticStorageManifest()
+#
+deleteElasticStorageManifest() {
+  runIgnoreErrors kubectl delete -f elastic-storage-${ELASTIC_STORAGE}.yaml
+  countDownSecs 20 "Deleting \"elastic-storage-${ELASTIC_STORAGE}.yaml\" manifest"
+}
+
+#
 # applyElasticCRDManifest()
 #
 applyElasticCRDManifest() {
@@ -1337,14 +1345,6 @@ applyElasticCRDManifest() {
 deleteElasticCRDManifest() {
   runIgnoreErrors kubectl delete -f operator-crds.yaml
   countDownSecs 10 "Deleting \"operator-crds.yaml\" manifest"
-}
-
-#
-# deleteElasticStorageManifest()
-#
-deleteElasticStorageManifest() {
-  runIgnoreErrors kubectl delete -f elastic-storage-${ELASTIC_STORAGE}.yaml
-  countDownSecs 20 "Deleting \"elastic-storage-${ELASTIC_STORAGE}.yaml\" manifest"
 }
 
 #
