@@ -456,7 +456,7 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: network-admin
+  name: tigera-network-admin
 rules:
 # Full access to all network policies
 - apiGroups: ["projectcalico.org","networking.k8s.io","extensions"]

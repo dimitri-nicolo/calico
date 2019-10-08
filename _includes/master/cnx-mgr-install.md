@@ -192,7 +192,7 @@
    EOF
    ```
 
-   If the ClusterRole `tigera-ui-user` or `network-admin` were not modified, then no
+   If the ClusterRole `tigera-ui-user` or `tigera-network-admin` were not modified, then no
    additional step is required for Elasticsearch access.
 {% endif %}
 
