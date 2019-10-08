@@ -1324,17 +1324,17 @@ applyElasticStorageManifest() {
 }
 
 #
-# applyElasticCRDManifests()
+# applyElasticCRDManifest()
 #
-applyElasticCRDManifests() {
+applyElasticCRDManifest() {
   run kubectl apply -f operator-crds.yaml
   countDownSecs 10 "Applying \"operator-crds.yaml\" manifest"
 }
 
 #
-# deleteElasticCRDManifests()
+# deleteElasticCRDManifest()
 #
-deleteElasticCRDManifests() {
+deleteElasticCRDManifest() {
   runIgnoreErrors kubectl delete -f operator-crds.yaml
   countDownSecs 10 "Deleting \"operator-crds.yaml\" manifest"
 }
@@ -1719,7 +1719,7 @@ installCNX() {
 
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
   applyElasticStorageManifest     # Apply elastic-storage.yaml
-  applyElasticCRDManifests        # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
+  applyElasticCRDManifest        # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   applyOperatorManifest           # Apply operator.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
@@ -1739,7 +1739,7 @@ uninstallCNX() {
 
   deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
   deleteOperatorManifest         # Delete operator.yaml
-  deleteElasticCRDManifests      # Delete operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
+  deleteElasticCRDManifest      # Delete operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
