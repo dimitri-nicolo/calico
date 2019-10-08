@@ -573,6 +573,20 @@ var netSet2 = NetworkSet{
 	},
 }
 
+var netSet3Key = NetworkSetKey{Name: "netset-3"}
+var netSet3 = NetworkSet{
+	Nets: []net.IPNet{
+		mustParseNet("12.1.2.142/32"),
+		mustParseNet("12.1.0.0/16"),
+		mustParseNet("12.1.0.0/8"),
+	},
+	Labels: map[string]string{
+		"a": "b",
+	},
+}
+var netset3Ip1a = mustParseNet("12.1.0.130/32").IP
+var netset3Ip1b = mustParseNet("12.1.2.142/32").IP
+
 // Resources for DNS Policy unit testing. We start with a basic default-deny-egress policy that only allows UDP:53 out.
 var policyDNSBasic = Policy{
 	Selector: "name == 'dnspolicy'",

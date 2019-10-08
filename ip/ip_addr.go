@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ type Addr interface {
 	AsCalicoNetIP() calinet.IP
 	AsCIDR() CIDR
 	String() string
+	AsBinary() string
 }
 
 type V4Addr [4]byte
@@ -70,6 +71,16 @@ func (a V4Addr) String() string {
 	return a.AsNetIP().String()
 }
 
+func (a V4Addr) AsBinary() string {
+	var ipInBinary string = ""
+	for ii := 0; ii < net.IPv4len; ii++ {
+		temp := fmt.Sprintf("%08b", a[ii])
+		ipInBinary += temp
+	}
+
+	return ipInBinary
+}
+
 type V6Addr [16]byte
 
 func (a V6Addr) Version() uint8 {
@@ -95,12 +106,23 @@ func (a V6Addr) String() string {
 	return a.AsNetIP().String()
 }
 
+func (a V6Addr) AsBinary() string {
+	var ipInBinary string = ""
+	for ii := 0; ii < net.IPv6len; ii++ {
+		temp := fmt.Sprintf("%08b", a[ii])
+		ipInBinary += temp
+	}
+
+	return ipInBinary
+}
+
 type CIDR interface {
 	Version() uint8
 	Addr() Addr
 	Prefix() uint8
 	String() string
 	ToIPNet() net.IPNet
+	AsBinary() string
 }
 
 type V4CIDR struct {
@@ -131,6 +153,16 @@ func (c V4CIDR) String() string {
 	return fmt.Sprintf("%s/%v", c.addr.String(), c.prefix)
 }
 
+func (c V4CIDR) AsBinary() string {
+	var ipInBinary string = ""
+	for ii := 0; ii < net.IPv4len; ii++ {
+		temp := fmt.Sprintf("%08b", c.addr[ii])
+		ipInBinary += temp
+	}
+
+	return ipInBinary[0:c.prefix]
+}
+
 type V6CIDR struct {
 	addr   V6Addr
 	prefix uint8
@@ -159,6 +191,14 @@ func (c V6CIDR) String() string {
 	return fmt.Sprintf("%s/%v", c.addr.String(), c.prefix)
 }
 
+func (c V6CIDR) AsBinary() string {
+	var ipInBinary string = ""
+	for ii := 0; ii < net.IPv6len; ii++ {
+		temp := fmt.Sprintf("%08b", c.addr[ii])
+		ipInBinary += temp
+	}
+	return ipInBinary[0:c.prefix]
+}
 func FromString(s string) Addr {
 	return FromNetIP(net.ParseIP(s))
 }
