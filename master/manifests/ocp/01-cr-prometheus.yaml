@@ -3,7 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   name: calico-node-prometheus
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   baseImage: quay.io/prometheus/prometheus
   nodeSelector:
@@ -23,7 +23,7 @@ spec:
       prometheus: calico-node-prometheus
   alerting:
     alertmanagers:
-      - namespace: calico-monitoring
+      - namespace: tigera-prometheus
         name: calico-node-alertmanager
         port: web
         scheme: http

@@ -84,7 +84,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   name: calico-node-prometheus
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   baseImage: quay.io/prometheus/prometheus
   nodeSelector:
@@ -104,7 +104,7 @@ spec:
       prometheus: calico-node-prometheus
   alerting:
     alertmanagers:
-      - namespace: calico-monitoring
+      - namespace: tigera-prometheus
         name: calico-node-alertmanager
         port: web
         scheme: http
@@ -146,7 +146,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: calico-node-monitor
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
     team: network-operators
 spec:
@@ -169,7 +169,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
   name: calico-node-alertmanager
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   version: v0.16.1
   baseImage: quay.io/prometheus/alertmanager
@@ -184,7 +184,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: calico-prometheus-dp-rate
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
     role: calico-prometheus-rules
     prometheus: calico-node-prometheus

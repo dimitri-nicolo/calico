@@ -3,7 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
   name: calico-node-alertmanager
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   version: v0.16.1
   baseImage: quay.io/prometheus/alertmanager
