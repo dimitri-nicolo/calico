@@ -839,7 +839,6 @@ metadata:
 spec:
   template:
     spec:
-      backoffLimit: 10
       restartPolicy: OnFailure
 {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
