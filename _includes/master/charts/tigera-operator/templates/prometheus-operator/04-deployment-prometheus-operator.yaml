@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: calico-prometheus-operator
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
     operator: prometheus
 spec:
@@ -22,7 +22,7 @@ spec:
           - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
           - --config-reloader-image={{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
           - --config-reloader-memory=25Mi
-          - --namespaces=calico-monitoring
+          - --namespaces=tigera-prometheus
         resources:
           requests:
             cpu: 100m

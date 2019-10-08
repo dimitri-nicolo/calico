@@ -95,6 +95,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-clust
 curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-clusterrole-elasticsearch-operator.yaml -o manifests/03-clusterrole-elasticsearch-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-deployment-elasticsearch-operator.yaml -o manifests/03-deployment-elasticsearch-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-serviceaccount-elasticsearch-operator.yaml -o manifests/03-serviceaccount-elasticsearch-operator.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/misc/00-namespace-tigera-prometheus.yaml -o manifests/00-namespace-tigera-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus-operator.yaml -o manifests/04-clusterrolebinding-prometheus-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus.yaml -o manifests/04-clusterrolebinding-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrole-prometheus-operator.yaml -o manifests/04-clusterrole-prometheus-operator.yaml
