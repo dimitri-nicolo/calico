@@ -45,7 +45,8 @@
 			"user": {
 				"properties": {
 					"groups": { "type": "keyword" },
-					"username": { "type": "keyword" }
+					"username": { "type": "keyword" },
+					"uid": { "type": "keyword" }
 				}
 			},
 			"verb": { "type": "keyword" }

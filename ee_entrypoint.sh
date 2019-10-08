@@ -1,6 +1,14 @@
 #!/bin/sh
 set -e
 
+setup_secure_es_conf() {
+  sed -i 's|scheme .*||g' /fluentd/etc/output_${1}/out-es.conf
+  sed -i 's|user .*||g' /fluentd/etc/output_${1}/out-es.conf
+  sed -i 's|password .*||g' /fluentd/etc/output_${1}/out-es.conf
+  sed -i 's|ca_file .*||g' /fluentd/etc/output_${1}/out-es.conf
+  sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${1}/out-es.conf
+}
+
 if [ "${MANAGED_K8S}" == "true" ]; then
   # start from scratch
   > /fluentd/etc/fluent.conf
@@ -11,8 +19,24 @@ if [ "${MANAGED_K8S}" == "true" ]; then
     cat /fluentd/etc/inputs/in-eks.conf >> /fluentd/etc/fluent.conf
   fi
 
-  # match
+  # filter
+  cat /fluentd/etc/filters/filter-eks-audit.conf >> /fluentd/etc/fluent.conf
   echo >> /fluentd/etc/fluent.conf
+
+  # match
+  cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
+  if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
+    setup_secure_es_conf kube_audit
+  fi
+  if [ "${S3_STORAGE}" == "true" ]; then
+    cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
+  fi
+  source /bin/syslog-environment.sh
+  source /bin/syslog-config.sh
+  source /bin/splunk-environment.sh
+  source /bin/splunk-config.sh
+  source /bin/sumo-environment.sh
+  source /bin/sumo-config.sh
   cat /fluentd/etc/outputs/out-eks-audit-es.conf >> /fluentd/etc/fluent.conf
   echo >> /fluentd/etc/fluent.conf
 
@@ -54,6 +78,14 @@ cp /fluentd/etc/outputs/out-es-flows.conf /fluentd/etc/output_flows/out-es.conf
 cp /fluentd/etc/outputs/out-es-dns.conf /fluentd/etc/output_dns/out-es.conf
 cp /fluentd/etc/outputs/out-es-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-es.conf
 cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
+
+# Check if we should strip out the secure settings from the configuration file.
+if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
+  for x in flows dns tsee_audit kube_audit; do
+    setup_secure_es_conf $x
+  done
+fi
+
 if [ "${S3_STORAGE}" == "true" ]; then
   cp /fluentd/etc/outputs/out-s3-flows.conf /fluentd/etc/output_flows/out-s3.conf
   cp /fluentd/etc/outputs/out-s3-dns.conf /fluentd/etc/output_dns/out-s3.conf
@@ -61,40 +93,14 @@ if [ "${S3_STORAGE}" == "true" ]; then
   cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
 fi
 
-# Optional Syslog output
-export SYSLOG_TLS=${SYSLOG_TLS:-false}
-export SYSLOG_FLUSH_INTERVAL=${SYSLOG_FLUSH_INTERVAL:-5s}
-if [ -z "${SYSLOG_VERIFY_MODE}" ]; then
-  sed -i 's|verify_mode .*||g' /fluentd/etc/outputs/out-syslog.conf
-fi
-if [ ! -f /etc/fluentd/syslog/ca.pem ]; then
-  sed -i 's|ca_file .*||g' /fluentd/etc/outputs/out-syslog.conf
-fi
-if [ "${SYSLOG_FLOW_LOG}" == "true" ]; then
-  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_flows/out-syslog.conf
-  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_dns/out-syslog.conf
-fi
-if [ "${SYSLOG_AUDIT_LOG}" == "true" ]; then
-  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_tsee_audit/out-syslog.conf
-  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_kube_audit/out-syslog.conf
-fi
+source /bin/syslog-environment.sh
+source /bin/syslog-config.sh
 
 source /bin/splunk-environment.sh
 source /bin/splunk-config.sh
 
 source /bin/sumo-environment.sh
 source /bin/sumo-config.sh
-
-# Check if we should strip out the secure settings from the configuration file.
-if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-  for x in flows dns tsee_audit kube_audit; do
-    sed -i 's|scheme .*||g' /fluentd/etc/output_${x}/out-es.conf
-    sed -i 's|user .*||g' /fluentd/etc/output_${x}/out-es.conf
-    sed -i 's|password .*||g' /fluentd/etc/output_${x}/out-es.conf
-    sed -i 's|ca_file .*||g' /fluentd/etc/output_${x}/out-es.conf
-    sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${x}/out-es.conf
-  done
-fi
 
 cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
 

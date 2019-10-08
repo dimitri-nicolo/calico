@@ -25,6 +25,7 @@ COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY fluent_output.conf /fluentd/etc/fluent_output.conf
 COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
+COPY filters /fluentd/etc/filters
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
@@ -47,6 +48,10 @@ RUN chmod +x /bin/readiness.sh
 
 COPY liveness.sh /bin/
 RUN chmod +x /bin/liveness.sh
+
+COPY syslog-environment.sh /bin/
+COPY syslog-config.sh /bin/
+RUN chmod +x /bin/syslog-config.sh /bin/syslog-environment.sh
 
 COPY splunk-environment.sh /bin/
 RUN chmod +x /bin/splunk-environment.sh
