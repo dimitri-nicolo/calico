@@ -1,11 +1,18 @@
-GCR_REPO?=gcr.io/unique-caldron-775/cnx
+GCR_REPO?=gcr.io/unique-caldron-775/cnx/tigera
 REPO?=$(GCR_REPO)
 PUSH_IMAGE_BASE?=$(REPO)
 PUSH_IMAGE?=$(PUSH_IMAGE_BASE)/fluentd
 
+.PHONY: imagetag
 imagetag:
 ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
+endif
+
+.PHONY: confirm
+confirm:
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
 
 .PHONY: image
@@ -14,7 +21,7 @@ image: imagetag $(BUILD_IMAGE)
 $(BUILD_IMAGE):
 	docker build --pull -t $(BUILD_IMAGE):$(IMAGETAG) .
 
-push: imagetag image
+push: imagetag confirm image
 	docker tag $(BUILD_IMAGE):$(IMAGETAG) $(PUSH_IMAGE):$(IMAGETAG)
 	docker push $(PUSH_IMAGE):$(IMAGETAG)
 
