@@ -1,6 +1,5 @@
----
-layout: null
----
-{% helm tigera-operator --execute templates/crds/01-crd-logcollector.yaml %}
-openshift: true
-{% endhelm %}
+# This section installs and configures Tigera Secure log collector functionality.
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
+metadata:
+  name: tigera-secure

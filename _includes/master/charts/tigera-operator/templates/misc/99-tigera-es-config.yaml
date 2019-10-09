@@ -49,10 +49,10 @@ data:
     </filter>
   tigera.elasticsearch.access-mode: "insecure"
   tigera.elasticsearch.scheme: "http"
-  tigera.elasticsearch.host: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+  tigera.elasticsearch.host: tigera-secure-es-http.tigera-elasticsearch.svc
   tigera.elasticsearch.port: "9200"
   tigera.kibana.host: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local
   tigera.kibana.port: "80"
   tigera.kibana.scheme: "http"
   tigera.elasticsearch.startXPackTrial: "true"
-  tigera.elasticsearch.ca.path: ""
+  tigera.elasticsearch.ca.path: "/etc/ssl/elastic/ca.pem"

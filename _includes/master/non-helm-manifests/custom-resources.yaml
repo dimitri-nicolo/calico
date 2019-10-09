@@ -58,27 +58,6 @@ metadata:
 
 ---
 
-# This section installs and configures Tigera Secure monitoring stack access.
-apiVersion: operator.tigera.io/v1
-kind: MonitoringConfiguration
-metadata:
-  name: tigera-secure
-spec:
-  clusterName: "cluster"
-  elasticsearch:
-    endpoint: http://elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local:9200
-  kibana:
-    endpoint: http://kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local:80
-
----
-
-apiVersion: operator.tigera.io/v1
-kind: LogCollector
-metadata:
-  name: tigera-secure
-
----
-
 # This section configures the Tigera Secure Prometheus deployment.
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
@@ -111,31 +90,21 @@ spec:
 
 ---
 
-# This section configures the Tigera Secure ElasticSearch cluster.
-# For detailed configuration options, see https://github.com/upmc-enterprises/elasticsearch-operator
-apiVersion: enterprises.upmc.com/v1
-kind: ElasticsearchCluster
+# This section creates / configures the Elasticsearch cluster where tigera logs are stored
+apiVersion: operator.tigera.io/v1
+kind: LogStorage
 metadata:
-  name: tigera-elasticsearch
-  namespace: calico-monitoring
+  name: tigera-secure
 spec:
-  nodeSelector:
-    beta.kubernetes.io/os: linux
-  kibana:
-    image: docker.elastic.co/kibana/kibana:6.4.3
-  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:6.4.3
-  # For production deployments, modify the number of elasticsearch replicas accordingly
-  client-node-replicas: 1
-  master-node-replicas: 1
-  data-node-replicas: 1
-  network-host: 0.0.0.0
-  zones: []
-  use-ssl: false
-  # For production volumes, consider increasing volume sizes, memory and adding backups
-  data-volume-size: 40Gi
-  java-options: "-Xms1g -Xmx1g"
-  storage:
-    storage-class: elasticsearch-storage
+  nodes:
+    count: 1
+
+---
+
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
+metadata:
+  name: tigera-secure
 
 ---
 

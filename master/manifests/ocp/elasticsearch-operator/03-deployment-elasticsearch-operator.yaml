@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-operator --execute templates/elasticsearch-operator/03-deployment-elasticsearch-operator.yaml %}
-openshift: true
-{% endhelm %}

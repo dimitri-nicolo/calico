@@ -20,6 +20,8 @@ spec:
           operator: Exists
       serviceAccountName: tigera-operator
       hostNetwork: true
+      # This must be set when hostNetwork is true or else the cluster services won't resolve
+      dnsPolicy: ClusterFirstWithHostNet
 {{- if .Values.openshift }}
       initContainers:
         # This initContainer is only required for OpenShift v4 when using installer-provisioned

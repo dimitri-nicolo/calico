@@ -77,10 +77,13 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-alertmanager.yaml -
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-apiserver.yaml -o manifests/01-crd-apiserver.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-compliance.yaml -o manifests/01-crd-compliance.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-console.yaml -o manifests/01-crd-console.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-elasticsearchcluster.yaml -o manifests/01-crd-elasticsearchcluster.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-apmserver.yaml -o manifests/01-crd-eck-apmserver.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-elasticsearch.yaml -o manifests/01-crd-eck-elasticsearch.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-kibana.yaml -o manifests/01-crd-eck-kibana.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-trustedrelationship.yaml -o manifests/01-crd-eck-trustedrelationship.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-installation.yaml -o manifests/01-crd-installation.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-intrusiondetection.yaml -o manifests/01-crd-intrusiondetection.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-monitoringconfiguration.yaml -o manifests/01-crd-monitoringconfiguration.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-logstorage.yaml -o manifests/01-crd-logstorage.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-logcollector.yaml -o manifests/01-crd-logcollector.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheusrule.yaml -o manifests/01-crd-prometheusrule.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheus.yaml -o manifests/01-crd-prometheus.yaml
@@ -91,10 +94,6 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-rolebinding-
 curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml -o manifests/02-role-tigera-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-serviceaccount-tigera-operator.yaml -o manifests/02-serviceaccount-tigera-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-tigera-operator.yaml -o manifests/02-tigera-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-clusterrolebinding-elasticsearch-operator.yaml -o manifests/03-clusterrolebinding-elasticsearch-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-clusterrole-elasticsearch-operator.yaml -o manifests/03-clusterrole-elasticsearch-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-deployment-elasticsearch-operator.yaml -o manifests/03-deployment-elasticsearch-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/elasticsearch-operator/03-serviceaccount-elasticsearch-operator.yaml -o manifests/03-serviceaccount-elasticsearch-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/00-namespace-tigera-prometheus.yaml -o manifests/00-namespace-tigera-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus-operator.yaml -o manifests/04-clusterrolebinding-prometheus-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus.yaml -o manifests/04-clusterrolebinding-prometheus.yaml
@@ -116,8 +115,6 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-console.yaml -o manifests
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-compliance.yaml -o manifests/01-cr-compliance.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-intrusiondetection.yaml -o manifests/01-cr-intrusiondetection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-elasticsearchcluster.yaml -o manifests/01-cr-elasticsearchcluster.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-monitoringconfiguration.yaml -o manifests/01-cr-monitoringconfiguration.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logcollector.yaml -o manifests/01-cr-logcollector.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheus.yaml -o manifests/01-cr-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheusrule.yaml -o manifests/01-cr-prometheusrule.yaml
