@@ -40,8 +40,10 @@ DATASTORE=${DATASTORE:="etcdv3"}
 LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
 # Specify the type of elasticsearch storage to use: "none" or "local".
-#   ELASTIC_STORAGE="none" ./install-cnx.sh
-ELASTIC_STORAGE=${ELASTIC_STORAGE:="local"}
+# When none is selected, a StorageClass called "elasticsearch-storage" must
+# be provisioned externally.
+#   ELASTIC_STORAGE="local" ./install-cnx.sh
+ELASTIC_STORAGE=${ELASTIC_STORAGE:="none"}
 
 # Specify an external etcd endpoint(s), e.g.
 #   ETCD_ENDPOINTS=https://192.168.0.1:2379 ./install-cnx.sh
@@ -1718,7 +1720,10 @@ installCNX() {
   applyLicenseManifest            # If the user specified a license file, apply it
 
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
-  applyElasticStorageManifest     # Apply elastic-storage.yaml
+
+  if [ "${ELASTIC_STORAGE}" != "none" ]; then
+    applyElasticStorageManifest     # Apply elastic-storage.yaml
+  fi
   applyElasticCRDManifest        # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   applyOperatorManifest           # Apply operator.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml

@@ -139,7 +139,6 @@ pipeline {
                             sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml ~/"'
                             sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml ~/"'
                             sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml ~/"'
-                            sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml ~/"'
                         }
                     }
                 }
