@@ -964,6 +964,8 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml"
+
 
   # Irrespective of datastore type, for federation we'll need to create a federation secret since the manifests assume
   # this exists.
@@ -1313,7 +1315,6 @@ deleteCNXPolicyManifest() {
   countDownSecs 20 "Deleting \"cnx-policy.yaml\" manifest"
 }
 
-
 #
 # applyElasticStorageManifest()
 #
@@ -1331,44 +1332,19 @@ deleteElasticStorageManifest() {
 }
 
 #
-# doesCRDExist() - return 1 exit code if the CRD exists
+# applyElasticCRDManifest()
 #
-doesCRDExist() {
-  crd=$1
-
-  if (kubectl get crd 2>/dev/null | grep -v NAME | grep -q $1); then
-    return 0
-  else
-    return 1
-  fi
+applyElasticCRDManifest() {
+  run kubectl apply -f operator-crds.yaml
+  countDownSecs 10 "Applying \"operator-crds.yaml\" manifest"
 }
 
 #
-# checkCRDs() - poll running CRDs until all
-# operator CRDs are running, or timeout and fail.
+# deleteElasticCRDManifest()
 #
-checkCRDs() {
-  alertCRD="alertmanagers.monitoring.coreos.com"
-  promCRD="prometheuses.monitoring.coreos.com"
-  svcCRD="servicemonitors.monitoring.coreos.com"
-  elasticCRD="elasticsearches.elasticsearch.k8s.elastic.co"
-  kibanaCRD="kibanas.kibana.k8s.elastic.co"
-
-  count=60
-  echo -n "waiting up to $count seconds for Custom Resource Definitions to be created: "
-
-  while [[ $count -ne 0 ]]; do
-    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD) && (doesCRDExist $elasticCRD) && (doesCRDExist $kibanaCRD); then
-        echo "all CRDs exist!"
-        return
-    fi
-
-    echo -n .
-    ((count = count - 1))
-    sleep 1
-  done
-
-  fatalError "Not all CRDs are running."
+deleteElasticCRDManifest() {
+  runIgnoreErrors kubectl delete -f operator-crds.yaml
+  countDownSecs 10 "Deleting \"operator-crds.yaml\" manifest"
 }
 
 #
@@ -1377,7 +1353,6 @@ checkCRDs() {
 applyOperatorManifest() {
   echo -n "Applying \"operator.yaml\" manifest: "
   run kubectl apply -f operator.yaml
-  checkCRDs
   blockUntilPodIsReady "control-plane=elastic-operator" 180 "elastic-operator-0"      # Block until prometheus-calico-nod pod is running & ready
 }
 
@@ -1385,6 +1360,10 @@ applyOperatorManifest() {
 # deleteOperatorManifest()
 #
 deleteOperatorManifest() {
+  runIgnoreErrors kubectl delete elasticsearch tigera-elasticsearch -n calico-monitoring
+  countDownSecs 5 "Deleting tigera-kibana"
+  runIgnoreErrors kubectl delete kibana tigera-kibana -n calico-monitoring
+  countDownSecs 5 "Deleting tigera-elasticsearch"
   runIgnoreErrors kubectl delete -f operator.yaml
   countDownSecs 5 "Deleting \"operator.yaml\" manifest"
   runIgnoreErrors kubectl delete daemonset elasticsearch-operator-sysctl
@@ -1400,10 +1379,10 @@ applyMonitorCalicoManifest() {
     sed -i "s|\(.*\)- .* #K8S_API_SERVER_IP|\1- \"$REPLACE_K8S_CIDR\"|g" monitor-calico.yaml
   fi
   echo -n "Applying \"monitor-calico.yaml\" manifest: "
-  run kubectl apply -f monitor-calico.yaml
+  run kubectl apply --request-timeout=60s -f monitor-calico.yaml
   blockUntilPodIsReady "app=prometheus" 180 "prometheus-calico-node"      # Block until prometheus-calico-nod pod is running & ready
-  blockUntilPodIsReady "name=es-client-tigera-elasticsearch" 180 "elasticsearch-client"      # Block until elasticsearch-client pod is running & ready
-  blockUntilPodIsReady "name=kibana-tigera-elasticsearch" 180 "kibana"    # Block until kibana pod is running & ready
+  blockUntilPodIsReady "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch" 180 "elasticsearch-client"      # Block until elasticsearch-client pod is running & ready
+  blockUntilPodIsReady "name=tigera-kibana" 180 "kibana"    # Block until kibana pod is running & ready
 }
 
 #
@@ -1740,6 +1719,7 @@ installCNX() {
 
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
   applyElasticStorageManifest     # Apply elastic-storage.yaml
+  applyElasticCRDManifest        # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   applyOperatorManifest           # Apply operator.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
@@ -1759,6 +1739,7 @@ uninstallCNX() {
 
   deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
   deleteOperatorManifest         # Delete operator.yaml
+  deleteElasticCRDManifest      # Delete operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
