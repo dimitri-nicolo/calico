@@ -90,6 +90,9 @@ spec:
       containers:
         - name: tigera-cloud-controllers
           image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
 {{ tuple .Values.cloudControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           readinessProbe:
             exec:
