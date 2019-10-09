@@ -157,22 +157,6 @@ func (b *allocationBlock) assign(address cnet.IP, handleID *string, attrs map[st
 	return nil
 }
 
-// windows specific code to check for
-// addresseses left are 0, 1, 2 and last address
-// and the handleID contains windows-reserved-IP-handle
-func (b *allocationBlock) containsOnlyReservedIPs() bool {
-	for _, attrIdx := range b.Allocations {
-		if attrIdx == nil {
-			continue
-		}
-		attrs := b.Attributes[*attrIdx]
-		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != windowsReservedHandle {
-			return false
-		}
-	}
-	return true
-}
-
 // hostAffinityMatches checks if the provided host matches the provided affinity.
 func hostAffinityMatches(host string, block *model.AllocationBlock) bool {
 	return *block.Affinity == "host:"+host
@@ -194,11 +178,6 @@ func (b allocationBlock) empty(windowsHost bool) bool {
 		return true
 	}
 	return b.numFreeAddresses() == b.NumAddresses()
-}
-// empty returns true if the block has released all of its assignable addresses,
-// and returns false if any assignable addresses are in use.
-func (b allocationBlock) empty() bool {
-	return b.containsOnlyReservedIPs()
 }
 
 // containsOnlyReservedIPs returns true if the block is empty excepted for

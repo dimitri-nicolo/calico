@@ -1,6 +1,6 @@
 module github.com/projectcalico/libcalico-go
 
- go 1.13
+go 1.13
 
 require (
 	github.com/Azure/go-autorest v10.6.2+incompatible // indirect

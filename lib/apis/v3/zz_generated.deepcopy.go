@@ -139,7 +139,7 @@ func (in *BGPConfiguration) DeepCopyObject() runtime.Object {
 func (in *BGPConfigurationList) DeepCopyInto(out *BGPConfigurationList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]BGPConfiguration, len(*in))
@@ -263,7 +263,7 @@ func (in *BGPPeer) DeepCopyObject() runtime.Object {
 func (in *BGPPeerList) DeepCopyInto(out *BGPPeerList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]BGPPeer, len(*in))
@@ -351,7 +351,7 @@ func (in *BlockAffinity) DeepCopyObject() runtime.Object {
 func (in *BlockAffinityList) DeepCopyInto(out *BlockAffinityList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]BlockAffinity, len(*in))
@@ -622,7 +622,7 @@ func (in *ClusterInformation) DeepCopyObject() runtime.Object {
 func (in *ClusterInformationList) DeepCopyInto(out *ClusterInformationList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterInformation, len(*in))
@@ -940,7 +940,7 @@ func (in *FelixConfiguration) DeepCopyObject() runtime.Object {
 func (in *FelixConfigurationList) DeepCopyInto(out *FelixConfigurationList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]FelixConfiguration, len(*in))
@@ -989,32 +989,32 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.RouteRefreshInterval != nil {
 		in, out := &in.RouteRefreshInterval, &out.RouteRefreshInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.IptablesRefreshInterval != nil {
 		in, out := &in.IptablesRefreshInterval, &out.IptablesRefreshInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.IptablesPostWriteCheckInterval != nil {
 		in, out := &in.IptablesPostWriteCheckInterval, &out.IptablesPostWriteCheckInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.IptablesLockTimeout != nil {
 		in, out := &in.IptablesLockTimeout, &out.IptablesLockTimeout
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.IptablesLockProbeInterval != nil {
 		in, out := &in.IptablesLockProbeInterval, &out.IptablesLockProbeInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.IpsetsRefreshInterval != nil {
 		in, out := &in.IpsetsRefreshInterval, &out.IpsetsRefreshInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.MaxIpsetSize != nil {
@@ -1029,12 +1029,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.XDPRefreshInterval != nil {
 		in, out := &in.XDPRefreshInterval, &out.XDPRefreshInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.NetlinkTimeout != nil {
 		in, out := &in.NetlinkTimeout, &out.NetlinkTimeout
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.MetadataPort != nil {
@@ -1079,12 +1079,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.ReportingInterval != nil {
 		in, out := &in.ReportingInterval, &out.ReportingInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.ReportingTTL != nil {
 		in, out := &in.ReportingTTL, &out.ReportingTTL
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.EndpointReportingEnabled != nil {
@@ -1094,7 +1094,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.EndpointReportingDelay != nil {
 		in, out := &in.EndpointReportingDelay, &out.EndpointReportingDelay
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.IptablesMarkMask != nil {
@@ -1176,12 +1176,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.UsageReportingInitialDelay != nil {
 		in, out := &in.UsageReportingInitialDelay, &out.UsageReportingInitialDelay
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.UsageReportingInterval != nil {
 		in, out := &in.UsageReportingInterval, &out.UsageReportingInterval
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.NATPortRange != nil {
@@ -1230,12 +1230,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.DebugSimulateCalcGraphHangAfter != nil {
 		in, out := &in.DebugSimulateCalcGraphHangAfter, &out.DebugSimulateCalcGraphHangAfter
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.DebugSimulateDataplaneHangAfter != nil {
 		in, out := &in.DebugSimulateDataplaneHangAfter, &out.DebugSimulateDataplaneHangAfter
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.SidecarAccelerationEnabled != nil {
@@ -1630,7 +1630,7 @@ func (in *GlobalNetworkPolicy) DeepCopyObject() runtime.Object {
 func (in *GlobalNetworkPolicyList) DeepCopyInto(out *GlobalNetworkPolicyList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]GlobalNetworkPolicy, len(*in))
@@ -1730,7 +1730,7 @@ func (in *GlobalNetworkSet) DeepCopyObject() runtime.Object {
 func (in *GlobalNetworkSetList) DeepCopyInto(out *GlobalNetworkSetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]GlobalNetworkSet, len(*in))
@@ -2182,7 +2182,7 @@ func (in *HostEndpoint) DeepCopyObject() runtime.Object {
 func (in *HostEndpointList) DeepCopyInto(out *HostEndpointList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]HostEndpoint, len(*in))
@@ -2299,7 +2299,7 @@ func (in *IPAMBlock) DeepCopyObject() runtime.Object {
 func (in *IPAMBlockList) DeepCopyInto(out *IPAMBlockList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]IPAMBlock, len(*in))
@@ -2403,7 +2403,7 @@ func (in *IPAMConfig) DeepCopyObject() runtime.Object {
 func (in *IPAMConfigList) DeepCopyInto(out *IPAMConfigList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]IPAMConfig, len(*in))
@@ -2479,7 +2479,7 @@ func (in *IPAMHandle) DeepCopyObject() runtime.Object {
 func (in *IPAMHandleList) DeepCopyInto(out *IPAMHandleList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]IPAMHandle, len(*in))
@@ -2578,7 +2578,7 @@ func (in *IPPool) DeepCopyObject() runtime.Object {
 func (in *IPPoolList) DeepCopyInto(out *IPPoolList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]IPPool, len(*in))
@@ -2675,7 +2675,7 @@ func (in *LicenseKey) DeepCopyObject() runtime.Object {
 func (in *LicenseKeyList) DeepCopyInto(out *LicenseKeyList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]LicenseKey, len(*in))
@@ -2751,7 +2751,7 @@ func (in *ManagedCluster) DeepCopyObject() runtime.Object {
 func (in *ManagedClusterList) DeepCopyInto(out *ManagedClusterList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ManagedCluster, len(*in))
@@ -2848,7 +2848,7 @@ func (in *NetworkPolicy) DeepCopyObject() runtime.Object {
 func (in *NetworkPolicyList) DeepCopyInto(out *NetworkPolicyList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]NetworkPolicy, len(*in))
@@ -2948,7 +2948,7 @@ func (in *NetworkSet) DeepCopyObject() runtime.Object {
 func (in *NetworkSetList) DeepCopyInto(out *NetworkSetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]NetworkSet, len(*in))
@@ -3050,7 +3050,7 @@ func (in *NodeBGPSpec) DeepCopy() *NodeBGPSpec {
 func (in *NodeList) DeepCopyInto(out *NodeList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Node, len(*in))
@@ -3152,7 +3152,7 @@ func (in *Profile) DeepCopyObject() runtime.Object {
 func (in *ProfileList) DeepCopyInto(out *ProfileList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Profile, len(*in))
@@ -3221,15 +3221,6 @@ func (in *ProfileSpec) DeepCopy() *ProfileSpec {
 // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
 func (in *ProtoPort) DeepCopyInto(out *ProtoPort) {
 	*out = *in
-	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]NetworkSet, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
 	return
 }
 
@@ -3295,7 +3286,7 @@ func (in *RemoteClusterConfiguration) DeepCopyObject() runtime.Object {
 func (in *RemoteClusterConfigurationList) DeepCopyInto(out *RemoteClusterConfigurationList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]RemoteClusterConfiguration, len(*in))
@@ -3637,6 +3628,38 @@ func (in *ServiceAccountMatch) DeepCopy() *ServiceAccountMatch {
 }
 
 // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *ServiceClusterIPBlock) DeepCopyInto(out *ServiceClusterIPBlock) {
+	*out = *in
+	return
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ServiceClusterIPBlock.
+func (in *ServiceClusterIPBlock) DeepCopy() *ServiceClusterIPBlock {
+	if in == nil {
+		return nil
+	}
+	out := new(ServiceClusterIPBlock)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *ServiceExternalIPBlock) DeepCopyInto(out *ServiceExternalIPBlock) {
+	*out = *in
+	return
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ServiceExternalIPBlock.
+func (in *ServiceExternalIPBlock) DeepCopy() *ServiceExternalIPBlock {
+	if in == nil {
+		return nil
+	}
+	out := new(ServiceExternalIPBlock)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
 func (in *Tier) DeepCopyInto(out *Tier) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
@@ -3683,23 +3706,36 @@ func (in *TierList) DeepCopy() *TierList {
 	if in == nil {
 		return nil
 	}
-	out := new(ServiceClusterIPBlock)
+	out := new(TierList)
 	in.DeepCopyInto(out)
 	return out
 }
 
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *TierList) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
+}
+
 // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
-func (in *ServiceExternalIPBlock) DeepCopyInto(out *ServiceExternalIPBlock) {
+func (in *TierSpec) DeepCopyInto(out *TierSpec) {
 	*out = *in
+	if in.Order != nil {
+		in, out := &in.Order, &out.Order
+		*out = new(float64)
+		**out = **in
+	}
 	return
 }
 
-// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new ServiceExternalIPBlock.
-func (in *ServiceExternalIPBlock) DeepCopy() *ServiceExternalIPBlock {
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new TierSpec.
+func (in *TierSpec) DeepCopy() *TierSpec {
 	if in == nil {
 		return nil
 	}
-	out := new(ServiceExternalIPBlock)
+	out := new(TierSpec)
 	in.DeepCopyInto(out)
 	return out
 }
@@ -3735,7 +3771,7 @@ func (in *WorkloadEndpoint) DeepCopyObject() runtime.Object {
 func (in *WorkloadEndpointList) DeepCopyInto(out *WorkloadEndpointList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]WorkloadEndpoint, len(*in))

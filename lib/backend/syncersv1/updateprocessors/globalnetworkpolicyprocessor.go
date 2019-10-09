@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,6 @@ func ConvertGlobalNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (model.Key, er
 		Name: v3key.Name,
 		Tier: tier,
 	}, nil
-
 }
 
 func ConvertGlobalNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
@@ -55,7 +54,6 @@ func ConvertGlobalNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error)
 }
 
 func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.Policy, error) {
-	spec := v3res.Spec
 	selector := spec.Selector
 
 	nsSelector := spec.NamespaceSelector
@@ -75,7 +73,7 @@ func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.P
 		Order:          spec.Order,
 		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, "", false),
 		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, "", false),
-		Selector:       spec.Selector,
+		Selector:       selector,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
 		DoNotTrack:     spec.DoNotTrack,
 		PreDNAT:        spec.PreDNAT,
