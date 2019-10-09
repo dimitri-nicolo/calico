@@ -16,8 +16,10 @@ package updateprocessors
 
 import (
 	"errors"
+	"strings"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -53,6 +55,21 @@ func ConvertGlobalNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error)
 }
 
 func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.Policy, error) {
+	spec := v3res.Spec
+	selector := spec.Selector
+
+	nsSelector := spec.NamespaceSelector
+	if nsSelector != "" {
+		selector = prefixAndAppendSelector(selector, nsSelector, conversion.NamespaceLabelPrefix)
+		selector = strings.Replace(selector, "all()", "has(projectcalico.org/namespace)", -1)
+	}
+
+	saSelector := spec.ServiceAccountSelector
+	if saSelector != "" {
+		selector = prefixAndAppendSelector(selector, saSelector, conversion.ServiceAccountLabelPrefix)
+		selector = strings.Replace(selector, "all()", "has(projectcalico.org/serviceaccount)", -1)
+	}
+
 	v1value := &model.Policy{
 		Namespace:      "", // Empty string used to signal a GlobalNetworkPolicy.
 		Order:          spec.Order,
