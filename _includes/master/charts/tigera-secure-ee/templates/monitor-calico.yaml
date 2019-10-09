@@ -822,7 +822,6 @@ spec:
 {{- else }}
             - name: elastic-ca-cert-volume
               secret:
-                optional: true
                 items:
                 - key: tls.crt
                   path: ca.pem
@@ -935,7 +934,6 @@ spec:
             items:
               - key: tls.crt
                 path: es-ca.pem
-            optional: true
             secretName: tigera-elasticsearch-es-http-certs-public
         - name: kb-certs
           secret:
@@ -943,7 +941,6 @@ spec:
             items:
               - key: tls.crt
                 path: kb-ca.pem
-            optional: true
             secretName: tigera-kibana-kb-http-certs-public
 {{- end}}
 {{- if .Values.elasticTseeInstaller.env }}
