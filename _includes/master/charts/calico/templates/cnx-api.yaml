@@ -225,12 +225,16 @@ rules:
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
       - networkpolicies
+      - stagedkubernetesnetworkpolicies
+      - stagednetworkpolicies        
       - tiers
       - clusterinformations
       - hostendpoints
       - licensekeys
       - globalnetworksets
+      - networksets
       - globalthreatfeeds
       - globalreporttypes
       - globalreports

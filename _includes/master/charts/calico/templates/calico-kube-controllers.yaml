@@ -103,7 +103,7 @@ spec:
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS
-              value: node
+              value: node,service
             - name: DATASTORE_TYPE
               value: kubernetes
 {{- if .Values.kubeControllers.env }}
