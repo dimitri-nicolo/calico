@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,9 +33,11 @@ func NewBGPConfigUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 		func(node, name string) model.Key { return model.NodeBGPConfigKey{Nodename: node, Name: name} },
 		func(name string) model.Key { return model.GlobalBGPConfigKey{Name: name} },
 		map[string]ConfigFieldValueToV1ModelValue{
-			"loglevel":   logLevelToBirdLogLevel,
-			"node_mesh":  nodeMeshToString,
-			"extensions": extensionsToJSON,
+			"extensions":       extensionsToJSON,
+			"loglevel":         logLevelToBirdLogLevel,
+			"node_mesh":        nodeMeshToString,
+			"svc_external_ips": svcExternalIpsToString,
+			"svc_cluster_ips":  svcClusterIpsToString,
 		},
 	)
 }
@@ -73,4 +75,40 @@ var extensionsToJSON = func(value interface{}) interface{} {
 		vb, _ := json.Marshal(mapping)
 		return string(vb)
 	}
+}
+
+// We wrap each Service external IP in a ServiceExternalIPBlock struct to
+// achieve the desired API structure. This unpacks that.
+var svcExternalIpsToString = func(value interface{}) interface{} {
+	ipBlocks := value.([]apiv3.ServiceExternalIPBlock)
+
+	// Processor expects all empty fields to be nil.
+	if len(ipBlocks) == 0 {
+		return nil
+	}
+
+	ipCidrs := make([]string, 0)
+	for _, ipBlock := range ipBlocks {
+		ipCidrs = append(ipCidrs, ipBlock.CIDR)
+	}
+
+	return strings.Join(ipCidrs, ",")
+}
+
+// We wrap each Service Cluster IP in a ServiceClusterIPBlock to
+// achieve the desired API structure. This unpacks that.
+var svcClusterIpsToString = func(value interface{}) interface{} {
+	ipBlocks := value.([]apiv3.ServiceClusterIPBlock)
+
+	// Processor expects all empty fields to be nil.
+	if len(ipBlocks) == 0 {
+		return nil
+	}
+
+	ipCidrs := make([]string, 0)
+	for _, ipBlock := range ipBlocks {
+		ipCidrs = append(ipCidrs, ipBlock.CIDR)
+	}
+
+	return strings.Join(ipCidrs, ",")
 }

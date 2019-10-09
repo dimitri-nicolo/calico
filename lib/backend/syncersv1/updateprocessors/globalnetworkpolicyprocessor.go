@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@ package updateprocessors
 
 import (
 	"errors"
+	"strings"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -41,7 +43,6 @@ func ConvertGlobalNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (model.Key, er
 		Name: v3key.Name,
 		Tier: tier,
 	}, nil
-
 }
 
 func ConvertGlobalNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
@@ -53,12 +54,26 @@ func ConvertGlobalNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error)
 }
 
 func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.Policy, error) {
+	selector := spec.Selector
+
+	nsSelector := spec.NamespaceSelector
+	if nsSelector != "" {
+		selector = prefixAndAppendSelector(selector, nsSelector, conversion.NamespaceLabelPrefix)
+		selector = strings.Replace(selector, "all()", "has(projectcalico.org/namespace)", -1)
+	}
+
+	saSelector := spec.ServiceAccountSelector
+	if saSelector != "" {
+		selector = prefixAndAppendSelector(selector, saSelector, conversion.ServiceAccountLabelPrefix)
+		selector = strings.Replace(selector, "all()", "has(projectcalico.org/serviceaccount)", -1)
+	}
+
 	v1value := &model.Policy{
 		Namespace:      "", // Empty string used to signal a GlobalNetworkPolicy.
 		Order:          spec.Order,
 		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, "", false),
 		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, "", false),
-		Selector:       spec.Selector,
+		Selector:       selector,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
 		DoNotTrack:     spec.DoNotTrack,
 		PreDNAT:        spec.PreDNAT,
