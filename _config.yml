@@ -19,6 +19,7 @@ noderunning: calico-node
 
 # DEPRECATED: This list of imageNames is not to be used or updated.
 # Docs and manifests should use the image names in versions.yml instead.
+# IMPORTANT: These imageNames only apply to versions v2.5.x and before.
 imageNames:
   node: tigera/cnx-node
   cnx-node: tigera/cnx-node
@@ -54,7 +55,7 @@ imageNames:
   configMapReload: quay.io/coreos/configmap-reload
   alertManager: quay.io/prometheus/alertmanager
   prometheus: quay.io/prometheus/prometheus
-  elasticsearchOperator: docker.elastic.co/eck/eck-operator
+  elasticsearchOperator: upmcenterprises/elasticsearch-operator
   elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
   prometheusOperator: quay.io/coreos/prometheus-operator
   busybox: busybox
