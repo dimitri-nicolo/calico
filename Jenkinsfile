@@ -2,7 +2,8 @@
 pipeline {
     agent { label 'slave'}
     options{
-        timeout(time: 2, unit: 'HOURS')
+        timeout(time: 2, unit: 'HOURS'),
+        disableConcurrentBuilds()
     }
     triggers{
         pollSCM('H/5 * * * *')
