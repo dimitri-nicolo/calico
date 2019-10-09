@@ -508,6 +508,98 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 	return nil
 }
 
+// TestNetworkSetClient exercises the NetworkSet client.
+func TestNetworkSetClient(t *testing.T) {
+	const name = "test-networkset"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.NetworkSet{}
+			})
+			defer shutdownServer()
+			if err := testNetworkSetClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-networkset test failed")
+	}
+}
+
+func testNetworkSetClient(client calicoclient.Interface, name string) error {
+	ns := "default"
+	networkSetClient := client.ProjectcalicoV3().NetworkSets(ns)
+	networkSet := &v3.NetworkSet{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	// start from scratch
+	networkSets, err := networkSetClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing networkSets (%s)", err)
+	}
+	if networkSets.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(networkSets.Items) > 0 {
+		return fmt.Errorf("networkSets should not exist on start, had %v networkSets", len(networkSets.Items))
+	}
+
+	networkSetServer, err := networkSetClient.Create(networkSet)
+	if nil != err {
+		return fmt.Errorf("error creating the networkSet '%v' (%v)", networkSet, err)
+	}
+
+	updatedNetworkSet := networkSetServer
+	updatedNetworkSet.Labels = map[string]string{"foo": "bar"}
+	networkSetServer, err = networkSetClient.Update(updatedNetworkSet)
+	if nil != err {
+		return fmt.Errorf("error updating the networkSet '%v' (%v)", networkSet, err)
+	}
+
+	// Should be listing the networkSet.
+	networkSets, err = networkSetClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing networkSets (%s)", err)
+	}
+	if 1 != len(networkSets.Items) {
+		return fmt.Errorf("should have exactly one networkSet, had %v networkSets", len(networkSets.Items))
+	}
+
+	networkSetServer, err = networkSetClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting networkSet %s (%s)", name, err)
+	}
+	if name != networkSetServer.Name &&
+		networkSet.ResourceVersion == networkSetServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same networkSet back from the server \n%+v\n%+v", networkSet, networkSetServer)
+	}
+
+	// Watch Test:
+	opts := v1.ListOptions{Watch: true}
+	wIface, err := networkSetClient.Watch(opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	err = networkSetClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("networkSet should be deleted (%s)", err)
+	}
+
+	wg.Wait()
+	return nil
+}
+
 // TestLicenseKeyClient exercises the LicenseKey client.
 func TestLicenseKeyClient(t *testing.T) {
 	const name = "default"

@@ -74,6 +74,10 @@ func (c *FakeProjectcalicoV3) NetworkPolicies(namespace string) v3.NetworkPolicy
 	return &FakeNetworkPolicies{c, namespace}
 }
 
+func (c *FakeProjectcalicoV3) NetworkSets(namespace string) v3.NetworkSetInterface {
+	return &FakeNetworkSets{c, namespace}
+}
+
 func (c *FakeProjectcalicoV3) Profiles() v3.ProfileInterface {
 	return &FakeProfiles{c}
 }

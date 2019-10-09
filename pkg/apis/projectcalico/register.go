@@ -70,6 +70,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ManagedClusterList{},
 		&ClusterInformation{},
 		&ClusterInformationList{},
+		&NetworkSet{},
+		&NetworkSetList{},
 	)
 	return nil
 }

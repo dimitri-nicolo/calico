@@ -34,6 +34,8 @@ type ManagedClusterExpansion interface{}
 
 type NetworkPolicyExpansion interface{}
 
+type NetworkSetExpansion interface{}
+
 type ProfileExpansion interface{}
 
 type RemoteClusterConfigurationExpansion interface{}

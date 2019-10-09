@@ -68,6 +68,10 @@ type NetworkPolicyListerExpansion interface{}
 // NetworkPolicyNamespaceLister.
 type NetworkPolicyNamespaceListerExpansion interface{}
 
+// NetworkSetListerExpansion allows custom methods to be added to
+// NetworkSetLister.
+type NetworkSetListerExpansion interface{}
+
 // ProfileListerExpansion allows custom methods to be added to
 // ProfileLister.
 type ProfileListerExpansion interface{}

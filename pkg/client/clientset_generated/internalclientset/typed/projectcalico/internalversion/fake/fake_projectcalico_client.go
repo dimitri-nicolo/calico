@@ -74,6 +74,10 @@ func (c *FakeProjectcalico) NetworkPolicies(namespace string) internalversion.Ne
 	return &FakeNetworkPolicies{c, namespace}
 }
 
+func (c *FakeProjectcalico) NetworkSets() internalversion.NetworkSetInterface {
+	return &FakeNetworkSets{c}
+}
+
 func (c *FakeProjectcalico) Profiles() internalversion.ProfileInterface {
 	return &FakeProfiles{c}
 }

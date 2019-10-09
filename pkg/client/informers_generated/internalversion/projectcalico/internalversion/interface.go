@@ -40,6 +40,8 @@ type Interface interface {
 	ManagedClusters() ManagedClusterInformer
 	// NetworkPolicies returns a NetworkPolicyInformer.
 	NetworkPolicies() NetworkPolicyInformer
+	// NetworkSets returns a NetworkSetInformer.
+	NetworkSets() NetworkSetInformer
 	// Profiles returns a ProfileInformer.
 	Profiles() ProfileInformer
 	// RemoteClusterConfigurations returns a RemoteClusterConfigurationInformer.
@@ -132,6 +134,11 @@ func (v *version) ManagedClusters() ManagedClusterInformer {
 // NetworkPolicies returns a NetworkPolicyInformer.
 func (v *version) NetworkPolicies() NetworkPolicyInformer {
 	return &networkPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// NetworkSets returns a NetworkSetInformer.
+func (v *version) NetworkSets() NetworkSetInformer {
+	return &networkSetInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Profiles returns a ProfileInformer.
