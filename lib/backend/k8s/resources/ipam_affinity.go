@@ -76,7 +76,7 @@ func (c blockAffinityClient) toV1(kvpv3 *model.KVPair) (*model.KVPair, error) {
 	// Parse the CIDR into a struct.
 	_, cidr, err := net.ParseCIDR(kvpv3.Value.(*apiv3.BlockAffinity).Spec.CIDR)
 	if err != nil {
-		log.WithField("cidr", cidr).WithError(err).Error("failed to parse cidr")
+		log.WithError(err).Error("failed to parse cidr")
 		return nil, err
 	}
 	state := model.BlockAffinityState(kvpv3.Value.(*apiv3.BlockAffinity).Spec.State)
