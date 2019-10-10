@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -266,7 +266,7 @@ func ruleActionV1ToV3API(inAction string) apiv3.Action {
 		return apiv3.Pass
 	} else {
 		for _, action := range []apiv3.Action{apiv3.Allow, apiv3.Deny, apiv3.Log, apiv3.Pass} {
-			if strings.ToLower(inAction) == strings.ToLower(string(action)) {
+			if strings.EqualFold(inAction, string(action)) {
 				return action
 			}
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -44,7 +45,6 @@ func ConvertNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 		Name: v3key.Namespace + "/" + v3key.Name,
 		Tier: tier,
 	}, nil
-
 }
 
 func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
@@ -57,6 +57,7 @@ func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
 	// If this policy is namespaced, then add a namespace selector.
 	spec := v3res.Spec
 	selector := spec.Selector
+
 	if v3res.Namespace != "" {
 		nsSelector := fmt.Sprintf("%s == '%s'", apiv3.LabelNamespace, v3res.Namespace)
 		if selector == "" {
@@ -80,6 +81,8 @@ func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
 		}
 	}
 	matchSGs := m == "true"
+	selector = prefixAndAppendSelector(selector, spec.ServiceAccountSelector, conversion.ServiceAccountLabelPrefix)
+
 	v1value := &model.Policy{
 		Namespace:      v3res.Namespace,
 		Order:          spec.Order,

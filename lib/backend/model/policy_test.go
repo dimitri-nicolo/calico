@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 )
 
 var _ = Describe("Policy functions", func() {
-
 	It("Policy should stringify correctly", func() {
 		order := 10.5
 		p := model.Policy{
@@ -35,7 +34,7 @@ var _ = Describe("Policy functions", func() {
 			ApplyOnForward: true,
 			Types:          []string{"Ingress", "Egress"},
 		}
-		Expect(p.String()).To(Equal("order:10.5,selector:\"apples=='oranges'\",inbound:Deny,outbound:Allow,untracked:false,pre_dnat:true,apply_on_forward:true,types:Ingress;Egress"))
+		Expect(p.String()).To(Equal(`order:10.5,selector:"apples=='oranges'",inbound:Deny,outbound:Allow,untracked:false,pre_dnat:true,apply_on_forward:true,types:Ingress;Egress`))
 	})
 
 	It("Policy should identify as staged by name", func() {

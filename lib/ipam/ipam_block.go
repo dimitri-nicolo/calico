@@ -30,6 +30,8 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
+// windwowsReservedHandle is the handle used to reserve addresses required for Windows
+// networking so that workloads do not get assigned these addresses.
 const windowsReservedHandle = "windows-reserved-IPAM-handle"
 
 // Wrap the backend AllocationBlock struct so that we can
@@ -155,22 +157,6 @@ func (b *allocationBlock) assign(address cnet.IP, handleID *string, attrs map[st
 	return nil
 }
 
-// windows specific code to check for
-// addresseses left are 0, 1, 2 and last address
-// and the handleID contains windows-reserved-IP-handle
-func (b *allocationBlock) containsOnlyReservedIPs() bool {
-	for _, attrIdx := range b.Allocations {
-		if attrIdx == nil {
-			continue
-		}
-		attrs := b.Attributes[*attrIdx]
-		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != windowsReservedHandle {
-			return false
-		}
-	}
-	return true
-}
-
 // hostAffinityMatches checks if the provided host matches the provided affinity.
 func hostAffinityMatches(host string, block *model.AllocationBlock) bool {
 	return *block.Affinity == "host:"+host
@@ -192,6 +178,21 @@ func (b allocationBlock) empty(windowsHost bool) bool {
 		return true
 	}
 	return b.numFreeAddresses() == b.NumAddresses()
+}
+
+// containsOnlyReservedIPs returns true if the block is empty excepted for
+// expected "reserved" IP addresses.
+func (b *allocationBlock) containsOnlyReservedIPs() bool {
+	for _, attrIdx := range b.Allocations {
+		if attrIdx == nil {
+			continue
+		}
+		attrs := b.Attributes[*attrIdx]
+		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != windowsReservedHandle {
+			return false
+		}
+	}
+	return true
 }
 
 func (b *allocationBlock) release(addresses []cnet.IP) ([]cnet.IP, map[string]int, error) {

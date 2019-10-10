@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -127,6 +127,20 @@ func (r bgpConfigurations) ValidateDefaultOnlyFields(res *apiv3.BGPConfiguration
 			errFields = append(errFields, cerrors.ErroredField{
 				Name:   "BGPConfiguration.Spec.ASNumber",
 				Reason: "Cannot set ASNumber on a non default BGP Configuration.",
+			})
+		}
+
+		if res.Spec.ServiceExternalIPs != nil && len(res.Spec.ServiceExternalIPs) > 0 {
+			errFields = append(errFields, cerrors.ErroredField{
+				Name:   "BGPConfiguration.Spec.ServiceExternalIPs",
+				Reason: "Cannot set ServiceExternalIPs on a non default BGP Configuration.",
+			})
+		}
+
+		if res.Spec.ServiceClusterIPs != nil && len(res.Spec.ServiceClusterIPs) > 0 {
+			errFields = append(errFields, cerrors.ErroredField{
+				Name:   "BGPConfiguration.Spec.ServiceClusterIPs",
+				Reason: "Cannot set ServiceClusterIPs on a non default BGP Configuration.",
 			})
 		}
 	}

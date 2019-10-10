@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,6 +93,9 @@ type NetworkPolicySpec struct {
 	// When the policy is read back again, Types will always be one of these values, never empty
 	// or nil.
 	Types []PolicyType `json:"types,omitempty" validate:"omitempty,dive,policyType"`
+
+	// ServiceAccountSelector is an optional field for an expression used to select a pod based on service accounts.
+	ServiceAccountSelector string `json:"serviceAccountSelector,omitempty" validate:"selector"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

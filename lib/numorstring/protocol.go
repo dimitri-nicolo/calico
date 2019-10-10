@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ func ProtocolV3FromProtocolV1(p Protocol) Protocol {
 	}
 
 	for _, n := range allProtocolNames {
-		if strings.ToLower(n) == strings.ToLower(p.StrVal) {
+		if strings.EqualFold(n, p.StrVal) {
 			return Protocol(
 				Uint8OrString{Type: NumOrStringString, StrVal: n},
 			)
@@ -74,7 +74,7 @@ func ProtocolV3FromProtocolV1(p Protocol) Protocol {
 // ProtocolFromString creates a Protocol struct from a string value.
 func ProtocolFromString(p string) Protocol {
 	for _, n := range allProtocolNames {
-		if strings.ToLower(n) == strings.ToLower(p) {
+		if strings.EqualFold(n, p) {
 			return Protocol(
 				Uint8OrString{Type: NumOrStringString, StrVal: n},
 			)

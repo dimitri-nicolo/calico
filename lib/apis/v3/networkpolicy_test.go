@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 var (
 	// gnpExtraFields is the set of fields that should be in GlobalNetworkPolicy but not
 	// NetworkPolicy.
-	gnpExtraFields = set.From("DoNotTrack", "PreDNAT", "ApplyOnForward")
+	gnpExtraFields = set.From("DoNotTrack", "PreDNAT", "ApplyOnForward", "NamespaceSelector")
 
 	// npExtraFields is the set of fields that should be in NetworkPolicy but not
 	// GlobalNetworkPolicy.

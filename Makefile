@@ -9,7 +9,7 @@ test: vendor ut fv
 
 # Define some constants
 #######################
-K8S_VERSION      ?= v1.14.1
+K8S_VERSION      ?= v1.16.0
 ETCD_VERSION     ?= v3.3.7
 COREDNS_VERSION  ?= 1.5.2
 GO_BUILD_VER     ?= v0.25
@@ -17,7 +17,6 @@ CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME     ?= github.com/projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
 BINDIR           ?= bin
-LIBCALICO-GO_PKG  = github.com/projectcalico/libcalico-go
 TOP_SRC_DIR       = lib
 MY_UID           := $(shell id -u)
 
@@ -32,7 +31,7 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/* -v $(GOMOD_CACHE):/go/pkg/mod:rw
 GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 GINKGO_ARGS		:= -mod=vendor
 
@@ -61,10 +60,9 @@ APIS_SRCS := $(filter-out ./lib/apis/v3/zz_generated.deepcopy.go ./lib/apis/v3/o
 TEST_CERT_PATH := test/etcd-ut-certs/
 
 .PHONY: clean
-## Removes all .coverprofile files, the vendor dir, and .go-pkg-cache
 clean:
-	find . -name '*.coverprofile' -type f -delete
 	rm -rf .go-pkg-cache vendor $(BINDIR) checkouts
+	find . -name '*.coverprofile' -type f -delete
 
 ###############################################################################
 # Building the binary
@@ -80,7 +78,7 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 
 $(BINDIR)/openapi-gen: vendor
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+		sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
@@ -89,13 +87,13 @@ gen-files:
 	$(MAKE) $(GENERATED_FILES)
 
 $(BINDIR)/deepcopy-gen: vendor
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: $(UPGRADE_SRCS) $(BINDIR)/deepcopy-gen
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "$(LIBCALICO-GO_PKG)/lib/upgrade/migrator/clients/v1/k8s/custom" \
+		--input-dirs "$(PACKAGE_NAME)/lib/upgrade/migrator/clients/v1/k8s/custom" \
 		--bounding-dirs "github.com/projectcalico/libcalico-go" \
 		--output-file-base zz_generated.deepcopy'
 
@@ -103,7 +101,7 @@ $(BINDIR)/deepcopy-gen: vendor
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v3" \
+		--input-dirs "$(PACKAGE_NAME)/lib/apis/v3" \
 		--bounding-dirs "github.com/projectcalico/libcalico-go" \
 		--output-file-base zz_generated.deepcopy'
 
@@ -113,22 +111,22 @@ $(BINDIR)/deepcopy-gen: vendor
 	   sh -c '$(BINDIR)/openapi-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v3,$(LIBCALICO-GO_PKG)/lib/apis/v1,$(LIBCALICO-GO_PKG)/lib/numorstring" \
-		--output-package "$(LIBCALICO-GO_PKG)/lib/apis/v3"'
+		--input-dirs "$(PACKAGE_NAME)/lib/apis/v3,$(PACKAGE_NAME)/lib/apis/v1,$(PACKAGE_NAME)/lib/numorstring" \
+		--output-package "$(PACKAGE_NAME)/lib/apis/v3"'
 
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BINDIR)/openapi-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v1,$(LIBCALICO-GO_PKG)/lib/numorstring" \
-		--output-package "$(LIBCALICO-GO_PKG)/lib/apis/v1"'
+		--input-dirs "$(PACKAGE_NAME)/lib/apis/v1,$(PACKAGE_NAME)/lib/numorstring" \
+		--output-package "$(PACKAGE_NAME)/lib/apis/v1"'
 
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BINDIR)/openapi-gen \
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
-		--input-dirs "$(LIBCALICO-GO_PKG)/lib/numorstring" \
-		--output-package "$(LIBCALICO-GO_PKG)/lib/numorstring"; \
+		--input-dirs "$(PACKAGE_NAME)/lib/numorstring" \
+		--output-package "$(PACKAGE_NAME)/lib/numorstring"; \
 		sed -i "/numorstring /d" ./lib/numorstring/openapi_generated.go'
 		# Above 'sed' to workaround a bug in openapi-gen which ends up
 		# importing "numorstring github.com/.../lib/numorstring" causing eventual build error
@@ -235,7 +233,7 @@ run-kubernetes-master: stop-kubernetes-master
 		--net=host --name st-apiserver \
 		--detach \
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
-		/hyperkube apiserver \
+		/hyperkube kube-apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
 	        	--etcd-servers=http://127.0.0.1:2379 \
@@ -252,7 +250,7 @@ run-kubernetes-master: stop-kubernetes-master
 		--net=host --name st-controller-manager \
 		--detach \
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
-		/hyperkube controller-manager \
+		/hyperkube kube-controller-manager \
                         --master=127.0.0.1:8080 \
                         --min-resync-period=3m \
                         --allocate-node-cidrs=true \
@@ -329,7 +327,6 @@ ci: clean mod-download static-checks test
 ## Display this help text
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
 	$(info Available targets)
-	@echo
 	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
 		nb = sub( /^## /, "", helpMsg );                                \
 		if(nb == 0) {                                                   \
