@@ -89,7 +89,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.24
+GO_BUILD_VER?=v0.25
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 # Figure out version information.  To support builds from release tarballs, we default to
