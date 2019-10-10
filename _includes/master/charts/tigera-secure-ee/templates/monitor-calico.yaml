@@ -885,11 +885,6 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.port
-          - name: ELASTIC_SCHEME
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-es-config
-                key: tigera.elasticsearch.scheme
           - name: ES_CA_CERT
             value: /certs/es-ca.pem
           - name: KB_CA_CERT
