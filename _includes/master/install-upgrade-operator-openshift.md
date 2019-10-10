@@ -76,7 +76,7 @@ Download the {{site.prodname}} manifests for OpenShift and add them to the gener
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-alertmanager.yaml -o manifests/01-crd-alertmanager.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-apiserver.yaml -o manifests/01-crd-apiserver.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-compliance.yaml -o manifests/01-crd-compliance.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-console.yaml -o manifests/01-crd-console.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-manager.yaml -o manifests/01-crd-manager.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-apmserver.yaml -o manifests/01-crd-eck-apmserver.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-elasticsearch.yaml -o manifests/01-crd-eck-elasticsearch.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-kibana.yaml -o manifests/01-crd-eck-kibana.yaml
@@ -111,7 +111,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-prometheus-service.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-tigera-es-config.yaml -o manifests/99-tigera-es-config.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-apiserver.yaml -o manifests/01-cr-apiserver.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-console.yaml -o manifests/01-cr-console.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-manager.yaml -o manifests/01-cr-manager.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-compliance.yaml -o manifests/01-cr-compliance.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-intrusiondetection.yaml -o manifests/01-cr-intrusiondetection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml

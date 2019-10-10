@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-operator --execute templates/crds/01-crd-console.yaml %}
-openshift: true
-{% endhelm %}

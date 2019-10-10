@@ -47,7 +47,7 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-cnx.cnx-manager-access
-  namespace: tigera-console
+  namespace: tigera-manager
 spec:
   order: 1
   tier: allow-cnx
@@ -83,7 +83,7 @@ spec:
     protocol: TCP
     source:
       selector: k8s-app == 'cnx-manager'
-      namespaceSelector: name == 'tigera-console'
+      namespaceSelector: name == 'tigera-manager'
     destination:
       ports: [5443]
 
@@ -199,7 +199,7 @@ spec:
     protocol: TCP
     source:
       selector: k8s-app == 'cnx-manager'
-      namespaceSelector: name == 'tigera-console'
+      namespaceSelector: name == 'tigera-manager'
     destination:
       ports: [9200]
   - action: Allow

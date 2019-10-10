@@ -21,13 +21,13 @@ spec:
 
 ---
 
-# This section configures the Tigera web console.
+# This section configures the Tigera web manager.
 apiVersion: operator.tigera.io/v1
-kind: Console
+kind: Manager
 metadata:
   name: tigera-secure
 spec:
-  # Authentication configuration for accessing the Tigera console.
+  # Authentication configuration for accessing the Tigera manager.
   # Default is to use token-based authentication.
   auth:
     type: Token
