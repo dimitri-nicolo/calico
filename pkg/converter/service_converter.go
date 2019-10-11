@@ -15,6 +15,8 @@
 package converter
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"sort"
 	"strconv"
@@ -28,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -48,6 +51,9 @@ const (
 
 	//NetworkSet created/managed by this controller will have following name prefix
 	NetworkSetNamePrefix = "kse."
+
+	//HashedNameLength is the length of hashed service name
+	HashedNameLength = 10
 )
 
 // ErrorServiceMustBeIgnored indicates that conversion did not happen because
@@ -132,6 +138,9 @@ func (s *serviceConverter) Convert(k8sObj interface{}) (interface{}, error) {
 // GetKey gets a K8s Services an returns the 'namespace/name' for the Calico NetworkSet as its key.
 func (s *serviceConverter) GetKey(obj interface{}) string {
 	k8sResource := obj.(*v1.Service)
+	if len(k8sResource.ObjectMeta.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
+		return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, hashName(k8sResource.ObjectMeta.Name))
+	}
 	return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, k8sResource.ObjectMeta.Name)
 }
 
@@ -142,7 +151,7 @@ func (s *serviceConverter) DeleteArgsFromKey(key string) (string, string) {
 
 // K8sServiceToNetworkSet converts a k8s Service to a NetworkSet.
 // The NetworkSet will have:
-// name = NetworkSetNamePrefix+<service name>
+// name = NetworkSetNamePrefix+<service name> (or hash(service name) if prefix+name would be longer than max allowed)
 // namespace = <service namespace>
 // labels = <service labeles> + extra label NetworkSetNamePrefix:<service name>
 // at least one annotations added. Other two added if service ports/protocols are not nil
@@ -247,6 +256,9 @@ func (s *endpointConverter) Convert(k8sObj interface{}) (interface{}, error) {
 // GetKey gets a K8s Endpoint an returns the 'namespace/name' for the Calico NetworkSet as its key.
 func (s *endpointConverter) GetKey(obj interface{}) string {
 	k8sResource := obj.(*v1.Endpoints)
+	if len(k8sResource.ObjectMeta.Name)+len(NetworkSetNamePrefix) > k8svalidation.DNS1123SubdomainMaxLength {
+		return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, hashName(k8sResource.ObjectMeta.Name))
+	}
 	return fmt.Sprintf("%s/%s%s", k8sResource.ObjectMeta.Namespace, NetworkSetNamePrefix, k8sResource.ObjectMeta.Name)
 }
 
@@ -258,7 +270,7 @@ func (s *endpointConverter) DeleteArgsFromKey(key string) (string, string) {
 // K8sEndpointToNetworkSet converts a k8s Endpoints to a NetworkSet.
 // K8sServiceToNetworkSet converts a k8s Service to a NetworkSet.
 // The NetworkSet will have:
-// name = NetworkSetNamePrefix+<service name>
+// name = NetworkSetNamePrefix+<service name> (or hash(service name) if prefix+name would be longer than max allowed)
 // namespace = <service namespace>
 // spec.Nets = endpoints addresses
 func (s *endpointConverter) k8sEndpointToNetworkSet(ep *corev1.Endpoints) (*model.KVPair, error) {
@@ -321,4 +333,13 @@ func sliceUniqMap(s []string) []string {
 		j++
 	}
 	return s[:j]
+}
+
+func hashName(name string) string {
+	hasher := sha1.New()
+	if _, err := hasher.Write([]byte(name)); err != nil {
+		return name
+	}
+	h := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return h[0:HashedNameLength]
 }
