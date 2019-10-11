@@ -243,7 +243,7 @@ run-kubernetes-master: stop-kubernetes-master
 			--logtostderr=true
 
 	# Wait until the apiserver is accepting requests.
-	while ! docker exec st-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+	while ! docker exec st-apiserver kubectl get crds; do echo "Waiting for apiserver to come up..."; sleep 3; done
 
 	# And run the controller manager.
 	docker run \
