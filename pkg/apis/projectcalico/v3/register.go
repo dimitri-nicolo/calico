@@ -69,6 +69,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ManagedClusterList{},
 		&ClusterInformation{},
 		&ClusterInformationList{},
+		&NetworkSet{},
+		&NetworkSetList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

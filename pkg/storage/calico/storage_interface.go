@@ -21,6 +21,8 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewGlobalNetworkPolicyStorage(opts)
 	case "projectcalico.org/globalnetworksets":
 		return NewGlobalNetworkSetStorage(opts)
+	case "projectcalico.org/networksets":
+		return NewNetworkSetStorage(opts)
 	case "projectcalico.org/licensekeys":
 		return NewLicenseKeyStorage(opts)
 	case "projectcalico.org/globalalerts":

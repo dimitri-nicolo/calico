@@ -97,6 +97,28 @@ type GlobalNetworkSet struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// NetworkPolicyList is a list of Policy objects.
+type NetworkSetList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []NetworkSet
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type NetworkSet struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.NetworkSetSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // LicenseKeyList is a list of LicenseKey objects.
 type LicenseKeyList struct {
 	metav1.TypeMeta

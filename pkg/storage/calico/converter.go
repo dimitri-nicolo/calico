@@ -52,6 +52,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiNetworkSet := &aapi.GlobalNetworkSet{}
 		GlobalNetworkSetConverter{}.convertToAAPI(lcgNetworkSet, aapiNetworkSet)
 		return aapiNetworkSet
+	case *libcalicoapi.NetworkSet:
+		lcgNetworkSet := libcalicoObject.(*libcalicoapi.NetworkSet)
+		aapiNetworkSet := &aapi.NetworkSet{}
+		NetworkSetConverter{}.convertToAAPI(lcgNetworkSet, aapiNetworkSet)
+		return aapiNetworkSet
 	case *libcalicoapi.LicenseKey:
 		lcgLicense := libcalicoObject.(*libcalicoapi.LicenseKey)
 		aapiLicenseKey := &aapi.LicenseKey{}

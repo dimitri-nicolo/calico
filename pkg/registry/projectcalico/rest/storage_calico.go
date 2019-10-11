@@ -39,6 +39,7 @@ import (
 	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
 	calicomanagedcluster "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/managedcluster"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
+	caliconetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkset"
 	calicoprofile "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/profile"
 	calicoremoteclusterconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/remoteclusterconfig"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
@@ -75,6 +76,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions: policyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	networksetRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networksets"))
+	if err != nil {
+		return nil, err
+	}
+	networksetOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   networksetRESTOptions,
+			Capacity:      1000,
+			ObjectType:    caliconetworkset.EmptyObject(),
+			ScopeStrategy: caliconetworkset.NewStrategy(scheme),
+			NewListFunc:   caliconetworkset.NewList,
+			GetAttrsFunc:  caliconetworkset.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: networksetRESTOptions,
 		},
 		p.StorageType,
 		authorizer,
@@ -442,6 +464,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
+	storage["networksets"] = caliconetworkset.NewREST(scheme, *networksetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
 
 	globalAlertsStorage, globalAlertsStatusStorage := calicogalert.NewREST(scheme, *gAlertOpts)

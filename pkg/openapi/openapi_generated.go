@@ -9159,6 +9159,83 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.NetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.NetworkSet": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.NetworkSetList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSetList is a list of NetworkSet objects.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.NetworkSet"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.NetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
 		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.Profile": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{

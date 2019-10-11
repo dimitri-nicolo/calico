@@ -94,6 +94,26 @@ type GlobalNetworkSet struct {
 	Spec calico.GlobalNetworkSetSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// NetworkSetList is a list of NetworkSet objects.
+type NetworkSetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []NetworkSet `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type NetworkSet struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.NetworkSetSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

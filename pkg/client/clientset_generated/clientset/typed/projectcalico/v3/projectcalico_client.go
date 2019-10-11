@@ -28,6 +28,7 @@ type ProjectcalicoV3Interface interface {
 	LicenseKeysGetter
 	ManagedClustersGetter
 	NetworkPoliciesGetter
+	NetworkSetsGetter
 	ProfilesGetter
 	RemoteClusterConfigurationsGetter
 	TiersGetter
@@ -96,6 +97,10 @@ func (c *ProjectcalicoV3Client) ManagedClusters() ManagedClusterInterface {
 
 func (c *ProjectcalicoV3Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
 	return newNetworkPolicies(c, namespace)
+}
+
+func (c *ProjectcalicoV3Client) NetworkSets(namespace string) NetworkSetInterface {
+	return newNetworkSets(c, namespace)
 }
 
 func (c *ProjectcalicoV3Client) Profiles() ProfileInterface {
