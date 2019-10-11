@@ -19,7 +19,7 @@ type Config struct {
 
 	// Elastic parameters
 	ElasticURI               string        `envconfig:"ELASTIC_URI"`
-	ElasticScheme            string        `envconfig:"ELASTIC_SCHEME" default:"http"`
+	ElasticScheme            string        `envconfig:"ELASTIC_SCHEME" default:"https"`
 	ElasticHost              string        `envconfig:"ELASTIC_HOST" default:"elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"`
 	ElasticPort              int           `envconfig:"ELASTIC_PORT" default:"9200"`
 	ElasticUser              string        `envconfig:"ELASTIC_USER" default:"elastic"`
