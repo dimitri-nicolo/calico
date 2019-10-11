@@ -16,9 +16,9 @@ GO_BUILD_VER     ?= v0.25
 CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME     ?= github.com/projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
-BINDIR           ?= bin
+BINDIR	   ?= bin
 TOP_SRC_DIR       = lib
-MY_UID           := $(shell id -u)
+MY_UID	   := $(shell id -u)
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
@@ -32,7 +32,7 @@ else
 endif
 
 EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/* -v $(GOMOD_CACHE):/go/pkg/mod:rw
-GIT_CONFIG_SSH          ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+GIT_CONFIG_SSH	  ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 GINKGO_ARGS		:= -mod=vendor
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
@@ -50,7 +50,7 @@ DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
 
 # Create a list of files upon which the generated file depends, skip the generated file itself
 UPGRADE_SRCS := $(filter-out ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go, \
-                             $(wildcard ./lib/upgrade/migrator/clients/v1/k8s/custom/*.go))
+			     $(wildcard ./lib/upgrade/migrator/clients/v1/k8s/custom/*.go))
 
 # Create a list of filesupon which the generated files depend on, skip the generated files itself
 APIS_SRCS := $(filter-out ./lib/apis/v3/zz_generated.deepcopy.go ./lib/apis/v3/openapi_generated.go, $(wildcard ./lib/apis/v3/*.go))
@@ -72,9 +72,9 @@ vendor: go.mod go.sum
 	$(DOCKER_GO_BUILD) go mod vendor
 
 GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
-           ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
-           ./lib/apis/v3/openapi_generated.go \
-           ./lib/numorstring/openapi_generated.go
+	   ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
+	   ./lib/apis/v3/openapi_generated.go \
+	   ./lib/numorstring/openapi_generated.go
 
 $(BINDIR)/openapi-gen: vendor
 	$(DOCKER_GO_BUILD) \
@@ -236,7 +236,7 @@ run-kubernetes-master: stop-kubernetes-master
 		/hyperkube kube-apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
-	        	--etcd-servers=http://127.0.0.1:2379 \
+			--etcd-servers=http://127.0.0.1:2379 \
 			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
 			--service-cluster-ip-range=10.101.0.0/16 \
 			--v=10 \
@@ -251,11 +251,11 @@ run-kubernetes-master: stop-kubernetes-master
 		--detach \
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
 		/hyperkube kube-controller-manager \
-                        --master=127.0.0.1:8080 \
-                        --min-resync-period=3m \
-                        --allocate-node-cidrs=true \
-                        --cluster-cidr=10.10.0.0/16 \
-                        --v=5
+			--master=127.0.0.1:8080 \
+			--min-resync-period=3m \
+			--allocate-node-cidrs=true \
+			--cluster-cidr=10.10.0.0/16 \
+			--v=5
 
 	# Create CustomResourceDefinition (CRD) for Calico resources
 	# from the manifest crds.yaml
@@ -327,17 +327,17 @@ ci: clean mod-download static-checks test
 ## Display this help text
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
 	$(info Available targets)
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
+	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
+		nb = sub( /^## /, "", helpMsg );				\
+		if(nb == 0) {						   \
+			helpMsg = $$0;					      \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
+		}							       \
+		if (nb)							 \
 			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=23                                                            \
+	}								   \
+	{ helpMsg = $$0 }'						  \
+	width=23							    \
 	$(MAKEFILE_LIST)
 	@echo
 	@echo 'To run a specific test suite, use: make test WHAT="<DIR containing test-suite>"'
