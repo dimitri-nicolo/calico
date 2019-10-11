@@ -92,4 +92,5 @@ type NetworkSet struct {
 	Nets                 []net.IPNet       `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
 	Labels               map[string]string `json:"labels,omitempty" validate:"omitempty,labels"`
 	AllowedEgressDomains []string          `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,wildname"`
+	ProfileIDs           []string          `json:"profile_ids"`
 }
