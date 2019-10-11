@@ -73,12 +73,6 @@ template:
           configMapKeyRef:
             name: tigera-es-config
             key: tigera.elasticsearch.cluster-name
-      - name: ELASTIC_SCHEME
-        valueFrom:
-          configMapKeyRef:
-            name: tigera-es-config
-            key: tigera.elasticsearch.scheme
-            optional: true
       - name: ELASTIC_HOST
         valueFrom:
           configMapKeyRef:

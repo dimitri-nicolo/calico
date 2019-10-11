@@ -329,11 +329,6 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.access-mode
-          - name: ELASTIC_SCHEME
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-es-config
-                key: tigera.elasticsearch.scheme
           - name: ELASTIC_HOST
             valueFrom:
               configMapKeyRef:

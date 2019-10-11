@@ -1063,11 +1063,6 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.port
-          - name: ELASTIC_SCHEME
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-es-config
-                key: tigera.elasticsearch.scheme
           - name: ELASTIC_USER
             valueFrom:
               secretKeyRef:
@@ -1091,8 +1086,6 @@ spec:
             value: tigera-elasticsearch-es-http.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
             value: "9200"
-          - name: ELASTIC_SCHEME
-            value: "https"
 {{- end}}
           - name: ELASTIC_CA
             value: /certs/ca.pem
