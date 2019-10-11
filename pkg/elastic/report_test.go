@@ -73,6 +73,8 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 	BeforeEach(func() {
 		err := os.Setenv("ELASTIC_HOST", "localhost")
 		Expect(err).NotTo(HaveOccurred())
+		err = os.Setenv("ELASTIC_SCHEME", "http")
+		Expect(err).NotTo(HaveOccurred())
 		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
 		Expect(err).NotTo(HaveOccurred())
 		elasticClient = MustGetElasticClient()

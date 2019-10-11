@@ -59,6 +59,7 @@ var _ = Describe("Benchmark elastic tests", func() {
 		os.Setenv("LOG_LEVEL", "debug")
 		os.Setenv("ELASTIC_HOST", "localhost")
 		os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
+		os.Setenv("ELASTIC_SCHEME", "http")
 		elasticClient = MustGetElasticClient()
 		elasticClient.(Resetable).Reset()
 	})
