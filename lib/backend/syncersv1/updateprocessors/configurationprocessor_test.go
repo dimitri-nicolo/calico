@@ -490,11 +490,11 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		checkExpectedConfigs(
 			kvps,
 			isGlobalBgpConfig,
-			numBgpConfigs+3,
+			numBgpConfigs+2,
 			map[string]interface{}{
-				"NewConfigType":           nil,
-				"AnotherNewConfigType":    nil,
-				"YetAnotherNewConfigType": nil,
+				"NewConfigType":        nil,
+				"AnotherNewConfigType": nil,
+				//				"YetAnotherNewConfigType": nil,
 			},
 		)
 
