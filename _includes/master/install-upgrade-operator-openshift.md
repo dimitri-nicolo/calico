@@ -80,7 +80,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-manager.yaml -o man
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-apmserver.yaml -o manifests/01-crd-eck-apmserver.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-elasticsearch.yaml -o manifests/01-crd-eck-elasticsearch.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-kibana.yaml -o manifests/01-crd-eck-kibana.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-trustedrelationship.yaml -o manifests/01-crd-eck-trustedrelationship.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-trustrelationship.yaml -o manifests/01-crd-eck-trustrelationship.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-installation.yaml -o manifests/01-crd-installation.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-intrusiondetection.yaml -o manifests/01-crd-intrusiondetection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-logstorage.yaml -o manifests/01-crd-logstorage.yaml
