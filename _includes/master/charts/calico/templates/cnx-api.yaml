@@ -152,6 +152,7 @@ metadata:
 rules:
 - apiGroups: ["projectcalico.org"]
   resources:
+    - networksets
     - globalnetworksets
     - globalnetworkpolicies
     - tier.globalnetworkpolicies
@@ -231,6 +232,7 @@ rules:
       - hostendpoints
       - licensekeys
       - globalnetworksets
+      - networksets
       - globalthreatfeeds
       - globalreporttypes
       - globalreports
@@ -335,6 +337,7 @@ data:
         - globalnetworkpolicies
         - networkpolicies
         - globalnetworksets
+        - networksets
         - tiers
         - hostendpoints
 
