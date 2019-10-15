@@ -370,6 +370,11 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 	// Wait for the correct number of updates. If we don't get them then the expect will fail below.
 	st.waitForNumUpdates(expected)
 
+	// TODO(casey): This is a hack - even though we've waited for the number of updates to exist, we might not have the
+	// correct ones. This is because the sanitizing process below might filter some out. Wait a litle bit
+	// extra just to make sure we've got everything. If we don't get them within 5 seconds, something must be wrong, right?
+	time.Sleep(5 * time.Second)
+
 	// Extract the updates and remove the updates and onUpdates from our cache.
 	st.lock.Lock()
 	defer st.lock.Unlock()
