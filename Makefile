@@ -358,7 +358,8 @@ sub-base-tag-images-%:
 .PHONY: static-checks
 LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
+	@echo "Linting is currently disabled."
+	#$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
 
 foss-checks:
 	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
