@@ -40,6 +40,7 @@ func buildSimpleExternalService() (svc *v1.Service, ep *v1.Endpoints) {
 			Type:                  v1.ServiceTypeNodePort,
 			ClusterIP:             "127.0.0.1",
 			ExternalTrafficPolicy: v1.ServiceExternalTrafficPolicyTypeLocal,
+			ExternalIPs:           []string{externalIP1, externalIP2},
 		}}
 	ep = &v1.Endpoints{
 		ObjectMeta: meta,
@@ -74,7 +75,7 @@ func buildSimpleService2() (svc *v1.Service, ep *v1.Endpoints) {
 	svc = &v1.Service{
 		ObjectMeta: meta,
 		Spec: v1.ServiceSpec{
-			Type:                  v1.ServiceTypeClusterIP,
+			Type:                  v1.ServiceTypeNodePort,
 			ClusterIP:             "127.0.0.5",
 			ExternalTrafficPolicy: v1.ServiceExternalTrafficPolicyTypeLocal,
 			ExternalIPs:           []string{externalIP1, externalIP2},
@@ -250,7 +251,8 @@ var _ = Describe("RouteGenerator", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				rg.setRouteForSvc(nil, ep)
-				Expect(rg.svcRouteMap["foo-int/bar-int"]).To(Equal("127.0.0.2/32"))
+				Expect(len(rg.svcRouteMap)).To((Equal(1)))
+				Expect(rg.svcRouteMap["foo-int/bar-int"]["127.0.0.2/32"]).To(BeTrue())
 				rg.unsetRouteForSvc(ep)
 				Expect(rg.svcRouteMap["foo-int/bar-int"]).To(BeEmpty())
 			})
@@ -268,16 +270,22 @@ var _ = Describe("RouteGenerator", func() {
 		BeforeEach(func() {
 			svc, ep = buildSimpleExternalService()
 			svc2, ep2 = buildSimpleService2()
+			svcInt, epInt = buildSimpleInternalService(true)
 
 			addEndpointSubset(ep, rg.nodeName)
 			addEndpointSubset(ep2, rg.nodeName)
+			addEndpointSubset(epInt, rg.nodeName)
 			err := rg.epIndexer.Add(ep)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.epIndexer.Add(ep2)
 			Expect(err).NotTo(HaveOccurred())
+			err = rg.epIndexer.Add(epInt)
+			Expect(err).NotTo(HaveOccurred())
 			err = rg.svcIndexer.Add(svc)
 			Expect(err).NotTo(HaveOccurred())
 			err = rg.svcIndexer.Add(svc2)
+			Expect(err).NotTo(HaveOccurred())
+			err = rg.svcIndexer.Add(svcInt)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -389,12 +397,13 @@ var _ = Describe("RouteGenerator", func() {
 
 				rg.onSvcAdd(svcInt)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 1))
-				Expect(rg.svcRouteMap["foo-int/bar-int"]).To(Equal("127.0.0.2/32"))
+				Expect(len(rg.svcRouteMap)).To((Equal(1)))
+				Expect(rg.svcRouteMap["foo-int/bar-int"]["127.0.0.2/32"]).To(BeTrue())
 				Expect(rg.client.cache["/calico/staticroutes/127.0.0.2-32"]).To(Equal("127.0.0.2/32"))
 
 				// delete
-				rg.onSvcDelete(svc)
-				Expect(rg.client.cacheRevision).To(Equal(initRevision + 1))
+				rg.onSvcDelete(svcInt)
+				Expect(rg.client.cacheRevision).To(Equal(initRevision + 2))
 				Expect(rg.svcRouteMap).ToNot(HaveKey("foo/bar"))
 				Expect(rg.client.cache).ToNot(HaveKey("/calico/staticroutes/127.0.0.1-32"))
 			})
@@ -435,13 +444,15 @@ var _ = Describe("RouteGenerator", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onSvcUpdate(nil, svc)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 1))
-				Expect(rg.svcRouteMap["foo-int/bar-int"]).To(Equal("127.0.0.2/32"))
+				Expect(len(rg.svcRouteMap)).To((Equal(1)))
+				Expect(rg.svcRouteMap["foo-int/bar-int"]["127.0.0.2/32"]).To(BeTrue())
 				Expect(rg.client.cache["/calico/staticroutes/127.0.0.2-32"]).To(Equal("127.0.0.2/32"))
 
 				// delete the special annotation
 				delete(svc.Annotations, advertiseClusterIPAnnotation)
 				rg.onSvcUpdate(nil, svc)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 2))
+				Expect(rg.svcRouteMap).To(BeEmpty())
 				Expect(rg.svcRouteMap).ToNot(HaveKey("foo-int/bar-int"))
 				Expect(rg.client.cache).ToNot(HaveKey("/calico/staticroutes/127.0.0.2-32"))
 			})
@@ -473,7 +484,9 @@ var _ = Describe("RouteGenerator", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onEPAdd(epInt)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 1))
-				Expect(rg.svcRouteMap["foo-int/bar-int"]).To(Equal("127.0.0.2/32"))
+
+				Expect(len(rg.svcRouteMap)).To((Equal(1)))
+				Expect(rg.svcRouteMap["foo-int/bar-int"]["127.0.0.2/32"]).To(BeTrue())
 				Expect(rg.client.cache["/calico/staticroutes/127.0.0.2-32"]).To(Equal("127.0.0.2/32"))
 
 				// delete
@@ -509,7 +522,8 @@ var _ = Describe("RouteGenerator", func() {
 				initRevision := rg.client.cacheRevision
 				rg.onEPUpdate(nil, epInt)
 				Expect(rg.client.cacheRevision).To(Equal(initRevision + 1))
-				Expect(rg.svcRouteMap["foo-int/bar-int"]).To(Equal("127.0.0.2/32"))
+				Expect(len(rg.svcRouteMap)).To((Equal(1)))
+				Expect(rg.svcRouteMap["foo-int/bar-int"]["127.0.0.2/32"]).To(BeTrue())
 				Expect(rg.client.cache["/calico/staticroutes/127.0.0.2-32"]).To(Equal("127.0.0.2/32"))
 
 				// delete the special annotation

@@ -428,7 +428,7 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints
 		return false
 	}
 
-	// advertise ClusterIP services only if they have an annotation override
+	// advertise the /32 of ClusterIP services only if they have an annotation override
 	if svc.Spec.Type == v1.ServiceTypeClusterIP {
 		if _, ok := svc.ObjectMeta.Annotations[advertiseClusterIPAnnotation]; !ok {
 			logc.Debug("Skipping ClusterIP service without annotation override")
