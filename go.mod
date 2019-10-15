@@ -3,8 +3,7 @@ module github.com/kelseyhightower/confd
 go 1.12
 
 require (
-	cloud.google.com/go v0.26.0
-	github.com/Azure/go-autorest v10.6.2+incompatible
+	cloud.google.com/go v0.38.0
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/semver v1.2.2
 	github.com/Masterminds/sprig v2.19.0+incompatible
@@ -12,12 +11,11 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 	github.com/aokoli/goutils v1.1.0
 	github.com/aws/aws-sdk-go v1.23.22 // indirect
-	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
-	github.com/coreos/etcd v3.3.8+incompatible
+	github.com/beorn7/perks v1.0.0
+	github.com/coreos/etcd v3.3.15+incompatible
 	github.com/davecgh/go-spew v1.1.1
-	github.com/dgrijalva/jwt-go v3.0.1-0.20160705203006-01aeca54ebda+incompatible
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/emicklei/go-restful v2.9.5+incompatible
-	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/jsonpointer v0.19.2
@@ -31,9 +29,9 @@ require (
 	github.com/golang/protobuf v1.3.1
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 	github.com/google/gofuzz v1.0.0
-	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed
+	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d
-	github.com/gophercloud/gophercloud v0.0.0-20180330165814-781450b3c4fc
+	github.com/gophercloud/gophercloud v0.1.0
 	github.com/gregjones/httpcache v0.0.0-20170728041850-787624de3eb7
 	github.com/hashicorp/consul/api v1.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1
@@ -44,51 +42,52 @@ require (
 	github.com/kelseyhightower/envconfig v1.3.1-0.20180517194557-dd1402a4d99d
 	github.com/kelseyhightower/memkv v0.1.1
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af
-	github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63
+	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e
 	github.com/matttproud/golang_protobuf_extensions v1.0.1
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 	github.com/modern-go/reflect2 v1.0.1
-	github.com/onsi/ginkgo v1.4.1-0.20170829012221-11459a886d9c
-	github.com/onsi/gomega v1.2.1-0.20170829124025-dcabb60a477c
-	github.com/pborman/uuid v0.0.0-20150603214016-ca53cad383ca
+	github.com/onsi/ginkgo v1.10.1
+	github.com/onsi/gomega v1.7.0
+	github.com/pborman/uuid v1.2.0
 	github.com/peterbourgon/diskv v2.0.1+incompatible
+	github.com/projectcalico/confd v3.2.0+incompatible // indirect
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
-	github.com/prometheus/client_golang v0.9.2
-	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
-	github.com/prometheus/common v0.2.0
-	github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a
+	github.com/prometheus/client_golang v0.9.4
+	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+	github.com/prometheus/common v0.4.1
+	github.com/prometheus/procfs v0.0.2
 	github.com/robfig/cron v1.2.0
 	github.com/samuel/go-zookeeper v0.0.0-20190810000440-0ceca61e4d75 // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.3
 	github.com/ugorji/go v1.1.7 // indirect
 	github.com/xordataexchange/crypt v0.0.2 // indirect
 	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
-	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
 	golang.org/x/text v0.3.2
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	google.golang.org/appengine v1.5.0
-	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
-	google.golang.org/grpc v1.22.0
+	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873
+	google.golang.org/grpc v1.23.0
 	gopkg.in/go-playground/validator.v9 v9.28.0
 	gopkg.in/inf.v0 v0.9.0
-	gopkg.in/yaml.v2 v2.2.2
-	k8s.io/api v0.0.0-20180628040859-072894a440bd
-	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
-	k8s.io/apiserver v0.0.0-20190324105220-f881eae9ec04
-	k8s.io/client-go v8.0.0+incompatible
+	gopkg.in/yaml.v2 v2.2.4
+	k8s.io/api v0.0.0-20191010143144-fbf594f18f80
+	k8s.io/apimachinery v0.0.0-20191014065749-fb3eea214746
+	k8s.io/apiserver v0.0.0-20191010200905-b803d9d0d3eb
+	k8s.io/client-go v0.0.0-20191010200049-172b42569cca
 	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20190917002945-931ed2638eb9
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191013032835-a13baff29e71
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191015080800-8447f77e8aa6
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
