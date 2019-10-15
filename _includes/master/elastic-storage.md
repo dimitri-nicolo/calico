@@ -4,22 +4,33 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-1. The bundled Elasticsearch operator is configured to use a `StorageClass` called `elasticsearch-storage` and local storage.
-   Use the following command to apply the manifest.
+1. The bundled ElasticSearch operator is configured to use a `StorageClass` called `elasticsearch-storage`.
+   Create a StorageClass with that name providing persistent storage that meets the requirements.
 
-   ```bash
-   {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/manifests/elastic-storage-local.yaml
+   Example 1: Local storage.  You must also provision a persistent volume in this StorageClass for each ElasticSearch node.
+   The [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)
+   may be useful for this.
+
+   ```
+   apiVersion: storage.k8s.io/v1
+   kind: StorageClass
+   metadata:
+     name: elasticsearch-storage
+   provisioner: kubernetes.io/no-provisioner
+   volumeBindingMode: WaitForFirstConsumer
    ```
 
-   > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/manifests/elastic-storage-local.yaml){:target="_blank"}.
-   {: .alert .alert-info}
+   Example 2: AWS EBS storage.  Your cluster must be configured with the AWS cloud provider integration.
 
-   > **Tip**: To use storage other than local, refer to the
-   > [Kubernetes documentation on StorageClasses](https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner)
-   > for a list of alternatives and some sample manifests. You may need to configure
-   > a provisioner or cloud provider integration. Edit the manifest above or create a new
-   > one with a `StorageClass` called `elasticsearch-storage` and the other necessary details.
-   > Then apply it. `{{cli}} apply -f my-storage-class.yaml`.
-   {: .alert .alert-success}
+   ```
+   apiVersion: storage.k8s.io/v1
+   kind: StorageClass
+   metadata:
+     name: elasticsearch-storage
+   provisioner: kubernetes.io/aws-ebs
+   parameters:
+     type: gp2
+   volumeBindingMode: WaitForFirstConsumer
+   ```
+
+   Alternatively, you can edit the `ElasticSearch` resource in `operator.yaml` to use an existing StorageClass.

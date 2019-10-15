@@ -61,22 +61,17 @@ in the [ElasticSearch operator documentation](https://github.com/upmc-enterprise
 ## Managing storage for operator created clusters
 
 The operator created cluster stores its data in volumes created through
-a Kubernetes `StorageClass`.  Three options are bundled with {{site.prodname}} -
-in manifests called `elastic-storage*.yaml`.  The installation options cover
-how to get these manifests - a few notes on each option follow.
+a Kubernetes `StorageClass`.  It is your responsibility to make a suitable StorageClass available.
+The cluster is configured to use a StorageClass called `elasticsearch-storage`, but this name can be modified
+to refer to any suitable StorageClass you have set up.
 
 #### Local
 
-The `local` implementation creates two volumes using the host filesystem.
-Those volumes are stored in `/var/tigera/elastic-data`, which must be writable
-by Kubernetes.
+[Local volumes](https://kubernetes.io/docs/concepts/storage/volumes/#local) allow ElasticSearch to use
+high performance local drives for storage.
 
-The [elastic-storage-local.yaml](../../getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml)
-manifest creates two of these volumes by default - enough for the default
-1 master, 1 client, 1 data cluster set up.  If you wish to modify the size of
-the volumes, they must match the configured request in the `elasticsearchcluster`
-CRD exactly.
+#### Other remote storage
 
-> **Warning**: The `local` `StorageClass` only works on single node clusters -
-> choose another implementation for production use.
-{: .alert .alert-danger}
+{{site.prodname}} is also tested using AWS EBS / GCE PD off-instance storage for ElasticSearch.
+You should be able to use any StorageClass that offers performance comparable to the SSD variants
+of those products, although note that local storage will still offer the best performance.
