@@ -169,7 +169,7 @@ Usage: $(basename "$0")
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
           [-n networking]      # Specify the networking ("calico"|"other"|"aws"); default "calico"
-          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "local"
+          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "none"
           [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
           [-v version]         # Tigera Secure EE version; default: "v2.1"
           [-u]                 # Uninstall Tigera Secure EE
