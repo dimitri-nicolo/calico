@@ -25,7 +25,6 @@ import (
 
 	"github.com/Masterminds/sprig"
 
-	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
@@ -149,11 +148,11 @@ var (
 		Stage:      "RequestReceived",
 		RequestURI: "/api/v1/foo/bar",
 		Verb:       "list",
-		User: authnv1.UserInfo{
+		User: audit.UserInfo{
 			Username: "userFoo",
 			Groups:   []string{"groupFoo"},
 		},
-		ImpersonatedUser: &authnv1.UserInfo{
+		ImpersonatedUser: &audit.UserInfo{
 			Username: "imporUserFoo",
 			Groups:   []string{"imperGroupFoo"},
 		},
