@@ -13,6 +13,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/tigera/compliance/pkg/archive"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/flow"
@@ -60,6 +61,21 @@ func Run(
 	xc := xrefcache.NewXrefCache(cfg, healthy)
 	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, lister, eventer, xc)
 
+	var longTermArchiver archive.LogDispatcher
+	if reportCfg.ArchiveLogsEnabled {
+		logrus.WithFields(logrus.Fields{
+			"directory": reportCfg.ArchiveLogsDirectory,
+			"max_size":  reportCfg.ArchiveLogsMaxFileSizeMB,
+			"max_files": reportCfg.ArchiveLogsMaxFiles,
+		}).Info("Creating Archive Logs FileDispatcher")
+		longTermArchiver = archive.NewFileDispatcher(
+			reportCfg.ArchiveLogsDirectory,
+			archive.ReportLogFilename,
+			reportCfg.ArchiveLogsMaxFileSizeMB,
+			reportCfg.ArchiveLogsMaxFiles,
+		)
+	}
+
 	r := &reporter{
 		ctx: ctx,
 		cfg: reportCfg,
@@ -89,7 +105,8 @@ func Run(
 			StartTime:      metav1.Time{cfg.ParsedReportStart},
 			EndTime:        metav1.Time{cfg.ParsedReportEnd},
 		},
-		flowLogFilter: flow.NewFlowLogFilter(),
+		flowLogFilter:    flow.NewFlowLogFilter(),
+		longTermArchiver: longTermArchiver,
 	}
 	return r.run()
 }
@@ -118,6 +135,9 @@ type reporter struct {
 
 	// Flow logs tracking information.
 	flowLogFilter *flow.FlowLogFilter
+
+	// Archive reports for long-term storage in secondary store (e.g. S3)
+	longTermArchiver archive.LogDispatcher
 }
 
 type reportEndpoint struct {
@@ -216,6 +236,23 @@ func (r *reporter) run() error {
 		ReportData: r.data,
 		UISummary:  summary,
 	}, time.Now())
+
+	// Indicate we are healthy.
+	r.healthy()
+
+	// Set the generation time and store the report data.
+	err = r.longTermArchiver.Initialize()
+	if err != nil {
+		r.clog.WithError(err).
+			Error("Long-term storage file dispatcher unable to initialize")
+		return err
+	}
+
+	r.clog.Debug("Sending report to long-term storage")
+	err = r.longTermArchiver.Dispatch(api.ArchivedReportData{
+		ReportData: r.data,
+		UISummary:  summary,
+	})
 
 	// Indicate we are healthy.
 	r.healthy()

@@ -114,6 +114,17 @@ func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []stri
 	return nil
 }
 
+// Fake log dispatcher for archiving Compliance reports
+type fakeLogDispatcher struct {
+}
+
+func (f *fakeLogDispatcher) Initialize() error {
+	return nil
+}
+func (f *fakeLogDispatcher) Dispatch(data interface{}) error {
+	return nil
+}
+
 var _ = Describe("Report tests", func() {
 	var r *reporter
 	var xc *XrefCacheTester
@@ -164,6 +175,8 @@ var _ = Describe("Report tests", func() {
 		reportStorer = &fakeReportStorer{}
 		auditer = &fakeAuditer{}
 		flowReporter := &fakeFlowReporter{}
+		longTermArchiver := &fakeLogDispatcher{}
+
 		r = &reporter{
 			ctx: context.Background(),
 			cfg: cfg,
@@ -192,7 +205,8 @@ var _ = Describe("Report tests", func() {
 				StartTime:      metav1.Time{cfg.ParsedReportStart},
 				EndTime:        metav1.Time{cfg.ParsedReportEnd},
 			},
-			flowLogFilter: flow.NewFlowLogFilter(),
+			flowLogFilter:    flow.NewFlowLogFilter(),
+			longTermArchiver: longTermArchiver,
 		}
 
 		// Start the reporter and wait until start has been called.

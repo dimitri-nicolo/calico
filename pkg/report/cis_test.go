@@ -231,6 +231,7 @@ var _ = Describe("CIS report tests", func() {
 		// Create a fake backends
 		benchmarker = &fakeBenchmarker{}
 		reportStorer = &fakeReportStorer{}
+		longTermArchiver := &fakeLogDispatcher{}
 
 		// Create a reporter "by hand" passing in test interfaces.
 		r = &reporter{
@@ -258,7 +259,8 @@ var _ = Describe("CIS report tests", func() {
 				StartTime:      metav1.Time{cfg.ParsedReportStart},
 				EndTime:        metav1.Time{cfg.ParsedReportEnd},
 			},
-			flowLogFilter: flow.NewFlowLogFilter(),
+			flowLogFilter:    flow.NewFlowLogFilter(),
+			longTermArchiver: longTermArchiver,
 		}
 
 		run = func() {
