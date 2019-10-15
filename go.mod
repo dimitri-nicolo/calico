@@ -12,19 +12,18 @@ require (
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/projectcalico/confd v3.2.0+incompatible // indirect
 	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	k8s.io/api v0.0.0-20191010143144-fbf594f18f80
-	k8s.io/apimachinery v0.0.0-20191014065749-fb3eea214746
-	k8s.io/client-go v0.0.0-20191010200049-172b42569cca
+	k8s.io/api v0.0.0-20180628040859-072894a440bd
+	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
+	k8s.io/client-go v8.0.0+incompatible
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191013032835-a13baff29e71
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191015080800-8447f77e8aa6
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191015234631-4407479bac37
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
