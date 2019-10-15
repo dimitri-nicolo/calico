@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,12 +89,7 @@ func (o *Options) validate() (err error) {
 	return
 }
 
-func New(
-	addr string,
-	myVersion, myHostname, myInfo string,
-	cbs api.SyncerCallbacks,
-	options *Options,
-) *SyncerClient {
+func New(addr string, myVersion, myHostname, myInfo string, cbs api.SyncerCallbacks, options *Options) *SyncerClient {
 	if err := options.validate(); err != nil {
 		log.WithField("options", options).WithError(err).Fatal("Invalid options")
 	}
@@ -208,7 +203,7 @@ func (s *SyncerClient) connect(cxt context.Context) error {
 			log.WithError(err).Error("Failed to load certificate and key")
 			return err
 		}
-		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}}
+		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}, MaxVersion: tls.VersionTLS12}
 
 		// Set InsecureSkipVerify true, because when it's false crypto/tls insists on
 		// verifying the server's hostname or IP address against tlsConfig.ServerName, and

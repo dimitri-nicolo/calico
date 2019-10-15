@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -288,7 +288,7 @@ func (s *Server) serve(cxt context.Context) {
 				"keyFile":  s.config.KeyFile,
 			}).WithError(tlsErr).Panic("Failed to load certificate and key")
 		}
-		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}}
+		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}, MaxVersion: tls.VersionTLS12}
 		tlsConfig.Rand = rand.Reader
 
 		// Arrange for server to verify the clients' certificates.

@@ -375,6 +375,10 @@ func (b *mockDatastore) getNumInitCalls() int {
 	return b.initCalled
 }
 
+func (b *mockDatastore) GlobalAlerts() clientv3.GlobalAlertInterface {
+	return nil
+}
+
 var _ RealClientV3 = (*mockDatastore)(nil)
 
 type dummySyncer struct {
