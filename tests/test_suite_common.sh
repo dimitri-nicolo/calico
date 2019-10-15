@@ -25,7 +25,6 @@ execute_test_suite() {
 	run_extra_test test_bgp_password
 	run_extra_test test_node_deletion
 	run_extra_test test_idle_peers
-	run_extra_test test_static_routes
 	run_extra_test test_router_id_hash
 	echo "Extra etcdv3 tests passed"
     fi
@@ -506,6 +505,7 @@ execute_tests_oneshot() {
         run_edited_individual_test_oneshot 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_individual_test_oneshot 'explicit_peering/selectors'
         run_individual_test_oneshot 'explicit_peering/route_reflector'
+        run_individual_test_oneshot 'mesh/static-routes'
     done
 }
 
