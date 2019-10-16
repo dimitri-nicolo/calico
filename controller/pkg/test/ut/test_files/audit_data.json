@@ -1,0 +1,146 @@
+[
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1beta1",
+    "metadata": {
+      "creationTimestamp": "2019-10-03T23:49:23Z"
+    },
+    "level": "RequestResponse",
+    "timestamp": "2019-10-03T23:49:23Z",
+    "auditID": "d98df66e-8d1b-4874-8659-8edcc0dc8782",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/kube-system/endpoints/kube-scheduler?timeout=10s",
+    "verb": "update",
+    "user": {
+      "username": "system:kube-scheduler",
+      "groups": [
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.162.0.11"
+    ],
+    "userAgent": "kube-scheduler/v1.12.7 (linux/amd64) kubernetes/6f48297/leader-election",
+    "objectRef": {
+      "resource": "endpoints",
+      "namespace": "kube-system",
+      "name": "kube-scheduler",
+      "uid": "0715ea55-e637-11e9-a9b8-42010aa2000b",
+      "apiVersion": "v1",
+      "resourceVersion": "2624"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "Endpoints",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "kube-scheduler",
+        "namespace": "kube-system",
+        "selfLink": "/api/v1/namespaces/kube-system/endpoints/kube-scheduler",
+        "uid": "0715ea55-e637-11e9-a9b8-42010aa2000b",
+        "resourceVersion": "2624",
+        "creationTimestamp": "2019-10-03T23:39:22Z",
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"stern-crc-kadm-ms_ff17f9f5-e636-11e9-a84f-42010aa2000b\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2019-10-03T23:39:22Z\",\"renewTime\":\"2019-10-03T23:49:23Z\",\"leaderTransitions\":0}"
+        }
+      }
+    },
+    "responseObject": {
+      "kind": "Endpoints",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "kube-scheduler",
+        "namespace": "kube-system",
+        "selfLink": "/api/v1/namespaces/kube-system/endpoints/kube-scheduler",
+        "uid": "0715ea55-e637-11e9-a9b8-42010aa2000b",
+        "resourceVersion": "2628",
+        "creationTimestamp": "2019-10-03T23:39:22Z",
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"stern-crc-kadm-ms_ff17f9f5-e636-11e9-a84f-42010aa2000b\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2019-10-03T23:39:22Z\",\"renewTime\":\"2019-10-03T23:49:23Z\",\"leaderTransitions\":0}"
+        }
+      }
+    },
+    "requestReceivedTimestamp": "2019-10-03T23:49:23.574687Z",
+    "stageTimestamp": "2019-10-03T23:49:23.615229Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-scheduler\" of ClusterRole \"system:kube-scheduler\" to User \"system:kube-scheduler\""
+    },
+    "name": "kube-scheduler"
+  },
+  {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1beta1",
+    "metadata": {
+      "creationTimestamp": "2019-10-03T23:49:25Z"
+    },
+    "level": "RequestResponse",
+    "timestamp": "2019-10-03T23:49:25Z",
+    "auditID": "60ca93e7-df18-4768-a374-ac624d7a4470",
+    "stage": "ResponseComplete",
+    "requestURI": "/api/v1/namespaces/kube-system/endpoints/kube-controller-manager?timeout=10s",
+    "verb": "update",
+    "user": {
+      "username": "system:kube-controller-manager",
+      "groups": [
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.162.0.11"
+    ],
+    "userAgent": "kube-controller-manager/v1.12.7 (linux/amd64) kubernetes/6f48297/leader-election",
+    "objectRef": {
+      "resource": "endpoints",
+      "namespace": "kube-system",
+      "name": "kube-controller-manager",
+      "uid": "08073b11-e637-11e9-a9b8-42010aa2000b",
+      "apiVersion": "v1",
+      "resourceVersion": "2627"
+    },
+    "responseStatus": {
+      "metadata": {},
+      "code": 200
+    },
+    "requestObject": {
+      "kind": "Endpoints",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "kube-controller-manager",
+        "namespace": "kube-system",
+        "selfLink": "/api/v1/namespaces/kube-system/endpoints/kube-controller-manager",
+        "uid": "08073b11-e637-11e9-a9b8-42010aa2000b",
+        "resourceVersion": "2627",
+        "creationTimestamp": "2019-10-03T23:39:24Z",
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"stern-crc-kadm-ms_ffdc52cd-e636-11e9-b4dc-42010aa2000b\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2019-10-03T23:39:24Z\",\"renewTime\":\"2019-10-03T23:49:25Z\",\"leaderTransitions\":0}"
+        }
+      }
+    },
+    "responseObject": {
+      "kind": "Endpoints",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "kube-controller-manager",
+        "namespace": "kube-system",
+        "selfLink": "/api/v1/namespaces/kube-system/endpoints/kube-controller-manager",
+        "uid": "08073b11-e637-11e9-a9b8-42010aa2000b",
+        "resourceVersion": "2631",
+        "creationTimestamp": "2019-10-03T23:39:24Z",
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"stern-crc-kadm-ms_ffdc52cd-e636-11e9-b4dc-42010aa2000b\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2019-10-03T23:39:24Z\",\"renewTime\":\"2019-10-03T23:49:25Z\",\"leaderTransitions\":0}"
+        }
+      }
+    },
+    "requestReceivedTimestamp": "2019-10-03T23:49:25.509136Z",
+    "stageTimestamp": "2019-10-03T23:49:25.512259Z",
+    "annotations": {
+      "authorization.k8s.io/decision": "allow",
+      "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-controller-manager\" of ClusterRole \"system:kube-controller-manager\" to User \"system:kube-controller-manager\""
+    },
+    "name": "kube-controller-manager"
+  }
+]

@@ -27,10 +27,11 @@ type DNSLog struct {
 }
 
 type DNSServer struct {
-	Name      string `json:"name"`
-	NameAggr  string `json:"name_aggr"`
-	Namespace string `json:"namespace"`
-	IP        string `json:"ip"`
+	Name      string            `json:"name"`
+	NameAggr  string            `json:"name_aggr"`
+	Namespace string            `json:"namespace"`
+	IP        string            `json:"ip"`
+	Labels    map[string]string `json:"labels"`
 }
 
 type DNSRRSet struct {

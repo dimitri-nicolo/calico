@@ -6,6 +6,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 )
@@ -49,5 +50,5 @@ func TestOnDemand(t *testing.T) {
 	wake.Signal()
 	lock.Unlock()
 
-	g.Eventually(func() int { return last }).Should(Equal(3))
+	g.Eventually(func() int { return last }, time.Second).Should(Equal(3))
 }
