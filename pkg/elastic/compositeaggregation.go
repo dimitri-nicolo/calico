@@ -4,9 +4,15 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
+
+	"github.com/tigera/lma/pkg/api"
 )
 
 // Structure encapsulating info about a composite source query.
@@ -635,4 +641,150 @@ func (s sortedTermBucketMaps) Less(i, j int) bool {
 
 func (s sortedTermBucketMaps) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
+}
+
+const (
+	FlowIndex          = "tigera_secure_ee_flows"
+	FlowlogBuckets     = "flog_buckets"
+	FlowNameAggregated = "-"
+	FlowNamespaceNone  = "-"
+	FlowIPNone         = "0.0.0.0"
+)
+
+// ConvertFlow converts the raw aggregation bucket into the required policy calculator flow.
+// ConvertFlow takes in a maps that key the field name in elasticsearch to the index in the
+// CompositeSources and AggregatedTerms that were used to create the query. These field names
+// are always going to be the same for queries on flow logs since the field names should be
+// the same across flow logs.
+func ConvertFlow(b *CompositeAggregationBucket, compositeIdxs map[string]int, termKeys map[string]string) *api.Flow {
+	k := b.CompositeAggregationKey
+	flow := &api.Flow{
+		Reporter: api.ReporterType(k[compositeIdxs["reporter"]].String()),
+		Source: api.FlowEndpointData{
+			Type:      getFlowEndpointTypeFromCompAggKey(k, compositeIdxs["source_type"]),
+			Name:      getFlowEndpointNameFromCompAggKey(k, compositeIdxs["source_name"], compositeIdxs["source_name_aggr"]),
+			Namespace: getFlowEndpointNamespaceFromCompAggKey(k, compositeIdxs["source_namespace"]),
+			Labels:    getFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[termKeys["source_labels"]]),
+			IP:        getFlowEndpointIPFromCompAggKey(k, compositeIdxs["source_ip"]),
+			Port:      getFlowEndpointPortFromCompAggKey(k, compositeIdxs["source_port"]),
+		},
+		Destination: api.FlowEndpointData{
+			Type:      getFlowEndpointTypeFromCompAggKey(k, compositeIdxs["dest_type"]),
+			Name:      getFlowEndpointNameFromCompAggKey(k, compositeIdxs["dest_name"], compositeIdxs["dest_name_aggr"]),
+			Namespace: getFlowEndpointNamespaceFromCompAggKey(k, compositeIdxs["dest_namespace"]),
+			Labels:    getFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[termKeys["dest_labels"]]),
+			IP:        getFlowEndpointIPFromCompAggKey(k, compositeIdxs["dest_ip"]),
+			Port:      getFlowEndpointPortFromCompAggKey(k, compositeIdxs["dest_port"]),
+		},
+		Action:   getFlowActionFromCompAggKey(k, compositeIdxs["action"]),
+		Proto:    getFlowProtoFromCompAggKey(k, compositeIdxs["proto"]),
+		Policies: getFlowPoliciesFromCompAggKey(b.AggregatedTerms[termKeys["policies"]]),
+	}
+
+	// Assume IP version is 4 unless otherwise determined from actual IPs in the flow.
+	ipVersion := 4
+	if flow.Source.IP != nil {
+		ipVersion = flow.Source.IP.Version()
+	} else if flow.Destination.IP != nil {
+		ipVersion = flow.Source.IP.Version()
+	}
+	flow.IPVersion = &ipVersion
+
+	return flow
+}
+
+// ---- Helper methods to convert the raw flow data into the api.Flow data. ----
+
+// getFlowActionFromCompAggKey extracts the flow action from the composite aggregation key.
+func getFlowActionFromCompAggKey(k CompositeAggregationKey, idx int) api.Action {
+	return api.Action(k[idx].String())
+}
+
+// getFlowProtoFromCompAggKey extracts the flow protocol from the composite aggregation key.
+func getFlowProtoFromCompAggKey(k CompositeAggregationKey, idx int) *uint8 {
+	if s := k[idx].String(); s != "" {
+		proto := numorstring.ProtocolFromString(s)
+		return api.GetProtocolNumber(&proto)
+	} else if f := k[idx].Float64(); f != 0 {
+		proto := uint8(f)
+		return &proto
+	}
+	return nil
+}
+
+// getFlowEndpointTypeFromCompAggKey extracts the flow endpoint type from the composite aggregation key.
+func getFlowEndpointTypeFromCompAggKey(k CompositeAggregationKey, idx int) api.EndpointType {
+	return api.EndpointType(k[idx].String())
+}
+
+// getFlowEndpointNameFromCompAggKey extracts the flow endpoint name from the composite aggregation key.
+func getFlowEndpointNameFromCompAggKey(k CompositeAggregationKey, nameIdx, nameAggrIdx int) string {
+	if name := k[nameIdx].String(); name != FlowNameAggregated {
+		return name
+	}
+	return k[nameAggrIdx].String()
+}
+
+// getFlowEndpointLabelsFromCompAggKey extracts the flow endpoint labels from the composite aggregation key.
+func getFlowEndpointLabelsFromCompAggKey(t *AggregatedTerm) map[string]string {
+	if t == nil {
+		return nil
+	}
+	l := make(map[string]string)
+	ranks := make(map[string]int64)
+	for k, rank := range t.Buckets {
+		s, _ := k.(string)
+		// Label bucket keys are of the format "<label-key>=<label-value>".
+		if parts := strings.SplitN(s, "=", 2); len(parts) == 2 {
+			// Extract the label key and label value parts of the bucket key.
+			key := parts[0]
+			value := parts[1]
+
+			// If the ranking of this key value is higher then store it off.
+			if rank > ranks[key] {
+				l[key] = value
+				ranks[key] = rank
+			}
+		}
+	}
+	return l
+}
+
+// getFlowPoliciesFromCompAggKey extracts the flow policies that were applied reporter-side from the composite aggregation key.
+func getFlowPoliciesFromCompAggKey(t *AggregatedTerm) []string {
+	if t == nil {
+		return nil
+	}
+	var l []string
+	for k := range t.Buckets {
+		if s, ok := k.(string); ok {
+			l = append(l, s)
+		}
+	}
+	return l
+}
+
+// getFlowEndpointNamespaceFromCompAggKey extracts the flow endpoint namespace from the composite aggregation key.
+func getFlowEndpointNamespaceFromCompAggKey(k CompositeAggregationKey, idx int) string {
+	if ns := k[idx].String(); ns != FlowNamespaceNone {
+		return ns
+	}
+	return ""
+}
+
+// getFlowEndpointIPFromCompAggKey extracts the flow endpoint IP from the composite aggregation key.
+func getFlowEndpointIPFromCompAggKey(k CompositeAggregationKey, idx int) *net.IP {
+	if s := k[idx].String(); s != "" && s != FlowIPNone {
+		return net.ParseIP(s)
+	}
+	return nil
+}
+
+// getFlowEndpointPortFromCompAggKey extracts the flow endpoint port from the composite aggregation key.
+func getFlowEndpointPortFromCompAggKey(k CompositeAggregationKey, idx int) *uint16 {
+	if v := k[idx].Float64(); v != 0 {
+		u16 := uint16(v)
+		return &u16
+	}
+	return nil
 }
