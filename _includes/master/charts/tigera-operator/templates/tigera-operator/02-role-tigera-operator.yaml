@@ -135,3 +135,9 @@ rules:
       - storageclasses
     verbs:
       - '*'
+  - apiGroups:
+      - kibana.k8s.elastic.co
+    resources:
+      - kibanas
+    verbs:
+      - '*'
