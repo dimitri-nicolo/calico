@@ -30,7 +30,7 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
 	github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20191030050937-be2e3fd6c28a+incompatible
 	github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible
-	github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
+	github.com/tigera/lma v0.0.0-20191104174029-36b62fc5f234
 	gopkg.in/go-playground/validator.v9 v9.29.0 // indirect
 	gopkg.in/ini.v1 v1.44.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect

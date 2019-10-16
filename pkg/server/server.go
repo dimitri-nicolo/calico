@@ -23,6 +23,7 @@ import (
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	lmaauth "github.com/tigera/lma/pkg/auth"
 )
 
 var (
@@ -55,6 +56,10 @@ func Start(cfg *Config) error {
 	proxy := handler.NewProxy(pc)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
+	// TODO(doublek): Tech debt. We have 2 copies of k8sauth and we aren't using the
+	// right one everywhere. For now, only use the lma one for policy recommendation
+	// and leave the rest to use the one in es-proxy.
+	lmaK8sAuth := lmaauth.NewK8sAuth(k8sClient, k8sConfig, cfg.DelegateAuthentication)
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig, cfg.DelegateAuthentication)
 
 	// Install pip mutator
@@ -84,6 +89,8 @@ func Start(cfg *Config) error {
 
 	switch cfg.AccessMode {
 	case InsecureMode:
+		sm.Handle("/recommend",
+			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPatern(
 				k8sAuth.KubernetesAuthnAuthz(proxy)))
@@ -92,6 +99,8 @@ func Start(cfg *Config) error {
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.PolicyImpactHandler(k8sAuth, p, proxy))))
 	case ServiceUserMode:
+		sm.Handle("/recommend",
+			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPatern(
 				k8sAuth.KubernetesAuthnAuthz(
