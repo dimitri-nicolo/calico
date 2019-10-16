@@ -38,7 +38,7 @@ ifeq ($(ARCH),x86_64)
 	override ARCH=amd64
 endif
 
-GO_BUILD_VER?=v0.24
+GO_BUILD_VER?=v0.26
 PACKAGE_NAME?=github.com/projectcalico/kube-controllers
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
