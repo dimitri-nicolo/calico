@@ -226,7 +226,10 @@ rules:
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
       - networkpolicies
+      - stagedkubernetesnetworkpolicies
+      - stagednetworkpolicies        
       - tiers
       - clusterinformations
       - hostendpoints

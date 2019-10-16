@@ -65,8 +65,11 @@ rules:
       - ippools
       - ipamblocks
       - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
       - globalnetworksets
       - networkpolicies
+      - stagedkubernetesnetworkpolicies
+      - stagednetworkpolicies
       - clusterinformations
       - hostendpoints
       - blockaffinities
