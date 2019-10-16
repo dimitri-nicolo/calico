@@ -16,13 +16,12 @@ require (
 	github.com/influxdata/platform v0.0.0-20190117200541-d500d3cf5589 // indirect
 	github.com/mcuadros/go-version v0.0.0-20190308113854-92cdf37c5b75
 	github.com/olekukonko/tablewriter v0.0.0-20190409134802-7e037d187b0c
-	github.com/onsi/ginkgo v1.7.0
-	github.com/onsi/gomega v1.4.3
+	github.com/onsi/ginkgo v1.8.0
+	github.com/onsi/gomega v1.5.0
 	github.com/osrg/gobgp v0.0.0-20170802061517-bbd1d99396fe
-	github.com/pquerna/ffjson v0.0.0-20190918152532-477b94a9a7ec // indirect
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee
-	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
+	github.com/projectcalico/libcalico-go v0.0.0-20191008175127-399044ecb659
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/afero v1.2.2 // indirect
@@ -40,6 +39,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

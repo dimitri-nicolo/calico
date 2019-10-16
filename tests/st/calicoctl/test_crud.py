@@ -284,6 +284,42 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("replace", data=networkpolicy_name1_rev2)
         rc.assert_error(text=NOT_FOUND)
 
+    def test_create_single_invalid_resource(self):
+        """
+        Test that creating a single invalid resource returns an appropriate error
+        """
+        rc = calicoctl("create", data=bgppeer_invalid, format="json")
+        rc.assert_error(text="error with field PeerIP = 'badpeerIP'")
+        rc.assert_output_not_contains("Partial success")
+        rc.assert_output_contains("Failed to create 'BGPPeer' resource")
+
+    def test_create_all_invalid_resources(self):
+        """
+        Test that creating multiple invalid resources returns an appropriate error
+        """
+        rc = calicoctl("create", data=bgppeer_multiple_invalid, format="json")
+        rc.assert_error(text="error with field PeerIP = 'badpeerIP'")
+        rc.assert_output_not_contains("Partial success")
+        rc.assert_output_contains("Failed to create any 'BGPPeer' resources")
+
+    def test_apply_single_invalid_resource(self):
+        """
+        Test that applying a single invalid resource returns an appropriate error
+        """
+        rc = calicoctl("apply", data=bgppeer_invalid)
+        rc.assert_error(text="error with field PeerIP = 'badpeerIP'")
+        rc.assert_output_not_contains("Partial success")
+        rc.assert_output_contains("Failed to apply 'BGPPeer' resource")
+
+    def test_apply_all_invalid_resources(self):
+        """
+        Test that applying multiple invalid resources returns an appropriate error
+        """
+        rc = calicoctl("apply", data=bgppeer_multiple_invalid)
+        rc.assert_error(text="error with field PeerIP = 'badpeerIP'")
+        rc.assert_output_not_contains("Partial success")
+        rc.assert_output_contains("Failed to apply any 'BGPPeer' resources")
+
     def test_apply_with_resource_version(self):
         """
         Test that resource version operates correctly with apply, i.e.
@@ -1278,10 +1314,45 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("label nodes node1 cluster --remove")
         rc.assert_error("can not remove label")
 
+    def test_patch(self):
+        """
+        Test that a basic CRUD flow for patch command works.
+        """
+        
+        # test patching a node
+        rc = calicoctl("create", data=node_name1_rev1)
+        rc.assert_no_error()
 
+        rc = calicoctl("patch nodes node1 -p '{\"spec\":{\"bgp\": {\"routeReflectorClusterID\": \"192.168.0.1\"}}}'")
+        rc.assert_no_error()
 
+        rc = calicoctl("get nodes node1 -o yaml")
+        rc.assert_no_error()
+        node1_rev1 = rc.decoded
+        self.assertEqual("192.168.0.1",node1_rev1['spec']['bgp']['routeReflectorClusterID'])
+        
+        # test patching an ippool
+        rc = calicoctl("create", data=ippool_name1_rev1_v4)
+        rc.assert_no_error()
 
-#
+        rc = calicoctl(
+                "patch ippool %s -p '{\"spec\":{\"natOutgoing\": true}}'" % name(ippool_name1_rev1_v4))
+        rc.assert_no_error()
+
+        rc = calicoctl(
+                "get ippool %s -o yaml" % name(ippool_name1_rev1_v4))
+        rc.assert_no_error()
+        ippool1_rev1 = rc.decoded
+        self.assertEqual(True,ippool1_rev1['spec']['natOutgoing'])
+
+        # test patching invalid networkpolicy
+        rc = calicoctl('create', data=networkpolicy_name2_rev1)
+        rc.assert_no_error()
+
+        rc = calicoctl(
+                "patch networkpolicy %s -p '{\"http\": {\"exact\": \"path/to/match\"}}'" % name(networkpolicy_name2_rev1))
+        rc.assert_error()
+
 #
 # class TestCreateFromFile(TestBase):
 #     """
