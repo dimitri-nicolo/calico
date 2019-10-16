@@ -1949,10 +1949,37 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"serviceExternalIPs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceExternalIPs are the CIDR blocks for Kubernetes Service External IPs. Kubernetes Service ExternalIPs will only be advertised if they are within one of these blocks.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock"),
+										},
+									},
+								},
+							},
+						},
+						"serviceClusterIPs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceClusterIPs are the CIDR blocks from which service cluster IPs are allocated. If specified, Calico will advertise these blocks, as well as any cluster IPs within them.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock"),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
-			Dependencies: []string{},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPassword": {
 			Schema: spec.Schema{
@@ -4722,6 +4749,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"serviceAccountSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceAccountSelector is an optional field for an expression used to select a pod based on service accounts.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"namespaceSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NamespaceSelector is an optional field for an expression used to select a pod based on namespaces.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
 					Required: []string{"selector"},
 				},
@@ -6476,6 +6517,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"serviceAccountSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceAccountSelector is an optional field for an expression used to select a pod based on service accounts.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
 					Required: []string{"selector"},
 				},
@@ -7667,6 +7715,38 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Description: "Selector is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a service account that matches the given label selector. If both Names and Selector are specified then they are AND'ed.",
 								Type:        []string{"string"},
 								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ServiceClusterIPBlock represents a single whitelisted CIDR block for ClusterIPs.",
+					Properties: map[string]spec.Schema{
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ServiceExternalIPBlock represents a single whitelisted CIDR External IP block.",
+					Properties: map[string]spec.Schema{
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
 							},
 						},
 					},
