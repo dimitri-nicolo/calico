@@ -65,12 +65,12 @@ func (pc *PolicyLookupsCache) OnProfileInactive(key model.ProfileRulesKey) {
 }
 
 // addNFLogPrefixEntry adds a single NFLOG prefix entry to our internal cache.
-func (pc *PolicyLookupsCache) addNFLogPrefixEntry(prefix string, ruleIDs *RuleID) {
+func (pc *PolicyLookupsCache) addNFLogPrefixEntry(prefix string, ruleID *RuleID) {
 	var bph [64]byte
 	copy(bph[:], []byte(prefix[:]))
 	pc.nflogMutex.Lock()
 	defer pc.nflogMutex.Unlock()
-	pc.nflogPrefixHash[bph] = ruleIDs
+	pc.nflogPrefixHash[bph] = ruleID
 }
 
 // deleteNFLogPrefixEntry deletes a single NFLOG prefix entry to our internal cache.
@@ -85,16 +85,25 @@ func (pc *PolicyLookupsCache) deleteNFLogPrefixEntry(prefix string) {
 // updatePolicyRulesNFLOGPrefixes stores the required prefix to RuleID maps for a policy, deleting any
 // stale entries if the number of rules or action types have changed.
 func (pc *PolicyLookupsCache) updatePolicyRulesNFLOGPrefixes(key model.PolicyKey, policy *model.Policy) {
-	// If this is the first time we have seen this tier, add the default deny entries for the tier.
+	// If this is the first time we have seen this tier, add the default deny entries for the tier, and the default
+	// pass (for staged-only tiers).
 	count, ok := pc.tierRefs[key.Tier]
 	if !ok {
 		pc.addNFLogPrefixEntry(
-			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirIngress, key.Tier),
+			rules.CalculateEndOfTierDropNFLOGPrefixStr(rules.RuleDirIngress, key.Tier),
 			NewRuleID(key.Tier, "", "", 0, rules.RuleDirIngress, rules.RuleActionDeny),
 		)
 		pc.addNFLogPrefixEntry(
-			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirEgress, key.Tier),
+			rules.CalculateEndOfTierDropNFLOGPrefixStr(rules.RuleDirEgress, key.Tier),
 			NewRuleID(key.Tier, "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny),
+		)
+		pc.addNFLogPrefixEntry(
+			rules.CalculateEndOfTierPassNFLOGPrefixStr(rules.RuleDirIngress, key.Tier),
+			NewRuleID(key.Tier, "", "", 0, rules.RuleDirIngress, rules.RuleActionPass),
+		)
+		pc.addNFLogPrefixEntry(
+			rules.CalculateEndOfTierPassNFLOGPrefixStr(rules.RuleDirEgress, key.Tier),
+			NewRuleID(key.Tier, "", "", 0, rules.RuleDirEgress, rules.RuleActionPass),
 		)
 	}
 	pc.tierRefs[key.Tier] = count + 1
@@ -125,10 +134,10 @@ func (pc *PolicyLookupsCache) removePolicyRulesNFLOGPrefixes(key model.PolicyKey
 	if count == 1 {
 		delete(pc.tierRefs, key.Tier)
 		pc.deleteNFLogPrefixEntry(
-			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirIngress, key.Tier),
+			rules.CalculateEndOfTierDropNFLOGPrefixStr(rules.RuleDirIngress, key.Tier),
 		)
 		pc.deleteNFLogPrefixEntry(
-			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirEgress, key.Tier),
+			rules.CalculateEndOfTierDropNFLOGPrefixStr(rules.RuleDirEgress, key.Tier),
 		)
 	} else {
 		pc.tierRefs[key.Tier] = count - 1
@@ -204,6 +213,25 @@ func (pc *PolicyLookupsCache) updateRulesNFLOGPrefixes(
 		newPrefixes.Add(prefix)
 	}
 
+	// If this is a staged policy then we also add ingress/egress lookups for no-match. These actually map
+	// to the end-of-tier drop associated with that policy since that is how they will be reported by the
+	// collector. The collector will only report these stats if we hit the end-of-tier pass indicating that
+	// the tier contains only staged policies.
+	if model.PolicyIsStaged(v1Name) {
+		prefix := rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirIngress, v1Name)
+		pc.addNFLogPrefixEntry(
+			prefix,
+			NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny),
+		)
+		newPrefixes.Add(prefix)
+		prefix = rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirEgress, v1Name)
+		pc.addNFLogPrefixEntry(
+			prefix,
+			NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny),
+		)
+		newPrefixes.Add(prefix)
+	}
+
 	// Delete the stale prefixes.
 	if oldPrefixes != nil {
 		oldPrefixes.Iter(func(item interface{}) error {
@@ -253,9 +281,7 @@ const (
 	RuleIDIndexUnknown      int = -2
 )
 
-// RuleID contains the complete identifiers for a particular rule. This is a breakdown of the
-// Felix v1 representation into the v3 representation used by the API and the collector.
-type RuleID struct {
+type PolicyID struct {
 	// The tier name. If this is blank this represents a Profile backed rule.
 	Tier string
 	// The policy or profile name. This has the tier removed from the name. If this is blank, this represents
@@ -265,6 +291,13 @@ type RuleID struct {
 	// The namespace. This is only non-blank for a NetworkPolicy type. For Tiers, GlobalNetworkPolicies and the
 	// no match rules this will be blank.
 	Namespace string
+}
+
+// RuleID contains the complete identifiers for a particular rule. This is a breakdown of the
+// Felix v1 representation into the v3 representation used by the API and the collector.
+type RuleID struct {
+	// The policy.
+	PolicyID
 	// The rule direction.
 	Direction rules.RuleDir
 	// The index into the rule slice.
@@ -281,9 +314,11 @@ type RuleID struct {
 
 func NewRuleID(tier, policy, namespace string, ruleIndex int, ruleDirection rules.RuleDir, ruleAction rules.RuleAction) *RuleID {
 	rid := &RuleID{
-		Tier:      tier,
-		Name:      policy,
-		Namespace: namespace,
+		PolicyID: PolicyID{
+			Tier:      tier,
+			Name:      policy,
+			Namespace: namespace,
+		},
 		Direction: ruleDirection,
 		Index:     ruleIndex,
 		IndexStr:  strconv.Itoa(ruleIndex),
@@ -295,9 +330,7 @@ func NewRuleID(tier, policy, namespace string, ruleIndex int, ruleDirection rule
 }
 
 func (r *RuleID) Equals(r2 *RuleID) bool {
-	return r.Tier == r2.Tier &&
-		r.Name == r2.Name &&
-		r.Namespace == r2.Namespace &&
+	return r.PolicyID == r2.PolicyID &&
 		r.Direction == r2.Direction &&
 		r.Index == r2.Index &&
 		r.Action == r2.Action
@@ -318,8 +351,12 @@ func (r *RuleID) IsProfile() bool {
 	return len(r.Tier) == 0
 }
 
-func (r *RuleID) IsNoMatchRule() bool {
+func (r *RuleID) IsEndOfTier() bool {
 	return len(r.Name) == 0
+}
+
+func (r *RuleID) IsEndOfTierPass() bool {
+	return len(r.Name) == 0 && r.Action == rules.RuleActionPass
 }
 
 func (r *RuleID) IsImplicitDropRule() bool {
@@ -414,7 +451,7 @@ func (r *RuleID) setFlowLogPolicyName() {
 			r.NameString(),
 			r.ActionString(),
 		)
-	} else if strings.HasPrefix(r.Name, "knp.default") {
+	} else if strings.HasPrefix(r.Name, "knp.default") || strings.HasPrefix(r.Name, model.PolicyNamePrefixStaged+"knp.default") {
 		r.fpName = fmt.Sprintf(
 			"%s|%s/%s|%s",
 			r.TierString(),
@@ -447,31 +484,53 @@ func (r *RuleID) GetFlowLogPolicyName() string {
 // The v1 policy name is of the format:
 // -  <namespace>/<tier>.<name> for a namespaced NetworkPolicies
 // -  <tier>.<name> for GlobalNetworkPolicies.
-// -  <namespace>/knp.default.k8spolicy for a k8s NetworkPolicies
+// -  <namespace>/knp.default.<name> for a k8s NetworkPolicies
+// and for the staged counterparts, respectively:
+// -  <namespace>/staged:<tier>.<name>
+// -  staged:<tier>.<name>
+// -  <namespace>/staged:knp.default.<name>
 //
 // The namespace is returned blank for GlobalNetworkPolicies.
 // For k8s network policies, the tier is always "default" and the name will be returned including the
 // knp.default prefix.
+//
+// Staged policies will have the simplified name prefixed with "staged:", eg:
+// - <namespace>/staged:<tier>.<name>      => Name=staged:<name>, Namespace=<namespace>, Tier=<tier>
+// - staged:<tier>.<name>                  => Name=staged:<name>, Namespace=<namespace>, Tier=<tier>
+// - <namespace>/staged:knp.default.<name> => Name=staged:knp.default.<name>, Namespace=<name>, Tier=default
 func deconstructPolicyName(name string) (string, string, string, error) {
+	var namespace string
+
+	// Split the name to extract the namespace.
 	parts := strings.Split(name, "/")
 	switch len(parts) {
 	case 1: // GlobalNetworkPolicy
-		nameParts := strings.Split(parts[0], ".")
-		if len(nameParts) != 2 {
-			return "", "", "", fmt.Errorf("Could not parse policy %s", name)
-		}
-		return "", nameParts[0], nameParts[1], nil
-	case 2: // NetworkPolicy
-		nameParts := strings.Split(parts[1], ".")
-		switch len(nameParts) {
-		case 2: // Non-k8s
-			return parts[0], nameParts[0], nameParts[1], nil
-		case 3: // K8s
-			if nameParts[0] == "knp" && nameParts[1] == "default" {
-				return parts[0], nameParts[1], parts[1], nil
-			}
+		name = parts[0]
+	case 2: // NetworkPolicy (Calico or Kubernetes)
+		namespace = parts[0]
+		name = parts[1]
+	default:
+		return "", "", "", fmt.Errorf("Could not parse policy %s", name)
+	}
+
+	// Remove the staged prefix if present so we can extract the tier.
+	var stagedPrefix string
+	if model.PolicyIsStaged(name) {
+		stagedPrefix = model.PolicyNamePrefixStaged
+		name = name[len(model.PolicyNamePrefixStaged):]
+	}
+
+	// Extract the tier, if present.
+	parts = strings.Split(name, ".")
+	switch len(parts) {
+	case 2: // Non-k8s
+		return namespace, parts[0], stagedPrefix + parts[1], nil
+	case 3: // K8s
+		if parts[0] == "knp" && parts[1] == "default" {
+			return namespace, "default", stagedPrefix + name, nil
 		}
 	}
+
 	return "", "", "", fmt.Errorf("Could not parse policy %s", name)
 }
 

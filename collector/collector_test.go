@@ -141,31 +141,118 @@ var (
 		},
 	}
 	localEd1 = &calc.EndpointData{
-		Key:          localWlEPKey1,
-		Endpoint:     localWlEp1,
-		OrderedTiers: []string{"default"},
+		Key:      localWlEPKey1,
+		Endpoint: localWlEp1,
+		IsLocal:  true,
+		Ingress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
+				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+			},
+			TierData: map[string]*calc.TierData{
+				"default": {
+					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny),
+					EndOfTierMatchIndex: 0,
+				},
+			},
+			ProfileMatchIndex: 0,
+		},
+		Egress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
+				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+			},
+			TierData: map[string]*calc.TierData{
+				"default": {
+					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny),
+					EndOfTierMatchIndex: 0,
+				},
+			},
+			ProfileMatchIndex: 0,
+		},
 	}
 	localEd2 = &calc.EndpointData{
-		Key:          localWlEPKey2,
-		Endpoint:     localWlEp2,
-		OrderedTiers: []string{"default"},
+		Key:      localWlEPKey2,
+		Endpoint: localWlEp2,
+		IsLocal:  true,
+		Ingress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
+				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+			},
+			TierData: map[string]*calc.TierData{
+				"default": {
+					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny),
+					EndOfTierMatchIndex: 0,
+				},
+			},
+			ProfileMatchIndex: 0,
+		},
+		Egress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
+				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+			},
+			TierData: map[string]*calc.TierData{
+				"default": {
+					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny),
+					EndOfTierMatchIndex: 0,
+				},
+			},
+			ProfileMatchIndex: 0,
+		},
 	}
 	remoteEd1 = &calc.EndpointData{
 		Key:      remoteWlEpKey1,
 		Endpoint: remoteWlEp1,
+		IsLocal:  false,
 	}
 	remoteEd2 = &calc.EndpointData{
 		Key:      remoteWlEpKey2,
 		Endpoint: remoteWlEp2,
+		IsLocal:  false,
 	}
 	localHostEd1 = &calc.EndpointData{
-		Key:          localHostEpKey1,
-		Endpoint:     localHostEp1,
-		OrderedTiers: []string{"default"},
+		Key:      localHostEpKey1,
+		Endpoint: localHostEp1,
+		IsLocal:  true,
+		Ingress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
+				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+			},
+			TierData: map[string]*calc.TierData{
+				"default": {
+					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny),
+					EndOfTierMatchIndex: 0,
+				},
+			},
+			ProfileMatchIndex: 0,
+		},
+		Egress: &calc.MatchData{
+			PolicyMatches: map[calc.PolicyID]int{
+				calc.PolicyID{Name: "policy1", Tier: "default"}: 0,
+				calc.PolicyID{Name: "policy2", Tier: "default"}: 0,
+			},
+			TierData: map[string]*calc.TierData{
+				"default": {
+					ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny),
+					EndOfTierMatchIndex: 0,
+				},
+			},
+			ProfileMatchIndex: 0,
+		},
 	}
 	remoteHostEd1 = &calc.EndpointData{
 		Key:      remoteHostEpKey1,
 		Endpoint: remoteHostEp1,
+		IsLocal:  false,
 	}
 
 	netSetKey1 = model.NetworkSetKey{
@@ -183,27 +270,33 @@ var (
 	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
 	defTierPolicy1AllowIngressRuleID = &calc.RuleID{
-		Tier:      "default",
-		Name:      "policy1",
-		Namespace: "",
+		PolicyID: calc.PolicyID{
+			Tier:      "default",
+			Name:      "policy1",
+			Namespace: "",
+		},
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirIngress,
 	}
 	defTierPolicy1AllowEgressRuleID = &calc.RuleID{
-		Tier:      "default",
-		Name:      "policy1",
-		Namespace: "",
+		PolicyID: calc.PolicyID{
+			Tier:      "default",
+			Name:      "policy1",
+			Namespace: "",
+		},
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirEgress,
 	}
 	defTierPolicy2DenyIngressRuleID = &calc.RuleID{
-		Tier:      "default",
-		Name:      "policy2",
-		Namespace: "",
+		PolicyID: calc.PolicyID{
+			Tier:      "default",
+			Name:      "policy2",
+			Namespace: "",
+		},
 		Index:     0,
 		IndexStr:  "0",
 		Action:    rules.RuleActionDeny,
@@ -1173,7 +1266,8 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < MaxEntries; i++ {
-			c.applyNflogStatUpdate(tuples[i], rids[i], localEd1, remoteEd1, 0, 1, 2)
+			data := NewData(tuples[i], localEd1, remoteEd1, 100)
+			c.applyNflogStatUpdate(data, rids[i], 0, 1, 2)
 		}
 	}
 }

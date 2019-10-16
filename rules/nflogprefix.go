@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 package rules
 
 import (
@@ -34,7 +34,7 @@ func CalculateNFLOGPrefixStr(action RuleAction, owner RuleOwnerType, dir RuleDir
 	return maybeHash(fmt.Sprintf("%c%c%c%d|%s", action, owner, dir, idx, name))
 }
 
-// CalculateNoMatchPolicyNFLOGPrefixStr calculates NFLOG prefix string to use for the no-policy-match
+// CalculateEndOfTierDropNFLOGPrefixStr calculates NFLOG prefix string to use for the no-policy-match
 // drop action in a tier.
 // The format is:
 // AOD|Tier ; with A:    the action: Always (D)eny
@@ -45,8 +45,24 @@ func CalculateNFLOGPrefixStr(action RuleAction, owner RuleOwnerType, dir RuleDir
 // If the total length of the prefix is greater than NFLOGPrefixMaxLength, then the first 10 chars
 // and the last 10 chars are left unchanged and the remainder is filled in with a hash of the original prefix
 // up to the max length. This allows for a reasonable stab at matching a hashed prefix with the tier.
-func CalculateNoMatchPolicyNFLOGPrefixStr(dir RuleDir, tier string) string {
+func CalculateEndOfTierDropNFLOGPrefixStr(dir RuleDir, tier string) string {
 	return maybeHash(fmt.Sprintf("%c%c%c|%s", RuleActionDeny, RuleOwnerTypePolicy, dir, tier))
+}
+
+// CalculateEndOfTierPassNFLOGPrefixStr calculates NFLOG prefix string to use for the no-policy-match
+// pass action in a tier. This is in replacement of the end-of-tier drop when all of the policies within the
+// tier are staged.
+// The format is:
+// AOD|Tier ; with A:    the action: Always (P)ass
+//                 O:    the owner type: Always (P)olicy
+//                 D:    the rule direction: (I)ngress or (E)gress
+//                 Tier: the tier name
+//
+// If the total length of the prefix is greater than NFLOGPrefixMaxLength, then the first 10 chars
+// and the last 10 chars are left unchanged and the remainder is filled in with a hash of the original prefix
+// up to the max length. This allows for a reasonable stab at matching a hashed prefix with the tier.
+func CalculateEndOfTierPassNFLOGPrefixStr(dir RuleDir, tier string) string {
+	return maybeHash(fmt.Sprintf("%c%c%c|%s", RuleActionPass, RuleOwnerTypePolicy, dir, tier))
 }
 
 // CalculateNoMatchProfileNFLOGPrefixStr calculates NFLOG prefix string to use for the no-match profile
@@ -58,6 +74,19 @@ func CalculateNoMatchPolicyNFLOGPrefixStr(dir RuleDir, tier string) string {
 func CalculateNoMatchProfileNFLOGPrefixStr(dir RuleDir) string {
 	// This is a fix length, it never needs hashing.
 	return fmt.Sprintf("%c%c%c", RuleActionDeny, RuleOwnerTypeProfile, dir)
+}
+
+// CalculateNoMatchPolicyNFLOGPrefixStr calculates NFLOG prefix string to use for the no-match profile
+// drop action.
+// The format is:
+// AOD|Policy ; with A:      the action: Always (D)eny
+//                   O:      the owner type: Always (P)olicy
+//                   D:      the rule direction: (I)ngress or (E)gress
+//                   Policy: the policy name
+// This is the same format as CalculateEndOfTierDropNFLOGPrefixStr but since the policy name always includes the
+// tier as a prefix, it is not possible to have log prefix clashes between tiers and policies.
+func CalculateNoMatchPolicyNFLOGPrefixStr(dir RuleDir, name string) string {
+	return maybeHash(fmt.Sprintf("%c%c%c|%s", RuleActionDeny, RuleOwnerTypePolicy, dir, name))
 }
 
 func maybeHash(prefix string) string {

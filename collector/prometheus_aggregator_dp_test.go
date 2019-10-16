@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -18,21 +18,25 @@ import (
 
 var (
 	ingressRulePolicy3Deny = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "policy3",
-		Tier:      "default",
-		Namespace: "",
+		Action:   rules.RuleActionDeny,
+		Index:    0,
+		IndexStr: "0",
+		PolicyID: calc.PolicyID{
+			Name:      "policy3",
+			Tier:      "default",
+			Namespace: "",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	ingressRulePolicy4Deny = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "policy4",
-		Tier:      "default",
-		Namespace: "",
+		Action:   rules.RuleActionDeny,
+		Index:    0,
+		IndexStr: "0",
+		PolicyID: calc.PolicyID{
+			Name:      "policy4",
+			Tier:      "default",
+			Namespace: "",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 )

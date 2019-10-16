@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -226,9 +226,7 @@ func (a PolicyByOrder) Less(i, j int) bool {
 	ordersEqual := bothNil || bothSet && (*a[i].Value.Order == *a[j].Value.Order)
 
 	if ordersEqual {
-		// Use name as tie-break.
-		result := a[i].Key.Name < a[j].Key.Name
-		return result
+		return model.PolicyNameLessThan(a[i].Key.Name, a[j].Key.Name)
 	}
 
 	// nil order maps to "infinity"
@@ -255,6 +253,10 @@ func NewTierInfo(name string) *tierInfo {
 		Name:     name,
 		Policies: make(map[model.PolicyKey]*model.Policy),
 	}
+}
+
+func NewTierInfoSlice() []tierInfo {
+	return nil
 }
 
 func (t tierInfo) String() string {

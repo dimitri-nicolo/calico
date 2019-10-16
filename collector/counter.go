@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -50,6 +50,11 @@ func (c *Counter) Increase(delta int) bool {
 	c.delta += delta
 	c.absolute += delta
 	return delta != 0
+}
+
+func (c *Counter) ResetAndSet(absolute int) {
+	c.delta = absolute
+	c.absolute = absolute
 }
 
 // Reset sets the absolute and delta values to zero.

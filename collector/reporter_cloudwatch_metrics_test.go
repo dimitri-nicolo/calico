@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -28,22 +28,26 @@ var (
 	fakeAWSsecrete     = "wow-such-secrete"
 
 	ingressRule1Deny = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "popopolicy",
-		Namespace: "",
-		Tier:      "default",
+		Action:   rules.RuleActionDeny,
+		Index:    0,
+		IndexStr: "0",
+		PolicyID: calc.PolicyID{
+			Name:      "popopolicy",
+			Namespace: "",
+			Tier:      "default",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 
 	egressRule1Deny = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     1,
-		IndexStr:  "1",
-		Name:      "cool-policy",
-		Namespace: "",
-		Tier:      "cry-me-a-tier",
+		Action:   rules.RuleActionDeny,
+		Index:    1,
+		IndexStr: "1",
+		PolicyID: calc.PolicyID{
+			Name:      "cool-policy",
+			Namespace: "",
+			Tier:      "cry-me-a-tier",
+		},
 		Direction: rules.RuleDirEgress,
 	}
 

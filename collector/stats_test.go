@@ -1,106 +1,130 @@
 // Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
-package collector
+package collector_test
 
 import (
 	"net"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/calc"
+	. "github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/rules"
 )
 
+const testMaxBoundedSetSize = 5
+
 var (
 	allowIngressRid0 = &calc.RuleID{
-		Action:    rules.RuleActionAllow,
-		Index:     1,
-		IndexStr:  "1",
-		Name:      "P1",
-		Tier:      "T1",
+		Action:   rules.RuleActionAllow,
+		Index:    1,
+		IndexStr: "1",
+		PolicyID: calc.PolicyID{
+			Name: "P1",
+			Tier: "T1",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	denyIngressRid0 = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     2,
-		IndexStr:  "2",
-		Name:      "P2",
-		Tier:      "T1",
+		Action:   rules.RuleActionDeny,
+		Index:    2,
+		IndexStr: "2",
+		PolicyID: calc.PolicyID{
+			Name: "P2",
+			Tier: "T2",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	allowIngressRid1 = &calc.RuleID{
-		Action:    rules.RuleActionAllow,
-		Index:     1,
-		IndexStr:  "1",
-		Name:      "P1",
-		Tier:      "T1",
+		Action:   rules.RuleActionAllow,
+		Index:    1,
+		IndexStr: "1",
+		PolicyID: calc.PolicyID{
+			Name: "P1",
+			Tier: "T3",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	denyIngressRid1 = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     2,
-		IndexStr:  "2",
-		Name:      "P2",
-		Tier:      "T1",
+		Action:   rules.RuleActionDeny,
+		Index:    2,
+		IndexStr: "2",
+		PolicyID: calc.PolicyID{
+			Name: "P2",
+			Tier: "T4",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	allowIngressRid2 = &calc.RuleID{
-		Action:    rules.RuleActionAllow,
-		Index:     1,
-		IndexStr:  "1",
-		Name:      "P2",
-		Tier:      "T2",
+		Action:   rules.RuleActionAllow,
+		Index:    1,
+		IndexStr: "1",
+		PolicyID: calc.PolicyID{
+			Name: "P2",
+			Tier: "T5",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	nextTierIngressRid0 = &calc.RuleID{
-		Action:    rules.RuleActionPass,
-		Index:     3,
-		IndexStr:  "3",
-		Name:      "P1",
-		Tier:      "T1",
+		Action:   rules.RuleActionPass,
+		Index:    3,
+		IndexStr: "3",
+		PolicyID: calc.PolicyID{
+			Name: "P1",
+			Tier: "T6",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	nextTierIngressRid1 = &calc.RuleID{
-		Action:    rules.RuleActionPass,
-		Index:     4,
-		IndexStr:  "4",
-		Name:      "P2",
-		Tier:      "T2",
+		Action:   rules.RuleActionPass,
+		Index:    4,
+		IndexStr: "4",
+		PolicyID: calc.PolicyID{
+			Name: "P2",
+			Tier: "T7",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	allowIngressRid11 = &calc.RuleID{
-		Action:    rules.RuleActionAllow,
-		Index:     1,
-		IndexStr:  "1",
-		Name:      "P1",
-		Tier:      "T1",
+		Action:   rules.RuleActionAllow,
+		Index:    1,
+		IndexStr: "1",
+		PolicyID: calc.PolicyID{
+			Name: "P1",
+			Tier: "T8",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 	denyIngressRid21 = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     1,
-		IndexStr:  "1",
-		Name:      "P1",
-		Tier:      "T1",
+		Action:   rules.RuleActionDeny,
+		Index:    1,
+		IndexStr: "1",
+		PolicyID: calc.PolicyID{
+			Name: "P1",
+			Tier: "T9",
+		},
 		Direction: rules.RuleDirIngress,
 	}
 
 	nextTierEgressRid0 = &calc.RuleID{
-		Action:    rules.RuleActionPass,
-		Index:     2,
-		IndexStr:  "2",
-		Name:      "P4",
-		Tier:      "T1",
+		Action:   rules.RuleActionPass,
+		Index:    2,
+		IndexStr: "2",
+		PolicyID: calc.PolicyID{
+			Name: "P4",
+			Tier: "T10",
+		},
 		Direction: rules.RuleDirEgress,
 	}
 	allowEgressRid2 = &calc.RuleID{
-		Action:    rules.RuleActionAllow,
-		Index:     3,
-		IndexStr:  "3",
-		Name:      "P3",
-		Tier:      "T2",
+		Action:   rules.RuleActionAllow,
+		Index:    3,
+		IndexStr: "3",
+		PolicyID: calc.PolicyID{
+			Name: "P3",
+			Tier: "T11",
+		},
 		Direction: rules.RuleDirEgress,
 	}
 )
@@ -115,8 +139,8 @@ var _ = Describe("Tuple", func() {
 			tuple = NewTuple(src, dst, 6, 12345, 80)
 		})
 		It("should parse correctly", func() {
-			Expect(net.IP(tuple.src[:16]).String()).To(Equal("127.0.0.1"))
-			Expect(net.IP(tuple.dst[:16]).String()).To(Equal("127.1.1.1"))
+			Expect(tuple.SourceNet().String()).To(Equal("127.0.0.1"))
+			Expect(tuple.DestNet().String()).To(Equal("127.1.1.1"))
 		})
 	})
 })
@@ -130,7 +154,7 @@ var _ = Describe("Rule Trace", func() {
 		copy(src[:], net.ParseIP("127.0.0.1").To16())
 		copy(dst[:], net.ParseIP("127.1.1.1").To16())
 		tuple = NewTuple(src, dst, 6, 12345, 80)
-		data = NewData(*tuple, time.Duration(10)*time.Second, testMaxBoundedSetSize)
+		data = NewData(*tuple, nil, nil, testMaxBoundedSetSize)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {
@@ -145,7 +169,8 @@ var _ = Describe("Rule Trace", func() {
 
 	Describe("Adding a RuleID to the Ingress Rule Trace", func() {
 		BeforeEach(func() {
-			data.AddRuleID(allowIngressRid0, 0, 0, 0)
+			rm := data.AddRuleID(allowIngressRid0, 0, 0, 0)
+			Expect(rm).To(Equal(RuleMatchSet))
 		})
 		It("should have path length equal to 1", func() {
 			Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
@@ -157,19 +182,21 @@ var _ = Describe("Rule Trace", func() {
 			Expect(data.IsDirty()).To(BeTrue())
 		})
 		It("should return a conflict for same rule Index but different values", func() {
-			Expect(data.AddRuleID(denyIngressRid1, 0, 0, 0)).To(BeFalse())
+			Expect(data.AddRuleID(denyIngressRid1, 0, 0, 0)).To(Equal(RuleMatchIsDifferent))
 		})
 	})
 
 	Describe("RuleTrace conflicts (ingress)", func() {
 		BeforeEach(func() {
-			data.AddRuleID(allowIngressRid0, 0, 0, 0)
+			rm := data.AddRuleID(allowIngressRid0, 0, 0, 0)
+			Expect(rm).To(Equal(RuleMatchSet))
 		})
 		Context("Adding a rule tracepoint that conflicts", func() {
 			var dirtyFlag bool
 			BeforeEach(func() {
 				dirtyFlag = data.IsDirty()
-				data.AddRuleID(denyIngressRid0, 0, 0, 0)
+				rm := data.AddRuleID(denyIngressRid0, 0, 0, 0)
+				Expect(rm).To(Equal(RuleMatchIsDifferent))
 			})
 			It("should have path length unchanged and equal to 1", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
@@ -198,11 +225,13 @@ var _ = Describe("Rule Trace", func() {
 	})
 	Describe("RuleTraces with next Tier", func() {
 		BeforeEach(func() {
-			data.AddRuleID(nextTierIngressRid0, 0, 0, 0)
+			rm := data.AddRuleID(nextTierIngressRid0, 0, 0, 0)
+			Expect(rm).To(Equal(RuleMatchSet))
 		})
 		Context("Adding a rule tracepoint with action", func() {
 			BeforeEach(func() {
-				data.AddRuleID(allowIngressRid1, 1, 0, 0)
+				rm := data.AddRuleID(allowIngressRid1, 1, 0, 0)
+				Expect(rm).To(Equal(RuleMatchSet))
 			})
 			It("should have path length 2", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
@@ -216,10 +245,11 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding a rule tracepoint with action and Index past initial length", func() {
 			BeforeEach(func() {
-				data.AddRuleID(allowIngressRid11, 11, 0, 0)
+				rm := data.AddRuleID(allowIngressRid11, 11, 0, 0)
+				Expect(rm).To(Equal(RuleMatchSet))
 			})
-			It("should have path length 12", func() {
-				Expect(data.IngressRuleTrace.Path()).To(HaveLen(12))
+			It("should have path length 2 (since path is contracted)", func() {
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
 			})
 			It("should have length twice of initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen * 2))
@@ -230,10 +260,11 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding a rule tracepoint with action and Index past double the initial length", func() {
 			BeforeEach(func() {
-				data.AddRuleID(denyIngressRid21, 21, 0, 0)
+				rm := data.AddRuleID(denyIngressRid21, 21, 0, 0)
+				Expect(rm).To(Equal(RuleMatchSet))
 			})
 			It("should have path length 22", func() {
-				Expect(data.IngressRuleTrace.Path()).To(HaveLen(22))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
 			})
 			It("should have length thrice of initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen * 3))
@@ -244,7 +275,8 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding a rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
-				data.AddRuleID(allowIngressRid0, 0, 0, 0)
+				rm := data.AddRuleID(allowIngressRid0, 0, 0, 0)
+				Expect(rm).To(Equal(RuleMatchIsDifferent))
 			})
 			It("should return a nil path", func() {
 				Expect(data.IngressRuleTrace.Path()).To(BeNil())
@@ -270,23 +302,25 @@ var _ = Describe("Rule Trace", func() {
 	Describe("RuleTraces with multiple tiers", func() {
 		BeforeEach(func() {
 			// Ingress
-			ok := data.AddRuleID(nextTierIngressRid0, 0, 0, 0)
-			Expect(ok).To(BeTrue())
-			ok = data.AddRuleID(nextTierIngressRid1, 1, 0, 0)
-			Expect(ok).To(BeTrue())
-			ok = data.AddRuleID(allowIngressRid2, 2, 0, 0)
-			Expect(ok).To(BeTrue())
+			rc := data.AddRuleID(nextTierIngressRid0, 0, 0, 0)
+			Expect(rc).To(Equal(RuleMatchSet))
+			rc = data.AddRuleID(nextTierIngressRid1, 1, 0, 0)
+			Expect(rc).To(Equal(RuleMatchSet))
+			rc = data.AddRuleID(allowIngressRid2, 2, 0, 0)
+			Expect(rc).To(Equal(RuleMatchSet))
 			// Egress
-			ok = data.AddRuleID(nextTierEgressRid0, 0, 0, 0)
-			Expect(ok).To(BeTrue())
-			ok = data.AddRuleID(allowEgressRid2, 2, 0, 0)
-			Expect(ok).To(BeTrue())
+			rc = data.AddRuleID(nextTierEgressRid0, 0, 0, 0)
+			Expect(rc).To(Equal(RuleMatchSet))
+			rc = data.AddRuleID(allowEgressRid2, 2, 0, 0)
+			Expect(rc).To(Equal(RuleMatchSet))
+			rc = data.AddRuleID(allowEgressRid2, 2, 0, 0)
+			Expect(rc).To(Equal(RuleMatchUnchanged))
 		})
 		It("should have ingress path length equal to 3", func() {
 			Expect(data.IngressRuleTrace.Path()).To(HaveLen(3))
 		})
-		It("should have egress path length equal to 3", func() {
-			Expect(data.EgressRuleTrace.Path()).To(HaveLen(3))
+		It("should have egress path length equal to 2 (path is contracted)", func() {
+			Expect(data.EgressRuleTrace.Path()).To(HaveLen(2))
 		})
 		It("should have have ingress action set to allow", func() {
 			Expect(data.IngressAction()).To(Equal(rules.RuleActionAllow))
@@ -296,7 +330,8 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding an ingress rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
-				data.AddRuleID(denyIngressRid1, 1, 0, 0)
+				rm := data.AddRuleID(denyIngressRid1, 1, 0, 0)
+				Expect(rm).To(Equal(RuleMatchIsDifferent))
 			})
 			It("should have path length unchanged and equal to 3", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(3))

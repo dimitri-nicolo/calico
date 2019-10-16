@@ -134,9 +134,11 @@ var (
 		origSourceIPs: NewBoundedSetFromSlice(testMaxBoundedSetSize, []net.IP{net.ParseIP(publicIP1Str)}),
 
 		unknownRuleID: &calc.RuleID{
-			Tier:      "__UNKNOWN__",
-			Name:      "__UNKNOWN__",
-			Namespace: "__UNKNOWN__",
+			PolicyID: calc.PolicyID{
+				Tier:      "__UNKNOWN__",
+				Name:      "__UNKNOWN__",
+				Namespace: "__UNKNOWN__",
+			},
 			Index:     -2,
 			IndexStr:  "-2",
 			Action:    rules.RuleActionAllow,

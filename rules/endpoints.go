@@ -17,6 +17,8 @@ package rules
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
 	"github.com/projectcalico/felix/hashutils"
 	. "github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
@@ -365,8 +367,19 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				},
 			})
 
+			// Track if any of the policies are not staged. If all of the policies in a tier are staged
+			// then the default end of tier behavior should be pass rather than drop.
+			endOfTierDrop := false
+
 			// Then, jump to each policy in turn.
 			for _, polID := range policies {
+				isStaged := model.PolicyIsStaged(polID)
+
+				// If this is not a staged policy then end of tier behavior should be drop.
+				if !isStaged {
+					endOfTierDrop = true
+				}
+
 				polChainName := PolicyChainName(
 					policyPrefix,
 					&proto.PolicyID{Tier: tier.Name, Name: polID},
@@ -377,43 +390,61 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					Match:  Match().MarkClear(r.IptablesMarkPass),
 					Action: JumpAction{Target: polChainName},
 				})
-				// If policy marked packet as accepted, it returns, setting the accept
-				// mark bit.
-				if chainType == chainTypeUntracked {
-					// For an untracked policy, map allow to "NOTRACK and ALLOW".
+
+				// Only handle actions for non-staged policies.
+				if !isStaged {
+					// If policy marked packet as accepted, it returns, setting the accept
+					// mark bit.
+					if chainType == chainTypeUntracked {
+						// For an untracked policy, map allow to "NOTRACK and ALLOW".
+						rules = append(rules, Rule{
+							Match:  Match().MarkSingleBitSet(r.IptablesMarkAccept),
+							Action: NoTrackAction{},
+						})
+					}
+					// If accept bit is set, return from this chain.  We don't immediately
+					// accept because there may be other policy still to apply.
 					rules = append(rules, Rule{
-						Match:  Match().MarkSingleBitSet(r.IptablesMarkAccept),
-						Action: NoTrackAction{},
+						Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
+						Action:  ReturnAction{},
+						Comment: "Return if policy accepted",
 					})
 				}
-				// If accept bit is set, return from this chain.  We don't immediately
-				// accept because there may be other policy still to apply.
-				rules = append(rules, Rule{
-					Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
-					Action:  ReturnAction{},
-					Comment: "Return if policy accepted",
-				})
 			}
 
 			if chainType == chainTypeNormal || chainType == chainTypeForward {
-				// When rendering normal and forwardrules, if no policy marked the packet as "pass", drop the
-				// packet.
-				//
-				// For untracked and pre-DNAT rules, we don't do that because there may be
-				// normal rules still to be applied to the packet in the filter table.
-				rules = append(rules, Rule{
-					Match: Match().MarkClear(r.IptablesMarkPass),
-					Action: NflogAction{
-						Group:       nflogGroup,
-						Prefix:      CalculateNoMatchPolicyNFLOGPrefixStr(dir, tier.Name),
-						SizeEnabled: r.EnableNflogSize,
-					},
-				})
-				rules = append(rules, r.DropRules(
-					Match().MarkClear(r.IptablesMarkPass), "Drop if no policies passed packet")...)
+				if endOfTierDrop {
+					// When rendering normal and forward rules, if no policy marked the packet as "pass", drop the
+					// packet.
+					//
+					// For untracked and pre-DNAT rules, we don't do that because there may be
+					// normal rules still to be applied to the packet in the filter table.
+					rules = append(rules, Rule{
+						Match: Match().MarkClear(r.IptablesMarkPass),
+						Action: NflogAction{
+							Group:       nflogGroup,
+							Prefix:      CalculateEndOfTierDropNFLOGPrefixStr(dir, tier.Name),
+							SizeEnabled: r.EnableNflogSize,
+						},
+					})
+
+					rules = append(rules, r.DropRules(
+						Match().MarkClear(r.IptablesMarkPass), "Drop if no policies passed packet")...)
+				} else {
+					// If we do not require an end of tier drop (i.e. because all of the policies in the tier are
+					// staged), then add an end of tier pass nflog action so that we can at least track that we
+					// would hit end of tier drop. This simplifies the processing in the collector.
+					rules = append(rules, Rule{
+						Match: Match().MarkClear(r.IptablesMarkPass),
+						Action: NflogAction{
+							Group:       nflogGroup,
+							Prefix:      CalculateEndOfTierPassNFLOGPrefixStr(dir, tier.Name),
+							SizeEnabled: r.EnableNflogSize,
+						},
+					})
+				}
 			}
 		}
-
 	}
 
 	if len(tiers) == 0 && chainType == chainTypeForward {

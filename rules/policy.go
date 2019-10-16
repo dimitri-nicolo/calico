@@ -18,6 +18,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/hashutils"
@@ -30,15 +32,28 @@ import (
 
 func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain {
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
+	isStaged := model.PolicyIsStaged(policyID.Name)
 	inbound := iptables.Chain{
 		Name: PolicyChainName(PolicyInboundPfx, policyID),
 		// Note that the policy name includes the tier, so it does not need to be separately specified.
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked, isStaged),
+	}
+	if isStaged {
+		// If staged, append an extra no-match nflog rule. This will be reported by the collector as a end-of-tier
+		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
+		// actually drop the packet already).
+		inbound.Rules = append(inbound.Rules, r.StagedPolicyNoMatchRule(RuleDirIngress, policyID.Name))
 	}
 	outbound := iptables.Chain{
 		Name: PolicyChainName(PolicyOutboundPfx, policyID),
 		// Note that the policy name also includes the tier, so it does not need to be separately specified.
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked, isStaged),
+	}
+	if isStaged {
+		// If staged, append an extra no-match nflog rule. This will be reported by the collector as a end-of-tier
+		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
+		// actually drop the packet already).
+		outbound.Rules = append(outbound.Rules, r.StagedPolicyNoMatchRule(RuleDirEgress, policyID.Name))
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -46,20 +61,20 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirIngress, profileID.Name, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirIngress, profileID.Name, false, false),
 	}
 	outbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirEgress, profileID.Name, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirEgress, profileID.Name, false, false),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, name string, untracked bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, name string, untracked, staged bool) []iptables.Rule {
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, owner, dir, ii, name, untracked)...)
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, owner, dir, ii, name, untracked, staged)...)
 	}
 	return rules
 }
@@ -81,7 +96,22 @@ func filterNets(mixedCIDRs []string, ipVersion uint8) (filtered []string, filter
 	return
 }
 
-func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) StagedPolicyNoMatchRule(dir RuleDir, name string) iptables.Rule {
+	nflogGroup := NFLOGOutboundGroup
+	if dir == RuleDirIngress {
+		nflogGroup = NFLOGInboundGroup
+	}
+	return iptables.Rule{
+		Match: iptables.Match(),
+		Action: iptables.NflogAction{
+			Group:       nflogGroup,
+			Prefix:      CalculateNoMatchPolicyNFLOGPrefixStr(dir, name),
+			SizeEnabled: r.EnableNflogSize,
+		},
+	}
+}
+
+func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []iptables.Rule {
 	// Filter the CIDRs to the IP version that we're rendering.  In general, we should have an
 	// explicit IP version in the rule and all CIDRs should match it (and calicoctl, for
 	// example, enforces that).  However, we try to handle a rule gracefully if it's missing a
@@ -262,7 +292,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		// success.  Add a match on that bit to the calculated rule.
 		match = match.MarkSingleBitSet(matchBlockBuilder.markAllBlocksPass)
 	}
-	markBit, actions := r.CalculateActions(&ruleCopy, ipVersion, owner, dir, idx, name, untracked)
+	markBit, actions := r.CalculateActions(&ruleCopy, ipVersion, owner, dir, idx, name, untracked, staged)
 	rs := matchBlockBuilder.Rules
 	if markBit != 0 {
 		// The rule needs to do more than one action. Render a rule that
@@ -520,7 +550,7 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 	return
 }
 
-func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked bool) (mark uint32, actions []iptables.Action) {
+func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) (mark uint32, actions []iptables.Action) {
 	actions = []iptables.Action{}
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
@@ -541,10 +571,12 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 	switch pRule.Action {
 	case "", "allow":
-		// Allow needs to set the accept mark, and then return to the calling chain for
-		// further processing.
-		mark = r.IptablesMarkAccept
+		// If this is not a staged policy then allow needs to set the accept mark.
+		if !staged {
+			mark = r.IptablesMarkAccept
+		}
 
+		// NFLOG the allow - we don't do this for untracked due to the performance hit.
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:       nflogGroup,
@@ -552,12 +584,17 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 				SizeEnabled: r.EnableNflogSize,
 			})
 		}
+
+		// Return to calling chain for end of policy.
 		actions = append(actions, iptables.ReturnAction{})
 	case "next-tier", "pass":
-		// pass (called next-tier in the API for historical reasons) needs to set the pass
-		// mark, and then return to the calling chain for further processing.
-		mark = r.IptablesMarkPass
+		// If this is not a staged policy then pass (called next-tier in the API for historical reasons) needs to set
+		// the pass mark.
+		if !staged {
+			mark = r.IptablesMarkPass
+		}
 
+		// NFLOG the pass - we don't do this for untracked due to the performance hit.
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:       nflogGroup,
@@ -565,11 +602,16 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 				SizeEnabled: r.EnableNflogSize,
 			})
 		}
+
+		// Return to calling chain for end of policy.
 		actions = append(actions, iptables.ReturnAction{})
 	case "deny":
-		// Deny maps to DROP.  We defer to DropActions() to allow for "sandbox" mode.
-		mark = r.IptablesMarkDrop
+		// If this is not a staged policy then deny maps to DROP.
+		if !staged {
+			mark = r.IptablesMarkDrop
+		}
 
+		// NFLOG the deny - we don't do this for untracked due to the performance hit.
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:       nflogGroup,
@@ -577,7 +619,14 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 				SizeEnabled: r.EnableNflogSize,
 			})
 		}
-		actions = append(actions, r.DropActions()...)
+
+		if !staged {
+			// We defer to DropActions() to allow for "sandbox" mode.
+			actions = append(actions, r.DropActions()...)
+		} else {
+			// For staged mode we simply return to calling chain for end of policy.
+			actions = append(actions, iptables.ReturnAction{})
+		}
 		//mark = r.IptablesMarkPass
 		//actions = append(actions, iptables.ReturnAction{})
 	case "log":

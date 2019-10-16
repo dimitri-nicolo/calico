@@ -5,7 +5,6 @@
 package fv_test
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -14,10 +13,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -72,8 +70,6 @@ const (
 )
 
 type expectation struct {
-	group                 string
-	stream                string
 	labels                bool
 	policies              bool
 	aggregationForAllowed aggregation
@@ -440,202 +436,27 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		// Within 30s we should see the complete set of expected allow and deny
 		// flow logs.
 		Eventually(func() error {
-			// Read flow logs from the two hosts and accumulate counts of
-			// flows started and completed for each distinct FlowMeta.
-			flowsStarted := [2]map[collector.FlowMeta]int{}
-			flowsCompleted := [2]map[collector.FlowMeta]int{}
-			packets := [2]map[collector.FlowMeta]int{}
-			policies := [2]map[collector.FlowMeta][]string{}
-			for ii, f := range felixes {
-				flowsStarted[ii] = make(map[collector.FlowMeta]int)
-				flowsCompleted[ii] = make(map[collector.FlowMeta]int)
-				packets[ii] = make(map[collector.FlowMeta]int)
-				policies[ii] = make(map[collector.FlowMeta][]string)
-
-				cwlogs, err := f.ReadFlowLogs(flowLogsOutput)
-				if err != nil {
-					return err
-				}
-
-				for _, fl := range cwlogs {
-					// We only generate traffic to port 8055, so
-					// ignore logs that aren't to port 8055.
-					if fl.Tuple.GetDestPort() != 8055 {
-						continue
-					}
-
-					// If endpoint labels are expected, and
-					// aggregation permits this, check that they are
-					// there.
-					labelsExpected := expectation.labels
-					if labelsExpected {
-						if fl.FlowLabels.SrcLabels == nil {
-							return errors.New(fmt.Sprintf("Missing src labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta))
-						}
-						if fl.FlowLabels.DstLabels == nil {
-							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowLabels))
-						}
-					} else {
-						if fl.FlowLabels.SrcLabels != nil {
-							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowLabels))
-						}
-						if fl.FlowLabels.DstLabels != nil {
-							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowLabels))
-						}
-					}
-
-					// Now discard labels so that our expectation code
-					// below doesn't ever have to specify them.
-					fl.FlowLabels.SrcLabels = nil
-					fl.FlowLabels.DstLabels = nil
-
-					if expectation.policies {
-						if len(fl.FlowPolicies) == 0 {
-							return errors.New(fmt.Sprintf("Missing policies in %v", fl.FlowMeta))
-						}
-						pols := []string{}
-						for p := range fl.FlowPolicies {
-							pols = append(pols, p)
-						}
-						policies[ii][fl.FlowMeta] = pols
-					} else if len(fl.FlowPolicies) != 0 {
-						return errors.New(fmt.Sprintf("Unexpected policies %v in %v", fl.FlowPolicies, fl.FlowMeta))
-					}
-
-					// Accumulate flow and packet counts for this FlowMeta.
-					if _, ok := flowsStarted[ii][fl.FlowMeta]; !ok {
-						flowsStarted[ii][fl.FlowMeta] = 0
-					}
-					flowsStarted[ii][fl.FlowMeta] += fl.NumFlowsStarted
-
-					if _, ok := flowsCompleted[ii][fl.FlowMeta]; !ok {
-						flowsCompleted[ii][fl.FlowMeta] = 0
-					}
-					flowsCompleted[ii][fl.FlowMeta] += fl.NumFlowsCompleted
-
-					if _, ok := packets[ii][fl.FlowMeta]; !ok {
-						packets[ii][fl.FlowMeta] = 0
-					}
-					packets[ii][fl.FlowMeta] += fl.PacketsIn + fl.PacketsOut
-				}
-				for meta, count := range flowsStarted[ii] {
-					log.Infof("started: %d %v", count, meta)
-				}
-				for meta, count := range flowsCompleted[ii] {
-					log.Infof("completed: %d %v", count, meta)
-				}
-
-				for meta, pols := range policies[ii] {
-					log.Infof("policies: %v %v", pols, meta)
-				}
-
-				// For each distinct FlowMeta, the counts of flows started
-				// and completed should be the same.
-				for meta, count := range flowsCompleted[ii] {
-					if count != flowsStarted[ii][meta] {
-						return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
-							flowsStarted[ii][meta], count, meta))
-					}
-				}
-
-				// Check that we have non-zero packets for each flow.
-				for meta, count := range packets[ii] {
-					if count == 0 {
-						return errors.New(fmt.Sprintf("No packets for %v", meta))
-					}
-				}
+			flowTester := metrics.NewFlowTester(felixes, expectation.labels, expectation.policies, 8055)
+			err := flowTester.PopulateFromFlowLogs(flowLogsOutput)
+			if err != nil {
+				return err
 			}
-
-			// Expect flow logs with the given src/dst metadata and IPs.
-			// Specifically there should be numMatchingMetas distinct
-			// FlowMetas that match those, and numFlowsPerMeta flows for each
-			// distinct FlowMeta.  actions indicates the expected handling on
-			// each host: "allow" or "deny"; or "" if the flow isn't
-			// explicitly allowed or denied on that host (which means that
-			// there won't be a flow log).
-			expect := func(srcMeta, srcIP, dstMeta, dstIP string, numMatchingMetas, numFlowsPerMeta int, actionsPolicies []expectedPolicy) error {
-
-				// Host loop.
-				for ii, handling := range actionsPolicies {
-					// Skip if the handling for this host is "".
-					if handling.action == "" && handling.reporter == "" {
-						continue
-					}
-					reporter := handling.reporter
-					action := handling.action
-					expectedPolicies := []string{}
-					expectedPoliciesStr := "-"
-					if expectation.policies {
-						expectedPolicies = handling.policies
-						expectedPoliciesStr = "[" + strings.Join(expectedPolicies, ",") + "]"
-					}
-
-					// Build a FlowMeta with the metadata and IPs that we are looking for.
-					var template string
-					if dstIP != "" {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0"
-					} else {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0"
-					}
-					fl := &collector.FlowLog{}
-					fl.Deserialize(template)
-					log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
-					if expectation.policies {
-						for meta, actualPolicies := range policies[ii] {
-							fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
-							if meta != fl.FlowMeta {
-								continue
-							}
-							for polIdx, p := range expectedPolicies {
-								if p != actualPolicies[polIdx] {
-									return errors.New(fmt.Sprintf("Expected policies %v to be present in %v", expectedPolicies, actualPolicies))
-								}
-							}
-							// Record that we've ticked off this flow.
-							policies[ii][meta] = []string{}
-						}
-						fl.FlowMeta.Tuple.SetSourcePort(0)
-					}
-
-					matchingMetas := 0
-					for meta, count := range flowsCompleted[ii] {
-						fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
-						if meta == fl.FlowMeta {
-							// This flow log matches what
-							// we're looking for.
-							if count != numFlowsPerMeta {
-								return errors.New(fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
-							}
-							matchingMetas += 1
-							// Record that we've ticked off this flow.
-							flowsCompleted[ii][meta] = 0
-						}
-					}
-					fl.FlowMeta.Tuple.SetSourcePort(0)
-					if matchingMetas != numMatchingMetas {
-						return errors.New(fmt.Sprintf("Wrong log count (%d != %d) for %v", matchingMetas, numMatchingMetas, fl.FlowMeta))
-					}
-				}
-				return nil
-			}
-
-			var err error
 
 			// Now we tick off each FlowMeta that we expect, and check that
 			// the log(s) for each one are present and as expected.
 			switch expectation.aggregationForAllowed {
 			case None:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 3, 1,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 3, 1,
+						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 					if err != nil {
 						return err
 					}
-					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
+						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{}, // ""
 						})
@@ -643,8 +464,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						return err
 					}
 				}
-				err = expect("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 3, 1,
-					[]expectedPolicy{
+				err = flowTester.CheckFlow("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 3, 1,
+					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
 					})
@@ -652,14 +473,14 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 3, 1,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 3, 1,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 3, 1,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 3, 1,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
@@ -669,16 +490,16 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				}
 			case BySourcePort:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 1, 3,
+						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 					if err != nil {
 						return err
 					}
-					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
+						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{},
 						})
@@ -686,8 +507,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						return err
 					}
 				}
-				err = expect("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 1, 3,
-					[]expectedPolicy{
+				err = flowTester.CheckFlow("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 1, 3,
+					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
 					})
@@ -695,14 +516,14 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 1, 3,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 1, 3,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
@@ -711,24 +532,24 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 			case ByPodPrefix:
-				err = expect("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 24,
-					[]expectedPolicy{
+				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 24,
+					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{}, // ""
 					})
 				if err != nil {
 					return err
 				}
-				err = expect("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
-					[]expectedPolicy{
+				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
+					[]metrics.ExpectedPolicy{
 						{}, // ""
 						{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 					})
 				if err != nil {
 					return err
 				}
-				err = expect("wep default - wl-host1-*", "", "hep - - "+felixes[1].Hostname, "", 1, 3,
-					[]expectedPolicy{
+				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "hep - - "+felixes[1].Hostname, "", 1, 3,
+					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
 					})
@@ -736,14 +557,14 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default - wl-host2-*", "", "ns - - ns-1", "", 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default - wl-host2-*", "", "ns - - ns-1", "", 1, 3,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = expect("wep default - wl-host2-*", "", "net - - pvt", "", 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default - wl-host2-*", "", "net - - pvt", "", 1, 3,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
@@ -756,8 +577,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			switch expectation.aggregationForDenied {
 			case None:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
 						})
@@ -767,8 +588,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				}
 			case BySourcePort:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
-						[]expectedPolicy{
+					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
+						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
 						})
@@ -777,8 +598,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					}
 				}
 			case ByPodPrefix:
-				err = expect("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
-					[]expectedPolicy{
+				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
+					[]metrics.ExpectedPolicy{
 						{}, // ""
 						{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
 					})
@@ -788,16 +609,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			}
 
 			// Finally check that there are no remaining flow logs that we did not expect.
-			for ii := range felixes {
-				for meta, count := range flowsCompleted[ii] {
-					if count != 0 {
-						return errors.New(fmt.Sprintf("Unexpected flow logs (%d) for %v",
-							count, meta))
-					}
-				}
-			}
-
-			return nil
+			return flowTester.CheckAllFlowsAccountedFor()
 		}, "30s", "3s").ShouldNot(HaveOccurred())
 	}
 
@@ -809,8 +621,6 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 
 			// Defaults for how we expect flow logs to be generated.
-			expectation.group = "tigera-flowlogs-<cluster-guid>"
-			expectation.stream = "<felix-hostname>_Flowlogs"
 			expectation.labels = false
 			expectation.aggregationForAllowed = ByPodPrefix
 			expectation.aggregationForDenied = BySourcePort
@@ -821,7 +631,6 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"] = "fvtestg:<cluster-guid>"
-				expectation.group = "fvtestg:<cluster-guid>"
 			})
 
 			It("should get expected flow logs", func() {
@@ -833,7 +642,6 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGSTREAMNAME"] = "fvtests:<cluster-guid>"
-				expectation.stream = "fvtests:<cluster-guid>"
 			})
 
 			It("should get expected flow logs", func() {
@@ -873,8 +681,6 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 
 			// Defaults for how we expect flow logs to be generated.
-			expectation.group = "tigera-flowlogs-<cluster-guid>"
-			expectation.stream = "<felix-hostname>_Flowlogs"
 			expectation.labels = false
 			expectation.policies = false
 			expectation.aggregationForAllowed = ByPodPrefix

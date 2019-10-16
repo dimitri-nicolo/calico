@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,9 +73,9 @@ var _ = Describe("NFLOG prefix construction tests", func() {
 	)
 
 	DescribeTable(
-		"CalculateNoMatchPolicyNFLOGPrefixStr should return correct result",
+		"CalculateEndOfTierDropNFLOGPrefixStr should return correct result",
 		func(dir RuleDir, tier string, expected string, expectHash bool) {
-			actual := CalculateNoMatchPolicyNFLOGPrefixStr(dir, tier)
+			actual := CalculateEndOfTierDropNFLOGPrefixStr(dir, tier)
 			Expect(actual).To(Equal(expected), actual)
 			if expectHash {
 				Expect(len(actual)).To(Equal(63))

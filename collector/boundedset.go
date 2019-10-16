@@ -29,18 +29,17 @@ type boundedSet struct {
 	// The maximum number of IP address values that this boundedSet will track.
 	// Any Adds beyond maxSize will only increment the `totalCount` field.
 	maxSize int
-	// `totalCount` trackes the total number of unique IP addresses tracked
+	// `totalCount` tracks the total number of unique IP addresses tracked
 	// in this boundedSet. Of `totalCount` IP addresses, up to `maxSize` IP
 	// address values are available in the `ips` map.
-	totalCount *Counter
+	totalCount Counter
 }
 
 // NewBoundedSet creates a boundedSet which will store a maximum of `maxSize` items.
 func NewBoundedSet(maxSize int) *boundedSet {
 	return &boundedSet{
-		ips:        make(map[IpKey]empty, maxSize),
-		maxSize:    maxSize,
-		totalCount: NewCounter(0),
+		ips:     make(map[IpKey]empty, maxSize),
+		maxSize: maxSize,
 	}
 }
 
