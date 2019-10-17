@@ -831,3 +831,7 @@ var remoteHostVXLANTunnelIP = "10.0.1.0"
 var remoteHostVXLANTunnelIP2 = "10.0.1.1"
 var remoteHost2VXLANTunnelIP = "10.0.2.0"
 var remoteHostVXLANTunnelMAC = "66:74:c5:72:3f:01"
+
+var netCidrs1 []string = []string{"122.10.1.2/16", "122.10.1.2/24"}
+var netCidrs1res string = "12.1.0.0/24"
+var netCidrs2res string = "12.1.2.142/32"

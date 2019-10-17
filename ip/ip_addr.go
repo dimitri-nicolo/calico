@@ -73,6 +73,7 @@ func (a V4Addr) String() string {
 
 func (a V4Addr) AsBinary() string {
 	var ipInBinary string = ""
+	ipInBinary = fmt.Sprintf("%04b", 4)
 	for ii := 0; ii < net.IPv4len; ii++ {
 		temp := fmt.Sprintf("%08b", a[ii])
 		ipInBinary += temp
@@ -108,6 +109,7 @@ func (a V6Addr) String() string {
 
 func (a V6Addr) AsBinary() string {
 	var ipInBinary string = ""
+	ipInBinary = fmt.Sprintf("%04b", 6)
 	for ii := 0; ii < net.IPv6len; ii++ {
 		temp := fmt.Sprintf("%08b", a[ii])
 		ipInBinary += temp
@@ -155,12 +157,13 @@ func (c V4CIDR) String() string {
 
 func (c V4CIDR) AsBinary() string {
 	var ipInBinary string = ""
+	ipInBinary = fmt.Sprintf("%04b", 4)
 	for ii := 0; ii < net.IPv4len; ii++ {
 		temp := fmt.Sprintf("%08b", c.addr[ii])
 		ipInBinary += temp
 	}
 
-	return ipInBinary[0:c.prefix]
+	return ipInBinary[0 : c.prefix+4]
 }
 
 type V6CIDR struct {
@@ -193,11 +196,12 @@ func (c V6CIDR) String() string {
 
 func (c V6CIDR) AsBinary() string {
 	var ipInBinary string = ""
+	ipInBinary = fmt.Sprintf("%04b", 6)
 	for ii := 0; ii < net.IPv6len; ii++ {
 		temp := fmt.Sprintf("%08b", c.addr[ii])
 		ipInBinary += temp
 	}
-	return ipInBinary[0:c.prefix]
+	return ipInBinary[0 : c.prefix+4]
 }
 func FromString(s string) Addr {
 	return FromNetIP(net.ParseIP(s))
