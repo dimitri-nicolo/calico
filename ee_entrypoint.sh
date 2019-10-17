@@ -47,11 +47,16 @@ if [ "${MANAGED_K8S}" == "true" ]; then
   exit $?
 fi
 
-# Set the number of shards for index tigera_secure_ee_flows
-sed -i 's|"number_of_shards": \d*|"number_of_shards": '"$ELASTIC_FLOWS_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_flows.template
+# Set the number of shards and replicas for index tigera_secure_ee_flows
+sed -i 's|"number_of_shards": *[0-9]+|"number_of_shards": '"$ELASTIC_FLOWS_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_flows.template
+sed -i 's|"number_of_replicas": *[0-9]+|"number_of_replicas": '"$ELASTIC_FLOWS_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_flows.template
 
-# Set the number of shards for index tigera_secure_ee_dns
-sed -i 's|"number_of_shards": \d*|"number_of_shards": '"$ELASTIC_DNS_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_dns.template
+# Set the number of shards and replicas for index tigera_secure_ee_dns
+sed -i 's|"number_of_shards": *[0-9]+|"number_of_shards": '"$ELASTIC_DNS_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_dns.template
+sed -i 's|"number_of_replicas": *[0-9]+|"number_of_replicas": '"$ELASTIC_DNS_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_dns.template
+
+# Set the number of replicas for index tigera_secure_ee_audit
+sed -i 's|"number_of_replicas": *[0-9]+|"number_of_replicas": '"$ELASTIC_AUDIT_INDEX_REPLICAS"'|g' /fluentd/etc/elastic_mapping_audits.template
 
 # Build the fluentd configuration file bit by bit, because order is important.
 # Add the sources.
