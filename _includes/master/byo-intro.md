@@ -84,7 +84,7 @@ They may also be useful as a reference for defining alternative security configu
        "cluster": [ "monitor" ],
        "indices": [
          {
-           "names": [ "tigera_secure_ee_*" ],
+           "names": [ "tigera_secure_ee_*", ".kibana" ],
            "privileges": [ "read"]
          }
        ]
