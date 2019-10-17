@@ -180,6 +180,13 @@ spec:
   - action: Allow
     protocol: TCP
     source:
+      selector: k8s-app == 'eks-log-forwarder'
+      namespaceSelector: name == 'tigera-compliance'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
       selector: name == 'kibana-tigera-elasticsearch'
     destination:
       ports: [9200]

@@ -62,7 +62,7 @@ When it shows all components with status `Available`, proceed to the next sectio
 To secure the components which make up Tigera Secure EE, install the following set of network policies.
 
 ```
-kubectl create -f https://docs.tigera.io/master/manifests/tigera-policies.yaml
+kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
 ```
 
 ### Above and beyond
