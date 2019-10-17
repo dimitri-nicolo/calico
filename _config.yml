@@ -17,9 +17,9 @@ nodecontainer: cnx-node
 repository: projectcalico/calico
 noderunning: calico-node
 
-# Image names in case the host changes
-# Node is duplicated because documentation refers to it using both names. At least one needs to match the version in versions.yaml
-# IMPORTANT - When updating this list, also update _includes/<version>/load-docker.md
+# DEPRECATED: This list of imageNames is not to be used or updated.
+# Docs and manifests should use the image names in versions.yml instead.
+# IMPORTANT: These imageNames only apply to versions v2.5.x and before.
 imageNames:
   node: tigera/cnx-node
   cnx-node: tigera/cnx-node

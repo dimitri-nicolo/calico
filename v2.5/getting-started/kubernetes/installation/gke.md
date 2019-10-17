@@ -8,13 +8,11 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 This guide covers installing {{site.prodname}} for policy enforcement on Google GKE.
 
-> **Note**: GKE support on {{site.prodname}} is currently in technical preview
-   and is suitable for non-production clusters only.
-{: .alert .alert-info}
-
 ## Before you begin
 
 - Create a GKE cluster with the following settings:
+
+  - Version `v1.14.5-gke.5` or greater.  At the time of writing, `v1.14.5-gke.5` is available through the "Rapid" [release channel](https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels).  `v1.14.5-gke.5` includes a specific compatibility fix to enable {{site.prodname}}; {{site.prodname}} will fail to install on earlier versions.
  
   - [Intranode visibility](https://cloud.google.com/kubernetes-engine/docs/how-to/intranode-visibility) *enabled*.  This setting configures GKE to use the GKE CNI plugin, which is required.
   

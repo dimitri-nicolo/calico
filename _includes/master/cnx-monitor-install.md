@@ -196,6 +196,11 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% endif %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
+
+   > **Note**: To configure storage for Prometheus instance please refer to the
+   > [configuring prometheus storage](/{{page.version}}/security/configuration/prometheus#storage).
+   {: .alert .alert-success}
+
 {% if include.platform == "docker-ee" %}
 1. Update the `calico-node-alertmanager` service section and replace `nodePort: 30903` with `nodePort: 33903`
 

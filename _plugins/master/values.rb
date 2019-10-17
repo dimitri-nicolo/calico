@@ -1,9 +1,9 @@
-def gen_values_master(versions, imageNames, imageRegistry, chart, forDocs)
-    return gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart, forDocs)
+def gen_values_master(versions, _, imageRegistry, chart, forDocs)
+    return gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
 end
 
 
-def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart, forDocs)
+def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
   docsOverrides = Hash.new("")
   if forDocs
     docsOverrides["core.apiserver.tls.crt"] = "<replace with base64 encoded certificate>"
@@ -22,8 +22,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for setting up the manager UI.
     manager:
-      image: #{imageRegistry}#{imageNames["cnxManager"]}
-      tag: #{versions["cnx-manager"]}
+      image: #{imageRegistry}#{versions["cnx-manager"].image}
+      tag: #{versions["cnx-manager"].version}
       # Authentication information for securing communications between TSEE manager and the web browser.
       # Leave blank to use self-signed certs.
       tls:
@@ -64,9 +64,9 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
       kibanaURL: ''
  
     # Configuration for the manager UI proxy.
-    managerProxy:
-      image: #{imageRegistry}#{imageNames["cnxManagerProxy"]}
-      tag: #{versions["cnx-manager-proxy"]}
+    voltron:
+      image: #{imageRegistry}#{versions["voltron"].image}
+      tag: #{versions["voltron"].version}
       env:
         # Optional environment variables for configuring the manager proxy.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -80,11 +80,11 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
         limits:
           cpu: #"500m"
           memory: #"1024Mi"
-    
+
     # Configuration for the esProxy container.
     esProxy:
-      image: #{imageRegistry}#{imageNames["es-proxy"]}
-      tag: #{versions["es-proxy"]}
+      image: #{imageRegistry}#{versions["es-proxy"].image}
+      tag: #{versions["es-proxy"].version}
       env:
         # Optional environment variables for configuring the elasticsearch proxy container.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -101,8 +101,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the Tigera custom fluentd.
     fluentd:
-      image: #{imageRegistry}#{imageNames["fluentd"]}
-      tag: #{versions["fluentd"]}
+      image: #{imageRegistry}#{versions["fluentd"].image}
+      tag: #{versions["fluentd"].version}
       # Set to true to create a security context constraint for fluentd enabling
       # it to ingest logs volume-mounted from the host in environments where doing
       # so is restricted.
@@ -126,8 +126,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the Tigera elasticsearch curator.
     esCurator:
-      image: #{imageRegistry}#{imageNames["es-curator"]}
-      tag: #{versions["es-curator"]}
+      image: #{imageRegistry}#{versions["es-curator"].image}
+      tag: #{versions["es-curator"].version}
       env:
         # Optional environment variables for configuring the elasticsearch curator.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -145,8 +145,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     # Configuration for the Tigera elasticsearch dashboard installer job.
     elasticTseeInstaller:
       enable: true
-      image: #{imageRegistry}#{imageNames["elastic-tsee-installer"]}
-      tag: #{versions["elastic-tsee-installer"]}
+      image: #{imageRegistry}#{versions["elastic-tsee-installer"].image}
+      tag: #{versions["elastic-tsee-installer"].version}
       env:
         # Optional environment variables for configuring the elasticsearch dashboard installer job.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -163,8 +163,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the compliance controller.
     complianceController:
-      image: #{imageRegistry}#{imageNames["compliance-controller"]}
-      tag: #{versions["compliance-controller"]}
+      image: #{imageRegistry}#{versions["compliance-controller"].image}
+      tag: #{versions["compliance-controller"].version}
       env:
         # Optional environment variables for configuring the compliance controller.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -181,8 +181,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the compliance reporter.
     complianceReporter:
-      image: #{imageRegistry}#{imageNames["compliance-reporter"]}
-      tag: #{versions["compliance-reporter"]}
+      image: #{imageRegistry}#{versions["compliance-reporter"].image}
+      tag: #{versions["compliance-reporter"].version}
       env:
         # Optional environment variables for configuring the compliance reporter.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -199,8 +199,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the compliance snapshotter.
     complianceSnapshotter:
-      image: #{imageRegistry}#{imageNames["compliance-snapshotter"]}
-      tag: #{versions["compliance-snapshotter"]}
+      image: #{imageRegistry}#{versions["compliance-snapshotter"].image}
+      tag: #{versions["compliance-snapshotter"].version}
       env:
         # Optional environment variables for configuring the compliance snapshotter.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -217,8 +217,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
 
     # Configuration for the compliance server.
     complianceServer:
-      image: #{imageRegistry}#{imageNames["compliance-server"]}
-      tag: #{versions["compliance-server"]}
+      image: #{imageRegistry}#{versions["compliance-server"].image}
+      tag: #{versions["compliance-server"].version}
       env:
         # Optional environment variables for configuring the compliance server.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -235,8 +235,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the compliance benchmarker.
     complianceBenchmarker:
-      image: #{imageRegistry}#{imageNames["compliance-benchmarker"]}
-      tag: #{versions["compliance-benchmarker"]}
+      image: #{imageRegistry}#{versions["compliance-benchmarker"].image}
+      tag: #{versions["compliance-benchmarker"].version}
       runAsPrivileged: false
       env:
         # Optional environment variables for configuring the compliance server.
@@ -253,16 +253,16 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
           memory: #"1024Mi"
     
     alertmanager:
-      image: #{imageNames["alertManager"]}
-      tag: #{versions["alertmanager"]}
+      image: #{versions["alertmanager"].registry}/#{versions["alertmanager"].image}
+      tag: #{versions["alertmanager"].version}
       # Configuration for the service which exposes the Prometheus alertmanager.
       service:
         type: NodePort
         nodePort:
     
     prometheus:
-      image: #{imageNames["prometheus"]}
-      tag: #{versions["prometheus"]}
+      image: #{versions["prometheus"].registry}/#{versions["prometheus"].image}
+      tag: #{versions["prometheus"].version}
       scrapeTargets:
         # Node settings grant control over the Prometheus instance tasked with
         # scraping Tigera Secure EE node.
@@ -276,8 +276,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
       createFinalizers: false
     
     kibana:
-      image: #{imageRegistry}#{imageNames["kibana"]}
-      tag: #{versions["kibana"]}
+      image: #{versions["kibana"].registry}/#{versions["kibana"].image}
+      tag: #{versions["kibana"].version}
       # The address of your kibana instance.
       host:
       # The port your kibana instance is listening on
@@ -288,10 +288,10 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
         nodePort:
         loadBalancerIP:
         clusterIP:
-    
+
     elasticsearch:
-      image: #{imageNames["elasticsearch"]}
-      tag: #{versions["elasticsearch"]}
+      image: #{versions["elasticsearch"].registry}/#{versions["elasticsearch"].image}
+      tag: #{versions["elasticsearch"].version}
       # Information for configuring connections to a BYO elasticsearch cluster.
       # Leave all fields blank to deploy a self-hosted elasticsearch instance.
     
@@ -306,6 +306,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
         # Leave blank to use self-signed certs.
         crt:
         key:
+        selfSignedCertificate:
+          dns: cluster.local
       fluentd:
         # The username and password fluentd should use when connecting to elasticsearch.
         username: tigera-ee-fluentd
@@ -347,30 +349,33 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
         # Username and password for the job installer to authenticate with elasticsearch.
         username: tigera-ee-installer
         password: ""
+      persistentVolume:
+        capacity: 10Gi
+      nodeCount: 1
     
     intrusionDetectionController:
-      image: #{imageRegistry}#{imageNames["intrusion-detection-controller"]}
-      tag: #{versions["intrusion-detection-controller"]}
+      image: #{imageRegistry}#{versions["intrusion-detection-controller"].image}
+      tag: #{versions["intrusion-detection-controller"].version}
 
     prometheusOperator:
-      image: #{imageNames["prometheusOperator"]}
-      tag: #{versions["prometheus-operator"]}
+      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
+      tag: #{versions["prometheus-operator"].version}
 
     prometheusConfigReloader:
-      image: #{imageNames["prometheusConfigReloader"]}
-      tag: #{versions["prometheus-config-reloader"]}
+      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
+      tag: #{versions["prometheus-config-reloader"].version}
 
     configmapReload:
-      image: #{imageNames["configMapReload"]}
-      tag: #{versions["configmap-reload"]}
+      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
+      tag: #{versions["configmap-reload"].version}
 
     elasticsearchOperator:
-      image: #{imageNames["elasticsearchOperator"]}
-      tag: #{versions["elasticsearch-operator"]}
+      image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
+      tag: #{versions["elasticsearch-operator"].version}
 
     busybox:
-      image: #{imageNames["busybox"]}
-      tag: #{versions["busybox"]}
+      image: #{versions["busybox"].image}
+      tag: #{versions["busybox"].version}
 
     # Optionally specify docker configuration to be used for imagePullSecrets. 
     # Default to an empty list. 
@@ -384,37 +389,37 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     versionsYml = <<~EOF
     # Configuration for the tigera operator
     tigeraOperator:
-      image: tigera/operator
-      registry: quay.io/
-      version: #{versions["tigera-operator"]}
+      image: #{versions["tigera-operator"].image}
+      registry: #{versions["tigera-operator"].registry}
+      version: #{versions["tigera-operator"].version}
 
     # Configuration for the tigera operator init container.
     tigeraOperatorInit:
-      image: tigera/operator-init
-      registry: quay.io/
-      version: #{versions["tigera-operator"]}
+      image: #{versions["tigera-operator"].image}-init
+      registry: #{versions["tigera-operator"].registry}
+      version: #{versions["tigera-operator"].version}
 
     # TODO: All of this will be removed when these components are installed by the Tigera operator.
     fluentd:
-      image: #{imageNames["fluentd"]}
+      image: #{versions["fluentd"].image}
       registry: #{imageRegistry}
-      version: #{versions["fluentd"]}
+      version: #{versions["fluentd"].version}
     esCurator:
-      image: #{imageNames["es-curator"]}
+      image: #{versions["es-curator"].image}
       registry: #{imageRegistry}
-      version: #{versions["es-curator"]}
+      version: #{versions["es-curator"].version}
     prometheusOperator:
-      image: #{imageNames["prometheusOperator"]}
-      version: #{versions["prometheus-operator"]}
+      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
+      version: #{versions["prometheus-operator"].version}
     elasticsearchOperator:
-      image: #{imageNames["elasticsearchOperator"]}
-      version: #{versions["elasticsearch-operator"]}
+      image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
+      version: #{versions["elasticsearch-operator"].version}
     prometheusConfigReloader:
-      image: #{imageNames["prometheusConfigReloader"]}
-      tag: #{versions["prometheus-config-reloader"]}
+      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
+      tag: #{versions["prometheus-config-reloader"].version}
     configmapReload:
-      image: #{imageNames["configMapReload"]}
-      tag: #{versions["configmap-reload"]}
+      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
+      tag: #{versions["configmap-reload"].version}
     EOF
   else 
     versionsYml = <<~EOF
@@ -444,17 +449,6 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
       # Can be "Never", "CrossSubnet", or "Always"
       ipIpMode: Always
     
-    # Configuration for Canal config job 
-    configureCanal: 
-      # Optional configuration for setting resource limits on the Canal config job container.
-      resources:
-        requests:
-          cpu: #"100m"
-          memory: #"128Mi"
-        limits:
-          cpu: #"2000m"
-          memory: #"1024Mi"
-    
     # Sets the ipam. Can be 'calico-ipam' or 'host-local'
     ipam: calico-ipam
     
@@ -475,8 +469,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for setting up Calico node
     node:
-      image: #{imageRegistry}#{imageNames["node"]}
-      tag: #{versions["cnx-node"]}
+      image: #{imageRegistry}#{versions["cnx-node"].image}
+      tag: #{versions["cnx-node"].version}
       env:
         # Optional environment variables for configuring Calico node.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -494,36 +488,18 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     # Configuration for setting up Calico CNI.
     cni:
       # cni does not use imageRegistry as it is an external OS image
-      image: #{imageNames["cni"]}
-      tag: #{versions["calico/cni"]}
+      image: #{versions["calico/cni"].registry}/#{versions["calico/cni"].image}
+      tag: #{versions["calico/cni"].version}
       env:
         # Optional environment variables for configuring Calico CNI.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: FOO
         #   value: bar
     
-    # Configuration for setting up Flannel.
-    flannel:
-      image: #{imageNames["flannel"]}
-      tag: #{versions["flannel"]}
-      env:
-        # Optional environment variables for configuring Flannel.
-        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
-        # - name: FOO
-        #   value: bar
-      # Optional configuration for setting resource limits on the Flannel container.
-      resources:
-        requests:
-          cpu: #"100m"
-          memory: #"128Mi"
-        limits:
-          cpu: #"2000m"
-          memory: #"1024Mi"
-    
     # Configuration for setting up Calico kube controllers
     kubeControllers:
-      image: #{imageRegistry}#{imageNames["kubeControllers"]}
-      tag: #{versions["cnx-kube-controllers"]}
+      image: #{imageRegistry}#{versions["cnx-kube-controllers"].image}
+      tag: #{versions["cnx-kube-controllers"].version}
       env:
         # Optional environment variables for configuring Calico kube controllers.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -540,8 +516,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for setting up Typha
     typha:
-      image: #{imageRegistry}#{imageNames["typha"]}
-      tag: #{versions["typha"]}
+      image: #{imageRegistry}#{versions["typha"].image}
+      tag: #{versions["typha"].version}
       enabled: false
       env:
         # Optional environment variables for configuring Typha.
@@ -570,8 +546,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
 
     # Configuration for the Calico aggregated API server.
     apiserver:
-      image: #{imageRegistry}#{imageNames["cnxApiserver"]}
-      tag: #{versions["cnx-apiserver"]}
+      image: #{imageRegistry}#{versions["cnx-apiserver"].image}
+      tag: #{versions["cnx-apiserver"].version}
       # Authentication information for securing communications between TSEE manager and TSEE apiserver.
       # Leave blank to use self-signed certs.
       tls:
@@ -595,8 +571,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the Calico query server.
     queryserver:
-      image: #{imageRegistry}#{imageNames["cnxQueryserver"]}
-      tag: #{versions["cnx-queryserver"]}
+      image: #{imageRegistry}#{versions["cnx-queryserver"].image}
+      tag: #{versions["cnx-queryserver"].version}
       env:
         # Optional environment variables for configuring the Calico query server.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
@@ -612,25 +588,25 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
           memory: #"1024Mi"
 
     calicoctl:
-      image: #{imageRegistry}#{imageNames["calicoctl"]}
-      tag: #{versions["calicoctl"]}
+      image: #{imageRegistry}#{versions["calicoctl"].image}
+      tag: #{versions["calicoctl"].version}
 
     dikastes:
-      image: #{imageRegistry}#{imageNames["dikastes"]}
-      tag: #{versions["dikastes"]}
+      image: #{imageRegistry}#{versions["dikastes"].image}
+      tag: #{versions["dikastes"].version}
 
     flexvol:
       # flexvol does not use imageRegistry as it is an external OS image
-      image: #{imageNames["flexvol"]}
-      tag: #{versions["flexvol"]}
+      image: #{versions["flexvol"].registry}/#{versions["flexvol"].image}
+      tag: #{versions["flexvol"].version}
 
     cpHorizontalAutoscaler:
-      image: #{imageNames["cpHorizontalAutoscaler"]}
-      tag: #{versions["cpHorizontalAutoscaler"]}
+      image: #{versions["cpHorizontalAutoscaler"].registry}/#{versions["cpHorizontalAutoscaler"].image}
+      tag: #{versions["cpHorizontalAutoscaler"].version}
 
     cpVerticalAutoscaler:
-      image: #{imageNames["cpVerticalAutoscaler"]}
-      tag: #{versions["cpVerticalAutoscaler"]}
+      image: #{versions["cpVerticalAutoscaler"].registry}/#{versions["cpVerticalAutoscaler"].image}
+      tag: #{versions["cpVerticalAutoscaler"].version}
 
     # Optional configuration for setting custom BGP templates
     bgp:
@@ -653,8 +629,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     
     # Configuration for the Tigera Cloud Controllers.
     cloudControllers:
-      image: #{imageRegistry}#{imageNames["cloudControllers"]}
-      tag: #{versions["cloud-controllers"]}
+      image: #{imageRegistry}#{versions["cloud-controllers"].image}
+      tag: #{versions["cloud-controllers"].version}
       enabled: false
       # Optional configuration for setting resource limits on the Cloud Controllers container.
       resources:

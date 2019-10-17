@@ -18,6 +18,12 @@ rules:
     verbs:
       - '*'
   - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - 'list'
+  - apiGroups:
       - rbac.authorization.k8s.io
     resources:
       - clusterroles
@@ -31,6 +37,7 @@ rules:
     resources:
       - deployments
       - daemonsets
+      - statefulsets
     verbs:
       - '*'
   - apiGroups:
@@ -114,5 +121,23 @@ rules:
     resources:
       - globalreporttypes
       - licensekeys
+    verbs:
+      - '*'
+  - apiGroups:
+      - elasticsearch.k8s.elastic.co
+    resources:
+      - elasticsearches
+    verbs:
+      - '*'
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - '*'
+  - apiGroups:
+      - kibana.k8s.elastic.co
+    resources:
+      - kibanas
     verbs:
       - '*'

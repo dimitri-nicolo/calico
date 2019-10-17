@@ -28,7 +28,7 @@ VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
                           'cnxApiserver': 'cnx-apiserver',
                           'cnxQueryserver': 'cnx-queryserver',
                           'cnxManager': 'cnx-manager',
-                          'cnxManagerProxy': 'cnx-manager-proxy'}
+                          'cnxManagerProxy': 'voltron'}
 
 EE_MAPPED_IMAGES = {'intrusion-detection-controller': 'intrusionDetectionController',
                     'cnxManager': 'manager',

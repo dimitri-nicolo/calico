@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: calico-prometheus-operator
-  namespace: calico-monitoring
+  namespace: tigera-prometheus

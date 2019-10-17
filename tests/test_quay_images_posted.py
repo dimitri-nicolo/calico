@@ -45,7 +45,7 @@ VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
                           'cnxApiserver': 'cnx-apiserver',
                           'cnxQueryserver': 'cnx-queryserver',
                           'cnxManager': 'cnx-manager',
-                          'cnxManagerProxy': 'cnx-manager-proxy'}
+                          'cnxManagerProxy': 'voltron'}
 
 # create list of images for this release
 with open('%s/../_config.yml' % PATH) as f:

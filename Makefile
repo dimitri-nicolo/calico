@@ -91,7 +91,7 @@ clean:
 #
 # Example commands:
 #
-#       # Make a build of your locally checked out code with custom registry.
+#	# Make a build of your locally checked out code with custom registry.
 #	make dev-clean dev-image REGISTRY=caseydavenport
 #
 #	# Build a set of manifests using the produced images.

@@ -4,7 +4,7 @@
 # - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
-
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 # Update this ConfigMap with the Google login client id.
 kind: ConfigMap
 apiVersion: v1
@@ -128,6 +128,10 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: cnx-manager-role
 rules:
+  - apiGroups: ["projectcalico.org"]
+    resources: 
+      - managedclusters
+    verbs: ["*"]
   - apiGroups: ["authentication.k8s.io"]
     resources:
       - tokenreviews
@@ -281,48 +285,36 @@ spec:
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
-      - name: cnx-manager-proxy
-        image: {{.Values.managerProxy.image}}:{{.Values.managerProxy.tag}}
-{{ tuple .Values.managerProxy.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
+      - name: tigera-voltron
+        image: {{.Values.voltron.image}}:{{.Values.voltron.tag}}
+{{ tuple .Values.voltron.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
         env:
-          - name: CNX_WEB_AUTHENTICATION_TYPE
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.authentication-type
-          - name: CNX_WEB_OIDC_AUTHORITY
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.oidc-authority
-          - name: CNX_WEB_OIDC_CLIENT_ID
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.oidc-client-id
-          - name: CNX_WEB_OAUTH_AUTHORITY
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.oauth-authority
-          - name: CNX_WEB_OAUTH_CLIENT_ID
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.oauth-client-id
-{{- if .Values.managerProxy.env }}
-{{ toYaml .Values.managerProxy.env | indent 10 }}
+          - name: VOLTRON_PORT
+            value: "9443"
+          - name: VOLTRON_LOGLEVEL
+            value: "info"
+{{- if .Values.voltron.env }}
+{{ toYaml .Values.voltron.env | indent 10 }}
 {{- end }}
         volumeMounts:
-        - mountPath: /etc/cnx-manager-web-tls
+        - mountPath: /certs/https
+          name: cnx-manager-tls
+        - mountPath: /certs/tunnel
           name: cnx-manager-tls
         livenessProbe:
           httpGet:
-            path: /
+            path: /voltron/api/health
             port: 9443
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /voltron/api/health
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 5
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
@@ -354,6 +346,7 @@ spec:
                 key: tigera.elasticsearch.port
           - name: ELASTIC_INSECURE_SKIP_VERIFY
             value: "false"
+            {{- if eq $elasticMode "external" }}
           - name: ELASTIC_USERNAME
             valueFrom:
               secretKeyRef:
@@ -366,6 +359,15 @@ spec:
                 name: tigera-es-config
                 key: tigera.elasticsearch.password
                 optional: true
+            {{- else }}
+          - name: ELASTIC_USERNAME
+            value: "elastic"
+          - name: ELASTIC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tigera-elasticsearch-es-elastic-user
+                key: elastic
+            {{- end }}
           - name: ELASTIC_CA
             valueFrom:
               configMapKeyRef:
@@ -375,10 +377,10 @@ spec:
 {{- if .Values.esProxy.env }}
 {{ toYaml .Values.esProxy.env | indent 10 }}
 {{- end }}
-        # Use the same liveness check as the cnx-manager-proxy since
+        # Use the same liveness check as voltron since
         # the es-proxy only listens for connections over localhost
         # interface. Liveness check reaches tigera-es-proxy via the
-        # cnx-manager-proxy.
+        # voltron.
         livenessProbe:
           httpGet:
             path: /tigera-elasticsearch/version
@@ -400,9 +402,15 @@ spec:
         secret:
           optional: true
           items:
+{{- if eq $elasticMode "operator" }}
+          - key: tls.crt
+            path: ca.pem
+          secretName: tigera-elasticsearch-es-http-certs-public
+{{- else }}
           - key: tigera.elasticsearch.ca
             path: ca.pem
           secretName: tigera-es-config
+{{- end}}
 ---
 
 kind: ClusterRole
@@ -424,7 +432,7 @@ rules:
   verbs: ["get","create"]
 - apiGroups: ["lma.tigera.io"]
   resources: ["index"]
-  resourceNames: ["flows", "audit*", "events"]
+  resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 # Access to policies in the default tier
 - apiGroups: ["projectcalico.org"]
@@ -438,13 +446,17 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["globalreporttypes"]
   verbs: ["get"]
+# Access to cluster information containing Calico and EE versions from the UI.
+- apiGroups: ["projectcalico.org"]
+  resources: ["clusterinformations"]
+  verbs: ["get","list"]
 
 ---
 
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: network-admin
+  name: tigera-network-admin
 rules:
 # Full access to all network policies
 - apiGroups: ["projectcalico.org","networking.k8s.io","extensions"]
@@ -465,7 +477,7 @@ rules:
 # Access to flow logs, audit logs, and statistics
 - apiGroups: ["lma.tigera.io"]
   resources: ["index"]
-  resourceNames: ["flows", "audit*", "events"]
+  resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 # Manage globalreport configuration, view report generation status, and list reports in the UI.
 - apiGroups: ["projectcalico.org"]
@@ -478,6 +490,10 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["globalreporttypes"]
   verbs: ["get"]
+# Access to cluster information containing Calico and EE versions from the UI.
+- apiGroups: ["projectcalico.org"]
+  resources: ["clusterinformations"]
+  verbs: ["get","list"]
 
 ---
 
@@ -503,6 +519,7 @@ spec:
     destination:
       # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
       ports: [9443]
+
 ---
 
 # Allow internal communication to compliance-server from Manager.

@@ -40,8 +40,10 @@ DATASTORE=${DATASTORE:="etcdv3"}
 LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
 # Specify the type of elasticsearch storage to use: "none" or "local".
-#   ELASTIC_STORAGE="none" ./install-cnx.sh
-ELASTIC_STORAGE=${ELASTIC_STORAGE:="local"}
+# When none is selected, a StorageClass called "elasticsearch-storage" must
+# be provisioned externally.
+#   ELASTIC_STORAGE="local" ./install-cnx.sh
+ELASTIC_STORAGE=${ELASTIC_STORAGE:="none"}
 
 # Specify an external etcd endpoint(s), e.g.
 #   ETCD_ENDPOINTS=https://192.168.0.1:2379 ./install-cnx.sh
@@ -167,7 +169,7 @@ Usage: $(basename "$0")
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
           [-n networking]      # Specify the networking ("calico"|"other"|"aws"); default "calico"
-          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "local"
+          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "none"
           [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
           [-v version]         # Tigera Secure EE version; default: "v2.1"
           [-u]                 # Uninstall Tigera Secure EE
@@ -964,6 +966,8 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml"
+
 
   # Irrespective of datastore type, for federation we'll need to create a federation secret since the manifests assume
   # this exists.
@@ -1313,7 +1317,6 @@ deleteCNXPolicyManifest() {
   countDownSecs 20 "Deleting \"cnx-policy.yaml\" manifest"
 }
 
-
 #
 # applyElasticStorageManifest()
 #
@@ -1331,43 +1334,19 @@ deleteElasticStorageManifest() {
 }
 
 #
-# doesCRDExist() - return 1 exit code if the CRD exists
+# applyElasticCRDManifest()
 #
-doesCRDExist() {
-  crd=$1
-
-  if (kubectl get crd 2>/dev/null | grep -v NAME | grep -q $1); then
-    return 0
-  else
-    return 1
-  fi
+applyElasticCRDManifest() {
+  run kubectl apply -f operator-crds.yaml
+  countDownSecs 10 "Applying \"operator-crds.yaml\" manifest"
 }
 
 #
-# checkCRDs() - poll running CRDs until all
-# operator CRDs are running, or timeout and fail.
+# deleteElasticCRDManifest()
 #
-checkCRDs() {
-  alertCRD="alertmanagers.monitoring.coreos.com"
-  promCRD="prometheuses.monitoring.coreos.com"
-  svcCRD="servicemonitors.monitoring.coreos.com"
-  elasticCRD="elasticsearchclusters.enterprises.upmc.com"
-
-  count=60
-  echo -n "waiting up to $count seconds for Custom Resource Definitions to be created: "
-
-  while [[ $count -ne 0 ]]; do
-    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD) && (doesCRDExist $elasticCRD); then
-        echo "all CRDs exist!"
-        return
-    fi
-
-    echo -n .
-    ((count = count - 1))
-    sleep 1
-  done
-
-  fatalError "Not all CRDs are running."
+deleteElasticCRDManifest() {
+  runIgnoreErrors kubectl delete -f operator-crds.yaml
+  countDownSecs 10 "Deleting \"operator-crds.yaml\" manifest"
 }
 
 #
@@ -1376,13 +1355,17 @@ checkCRDs() {
 applyOperatorManifest() {
   echo -n "Applying \"operator.yaml\" manifest: "
   run kubectl apply -f operator.yaml
-  checkCRDs
+  blockUntilPodIsReady "control-plane=elastic-operator" 180 "elastic-operator-0"      # Block until prometheus-calico-nod pod is running & ready
 }
 
 #
 # deleteOperatorManifest()
 #
 deleteOperatorManifest() {
+  runIgnoreErrors kubectl delete elasticsearch tigera-elasticsearch -n calico-monitoring
+  countDownSecs 5 "Deleting tigera-kibana"
+  runIgnoreErrors kubectl delete kibana tigera-kibana -n calico-monitoring
+  countDownSecs 5 "Deleting tigera-elasticsearch"
   runIgnoreErrors kubectl delete -f operator.yaml
   countDownSecs 5 "Deleting \"operator.yaml\" manifest"
   runIgnoreErrors kubectl delete daemonset elasticsearch-operator-sysctl
@@ -1398,10 +1381,10 @@ applyMonitorCalicoManifest() {
     sed -i "s|\(.*\)- .* #K8S_API_SERVER_IP|\1- \"$REPLACE_K8S_CIDR\"|g" monitor-calico.yaml
   fi
   echo -n "Applying \"monitor-calico.yaml\" manifest: "
-  run kubectl apply -f monitor-calico.yaml
+  run kubectl apply --request-timeout=60s -f monitor-calico.yaml
   blockUntilPodIsReady "app=prometheus" 180 "prometheus-calico-node"      # Block until prometheus-calico-nod pod is running & ready
-  blockUntilPodIsReady "name=es-client-tigera-elasticsearch" 180 "elasticsearch-client"      # Block until elasticsearch-client pod is running & ready
-  blockUntilPodIsReady "name=kibana-tigera-elasticsearch" 180 "kibana"    # Block until kibana pod is running & ready
+  blockUntilPodIsReady "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch" 180 "elasticsearch-client"      # Block until elasticsearch-client pod is running & ready
+  blockUntilPodIsReady "name=tigera-kibana" 180 "kibana"    # Block until kibana pod is running & ready
 }
 
 #
@@ -1416,8 +1399,13 @@ deleteMonitorCalicoManifest() {
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
-  openssl req -x509 -newkey rsa:4096 \
-                  -keyout manager.key \
+  # Note the below sequence for cert generation is different from all others in this script because of an issue 
+  # with parsing a key generated using openssl -newkey flag inside Voltron (the new proxy for CNX Manager). 
+  # For more details on this problem please see: https://tigera.atlassian.net/browse/SAAS-390
+  # Generating the key separately from the openssl cert generation appears to get around this problem. 
+  ssh-keygen -m PEM -b 4096 -t rsa -f manager.key -N ""
+  openssl req -x509 -new \
+                  -key manager.key \
                   -nodes \
                   -out manager.crt \
                   -subj "/CN=cnx-manager.calico-monitoring.svc" \
@@ -1425,6 +1413,8 @@ createCNXManagerSecret() {
 
   runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert=./manager.crt --from-file=key=./manager.key -n calico-monitoring
   countDownSecs 5 "Creating cnx-manager-tls secret"
+
+  run rm -f manager.key 
 }
 
 #
@@ -1730,8 +1720,12 @@ installCNX() {
   applyLicenseManifest            # If the user specified a license file, apply it
 
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
+
+  if [ "${ELASTIC_STORAGE}" != "none" ]; then
+    applyElasticStorageManifest     # Apply elastic-storage.yaml
+  fi
+  applyElasticCRDManifest        # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   applyOperatorManifest           # Apply operator.yaml
-  applyElasticStorageManifest     # Apply elastic-storage.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx.yaml
@@ -1749,8 +1743,9 @@ uninstallCNX() {
   deleteCNXManagerSecret         # Delete TLS secret
 
   deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
-  deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteOperatorManifest         # Delete operator.yaml
+  deleteElasticCRDManifest      # Delete operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
+  deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
   deleteCNXAPIManifest           # Delete cnx-api-[etcd|kdd].yaml

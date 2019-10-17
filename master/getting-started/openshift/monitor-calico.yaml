@@ -5,7 +5,7 @@ layout: null
 createCustomResources: false
 fluentd:
   runAsPrivileged: true
-  kubeAuditMountPath: /var/lib/origin
+  kubeAuditMountPath: /var/lib/origin/audit
 # Add the imagePullSecret calico-pull-secret since that is the pull secret our ansible scripts create in openshift-ansible
 imagePullSecrets:
   calico-pull-secret: ""
