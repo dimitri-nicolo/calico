@@ -30,9 +30,20 @@ import (
 var uut *elastic.Elastic
 var elasticClient *oElastic.Client
 
+type exitWithCode struct{ code int }
+
 const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:7.3.2"
 
 func TestMain(m *testing.M) {
+	defer func() {
+		if e := recover(); e != nil {
+			if x, ok := e.(exitWithCode); ok {
+				os.Exit(x.code)
+			}
+			panic(e)
+		}
+	}()
+
 	d, err := client.NewEnvClient()
 	if err != nil {
 		panic("could not create Docker client: " + err.Error())
@@ -81,7 +92,7 @@ func TestMain(m *testing.M) {
 	timeout := time.Second * 10
 	defer func() {
 		if err := d.ContainerStop(ctx, result.ID, &timeout); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "ContainerRemove: %s", err)
+			_, _ = fmt.Fprintf(os.Stderr, "ContainerStop: %s", err)
 		}
 	}()
 
@@ -130,6 +141,15 @@ func TestMain(m *testing.M) {
 		panic("could not create elasticClient: " + err.Error())
 	}
 
+	// Add XPack evaluation license
+	_, err = elasticClient.PerformRequest(ctx, oElastic.PerformRequestOptions{
+		Method: "POST",
+		Path:   "/_license/start_trial?acknowledge=true",
+	})
+	if err != nil {
+		panic("could not install license: " + err.Error())
+	}
+
 	uut, err = elastic.NewElastic(&http.Client{}, u, "", "")
 	if err != nil {
 		panic("could not create unit under test: " + err.Error())
@@ -139,5 +159,5 @@ func TestMain(m *testing.M) {
 
 	rc := m.Run()
 
-	os.Exit(rc)
+	panic(exitWithCode{rc})
 }

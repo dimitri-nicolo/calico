@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	calicoQuery "github.com/projectcalico/libcalico-go/lib/validator/v3/query"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/alert/query"
+	"github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
 	idsElastic "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 )
@@ -72,7 +72,7 @@ func TestAuditQuery(t *testing.T) {
 			err = calicoQuery.Validate(q, calicoQuery.IsValidAuditAtom)
 			g.Expect(err).ShouldNot(HaveOccurred())
 
-			c := query.NewAuditConverter()
+			c := elastic.NewAuditConverter()
 			eq := c.Convert(q)
 			g.Expect(eq).ShouldNot(BeNil())
 			g.Expect(eq).ShouldNot(HaveLen(0))
@@ -222,7 +222,7 @@ func TestDNSQuery(t *testing.T) {
 			err = calicoQuery.Validate(q, calicoQuery.IsValidDNSAtom)
 			g.Expect(err).ShouldNot(HaveOccurred())
 
-			c := query.NewDNSConverter()
+			c := elastic.NewDNSConverter()
 			eq := c.Convert(q)
 			g.Expect(eq).ShouldNot(BeNil())
 			g.Expect(eq).ShouldNot(HaveLen(0))
@@ -314,7 +314,7 @@ func TestFlowsQuery(t *testing.T) {
 			err = calicoQuery.Validate(q, calicoQuery.IsValidFlowsAtom)
 			g.Expect(err).ShouldNot(HaveOccurred())
 
-			c := query.NewFlowsConverter()
+			c := elastic.NewFlowsConverter()
 			eq := c.Convert(q)
 			g.Expect(eq).ShouldNot(BeNil())
 			g.Expect(eq).ShouldNot(HaveLen(0))

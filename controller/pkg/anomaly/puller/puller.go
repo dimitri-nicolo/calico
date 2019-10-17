@@ -46,7 +46,7 @@ type Puller interface {
 
 type puller struct {
 	name      string
-	xPack     elastic.XPack
+	xPack     elastic.XPackAnomalyDetector
 	events    db.Events
 	filter    filters.Filter
 	detectors map[int]*template.Template
@@ -54,7 +54,7 @@ type puller struct {
 	once      sync.Once
 }
 
-func NewPuller(name string, xPack elastic.XPack, events db.Events, filter filters.Filter, detectors map[int]*template.Template) Puller {
+func NewPuller(name string, xPack elastic.XPackAnomalyDetector, events db.Events, filter filters.Filter, detectors map[int]*template.Template) Puller {
 	return &puller{
 		name:      name,
 		xPack:     xPack,

@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package elastic
+package controller
 
 import (
 	"context"
@@ -12,10 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 )
 
 type Controller interface {
+	// Add or update a new Set including the spec. f is function the controller should call
+	// if we fail to update, and stat is the Statser we should report or clear errors on.
+	Add(ctx context.Context, name string, value interface{}, f func(), stat Statser)
+
 	// Delete, and NoGC alter the desired state the controller will attempt to
 	// maintain, by syncing with the elastic database.
 
@@ -36,18 +39,36 @@ type Controller interface {
 	Run(context.Context)
 }
 
-type data interface {
-	put(ctx context.Context, name string, value interface{}) error
-	list(ctx context.Context) ([]db.Meta, error)
-	delete(ctx context.Context, m db.Meta) error
+type Statser interface {
+	Run(context.Context)
+	Close()
+	Error(string, error)
+	ClearError(string)
+}
+
+type Data interface {
+	Put(ctx context.Context, name string, value interface{}) error
+	List(ctx context.Context) ([]db.Meta, error)
+	Delete(ctx context.Context, m db.Meta) error
+}
+
+func NewController(data Data, errorType string) Controller {
+	return &controller{
+		dirty:     make(map[string]update),
+		noGC:      make(map[string]struct{}),
+		updates:   make(chan update, DefaultUpdateQueueLen),
+		data:      data,
+		errorType: errorType,
+	}
 }
 
 type controller struct {
-	once    sync.Once
-	dirty   map[string]update
-	noGC    map[string]struct{}
-	updates chan update
-	data    data
+	once      sync.Once
+	dirty     map[string]update
+	noGC      map[string]struct{}
+	updates   chan update
+	data      Data
+	errorType string
 }
 
 type op int
@@ -64,7 +85,7 @@ type update struct {
 	op      op
 	value   interface{}
 	fail    func()
-	statser statser.Statser
+	statser Statser
 }
 
 const DefaultUpdateQueueLen = 1000
@@ -75,7 +96,7 @@ var NewTicker = func() *time.Ticker {
 	return tkr
 }
 
-func (c *controller) add(ctx context.Context, name string, value interface{}, f func(), stat statser.Statser) {
+func (c *controller) Add(ctx context.Context, name string, value interface{}, f func(), stat Statser) {
 	select {
 	case <-ctx.Done():
 		return
@@ -171,11 +192,11 @@ func (c *controller) processUpdate(u update) {
 }
 
 func (c *controller) reconcile(ctx context.Context) {
-	metas, err := c.data.list(ctx)
+	metas, err := c.data.List(ctx)
 	if err != nil {
 		log.WithError(err).Error("failed to reconcile elastic object")
 		for _, u := range c.dirty {
-			u.statser.Error(statser.ElasticSyncFailed, err)
+			u.statser.Error(c.errorType, err)
 		}
 		return
 	}
@@ -199,15 +220,15 @@ func (c *controller) reconcile(ctx context.Context) {
 }
 
 func (c *controller) updateObject(ctx context.Context, u update) {
-	err := c.data.put(ctx, u.name, u.value)
+	err := c.data.Put(ctx, u.name, u.value)
 	if err != nil {
 		log.WithError(err).WithField("name", u.name).Error("failed to update elastic object")
 		u.fail()
-		u.statser.Error(statser.ElasticSyncFailed, err)
+		u.statser.Error(c.errorType, err)
 		return
 	}
 	// success!
-	u.statser.ClearError(statser.ElasticSyncFailed)
+	u.statser.ClearError(c.errorType)
 	c.noGC[u.name] = struct{}{}
 	delete(c.dirty, u.name)
 }
@@ -226,7 +247,7 @@ func (c *controller) purgeObject(ctx context.Context, m db.Meta) {
 		}
 	}
 
-	err := c.data.delete(ctx, m)
+	err := c.data.Delete(ctx, m)
 	if elastic.IsNotFound(err) {
 		return
 	}

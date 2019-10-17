@@ -30,12 +30,11 @@ const domainNameSetMapping = `{
   }
 }`
 
-const eventMapping = `{
+const EventMapping = `{
   "mappings": {
     "properties" : {
       "time": {
-          "type": "date",
-          "format": "epoch_second"
+          "type": "date"
       },
       "type": {
           "type": "keyword"

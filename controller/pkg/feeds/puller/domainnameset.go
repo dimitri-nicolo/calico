@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/controller"
+
 	log "github.com/sirupsen/logrus"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/idna"
@@ -18,7 +20,6 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -32,7 +33,7 @@ type dnSetNewlineDelimited struct{}
 
 type dnSetPersistence struct {
 	d db.DomainNameSet
-	c elastic.DomainNameSetController
+	c controller.Controller
 }
 
 type dnSetGNSHandler struct {
@@ -96,7 +97,7 @@ func NewDomainNameSetHTTPPuller(
 	configMapClient core.ConfigMapInterface,
 	secretsClient core.SecretInterface,
 	client *http.Client,
-	e elastic.DomainNameSetController,
+	e controller.Controller,
 ) Puller {
 	d := dnSetPersistence{d: ddb, c: e}
 	c := dnSetNewlineDelimited{}

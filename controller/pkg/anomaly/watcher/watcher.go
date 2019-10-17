@@ -25,7 +25,7 @@ type Watcher interface {
 type watcher struct {
 	events      db.Events
 	auditLog    db.AuditLog
-	xPack       elastic.XPack
+	xPack       elastic.XPackAnomalyDetector
 	jobWatchers map[string]*jobWatcher
 	cancel      context.CancelFunc
 	once        sync.Once
@@ -38,7 +38,7 @@ type jobWatcher struct {
 	statser statser.Statser
 }
 
-func NewWatcher(events db.Events, auditLog db.AuditLog, xPack elastic.XPack) Watcher {
+func NewWatcher(events db.Events, auditLog db.AuditLog, xPack elastic.XPackAnomalyDetector) Watcher {
 	return &watcher{
 		events:      events,
 		auditLog:    auditLog,

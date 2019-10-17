@@ -30,6 +30,8 @@ const (
 	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
 	EventIndexPattern         = "tigera_secure_ee_events.%s"
 	AuditIndexPattern         = "tigera_secure_ee_audit_*.%s.*"
+	WatchIndex                = ".watches"
+	WatchNamePrefixPattern    = "tigera_secure_ee_watch.%s."
 	QuerySize                 = 1000
 	AuditQuerySize            = 0
 	MaxClauseCount            = 1024
@@ -48,19 +50,21 @@ var (
 	FlowLogIndex       string
 	DNSLogIndex        string
 	AuditIndex         string
+	WatchNamePrefix    string
 )
 
 func init() {
-	cluster := os.Getenv("CLUSTER_NAME")
-	if cluster == "" {
-		cluster = "cluster"
+	clusterName := os.Getenv("CLUSTER_NAME")
+	if clusterName == "" {
+		clusterName = "cluster"
 	}
-	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, cluster)
-	DomainNameSetIndex = fmt.Sprintf(DomainNameSetIndexPattern, cluster)
-	EventIndex = fmt.Sprintf(EventIndexPattern, cluster)
-	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
-	DNSLogIndex = fmt.Sprintf(DNSLogIndexPattern, cluster)
-	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
+	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, clusterName)
+	DomainNameSetIndex = fmt.Sprintf(DomainNameSetIndexPattern, clusterName)
+	EventIndex = fmt.Sprintf(EventIndexPattern, clusterName)
+	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, clusterName)
+	DNSLogIndex = fmt.Sprintf(DNSLogIndexPattern, clusterName)
+	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, clusterName)
+	WatchNamePrefix = fmt.Sprintf(WatchNamePrefixPattern, clusterName)
 }
 
 type ipSetDoc struct {
@@ -131,7 +135,7 @@ func (e *Elastic) Run(ctx context.Context) {
 		}()
 
 		go func() {
-			if err := e.createOrUpdateIndex(ctx, EventIndex, eventMapping, e.eventMappingCreated); err != nil {
+			if err := e.createOrUpdateIndex(ctx, EventIndex, EventMapping, e.eventMappingCreated); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"index": EventIndex,
 				}).Error("Could not create index")
@@ -794,4 +798,55 @@ func (e *Elastic) auditObjectCreatedDeletedBetween(
 	}).Debug("AuditLog query results")
 
 	return rval, nil
+}
+
+func (e *Elastic) ListWatches(ctx context.Context) ([]db.Meta, error) {
+	result, err := e.c.Search(WatchIndex).Query(elastic.NewMatchAllQuery()).Do(ctx)
+
+	// Handle the special case where no watches have been created. Querying for watches returns
+	// index_not_found_exception. This is not an error. There are no watches.
+	if err != nil {
+		switch err.(type) {
+		case *elastic.Error:
+			err := err.(*elastic.Error)
+			if err.Details.Type == "index_not_found_exception" {
+				return nil, nil
+			}
+		}
+		return nil, err
+	}
+
+	var res []db.Meta
+	for _, hit := range result.Hits.Hits {
+		if strings.HasPrefix(hit.Id, WatchNamePrefix) {
+			res = append(res, db.Meta{Name: hit.Id[len(WatchNamePrefix):], Version: hit.Version})
+		}
+	}
+	return res, nil
+}
+
+func (e *Elastic) TestWatch(ctx context.Context, body *PutWatchBody) (*elastic.XPackWatchRecord, error) {
+	res, err := e.c.XPackWatchExecute().BodyJson(map[string]interface{}{
+		"watch": body,
+	}).Do(ctx)
+
+	if res != nil {
+		return res.WatchRecord, err
+	}
+	return nil, err
+}
+
+func (e *Elastic) PutWatch(ctx context.Context, name string, body *PutWatchBody) error {
+	watchID := WatchNamePrefix + name
+	_, err := e.c.XPackWatchPut(watchID).Body(body).Do(ctx)
+	return err
+}
+
+func (e *Elastic) DeleteWatch(ctx context.Context, m db.Meta) error {
+	// TODO This has a race condition. :(
+	// should maybe check version before or in result. Elastic does not allow you to specify version which
+	// causes the race.
+	watchID := WatchNamePrefix + m.Name
+	_, err := e.c.XPackWatchDelete(watchID).Do(ctx)
+	return err
 }

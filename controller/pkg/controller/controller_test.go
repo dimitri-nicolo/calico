@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package elastic
+package controller
 
 import (
 	"context"
@@ -10,14 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/controller"
-
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+)
+
+const (
+	TestErrorType = "test"
 )
 
 // In order to run these tests against different kinds of controllers, which are
@@ -26,31 +27,24 @@ import (
 
 type testCase struct {
 	name    string
-	makeUUT func(d interface{}) reflect.Value
+	makeUUT func(d Data) reflect.Value
 	set     reflect.Value
 }
 
 var cases = []testCase{
 	{
 		name: "IPSet",
-		makeUUT: func(d interface{}) reflect.Value {
-			return reflect.ValueOf(NewIPSetController(d.(db.IPSet)))
+		makeUUT: func(d Data) reflect.Value {
+			return reflect.ValueOf(NewController(d, TestErrorType))
 		},
 		set: reflect.ValueOf(db.IPSetSpec{"1.2.3.4"}),
-	},
-	{
-		name: "DomainNameSet",
-		makeUUT: func(d interface{}) reflect.Value {
-			return reflect.ValueOf(NewDomainNameSetController(d.(db.DomainNameSet)))
-		},
-		set: reflect.ValueOf(db.DomainNameSetSpec{"evilstuff.bad"}),
 	},
 }
 
 // The following are convenience functions to make it easier to call the Add, Run, Delete, StartReconciliation, and NoGC
 // methods on the UUT, which is a reflect.Value containing the actual controller type.
 
-func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(), stat statser.Statser) {
+func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(), stat Statser) {
 	uut.MethodByName("Add").Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(name),
@@ -83,7 +77,7 @@ func TestController_Add_Success(t *testing.T) {
 			dbm := &db.MockSets{}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -92,7 +86,7 @@ func TestController_Add_Success(t *testing.T) {
 
 			name := "test"
 			fail := func() { t.Error("controller called fail func unexpectedly") }
-			stat := &statser.MockStatser{}
+			stat := &mockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
 			startReconciliation(uut, ctx)
@@ -122,7 +116,7 @@ func TestController_Delete_Success(t *testing.T) {
 			dbm := &db.MockSets{Metas: []db.Meta{{Name: name}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -159,7 +153,7 @@ func TestController_GC_Success(t *testing.T) {
 			dbm := &db.MockSets{}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			gcName := "shouldGC"
 			noGCName := "shouldNotGC"
@@ -190,7 +184,7 @@ func TestController_Update_Success(t *testing.T) {
 			dbm := &db.MockSets{Metas: []db.Meta{{Name: name, Version: &version}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -198,7 +192,7 @@ func TestController_Update_Success(t *testing.T) {
 			run(uut, ctx)
 
 			fail := func() { t.Error("controller called fail func unexpectedly") }
-			stat := &statser.MockStatser{}
+			stat := &mockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
 			startReconciliation(uut, ctx)
@@ -224,7 +218,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 			dbm := &db.MockSets{Error: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -234,7 +228,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 			aName := "added"
 			var failed bool
 			fail := func() { failed = true }
-			stat := &statser.MockStatser{}
+			stat := &mockStatser{}
 			add(uut, ctx, aName, tc.set, fail, stat)
 
 			gName := "nogc"
@@ -257,7 +251,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 			dbm := &db.MockSets{PutError: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -267,7 +261,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 			name := "test"
 			var failed bool
 			fail := func() { failed = true }
-			stat := &statser.MockStatser{}
+			stat := &mockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
 			startReconciliation(uut, ctx)
@@ -281,7 +275,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 			// Potential race condition between call to Put and recording the error, so we just
 			// need the error to eventually be recorded.
 			g.Eventually(func() int { return len(stat.Status().ErrorConditions) }).Should(Equal(1))
-			g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(statser.ElasticSyncFailed))
+			g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(TestErrorType))
 
 			// Potential race condition on calling of the fail function, so we just need it to eventually
 			// have been called.
@@ -304,7 +298,7 @@ func TestController_GC_NotFound(t *testing.T) {
 			dbm := &db.MockSets{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			gcName := "shouldGC"
 			var gcVer int64 = 6
@@ -336,7 +330,7 @@ func TestController_GC_Error(t *testing.T) {
 			dbm := &db.MockSets{DeleteError: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			gcName := "shouldGC"
 			var gcVer int64 = 6
@@ -365,7 +359,7 @@ func TestController_NewTicker(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			dbm := &db.MockSets{}
-			uut := tc.makeUUT(dbm)
+			uut := tc.makeUUT(&mockSetsData{dbm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -379,6 +373,92 @@ func TestController_NewTicker(t *testing.T) {
 	}
 }
 
+// Test Add Delete, NoGC, StartReconciliation, and Run functions when their
+// context expires.
+func TestController_ContextExpiry(t *testing.T) {
+	// For this particular test, we need to monkey patch the update channel to be
+	// blocking before we hand the UUT over to the test code. (Note that we can't
+	// do this using reflection because the field is not exported.) This prevents
+	// Add, Delete, NoGC and StartReconciliation from being queued when the
+	// controller is not running.
+	cases := []testCase{
+		{
+			name: "IPSet",
+			makeUUT: func(d Data) reflect.Value {
+				uut := NewController(d, "test")
+				ctrl := uut.(*controller)
+				ctrl.updates = make(chan update)
+				return reflect.ValueOf(uut)
+			},
+			set: reflect.ValueOf(db.IPSetSpec{"1.2.3.4"}),
+		},
+		{
+			name: "DomainNameSet",
+			makeUUT: func(d Data) reflect.Value {
+				uut := NewController(d, "test")
+				ctrl := uut.(*controller)
+				ctrl.updates = make(chan update)
+				return reflect.ValueOf(uut)
+			},
+			set: reflect.ValueOf(db.DomainNameSetSpec{"evilstuff.bad"}),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			dbm := &db.MockSets{}
+			uut := tc.makeUUT(&mockSetsData{dbm})
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			aCtx, aCancel := context.WithCancel(ctx)
+			var aDone bool
+			go func() {
+				add(uut, aCtx, "add", tc.set, func() {}, &mockStatser{})
+				aDone = true
+			}()
+
+			dCtx, dCancel := context.WithCancel(ctx)
+			var dDone bool
+			go func() {
+				_delete(uut, dCtx, "delete")
+				dDone = true
+			}()
+
+			gCtx, gCancel := context.WithCancel(ctx)
+			var gDone bool
+			go func() {
+				noGC(uut, gCtx, "nogc")
+				gDone = true
+			}()
+
+			sCtx, sCancel := context.WithCancel(ctx)
+			var sDone bool
+			go func() {
+				startReconciliation(uut, sCtx)
+				sDone = true
+			}()
+
+			aCancel()
+			dCancel()
+			gCancel()
+			sCancel()
+
+			g.Eventually(func() bool { return aDone }).Should(BeTrue())
+			g.Eventually(func() bool { return dDone }).Should(BeTrue())
+			g.Eventually(func() bool { return gDone }).Should(BeTrue())
+			g.Eventually(func() bool { return sDone }).Should(BeTrue())
+
+			// Fresh controller to test Run context cancel
+			uut2 := NewController(&mockSetsData{dbm}, "test")
+			rCtx, rCancel := context.WithCancel(ctx)
+			uut2.Run(rCtx)
+			rCancel()
+		})
+	}
+}
+
 type mockTicker struct {
 	oldTicker func() *time.Ticker
 	ticks     chan<- time.Time
@@ -386,14 +466,14 @@ type mockTicker struct {
 
 func mockNewTicker() *mockTicker {
 	ticks := make(chan time.Time)
-	mt := &mockTicker{oldTicker: controller.NewTicker, ticks: ticks}
+	mt := &mockTicker{oldTicker: NewTicker, ticks: ticks}
 	tkr := time.Ticker{C: ticks}
-	controller.NewTicker = func() *time.Ticker { return &tkr }
+	NewTicker = func() *time.Ticker { return &tkr }
 	return mt
 }
 
 func (m *mockTicker) restoreNewTicker() {
-	controller.NewTicker = m.oldTicker
+	NewTicker = m.oldTicker
 }
 
 func (m *mockTicker) reconcile(t *testing.T, ctx context.Context) {

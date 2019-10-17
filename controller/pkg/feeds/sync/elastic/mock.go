@@ -6,15 +6,16 @@ import (
 	"context"
 	"sync"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/controller"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 )
 
 type MockElasticIPSetController struct {
 	m         sync.Mutex
 	sets      map[string]db.IPSetSpec
 	failFuncs map[string]func()
-	statsers  map[string]statser.Statser
+	statsers  map[string]controller.Statser
 	noGC      map[string]struct{}
 }
 
@@ -22,15 +23,15 @@ func NewMockElasticIPSetController() *MockElasticIPSetController {
 	return &MockElasticIPSetController{
 		sets:      make(map[string]db.IPSetSpec),
 		failFuncs: make(map[string]func()),
-		statsers:  make(map[string]statser.Statser),
+		statsers:  make(map[string]controller.Statser),
 		noGC:      make(map[string]struct{}),
 	}
 }
 
-func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser) {
+func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set interface{}, f func(), stat controller.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.sets[name] = set
+	c.sets[name] = set.(db.IPSetSpec)
 	c.failFuncs[name] = f
 	c.statsers[name] = stat
 }
@@ -82,7 +83,7 @@ type MockDomainNameSetsController struct {
 	m         sync.Mutex
 	sets      map[string]db.DomainNameSetSpec
 	failFuncs map[string]func()
-	statsers  map[string]statser.Statser
+	statsers  map[string]controller.Statser
 	noGC      map[string]struct{}
 }
 
@@ -90,15 +91,15 @@ func NewMockDomainNameSetsController() *MockDomainNameSetsController {
 	return &MockDomainNameSetsController{
 		sets:      make(map[string]db.DomainNameSetSpec),
 		failFuncs: make(map[string]func()),
-		statsers:  make(map[string]statser.Statser),
+		statsers:  make(map[string]controller.Statser),
 		noGC:      make(map[string]struct{}),
 	}
 }
 
-func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set db.DomainNameSetSpec, f func(), stat statser.Statser) {
+func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(), stat controller.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.sets[name] = set
+	c.sets[name] = set.(db.DomainNameSetSpec)
 	c.failFuncs[name] = f
 	c.statsers[name] = stat
 }

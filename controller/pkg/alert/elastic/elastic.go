@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package query
+package elastic
 
 import (
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"

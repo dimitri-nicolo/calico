@@ -11,13 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/controller"
+
 	log "github.com/sirupsen/logrus"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
@@ -26,7 +27,7 @@ type ipSetNewlineDelimited struct{}
 
 type ipSetPersistence struct {
 	d db.IPSet
-	c elastic.IPSetController
+	c controller.Controller
 }
 
 type ipSetGNSHandler struct {
@@ -170,7 +171,7 @@ func NewIPSetHTTPPuller(
 	secretsClient core.SecretInterface,
 	client *http.Client,
 	gnsController globalnetworksets.Controller,
-	elasticIPSet elastic.IPSetController,
+	elasticIPSet controller.Controller,
 ) Puller {
 	d := ipSetPersistence{d: ipSet, c: elasticIPSet}
 	c := ipSetNewlineDelimited{}
