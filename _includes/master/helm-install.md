@@ -280,11 +280,11 @@ kubectl create clusterrolebinding <USER>-tigera \
 
 **Network Admin**
 
-The `network-admin` role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and administer all network policies and tiers.
+The `tigera-network-admin` role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and administer all network policies and tiers.
 
 ```
 kubectl create clusterrolebinding <USER>-network-admin \
-  --clusterrole=network-admin \
+  --clusterrole=tigera-network-admin \
   --user=<USER>
 ```
 

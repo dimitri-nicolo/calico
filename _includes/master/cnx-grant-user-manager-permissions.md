@@ -8,16 +8,6 @@
   {% assign user = "<USER>" %}
 {%- endif %}
 
-{% comment %}
-The operator uses a more consistent name for clusterroles so add an override for the network-admin-role name.
-TODO(lmm): rename the 'network-admin' role to 'tigera-network-admin' so we can remove this workaround.
-{% endcomment %}
-{%- if include.installer == "operator" %}
-  {% assign network-admin-role = "tigera-network-admin" %}
-{% else %}
-  {% assign network-admin-role = "network-admin" %}
-{%- endif %}
-
 1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `{{user}}` with the {{type}} you wish to grant access.
 
@@ -34,16 +24,16 @@ TODO(lmm): rename the 'network-admin' role to 'tigera-network-admin' so we can r
 {%- endif %}
    ```
 
-   The ClusterRole `{{network-admin-role}}` grants permission to use the {{site.prodname}} Manager UI, view flow
+   The ClusterRole `tigera-network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow
    logs, audit logs, compliance reports and network statistics, and administer all network policies and tiers, and
    manage compliance report schedules.
 
    ```
 {%- if include.init == "openshift" %}
-   oc adm policy add-cluster-role-to-user network-admin <USER>
+   oc adm policy add-cluster-role-to-user tigera-network-admin <USER>
 {%- else %}
    kubectl create clusterrolebinding <USER>-network-admin \
-     --clusterrole={{network-admin-role}} \
+     --clusterrole=tigera-network-admin \
      --{{flag}}={{user}}
 {%- endif %}
    ```
