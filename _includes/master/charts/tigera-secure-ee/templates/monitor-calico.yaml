@@ -1039,13 +1039,7 @@ spec:
           exec:
             command: ["/healthz", "liveness"]
           initialDelaySeconds: 5
-        readinessProbe:
-          exec:
-            command: ["/healthz", "readiness"]
-          initialDelaySeconds: 5
-        securityContext:
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
+        name: controller
         env:
           - name: CLUSTER_NAME
             valueFrom:
