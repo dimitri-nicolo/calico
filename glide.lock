@@ -1,5 +1,5 @@
-hash: ba2f208d2d5f287990ff31630dccbd0bf693a33e505b5abbbad3b85eb56de441
-updated: 2019-09-25T16:53:33.592545524-07:00
+hash: 59b1a5a290f2f8e0c60e770f9d857245dc41100eeb9b3c912327866745f513b3
+updated: 2019-10-08T13:54:28.286168-07:00
 imports:
 - name: github.com/aquasecurity/kube-bench
   version: b649588f46c54c84cd9c88510680b5a651f12d46
@@ -86,7 +86,7 @@ imports:
 - name: github.com/huandu/xstrings
   version: f02667b379e2fb5916c3cda2cf31e0eb885d79f8
 - name: github.com/imdario/mergo
-  version: 7c29201646fa3de8506f701213473dd407f19646
+  version: 1afb36080aec31e0d1528973ebe6721b191b0369
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/json-iterator/go
@@ -130,7 +130,7 @@ imports:
   - v7/config
   - v7/uritemplates
 - name: github.com/onsi/ginkgo
-  version: 974566c482abc93ffd3df6f4626e79076c7ed290
+  version: 72b6ab036f78c4bf1a9748c3941dd7c3de54917a
   subpackages:
   - config
   - extensions/table
@@ -194,7 +194,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 2ac87253de276ce4dfb30d864ae4c1d157d93c22
+  version: 80bdc7c2bee378f543a6233f4d2278c38b7e73c0
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -385,6 +385,8 @@ imports:
   version: 556b9da3c05f2a935bc086fb5a0bb55dd8112d2d
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/natefinch/lumberjack.v2
+  version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
   version: f8f38de21b4dcd69d0413faf231983f5fd6634b1
   subpackages:

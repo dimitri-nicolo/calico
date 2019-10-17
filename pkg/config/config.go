@@ -63,6 +63,14 @@ type Config struct {
 
 	// This setting is required for es proxy that performs the authentication and authorization for an user.
 	EnableMultiClusterClient bool `envconfig:"ENABLE_MULTI_CLUSTER_CLIENT" default:"false"`
+
+	// Settings for controlling archiving behaviour for Compliance reports (through Fluentd tailed log file)
+	// Note: By default the logging to file for archiving is turned on. User is expected to interact with config
+	// on Fluentd side (by enabling S3 storage).
+	ArchiveLogsEnabled       bool   `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_ENABLED" default:"true"`
+	ArchiveLogsDirectory     string `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_DIR" default:"/var/log/calico/compliance"`
+	ArchiveLogsMaxFiles      int    `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_MAX_FILES" default:"2"`
+	ArchiveLogsMaxFileSizeMB int    `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_MAX_FILESIZE_MB" default:"50"`
 }
 
 func MustLoadConfig() *Config {
