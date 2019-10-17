@@ -60,7 +60,7 @@ type clusters struct {
 func returnJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Errorf("Error while encoding data for response %#v", data)
+		log.Error("Error while encoding data for response")
 		// TODO: We need named errors, with predefined
 		// error codes and user-friendly error messages here
 		http.Error(w, "\"An error occurred\"", 500)
@@ -99,7 +99,10 @@ func (cs *clusters) List() []jclust.Cluster {
 		return clusterList[i].DisplayName < clusterList[j].DisplayName
 	})
 
-	log.Debugf("clusterList = %+v", clusterList)
+	log.Debugf("Listing current %d clusters.", len(clusterList))
+	for _, cluster := range clusterList {
+		log.Debugf("DisplayName = %s", cluster.DisplayName)
+	}
 	return clusterList
 }
 
@@ -311,7 +314,7 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 		return
 	}
 
-	log.Debugf("managedClusterHandler: Decoded object %+v", data)
+	log.Debugf("ManagedClusterHandler: Successfully decoded received data")
 
 	// New cluster used to generate manifest
 	metadataObj := data["metadata"].(map[string]interface{})
@@ -323,7 +326,7 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 	renderedManifest, err := cs.update(&jc)
 	if err != nil {
 		log.Errorf("managedClusterHandler: Manifest generation failed %s", err.Error())
-		http.Error(w, "ManagedCluster was created, but installation manifest could not be generated", 500)
+		http.Error(w, "managedCluster was created, but installation manifest could not be generated", 500)
 		return
 	}
 
@@ -335,7 +338,7 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 	}
 
 	if err := json.NewEncoder(&dataBuffer).Encode(data); err != nil {
-		log.Errorf("managedClusterHandler: Error while encoding data for response %#v: err %s", data, err.Error())
+		log.Errorf("managedClusterHandler: Error while encoding data for response: %s", err.Error())
 		http.Error(w, "ManagedCluster was created, but unable to encode resource entity", 500)
 		return
 	}
@@ -377,7 +380,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
 
 			mc, ok := r.Object.(*apiv3.ManagedCluster)
 			if !ok {
-				log.Errorf("Unexpected object type %T value %+v", r.Object, r.Object)
+				log.Debugf("Unexpected object type %T", r.Object)
 				continue
 			}
 
@@ -386,7 +389,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
 				DisplayName: mc.ObjectMeta.Name,
 			}
 
-			log.Debugf("watchK8s: %s %+v", r.Type, jc)
+			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, jc.DisplayName)
 
 			var err error
 
@@ -401,7 +404,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
 			case watch.Deleted:
 				err = cs.remove(jc)
 			default:
-				err = errors.Errorf("watch event %s unsupported", r.Type)
+				err = errors.Errorf("Watch event %s unsupported", r.Type)
 			}
 
 			if err != nil {
@@ -439,7 +442,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, k8s K8sInterface) (string
 
 		known[id] = struct{}{}
 
-		log.Debugf("resyncWithK8s: %+v", jc)
+		log.Debugf("Sync K8s watch for cluster : %s", jc.DisplayName)
 		_, err = cs.updateLocked(jc, true)
 		if err != nil {
 			log.Errorf("ManagedClusters listing failed: %s", err)
@@ -471,7 +474,7 @@ func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<-
 		} else {
 			err = errors.WithMessage(err, "k8s list failed")
 		}
-		log.Errorf("ManagedClusters: %s", err)
+		log.Debugf("ManagedClusters: could not sync watch due to %s", err)
 		select {
 		case <-ctx.Done():
 			return errors.Errorf("watcher exiting: %s", ctx.Err())

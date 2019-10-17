@@ -4,6 +4,7 @@ package main
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 
@@ -21,13 +22,21 @@ const (
 
 // Config is a configuration used for Guardian
 type config struct {
-	LogLevel          string            `default:"DEBUG"`
-	CertPath          string            `default:"/certs" split_words:"true"`
+	LogLevel          string            `default:"INFO"`
+	CertPath          string            `default:"/certs" split_words:"true" json:"-"`
 	VoltronURL        string            `required:"true" split_words:"true"`
 	ProxyTargets      bootstrap.Targets `required:"true" split_words:"true"`
 	KeepAliveEnable   bool              `default:"true" split_words:"true"`
 	KeepAliveInterval int               `default:"100" split_words:"true"`
 	PProf             bool              `default:"false"`
+}
+
+func (cfg config) String() string {
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
 }
 
 func main() {
@@ -42,7 +51,7 @@ func main() {
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
+	log.Infof("Starting %s with %s", EnvConfigPrefix, cfg)
 
 	if cfg.PProf {
 		go func() {
@@ -58,17 +67,17 @@ func main() {
 
 	pemCert, err := ioutil.ReadFile(cert)
 	if err != nil {
-		log.Fatalf("Failed to load cert: %+v", err)
+		log.Fatalf("Failed to load cert: %s", err)
 	}
 	pemKey, err := ioutil.ReadFile(key)
 	if err != nil {
-		log.Fatalf("Failed to load key: %+v", err)
+		log.Fatalf("Failed to load key: %s", err)
 	}
 
 	ca := x509.NewCertPool()
 	content, _ := ioutil.ReadFile(serverCrt)
 	if ok := ca.AppendCertsFromPEM(content); !ok {
-		log.Fatalf("Cannot append voltron cert to ca pool: %+v", err)
+		log.Fatalf("Cannot append the certificate to ca pool: %s", err)
 	}
 
 	tgts, err := bootstrap.ProxyTargets(cfg.ProxyTargets)

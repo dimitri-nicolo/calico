@@ -141,32 +141,30 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 		if tlsc, ok := ss.Conn.(*tls.Conn); ok {
 			if !tlsc.ConnectionState().HandshakeComplete {
 				// Set timeout not to hang for ever
-				tlsc.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
+				_ = tlsc.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
 				err := tlsc.Handshake()
 				if err != nil {
 					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
 						tlsc.RemoteAddr().String(), err)
 					log.Errorf(msg)
-					ss.Close()
+					_ = ss.Close()
 					return nil, errors.Errorf(msg)
 				}
 				// reset the deadline to no timeout
-				tlsc.SetReadDeadline(time.Time{})
+				_ = tlsc.SetReadDeadline(time.Time{})
 				log.Debugf("TLS HandshakeComplete %t certs %d",
 					tlsc.ConnectionState().HandshakeComplete,
 					len(tlsc.ConnectionState().PeerCertificates))
-				log.Debugf("cert emails: %v",
-					tlsc.ConnectionState().PeerCertificates[0].EmailAddresses)
 			}
 			ctyp = "tls "
 		}
 
-		log.Debugf("tunnel.Server accepted %sconnection from %s",
+		log.Debugf("tunnel.Server accepted %s connection from %s",
 			ctyp, ss.Conn.RemoteAddr().String())
 
 		return ss, nil
 	case <-s.ctx.Done():
-		return nil, errors.Errorf("server is exitting")
+		return nil, errors.Errorf("server is exiting")
 	}
 }
 

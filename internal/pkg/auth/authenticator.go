@@ -48,7 +48,7 @@ func (id BearerAuthenticator) Authenticate(token string) (*User, error) {
 
 	if result.Status.Authenticated {
 		user := &User{Name: result.Status.User.Username, Groups: result.Status.User.Groups}
-		log.Debugf("User was authenticated as %v", user)
+		log.Debug("User was authenticated")
 		return user, nil
 	}
 
@@ -78,7 +78,7 @@ func (id BasicAuthenticator) Authenticate(token string) (*User, error) {
 		return nil, errors.New("Could not parse basic token")
 	}
 
-	log.Debugf("Creating anonymous configuration for k8s api for user %v", slice[0])
+	log.Debugf("Creating anonymous configuration for k8s api for user %s", slice[0])
 	k8sAPI, err := id.apiGen.Generate(slice[0], slice[1])
 	if err != nil {
 		return nil, err

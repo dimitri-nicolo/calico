@@ -44,7 +44,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 	}
 
 	client.tunnelAddr = addr
-	log.Infof("Tunnel Address: %v", client.tunnelAddr)
+	log.Infof("Tunnel Address: %s", client.tunnelAddr)
 
 	for _, o := range opts {
 		if err := o(client); err != nil {
@@ -52,7 +52,9 @@ func New(addr string, opts ...Option) (*Client, error) {
 		}
 	}
 
-	log.Infof("Targets are: %v", client.targets)
+	for _, target := range client.targets {
+		log.Infof("Will route traffic to %s for requests matching %s", target.Dest, target.Path)
+	}
 
 	client.proxyMux = http.NewServeMux()
 	client.http.Handler = client.proxyMux

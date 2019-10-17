@@ -34,7 +34,7 @@ func WithTemplate(templatePath string) Option {
 	return func(s *Server) error {
 		templateContent, err := ioutil.ReadFile(templatePath)
 		if err != nil {
-			return errors.Errorf("Could not read template from path %v", err)
+			return errors.Errorf("Could not read template from path %s", err)
 		}
 
 		s.template = string(templateContent)

@@ -48,9 +48,9 @@ func NewIdentity(k8sAPI k8s.Interface, config *rest.Config) *Identity {
 // against k8s api. The following types of authentication are supported: Basic and Bearer
 // If a User cannot be authenticated it will return an error
 func (id *Identity) Authenticate(r *http.Request) (*User, error) {
-	log.Debugf("Will extract token of out request %v", r)
+	log.Debugf("Will extract token of out request %s", r.RequestURI)
 	token, tokenType := Extract(r)
-	log.Debugf("Extracted token %v with type %v", token, tokenType)
+	log.Debugf("Extracted token with type %v", tokenType)
 	authenticator, ok := id.authenticators[tokenType]
 	if !ok {
 		return nil, errors.New("Token type not supported")

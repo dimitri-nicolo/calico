@@ -105,7 +105,7 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 		if tgt.PathRegexp != nil {
 			if !tgt.PathRegexp.MatchString(r.URL.Path) {
 				http.Error(w, "Not found", 404)
-				log.Debugf("Received request %+v rejected by PathRegexp %q", r, tgt.PathRegexp)
+				log.Debugf("Received request %s rejected by PathRegexp %q", r.RequestURI, tgt.PathRegexp)
 				return
 			}
 			if tgt.PathReplace != nil {
@@ -117,7 +117,7 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 			r.Header.Set("Authorization", token)
 		}
 
-		log.Debugf("Received request %+v will proxy to %s", r, tgt.Dest)
+		log.Debugf("Received request %s will proxy to %s", r.RequestURI, tgt.Dest)
 
 		p.ServeHTTP(w, r)
 	}

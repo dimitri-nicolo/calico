@@ -364,7 +364,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.auth.Authenticate(r)
 	if err != nil {
-		log.Errorf("Could not authenticate user from request: %v", err)
+		log.Errorf("Could not authenticate user from request: %s", err)
 		http.Error(w, err.Error(), 401)
 		return
 	}
@@ -387,7 +387,7 @@ func addImpersonationHeaders(r *http.Request, user *auth.User) {
 	for _, group := range user.Groups {
 		r.Header.Add("Impersonate-Group", group)
 	}
-	log.Debugf("Setting headers %v", r.Header)
+	log.Debugf("Adding impersonation headers")
 }
 
 func (s *Server) generateCreds(clusterInfo *jclust.Cluster) (*x509.Certificate, crypto.Signer, error) {

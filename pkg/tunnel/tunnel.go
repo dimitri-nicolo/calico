@@ -67,7 +67,7 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 	}
 
 	if err != nil {
-		return nil, errors.Errorf("New failed creating muxer: %+v", err)
+		return nil, errors.Errorf("New failed creating muxer: %s", err)
 	}
 
 	t.mux = mux

@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	authn "k8s.io/api/authentication/v1"
 	authz "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -348,8 +347,6 @@ func (mc *managedClusters) listReactor(action k8stesting.Action) (
 			},
 		})
 	}
-
-	log.Infof("list: %+v", list)
 
 	return true, list, nil
 }

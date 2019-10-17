@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 
@@ -27,13 +28,13 @@ type config struct {
 	Host               string
 	TunnelPort         int    `default:"5566" split_words:"true"`
 	TunnelHost         string `split_words:"true"`
-	TunnelCert         string `default:"/certs/tunnel/cert" split_words:"true"`
-	TunnelKey          string `default:"/certs/tunnel/key" split_words:"true"`
-	LogLevel           string `default:"DEBUG"`
+	TunnelCert         string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
+	TunnelKey          string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
+	LogLevel           string `default:"INFO"`
 	TemplatePath       string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
 	PublicIP           string `default:"127.0.0.1:32453" split_words:"true"`
-	HTTPSCert          string `default:"/certs/https/cert" split_words:"true"`
-	HTTPSKey           string `default:"/certs/https/key" split_words:"true"`
+	HTTPSCert          string `default:"/certs/https/cert" split_words:"true" json:"-"`
+	HTTPSKey           string `default:"/certs/https/key" split_words:"true" json:"-"`
 	K8sConfigPath      string `split_words:"true"`
 	KeepAliveEnable    bool   `default:"true" split_words:"true"`
 	KeepAliveInterval  int    `default:"100" split_words:"true"`
@@ -44,6 +45,14 @@ type config struct {
 	PProf              bool   `default:"false"`
 }
 
+func (cfg config) String() string {
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
 func main() {
 	cfg := config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
@@ -51,7 +60,7 @@ func main() {
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
+	log.Infof("Starting %s with %s", EnvConfigPrefix, cfg)
 
 	if cfg.PProf {
 		go func() {
