@@ -91,6 +91,7 @@ if [ "${S3_STORAGE}" == "true" ]; then
   cp /fluentd/etc/outputs/out-s3-dns.conf /fluentd/etc/output_dns/out-s3.conf
   cp /fluentd/etc/outputs/out-s3-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-s3.conf
   cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
+  cp /fluentd/etc/outputs/out-s3-compliance-reports.conf /fluentd/etc/output_compliance_reports/out-s3.conf
 fi
 
 source /bin/syslog-environment.sh
@@ -103,6 +104,11 @@ source /bin/sumo-environment.sh
 source /bin/sumo-config.sh
 
 cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
+# Append additional output config (for Compliance reports) when S3 archiving is turned on
+if [ "${S3_STORAGE}" == "true" ]; then
+  cat /fluentd/etc/fluent_output_optional.conf >> /fluentd/etc/fluent.conf
+fi
+echo >> /fluentd/etc/fluent.conf
 
 # Run fluentd
 "$@"

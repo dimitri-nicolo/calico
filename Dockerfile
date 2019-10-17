@@ -23,10 +23,12 @@ ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY fluent_output.conf /fluentd/etc/fluent_output.conf
+COPY fluent_output_optional.conf /fluentd/etc/fluent_output_optional.conf
 COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
 COPY filters /fluentd/etc/filters
 
+ENV COMPLIANCE_LOG_FILE=/var/log/calico/compliance/reports.log
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 ENV POS_DIR=/var/log/calico
@@ -72,6 +74,7 @@ RUN mkdir /fluentd/etc/output_flows
 RUN mkdir /fluentd/etc/output_dns
 RUN mkdir /fluentd/etc/output_tsee_audit
 RUN mkdir /fluentd/etc/output_kube_audit
+RUN mkdir /fluentd/etc/output_compliance_reports
 
 EXPOSE 24284
 
