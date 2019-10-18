@@ -1,42 +1,42 @@
 # This Makefile builds Felix and packages it in various forms:
 #
-#                                                                      Go install
-#                                                                           |
-#                                                                           |
-#                                                                           |
-#                                                    +-------+              v
-#                                                    | Felix |   +---------------------+
-#                                                    |  Go   |   | calico/go-build     |
-#                                                    |  code |   +---------------------+
-#                                                    +-------+         /
-#                                                           \         /
-#                                                            \       /
-#                                                             \     /
-#                                                             go build
-#                                                                 \
-#                                                                  \
-#                                                                   \
-# +----------------------+                                           :
-# | calico-build/centos7 |                                           v
-# | calico-build/xenial  |                                 +------------------+
-# | calico-build/trusty  |                                 | bin/calico-felix |
-# +----------------------+                                 +------------------+
-#                     \                                          /   /
-#                      \             .--------------------------'   /
-#                       \           /                              /
-#                        \         /                      .-------'
-#                         \       /                      /
-#                     rpm/build-rpms                    /
-#                   debian/build-debs                  /
-#                           |                         /
-#                           |                   docker build
-#                           v                         |
-#            +----------------------------+           |
-#            |  RPM packages for Centos7  |           |
-#            |  RPM packages for Centos6  |           v
-#            | Debian packages for Xenial |    +--------------+
-#            | Debian packages for Trusty |    | tigera/felix |
-#            +----------------------------+    +--------------+
+#								      Go install
+#									   |
+#									   |
+#									   |
+#						    +-------+	      v
+#						    | Felix |   +---------------------+
+#						    |  Go   |   | calico/go-build     |
+#						    |  code |   +---------------------+
+#						    +-------+	 /
+#							   \	 /
+#							    \       /
+#							     \     /
+#							     go build
+#								 \
+#								  \
+#								   \
+# +----------------------+					   :
+# | calico-build/centos7 |					   v
+# | calico-build/xenial  |				 +------------------+
+# | calico-build/trusty  |				 | bin/calico-felix |
+# +----------------------+				 +------------------+
+#		     \					  /   /
+#		      \	     .--------------------------'   /
+#		       \	   /			      /
+#			\	 /		      .-------'
+#			 \       /		      /
+#		     rpm/build-rpms		    /
+#		   debian/build-debs		  /
+#			   |			 /
+#			   |		   docker build
+#			   v			 |
+#	    +----------------------------+	   |
+#	    |  RPM packages for Centos7  |	   |
+#	    |  RPM packages for Centos6  |	   v
+#	    | Debian packages for Xenial |    +--------------+
+#	    | Debian packages for Trusty |    | tigera/felix |
+#	    +----------------------------+    +--------------+
 #
 #
 #
@@ -65,10 +65,10 @@ BUILDOS ?= $(shell uname -s | tr A-Z a-z)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
+	BUILDARCH=arm64
 endif
 ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+	BUILDARCH=amd64
 endif
 
 # unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
@@ -76,10 +76,10 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
+	override ARCH=amd64
 endif
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
@@ -155,9 +155,9 @@ FV_FELIXIMAGE ?= tigera/felix:latest-$(BUILDARCH)
 
 # If building on amd64 omit the arch in the container name.  Fixme!
 ifeq ($(BUILDARCH),amd64)
-        FV_ETCDIMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
-        FV_K8SIMAGE=gcr.io/google_containers/hyperkube:$(K8S_VERSION)
-        FV_TYPHAIMAGE=gcr.io/unique-caldron-775/cnx/tigera/typha:master
+	FV_ETCDIMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
+	FV_K8SIMAGE=gcr.io/google_containers/hyperkube:$(K8S_VERSION)
+	FV_TYPHAIMAGE=gcr.io/unique-caldron-775/cnx/tigera/typha:master
 endif
 
 # Total number of ginkgo batches to run.  The CI system sets this according to the number
@@ -189,10 +189,10 @@ DATE:=$(shell date -u +'%FT%T%z')
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
 LDFLAGS:=-ldflags "\
-        -X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
-        -X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
-        -X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT) \
-        -B 0x$(BUILD_ID)"
+	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
+	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
+	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT) \
+	-B 0x$(BUILD_ID)"
 
 # List of Go files that are generated by the build process.  Builds should
 # depend on these, clean removes them.
@@ -221,12 +221,9 @@ LOCAL_GROUP_ID:=$(shell id -g)
 EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
 GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
+# Allow the ssh auth sock to be mapped into the build container.
 ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
@@ -240,7 +237,25 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico and typha in the same directory as this repo.
+PHONY:local_build
+
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw \
+        -v $(CURDIR)/../typha-private:/go/src/github.com/projectcalico/typha:rw
+local_build:
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/typha=../typha
+else
+# Note that update_replace_pin invokes `go mod download`, which will fail for all but the last call in this target. That's
+# expected since the local directories are not volume mounted anymore.
+local_build:
+	-$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
+	$(call update_replace_pin,github.com/projectcalico/typha,github.com/tigera/typha-private,master)
+endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -253,20 +268,6 @@ DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
 		-w /go/src/$(PACKAGE_NAME)
-
-# TODO: re-enable local builds
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-PHONY:local_build
-
-ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
-local_build:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go'
-else
-local_build:
-	@echo This is not a local build.
-endif
 
 .PHONY: clean
 clean:
@@ -288,26 +289,61 @@ clean:
 	find . -name "*.pyc" -type f -delete
 
 ###############################################################################
-# Building the binary
+# Updating pins
 ###############################################################################
-build: bin/calico-felix
-build-all: $(addprefix sub-build-,$(VALIDARCHES))
-sub-build-%:
-	$(MAKE) build ARCH=$*
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
-# Default the typha repo and version but allow them to be overridden
-TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-TYPHA_REPO?=github.com/projectcalico/typha
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:projectcalico/typha $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
-TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go list -m -f "{{.Version}}" github.com/projectcalico/typha')
+define get_remote_version
+	$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+endef
 
-## Update typha pin in go.mod
-update-typha:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
-	if [[ ! -z "$(TYPHA_VERSION)" ]] && [[ "$(TYPHA_VERSION)" != "$(TYPHA_OLDVER)" ]]; then \
-		echo "Updating typha version $(TYPHA_OLDVER) to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
-		go get $(TYPHA_REPO)@$(TYPHA_VERSION); \
-	fi'
+# update_pin updates the given package's version to the latest available in the specified repo and branch.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			go get $(1)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
+# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_replace_pin
+	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+		if [[ ! -z "$(new_ver)" ]]; then \
+			go mod edit -replace $(1)=$(2)@$(new_ver); \
+			go mod download; \
+		fi'
+endef
+
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+LICENSING_BRANCH?=$(PIN_BRANCH)
+LICENSING_REPO?=github.com/tigera/licensing
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+TYPHA_BRANCH?=$(PIN_BRANCH)
+TYPHA_REPO?=github.com/tigera/typha-private
+
+update-licensing-pin: guard-ssh-forwarding-bug
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
+
+update-libcalico-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
+
+update-typha-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/typha,$(TYPHA_REPO),$(TYPHA_BRANCH))
 
 git-status:
 	git status --porcelain
@@ -319,12 +355,22 @@ ifdef CONFIRM
 endif
 
 git-commit:
-	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
 
 git-push:
 	git push
 
-commit-pin-updates: update-typha git-status ci git-config git-commit git-push
+update-pins: update-licensing-pin update-libcalico-pin update-typha-pin
+
+commit-pin-updates: update-pins git-status ci git-config git-commit git-push
+
+###############################################################################
+# Building the binary
+###############################################################################
+build: bin/calico-felix
+build-all: $(addprefix sub-build-,$(VALIDARCHES))
+sub-build-%:
+	$(MAKE) build ARCH=$*
 
 bin/calico-felix: remote-deps bin/calico-felix-$(ARCH)
 	ln -f bin/calico-felix-$(ARCH) bin/calico-felix
@@ -343,7 +389,7 @@ bin/calico-felix.exe: $(SRC_FILES)
 	@echo Building felix for Windows...
 	mkdir -p bin
 	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
-           	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
+	   	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
@@ -379,10 +425,10 @@ endif
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
 protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-                  -v $(CURDIR):/code -v $(CURDIR)/proto:/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              --gogofaster_out=plugins=grpc:. \
-	              felixbackend.proto
+		  -v $(CURDIR):/code -v $(CURDIR)/proto:/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      --gogofaster_out=plugins=grpc:. \
+		      felixbackend.proto
 
 BPF_INC_FILES := bpf/include/bpf.h
 BPF_XDP_INC_FILES :=
@@ -397,98 +443,98 @@ $(CLANG_BUILDER_STAMP): docker-build-images/bpf-clang-builder.Dockerfile.$(BUILD
 bpf/xdp/generated/xdp.o: bpf/xdp/filter.c $(BPF_INC_FILES) $(BPF_XDP_INC_FILES) $(CLANG_BUILDER_STAMP)
 	mkdir -p bpf/xdp/generated
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-	          -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	              calico-build/bpf-clang \
-	              /bin/sh -c \
-	              "cd /go/src/$(PACKAGE_NAME) && \
-	               clang \
-	                      -D__KERNEL__ \
-	                      -D__ASM_SYSREG_H \
-	                      -Wno-unused-value \
-	                      -Wno-pointer-sign \
-	                      -Wno-compare-distinct-pointer-types \
-	                      -Wunused \
-	                      -Wall \
-	                      -Werror \
-	                      -fno-stack-protector \
-	                      -O2 \
-	                      -emit-llvm \
-	                      -c /go/src/$(PACKAGE_NAME)/bpf/xdp/filter.c \
-	                      -o /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.ll && \
-	               llc \
-	                       -march=bpf \
-	                       -filetype=obj \
-	                       -o /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.o \
-	                       /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.ll && \
-	               rm -f /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.ll"
+		  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		      calico-build/bpf-clang \
+		      /bin/sh -c \
+		      "cd /go/src/$(PACKAGE_NAME) && \
+		       clang \
+			      -D__KERNEL__ \
+			      -D__ASM_SYSREG_H \
+			      -Wno-unused-value \
+			      -Wno-pointer-sign \
+			      -Wno-compare-distinct-pointer-types \
+			      -Wunused \
+			      -Wall \
+			      -Werror \
+			      -fno-stack-protector \
+			      -O2 \
+			      -emit-llvm \
+			      -c /go/src/$(PACKAGE_NAME)/bpf/xdp/filter.c \
+			      -o /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.ll && \
+		       llc \
+			       -march=bpf \
+			       -filetype=obj \
+			       -o /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.o \
+			       /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.ll && \
+		       rm -f /go/src/$(PACKAGE_NAME)/bpf/xdp/generated/xdp.ll"
 
 BPF_SOCKMAP_INC_FILES := bpf/sockmap/sockops.h
 
 bpf/sockmap/generated/sockops.o: bpf/sockmap/sockops.c $(BPF_INC_FILES) $(BPF_SOCKMAP_INC_FILES) $(CLANG_BUILDER_STAMP)
 	mkdir -p bpf/sockmap/generated
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-	          -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	              calico-build/bpf-clang \
-	              /bin/sh -c \
-	              "cd /go/src/$(PACKAGE_NAME) && \
-	               clang \
-	                      -D__KERNEL__ \
-	                      -D__ASM_SYSREG_H \
-	                      -Wno-unused-value \
-	                      -Wno-pointer-sign \
-	                      -Wno-compare-distinct-pointer-types \
-	                      -Wunused \
-	                      -Wall \
-	                      -Werror \
-	                      -fno-stack-protector \
-	                      -O2 \
-	                      -emit-llvm \
-	                      -c /go/src/$(PACKAGE_NAME)/bpf/sockmap/sockops.c \
-	                      -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.ll && \
-	               llc \
-	                       -march=bpf \
-	                       -filetype=obj \
-	                       -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.o \
-	                       /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.ll && \
-	               rm -f /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.ll"
+		  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		      calico-build/bpf-clang \
+		      /bin/sh -c \
+		      "cd /go/src/$(PACKAGE_NAME) && \
+		       clang \
+			      -D__KERNEL__ \
+			      -D__ASM_SYSREG_H \
+			      -Wno-unused-value \
+			      -Wno-pointer-sign \
+			      -Wno-compare-distinct-pointer-types \
+			      -Wunused \
+			      -Wall \
+			      -Werror \
+			      -fno-stack-protector \
+			      -O2 \
+			      -emit-llvm \
+			      -c /go/src/$(PACKAGE_NAME)/bpf/sockmap/sockops.c \
+			      -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.ll && \
+		       llc \
+			       -march=bpf \
+			       -filetype=obj \
+			       -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.o \
+			       /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.ll && \
+		       rm -f /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/sockops.ll"
 
 bpf/sockmap/generated/redir.o: bpf/sockmap/redir.c $(BPF_INC_FILES) $(BPF_SOCKMAP_INC_FILES) $(CLANG_BUILDER_STAMP)
 	mkdir -p bpf/sockmap/generated
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-	          -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	              calico-build/bpf-clang \
-	              /bin/sh -c \
-	              "cd /go/src/$(PACKAGE_NAME) && \
-	               clang \
-	                      -D__KERNEL__ \
-	                      -D__ASM_SYSREG_H \
-	                      -Wno-unused-value \
-	                      -Wno-pointer-sign \
-	                      -Wno-compare-distinct-pointer-types \
-	                      -Wunused \
-	                      -Wall \
-	                      -Werror \
-	                      -fno-stack-protector \
-	                      -O2 \
-	                      -emit-llvm \
-	                      -c /go/src/$(PACKAGE_NAME)/bpf/sockmap/redir.c \
-	                      -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll && \
-	               llc \
-	                       -march=bpf \
-	                       -filetype=obj \
-	                       -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.o \
-	                       /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll && \
-	               rm -f /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll"
+		  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		      calico-build/bpf-clang \
+		      /bin/sh -c \
+		      "cd /go/src/$(PACKAGE_NAME) && \
+		       clang \
+			      -D__KERNEL__ \
+			      -D__ASM_SYSREG_H \
+			      -Wno-unused-value \
+			      -Wno-pointer-sign \
+			      -Wno-compare-distinct-pointer-types \
+			      -Wunused \
+			      -Wall \
+			      -Werror \
+			      -fno-stack-protector \
+			      -O2 \
+			      -emit-llvm \
+			      -c /go/src/$(PACKAGE_NAME)/bpf/sockmap/redir.c \
+			      -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll && \
+		       llc \
+			       -march=bpf \
+			       -filetype=obj \
+			       -o /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.o \
+			       /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll && \
+		       rm -f /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll"
 
 .PHONY: packr
 packr: bpf/bpf-packr.go bpf/packrd/packed-packr.go
 
 bpf/bpf-packr.go bpf/packrd/packed-packr.go: bpf/xdp/generated/xdp.o bpf/sockmap/generated/sockops.o bpf/sockmap/generated/redir.o $(CLANG_BUILDER_STAMP)
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-	          -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	              calico-build/bpf-clang \
-	              /bin/sh -c \
-	              "cd /go/src/$(PACKAGE_NAME)/bpf && /go/bin/packr2"
+		  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		      calico-build/bpf-clang \
+		      /bin/sh -c \
+		      "cd /go/src/$(PACKAGE_NAME)/bpf && /go/bin/packr2"
 	sed -i 's,^	"github.com/gobuffalo/packr/v2",	packr "github.com/gobuffalo/packr/v2",' bpf/packrd/packed-packr.go
 	$(DOCKER_RUN) $(CALICO_BUILD) goimports -w -local github.com/projectcalico/ bpf/packrd/packed-packr.go bpf/bpf-packr.go
 
@@ -642,114 +688,22 @@ calico-build/centos6:
 	  -t calico-build/centos6 .
 
 ###############################################################################
-# Managing the upstream library pins
-#
-# If you're updating the pins with a non-release branch checked out,
-# set PIN_BRANCH to the parent branch, e.g.:
-#
-#     PIN_BRANCH=release-v2.5 make update-pins
-#        - or -
-#     PIN_BRANCH=master make update-pins
-#
-###############################################################################
-
-## Update dependency pins in glide.yaml
-update-pins: update-licensing-pin update-typha-pin
-
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-###############################################################################
-## Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-
-###############################################################################
-## typha
-
-## Set the default TYPHA source for this project
-TYPHA_PROJECT_DEFAULT=tigera/typha-private.git
-TYPHA_GLIDE_LABEL=projectcalico/typha
-
-TYPHA_BRANCH?=$(PIN_BRANCH)
-TYPHA_REPO?=github.com/$(TYPHA_PROJECT_DEFAULT)
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:$(TYPHA_PROJECT_DEFAULT) $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure TYPHA repo and branch are reachable
-guard-git-typha:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Ensure the branch exists, or set TYPHA_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(TYPHA_VERSION))" = "" ]; then \
-		echo "ERROR: TYPHA version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin in glide.yaml
-update-typha-pin: guard-ssh-forwarding-bug guard-git-typha
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(TYPHA_GLIDE_LABEL)" \
-		REPO="$(TYPHA_REPO)" \
-		VERSION="$(TYPHA_VERSION)" \
-		DEFAULT_REPO="$(TYPHA_PROJECT_DEFAULT)" \
-		BRANCH="$(TYPHA_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-###############################################################################
-## licensing
-
-## Set the default LICENSING source for this project
-LICENSING_PROJECT_DEFAULT=tigera/licensing
-LICENSING_GLIDE_LABEL=tigera/licensing
-
-LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
-LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
-	@$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
-		echo "ERROR: LICENSING version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin in glide.yaml
-update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LICENSING_GLIDE_LABEL)" \
-		REPO="$(LICENSING_REPO)" \
-		VERSION="$(LICENSING_VERSION)" \
-		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
-		BRANCH="$(LICENSING_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-###############################################################################
-# Static checks. Note disable golangci-lint for now.
+# Static checks.
 ###############################################################################
 .PHONY: static-checks
 static-checks:
-	$(MAKE) check-typha-pins check-packr fix
+	$(MAKE) check-typha-pins check-packr fix golangci-lint
 
-# govet uses too much memory for Semaphore
+LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
 ifneq ($(CI),)
-LINT_ARGS := --disable govet
+	# govet uses too much memory for CI
+	LINT_ARGS += --disable govet
 endif
 
 .PHONY: golangci-lint
 golangci-lint: remote-deps $(GENERATED_FILES)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run --deadline 5m --max-issues-per-linter 0 --max-same-issues 0 $(LINT_ARGS)'
+	@echo "linting is currently disabled"
+	#$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run $(LINT_ARGS)'
 
 .PHONY: check-packr
 check-packr: bpf/packrd/packed-packr.go
@@ -763,10 +717,10 @@ check-packr: bpf/packrd/packed-packr.go
 fix go-fmt goimports:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'find . -iname "*.go" ! -wholename "./vendor/*" | xargs goimports -w -local github.com/projectcalico/'
 
-LIBCALICO_FELIX?=$(shell grep 'replace github.com/projectcalico/libcalico-go' go.mod | cut -d '>' -f2)
-TYPHA_GOMOD?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go list -m -f "{{.GoMod}}" github.com/projectcalico/typha')
-ifneq ($(TYPHA_GOMOD),)
-	LIBCALICO_TYPHA?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) grep 'replace github.com/projectcalico/libcalico-go' $(TYPHA_GOMOD) | cut -d '>' -f2)
+LIBCALICO_FELIX?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go list -m -f "{{.Replace.Version}}" github.com/projectcalico/libcalico-go')
+TYPHA_GOMOD_DIR?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go list -m -f "{{.Dir}}" github.com/projectcalico/typha')
+ifneq ($(TYPHA_GOMOD_DIR),)
+	LIBCALICO_TYPHA?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); (cd $(TYPHA_GOMOD_DIR); go list -m -f "{{.Replace.Version}}" github.com/projectcalico/libcalico-go)')
 endif
 
 .PHONY: check-typha-pins
@@ -789,12 +743,11 @@ pre-commit:
 hooks_installed:=$(shell ./install-git-hooks)
 
 .PHONY: install-git-hooks
-## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
 
 foss-checks:
-	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); /usr/local/bin/fossa'
 
 ###############################################################################
 # Unit Tests
@@ -822,17 +775,17 @@ remote-deps:
 .PHONY: fv
 # runs all of the fv tests
 # to run it in parallel, decide how many parallel engines you will run, and in each one call:
-#         $(MAKE) fv FV_BATCHES_TO_RUN="<num>" FV_NUM_BATCHES=<num>
+#	 $(MAKE) fv FV_BATCHES_TO_RUN="<num>" FV_NUM_BATCHES=<num>
 # where
-#         FV_NUM_BATCHES = total parallel batches
-#         FV_BATCHES_TO_RUN = which number this is
+#	 FV_NUM_BATCHES = total parallel batches
+#	 FV_BATCHES_TO_RUN = which number this is
 # e.g. to run it in 10 parallel runs:
-#         $(MAKE) fv FV_BATCHES_TO_RUN="1" FV_NUM_BATCHES=10     # the first 1/10
-#         $(MAKE) fv FV_BATCHES_TO_RUN="2" FV_NUM_BATCHES=10     # the second 1/10
-#         $(MAKE) fv FV_BATCHES_TO_RUN="3" FV_NUM_BATCHES=10     # the third 1/10
-#         ...
-#         $(MAKE) fv FV_BATCHES_TO_RUN="10" FV_NUM_BATCHES=10    # the tenth 1/10
-#         etc.
+#	 $(MAKE) fv FV_BATCHES_TO_RUN="1" FV_NUM_BATCHES=10     # the first 1/10
+#	 $(MAKE) fv FV_BATCHES_TO_RUN="2" FV_NUM_BATCHES=10     # the second 1/10
+#	 $(MAKE) fv FV_BATCHES_TO_RUN="3" FV_NUM_BATCHES=10     # the third 1/10
+#	 ...
+#	 $(MAKE) fv FV_BATCHES_TO_RUN="10" FV_NUM_BATCHES=10    # the tenth 1/10
+#	 etc.
 #
 # To only run specific fv tests, set GINGKO_FOCUS to the desired Describe{}, Context{}
 # or It{} description string. For example, to only run dns_test.go, type:
@@ -956,10 +909,12 @@ bin/test-connection: $(SRC_FILES) local_build
 ###############################################################################
 # CI/CD
 ###############################################################################
-.PHONY: ci cd
+.PHONY: mod-download
+mod-download:
+	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
 
-## run CI cycle - build, test, etc.
-ci: image-all ut static-checks
+.PHONY: ci cd
+ci: mod-download image-all ut static-checks
 ifeq (,$(filter fv, $(EXCEPT)))
 	@$(MAKE) fv
 endif
@@ -1133,15 +1088,15 @@ cover-report: combined.coverprofile
 	@echo ======== All coverage =========
 	@echo
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'go tool cover -func combined.coverprofile | \
-	                           sed 's=$(PACKAGE_NAME)/==' | \
-	                           column -t'
+				   sed 's=$(PACKAGE_NAME)/==' | \
+				   column -t'
 	@echo
 	@echo ======== Missing coverage only =========
 	@echo
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c "go tool cover -func combined.coverprofile | \
-	                           sed 's=$(PACKAGE_NAME)/==' | \
-	                           column -t | \
-	                           grep -v '100\.0%'"
+				   sed 's=$(PACKAGE_NAME)/==' | \
+				   column -t | \
+				   grep -v '100\.0%'"
 
 bin/calico-felix.transfer-url: bin/calico-felix
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
@@ -1190,32 +1145,32 @@ help:
 	@echo
 	@echo "Builds:"
 	@echo
-	@echo "  make all                    Build all the binary packages."
-	@echo "  make deb                    Build debs in ./dist."
-	@echo "  make rpm                    Build rpms in ./dist."
-	@echo "  make build                  Build binary."
-	@echo "  make image                  Build docker image."
-	@echo "  make build-all              Build binary for all supported architectures."
-	@echo "  make image-all              Build docker images for all supported architectures."
+	@echo "  make all		    Build all the binary packages."
+	@echo "  make deb		    Build debs in ./dist."
+	@echo "  make rpm		    Build rpms in ./dist."
+	@echo "  make build		  Build binary."
+	@echo "  make image		  Build docker image."
+	@echo "  make build-all	      Build binary for all supported architectures."
+	@echo "  make image-all	      Build docker images for all supported architectures."
 	@echo "  make push IMAGETAG=tag      Deploy docker image with the tag IMAGETAG for the given ARCH, e.g. $(BUILD_IMAGE)<IMAGETAG>-<ARCH>."
 	@echo "  make push-all IMAGETAG=tag  Deploy docker images with the tag IMAGETAG all supported architectures"
 	@echo
 	@echo "Tests:"
 	@echo
-	@echo "  make ut                Run UTs."
-	@echo "  make fv                Run FVs."
+	@echo "  make ut		Run UTs."
+	@echo "  make fv		Run FVs."
 	@echo "  make go-cover-browser  Display go code coverage in browser."
 	@echo
 	@echo "Maintenance:"
 	@echo
-	@echo "  make go-fmt        Format our go code."
-	@echo "  make clean         Remove binary files."
+	@echo "  make go-fmt	Format our go code."
+	@echo "  make clean	 Remove binary files."
 	@echo "-----------------------------------------"
-	@echo "ARCH (target):          $(ARCH)"
+	@echo "ARCH (target):	  $(ARCH)"
 	@echo "BUILDARCH (host):       $(BUILDARCH)"
-	@echo "CALICO_BUILD:           $(CALICO_BUILD)"
+	@echo "CALICO_BUILD:	   $(CALICO_BUILD)"
 	@echo "PROTOC_CONTAINER:       $(PROTOC_CONTAINER)"
-	@echo "FV_ETCDIMAGE:           $(FV_ETCDIMAGE)"
-	@echo "FV_K8SIMAGE:            $(FV_K8SIMAGE)"
-	@echo "FV_TYPHAIMAGE:          $(FV_TYPHAIMAGE)"
+	@echo "FV_ETCDIMAGE:	   $(FV_ETCDIMAGE)"
+	@echo "FV_K8SIMAGE:	    $(FV_K8SIMAGE)"
+	@echo "FV_TYPHAIMAGE:	  $(FV_TYPHAIMAGE)"
 	@echo "-----------------------------------------"
