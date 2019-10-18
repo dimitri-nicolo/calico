@@ -39,7 +39,7 @@ ifeq ($(ARCH),x86_64)
 endif
 
 BIN=bin/$(ARCH)
-GO_BUILD_VER ?= v0.24
+GO_BUILD_VER ?= v0.26
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
