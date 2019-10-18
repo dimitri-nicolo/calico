@@ -176,6 +176,8 @@ github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 h1:JpFoh6mXPEoUpIg
 github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5/go.mod h1:DvyZB1rfVYsBIigL8HwpZgxHwXozlTgGqn63UyNX5k4=
 github.com/imdario/mergo v0.3.5 h1:JboBksRwiiAJWvIYJVo46AfV+IAIKZpfrSzVKj42R4Q=
 github.com/imdario/mergo v0.3.5/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
+github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a h1:zPPuIq2jAWWPTrGt70eK/BSch+gFAGrNzecsoENgu2o=
+github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a/go.mod h1:yL958EeXv8Ylng6IfnvG4oflryUi3vgA3xPs9hmII1s=
 github.com/jonboulle/clockwork v0.1.0 h1:VKV+ZcuP6l3yW9doeqz6ziZGgcynBVQO+obU0+0hcPo=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3 h1:/UewZcckqhvnnS0C6r3Sher2hSEbVmM6Ogpcjen08+Y=
@@ -299,6 +301,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191013032835-a13baff29e71 h1:d
 github.com/tigera/libcalico-go-private v1.7.2-0.20191013032835-a13baff29e71/go.mod h1:436nGpx2O9aPMo6AWmMAzj1UBLXqSHGN56R/RTbxaf8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5 h1:GKLozu9nKwcjzSWfbiAvjIkThw9ojnTm5FHLZaoed2Q=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5/go.mod h1:lhLRKgy42v9xWiVbVQfougkr3YPGfXNkIdtYdH3bJDw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538 h1:rGU+Wvpg2GBn4wODz9JBRRYkUVL9KqipfGvpl20PIrI=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
 github.com/tinylib/msgp v1.1.0 h1:9fQd+ICuRIu/ue4vxJZu6/LzxN0HwMds2nq/0cFvxHU=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
