@@ -1189,7 +1189,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, jm = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1215,7 +1215,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, jm = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(wepUpd2))
 
@@ -1269,7 +1269,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, jm = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1294,7 +1294,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, jm = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(wepUpd2))
 

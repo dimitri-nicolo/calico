@@ -158,7 +158,8 @@ var _ = Describe("IP Sets manager", func() {
 						ipsetsMgr.OnUpdate(&proto.IPSetRemove{
 							Id: ipsetID,
 						})
-						ipsetsMgr.CompleteDeferredWork()
+						err := ipsetsMgr.CompleteDeferredWork()
+						Expect(err).ToNot(HaveOccurred())
 					})
 					AssertIPSetNoMembers(ipsetID)
 				})
@@ -173,7 +174,8 @@ var _ = Describe("IP Sets manager", func() {
 						Members: []string{members[1], members[2]},
 						Type:    ipsetType,
 					})
-					ipsetsMgr.CompleteDeferredWork()
+					err := ipsetsMgr.CompleteDeferredWork()
+					Expect(err).ToNot(HaveOccurred())
 				})
 
 				if ipsetType == proto.IPSetUpdate_DOMAIN {

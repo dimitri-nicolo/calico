@@ -707,10 +707,6 @@ var ipPoolKey = IPPoolKey{
 	CIDR: mustParseNet("10.0.0.0/16"),
 }
 
-var ipPoolNoEncap = IPPool{
-	CIDR: mustParseNet("10.0.0.0/16"),
-}
-
 var ipPoolWithIPIP = IPPool{
 	CIDR:     mustParseNet("10.0.0.0/16"),
 	IPIPMode: encap.Always,
