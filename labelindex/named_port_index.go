@@ -245,12 +245,13 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 			// Figure out what's changed and update the cache.
 			log.Debugf("Updating NamedPortIndex for network set %v", key)
 			netSet := update.Value.(*model.NetworkSet)
+			profileIDs := netSet.ProfileIDs
 			idx.UpdateEndpointOrSet(
 				key,
 				netSet.Labels,
 				extractCIDRsFromNetworkSet(netSet),
 				nil,
-				nil,
+				profileIDs,
 				netSet.AllowedEgressDomains)
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)

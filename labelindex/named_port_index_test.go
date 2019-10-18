@@ -99,6 +99,38 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			Expect(set).To(HaveKey(IPSetMember{Domain: "mixed.org"}))
 		})
 	})
+
+	Describe("NetworkSet profiles", func() {
+		It("should inherit labels from profiles", func() {
+			uut.OnUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key:   model.ProfileLabelsKey{model.ProfileKey{Name: "doo"}},
+					Value: map[string]string{"superhero": "scooby"},
+				},
+			})
+			uut.OnUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.NetworkSetKey{Name: "scary-ns"},
+					Value: &model.NetworkSet{
+						Nets: []calinet.IPNet{
+							{IPNet: net.IPNet{
+								IP:   net.IP{192, 168, 20, 1},
+								Mask: net.IPMask{255, 255, 0, 0},
+							}},
+						},
+						Labels:     map[string]string{"villain": "ghost"},
+						ProfileIDs: []string{"doo"},
+					},
+				},
+			})
+			s, err := selector.Parse("villain == 'ghost' && superhero == 'scooby'")
+			Expect(err).ToNot(HaveOccurred())
+			uut.UpdateIPSet("scoobydoobydoo", s, ProtocolNone, "")
+			set, ok := recorder.ipsets["scoobydoobydoo"]
+			Expect(ok).To(BeTrue())
+			Expect(set).To(HaveLen(1))
+		})
+	})
 })
 
 type testRecorder struct {
