@@ -76,6 +76,8 @@ spec:
 | doNotTrack\*\*     | Indicates to apply the rules in this policy before any data plane connection tracking, and that packets allowed by these rules should not be tracked. | true, false     | boolean               | false   |
 | preDNAT\*\*        | Indicates to apply the rules in this policy before any DNAT.                                                                                          | true, false     | boolean               | false   |
 | applyOnForward\*\* | Indicates to apply the rules in this policy on forwarded traffic as well as to locally terminated traffic.                                            | true, false     | boolean               | false   |
+| serviceAccountSelector | Selects the service account(s) to which this policy applies.                                                                                        |                 | [selector](#selector)  | all()   |
+| namespaceSelector | Selects the namespace(s) to which this policy applies.                                                                                        |                 | [selector](#selector)  | all()   |
 
 \* If `types` has no value, {{site.prodname}} defaults as follows.
 
@@ -97,7 +99,7 @@ the policy is enforced after connection tracking and any DNAT.
 `true` because for a given policy, any untracked rules or rules before DNAT will
  in practice apply to forwarded traffic.
 
-See [Using {{site.prodname}} to Secure Host Interfaces]({{site.url}}/{{page.version}}/security/host-endpoints/)
+See [Using {{site.prodname}} to Secure Host Interfaces]({{site.url}}/{{page.version}}/reference/host-endpoints/)
 for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host endpoints.
 
 #### Rule

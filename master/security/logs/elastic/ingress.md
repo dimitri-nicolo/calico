@@ -85,7 +85,7 @@ IP addresses:
   for more details.
 
 Create a Kubernetes pull secret in the namespace your ingress controller or router syslog
-server is running in. 
+server is running in.
 ```bash
 kubectl create secret generic cnx-pull-secret -n <ingress controller namespace> --from-file=.dockerconfigjson=$HOME/.docker/config.json --type kubernetes.io/dockerconfigjson
 ```
@@ -102,7 +102,7 @@ collected logs. The installation of the ingress log collector will be done in a 
    ```
    curl {{site.url}}/{{page.version}}/manifests/ingress/patch-ingress.yaml -O
    ```
-   
+
 1. Modify patch-ingress.yaml so that the ingress controller container name appropriately
    reflects the container name in your ingress controller installation. Replace
    `<ingress-controller-name>` with the name of the ingress controller **container** in your pod.
@@ -130,9 +130,19 @@ logs properly, we need to enable communication between the ingress log collector
 the directions based on your orchestrator.
 
 **Kubernetes**
-{% include {{page.version}}/enable-policy-sync-api.md feature="ingress-flows" %}
 
+**Prerequisites**:
+
+ - [{{site.prodname}} installed](/{{page.version}}/getting-started/kubernetes/installation/)
+
+Ingress flow log correlation requires the Policy Sync API to be enabled on Felix. To do this cluster-wide, modify the `default`
+FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.
+
+```bash
+kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
+```
 **OpenShift**
+
 1. Download the appropriate patch file for enabling the Policy Sync API on Felix.
    ```
    curl {{site.url}}/{{page.version}}/manifests/ingress/patch-flexvol.yaml -O

@@ -1,11 +1,11 @@
 ---
-title: Simple policy tutorial
-canonical_url: 'https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/simple-policy'
+title: Kubernetes policy, basic tutorial
+canonical_url: 'https://docs.projectcalico.org/v3.9/security/tutorials/kubernetes-policy-basic'
 ---
 
 This guide provides a simple way to try out Kubernetes `NetworkPolicy` with {{site.prodname}}.  It requires a Kubernetes cluster configured with {{site.prodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily deploy such a cluster by following one of the [installation guides]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation).
+You can quickly and easily deploy such a cluster by following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation).
 
 ### Configure namespaces
 
@@ -208,4 +208,4 @@ kubectl delete ns policy-demo
 This was just a simple example of the Kubernetes NetworkPolicy API and how Calico can secure your Kubernetes cluster.  For more
 information on network policy in Kubernetes, see the [Kubernetes user-guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
-For a slightly more detailed demonstration of policy, check out the [stars demo](stars-policy).
+For a slightly more detailed demonstration of policy, check out the [Kubernetes policy demo](kubernetes-policy-demo/kubernetes-demo).

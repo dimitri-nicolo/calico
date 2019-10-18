@@ -1,6 +1,6 @@
 ---
 title: Running tigera/cnx-node with an init system
-canonical_url: 'https://docs.tigera.io/v2.4/getting-started/as-service'
+canonical_url: 'https://docs.tigera.io/v2.5/getting-started/as-service'
 ---
 
 This guide explains how to run `{{site.nodecontainer}}` with an init system like

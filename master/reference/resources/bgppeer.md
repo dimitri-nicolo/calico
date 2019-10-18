@@ -10,9 +10,8 @@ with your datacenter fabric (e.g. ToR). For more
 information on cluster layouts, see {{site.prodname}}'s documentation on
 [{{site.prodname}} over IP fabrics]({{site.url}}/{{page.version}}/networking/design/l3-interconnect-fabric).
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
-may be used to specify the resource type on the CLI:
-`bgppeer`, `bgppeers`, `bgpp`, `bgpps`, `bp`, `bps`.
+For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) that specify a resource type on the CLI, the following
+aliases are supported (all case insensitive): `bgppeer`, `bgppeers`, `bgpp`, `bgpps`, `bp`, `bps`.
 
 This resource is not supported in `kubectl`.
 

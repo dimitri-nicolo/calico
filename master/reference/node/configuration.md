@@ -26,10 +26,14 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | CALICO_NETWORKING_BACKEND | The networking backend to use.  In `bird` mode, Calico will provide BGP networking using the BIRD BGP daemon; VXLAN networking can also be used.  In `vxlan` mode, only VXLAN networking is provided; BIRD and BGP are disabled.  If set to `none` (also known as policy-only mode), both BIRD and VXLAN are disabled. [Default: `bird`] | bird, vxlan, none |
 | CALICO_IPV4POOL_CIDR | The IPv4 Pool to create if none exists at start up. It is invalid to define this variable and NO_DEFAULT_POOLS. [Default: `192.168.0.0/16`] | IPv4 CIDR |
 | CALICO_IPV6POOL_CIDR | The IPv6 Pool to create if none exists at start up. It is invalid to define this variable and NO_DEFAULT_POOLS. [Default: `<a randomly chosen /48 ULA>`] | IPv6 CIDR |
+| CALICO_IPV4POOL_BLOCK_SIZE | Block size to use for the IPv4 POOL created at startup.  Block size for IPv4 should be in the range 20-32 (inclusive) [Default: `26`] | int |
+| CALICO_IPV6POOL_BLOCK_SIZE | Block size to use for the IPv6 POOL created at startup.  Block size for IPv6 should be in the range 116-128 (inclusive) [Default: `122`] | int |
 | CALICO_IPV4POOL_IPIP | IPIP Mode to use for the IPv4 POOL created at start up. If set to a value other than `Never`, `CALICO_IPV4POOL_VXLAN` should not be set. [Default: `Always`] | Always, CrossSubnet, Never ("Off" is also accepted as a synonym for "Never") |
-| CALICO_IPV4POOL_VXLAN | VXLAN Mode to use for the IPv4 POOL created at start up.  If set to a value other than `Never`, `CALICO_IPV4POOL_IPIP` should not be set. [Default: `Never`] | Always, Never |
+| CALICO_IPV4POOL_VXLAN | VXLAN Mode to use for the IPv4 POOL created at start up.  If set to a value other than `Never`, `CALICO_IPV4POOL_IPIP` should not be set. [Default: `Never`] | Always, CrossSubnet, Never |
 | CALICO_IPV4POOL_NAT_OUTGOING | Controls NAT Outgoing for the IPv4 Pool created at start up. [Default: `true`] | boolean |
 | CALICO_IPV6POOL_NAT_OUTGOING | Controls NAT Outgoing for the IPv6 Pool created at start up. [Default: `false`] | boolean |
+| CALICO_IPV4POOL_NODE_SELECTOR | Controls the NodeSelector for the IPv4 Pool created at start up. [Default: `all()`] | [selector](../resources/ippool#node-selector) |
+| CALICO_IPV6POOL_NODE_SELECTOR | Controls the NodeSelector for the IPv6 Pool created at start up. [Default: `all()`] | [selector](../resources/ippool#node-selector) |
 | CALICO_STARTUP_LOGLEVEL      | The log severity above which startup `{{site.nodecontainer}}` logs are sent to the stdout. [Default: `ERROR`] | DEBUG, INFO, WARNING, ERROR, CRITICAL, or NONE (case-insensitive) |
 | CLUSTER_TYPE | Contains comma delimited list of indicators about this cluster.  e.g. k8s, mesos, kubeadm, canal, bgp | string |
 | ETCD_ENDPOINTS     | A comma separated list of etcd endpoints [Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`] (required) | string |
@@ -42,8 +46,8 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | K8S_CERT_FILE | Location of a client certificate for accessing the Kubernetes API.          | string |
 | K8S_KEY_FILE | Location of a client key for accessing the Kubernetes API.                   | string |
 | K8S_CA_FILE | Location of a CA for accessing the Kubernetes API.                            | string |
-| CALICO_ADVERTISE_CLUSTER_IPS | Enable [advertising Kubernetes service cluster IPs over BGP](/{{page.version}}/networking/service-advertisement), within the specified CIDR. [Default: disabled] | IPv4 CIDR |
-| USE_POD_CIDR | Use the Kubernetes `Node.Spec.PodCIDR` field for route aggregation. This field is supported only when using the Kubernetes API datastore with host-local IPAM. [Default: false] | boolean |
+| CALICO_ADVERTISE_CLUSTER_IPS | Deprecated. Use [BGPConfiguration](/{{page.version}}/reference/resources/bgpconfig) resource instead. Note: if this variable is defined, then any serviceClusterIPs defined in BGPConfiguration are ignored. [Default: ""] | IPv4 CIDR |
+| USE_POD_CIDR | Use the Kubernetes `Node.Spec.PodCIDR` field. This field is required when using the Kubernetes API datastore with host-local IPAM. [Default: false] | boolean |
 
 In addition to the above, `{{site.nodecontainer}}` also supports [the standard Felix configuration environment variables](../felix/configuration).
 
@@ -171,6 +175,20 @@ Example with valid IP address on interface eth0, eth1, eth2 etc.:
 ```
 IP_AUTODETECTION_METHOD=interface=eth.*
 IP6_AUTODETECTION_METHOD=interface=eth.*
+```
+
+#### skip-interface=INTERFACE-REGEX
+
+The `skip-interface` method uses the supplied interface regular expression (golang
+syntax) to exclude interfaces and to return the first IP address on the first
+interface that not matching. The order that both the interfaces
+and the IP addresses are listed is system dependent.
+
+Example with valid IP address on interface exclude enp6s0f0, eth0, eth1, eth2 etc.:
+
+```
+IP_AUTODETECTION_METHOD=skip-interface=enp6s0f0,eth.*
+IP6_AUTODETECTION_METHOD=skip-interface=enp6s0f0,eth.*
 ```
 
 ### Node readiness

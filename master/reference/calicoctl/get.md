@@ -23,7 +23,7 @@ command.
 
 ```
 Usage:
-  calicoctl get ( (<KIND> [<NAME>]) |
+  calicoctl get ( (<KIND> [<NAME...>]) |
                 --filename=<FILENAME>)
                 [--output=<OUTPUT>] [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces]
 
@@ -31,8 +31,9 @@ Examples:
   # List all policy in default output format.
   calicoctl get policy
 
-  # List a specific policy in YAML format
-  calicoctl get -o yaml policy my-policy-1
+  # List specific policies in YAML format
+  calicoctl get -o yaml policy my-policy-1 my-policy-2
+
 
 Options:
   -h --help                    Show this screen.
@@ -68,7 +69,7 @@ Description:
     * hostEndpoint
     * ipPool
     * tier
-    * networkPolicy
+    * networkSet
     * node
     * profile
     * workloadEndpoint
@@ -118,7 +119,7 @@ Description:
                              custom-columns=..., go-template=...,
                              go-template-file=...   [Default: ps]
 -n --namespace=<NS>          Namespace of the resource.
-                             Only applicable to NetworkPolicy and WorkloadEndpoint.
+                             Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
                              Uses the default namespace if not specified.
 -a --all-namespaces          If present, list the requested object(s) across
                              all namespaces.

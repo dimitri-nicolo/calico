@@ -18,6 +18,8 @@ toc:
     path: /reference/calicoctl/delete
   - title: get
     path: /reference/calicoctl/get
+  - title: patch
+    path: /reference/calicoctl/patch
   - title: label
     path: /reference/calicoctl/label
   - title: convert
@@ -121,7 +123,11 @@ toc:
   - title: Prometheus statistics
     path: /reference/felix/prometheus
 - title: Typha
-  path: /reference/typha/configuration
+  section:
+  - title: Overview
+    path: /reference/typha/
+  - title: Configuration
+    path: /reference/typha/configuration
 - title: Dikastes
   path: /reference/dikastes/configuration
 - title: Tigera Secure EE Compliance Reports

@@ -13,11 +13,10 @@
 # limitations under the License.
 
 apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+kind: GlobalNetworkPolicy
 metadata:
-  name: default.customer
+  name: customer
 spec:
-  tier: default
   selector: app == 'customer'
   ingress:
     - action: Allow
@@ -29,11 +28,10 @@ spec:
 ---
 
 apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+kind: GlobalNetworkPolicy
 metadata:
-  name: default.summary
+  name: summary
 spec:
-  tier: default
   selector: app == 'summary'
   ingress:
     - action: Allow
@@ -45,11 +43,10 @@ spec:
 
 ---
 apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
+kind: GlobalNetworkPolicy
 metadata:
-  name: default.database
+  name: database
 spec:
-  tier: default
   selector: app == 'database'
   ingress:
     - action: Allow

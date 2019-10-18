@@ -1,5 +1,5 @@
 ---
-title: Securing Calico's Prometheus endpoints
+title: Secure Calico Prometheus endpoints
 canonical_url: 'https://docs.tigera.io/v2.3/usage/policy/secure-metrics'
 ---
 

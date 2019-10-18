@@ -95,7 +95,7 @@ spec:
 
 # This manifest creates a Deployment of Typha to back the above service.
 
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{include "typha_service_name" . }}
@@ -111,6 +111,9 @@ spec:
   # nodes.  In production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
   replicas: 1
   revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      k8s-app: {{include "typha_service_name" . }}
   template:
     metadata:
       labels:
@@ -153,6 +156,10 @@ spec:
         - name: {{ $key }}
     {{- end }}
   {{- end }}
+      priorityClassName: system-cluster-critical
+      # fsGroup allows using projected serviceaccount tokens as described here kubernetes/kubernetes#82573
+      securityContext:
+        fsGroup: 65534
       containers:
       - name: calico-typha
         image: {{.Values.typha.image}}:{{.Values.typha.tag}}
@@ -284,6 +291,9 @@ spec:
             host: localhost
           periodSeconds: 30
           initialDelaySeconds: 30
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
         readinessProbe:
           httpGet:
             path: /readiness

@@ -15,8 +15,6 @@ ETCD_ENDPOINTS=http://<ECTD_IP>:<ETCD_PORT> ./calicoctl node run --node-image={{
 > **Note**: Add the `ETCD_ENDPOINTS` Env and replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration when etcd isn't running locally.
 {: .alert .alert-info}
 
-
-
 ## Create a start-up script
 Felix should be started at boot time by your init system and the init system must be configured to restart Felix if it stops. Felix relies on that behavior for certain configuration changes.
 {% include {{page.version}}/docker-container-service.md %}

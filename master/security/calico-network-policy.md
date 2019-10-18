@@ -1,5 +1,6 @@
 ---
 title: Get started with Calico network policy
+description: Create your first Calico network policies. Shows the rich features using sample policies that extend native Kubernetes network policy.
 ---
 
 ### Big picture
@@ -89,8 +90,8 @@ You can specify whether policy applies to ingress, egress, or both using the **t
 The Kubernetes network policy specification defines the following behavior:
 
 - If no network policies apply to a pod, then all traffic to/from that pod is allowed.
-- If one or more network policies apply to a pod containing ingress rules, then only the ingress traffic specifically allowed by those policies is allowed, and all other traffic to/from the pod is denied.
-- If one or more network policies apply to a pod containing egress rules, then only the egress traffic specifically allowed by those policies is allowed, and all other traffic to/from the pod is denied.
+- If one or more network policies apply to a pod containing ingress rules, then only the ingress traffic specifically allowed by those policies is allowed.
+- If one or more network policies apply to a pod containing egress rules, then only the egress traffic specifically allowed by those policies is allowed.
 
 For compatibility with Kubernetes, **Calico network policy** follows the same behavior for Kubernetes pods.  For other endpoint types (VMs, host interfaces), Calico network policy is default deny. That is, only traffic specifically allowed by network policy is allowed, even if no network policies apply to the endpoint.
 
@@ -262,6 +263,6 @@ Spec:
 
 ### Above and beyond
 
-- For additional Calico network policy features, see [Calico Network Policy Reference]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy) and [Calico Global Network Policy Reference]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
-- For an alternative to using IP addresses or CIDRs in policy, see [Network sets]({{site.baseurl}}/{{page.version}}/reference/resources/) 
+- For additional Calico network policy features, see [Calico network policy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy) and [Calico global network policy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+- For an alternative to using IP addresses or CIDRs in policy, see [Network sets]({{site.baseurl}}/{{page.version}}/reference/resources/networkset) 
 - For details on the calicoctl command line tool, see [calicoctl user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) 

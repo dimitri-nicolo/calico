@@ -84,6 +84,7 @@ defaults:
       path: ""
     values:
       layout: docwithnav
+      show_title: true
       version: master
       sitemap: true
       # By default, released builds are pulled from quay.
@@ -100,26 +101,31 @@ defaults:
       path: v2.0
     values:
       version: v2.0
+      sitemap: false
   -
     scope:
       path: v2.1
     values:
       version: v2.1
+      sitemap: false
   -
     scope:
       path: v2.2
     values:
       version: v2.2
+      sitemap: false
   -
     scope:
       path: v2.3
     values:
       version: v2.3
+      sitemap: false
   -
     scope:
       path: v2.4
     values:
       version: v2.4
+      sitemap: false
   -
     scope:
       path: v2.5
