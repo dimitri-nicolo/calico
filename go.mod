@@ -10,6 +10,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 	github.com/aokoli/goutils v1.1.0
+	github.com/apparentlymart/go-cidr v1.0.1
 	github.com/aws/aws-sdk-go v1.13.54
 	github.com/beorn7/perks v1.0.0
 	github.com/coreos/etcd v3.3.10+incompatible
@@ -39,7 +40,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hpcloud/tail v1.0.0
 	github.com/huandu/xstrings v1.2.0
-	github.com/imdario/mergo v0.3.7
+	github.com/imdario/mergo v0.3.8
 	github.com/jmespath/go-jmespath v0.0.0-20151117175822-3433f3ea46d9
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.7
@@ -99,9 +100,9 @@ require (
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191007172056-a1ffe3734ca6
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191015234631-4407479bac37
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191018144106-d54219bf19b7
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191018135049-210e5c1a7e03
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )
