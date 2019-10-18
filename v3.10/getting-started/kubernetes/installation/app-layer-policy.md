@@ -15,7 +15,20 @@ operate.
 
 ## Enabling application layer policy
 
-{% include {{page.version}}/enable-policy-sync-api.md %}
+**Prerequisites**:
+
+ - [{{site.prodname}} installed](/{{page.version}}/getting-started/kubernetes/installation/)
+ - [calicoctl installed](/{{page.version}}/getting-started/calicoctl/install) & [configured](/{{page.version}}/getting-started/calicoctl/configure/)
+
+Application layer policy requires the Policy Sync API to be enabled on Felix. To do this cluster-wide, modify the `default`
+FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.  The following example uses `sed` to modify your
+existing default config before re-applying it.
+
+```bash
+calicoctl get felixconfiguration default --export -o yaml | \
+sed -e '/  policySyncPathPrefix:/d' \
+    -e '$ a\  policySyncPathPrefix: /var/run/nodeagent' > felix-config.yaml
+calicoctl apply -f felix-config.yaml
 
 In addition, the {{site.prodname}} Manager needs to have application layer policy support enabled:
 
@@ -47,7 +60,7 @@ The sidecar injector automatically modifies pods as they are created to work
 with Istio. This step modifies the injector configuration to add Dikastes, a
 {{site.prodname}} component, as sidecar containers.
 
-1. Follow the [Automatic sidecar injection instructions](https://archive.istio.io/v1.1/docs/setup/kubernetes/additional-setup/sidecar-injection/#automatic-sidecar-injection)
+1. Follow the [Automatic sidecar injection instructions](https://archive.istio.io/v1.1/docs/setup/kubernetes/sidecar-injection/#automatic-sidecar-injection)
    to install the sidecar injector and enable it in your chosen namespace(s).
 
 1. Apply the following ConfigMap to enable injection of Dikastes alongside Envoy.

@@ -57,6 +57,7 @@ Description:
     * ipPool
     * tier
     * networkPolicy
+    * networkSet
     * node
     * profile
     * workloadEndpoint

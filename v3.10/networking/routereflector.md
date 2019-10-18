@@ -9,6 +9,8 @@ includes optional route reflector function in the {{site.nodecontainer}} image, 
 enabled by provisioning the `spec.bgp.routeReflectorClusterID` field of the relevant [node
 resource]({{site.url}}/{{page.version}}/reference/resources/node).
 
+Some of the existing {{site.prodname}} nodes in a cluster can be [enabled to behave as route
+reflectors]({{site.baseurl}}/{{page.version}}/networking/bgp#configuring-in-cluster-route-reflectors)
 (simultaneously with their function as workload hosts).
 
 To run a standalone route reflector outside the cluster, you can also use the

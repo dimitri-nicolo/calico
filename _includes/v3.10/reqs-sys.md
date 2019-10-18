@@ -13,7 +13,7 @@
   {% endif %}{% if include.orch == "OpenStack" %}
   - Ubuntu 16.04
   - CentOS 7
-  {% endif %}<br><br>
+  {% endif %}
 
 - {{site.prodname}} must be able to manage `cali*` interfaces on the host. When IPIP is
   enabled (the default), {{site.prodname}} also needs to be able to manage `tunl*` interfaces.

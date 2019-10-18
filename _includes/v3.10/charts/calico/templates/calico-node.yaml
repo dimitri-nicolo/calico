@@ -53,29 +53,6 @@ spec:
 {{- end }}
       initContainers:
 {{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks")  }}
-  {{- if and (eq .Values.network "calico") (eq .Values.datastore "kubernetes") }}
-        # This container performs upgrade from host-local IPAM to calico-ipam.
-        # It can be deleted if this is a fresh installation, or if you have already
-        # upgraded to use calico-ipam.
-        - name: upgrade-ipam
-          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
-          command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
-          env:
-            - name: KUBERNETES_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: CALICO_NETWORKING_BACKEND
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: calico_backend
-          volumeMounts:
-            - mountPath: /var/lib/cni/networks
-              name: host-local-net-dir
-            - mountPath: /host/opt/cni/bin
-              name: cni-bin-dir
-  {{- end }}
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
@@ -91,63 +68,42 @@ spec:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: cni_network_config
-  {{- if eq .Values.datastore "etcd" }}
+{{- if eq .Values.datastore "etcd" }}
             # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: etcd_endpoints
-    {{- if eq .Values.network "flannel" }}
-            # Location of the CA certificate for etcd.
-            - name: ETCD_CA_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: ETCD_KEY_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: ETCD_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-    {{- end }}
-  {{- else if eq .Values.datastore "kubernetes" }}
+{{- else if eq .Values.datastore "kubernetes" }}
             # Set the hostname based on the k8s node name.
             - name: KUBERNETES_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-  {{- end }}
-  {{- if eq .Values.network "calico" }}
+{{- end }}
+{{- if eq .Values.network "calico" }}
             # CNI MTU Config variable
             - name: CNI_MTU
               valueFrom:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: veth_mtu
-  {{- end }}
+{{- end }}
             # Prevents the container from sleeping forever.
             - name: SLEEP
               value: "false"
-  {{- if .Values.cni.env }}
+{{- if .Values.cni.env }}
 {{ toYaml .Values.cni.env | indent 12 }}
-  {{- end }}
+{{- end }}
           volumeMounts:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
             - mountPath: /host/etc/cni/net.d
               name: cni-net-dir
-  {{- if eq .Values.datastore "etcd" }}
+{{- if eq .Values.datastore "etcd" }}
             - mountPath: /calico-secrets
               name: etcd-certs
-  {{- end }}
 {{- end }}
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
@@ -390,10 +346,10 @@ spec:
           securityContext:
             privileged: true
           livenessProbe:
-            httpGet:
-              path: /liveness
-              port: 9099
-              host: localhost
+            exec:
+              command:
+              - /bin/calico-node
+              - -felix-live
             periodSeconds: 10
             initialDelaySeconds: 10
             failureThreshold: 6
@@ -404,11 +360,6 @@ spec:
               - /bin/calico-node
               - -bird-ready
               - -felix-ready
-{{- else if eq .Values.network "flannel" }}
-            httpGet:
-              path: /readiness
-              port: 9099
-              host: localhost
 {{- else }}
             exec:
               command:
@@ -450,122 +401,6 @@ spec:
 {{- end }}
             - name: policysync
               mountPath: /var/run/nodeagent
-{{- if eq .Values.network "flannel" }}
-  {{- if eq .Values.datastore "kubernetes" }}
-        # This container runs flannel using the kube-subnet-mgr backend
-        # for allocating subnets.
-        - name: kube-flannel
-          image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
-{{ tuple .Values.flannel.resources | include "calico.resourceLimits" | indent 10 -}}
-          command: [ "/opt/bin/flanneld", "--ip-masq", "--kube-subnet-mgr" ]
-          securityContext:
-            privileged: true
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: FLANNELD_IFACE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: canal_iface
-            - name: FLANNELD_IP_MASQ
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: masquerade
-{{- if .Values.flannel.env }}
-{{ toYaml .Values.flannel.env | indent 12 }}
-{{- end }}
-          volumeMounts:
-          - mountPath: /run/xtables.lock
-            name: xtables-lock
-            readOnly: false
-          - name: flannel-cfg
-            mountPath: /etc/kube-flannel/
-  {{- else if eq .Values.datastore "etcd" }}
-        # Runs the flannel daemon to enable vxlan networking between
-        # container hosts.
-        - name: flannel
-          image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
-{{ tuple .Values.flannel.resources | include "calico.resourceLimits" | indent 10 -}}
-          env:
-            # The location of the etcd cluster.
-            - name: FLANNELD_ETCD_ENDPOINTS
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_endpoints
-            # Location of the CA certificate for etcd.
-            - name: ETCD_CA_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: ETCD_KEY_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: ETCD_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-            # Location of the CA certificate for etcd.
-            - name: FLANNELD_ETCD_CAFILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: FLANNELD_ETCD_KEYFILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: FLANNELD_ETCD_CERTFILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-            # The interface flannel should run on.
-            - name: FLANNELD_IFACE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: canal_iface
-            # Perform masquerade on traffic leaving the pod cidr.
-            - name: FLANNELD_IP_MASQ
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: masquerade
-            # Write the subnet.env file to the mounted directory.
-            - name: FLANNELD_SUBNET_FILE
-              value: "/run/flannel/subnet.env"
-{{- if .Values.flannel.env }}
-{{ toYaml .Values.flannel.env | indent 12 }}
-{{- end }}
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - mountPath: /etc/resolv.conf
-              name: resolv
-            - mountPath: /run/flannel
-              name: run-flannel
-            - mountPath: /calico-secrets
-              name: etcd-certs
-  {{- end }}
-{{- end }}
       volumes:
         # Used by cnx-node.
         - name: lib-modules
@@ -581,20 +416,6 @@ spec:
           hostPath:
             path: /run/xtables.lock
             type: FileOrCreate
-{{- if and (eq .Values.network "flannel") (eq .Values.datastore "kubernetes") }}
-        # Used by flannel.
-        - name: flannel-cfg
-          configMap:
-            name: canal-config
-{{- else if and (eq .Values.network "flannel") (eq .Values.datastore "etcd") }}
-        # Used by flannel.
-        - name: run-flannel
-          hostPath:
-            path: /run/flannel
-        - name: resolv
-          hostPath:
-            path: /etc/resolv.conf
-{{- end }}
 {{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
         # Used to install CNI.
         - name: cni-bin-dir

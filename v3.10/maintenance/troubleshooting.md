@@ -18,7 +18,6 @@ To view logs, use the following command:
 
 `kubectl logs -n kube-system <pod_name>`
 
-
 To view debug logs on some {{site.prodname}} components, set the `LogSeverityScreen` through the associated environment variable.
 
 
@@ -170,7 +169,6 @@ This error can also occur if inactive Node resources are configured for node-to-
 This error can also occur when BGP connections to non-mesh peers go down. If this is a common occurrence in your BGP topology, you can disable BIRD readiness checks. See [node readiness]({{site.baseurl}}/{{page.version}}/reference/node/configuration#node-readiness)
 for more information.
 
-
 ### Linux conntrack table is out of space
 
 A common problem on Linux systems is running out of space in the conntrack table, which can cause poor iptables performance. This can
@@ -182,7 +180,6 @@ happen if you run a lot of workloads on a given host, or if your workloads creat
 ### Compliance report is not generating at expected time
 
 By design, reports are scheduled to generate 30 minutes after the specified end time. The reason for this is to allow a certain amount of
-time to pass for all the relevant data within the specified start and end time to be fully processed and stored. This delay can be modified 
-by setting the `TIGERA_COMPLIANCE_JOB_START_DELAY` environment variable on the `compliance-controller` deployment to the 
+time to pass for all the relevant data within the specified start and end time to be fully processed and stored. This delay can be modified
+by setting the `TIGERA_COMPLIANCE_JOB_START_DELAY` environment variable on the `compliance-controller` deployment to the
 desired [Golang duration](https://godoc.org/time#Duration).
-

@@ -13,7 +13,7 @@ ifneq ($(IMAGES_FILE),)
 	CONFIG:=$(CONFIG),/config_images.yml
 endif
 
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.22
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
 PACKAGE_NAME?=github.com/projectcalico/calico
@@ -109,9 +109,9 @@ RELEASE_BRANCH_REPOS=$(sort $(RELEASE_REPOS) libcalico-go confd)
 TAG_COMMAND=git describe --tags --dirty --always --long
 REGISTRY?=calico
 LOCAL_BUILD=true
-.PHONY: dev-image dev-test dev-vendor dev-clean
+.PHONY: dev-image dev-test dev-clean
 ## Build a local version of Calico based on the checked out codebase.
-dev-image: dev-vendor $(addsuffix -dev-image, $(filter-out calico felix, $(RELEASE_REPOS)))
+dev-image: $(addsuffix -dev-image, $(filter-out calico felix, $(RELEASE_REPOS)))
 $(addsuffix -dev-image,$(RELEASE_REPOS)): %-dev-image: ../%
 	@cd $< && export TAG=$$($(TAG_COMMAND)); make image tag-images \
 		BUILD_IMAGE=$(REGISTRY)/$* \
@@ -129,13 +129,9 @@ $(addsuffix -dev-push,$(RELEASE_REPOS)): %-dev-push: ../%
 		IMAGETAG=$$TAG
 
 ## Run all tests against currently checked out code. WARNING: This takes a LONG time.
-dev-test: dev-vendor $(addsuffix -dev-test, $(filter-out calico, $(RELEASE_REPOS)))
+dev-test:  $(addsuffix -dev-test, $(filter-out calico, $(RELEASE_REPOS)))
 $(addsuffix -dev-test,$(RELEASE_REPOS)): %-dev-test: ../%
 	@cd $< && make test LOCAL_BUILD=$(LOCAL_BUILD)
-
-dev-vendor: $(addsuffix -dev-vendor, $(filter-out calico, $(RELEASE_BRANCH_REPOS)))
-$(addsuffix -dev-vendor,$(RELEASE_BRANCH_REPOS)): %-dev-vendor: ../%
-	@cd $< && make vendor
 
 ## Run `make clean` across all repos.
 dev-clean: $(addsuffix -dev-clean, $(filter-out calico felix, $(RELEASE_REPOS)))
@@ -408,7 +404,16 @@ RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/k8s-manifests
 RELEASE_DIR_IMAGES?=$(RELEASE_DIR)/images
 RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
-MANIFEST_SRC ?= ./_site/$(RELEASE_STREAM)/manifests
+
+# Determine where the manifests live. For older versions we used
+# a different location, but we still need to package them up for patch
+# releases.
+DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/manifests
+OLD_VERSIONS := v3.0 v3.1 v3.2 v3.3 v3.4 v3.5 v3.6
+ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
+DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation
+endif
+MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
 
 ## Create an archive that contains a complete "Calico" release
 release-archive: release-prereqs $(RELEASE_DIR).tgz

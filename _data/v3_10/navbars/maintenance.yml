@@ -14,6 +14,8 @@ toc:
     path: /maintenance/openshift-upgrade-tsee
 - title: Decommissioning a node
   path: /maintenance/decommissioning-a-node
+- title: Monitor Calico component metrics
+  path: /maintenance/monitor-component-metrics  
 - title: Component logs
   path: /maintenance/component-logs
 - title: Troubleshooting

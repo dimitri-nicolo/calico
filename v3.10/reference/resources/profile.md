@@ -56,8 +56,8 @@ spec:
 
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
-| ingress  | The ingress rules belonging to this profile. | | List of [Rule](#rule) |
-| egress   | The egress rules belonging to this profile. | | List of [Rule](#rule)  |
+| ingress (deprecated) | The ingress rules belonging to this profile. | | List of [Rule](#rule) |
+| egress  (deprecated) | The egress rules belonging to this profile. | | List of [Rule](#rule)  |
 | labelsToApply | An optional set of labels to apply to each endpoint in this profile (in addition to the endpoint's own labels) |  | map |
 
 #### Rule

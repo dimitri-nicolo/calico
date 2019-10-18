@@ -18,6 +18,7 @@ Usage:
 
     release      Release a Calico assigned IP address.
     show         Show details of a Calico assigned IP address.
+                 or of overall IP usage.
 
 Options:
   -h --help      Show this screen.

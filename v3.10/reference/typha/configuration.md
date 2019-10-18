@@ -35,7 +35,8 @@ The full list of parameters which can be set is as follows.
 | `LogSeveritySys`                  | `TYPHA_LOGSEVERITYSYS`                  | The log severity above which logs are sent to the syslog. Set to `""` for no logging to syslog. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
 | `PrometheusGoMetricsEnabled`      | `TYPHA_PROMETHEUSGOMETRICSENABLED`      | Set to `false` to disable Go runtime metrics collection, which the Prometheus client does by default. This reduces the number of metrics reported, reducing Prometheus load. [Default: `true`]  | boolean |
 | `PrometheusMetricsEnabled`        | `TYPHA_PROMETHEUSMETRICSENABLED`        | Set to `true` to enable the Prometheus metrics server in Typha. [Default: `false`] | boolean |
-| `PrometheusMetricsPort`           | `TYPHA_PROMETHEUSMETRICSPORT`           | Experimental: TCP port that the Prometheus metrics server should bind to. [Default: `9091`] | int |
+| `PrometheusMetricsHost`           | `TYPHA_PROMETHEUSMETRICSHOST`           | TCP network address that the Prometheus metrics server should bind to. [Default: `""`] | string |
+| `PrometheusMetricsPort`           | `TYPHA_PROMETHEUSMETRICSPORT`           | TCP port that the Prometheus metrics server should bind to. [Default: `9091`] | int |
 | `PrometheusProcessMetricsEnabled` | `TYPHA_PROMETHEUSPROCESSMETRICSENABLED` | Set to `false` to disable process metrics collection, which the Prometheus client does by default. This reduces the number of metrics reported, reducing Prometheus load. [Default: `true`] | boolean |
 
 > **Note**: By default, if the health endpoint is enabled Typha listens on localhost.  However, if  Typhs is used in
@@ -72,6 +73,12 @@ read Prometheus metrics, and the data is encrypted in transit.  A
 valid client must then connect over HTTPS and present a certificate
 that is signed by one of the trusted CAs in the
 `PrometheusMetricsCAFile` setting.
+
+##### Environment variables
+
+| Environment   | Description | Schema |
+| ------------- | ----------- | ------ |
+| USE_POD_CIDR | Use the Kubernetes `Node.Spec.PodCIDR` field. This field is required when using the Kubernetes API datastore with host-local IPAM. [Default: false] | boolean |
 
 #### Felix-Typha TLS configuration
 

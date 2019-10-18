@@ -1,5 +1,6 @@
 ---
 title: Get started with Kubernetes network policy
+description: Learn Kubernetes policy syntax, rules, and features for controlling network traffic.
 ---
 
 ### Big picture
@@ -36,7 +37,7 @@ The bulk of securing network traffic typically revolves around defining egress a
 
 Before you create your first Kubernetes network policy, you need to understand the default network policy behaviors. If no Kubernetes network policies apply to a pod, then all traffic to/from the pod are allowed (default-allow). As a result, if you do not create any network policies, then all pods are allowed to communicate freely with all other pods. If one or more Kubernetes network policies apply to a pod, then only the traffic specifically defined in that network policy are allowed (default-deny).
 
-You are now ready to start fine-tuning trtaffic that should be allowed.
+You are now ready to start fine-tuning traffic that should be allowed.
 
 - [Create ingress policies](#create-ingress-policies)
 - [Allow ingress traffic from pods in the same namespace](#allow-ingress-traffic-from-pods-in-the-same-namespace)
@@ -70,9 +71,9 @@ spec:
   ingress:
   - from:
     - podSelector:
-        color: red
-    to:
-      ports:
+        matchLabels:
+          color: red
+    ports:
       - port: 80
 ```
 
@@ -83,7 +84,7 @@ To allow traffic from pods in a different namespace, use a namespace selector in
 >**Note**: Namespace selectors can be used only in policy rules. The **spec.podSelector** applies to pods only in the same namespace as the policy.
 {: .alert .alert-info}
 
-In the following example, incoming traffic is allowed only if they come from a pod with label **color=red**, in a namespace with **shape=square**, on port **80**.
+In the following example, incoming traffic is allowed only if they come from a pod with label **color=red**, in a namespace with label **shape=square**, on port **80**.
 
 ```
 kind: NetworkPolicy
@@ -98,12 +99,13 @@ spec:
   ingress:
   - from:
     - podSelector:
-        color: red
+        matchLabels:
+          color: red
       namespaceSelector:
-        shape: square
-    to:
-      ports:
-      - port: 80
+        matchLabels:
+          shape: square
+    ports:
+    - port: 80
 ```
 
 #### Create egress policies
@@ -112,7 +114,7 @@ Create egress network policies to allow outbound traffic from pods.
 
 ##### Allow egress traffic from pods in the same namespace
 
-The following policy allows pod outbound traffic to other pods in the same namespace that match the pod selector. In the following example, outbound traffic is allowed only if they go to a pod with **color=red**, on port **80**.
+The following policy allows pod outbound traffic to other pods in the same namespace that match the pod selector. In the following example, outbound traffic is allowed only if they go to a pod with label **color=red**, on port **80**.
 
 ```
 kind: NetworkPolicy
@@ -127,9 +129,10 @@ spec:
   egress:
   - to:
     - podSelector:
-        color: red
-      ports:
-      - port: 80
+        matchLabels:
+          color: red
+    ports:
+    - port: 80
 ```
 
 ##### Allow egress traffic to IP addresses or CIDR range

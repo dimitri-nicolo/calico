@@ -1,5 +1,6 @@
 ---
 title: calicoctl label
+canonical_url: 'https://docs.projectcalico.org/v3.9/reference/calicoctl/label'
 ---
 
 This section describes the `calicoctl label` command.
@@ -65,6 +66,7 @@ Description:
     * hostEndpoint
     * ipPool
     * networkPolicy
+    * networkSet
     * node
     * profile
     * workloadEndpoint

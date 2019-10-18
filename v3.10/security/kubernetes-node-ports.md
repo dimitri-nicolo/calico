@@ -61,13 +61,13 @@ spec:
     - action: Allow
       source:
         nets: [1.2.3.4/16, 100.100.100.0/16]
-        selector: has(kubernetes-host)
     - action: Deny
+  selector: has(kubernetes-host)
 ```
 
 #### Allow local host egress traffic
 
-We also need a global network policy to allow egress traffic through each node's external interface. Otherwise, when we define host endpoints for those interfaces, no egress traffic will be allowed from local processes (except for traffic that is allowed by the [Failsafe rules]({{site.baseurl}}/{{page.version}}/security/host-endpoints/failsafe).
+We also need a global network policy to allow egress traffic through each node's external interface. Otherwise, when we define host endpoints for those interfaces, no egress traffic will be allowed from local processes (except for traffic that is allowed by the [Failsafe rules]({{site.baseurl}}/{{page.version}}/reference/host-endpoints/failsafe).
 
 ```
 apiVersion: projectcalico.org/v3
@@ -132,5 +132,5 @@ Then, use **nodeport-external-ingress: true** as the selector of the **allow-nod
 
 ### Above and beyond
 
-- [Global Network Policy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
-- [Host Endpoints]({{site.baseurl}}/{{page.version}}/reference/resources/hostendpoint)
+- [Global network policy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+- [Host endpoints]({{site.baseurl}}/{{page.version}}/reference/resources/hostendpoint)

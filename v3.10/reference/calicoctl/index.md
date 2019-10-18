@@ -3,23 +3,17 @@ title: calicoctl user reference
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/
 ---
 
-The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network and security policy, as well as other
-{{site.prodname}} configurations.
-
-The calicoctl command line interface provides a number of resource management
-commands to allow you to create, modify, delete, and view the different {{site.prodname}}
-resources.
+The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}}
+network and security policy, as well as other {{site.prodname}} configurations.
 
 The full list of commands is described in the
 [Command reference]({{site.url}}/{{page.version}}/reference/calicoctl/)
 section.
 
-The full list of resources that can be managed, including a description of each,
-is described in the [Resource Definitions]({{site.url}}/{{page.version}}/reference/resources/)
-section.
-
 > **Note**: This section provides full reference information for `calicoctl`. To learn
 > how to install and configure `calicoctl`, refer to
+> [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
+{: .alert .alert-info}
 
 The calicoctl command line interface provides a number of resource management
 commands to allow you to create, modify, delete, and view the different
@@ -39,6 +33,7 @@ Usage:
     replace   Replace a resource by filename or stdin.
     apply     Apply a resource by filename or stdin.  This creates a resource
               if it does not exist, and replaces a resource if it does exists.
+    patch     Patch a pre-exisiting resource in place.
     delete    Delete a resource identified by file, stdin or resource type and
               name.
     get       Get a resource identified by file, stdin or resource type and
@@ -71,6 +66,7 @@ organized by top level command.
 -  [calicoctl create]({{site.baseurl}}/{{page.version}}/reference/calicoctl/create)
 -  [calicoctl replace]({{site.baseurl}}/{{page.version}}/reference/calicoctl/replace)
 -  [calicoctl apply]({{site.baseurl}}/{{page.version}}/reference/calicoctl/apply)
+-  [calicoctl patch]({{site.baseurl}}/{{page.version}}/reference/calicoctl/patch)
 -  [calicoctl delete]({{site.baseurl}}/{{page.version}}/reference/calicoctl/delete)
 -  [calicoctl get]({{site.baseurl}}/{{page.version}}/reference/calicoctl/get)
 -  [calicoctl label]({{site.baseurl}}/{{page.version}}/reference/calicoctl/label)
