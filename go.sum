@@ -266,6 +266,8 @@ github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368/go.mod h1:
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jefferai/jsonx v0.0.0-20160721235117-9cc31c3135ee/go.mod h1:N0t2vlmpe8nyZB5ouIbJQPDSR+mH6oe7xHB9VZHSUzM=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
+github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a h1:zPPuIq2jAWWPTrGt70eK/BSch+gFAGrNzecsoENgu2o=
+github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a/go.mod h1:yL958EeXv8Ylng6IfnvG4oflryUi3vgA3xPs9hmII1s=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jonboulle/clockwork v0.1.0 h1:VKV+ZcuP6l3yW9doeqz6ziZGgcynBVQO+obU0+0hcPo=
@@ -476,6 +478,8 @@ github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go
 github.com/tigera/libcalico-go-private v0.0.0-20190919234112-2890e944b436/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5 h1:GKLozu9nKwcjzSWfbiAvjIkThw9ojnTm5FHLZaoed2Q=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5/go.mod h1:lhLRKgy42v9xWiVbVQfougkr3YPGfXNkIdtYdH3bJDw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538 h1:rGU+Wvpg2GBn4wODz9JBRRYkUVL9KqipfGvpl20PIrI=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
