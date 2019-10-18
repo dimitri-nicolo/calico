@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,8 +35,8 @@ import (
 
 var testIP = mustParseIP("10.0.0.1")
 var testIP2 = mustParseIP("10.0.0.2")
-var testIPAs6 = net.IP{testIP.To16()}
-var testIPAs4 = net.IP{testIP.To4()}
+var testIPAs6 = net.IP{IP: testIP.To16()}
+var testIPAs4 = net.IP{IP: testIP.To4()}
 
 var _ = DescribeTable("Calculation graph pass-through tests",
 	func(key model.Key, input interface{}, expUpdate interface{}, expRemove interface{}) {

@@ -83,7 +83,7 @@ func (pr *PrometheusReporter) Report(mu MetricUpdate) error {
 // servePrometheusMetrics starts a lightweight web server to server prometheus metrics.
 func (pr *PrometheusReporter) servePrometheusMetrics() {
 	for {
-		err := security.ServePrometheusMetrics(pr.registry, pr.port, pr.certFile, pr.keyFile, pr.caFile)
+		err := security.ServePrometheusMetrics(pr.registry, "", pr.port, pr.certFile, pr.keyFile, pr.caFile)
 		log.WithError(err).Error(
 			"Prometheus reporter metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)

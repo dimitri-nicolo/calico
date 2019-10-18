@@ -36,6 +36,7 @@ import (
 type Container struct {
 	Name     string
 	IP       string
+	IPPrefix string
 	Hostname string
 	runCmd   *exec.Cmd
 	Stdin    io.WriteCloser
@@ -43,6 +44,7 @@ type Container struct {
 	mutex         sync.Mutex
 	binaries      set.Set
 	stdoutWatches []*watch
+	stderrWatches []*watch
 
 	logFinished sync.WaitGroup
 }
@@ -143,7 +145,11 @@ func (c *Container) signalDockerRun(sig os.Signal) {
 	if c.runCmd == nil {
 		return
 	}
-	c.runCmd.Process.Signal(sig)
+	err := c.runCmd.Process.Signal(sig)
+	if err != nil {
+		logCxt.WithError(err).Error("failed to signal 'docker run' process")
+		return
+	}
 	logCxt.Info("Signalled docker run")
 }
 
@@ -205,7 +211,7 @@ func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
 	// Merge container's output into our own logging.
 	c.logFinished.Add(2)
 	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches)
-	go c.copyOutputToLog("stderr", stderr, &c.logFinished, nil)
+	go c.copyOutputToLog("stderr", stderr, &c.logFinished, &c.stderrWatches)
 
 	// Note: it might take a long time for the container to start running, e.g. if the image
 	// needs to be downloaded.
@@ -213,10 +219,28 @@ func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
 
 	// Fill in rest of container struct.
 	c.IP = c.GetIP()
+	c.IPPrefix = c.GetIPPrefix()
 	c.Hostname = c.GetHostname()
 	c.binaries = set.New()
 	log.WithField("container", c).Info("Container now running")
 	return
+}
+
+func (c *Container) WatchStderrFor(re *regexp.Regexp) chan struct{} {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	log.WithFields(log.Fields{
+		"container": c.Name,
+		"regex":     re,
+	}).Info("Start watching stderr")
+
+	ch := make(chan struct{})
+	c.stderrWatches = append(c.stderrWatches, &watch{
+		regexp: re,
+		c:      ch,
+	})
+	return ch
 }
 
 func (c *Container) WatchStdoutFor(re *regexp.Regexp) chan struct{} {
@@ -326,6 +350,11 @@ func (c *Container) GetIP() string {
 	return strings.TrimSpace(output)
 }
 
+func (c *Container) GetIPPrefix() string {
+	output := c.DockerInspect("{{range .NetworkSettings.Networks}}{{.IPPrefixLen}}{{end}}")
+	return strings.TrimSpace(output)
+}
+
 func (c *Container) GetHostname() string {
 	output := c.DockerInspect("{{.Config.Hostname}}")
 	return strings.TrimSpace(output)
@@ -423,7 +452,10 @@ func (c *Container) EnsureBinary(name string) {
 	defer c.mutex.Unlock()
 
 	if !c.binaries.Contains(name) {
-		utils.Command("docker", "cp", "../bin/"+name, c.Name+":/"+name).Run()
+		err := utils.Command("docker", "cp", "../bin/"+name, c.Name+":/"+name).Run()
+		if err != nil {
+			log.WithField("name", name).Error("Failed to run 'docker cp' command")
+		}
 		c.binaries.Add(name)
 	}
 }

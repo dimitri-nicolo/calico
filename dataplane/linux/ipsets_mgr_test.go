@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -118,7 +118,8 @@ var _ = Describe("IP Sets manager", func() {
 					Members: []string{members[0], members[1]},
 					Type:    ipsetType,
 				})
-				ipsetsMgr.CompleteDeferredWork()
+				err := ipsetsMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			AssertIPSetModified()
@@ -139,7 +140,8 @@ var _ = Describe("IP Sets manager", func() {
 						AddedMembers:   []string{members[2], members[3]},
 						RemovedMembers: []string{members[0]},
 					})
-					ipsetsMgr.CompleteDeferredWork()
+					err := ipsetsMgr.CompleteDeferredWork()
+					Expect(err).ToNot(HaveOccurred())
 				})
 
 				AssertIPSetNotModified()

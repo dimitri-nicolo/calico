@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,7 +63,11 @@ func DumpCPUProfile(fileName string) {
 	defer f.Close()
 
 	logCxt.Info("Writing CPU profile...")
-	pprof.StartCPUProfile(f)
+	err = pprof.StartCPUProfile(f)
+	if err != nil {
+		logCxt.WithError(err).Error("Could not start CPU profile")
+		return
+	}
 	defer pprof.StopCPUProfile()
 	time.Sleep(10 * time.Second)
 	logCxt.Info("Finished writing CPU profile")

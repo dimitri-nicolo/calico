@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,5 +123,8 @@ func createNetworkPolicy(clientset *kubernetes.Clientset, namespace string) {
 			},
 		},
 	}
-	clientset.NetworkingV1().NetworkPolicies("").Create(&np)
+	_, err := clientset.NetworkingV1().NetworkPolicies("").Create(&np)
+	if err != nil {
+		log.WithField("name", namespace).WithError(err).Error("failed to create namespace for network policy")
+	}
 }

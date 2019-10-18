@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -170,7 +170,8 @@ func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 			return
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFunc()
 		err = calicoClient.EnsureInitialized(
 			ctx,
 			"v3.0.0-test",
@@ -263,5 +264,4 @@ func panicIfError(err error) {
 	if err != nil {
 		panic(err)
 	}
-	return
 }
