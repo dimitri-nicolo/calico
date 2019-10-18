@@ -18,7 +18,7 @@ metadata:
   namespace: calico-monitoring
 spec:
   capacity:
-    storage: {{.Values.elasticsearch.persistentVolume.capacity}}
+    storage: 10Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
