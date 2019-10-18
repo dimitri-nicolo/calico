@@ -498,7 +498,7 @@ func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) (
 		// If this is a retry then we may have stale conntrack entries and we don't want those
 		// to influence the connectivity check.  Only an issue for UDP due to the lack of a
 		// sequence number.
-		p.C.ExecMayFail("conntrack", "-D", "-p", "udp", "-s", p.Workload.IP, "-d", ip)
+		_ = p.C.ExecMayFail("conntrack", "-D", "-p", "udp", "-s", p.Workload.IP, "-d", ip)
 	}
 
 	// Run 'test-connection' to the target.

@@ -26,7 +26,7 @@ require (
 	github.com/gxed/eventfd v0.0.0-20160916113412-80a92cca79a8 // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/imdario/mergo v0.3.7 // indirect
+	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/ipfs/go-log v0.0.0-20180611222144-5dc2060baaf8 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20151117175822-3433f3ea46d9 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
