@@ -469,6 +469,18 @@ EOF
         Run ClusterIP service test for service ip advertisement
         """
         with DiagsCollector():
+
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: BGPConfiguration
+metadata:
+  name: default
+spec:
+  serviceClusterIPs:
+  - cidr: 10.96.0.0/12
+EOF
+""")
+
             # Assert that a route to the service IP range is present.
             retry_until_success(lambda: self.assertIn("10.96.0.0/12", self.get_routes()))
 
