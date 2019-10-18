@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/mockdata/replayer"
-	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/lma/pkg/elastic"
 )
 
@@ -41,7 +40,7 @@ func main() {
 				Index(hit.Index).
 				Type(hit.Type).
 				Id(hit.Id).
-				BodyString(string(*hit.Source)).
+				BodyString(string(hit.Source)).
 				Do(context.Background())
 			if err == nil {
 				log.WithFields(log.Fields{"id": hit.Id, "result": res}).Info("successfully indexed document")

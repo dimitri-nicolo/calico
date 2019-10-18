@@ -28,6 +28,9 @@ cmd/mockdata-exporter/mockdata-exporter
 docker-image/scaleloader/playbooks
 docker-image/scaleloader/bin
 docker-image/scaleloader/scenarios
+docker-image/benchmarker/cfg/
+
+tmp/kube-bench
 
 cmd/server/apiserver.local.config/
 .settings
