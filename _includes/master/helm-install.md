@@ -129,7 +129,7 @@ initialPool:
   cidr: 10.0.0.0/8
 ```
 
->**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/changing-ip-pools)
+>**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/migrate-pools)
 {: .alert .alert-warning}
 
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster

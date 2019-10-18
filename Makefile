@@ -409,7 +409,7 @@ RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
 # a different location, but we still need to package them up for patch
 # releases.
 DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/manifests
-OLD_VERSIONS := v3.0 v3.1 v3.2 v3.3 v3.4 v3.5 v3.6
+OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4 
 ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
 DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation
 endif

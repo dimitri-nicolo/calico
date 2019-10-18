@@ -1,6 +1,6 @@
 ---
 title: Creating host endpoint objects
-canonical_url: 'https://docs.projectcalico.org/v3.9/reference/host-endpoints/objects'
+canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/objects'
 ---
 
 

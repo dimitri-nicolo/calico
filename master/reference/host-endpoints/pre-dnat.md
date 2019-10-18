@@ -1,6 +1,6 @@
 ---
 title: Pre-DNAT policy
-canonical_url: 'https://docs.projectcalico.org/v3.9/reference/host-endpoints/pre-dnat'
+canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/pre-dnat'
 ---
 
 

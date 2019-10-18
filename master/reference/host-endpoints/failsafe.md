@@ -1,6 +1,6 @@
 ---
 title: Failsafe rules
-canonical_url: 'https://docs.projectcalico.org/v3.9/reference/host-endpoints/failsafe'
+canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/failsafe'
 ---
 
 
@@ -26,7 +26,7 @@ By default, {{site.prodname}} keeps the following ports open on *all* host endpo
 The lists of failsafe ports can be configured via the configuration parameters
 `FailsafeInboundHostPorts` and `FailsafeOutboundHostPorts`
 described in [Configuring
-Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).  They
+Felix]({{site.url}}/{{page.version}}/reference/felix/configuration).  They
 can be disabled by setting each configuration value to "none".
 
 > **Important**: Removing the inbound failsafe rules can leave a host inaccessible.

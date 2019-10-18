@@ -105,6 +105,7 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {{- end }}
+{{- end }}
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
@@ -204,19 +205,6 @@ spec:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: veth_mtu
-{{- else if eq .Values.network "flannel" }}
-            # Don't enable BGP.
-            - name: CALICO_NETWORKING_BACKEND
-              value: "none"
-            # Cluster type to identify the deployment type
-            - name: CLUSTER_TYPE
-              value: "k8s,canal"
-            # Period, in seconds, at which felix re-applies all iptables state
-            - name: FELIX_IPTABLESREFRESHINTERVAL
-              value: "60"
-            # No IP address needed.
-            - name: IP
-              value: ""
 {{- else if eq .Values.network "ecs" }}
             # Don't enable BGP.
             - name: CALICO_NETWORKING_BACKEND
@@ -486,35 +474,3 @@ kind: ServiceAccount
 metadata:
   name: {{include "nodeName" . }}
   namespace: kube-system
-
-{{- if and (eq .Values.datastore "etcd") (eq .Values.network "flannel") }}
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: canal
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: canal
-subjects:
-- kind: ServiceAccount
-  name: canal-node
-  namespace: kube-system
-
----
-
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: canal
-rules:
-  - apiGroups: [""]
-    resources:
-      - pods
-      - nodes
-      - namespaces
-    verbs:
-      - get
-{{- end }}

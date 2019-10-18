@@ -128,7 +128,6 @@ toc:
     path: /reference/typha/
   - title: Configuration
     path: /reference/typha/configuration
-  path: /reference/typha/configuration
 - title: Dikastes
   path: /reference/dikastes/configuration
 - title: Tigera Secure EE Compliance Reports

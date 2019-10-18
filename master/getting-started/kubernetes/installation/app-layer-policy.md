@@ -18,18 +18,14 @@ operate.
 **Prerequisites**:
 
  - [{{site.prodname}} installed](/{{page.version}}/getting-started/kubernetes/installation/)
- - [calicoctl installed](/{{page.version}}/getting-started/calicoctl/install) & [configured](/{{page.version}}/getting-started/calicoctl/configure/)
 
 Application layer policy requires the Policy Sync API to be enabled on Felix. To do this cluster-wide, modify the `default`
 FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.  The following example uses `sed` to modify your
 existing default config before re-applying it.
 
 ```bash
-calicoctl get felixconfiguration default --export -o yaml | \
-sed -e '/  policySyncPathPrefix:/d' \
-    -e '$ a\  policySyncPathPrefix: /var/run/nodeagent' > felix-config.yaml
-calicoctl apply -f felix-config.yaml
-
+kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
+```
 In addition, the {{site.prodname}} Manager needs to have application layer policy support enabled:
 
 ```bash
