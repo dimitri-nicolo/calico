@@ -28,6 +28,6 @@ replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191018190509-53c264bd3ab4
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191018135049-210e5c1a7e03
-	github.com/sirupsen/logrus => github.com/projectcalico/logrus v0.0.0-20180627202928-fc9bbf2f57995271c5cd6911ede7a2ebc5ea7c6f
+	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )
