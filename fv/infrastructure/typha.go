@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -125,6 +126,11 @@ func EnsureTLSCredentials() {
 	clientUntrustedCert, clientUntrustedKey := tlsutils.MakePeerCert("typha-client", "", x509.ExtKeyUsageClientAuth, untrustedCert, untrustedKey)
 	tlsutils.WriteKey(clientUntrustedKey, filepath.Join(CertDir, "client-untrusted.key"))
 	tlsutils.WriteCert(clientUntrustedCert, filepath.Join(CertDir, "client-untrusted.crt"))
+
+	// Ensure that all users can read these credentials.  (Needed because Typha now
+	// runs as non-root.)
+	err = exec.Command("chmod", "-R", "a+rx", CertDir).Run()
+	tlsutils.PanicIfErr(err)
 }
 
 func RemoveTLSCredentials() {
