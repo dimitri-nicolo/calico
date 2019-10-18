@@ -39,7 +39,7 @@ ifeq ($(ARCH),x86_64)
 endif
 
 BIN=bin/$(ARCH)
-GO_BUILD_VER ?= v0.24
+GO_BUILD_VER ?= v0.26
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
@@ -139,9 +139,6 @@ BUILD_IMAGE_ORG?=calico
 # By default set the CNI_SPEC_VERSION to 0.3.1 for tests.
 CNI_SPEC_VERSION?=0.3.1
 
-BIN=bin/$(ARCH)
-# Ensure that the bin directory is always created
-MAKE_SURE_BIN_EXIST := $(shell mkdir -p $(BIN))
 CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
 
 BUILD_IMAGE?=tigera/cni
@@ -506,7 +503,7 @@ mod-download:
 	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
 
 .PHONY: ci
-ci: clean mod-download static-checks build test-cni-versions image-all test-install-cni
+ci: clean mod-download static-checks build assert-not-dirty test-cni-versions image-all test-install-cni
 
 ## Deploys images to registry
 cd:
@@ -522,6 +519,11 @@ endif
 ## Build fv binary for Windows
 $(BIN)/win-fv.exe: local_build $(WINFV_SRCFILES)
 	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && go test ./win_tests -c -o $(BIN)/win-fv.exe'
+
+# Assert no local changes after a clean build. This helps catch errors resulting from
+# misconfigured go.mod / go.sum / gitignore, etc.
+assert-not-dirty:
+	@./hack/check-dirty.sh
 
 ###############################################################################
 # Release
