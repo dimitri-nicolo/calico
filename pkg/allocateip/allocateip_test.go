@@ -599,3 +599,19 @@ func (c shimClient) RemoteClusterConfigurations() client.RemoteClusterConfigurat
 func (c shimClient) ManagedClusters() client.ManagedClusterInterface {
 	panic("not implemented")
 }
+
+func (c shimClient) GlobalAlerts() client.GlobalAlertInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) StagedGlobalNetworkPolicies() client.StagedGlobalNetworkPolicyInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) StagedKubernetesNetworkPolicies() client.StagedKubernetesNetworkPolicyInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) StagedNetworkPolicies() client.StagedNetworkPolicyInterface {
+	panic("not implemented")
+}
