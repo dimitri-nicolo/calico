@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	calicoconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -120,6 +122,8 @@ var (
 		IP:   net.ParseIP("fe80::"),
 		Mask: net.CIDRMask(10, 128),
 	}
+
+	stagedActionRegex = regexp.MustCompile("^(" + string(api.StagedActionSet) + "|" + string(api.StagedActionDelete) + ")$")
 )
 
 // Validate is used to validate the supplied structure according to the
@@ -161,6 +165,7 @@ func init() {
 	registerFieldValidator("labels", validateLabels)
 	registerFieldValidator("ipVersion", validateIPVersion)
 	registerFieldValidator("ipIpMode", validateIPIPMode)
+	registerFieldValidator("stagedAction", validateStagedAction)
 	registerFieldValidator("vxlanMode", validateVXLANMode)
 	registerFieldValidator("policyType", validatePolicyType)
 	registerFieldValidator("logLevel", validateLogLevel)
@@ -216,6 +221,9 @@ func init() {
 	registerStructValidator(validate, validateBGPPeerSpec, api.BGPPeerSpec{})
 	registerStructValidator(validate, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
+	registerStructValidator(validate, validateStagedNetworkPolicy, api.StagedNetworkPolicy{})
+	registerStructValidator(validate, validateStagedGlobalNetworkPolicy, api.StagedGlobalNetworkPolicy{})
+	registerStructValidator(validate, validateStagedKubernetesNetworkPolicy, api.StagedKubernetesNetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
 	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
@@ -352,6 +360,12 @@ func validateIPIPMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPIP Mode: %s", s)
 	return ipipModeRegex.MatchString(s)
+}
+
+func validateStagedAction(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate StagedAction Mode: %s", s)
+	return stagedActionRegex.MatchString(s)
 }
 
 func validateVXLANMode(fl validator.FieldLevel) bool {
@@ -1218,10 +1232,7 @@ func validateTier(structLevel validator.StructLevel) {
 	validateObjectMetaLabels(structLevel, tier.Labels)
 }
 
-func validateNetworkPolicy(structLevel validator.StructLevel) {
-	np := structLevel.Current().Interface().(api.NetworkPolicy)
-	spec := np.Spec
-
+func validateNetworkPolicySpec(spec *api.NetworkPolicySpec, structLevel validator.StructLevel) {
 	// Check (and disallow) any repeats in Types field.
 	mp := map[api.PolicyType]bool{}
 	for _, t := range spec.Types {
@@ -1232,6 +1243,21 @@ func validateNetworkPolicy(structLevel validator.StructLevel) {
 			mp[t] = true
 		}
 	}
+
+	// Check (and disallow) rules with application layer policy for egress rules.
+	if len(spec.Egress) > 0 {
+		for _, r := range spec.Egress {
+			useALP, v, f := ruleUsesAppLayerPolicy(&r)
+			if useALP {
+				structLevel.ReportError(v, f, "", reason("not allowed in egress rule"), "")
+			}
+		}
+	}
+}
+
+func validateNetworkPolicy(structLevel validator.StructLevel) {
+	np := structLevel.Current().Interface().(api.NetworkPolicy)
+	spec := np.Spec
 
 	// Check the name is within the max length.
 	if len(np.Name) > k8svalidation.DNS1123SubdomainMaxLength {
@@ -1259,13 +1285,52 @@ func validateNetworkPolicy(structLevel validator.StructLevel) {
 	validateObjectMetaAnnotations(structLevel, np.Annotations)
 	validateObjectMetaLabels(structLevel, np.Labels)
 
-	// Check (and disallow) rules with application layer policy for egress rules.
-	if len(spec.Egress) > 0 {
-		for _, r := range spec.Egress {
-			useALP, v, f := ruleUsesAppLayerPolicy(&r)
-			if useALP {
-				structLevel.ReportError(v, f, "", reason("not allowed in egress rule"), "")
-			}
+	validateNetworkPolicySpec(&spec, structLevel)
+}
+
+func validateStagedNetworkPolicy(structLevel validator.StructLevel) {
+	staged := structLevel.Current().Interface().(api.StagedNetworkPolicy)
+
+	// Check the name is within the max length.
+	if len(staged.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(staged.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(staged.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+			"",
+		)
+	}
+
+	// Uses the k8s DN1123 label format for policy names (plus knp.default prefixed k8s policies).
+	matched := networkPolicyNameRegex.MatchString(staged.Name)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(staged.Name),
+			"Metadata.Name",
+			"",
+			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+			"",
+		)
+	}
+
+	validateObjectMetaAnnotations(structLevel, staged.Annotations)
+	validateObjectMetaLabels(structLevel, staged.Labels)
+
+	_, enforced := api.ConvertStagedPolicyToEnforced(&staged)
+	validateNetworkPolicySpec(&enforced.Spec, structLevel)
+
+	//If StagedAction is Set or not set at all, then selector is a required field
+	if staged.Spec.StagedAction == api.StagedActionSet || staged.Spec.StagedAction == "" {
+		if staged.Spec.Selector == "" {
+			structLevel.ReportError(reflect.ValueOf(staged.Spec),
+				"StagedNetworkPolicySpec", "", reason("Selector field is required"), "")
+		}
+	} else {
+		//the network policy fields should all "zero-value" when the update type is "delete"
+		if !reflect.DeepEqual(api.NetworkPolicySpec{}, enforced.Spec) {
+			structLevel.ReportError(reflect.ValueOf(staged.Spec),
+				"StagedNetworkPolicySpec", "", reason("Spec fields should all be zero-value is stagedAction is Delete"), "")
 		}
 	}
 }
@@ -1304,36 +1369,7 @@ func validateGlobalNetworkSet(structLevel validator.StructLevel) {
 	}
 }
 
-func validateGlobalNetworkPolicy(structLevel validator.StructLevel) {
-	gnp := structLevel.Current().Interface().(api.GlobalNetworkPolicy)
-	spec := gnp.Spec
-
-	// Check the name is within the max length.
-	if len(gnp.Name) > k8svalidation.DNS1123SubdomainMaxLength {
-		structLevel.ReportError(
-			reflect.ValueOf(gnp.Name),
-			"Metadata.Name",
-			"",
-			reason(fmt.Sprintf("name is too long by %d bytes", len(gnp.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
-			"",
-		)
-	}
-
-	// Uses the k8s DN1123 label format for policy names.
-	matched := globalNetworkPolicyNameRegex.MatchString(gnp.Name)
-	if !matched {
-		structLevel.ReportError(
-			reflect.ValueOf(gnp.Name),
-			"Metadata.Name",
-			"",
-			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
-			"",
-		)
-	}
-
-	validateObjectMetaAnnotations(structLevel, gnp.Annotations)
-	validateObjectMetaLabels(structLevel, gnp.Labels)
-
+func validateGlobalNetworkPolicySpec(spec *api.GlobalNetworkPolicySpec, structLevel validator.StructLevel) {
 	if spec.DoNotTrack && spec.PreDNAT {
 		structLevel.ReportError(reflect.ValueOf(spec.PreDNAT),
 			"PolicySpec.PreDNAT", "", reason("PreDNAT and DoNotTrack cannot both be true, for a given PolicySpec"), "")
@@ -1376,6 +1412,135 @@ func validateGlobalNetworkPolicy(structLevel validator.StructLevel) {
 			if useALP {
 				structLevel.ReportError(v, f, "", reason("not allowed in egress rules"), "")
 			}
+		}
+	}
+}
+
+func validateGlobalNetworkPolicy(structLevel validator.StructLevel) {
+	gnp := structLevel.Current().Interface().(api.GlobalNetworkPolicy)
+	spec := gnp.Spec
+
+	// Check the name is within the max length.
+	if len(gnp.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(gnp.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(gnp.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+			"",
+		)
+	}
+
+	// Uses the k8s DN1123 label format for policy names.
+	matched := globalNetworkPolicyNameRegex.MatchString(gnp.Name)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(gnp.Name),
+			"Metadata.Name",
+			"",
+			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+			"",
+		)
+	}
+
+	validateObjectMetaAnnotations(structLevel, gnp.Annotations)
+	validateObjectMetaLabels(structLevel, gnp.Labels)
+	validateGlobalNetworkPolicySpec(&spec, structLevel)
+}
+
+func validateStagedGlobalNetworkPolicy(structLevel validator.StructLevel) {
+	staged := structLevel.Current().Interface().(api.StagedGlobalNetworkPolicy)
+
+	// Check the name is within the max length.
+	if len(staged.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(staged.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(staged.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+			"",
+		)
+	}
+
+	// Uses the k8s DN1123 label format for policy names.
+	matched := globalNetworkPolicyNameRegex.MatchString(staged.Name)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(staged.Name),
+			"Metadata.Name",
+			"",
+			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+			"",
+		)
+	}
+
+	validateObjectMetaAnnotations(structLevel, staged.Annotations)
+	validateObjectMetaLabels(structLevel, staged.Labels)
+
+	_, enforced := api.ConvertStagedGlobalPolicyToEnforced(&staged)
+	validateGlobalNetworkPolicySpec(&enforced.Spec, structLevel)
+
+	//If StagedAction is Set or not set at all, then podSelector is a required field
+	if staged.Spec.StagedAction == api.StagedActionSet || staged.Spec.StagedAction == "" {
+		if staged.Spec.Selector == "" {
+			structLevel.ReportError(reflect.ValueOf(staged.Spec),
+				"StagedGlobalNetworkPolicySpec", "", reason("selector field is required"), "")
+		}
+	} else {
+		//the network policy fields should all "zero-value" when the update type is "delete"
+		if !reflect.DeepEqual(api.GlobalNetworkPolicySpec{}, enforced.Spec) {
+			structLevel.ReportError(reflect.ValueOf(staged.Spec),
+				"StagedGlobalNetworkPolicySpec", "", reason("Spec fields should all be zero-value is stagedAction is Delete"), "")
+		}
+	}
+}
+
+func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
+	staged := structLevel.Current().Interface().(api.StagedKubernetesNetworkPolicy)
+
+	// Check the name is within the max length.
+	if len(staged.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(staged.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(staged.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+			"",
+		)
+	}
+
+	validateObjectMetaAnnotations(structLevel, staged.Annotations)
+	validateObjectMetaLabels(structLevel, staged.Labels)
+
+	c := calicoconversion.Converter{}
+	snpKVPair, err := c.StagedKubernetesNetworkPolicyToStaged(&staged)
+	if err != nil {
+		structLevel.ReportError(
+			reflect.ValueOf(staged.Spec),
+			"PolicySpec",
+			"",
+			reason(fmt.Sprintf("conversion to stagednetworkpolicy failed %v", err)),
+			"",
+		)
+	}
+
+	v3snp := snpKVPair.Value.(*api.StagedNetworkPolicy)
+	spec := v3snp.Spec
+
+	_, enforced := api.ConvertStagedPolicyToEnforced(v3snp)
+	validateNetworkPolicySpec(&enforced.Spec, structLevel)
+
+	//If StagedAction is Set or not set at all, then podSelector is a required field
+	if spec.StagedAction == api.StagedActionSet || spec.StagedAction == "" {
+		if reflect.DeepEqual(metav1.LabelSelector{}, staged.Spec.PodSelector) {
+			structLevel.ReportError(reflect.ValueOf(spec),
+				"StagedKubernetesNetworkPolicySpec", "", reason("podSelector field is required"), "")
+		}
+	} else {
+		//the network policy fields should all "zero-value" when the update type is "delete"
+		if !reflect.DeepEqual(api.NetworkPolicySpec{}, enforced.Spec) {
+			structLevel.ReportError(reflect.ValueOf(staged.Spec),
+				"StagedKubernetesNetworkPolicySpec", "", reason("Spec fields should all be zero-value is stagedAction is Delete"), "")
 		}
 	}
 }

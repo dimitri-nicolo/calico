@@ -27,6 +27,12 @@ type Interface interface {
 	GlobalNetworkPolicies() GlobalNetworkPolicyInterface
 	// NetworkPolicies returns an interface for managing namespaced network policy resources.
 	NetworkPolicies() NetworkPolicyInterface
+	// StagedGlobalNetworkPolicies returns an interface for managing staged global network policy resources.
+	StagedGlobalNetworkPolicies() StagedGlobalNetworkPolicyInterface
+	// StagedNetworkPolicies returns an interface for managing staged namespaced network policy resources.
+	StagedNetworkPolicies() StagedNetworkPolicyInterface
+	// StagedKubernetesNetworkPolicies returns an interface for managing staged kubernetes network policy resources.
+	StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInterface
 	// IPPools returns an interface for managing IP pool resources.
 	IPPools() IPPoolInterface
 	// Profiles returns an interface for managing profile resources.

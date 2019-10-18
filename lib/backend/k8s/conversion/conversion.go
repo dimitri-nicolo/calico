@@ -363,6 +363,106 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 	return &kvp, nil
 }
 
+// StagedKubernetesNetworkPolicyToStagedName converts a StagedKubernetesNetworkPolicy name into a StagedNetworkPolicy name
+func (c Converter) StagedKubernetesNetworkPolicyToStagedName(stagedK8sName string) string {
+	parts := strings.SplitN(stagedK8sName, ".", 2)
+	if len(parts) < 2 {
+		// A name without a prefix.
+		return fmt.Sprintf(K8sNetworkPolicyNamePrefix + stagedK8sName)
+	}
+	return fmt.Sprintf(K8sNetworkPolicyNamePrefix + parts[1])
+}
+
+// StagedKubernetesNetworkPolicyToStaged converts a StagedKubernetesNetworkPolicy to a StagedNetworkPolicy.
+func (c Converter) StagedKubernetesNetworkPolicyToStaged(np *apiv3.StagedKubernetesNetworkPolicy) (*model.KVPair, error) {
+	// Pull out important fields.
+	policyName := c.StagedKubernetesNetworkPolicyToStagedName(np.Name)
+
+	// We insert all the StagedKubernetesNetworkPolicy Policies at order 1000.0 after conversion.
+	// This order might change in future.
+	order := float64(1000.0)
+
+	// Generate the ingress rules list.
+	var ingressRules []apiv3.Rule
+	for _, r := range np.Spec.Ingress {
+		rules, err := c.k8sRuleToCalico(r.From, r.Ports, np.Namespace, true)
+		if err != nil {
+			log.WithError(err).Warn("dropping k8s rule that couldn't be converted.")
+		} else {
+			ingressRules = append(ingressRules, rules...)
+		}
+	}
+
+	// Generate the egress rules list.
+	var egressRules []apiv3.Rule
+	for _, r := range np.Spec.Egress {
+		rules, err := c.k8sRuleToCalico(r.To, r.Ports, np.Namespace, false)
+		if err != nil {
+			log.WithError(err).Warn("dropping k8s rule that couldn't be converted")
+		} else {
+			egressRules = append(egressRules, rules...)
+		}
+	}
+
+	// Calculate Types setting.
+	ingress := false
+	egress := false
+	for _, policyType := range np.Spec.PolicyTypes {
+		switch policyType {
+		case networkingv1.PolicyTypeIngress:
+			ingress = true
+		case networkingv1.PolicyTypeEgress:
+			egress = true
+		}
+	}
+	types := []apiv3.PolicyType{}
+	if ingress {
+		types = append(types, apiv3.PolicyTypeIngress)
+	}
+	if egress {
+		types = append(types, apiv3.PolicyTypeEgress)
+	} else if len(egressRules) > 0 {
+		// Egress was introduced at the same time as policyTypes.  It shouldn't be possible to
+		// receive a NetworkPolicy with an egress rule but without "Egress" specified in its types,
+		// but we'll warn about it anyway.
+		log.Warn("K8s PolicyTypes don't include 'egress', but NetworkPolicy has egress rules.")
+	}
+
+	// If no types were specified in the policy, then we're running on a cluster that doesn't
+	// include support for that field in the API.  In that case, the correct behavior is for the policy
+	// to apply to only ingress traffic.
+	if len(types) == 0 && np.Spec.StagedAction != apiv3.StagedActionDelete {
+		types = append(types, apiv3.PolicyTypeIngress)
+	}
+
+	// Create the NetworkPolicy.
+	policy := apiv3.NewStagedNetworkPolicy()
+	policy.ObjectMeta = metav1.ObjectMeta{
+		Name:        policyName,
+		Namespace:   np.Namespace,
+		Annotations: np.Annotations,
+	}
+	policy.Spec = apiv3.StagedNetworkPolicySpec{
+		StagedAction: np.Spec.StagedAction,
+		Order:        &order,
+		Selector:     c.k8sSelectorToCalico(&np.Spec.PodSelector, SelectorPod),
+		Ingress:      ingressRules,
+		Egress:       egressRules,
+		Types:        types,
+	}
+
+	// Build and return the KVPair.
+	return &model.KVPair{
+		Key: model.ResourceKey{
+			Name:      policyName,
+			Namespace: np.Namespace,
+			Kind:      apiv3.KindStagedNetworkPolicy,
+		},
+		Value:    policy,
+		Revision: np.ResourceVersion,
+	}, nil
+}
+
 // K8sNetworkPolicyToCalico converts a k8s NetworkPolicy to a model.KVPair.
 func (c Converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*model.KVPair, error) {
 	// Pull out important fields.

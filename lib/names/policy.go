@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
 package names
 
@@ -40,7 +40,7 @@ func TierFromPolicyName(name string) (string, error) {
 // BackendTieredPolicyName returns a policy name suitable for use by any
 // backend. It will always return a policy name prefixed with the appropriate
 // tier or error. The tier name is passed in as-is from the Policy Spec of a
-// NetworkPolicy or a GlobalNetworkPolicy resource.
+// (Staged)NetworkPolicy or a (Staged)GlobalNetworkPolicy resource.
 func BackendTieredPolicyName(policy, tier string) (string, error) {
 	tieredPolicy := TieredPolicyName(policy)
 	return tieredPolicy, validateBackendTieredPolicyName(tieredPolicy, tier)
@@ -86,7 +86,7 @@ func TieredPolicyName(policy string) string {
 
 // ClientTieredPolicyName returns a policy name suitable for returning to
 // the user of the client. The tier name is passed in as-is from the Policy
-// spec for NetworkPolicy or a GlobalNetworkPolicy.
+// spec for (Staged)NetworkPolicy or a (Staged)GlobalNetworkPolicy.
 func ClientTieredPolicyName(policy string) (string, error) {
 	if policy == "" {
 		return "", errors.New("Policy name is empty")

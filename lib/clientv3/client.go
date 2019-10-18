@@ -90,6 +90,21 @@ func (c client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
 	return globalNetworkPolicies{client: c}
 }
 
+// StagedNetworkPolicies returns an interface for managing policy resources.
+func (c client) StagedNetworkPolicies() StagedNetworkPolicyInterface {
+	return stagedNetworkPolicies{client: c}
+}
+
+// StagedGlobalNetworkPolicies returns an interface for managing policy resources.
+func (c client) StagedGlobalNetworkPolicies() StagedGlobalNetworkPolicyInterface {
+	return stagedGlobalNetworkPolicies{client: c}
+}
+
+// StagedKubernetesNetworkPolicies returns an interface for managing policy resources.
+func (c client) StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInterface {
+	return stagedKubernetesNetworkPolicies{client: c}
+}
+
 // IPPools returns an interface for managing IP pool resources.
 func (c client) IPPools() IPPoolInterface {
 	return ipPools{client: c}

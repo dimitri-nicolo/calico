@@ -49,6 +49,10 @@ func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.Syn
 			UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
 		},
 		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindStagedGlobalNetworkPolicy},
+			UpdateProcessor: updateprocessors.NewStagedGlobalNetworkPolicyUpdateProcessor(),
+		},
+		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindGlobalNetworkSet},
 			UpdateProcessor: updateprocessors.NewGlobalNetworkSetUpdateProcessor(),
 		},
@@ -71,6 +75,14 @@ func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.Syn
 		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNetworkPolicy},
 			UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
+		},
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindStagedNetworkPolicy},
+			UpdateProcessor: updateprocessors.NewStagedNetworkPolicyUpdateProcessor(),
+		},
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindStagedKubernetesNetworkPolicy},
+			UpdateProcessor: updateprocessors.NewStagedKubernetesNetworkPolicyUpdateProcessor(),
 		},
 		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNetworkSet},

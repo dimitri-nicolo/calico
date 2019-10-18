@@ -31,18 +31,21 @@ const (
 )
 
 var (
-	TypeCalicoGlobalNetworkPolicies = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkPolicy}
-	TypeCalicoGlobalNetworkSets     = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkSet}
-	TypeCalicoHostEndpoints         = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindHostEndpoint}
-	TypeCalicoNetworkPolicies       = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindNetworkPolicy}
-	TypeCalicoTiers                 = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindTier}
-	TypeK8sServices                 = metav1.TypeMeta{APIVersion: v1, Kind: "Service"}
-	TypeK8sEndpoints                = metav1.TypeMeta{APIVersion: v1, Kind: "Endpoints"}
-	TypeK8sNamespaces               = metav1.TypeMeta{APIVersion: v1, Kind: "Namespace"}
-	TypeK8sNetworkPolicies          = metav1.TypeMeta{APIVersion: grpVersionK8sNetworking, Kind: "NetworkPolicy"}
-	TypeK8sPods                     = metav1.TypeMeta{APIVersion: v1, Kind: "Pod"}
-	TypeK8sServiceAccounts          = metav1.TypeMeta{APIVersion: v1, Kind: "ServiceAccount"}
-	TypeK8sStatus                   = metav1.TypeMeta{APIVersion: v1, Kind: "Status"}
+	TypeCalicoGlobalNetworkPolicies           = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkPolicy}
+	TypeCalicoStagedGlobalNetworkPolicies     = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindStagedGlobalNetworkPolicy}
+	TypeCalicoGlobalNetworkSets               = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkSet}
+	TypeCalicoHostEndpoints                   = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindHostEndpoint}
+	TypeCalicoNetworkPolicies                 = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindNetworkPolicy}
+	TypeCalicoStagedNetworkPolicies           = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindStagedNetworkPolicy}
+	TypeCalicoStagedKubernetesNetworkPolicies = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindStagedKubernetesNetworkPolicy}
+	TypeCalicoTiers                           = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindTier}
+	TypeK8sServices                           = metav1.TypeMeta{APIVersion: v1, Kind: "Service"}
+	TypeK8sEndpoints                          = metav1.TypeMeta{APIVersion: v1, Kind: "Endpoints"}
+	TypeK8sNamespaces                         = metav1.TypeMeta{APIVersion: v1, Kind: "Namespace"}
+	TypeK8sNetworkPolicies                    = metav1.TypeMeta{APIVersion: grpVersionK8sNetworking, Kind: "NetworkPolicy"}
+	TypeK8sPods                               = metav1.TypeMeta{APIVersion: v1, Kind: "Pod"}
+	TypeK8sServiceAccounts                    = metav1.TypeMeta{APIVersion: v1, Kind: "ServiceAccount"}
+	TypeK8sStatus                             = metav1.TypeMeta{APIVersion: v1, Kind: "Status"}
 
 	// Legacy types.
 	TypeK8sNetworkPoliciesExtensions = metav1.TypeMeta{APIVersion: grpVersionExtensions, Kind: "NetworkPolicy"}
@@ -250,6 +253,27 @@ var (
 			&apiv3.GlobalNetworkPolicyList{},
 			[]metav1.TypeMeta{},
 			"globalnetworkpolicies",
+		},
+		{
+			TypeCalicoStagedNetworkPolicies,
+			&apiv3.StagedNetworkPolicy{},
+			&apiv3.StagedNetworkPolicyList{},
+			[]metav1.TypeMeta{},
+			"stagednetworkpolicies",
+		},
+		{
+			TypeCalicoStagedKubernetesNetworkPolicies,
+			&apiv3.StagedKubernetesNetworkPolicy{},
+			&apiv3.StagedKubernetesNetworkPolicyList{},
+			[]metav1.TypeMeta{},
+			"stagedkubernetesnetworkpolicies",
+		},
+		{
+			TypeCalicoStagedGlobalNetworkPolicies,
+			&apiv3.StagedGlobalNetworkPolicy{},
+			&apiv3.StagedGlobalNetworkPolicyList{},
+			[]metav1.TypeMeta{},
+			"stagedglobalnetworkpolicies",
 		},
 	}
 )
