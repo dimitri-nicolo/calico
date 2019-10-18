@@ -39,7 +39,7 @@ require (
 	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
 	github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible
 	github.com/tigera/licensing v2.2.3+incompatible // indirect
-	github.com/tigera/lma v0.0.0-20190927175333-26298c8c50e3
+	github.com/tigera/lma v0.0.0-20191018195438-615c03951bab
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
