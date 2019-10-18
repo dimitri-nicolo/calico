@@ -1,17 +1,17 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package calc_test
 
 import (
 	"net"
 
-	. "github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	. "github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 var _ = Describe("NetworksetLookupsCache tests", func() {
@@ -30,7 +30,6 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 			}
 			var addrB [16]byte
 			copy(addrB[:], ipAddr.To16()[:16])
-
 			ec.OnUpdate(update)
 			ed, ok := ec.GetNetworkset(addrB)
 			Expect(ok).To(BeTrue(), c)
@@ -170,4 +169,39 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 		}
 	})
 
+	It("should longest prefix match for a given IP from multiple CIDRs", func() {
+		By("adding a networkset with multiple overlapping CIDRs")
+		update := api.Update{
+			KVPair: model.KVPair{
+				Key:   netSet3Key,
+				Value: &netSet3,
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		}
+		ec.OnUpdate(update)
+		update = api.Update{
+			KVPair: model.KVPair{
+				Key:   netSet1Key,
+				Value: &netSet1,
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		}
+		ec.OnUpdate(update)
+		verifyIpInCidrUsingLpm := func(key model.Key, ipAddr net.IP, exists bool) {
+			name := "NeworkSet(" + key.(model.NetworkSetKey).Name + ")"
+			var addrB [16]byte
+			copy(addrB[:], ipAddr.To16()[:16])
+			ed, ok := ec.GetNetworkset(addrB)
+			if exists {
+				Expect(ok).To(BeTrue(), name+"\n"+ec.DumpNetworksets())
+				Expect(ed.Key).To(Equal(key))
+			} else {
+				Expect(ok).To(BeFalse(), name+".\n"+ec.DumpNetworksets())
+			}
+		}
+
+		By("verifying all subnets of the networkset are present in the mapping")
+		verifyIpInCidrUsingLpm(netSet1Key, netset3Ip1a, true)
+		verifyIpInCidrUsingLpm(netSet3Key, netset3Ip1b, true)
+	})
 })

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -211,23 +211,46 @@ func (nc *NetworksetLookupsCache) removeNetworksetCidrMapping(key model.Key, cid
 	}
 }
 
-// GetNetworkset returns the first networkset that contains the IP address argument.
+//getLongestPrefixMatch Function Iterates over all CIDRS, and return a Longest prefix match
+// CIDR for the given IP ADDR
+func (nc *NetworksetLookupsCache) getLongestPrefixMatch(addr [16]byte) (ip.CIDR, bool) {
+	var ok bool = false
+	var max int
+	var cidrLpm ip.CIDR
+	ipAddr := ip.FromNetIP(net.IP(addr[:]))
+	ipBin := ipAddr.AsBinary()
+
+	for cidr, _ := range nc.cidrToNetworksets {
+		cidrBin := cidr.AsBinary()
+		if strings.HasPrefix(ipBin, cidrBin) {
+			if len(cidrBin) > max {
+				max = len(cidrBin)
+				cidrLpm = cidr
+				ok = true
+			}
+		}
+	}
+
+	return cidrLpm, ok
+}
+
+// GetNetworkset finds Longest Prefix Match CIDR from given IP ADDR and return last observed
+// Networkset for that CIDR
 func (nc *NetworksetLookupsCache) GetNetworkset(addr [16]byte) (*EndpointData, bool) {
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
 	// Find the first cidr that contains the ip address to use for the lookup.
 	var netsets []*EndpointData
 	var ok bool
-	for cidr, _ := range nc.cidrToNetworksets {
-		ipnet := cidr.ToIPNet()
-		if ipnet.Contains(net.IP(addr[:])) {
-			netsets, ok = nc.cidrToNetworksets[cidr]
-			break
+	var cidrLpm ip.CIDR
+
+	cidrLpm, ok = nc.getLongestPrefixMatch(addr)
+	if ok {
+		netsets, ok = nc.cidrToNetworksets[cidrLpm]
+		if len(netsets) >= 1 && ok {
+			// We return the last observed networkset.
+			return netsets[len(netsets)-1], ok
 		}
-	}
-	if len(netsets) >= 1 {
-		// We return the last observed networkset.
-		return netsets[len(netsets)-1], ok
 	}
 	return nil, ok
 }
