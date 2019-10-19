@@ -16,7 +16,7 @@ func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *r
 	if err := announced.NewGroupMetaFactory(
 		&announced.GroupMetaFactoryArgs{
 			GroupName:                  projectcalico.GroupName,
-			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet", "LicenseKey", "GlobalAlert", "GlobalThreatFeed", "HostEndpoint", "GlobalReport", "GlobalReportType", "IPPool", "BGPConfiguration", "BGPPeer", "Profile", "RemoteClusterConfiguration", "FelixConfiguration", "ManagedCluster", "ClusterInformation"),
+			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet", "LicenseKey", "GlobalAlert", "GlobalThreatFeed", "HostEndpoint", "GlobalReport", "GlobalReportType", "IPPool", "BGPConfiguration", "BGPPeer", "Profile", "RemoteClusterConfiguration", "FelixConfiguration", "ManagedCluster", "ClusterInformation", "StagedGlobalNetworkPolicy"),
 			VersionPreferenceOrder:     []string{v3.SchemeGroupVersion.Version},
 			AddInternalObjectsToScheme: projectcalico.AddToScheme,
 		},

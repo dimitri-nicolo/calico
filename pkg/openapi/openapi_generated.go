@@ -12,6 +12,7 @@ import (
 	spec "github.com/go-openapi/spec"
 	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	common "k8s.io/kube-openapi/pkg/common"
 )
 
@@ -7754,6 +7755,507 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedGlobalNetworkPolicy is a staged GlobalNetworkPolicy.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Policy.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedGlobalNetworkPolicyList contains a list of GlobalNetworkPolicy resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"stagedAction": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The staged action. If this is omitted, the default is Set.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"tier": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the policy is applied. Policies with higher \"order\" are applied after those with lower order within the same tier.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order will be applied in alphanumerical order based on the Policy \"Name\" within the tier.",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
+						},
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
+									},
+								},
+							},
+						},
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
+									},
+								},
+							},
+						},
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"types": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what Ingress and Egress rules are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no Egress rules (including the case where there are\n  also no Ingress rules)\n\n- [ PolicyTypeEgress ], if there are Egress rules but no Ingress rules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both Ingress and Egress rules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"doNotTrack": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DoNotTrack indicates whether packets matched by the rules in this policy should go through the data plane's connection tracking, such as Linux conntrack.  If True, the rules in this policy are applied before any data plane connection tracking, and packets allowed by this policy are marked as not to be tracked.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"preDNAT": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PreDNAT indicates to apply the rules in this policy before any DNAT.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"applyOnForward": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ApplyOnForward indicates to apply the rules in this policy on forward traffic.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"serviceAccountSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceAccountSelector is an optional field for an expression used to select a pod based on service accounts.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"namespaceSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NamespaceSelector is an optional field for an expression used to select a pod based on namespaces.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedKubernetesNetworkPolicy is a staged GlobalNetworkPolicy.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Policy.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedKubernetesNetworkPolicyList contains a list of StagedKubernetesNetworkPolicy resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"stagedAction": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The staged action. If this is omitted, the default is Set.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"podSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selects the pods to which this NetworkPolicy object applies. The array of ingress rules is applied to any pods selected by this field. Multiple network policies can select the same set of pods. In this case, the ingress rules for each are combined additively. This field is NOT optional and follows standard label selector semantics. An empty podSelector matches all pods in this namespace.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							},
+						},
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of ingress rules to be applied to the selected pods. Traffic is allowed to a pod if there are no NetworkPolicies selecting the pod (and cluster policy otherwise allows the traffic), OR if the traffic source is the pod's local node, OR if the traffic matches at least one ingress rule across all of the NetworkPolicy objects whose podSelector matches the pod. If this field is empty then this NetworkPolicy does not allow any traffic (and serves solely to ensure that the pods it selects are isolated by default)",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyIngressRule"),
+										},
+									},
+								},
+							},
+						},
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of egress rules to be applied to the selected pods. Outgoing traffic is allowed if there are no NetworkPolicies selecting the pod (and cluster policy otherwise allows the traffic), OR if the traffic matches at least one egress rule across all of the NetworkPolicy objects whose podSelector matches the pod. If this field is empty then this NetworkPolicy limits all outgoing traffic (and serves solely to ensure that the pods it selects are isolated by default). This field is beta-level in 1.8",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyEgressRule"),
+										},
+									},
+								},
+							},
+						},
+						"policyTypes": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of rule types that the NetworkPolicy relates to. Valid options are Ingress, Egress, or Ingress,Egress. If this field is not specified, it will default based on the existence of Ingress or Egress rules; policies that contain an Egress section are assumed to affect Egress, and all policies (whether or not they contain an Ingress section) are assumed to affect Ingress. If you want to write an egress-only policy, you must explicitly specify policyTypes [ \"Egress\" ]. Likewise, if you want to write a policy that specifies that no egress is allowed, you must specify a policyTypes value that include \"Egress\" (since such a policy would not include an Egress section and would otherwise default to just [ \"Ingress\" ]). This field is beta-level in 1.8",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.NetworkPolicyEgressRule", "k8s.io/api/networking/v1.NetworkPolicyIngressRule", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedNetworkPolicy is a staged NetworkPolicy. StagedNetworkPolicy is the Namespaced-equivalent of the StagedGlobalNetworkPolicy.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Policy.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedNetworkPolicyList contains a list of StagedNetworkPolicy resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"stagedAction": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The staged action. If this is omitted, the default is Set.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"tier": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the policy is applied. Policies with higher \"order\" are applied after those with lower order within the same tier.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order will be applied in alphanumerical order based on the Policy \"Name\" within the tier.",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
+						},
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
+									},
+								},
+							},
+						},
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
+									},
+								},
+							},
+						},
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"types": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what Ingress and Egress are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no Egress rules (including the case where there are\n  also no Ingress rules)\n\n- [ PolicyTypeEgress ], if there are Egress rules but no Ingress rules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both Ingress and Egress rules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"serviceAccountSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceAccountSelector is an optional field for an expression used to select a pod based on service accounts.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -9469,6 +9971,237 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.RemoteClusterConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedGlobalNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedGlobalNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedGlobalNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedGlobalNetworkPolicyList is a list of Policy objects.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedGlobalNetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedGlobalNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedKubernetesNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedKubernetesNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedKubernetesNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedKubernetesNetworkPolicyList is a list of Policy objects.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedKubernetesNetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedKubernetesNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "StagedNetworkPolicyList is a list of Policy objects.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedNetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.StagedNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
 		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.Tier": {
 			Schema: spec.Schema{
@@ -18272,6 +19005,305 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/api/core/v1.PodAffinityTerm"},
 		},
+		"k8s.io/api/networking/v1.IPBlock": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPBlock describes a particular CIDR (Ex. \"192.168.1.1/24\") that is allowed to the pods matched by a NetworkPolicySpec's podSelector. The except entry describes CIDRs that should not be included within this rule.",
+					Properties: map[string]spec.Schema{
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CIDR is a string representing the IP Block Valid examples are \"192.168.1.1/24\"",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"except": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Except is a slice of CIDRs that should not be included within an IP Block Valid examples are \"192.168.1.1/24\" Except values will be rejected if they are outside the CIDR range",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"cidr"},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicy describes what network traffic is allowed for a set of Pods",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the desired behavior for this NetworkPolicy.",
+								Ref:         ref("k8s.io/api/networking/v1.NetworkPolicySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.NetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicyEgressRule": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicyEgressRule describes a particular set of traffic that is allowed out of pods matched by a NetworkPolicySpec's podSelector. The traffic must match both ports and to. This type is beta-level in 1.8",
+					Properties: map[string]spec.Schema{
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of destination ports for outgoing traffic. Each item in this list is combined using a logical OR. If this field is empty or missing, this rule matches all ports (traffic not restricted by port). If this field is present and contains at least one item, then this rule allows traffic only if the traffic matches at least one port in the list.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyPort"),
+										},
+									},
+								},
+							},
+						},
+						"to": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of destinations for outgoing traffic of pods selected for this rule. Items in this list are combined using a logical OR operation. If this field is empty or missing, this rule matches all destinations (traffic not restricted by destination). If this field is present and contains at least one item, this rule allows traffic only if the traffic matches at least one item in the to list.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyPeer"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.NetworkPolicyPeer", "k8s.io/api/networking/v1.NetworkPolicyPort"},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicyIngressRule": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicyIngressRule describes a particular set of traffic that is allowed to the pods matched by a NetworkPolicySpec's podSelector. The traffic must match both ports and from.",
+					Properties: map[string]spec.Schema{
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of ports which should be made accessible on the pods selected for this rule. Each item in this list is combined using a logical OR. If this field is empty or missing, this rule matches all ports (traffic not restricted by port). If this field is present and contains at least one item, then this rule allows traffic only if the traffic matches at least one port in the list.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyPort"),
+										},
+									},
+								},
+							},
+						},
+						"from": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of sources which should be able to access the pods selected for this rule. Items in this list are combined using a logical OR operation. If this field is empty or missing, this rule matches all sources (traffic not restricted by source). If this field is present and contains at least on item, this rule allows traffic only if the traffic matches at least one item in the from list.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyPeer"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.NetworkPolicyPeer", "k8s.io/api/networking/v1.NetworkPolicyPort"},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicyList is a list of NetworkPolicy objects.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Items is a list of schema objects.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicy"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.NetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicyPeer": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicyPeer describes a peer to allow traffic from. Exactly one of its fields must be specified.",
+					Properties: map[string]spec.Schema{
+						"podSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "This is a label selector which selects Pods in this namespace. This field follows standard label selector semantics. If present but empty, this selector selects all pods in this namespace.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							},
+						},
+						"namespaceSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selects Namespaces using cluster scoped-labels. This matches all pods in all namespaces selected by this label selector. This field follows standard label selector semantics. If present but empty, this selector selects all namespaces.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							},
+						},
+						"ipBlock": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPBlock defines policy on a particular IPBlock",
+								Ref:         ref("k8s.io/api/networking/v1.IPBlock"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.IPBlock", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicyPort": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicyPort describes a port to allow traffic on",
+					Properties: map[string]spec.Schema{
+						"protocol": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The protocol (TCP or UDP) which traffic must match. If not specified, this field defaults to TCP.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"port": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The port on the given protocol. This can either be a numerical or named port on a pod. If this field is not provided, this matches all port names and numbers.",
+								Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+		},
+		"k8s.io/api/networking/v1.NetworkPolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicySpec provides the specification of a NetworkPolicy",
+					Properties: map[string]spec.Schema{
+						"podSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selects the pods to which this NetworkPolicy object applies. The array of ingress rules is applied to any pods selected by this field. Multiple network policies can select the same set of pods. In this case, the ingress rules for each are combined additively. This field is NOT optional and follows standard label selector semantics. An empty podSelector matches all pods in this namespace.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							},
+						},
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of ingress rules to be applied to the selected pods. Traffic is allowed to a pod if there are no NetworkPolicies selecting the pod (and cluster policy otherwise allows the traffic), OR if the traffic source is the pod's local node, OR if the traffic matches at least one ingress rule across all of the NetworkPolicy objects whose podSelector matches the pod. If this field is empty then this NetworkPolicy does not allow any traffic (and serves solely to ensure that the pods it selects are isolated by default)",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyIngressRule"),
+										},
+									},
+								},
+							},
+						},
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of egress rules to be applied to the selected pods. Outgoing traffic is allowed if there are no NetworkPolicies selecting the pod (and cluster policy otherwise allows the traffic), OR if the traffic matches at least one egress rule across all of the NetworkPolicy objects whose podSelector matches the pod. If this field is empty then this NetworkPolicy limits all outgoing traffic (and serves solely to ensure that the pods it selects are isolated by default). This field is beta-level in 1.8",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/networking/v1.NetworkPolicyEgressRule"),
+										},
+									},
+								},
+							},
+						},
+						"policyTypes": {
+							SchemaProps: spec.SchemaProps{
+								Description: "List of rule types that the NetworkPolicy relates to. Valid options are Ingress, Egress, or Ingress,Egress. If this field is not specified, it will default based on the existence of Ingress or Egress rules; policies that contain an Egress section are assumed to affect Egress, and all policies (whether or not they contain an Ingress section) are assumed to affect Ingress. If you want to write an egress-only policy, you must explicitly specify policyTypes [ \"Egress\" ]. Likewise, if you want to write a policy that specifies that no egress is allowed, you must specify a policyTypes value that include \"Egress\" (since such a policy would not include an Egress section and would otherwise default to just [ \"Ingress\" ]). This field is beta-level in 1.8",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"podSelector"},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/networking/v1.NetworkPolicyEgressRule", "k8s.io/api/networking/v1.NetworkPolicyIngressRule", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+		},
 		"k8s.io/apimachinery/pkg/apis/meta/v1.APIGroup": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -19800,6 +20832,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{},
+		},
+		"k8s.io/apimachinery/pkg/util/intstr.IntOrString": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Type:   intstr.IntOrString{}.OpenAPISchemaType(),
+					Format: intstr.IntOrString{}.OpenAPISchemaFormat(),
+				},
+			},
 		},
 		"k8s.io/apimachinery/pkg/version.Info": {
 			Schema: spec.Schema{

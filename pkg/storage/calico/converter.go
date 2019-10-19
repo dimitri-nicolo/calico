@@ -42,10 +42,25 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiPolicy := &aapi.NetworkPolicy{}
 		NetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
+	case *libcalicoapi.StagedKubernetesNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*libcalicoapi.StagedKubernetesNetworkPolicy)
+		aapiPolicy := &aapi.StagedKubernetesNetworkPolicy{}
+		StagedKubernetesNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
+		return aapiPolicy
+	case *libcalicoapi.StagedNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*libcalicoapi.StagedNetworkPolicy)
+		aapiPolicy := &aapi.StagedNetworkPolicy{}
+		StagedNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
+		return aapiPolicy
 	case *libcalicoapi.GlobalNetworkPolicy:
 		lcgPolicy := libcalicoObject.(*libcalicoapi.GlobalNetworkPolicy)
 		aapiPolicy := &aapi.GlobalNetworkPolicy{}
 		GlobalNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
+		return aapiPolicy
+	case *libcalicoapi.StagedGlobalNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*libcalicoapi.StagedGlobalNetworkPolicy)
+		aapiPolicy := &aapi.StagedGlobalNetworkPolicy{}
+		StagedGlobalNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
 	case *libcalicoapi.GlobalNetworkSet:
 		lcgNetworkSet := libcalicoObject.(*libcalicoapi.GlobalNetworkSet)

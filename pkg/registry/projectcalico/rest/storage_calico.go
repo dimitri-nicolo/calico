@@ -43,6 +43,9 @@ import (
 	calicoprofile "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/profile"
 	calicoremoteclusterconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/remoteclusterconfig"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
+	calicostagedgpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/stagedglobalnetworkpolicy"
+	calicostagedk8spolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/stagedkubernetesnetworkpolicy"
+	calicostagedpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/stagednetworkpolicy"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/tier"
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
@@ -102,6 +105,48 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	stagedk8spolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("stagedkubernetesnetworkpolicies"))
+	if err != nil {
+		return nil, err
+	}
+	stagedk8spolicyOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   stagedk8spolicyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicostagedk8spolicy.EmptyObject(),
+			ScopeStrategy: calicostagedk8spolicy.NewStrategy(scheme),
+			NewListFunc:   calicostagedk8spolicy.NewList,
+			GetAttrsFunc:  calicostagedk8spolicy.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: stagedk8spolicyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	stagedpolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("stagednetworkpolicies"))
+	if err != nil {
+		return nil, err
+	}
+	stagedpolicyOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   stagedpolicyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicostagedpolicy.EmptyObject(),
+			ScopeStrategy: calicostagedpolicy.NewStrategy(scheme),
+			NewListFunc:   calicostagedpolicy.NewList,
+			GetAttrsFunc:  calicostagedpolicy.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: stagedpolicyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	tierRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("tiers"))
 	if err != nil {
 		return nil, err
@@ -139,6 +184,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions: gpolicyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	stagedgpolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("stagedglobalnetworkpolicies"))
+	if err != nil {
+		return nil, err
+	}
+	stagedgpolicyOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   stagedgpolicyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicostagedgpolicy.EmptyObject(),
+			ScopeStrategy: calicostagedgpolicy.NewStrategy(scheme),
+			NewListFunc:   calicostagedgpolicy.NewList,
+			GetAttrsFunc:  calicostagedgpolicy.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: stagedgpolicyRESTOptions,
 		},
 		p.StorageType,
 		authorizer,
@@ -461,8 +527,11 @@ func (p RESTStorageProvider) NewV3Storage(
 
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
+	storage["stagednetworkpolicies"] = calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts)
+	storage["stagedkubernetesnetworkpolicies"] = calicostagedk8spolicy.NewREST(scheme, *stagedk8spolicyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
+	storage["stagedglobalnetworkpolicies"] = calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
 	storage["networksets"] = caliconetworkset.NewREST(scheme, *networksetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
