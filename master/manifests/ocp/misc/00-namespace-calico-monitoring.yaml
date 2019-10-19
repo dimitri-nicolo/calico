@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-operator --execute templates/misc/00-namespace-calico-monitoring.yaml %}
-openshift: true
-{% endhelm %}
