@@ -15,11 +15,14 @@
 package converter_test
 
 import (
+	"math/rand"
+
 	"github.com/projectcalico/kube-controllers/pkg/converter"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -177,7 +180,7 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 		})
 	})
 
-	It("should ignore a service with propert annotation", func() {
+	It("should ignore a service with proper annotation", func() {
 		service := corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testPolicy",
@@ -192,6 +195,43 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 		By("generating a conversion error", func() {
 			Expect(err).To(HaveOccurred())
 		})
+	})
+
+	It("should parse a service with name longer than max", func() {
+		var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+		length := k8svalidation.DNS1123SubdomainMaxLength
+		b := make([]rune, length)
+		for i := range b {
+			b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		}
+		longName := string(b)
+
+		service := corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "default",
+			},
+		}
+
+		ns, err := serviceConverter.Convert(&service)
+		By("not generating a conversion error", func() {
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("returning a networkset with expected name length", func() {
+			Expect(len(ns.(api.NetworkSet).Name)).To(Equal(len(converter.NetworkSetNamePrefix) + converter.HashedNameLength))
+		})
+
+		ns2, err := serviceConverter.Convert(&service)
+		By("not generating a conversion error", func() {
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		//Hashing should always return same output for same input
+		By("returning a networkset with expected name", func() {
+			Expect(ns2.(api.NetworkSet).Name).To(Equal(ns.(api.NetworkSet).Name))
+		})
+
 	})
 
 	endpointConverter := converter.NewEndpointConverter()
