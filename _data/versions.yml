@@ -1474,10 +1474,11 @@ master:
     es-proxy:
       image: tigera/es-proxy
       version: master
-    kibana:
-      registry: docker.elastic.co
-      image: kibana/kibana
+    eck-kibana:
       version: 7.3.2
+    kibana:
+      image: tigera/kibana
+      version: 7.3
     elasticsearch-operator:
       registry: docker.elastic.co
       image: eck/eck-operator

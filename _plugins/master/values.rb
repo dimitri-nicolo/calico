@@ -276,8 +276,9 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
       createFinalizers: false
     
     kibana:
-      image: #{versions["kibana"].registry}/#{versions["kibana"].image}
+      image: #{imageRegistry}#{versions["kibana"].image}
       tag: #{versions["kibana"].version}
+      version: #{versions["eck-kibana"]}
       # The address of your kibana instance.
       host:
       # The port your kibana instance is listening on

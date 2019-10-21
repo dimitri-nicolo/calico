@@ -389,7 +389,8 @@ metadata:
   labels:
     k8s-app: tigera-kibana
 spec:
-  version: {{.Values.kibana.tag}}
+  version: {{.Values.kibana.version}}
+  image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
   nodeCount: 1
   elasticsearchRef:
     name: tigera-elasticsearch
@@ -399,8 +400,6 @@ spec:
       labels:
         name: tigera-kibana
         k8s-app: tigera-kibana
-    spec:
-      image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
 {{- end }}
 
 {{- if .Values.prometheus.createFinalizers }}
