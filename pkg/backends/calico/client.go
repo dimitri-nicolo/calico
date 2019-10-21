@@ -393,6 +393,7 @@ type bgpPeer struct {
 	RRClusterID string               `json:"rr_cluster_id"`
 	Extensions  map[string]string    `json:"extensions"`
 	Password    string               `json:"password"`
+	SourceAddr  string               `json:"source_addr"`
 }
 
 func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
@@ -493,8 +494,9 @@ func (c *client) updatePeersV1() {
 					continue
 				}
 				peers = append(peers, &bgpPeer{
-					PeerIP: *ip,
-					ASNum:  v3res.Spec.ASNumber,
+					PeerIP:     *ip,
+					ASNum:      v3res.Spec.ASNumber,
+					SourceAddr: string(v3res.Spec.SourceAddress),
 				})
 			}
 			log.Debugf("Peers %#v", peers)
@@ -564,6 +566,7 @@ func (c *client) updatePeersV1() {
 			for _, peer := range c.nodeAsBGPPeers(peerNodeName) {
 				peer.Extensions = v3res.Spec.Extensions
 				peer.Password = password
+				peer.SourceAddr = string(v3res.Spec.SourceAddress)
 				for _, localNodeName := range localNodeNames {
 					key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
 					emit(key, peer)
