@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: calico-monitoring
-  annotations:
-  labels:
-    name: calico-monitoring
