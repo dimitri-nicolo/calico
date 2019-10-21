@@ -108,10 +108,10 @@ var (
 
 	dropActionOverrideRegex = regexp.MustCompile("^(Drop|Accept|LogAndDrop|LogAndAccept)$")
 
-	sourceAddressRegex        = regexp.MustCompile("^(UseNodeIP|None)$")
-	failureDetectionModeRegex = regexp.MustCompile("^(None|BFDIfDirectlyConnected)$")
-	restartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
-	birdGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
+	SourceAddressRegex        = regexp.MustCompile("^(UseNodeIP|None)$")
+	FailureDetectionModeRegex = regexp.MustCompile("^(None|BFDIfDirectlyConnected)$")
+	RestartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
+	BIRDGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
 
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2
@@ -189,10 +189,10 @@ func init() {
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
-	registerFieldValidator("sourceAddress", regexValidator("SourceAddress", sourceAddressRegex))
-	registerFieldValidator("failureDetectionMode", regexValidator("FailureDetectionMode", failureDetectionModeRegex))
-	registerFieldValidator("restartMode", regexValidator("RestartMode", restartModeRegex))
-	registerFieldValidator("birdGatewayMode", regexValidator("BIRDGatewayMode", birdGatewayModeRegex))
+	registerFieldValidator("sourceAddress", RegexValidator("SourceAddress", SourceAddressRegex))
+	registerFieldValidator("failureDetectionMode", RegexValidator("FailureDetectionMode", FailureDetectionModeRegex))
+	registerFieldValidator("restartMode", RegexValidator("RestartMode", RestartModeRegex))
+	registerFieldValidator("birdGatewayMode", RegexValidator("BIRDGatewayMode", BIRDGatewayModeRegex))
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -383,7 +383,7 @@ func validateVXLANMode(fl validator.FieldLevel) bool {
 	return vxlanModeRegex.MatchString(s)
 }
 
-func regexValidator(desc string, rx *regexp.Regexp) func(fl validator.FieldLevel) bool {
+func RegexValidator(desc string, rx *regexp.Regexp) func(fl validator.FieldLevel) bool {
 	return func(fl validator.FieldLevel) bool {
 		s := fl.Field().String()
 		log.Debugf("Validate %s: %s", desc, s)
