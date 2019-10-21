@@ -10,7 +10,7 @@ import (
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 )
 
-type SyncFailFunction func()
+type SyncFailFunction func(error)
 
 type Puller interface {
 	// Run activates the puller to start pulling from the feed.

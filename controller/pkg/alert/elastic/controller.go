@@ -5,6 +5,8 @@ package elastic
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/alert/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -20,6 +22,9 @@ func NewAlertController(xPack elastic.XPackWatcher) controller.Controller {
 }
 
 func (d watchData) Put(ctx context.Context, name string, value interface{}) error {
+	log.WithFields(log.Fields{
+		"name": name,
+	}).Debug("Put watch")
 	return d.XPackWatcher.PutWatch(ctx, name, value.(*elastic.PutWatchBody))
 }
 
@@ -28,5 +33,9 @@ func (d watchData) List(ctx context.Context) ([]db.Meta, error) {
 }
 
 func (d watchData) Delete(ctx context.Context, m db.Meta) error {
+	log.WithFields(log.Fields{
+		"name":    m.Name,
+		"version": m.Version,
+	}).Debug("Delete watch")
 	return d.XPackWatcher.DeleteWatch(ctx, m)
 }

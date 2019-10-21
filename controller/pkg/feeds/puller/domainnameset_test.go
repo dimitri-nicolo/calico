@@ -4,7 +4,6 @@ package puller
 
 import (
 	"context"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -12,10 +11,12 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 func TestQueryDomainNameSet(t *testing.T) {
@@ -51,7 +52,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 		StatusCode: 200,
 		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(append(input, "# comment", "", " "), "\n"))),
 	}
-	client.Transport = &MockRoundTripper{
+	client.Transport = &util.MockRoundTripper{
 		Response: resp,
 	}
 	s := &statser.MockStatser{}
@@ -98,7 +99,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 		StatusCode: 200,
 		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(input, "\n"))),
 	}
-	client.Transport = &MockRoundTripper{
+	client.Transport = &util.MockRoundTripper{
 		Response: resp,
 	}
 	s := &statser.MockStatser{}

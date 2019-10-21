@@ -825,10 +825,8 @@ func (e *Elastic) ListWatches(ctx context.Context) ([]db.Meta, error) {
 	return res, nil
 }
 
-func (e *Elastic) TestWatch(ctx context.Context, body *PutWatchBody) (*elastic.XPackWatchRecord, error) {
-	res, err := e.c.XPackWatchExecute().BodyJson(map[string]interface{}{
-		"watch": body,
-	}).Do(ctx)
+func (e *Elastic) ExecuteWatch(ctx context.Context, body *ExecuteWatchBody) (*elastic.XPackWatchRecord, error) {
+	res, err := e.c.XPackWatchExecute().BodyJson(body).Do(ctx)
 
 	if res != nil {
 		return res.WatchRecord, err

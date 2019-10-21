@@ -1,10 +1,10 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package watcher
+package util
 
 import "k8s.io/client-go/tools/cache"
 
-type ping struct{}
+type Ping struct{}
 
 // pingKey is a sentinel to represent a ping on the FIFO.  Note that we use characters
 // not allowed in Kubernetes names so that we won't conflict with GlobalThreatFeed
@@ -29,7 +29,7 @@ func NewPingableFifo() (*cache.DeltaFIFO, cache.Store) {
 }
 
 func PingableKeyFunc(obj interface{}) (string, error) {
-	_, ok := obj.(ping)
+	_, ok := obj.(Ping)
 	if ok {
 		return pingKey, nil
 	}

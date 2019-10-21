@@ -152,7 +152,7 @@ func TestQuery(t *testing.T) {
 		StatusCode: 200,
 		Body:       ioutil.NopCloser(strings.NewReader(strings.Join([]string(append(input, "# comment", "", " ", "junk", "junk/")), "\n"))),
 	}
-	client.Transport = &MockRoundTripper{
+	client.Transport = &util.MockRoundTripper{
 		Response: resp,
 	}
 	s := &statser.MockStatser{}
@@ -205,7 +205,7 @@ func TestQueryHTTPError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	client := &http.Client{}
-	rt := &MockRoundTripper{
+	rt := &util.MockRoundTripper{
 		Error: TemporaryError("mock error"),
 	}
 	client.Transport = rt
@@ -241,7 +241,7 @@ func TestQueryHTTPStatus404(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	client := &http.Client{}
-	rt := &MockRoundTripper{
+	rt := &util.MockRoundTripper{
 		Response: &http.Response{
 			StatusCode: 404,
 		},
@@ -279,7 +279,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	client := &http.Client{}
-	rt := &MockRoundTripper{
+	rt := &util.MockRoundTripper{
 		Response: &http.Response{
 			StatusCode: 500,
 		},

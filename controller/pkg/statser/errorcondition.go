@@ -7,6 +7,8 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
+const MaxErrors = 10
+
 type ErrorConditions struct {
 	c *lru.Cache
 }

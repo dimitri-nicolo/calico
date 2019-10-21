@@ -17,14 +17,13 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
-var testClient = &http.Client{Transport: &puller.MockRoundTripper{Error: errors.New("mock error")}}
+var testClient = &http.Client{Transport: &util.MockRoundTripper{Error: errors.New("mock error")}}
 
 func TestWatcher_processQueue(t *testing.T) {
 	g := NewGomegaWithT(t)

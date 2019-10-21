@@ -17,7 +17,8 @@ import (
 	oElastic "github.com/olivere/elastic/v7"
 
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/yalp/jsonpath"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -170,7 +171,7 @@ func TestWatch(t *testing.T) {
 				fmt.Println(string(b))
 			}
 
-			res, err := uut.TestWatch(ctx, body)
+			res, err := uut.ExecuteWatch(ctx, &elastic.ExecuteWatchBody{Watch: body})
 			g.Expect(err).ShouldNot(HaveOccurred())
 
 			if Debug {
@@ -198,14 +199,14 @@ func TestWatch(t *testing.T) {
 	}
 
 	lookback := v1.Duration{time.Hour * 24 * 365 * 10}
-	t.Run("dns", f(v3.GlobalAlert{Spec: v3.GlobalAlertSpec{
+	t.Run("dns", f(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{
 		Description: "dns",
 		Severity:    100,
 		Lookback:    lookback,
 		DataSet:     "dns",
 	}}, 200))
 	t.Run("dns.count.agg0", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "${count} distinct responses",
 			Severity:    100,
 			DataSet:     "dns",
@@ -216,7 +217,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 1))
 	t.Run("dns.count.agg1", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
 			Severity:    100,
 			DataSet:     "dns",
@@ -228,7 +229,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 10))
 	t.Run("dns.count.agg2", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
 			Severity:    100,
 			DataSet:     "dns",
@@ -240,7 +241,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 20))
 	t.Run("dns.sum.agg0", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
 			Severity:    100,
 			DataSet:     "dns",
@@ -252,7 +253,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 1))
 	t.Run("dns.sum.agg1", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
 			Severity:    100,
 			DataSet:     "dns",
@@ -265,7 +266,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 10))
 	t.Run("dns.sum.agg2", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
 			Severity:    100,
 			DataSet:     "dns",
@@ -278,7 +279,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 20))
 	t.Run("dns.query[0]", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query",
 			Severity:    100,
 			Lookback:    lookback,
@@ -287,7 +288,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 91))
 	t.Run("dns.query[1]", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query",
 			Severity:    100,
 			Lookback:    lookback,
@@ -296,7 +297,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 10))
 	t.Run("dns.query[2]", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query",
 			Severity:    100,
 			Lookback:    lookback,
@@ -305,7 +306,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 81))
 	t.Run("dns.query[2].agg.sum", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query",
 			Severity:    100,
 			Lookback:    lookback,
@@ -319,7 +320,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 10))
 	t.Run("flows", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "flows",
 			Severity:    100,
 			Lookback:    lookback,
@@ -327,7 +328,7 @@ func TestWatch(t *testing.T) {
 		},
 	}, 200))
 	t.Run("audit", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "audit",
 			Severity:    100,
 			Lookback:    lookback,
@@ -343,7 +344,7 @@ func TestActionTransform(t *testing.T) {
 	defer cancel()
 
 	transform := alertElastic.ActionTransform(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "foo ${foo}",
 			Severity:    100,
 		},

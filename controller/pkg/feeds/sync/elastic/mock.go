@@ -14,7 +14,7 @@ import (
 type MockElasticIPSetController struct {
 	m         sync.Mutex
 	sets      map[string]db.IPSetSpec
-	failFuncs map[string]func()
+	failFuncs map[string]func(error)
 	statsers  map[string]controller.Statser
 	noGC      map[string]struct{}
 }
@@ -22,13 +22,13 @@ type MockElasticIPSetController struct {
 func NewMockElasticIPSetController() *MockElasticIPSetController {
 	return &MockElasticIPSetController{
 		sets:      make(map[string]db.IPSetSpec),
-		failFuncs: make(map[string]func()),
+		failFuncs: make(map[string]func(error)),
 		statsers:  make(map[string]controller.Statser),
 		noGC:      make(map[string]struct{}),
 	}
 }
 
-func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set interface{}, f func(), stat controller.Statser) {
+func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set interface{}, f func(error), stat controller.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set.(db.IPSetSpec)
@@ -82,7 +82,7 @@ func (c *MockElasticIPSetController) Sets() map[string]db.IPSetSpec {
 type MockDomainNameSetsController struct {
 	m         sync.Mutex
 	sets      map[string]db.DomainNameSetSpec
-	failFuncs map[string]func()
+	failFuncs map[string]func(error)
 	statsers  map[string]controller.Statser
 	noGC      map[string]struct{}
 }
@@ -90,13 +90,13 @@ type MockDomainNameSetsController struct {
 func NewMockDomainNameSetsController() *MockDomainNameSetsController {
 	return &MockDomainNameSetsController{
 		sets:      make(map[string]db.DomainNameSetSpec),
-		failFuncs: make(map[string]func()),
+		failFuncs: make(map[string]func(error)),
 		statsers:  make(map[string]controller.Statser),
 		noGC:      make(map[string]struct{}),
 	}
 }
 
-func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(), stat controller.Statser) {
+func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set interface{}, f func(error), stat controller.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set.(db.DomainNameSetSpec)

@@ -44,7 +44,7 @@ var cases = []testCase{
 // The following are convenience functions to make it easier to call the Add, Run, Delete, StartReconciliation, and NoGC
 // methods on the UUT, which is a reflect.Value containing the actual controller type.
 
-func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(), stat Statser) {
+func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(error), stat Statser) {
 	uut.MethodByName("Add").Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(name),
@@ -85,7 +85,7 @@ func TestController_Add_Success(t *testing.T) {
 			run(uut, ctx)
 
 			name := "test"
-			fail := func() { t.Error("controller called fail func unexpectedly") }
+			fail := func(error) { t.Error("controller called fail func unexpectedly") }
 			stat := &mockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
@@ -191,7 +191,7 @@ func TestController_Update_Success(t *testing.T) {
 
 			run(uut, ctx)
 
-			fail := func() { t.Error("controller called fail func unexpectedly") }
+			fail := func(error) { t.Error("controller called fail func unexpectedly") }
 			stat := &mockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
@@ -227,7 +227,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 
 			aName := "added"
 			var failed bool
-			fail := func() { failed = true }
+			fail := func(error) { failed = true }
 			stat := &mockStatser{}
 			add(uut, ctx, aName, tc.set, fail, stat)
 
@@ -260,7 +260,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 			name := "test"
 			var failed bool
-			fail := func() { failed = true }
+			fail := func(error) { failed = true }
 			stat := &mockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
@@ -415,7 +415,7 @@ func TestController_ContextExpiry(t *testing.T) {
 			aCtx, aCancel := context.WithCancel(ctx)
 			var aDone bool
 			go func() {
-				add(uut, aCtx, "add", tc.set, func() {}, &mockStatser{})
+				add(uut, aCtx, "add", tc.set, func(error) {}, &mockStatser{})
 				aDone = true
 			}()
 

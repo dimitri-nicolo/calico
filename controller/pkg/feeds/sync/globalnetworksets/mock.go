@@ -14,7 +14,7 @@ type MockGlobalNetworkSetController struct {
 	m         sync.Mutex
 	local     map[string]*v3.GlobalNetworkSet
 	noGC      map[string]struct{}
-	failFuncs map[string]func()
+	failFuncs map[string]func(error)
 	statsers  map[string]statser.Statser
 }
 
@@ -22,12 +22,12 @@ func NewMockGlobalNetworkSetController() *MockGlobalNetworkSetController {
 	return &MockGlobalNetworkSetController{
 		local:     make(map[string]*v3.GlobalNetworkSet),
 		noGC:      make(map[string]struct{}),
-		failFuncs: make(map[string]func()),
+		failFuncs: make(map[string]func(error)),
 		statsers:  make(map[string]statser.Statser),
 	}
 }
 
-func (c *MockGlobalNetworkSetController) Add(s *v3.GlobalNetworkSet, f func(), stat statser.Statser) {
+func (c *MockGlobalNetworkSetController) Add(s *v3.GlobalNetworkSet, f func(error), stat statser.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.local[s.Name] = s
@@ -74,8 +74,8 @@ func (c *MockGlobalNetworkSetController) NotGCable() map[string]struct{} {
 	return out
 }
 
-func (c *MockGlobalNetworkSetController) FailFuncs() map[string]func() {
-	out := make(map[string]func())
+func (c *MockGlobalNetworkSetController) FailFuncs() map[string]func(error) {
+	out := make(map[string]func(error))
 	c.m.Lock()
 	defer c.m.Unlock()
 	for k, s := range c.failFuncs {

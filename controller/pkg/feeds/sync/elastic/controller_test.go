@@ -50,7 +50,7 @@ var cases = []testCase{
 // The following are convenience functions to make it easier to call the Add, Run, Delete, StartReconciliation, and NoGC
 // methods on the UUT, which is a reflect.Value containing the actual controller type.
 
-func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(), stat statser.Statser) {
+func add(uut reflect.Value, ctx context.Context, name string, set reflect.Value, fail func(error), stat statser.Statser) {
 	uut.MethodByName("Add").Call([]reflect.Value{
 		reflect.ValueOf(ctx),
 		reflect.ValueOf(name),
@@ -91,7 +91,7 @@ func TestController_Add_Success(t *testing.T) {
 			run(uut, ctx)
 
 			name := "test"
-			fail := func() { t.Error("controller called fail func unexpectedly") }
+			fail := func(error) { t.Error("controller called fail func unexpectedly") }
 			stat := &statser.MockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
@@ -197,7 +197,7 @@ func TestController_Update_Success(t *testing.T) {
 
 			run(uut, ctx)
 
-			fail := func() { t.Error("controller called fail func unexpectedly") }
+			fail := func(error) { t.Error("controller called fail func unexpectedly") }
 			stat := &statser.MockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 
@@ -233,7 +233,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 
 			aName := "added"
 			var failed bool
-			fail := func() { failed = true }
+			fail := func(error) { failed = true }
 			stat := &statser.MockStatser{}
 			add(uut, ctx, aName, tc.set, fail, stat)
 
@@ -266,7 +266,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 			name := "test"
 			var failed bool
-			fail := func() { failed = true }
+			fail := func(error) { failed = true }
 			stat := &statser.MockStatser{}
 			add(uut, ctx, name, tc.set, fail, stat)
 

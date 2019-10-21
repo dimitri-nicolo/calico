@@ -17,7 +17,7 @@ import (
 type Controller interface {
 	// Add or update a new Set including the spec. f is function the controller should call
 	// if we fail to update, and stat is the Statser we should report or clear errors on.
-	Add(ctx context.Context, name string, value interface{}, f func(), stat Statser)
+	Add(ctx context.Context, name string, value interface{}, f func(error), stat Statser)
 
 	// Delete, and NoGC alter the desired state the controller will attempt to
 	// maintain, by syncing with the elastic database.
@@ -84,7 +84,7 @@ type update struct {
 	name    string
 	op      op
 	value   interface{}
-	fail    func()
+	fail    func(error)
 	statser Statser
 }
 
@@ -96,7 +96,7 @@ var NewTicker = func() *time.Ticker {
 	return tkr
 }
 
-func (c *controller) Add(ctx context.Context, name string, value interface{}, f func(), stat Statser) {
+func (c *controller) Add(ctx context.Context, name string, value interface{}, f func(error), stat Statser) {
 	select {
 	case <-ctx.Done():
 		return
@@ -223,7 +223,7 @@ func (c *controller) updateObject(ctx context.Context, u update) {
 	err := c.data.Put(ctx, u.name, u.value)
 	if err != nil {
 		log.WithError(err).WithField("name", u.name).Error("failed to update elastic object")
-		u.fail()
+		u.fail(err)
 		u.statser.Error(c.errorType, err)
 		return
 	}

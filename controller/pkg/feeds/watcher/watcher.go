@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/controller"
-
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
@@ -21,6 +19,7 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/searcher"
@@ -121,7 +120,7 @@ func NewWatcher(
 		ping:                   make(chan struct{}),
 	}
 
-	w.fifo, w.feeds = NewPingableFifo()
+	w.fifo, w.feeds = util.NewPingableFifo()
 
 	cfg := &cache.Config{
 		Queue:            w.fifo,
@@ -186,7 +185,7 @@ func (s *watcher) processQueue(obj interface{}) error {
 	// from oldest to newest
 	for _, d := range obj.(cache.Deltas) {
 		// Pings also come as cache updates
-		_, ok := d.Object.(ping)
+		_, ok := d.Object.(util.Ping)
 		if ok {
 			// Pong on a go routine so we don't block the main loop
 			// if no pinger is listening.
@@ -436,7 +435,7 @@ func (s *watcher) listFeedWatchers() []*feedWatcher {
 // Ping is used to ensure the watcher's main loop is running and not blocked.
 func (s *watcher) Ping(ctx context.Context) error {
 	// Enqueue a ping
-	err := s.fifo.Update(ping{})
+	err := s.fifo.Update(util.Ping{})
 	if err != nil {
 		// Local fifo & cache should never error.
 		panic(err)

@@ -5,13 +5,13 @@ package elastic
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/lithammer/dedent"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -56,6 +56,9 @@ func Watch(alert v3.GlobalAlert) (*elastic.PutWatchBody, error) {
 				},
 			},
 		},
+		Metadata: JsonObject{
+			"alert": alert.Spec,
+		},
 	}, nil
 }
 
@@ -64,7 +67,7 @@ func Condition(alert v3.GlobalAlert) *elastic.Condition {
 	switch alert.Spec.Metric {
 	case "":
 		return &elastic.Condition{Always: true}
-	case v3.GlobalAlertMetricCount:
+	case libcalicov3.GlobalAlertMetricCount:
 		valueKey = "doc_count"
 	default:
 		valueKey = fmt.Sprintf("%s.value", alert.Spec.Field)
@@ -73,7 +76,7 @@ func Condition(alert v3.GlobalAlert) *elastic.Condition {
 	switch {
 	case len(alert.Spec.AggregateBy) == 0:
 		switch alert.Spec.Metric {
-		case v3.GlobalAlertMetricCount:
+		case libcalicov3.GlobalAlertMetricCount:
 			return &elastic.Condition{
 				Compare: &elastic.Comparison{
 					Key:       "ctx.payload.hits.total",
@@ -134,7 +137,7 @@ func Condition(alert v3.GlobalAlert) *elastic.Condition {
 	return &elastic.Condition{
 		Script: &elastic.Script{
 			Language: "painless",
-			Source:   painlessFmt(source.String()),
+			Source:   util.PainlessFmt(source.String()),
 			Params: map[string]interface{}{
 				"threshold": alert.Spec.Threshold,
 			},
@@ -152,7 +155,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 					Source:   "[ '_value': ctx.payload.hits.hits.stream().map(t -> t._source).collect(Collectors.toList()) ]",
 				},
 			}
-		case v3.GlobalAlertMetricCount:
+		case libcalicov3.GlobalAlertMetricCount:
 			return &elastic.Transform{
 				Script: elastic.Script{
 					Language: "painless",
@@ -172,7 +175,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 	var description string
 	var key string
 	switch alert.Spec.Metric {
-	case v3.GlobalAlertMetricCount:
+	case libcalicov3.GlobalAlertMetricCount:
 		description = "count"
 		key = "doc_count"
 	default:
@@ -223,7 +226,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 	return &elastic.Transform{
 		Script: elastic.Script{
 			Language: "painless",
-			Source:   painlessFmt(script.String()),
+			Source:   util.PainlessFmt(script.String()),
 			Params: map[string]interface{}{
 				"threshold": alert.Spec.Threshold,
 			},
@@ -272,9 +275,9 @@ func Input(alert v3.GlobalAlert) (*elastic.Input, error) {
 
 	var timeField string
 	switch alert.Spec.DataSet {
-	case v3.GlobalAlertDataSetDNS, v3.GlobalAlertDataSetFlows:
+	case libcalicov3.GlobalAlertDataSetDNS, libcalicov3.GlobalAlertDataSetFlows:
 		timeField = "start_time"
-	case v3.GlobalAlertDataSetAudit:
+	case libcalicov3.GlobalAlertDataSetAudit:
 		timeField = "timestamp"
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", alert.Spec.DataSet)
@@ -292,7 +295,7 @@ func Input(alert v3.GlobalAlert) (*elastic.Input, error) {
 	if aggs != nil {
 		body["size"] = 0
 		body["aggs"] = aggs
-	} else if alert.Spec.Metric == v3.GlobalAlertMetricCount {
+	} else if alert.Spec.Metric == libcalicov3.GlobalAlertMetricCount {
 		body["size"] = 0
 	} else {
 		body["size"] = QuerySize
@@ -325,11 +328,11 @@ func LookbackFilter(lookback time.Duration, timeField string) JsonObject {
 
 func Indices(dataSet string) ([]string, error) {
 	switch dataSet {
-	case v3.GlobalAlertDataSetAudit:
+	case libcalicov3.GlobalAlertDataSetAudit:
 		return []string{elastic.AuditIndex}, nil
-	case v3.GlobalAlertDataSetDNS:
+	case libcalicov3.GlobalAlertDataSetDNS:
 		return []string{elastic.DNSLogIndex}, nil
-	case v3.GlobalAlertDataSetFlows:
+	case libcalicov3.GlobalAlertDataSetFlows:
 		return []string{elastic.FlowLogIndex}, nil
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", dataSet)
@@ -344,19 +347,19 @@ func Query(alert v3.GlobalAlert) (interface{}, error) {
 
 	var converter ElasticQueryConverter
 	switch alert.Spec.DataSet {
-	case v3.GlobalAlertDataSetAudit:
+	case libcalicov3.GlobalAlertDataSetAudit:
 		err := query.Validate(q, query.IsValidAuditAtom)
 		if err != nil {
 			return nil, err
 		}
 		converter = NewAuditConverter()
-	case v3.GlobalAlertDataSetDNS:
+	case libcalicov3.GlobalAlertDataSetDNS:
 		err := query.Validate(q, query.IsValidDNSAtom)
 		if err != nil {
 			return nil, err
 		}
 		converter = NewDNSConverter()
-	case v3.GlobalAlertDataSetFlows:
+	case libcalicov3.GlobalAlertDataSetFlows:
 		err := query.Validate(q, query.IsValidFlowsAtom)
 		if err != nil {
 			return nil, err
@@ -397,7 +400,7 @@ func TermQueryAggs(terms []string, agg *QueryAgg) *QueryAgg {
 
 func MetricQueryAggs(field, metric string, agg *QueryAgg) *QueryAgg {
 	switch metric {
-	case "", v3.GlobalAlertMetricCount:
+	case "", libcalicov3.GlobalAlertMetricCount:
 		return nil
 	}
 
@@ -476,7 +479,7 @@ func ActionTransform(alert v3.GlobalAlert) *elastic.Transform {
 		elastic.Script{
 			// This doesn't work for nested
 			Language: "painless",
-			Source:   painlessFmt(ResolveCode + GenerateDescriptionFunction(alert.Spec.Description) + actionTransformCode),
+			Source:   util.PainlessFmt(ResolveCode + GenerateDescriptionFunction(alert.Spec.Description) + actionTransformCode),
 			Params: JsonObject{
 				"type":        AlertEventType,
 				"description": alert.Spec.Description,
@@ -484,22 +487,4 @@ func ActionTransform(alert v3.GlobalAlert) *elastic.Transform {
 			},
 		},
 	}
-}
-
-func painlessFmt(s string) string {
-	var res []string
-	lines := strings.Split(s, "\n")
-	for idx, line := range lines {
-		line = strings.TrimSpace(line)
-		if idx > 0 && regexp.MustCompile(`^[{}]`).MatchString(line) {
-			line = " " + line
-		}
-		if idx < len(lines)-1 && regexp.MustCompile(`[,{};]$`).MatchString(line) {
-			line = line + " "
-		}
-		if line != "" {
-			res = append(res, line)
-		}
-	}
-	return strings.Join(res, "")
 }

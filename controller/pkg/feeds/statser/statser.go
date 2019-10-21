@@ -13,6 +13,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
+	statserCommon "github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const (
@@ -21,7 +22,6 @@ const (
 	GarbageCollectionFailed    = "GarbageCollectionFailed"
 	PullFailed                 = "PullFailed"
 	SearchFailed               = "SearchFailed"
-	MaxErrors                  = 10
 )
 
 type Statser interface {
@@ -35,7 +35,7 @@ type Statser interface {
 }
 
 func NewStatser(name string, globalThreatFeedClient v32.GlobalThreatFeedInterface) Statser {
-	l, err := NewErrorConditions(MaxErrors)
+	l, err := statserCommon.NewErrorConditions(statserCommon.MaxErrors)
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +52,7 @@ type statser struct {
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
 	lastSuccessfulSync     time.Time
 	lastSuccessfulSearch   time.Time
-	errorConditions        *ErrorConditions
+	errorConditions        *statserCommon.ErrorConditions
 	lock                   sync.RWMutex
 	once                   sync.Once
 	cancel                 context.CancelFunc

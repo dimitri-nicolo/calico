@@ -22,7 +22,7 @@ import (
 func TestPull(t *testing.T) {
 	g := NewWithT(t)
 
-	xPack := &elastic.MockXPack{
+	xPack := &elastic.MockXPackAnomalyDetector{
 		Records: []elastic.RecordSpec{
 			{
 				Timestamp:   elastic.Time{time.Now()},
@@ -56,7 +56,7 @@ func TestPull(t *testing.T) {
 func TestPull_RecordsFails(t *testing.T) {
 	g := NewWithT(t)
 
-	xPack := &elastic.MockXPack{
+	xPack := &elastic.MockXPackAnomalyDetector{
 		Err: errors.New("fail"),
 	}
 	e := &db.MockEvents{
@@ -84,7 +84,7 @@ func TestPull_RecordsFails(t *testing.T) {
 func TestPull_Filter(t *testing.T) {
 	g := NewWithT(t)
 
-	xPack := &elastic.MockXPack{
+	xPack := &elastic.MockXPackAnomalyDetector{
 		Records: []elastic.RecordSpec{
 			{
 				Timestamp:   elastic.Time{time.Now()},
@@ -127,7 +127,7 @@ func TestPull_Filter(t *testing.T) {
 func TestPull_FilterFails(t *testing.T) {
 	g := NewWithT(t)
 
-	xPack := &elastic.MockXPack{
+	xPack := &elastic.MockXPackAnomalyDetector{
 		Records: []elastic.RecordSpec{
 			{
 				Timestamp:   elastic.Time{time.Now()},
@@ -161,7 +161,7 @@ func TestPull_FilterFails(t *testing.T) {
 func TestPull_PutFails(t *testing.T) {
 	g := NewWithT(t)
 
-	xPack := &elastic.MockXPack{
+	xPack := &elastic.MockXPackAnomalyDetector{
 		Records: []elastic.RecordSpec{
 			{
 				Timestamp:   elastic.Time{time.Now()},
@@ -192,7 +192,7 @@ func TestPull_PutFails(t *testing.T) {
 func TestFetch(t *testing.T) {
 	g := NewWithT(t)
 
-	xPack := &elastic.MockXPack{
+	xPack := &elastic.MockXPackAnomalyDetector{
 		Records: []elastic.RecordSpec{
 			{
 				RecordScore: 100,
@@ -218,7 +218,7 @@ func TestGenerateEvent(t *testing.T) {
 	detectors := map[int]*template.Template{
 		1: template.Must(template.New("test").Parse(tmpl)),
 	}
-	p := NewPuller("test", &elastic.MockXPack{}, &db.MockEvents{}, &filters.NilFilter{}, detectors).(*puller)
+	p := NewPuller("test", &elastic.MockXPackAnomalyDetector{}, &db.MockEvents{}, &filters.NilFilter{}, detectors).(*puller)
 
 	r1 := elastic.RecordSpec{
 		DetectorIndex: 1,
@@ -250,7 +250,7 @@ func TestGenerateEventDescription(t *testing.T) {
 		0: template.Must(template.New("test").Parse("{{.OverFieldName}}: {{.OverFieldValue}}")),
 		1: template.Must(template.New("test").Parse("{{.PartitionFieldName}}: {{.PartitionFieldValue}}")),
 	}
-	p := NewPuller("test", &elastic.MockXPack{}, &db.MockEvents{}, &filters.NilFilter{}, detectors).(*puller)
+	p := NewPuller("test", &elastic.MockXPackAnomalyDetector{}, &db.MockEvents{}, &filters.NilFilter{}, detectors).(*puller)
 
 	r := elastic.RecordSpec{
 		OverFieldName:       "foo",

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go"
+	retry "github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +50,7 @@ type httpPuller struct {
 
 type persistence interface {
 	lastModified(ctx context.Context, name string) (time.Time, error)
-	add(ctx context.Context, name string, snapshot interface{}, f func(), st statser.Statser)
+	add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser)
 }
 
 type content interface {
@@ -86,7 +86,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 		ctx, h.cancel = context.WithCancel(ctx)
 
 		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
-		h.syncFailFunction = func() { _ = rescheduleFunc() }
+		h.syncFailFunction = func(error) { _ = rescheduleFunc() }
 
 		syncRunFunc, enqueueSyncFunction := runloop.OnDemand()
 		go syncRunFunc(ctx, func(ctx context.Context, i interface{}) {

@@ -104,7 +104,7 @@ func (i ipSetPersistence) lastModified(ctx context.Context, name string) (time.T
 	return i.d.GetIPSetModified(ctx, name)
 }
 
-func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(), st statser.Statser) {
+func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser) {
 	i.c.Add(ctx, name, snapshot.(db.IPSetSpec), f, st)
 }
 
@@ -121,7 +121,7 @@ func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, s statser.Statser) {
 			s.Error(statser.GlobalNetworkSetSyncFailed, err)
 		} else {
 			g := h.makeGNS(ipSet)
-			h.gnsController.Add(g, func() {}, s)
+			h.gnsController.Add(g, func(error) {}, s)
 		}
 	} else {
 		s.ClearError(statser.GlobalNetworkSetSyncFailed)

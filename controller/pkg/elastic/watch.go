@@ -18,7 +18,7 @@ import (
 
 type XPackWatcher interface {
 	ListWatches(ctx context.Context) ([]db.Meta, error)
-	TestWatch(ctx context.Context, body *PutWatchBody) (*elastic.XPackWatchRecord, error)
+	ExecuteWatch(ctx context.Context, body *ExecuteWatchBody) (*elastic.XPackWatchRecord, error)
 	PutWatch(ctx context.Context, name string, body *PutWatchBody) error
 	DeleteWatch(ctx context.Context, m db.Meta) error
 }
@@ -267,4 +267,13 @@ func (t *Transform) UnmarshalJSON(data []byte) error {
 		t.Script = script
 	}
 	return errors.New("missing script key")
+}
+
+type ExecuteWatchBody struct {
+	TriggerData      interface{}   `json:"trigger_data,omitempty"`
+	IgnoreCondition  bool          `json:"ignore_condition,omitempty"`
+	AlternativeInput interface{}   `json:"alternative_input,omitempty"`
+	ActionModes      []string      `json:"action_modes,omitempty"`
+	RecordExecution  bool          `json:"record_execution,omitempty"`
+	Watch            *PutWatchBody `json:"watch,omitempty"`
 }

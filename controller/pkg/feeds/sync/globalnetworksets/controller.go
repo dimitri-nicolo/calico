@@ -30,7 +30,7 @@ type Controller interface {
 	// maintain, by syncing with the Kubernetes API server.
 
 	// Add or update a new GlobalNetworkSet including the spec
-	Add(*v3.GlobalNetworkSet, func(), statser.Statser)
+	Add(*v3.GlobalNetworkSet, func(error), statser.Statser)
 
 	// Delete removes a GlobalNetworkSet from the desired state.
 	Delete(*v3.GlobalNetworkSet)
@@ -57,7 +57,7 @@ type controller struct {
 	noGC    map[string]struct{}
 	gcMutex sync.RWMutex
 
-	failFuncs map[string]func()
+	failFuncs map[string]func(error)
 	statsers  map[string]statser.Statser
 	fsMutex   sync.RWMutex
 }
@@ -121,12 +121,12 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 		remote:    remote,
 		informer:  informer,
 		noGC:      make(map[string]struct{}),
-		failFuncs: make(map[string]func()),
+		failFuncs: make(map[string]func(error)),
 		statsers:  make(map[string]statser.Statser),
 	}
 }
 
-func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(), stat statser.Statser) {
+func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(error), stat statser.Statser) {
 	ss := s.DeepCopy()
 
 	// The "creator" key ensures this object will be watched/listed by
@@ -325,7 +325,7 @@ func (c *controller) handleErr(key string) {
 	stat, sok := c.statsers[key]
 	c.fsMutex.RUnlock()
 	if fok {
-		fn()
+		fn(f.e)
 	}
 	if sok {
 		stat.Error(statser.GlobalNetworkSetSyncFailed, f.e)

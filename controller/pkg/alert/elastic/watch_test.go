@@ -10,7 +10,8 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
@@ -22,7 +23,7 @@ func TestCondition(t *testing.T) {
 			g := NewWithT(t)
 
 			c := Condition(v3.GlobalAlert{
-				Spec: v3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					AggregateBy: aggs,
 					Metric:      metric,
 					Field:       field,
@@ -38,12 +39,12 @@ func TestCondition(t *testing.T) {
 	}
 
 	aggs := []string{"a", "b", "c"}
-	for _, metric := range []string{"", v3.GlobalAlertMetricCount,
-		v3.GlobalAlertMetricAvg, v3.GlobalAlertMetricSum,
-		v3.GlobalAlertMetrixMin, v3.GlobalAlertMetricMax} {
+	for _, metric := range []string{"", libcalicov3.GlobalAlertMetricCount,
+		libcalicov3.GlobalAlertMetricAvg, libcalicov3.GlobalAlertMetricSum,
+		libcalicov3.GlobalAlertMetrixMin, libcalicov3.GlobalAlertMetricMax} {
 
 		field := "d"
-		if metric == v3.GlobalAlertMetricCount {
+		if metric == libcalicov3.GlobalAlertMetricCount {
 			field = ""
 		}
 
@@ -61,7 +62,7 @@ func TestTransform(t *testing.T) {
 			g := NewWithT(t)
 
 			c := Transform(v3.GlobalAlert{
-				Spec: v3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					AggregateBy: aggs,
 					Metric:      metric,
 					Field:       field,
@@ -77,12 +78,12 @@ func TestTransform(t *testing.T) {
 	}
 
 	aggs := []string{"a", "b", "c"}
-	for _, metric := range []string{"", v3.GlobalAlertMetricCount,
-		v3.GlobalAlertMetricAvg, v3.GlobalAlertMetricSum,
-		v3.GlobalAlertMetrixMin, v3.GlobalAlertMetricMax} {
+	for _, metric := range []string{"", libcalicov3.GlobalAlertMetricCount,
+		libcalicov3.GlobalAlertMetricAvg, libcalicov3.GlobalAlertMetricSum,
+		libcalicov3.GlobalAlertMetrixMin, libcalicov3.GlobalAlertMetricMax} {
 
 		field := "d"
-		if metric == v3.GlobalAlertMetricCount {
+		if metric == libcalicov3.GlobalAlertMetricCount {
 			field = ""
 		}
 
@@ -106,7 +107,7 @@ func TestPeriod(t *testing.T) {
 		return func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(Period(v3.GlobalAlert{Spec: v3.GlobalAlertSpec{Period: v1.Duration{i}}})).Should(Equal(e))
+			g.Expect(Period(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{Period: v1.Duration{i}}})).Should(Equal(e))
 		}
 	}
 
@@ -120,7 +121,7 @@ func TestLookback(t *testing.T) {
 		return func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(Lookback(v3.GlobalAlert{Spec: v3.GlobalAlertSpec{Lookback: v1.Duration{i}}})).Should(Equal(e))
+			g.Expect(Lookback(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{Lookback: v1.Duration{i}}})).Should(Equal(e))
 		}
 	}
 
@@ -160,23 +161,23 @@ func TestInput(t *testing.T) {
 	}
 
 	t.Run("bad dataset", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "fail",
 		},
 	}, false, false))
 	t.Run("bad query", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "audit",
 			Query:   "AND",
 		},
 	}, false, false))
 	t.Run("good query", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "audit",
 		},
 	}, false, true))
 	t.Run("aggs ", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet:     "audit",
 			AggregateBy: []string{"abc"},
 		},
@@ -230,54 +231,54 @@ func TestQuery(t *testing.T) {
 	}
 
 	t.Run("empty query", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "audit",
 			Query:   "",
 		},
 	}, true))
 	t.Run("invalid query", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			Query: "a AND ",
 		},
 	}, false))
 	t.Run("audit", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "audit",
 			Query:   "apiVersion = abc",
 		},
 	}, true))
 	t.Run("audit invalid", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "audit",
 			Query:   "abc = def",
 		},
 	}, false))
 	t.Run("dns", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "dns",
 			Query:   "qtype = A",
 		},
 	}, true))
 	t.Run("dns invalid", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "dns",
 			Query:   "abc = def",
 		},
 	}, false))
 	t.Run("flows", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "flows",
 			Query:   "source_name = foo",
 		},
 	}, true))
 	t.Run("flows invalid", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "flows",
 			Query:   "abc = def",
 		},
 	}, false))
 	t.Run("invalid dataset", f(v3.GlobalAlert{
-		Spec: v3.GlobalAlertSpec{
+		Spec: libcalicov3.GlobalAlertSpec{
 			DataSet: "invalid",
 			Query:   "",
 		},
@@ -372,7 +373,7 @@ func TestActionTransform(t *testing.T) {
 			g := NewWithT(t)
 
 			transform := ActionTransform(v3.GlobalAlert{
-				Spec: v3.GlobalAlertSpec{
+				Spec: libcalicov3.GlobalAlertSpec{
 					Description: description,
 					Severity:    severity,
 				},

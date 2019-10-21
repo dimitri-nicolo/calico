@@ -22,12 +22,14 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	watcher2 "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
+	alertElastic "github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
+	alertWatcher "github.com/tigera/intrusion-detection/controller/pkg/alert/watcher"
+	anomalyWatcher "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 	syncElastic "github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
+	feedsWatcher "github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 )
 
@@ -144,7 +146,10 @@ func main() {
 	}
 	h := &http.Client{}
 	if u.Scheme == "https" {
-		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
+		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{
+			RootCAs:            ca,
+			InsecureSkipVerify: os.Getenv("INSECURE_SKIP_VERIFY") == "yes",
+		}}
 	}
 	e, err := elastic.NewElastic(h, u, user, pass)
 	if err != nil {
@@ -156,10 +161,11 @@ func main() {
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
 	eip := syncElastic.NewIPSetController(e)
 	edn := syncElastic.NewDomainNameSetController(e)
+	ean := alertElastic.NewAlertController(e)
 	sIP := events.NewSuspiciousIP(e)
 	sDN := events.NewSuspiciousDomainNameSet(e)
 
-	s := watcher.NewWatcher(
+	s := feedsWatcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),
 		k8sClient.CoreV1().Secrets(SecretsNamespace),
 		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
@@ -168,14 +174,29 @@ func main() {
 		edn,
 		&http.Client{},
 		e, e, sIP, sDN, e)
-	s.Run(ctx)
-	defer s.Close()
+	if os.Getenv("DISABLE_FEEDS") != "yes" {
+		s.Run(ctx)
+		defer s.Close()
+	}
 
-	a := watcher2.NewWatcher(e, e, e)
-	a.Run(ctx)
-	defer a.Close()
+	a := anomalyWatcher.NewWatcher(e, e, e)
+	if os.Getenv("DISABLE_ANOMALY") != "yes" {
+		a.Run(ctx)
+		defer a.Close()
+	}
 
-	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
+	a2 := alertWatcher.NewWatcher(
+		calicoClient.ProjectcalicoV3().GlobalAlerts(),
+		ean,
+		e,
+		&http.Client{},
+	)
+	if os.Getenv("DISABLE_ALERTS") != "yes" {
+		a2.Run(ctx)
+		defer a2.Close()
+	}
+
+	hs := health.NewServer(health.Pingers{s, a, a2}, health.Readiers{health.AlwaysReady{}}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {

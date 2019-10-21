@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package puller
+package util
 
 import "net/http"
 

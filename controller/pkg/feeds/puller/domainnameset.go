@@ -66,7 +66,7 @@ func (i dnSetPersistence) lastModified(ctx context.Context, name string) (time.T
 	return i.d.GetDomainNameSetModified(ctx, name)
 }
 
-func (i dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(), st statser.Statser) {
+func (i dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser) {
 	i.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, st)
 }
 

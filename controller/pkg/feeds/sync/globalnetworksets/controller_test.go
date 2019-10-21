@@ -35,7 +35,7 @@ func TestController_Add_Success(t *testing.T) {
 	q := uut.(*controller).queue
 
 	gns := util.NewGlobalNetworkSet("test")
-	fail := func() { t.Error("controller called fail func unexpectedly") }
+	fail := func(error) { t.Error("controller called fail func unexpectedly") }
 	stat := &statser.MockStatser{}
 	// Set an error which we expect to clear.
 	stat.Error(statser.GlobalNetworkSetSyncFailed, errors.New("test"))
@@ -108,7 +108,7 @@ func TestController_Update(t *testing.T) {
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
-	fail := func() { t.Error("controller called fail func unexpectedly") }
+	fail := func(error) { t.Error("controller called fail func unexpectedly") }
 	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -154,7 +154,7 @@ func TestController_AddDelete(t *testing.T) {
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
-	fail := func() { t.Error("controller called fail func unexpectedly") }
+	fail := func(error) { t.Error("controller called fail func unexpectedly") }
 	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -181,7 +181,7 @@ func TestController_AddRetry(t *testing.T) {
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
-	fail := func() { t.Error("controller called fail func unexpectedly") }
+	fail := func(error) { t.Error("controller called fail func unexpectedly") }
 	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -209,7 +209,7 @@ func TestController_AddFail(t *testing.T) {
 	q := uut.(*controller).queue
 
 	var failed bool
-	fail := func() { failed = true }
+	fail := func(error) { failed = true }
 	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -335,7 +335,7 @@ func TestController_UpdateFailure(t *testing.T) {
 
 	gnsUp := gns.DeepCopy()
 	gnsUp.Spec.Nets = []string{"4.5.6.7"}
-	fail := func() {}
+	fail := func(error) {}
 	stat := &statser.MockStatser{}
 	uut.Add(gnsUp, fail, stat)
 
