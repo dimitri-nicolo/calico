@@ -43,7 +43,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "StagedNetworkPolicy",
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", "metadata.namespace":
+			case "spec.tier", "metadata.name", "metadata.namespace":
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
@@ -59,7 +59,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "StagedKubernetesNetworkPolicy",
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", "metadata.namespace":
+			case "spec.tier", "metadata.name", "metadata.namespace":
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
@@ -73,7 +73,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "StagedGlobalNetworkPolicy",
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name":
+			case "spec.tier", "metadata.name":
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
