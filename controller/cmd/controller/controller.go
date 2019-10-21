@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	DefaultElasticScheme = "http"
+	DefaultElasticScheme = "https"
 	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
 	DefaultElasticPort   = 9200
 	DefaultElasticUser   = "elastic"
