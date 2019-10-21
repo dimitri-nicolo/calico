@@ -20,6 +20,8 @@ toc:
       path: /getting-started/kubernetes/managed-public-cloud/iks
     - title: Microsoft Azure Kubernetes Service (AKS)
       path: /getting-started/kubernetes/managed-public-cloud/aks
+  - title: Enabling application layer policy (optional)
+    path: /getting-started/kubernetes/installation/app-layer-policy
   # - title: Tigera Secure EE the hard way
   #   section:
   #   - title: Introduction

@@ -1,6 +1,6 @@
 ---
 title: Enabling integration with AWS security groups (optional)
-canonical_url: https://docs.tigera.io/master/getting-started/kubernetes/installation/aws-sg-integration
+canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/aws-sg-integration
 ---
 
 AWS security group integration for {{site.prodname}} allows you to combine AWS security groups with network policy to enforce granular access control between Kubernetes pods and AWS VPC resources. See the [AWS security group integration overview](/{{page.version}}/security/aws-security-group-integration/) for more details on how to configure security groups in your VPC.
@@ -15,7 +15,7 @@ Your Kubernetes cluster must meet the following specifications:
   [Amazon VPC Networking]({{site.url}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
   (You must be using the [AWS CNI Plugin](https://github.com/aws/amazon-vpc-cni-k8s).)
 - You have already installed
-  [Tigera Secure EE for policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
+  [Tigera Secure EE for policy]({{site.url}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
   on your cluster. The AWS security group integration requires the Kubernetes API datastore.
 - You have not created any
   [host endpoints]({{site.url}}/{{page.version}}/reference/resources/hostendpoint)

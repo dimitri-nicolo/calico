@@ -3,10 +3,6 @@ title: Configuring Prometheus
 canonical_url: https://docs.tigera.io/v2.5/security/configuration/prometheus
 ---
 
-Note: This document assumes that Prometheus and Alertmanager have been setup
-using Prometheus Operator as described
-[here](../../getting-started/kubernetes/installation/hosted/cnx/cnx).
-
 #### Updating Denied Packets Rules
 
 This is an example of how to modify the sample rule created by the sample manifest.

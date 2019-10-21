@@ -1,8 +1,10 @@
 {% if include.orch != "openshift" %}
-  {% assign path = "kubernetes" %}
+  {% assign path = "reference/other-install-methods/kubernetes" %}
+  {% assign reqpath = "getting-started/kubernetes" %}
   {% assign name = "Kubernetes" %}
 {% else %}
-  {% assign path = "openshift" %}
+  {% assign path = "getting-started/openshift" %}
+  {% assign reqpath = "getting-started/openshift" %}
   {% assign name = "OpenShift" %}
 {% endif %}
 {% unless include.upgrade %}
@@ -24,18 +26,18 @@ will be able to send queries to Elasticsearch as the `tigera-ee-manager` user.
 
 ## Before you begin
 
-Ensure that you have followed the [installation instructions]({{site.baseurl}}/{{page.version}}/getting-started/{{path}}/installation)
+Ensure that you have followed the [installation instructions](/{{page.version}}/{{path}}/installation)
 up until the step to download and apply `operator.yaml`.  This document replaces
 the install instructions from that point (inclusive) onwards.
 
 To complete the following procedure, you'll need:
 
-- An Elasticsearch cluster that meets the [requirements]({{site.baseurl}}/{{page.version}}/getting-started/{{path}}/requirements#elasticsearch-requirements).
+- An Elasticsearch cluster that meets the [requirements](/{{page.version}}/{{reqpath}}/requirements#elasticsearch-requirements).
 - A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch (see below).
 - A `tigera-ee-manager` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards (see below).
 - A `tigera-ee-curator` user with permission to delete indices in Elasticsearch (see below).
-- A `tigera-ee-intrusion-detection` user with permission to process threat feeds, flow logs and security events (see below). 
+- A `tigera-ee-intrusion-detection` user with permission to process threat feeds, flow logs and security events (see below).
 - A `tigera-ee-compliance-benchmarker` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-compliance-controller` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-compliance-reporter` user with permission to query and send documents to Elasticsearch (see below).
@@ -168,7 +170,7 @@ They may also be useful as a reference for defining alternative security configu
        ```
 
     1. Compliance controller role for querying last archived reports  (`tigera-ee-compliance-controller`)
-    
+
        ```json
        {
          "elasticsearch": {
@@ -182,9 +184,9 @@ They may also be useful as a reference for defining alternative security configu
          }
        }
        ```
-    
+
     1. Compliance reporter role for querying archived audit information and storing reports  (`tigera-ee-compliance-reporter`)
-    
+
        ```json
        {
          "elasticsearch": {
@@ -210,9 +212,9 @@ They may also be useful as a reference for defining alternative security configu
          }
        }
        ```
-    
+
     1. Compliance snapshotter role for recording daily configuration audits  (`tigera-ee-compliance-snapshotter`)
-    
+
        ```json
        {
          "elasticsearch": {
@@ -226,9 +228,9 @@ They may also be useful as a reference for defining alternative security configu
          }
        }
        ```
-    
+
     1. Compliance server role for querying archived reports (`tigera-ee-compliance-server`)
-    
+
        ```json
        {
          "elasticsearch": {

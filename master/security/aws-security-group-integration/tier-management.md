@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 
 {{site.prodname}} installs the `default` and `allow-cnx` tiers as part of the
 base set of tiers. Enabling the
-[AWS security group integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration)
+[AWS security group integration](/{{page.version}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration)
 introduces three additional tiers: `sg-remote`, `sg-local`, and `metadata`.
 
 | Tier        | Order  | Installed with ...         |

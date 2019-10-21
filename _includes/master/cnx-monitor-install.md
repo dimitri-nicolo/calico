@@ -388,5 +388,5 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
    * If you are using the AWS CNI plugin and want to enforce granular access
     control between pods and AWS VPC resources, continue to
-    [Enabling integration with AWS security groups]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
+    [Enabling integration with AWS security groups]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration).
 {% endif %}

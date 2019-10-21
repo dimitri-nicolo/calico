@@ -64,7 +64,7 @@ as Azure, you may wish to switch to [Calico's VXLAN encapsulation mode]({{site.b
 To do this at install time (so that Calico creates the default IP pool with VXLAN and no IP-in-IP configuration has to
 be undone):
 
-- Start with one of the [Calico for policy and networking]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/calico) manifests.
+- Start with one of the [Calico for policy and networking]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico) manifests.
 - Replace environment variable name `CALICO_IPV4POOL_IPIP` with`CALICO_IPV4POOL_VXLAN`.  Leave the value of the new variable as "Always".
 - Optionally, (to save some resources if you're running a VXLAN-only cluster) completely disable Calico's BGP-based
   networking:

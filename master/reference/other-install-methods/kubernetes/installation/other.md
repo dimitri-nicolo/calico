@@ -8,19 +8,19 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 You can use {{site.prodname}} just for policy enforcement and achieve networking
 with another solution, such as:
 
-- [Amazon Web Services (AWS) VPC CNI plugin](../../../reference/public-cloud/aws#using-aws-networking)
-  (recommended for those on AWS who wish to [federate clusters](../../../networking/federation/index))
+- [Amazon Web Services (AWS) VPC CNI plugin](/{{page.version}}/reference/public-cloud/aws#using-aws-networking)
+  (recommended for those on AWS who wish to [federate clusters](/{{page.version}}/networking/federation/index))
 - Static routes
 - Kubernetes cloud provider integration
 
 ## Before you begin
 
 - Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
-  [system requirements](../requirements) and can [network](#overview). If you don't, follow the steps in
+  [system requirements](/{{page.version}}/getting-started/kubernetes/requirements) and can [network](#overview). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
@@ -31,7 +31,7 @@ with another solution, such as:
 ### About installing for policy only
 
 The installation procedure differs according to whether or not you want to
-[federate clusters](../../../networking/federation/index). Refer to the section that matches your
+[federate clusters](/{{page.version}}/networking/federation/index). Refer to the section that matches your
 configuration.
 
 - [Without federation](#install-ee-typha-nofed)
@@ -86,15 +86,15 @@ configuration.
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
 Kubernetes API datastore.
 
-**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../networking/federation/kubeconfig)
-for each [remote cluster](../../../networking/federation/index#terminology). Ensure that the
-[local cluster](../../../networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+**Prerequisite**: Complete the steps in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig)
+for each [remote cluster](/{{page.version}}/networking/federation/index#terminology). Ensure that the
+[local cluster](/{{page.version}}/networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
 1. Create a secret containing the `kubeconfig` files for all of the remote clusters that
    the local cluster should federate with. A command to achieve this follows. Adjust the `--from-file`
-   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../networking/federation/kubeconfig).
+   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig).
 
    > **Tip**: We recommend naming this secret `tigera-federation-remotecluster` as shown below to
    > make the rest of the procedure easier to follow.
