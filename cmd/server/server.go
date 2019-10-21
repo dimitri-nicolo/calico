@@ -14,6 +14,8 @@ import (
 
 	esprox "github.com/tigera/es-proxy/pkg/middleware"
 
+	"k8s.io/klog"
+
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
@@ -29,6 +31,24 @@ var (
 	apiPort           = flag.String("api-port", "5443", "web api port to listen on")
 	disableLogfmtFlag = flag.Bool("disable-logfmt", false, "disable logfmt style logging")
 )
+
+func init() {
+	// Tell glog (used by client-go) to log into STDERR. Otherwise, we risk
+	// certain kinds of API errors getting logged into a directory not
+	// available in a `FROM scratch` Docker container, causing glog to abort
+	err := flag.Set("logtostderr", "true")
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set logging configuration")
+	}
+
+	// Also tell klog to log to STDERR.
+	var sflags flag.FlagSet
+	klog.InitFlags(&sflags)
+	err = sflags.Set("logtostderr", "true")
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set logging configuration")
+	}
+}
 
 func main() {
 	initIniFlags()
