@@ -252,17 +252,16 @@ UPDATE_EXPECTED_DATA?=false
 test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl bin/typha run-k8s-apiserver
 	-git clean -fx etc/calico/confd
 	docker run --rm --net=host \
+	        $(EXTRA_DOCKER_ARGS) \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		-e GOPATH=/go \
 		-e LOCAL_USER_ID=0 \
-		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
 		-e FELIX_TYPHAREADTIMEOUT=50 \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
-		-e GO111MODULE=on \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_kdd.sh || \
 	{ \
