@@ -40,7 +40,7 @@ execute_test_suite() {
     # node mesh enabled, so turn it on now before we start confd.
     echo "Execute daemon-mode tests"
     turn_mesh_on
-    for i in $(seq 1 5); do
+    for i in $(seq 1 2); do
         execute_tests_daemon
     done
     echo "Daemon-mode tests passed"
@@ -455,7 +455,7 @@ execute_tests_daemon() {
     echo "Running with PID " $CONFD_PID
 
     # Run the node-mesh-enabled tests.
-    for i in $(seq 1 5); do
+    for i in $(seq 1 2); do
         run_individual_test 'mesh/ipip-always'
         run_individual_test 'mesh/ipip-cross-subnet'
         run_individual_test 'mesh/ipip-off'
@@ -466,7 +466,7 @@ execute_tests_daemon() {
     turn_mesh_off
 
     # Run the explicit peering tests.
-    for i in $(seq 1 5); do
+    for i in $(seq 1 2); do
         run_individual_test 'explicit_peering/global'
         run_individual_test 'explicit_peering/specific_node'
         run_edited_individual_test 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
