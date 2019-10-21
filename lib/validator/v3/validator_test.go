@@ -15,6 +15,8 @@
 package v3_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -1472,6 +1474,55 @@ func init() {
 		Entry("should reject invalid BGPPeerSpec (selector)", api.BGPPeerSpec{
 			NodeSelector: "kubernetes.io/hostname: == 'casey-crc-kadm-node-4'",
 		}, false),
+
+		// BGPPeer SourceAddress
+		Entry("BGPPeer with valid SourceAddress UseNodeIP", api.BGPPeerSpec{
+			SourceAddress: api.SourceAddressUseNodeIP,
+		}, true),
+		Entry("BGPPeer with valid SourceAddress None", api.BGPPeerSpec{
+			SourceAddress: api.SourceAddressNone,
+		}, true),
+		Entry("BGPPeer with invalid SourceAddress", api.BGPPeerSpec{
+			SourceAddress: api.SourceAddress("rubbish"),
+		}, false),
+
+		// BGPPeer FailureDetectionMode
+		Entry("BGPPeer with valid FailureDetectionMode None", api.BGPPeerSpec{
+			FailureDetectionMode: api.FailureDetectionModeNone,
+		}, true),
+		Entry("BGPPeer with valid FailureDetectionMode BFDIfDirectlyConnected", api.BGPPeerSpec{
+			FailureDetectionMode: api.FailureDetectionModeBFDIfDirectlyConnected,
+		}, true),
+		Entry("BGPPeer with invalid FailureDetectionMode", api.BGPPeerSpec{
+			FailureDetectionMode: api.FailureDetectionMode("rubbish"),
+		}, false),
+
+		// BGPPeer RestartMode
+		Entry("BGPPeer with valid RestartMode GracefulRestart", api.BGPPeerSpec{
+			RestartMode: api.RestartModeGracefulRestart,
+		}, true),
+		Entry("BGPPeer with valid RestartMode LongLivedGracefulRestart", api.BGPPeerSpec{
+			RestartMode: api.RestartModeLongLivedGracefulRestart,
+		}, true),
+		Entry("BGPPeer with invalid RestartMode", api.BGPPeerSpec{
+			RestartMode: api.RestartMode("rubbish"),
+		}, false),
+
+		// BGPPeer BIRDGatewayMode
+		Entry("BGPPeer with valid BIRDGatewayMode Recursive", api.BGPPeerSpec{
+			BIRDGatewayMode: api.BIRDGatewayModeRecursive,
+		}, true),
+		Entry("BGPPeer with valid BIRDGatewayMode DirectIfDirectlyConnected", api.BGPPeerSpec{
+			BIRDGatewayMode: api.BIRDGatewayModeDirectIfDirectlyConnected,
+		}, true),
+		Entry("BGPPeer with invalid BIRDGatewayMode", api.BGPPeerSpec{
+			BIRDGatewayMode: api.BIRDGatewayMode("rubbish"),
+		}, false),
+
+		// BGPPeer MaxRestartTime
+		Entry("BGPPeer with valid MaxRestartTime", api.BGPPeerSpec{
+			MaxRestartTime: &v1.Duration{10 * time.Second},
+		}, true),
 
 		// (API) NodeSpec
 		Entry("should accept node with IPv4 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: netv4_1}}, true),

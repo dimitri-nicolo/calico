@@ -108,6 +108,11 @@ var (
 
 	dropActionOverrideRegex = regexp.MustCompile("^(Drop|Accept|LogAndDrop|LogAndAccept)$")
 
+	sourceAddressRegex        = regexp.MustCompile("^(UseNodeIP|None)$")
+	failureDetectionModeRegex = regexp.MustCompile("^(None|BFDIfDirectlyConnected)$")
+	restartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
+	birdGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
+
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2
 	minDNSAggregationKindValue = 0
@@ -184,6 +189,10 @@ func init() {
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
+	registerFieldValidator("sourceAddress", regexValidator("SourceAddress", sourceAddressRegex))
+	registerFieldValidator("failureDetectionMode", regexValidator("FailureDetectionMode", failureDetectionModeRegex))
+	registerFieldValidator("restartMode", regexValidator("RestartMode", restartModeRegex))
+	registerFieldValidator("birdGatewayMode", regexValidator("BIRDGatewayMode", birdGatewayModeRegex))
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -372,6 +381,14 @@ func validateVXLANMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate VXLAN Mode: %s", s)
 	return vxlanModeRegex.MatchString(s)
+}
+
+func regexValidator(desc string, rx *regexp.Regexp) func(fl validator.FieldLevel) bool {
+	return func(fl validator.FieldLevel) bool {
+		s := fl.Field().String()
+		log.Debugf("Validate %s: %s", desc, s)
+		return rx.MatchString(s)
+	}
 }
 
 func validateMAC(fl validator.FieldLevel) bool {

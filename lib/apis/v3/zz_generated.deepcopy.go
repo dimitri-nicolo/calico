@@ -308,6 +308,11 @@ func (in *BGPPeerSpec) DeepCopyInto(out *BGPPeerSpec) {
 		*out = new(BGPPassword)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.MaxRestartTime != nil {
+		in, out := &in.MaxRestartTime, &out.MaxRestartTime
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 
