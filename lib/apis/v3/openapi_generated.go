@@ -5065,7 +5065,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertSpec(ref common.ReferenceCallbac
 						},
 					},
 				},
-				Required: []string{"description", "severity", "period", "lookback", "dataSet", "query", "aggregateBy", "field", "metric", "condition", "threshold"},
+				Required: []string{"description", "severity", "dataSet"},
 			},
 		},
 		Dependencies: []string{
@@ -5119,7 +5119,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref common.ReferenceCallb
 						},
 					},
 				},
-				Required: []string{"active", "executionState", "lastFired", "lastTriggered", "errorConditions"},
+				Required: []string{"active"},
 			},
 		},
 		Dependencies: []string{

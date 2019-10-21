@@ -39,26 +39,26 @@ type GlobalAlert struct {
 }
 
 type GlobalAlertSpec struct {
-	Description string          `json:"description" validate:"required"`
-	Severity    int             `json:"severity" validate:"required,min=1,max=100"`
-	Period      metav1.Duration `json:"period"`
-	Lookback    metav1.Duration `json:"lookback"`
-	DataSet     string          `json:"dataSet" validate:"required,oneof=flows dns audit"`
-	Query       string          `json:"query"`
-	AggregateBy []string        `json:"aggregateBy"`
-	Field       string          `json:"field"`
-	Metric      string          `json:"metric" validate:"omitempty,oneof=avg max min sum count"`
-	Condition   string          `json:"condition" validate:"omitempty,oneof=eq not_eq gt gte lt lte"`
-	Threshold   float64         `json:"threshold"`
+	Description string           `json:"description" validate:"required"`
+	Severity    int              `json:"severity" validate:"required,min=1,max=100"`
+	Period      *metav1.Duration `json:"period,omitempty" validate:"omitempty"`
+	Lookback    *metav1.Duration `json:"lookback,omitempty" validate:"omitempty"`
+	DataSet     string           `json:"dataSet" validate:"required,oneof=flows dns audit"`
+	Query       string           `json:"query,omitempty" validate:"omitempty"`
+	AggregateBy []string         `json:"aggregateBy,omitempty" validate:"omitempty"`
+	Field       string           `json:"field,omitempty" validate:"omitempty"`
+	Metric      string           `json:"metric,omitempty" validate:"omitempty,oneof=avg max min sum count"`
+	Condition   string           `json:"condition,omitempty" validate:"omitempty,oneof=eq not_eq gt gte lt lte"`
+	Threshold   float64          `json:"threshold,omitempty" validate:"omitempty"`
 }
 
 type GlobalAlertStatus struct {
-	LastUpdate      metav1.Time      `json:"lastUpdate,omitempty"`
+	LastUpdate      *metav1.Time     `json:"lastUpdate,omitempty"`
 	Active          bool             `json:"active"`
-	ExecutionState  string           `json:"executionState"`
-	LastFired       metav1.Time      `json:"lastFired"`
-	LastTriggered   metav1.Time      `json:"lastTriggered"`
-	ErrorConditions []ErrorCondition `json:"errorConditions"`
+	ExecutionState  string           `json:"executionState,omitempty"`
+	LastFired       *metav1.Time     `json:"lastFired,omitempty"`
+	LastTriggered   *metav1.Time     `json:"lastTriggered,omitempty"`
+	ErrorConditions []ErrorCondition `json:"errorConditions,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
