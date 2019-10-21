@@ -4,6 +4,8 @@ order: 5
 toc:
 - title: Reference
   path: /reference/
+- title: Installation
+  path: /reference/installation/api
 - title: calicoctl
   section:
   - title: Overview
