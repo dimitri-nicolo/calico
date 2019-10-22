@@ -134,6 +134,15 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- else}}
   multihop;
 {{- end}}
+{{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
+  graceful restart time 0;
+  long lived graceful restart;
+{{- if ne $data.restart_time ""}}
+  long lived stale time {{$data.restart_time}};
+{{- end}}
+{{- else if and (eq $data.restart_mode "GracefulRestart") (ne $data.restart_time "")}}
+  graceful restart time {{$data.restart_time}};
+{{- end}}
 {{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;
   rr cluster id {{$node_cluster_id}};
@@ -165,6 +174,15 @@ protocol bgp Node_{{$id}} from bgp_template {
   direct;
 {{- else}}
   multihop;
+{{- end}}
+{{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
+  graceful restart time 0;
+  long lived graceful restart;
+{{- if ne $data.restart_time ""}}
+  long lived stale time {{$data.restart_time}};
+{{- end}}
+{{- else if and (eq $data.restart_mode "GracefulRestart") (ne $data.restart_time "")}}
+  graceful restart time {{$data.restart_time}};
 {{- end}}
 {{- if and (eq $data.as_num $node_as_num) (ne "" ($node_cluster_id)) (ne $data.rr_cluster_id ($node_cluster_id))}}
   rr client;

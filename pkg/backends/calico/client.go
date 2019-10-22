@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"reflect"
@@ -401,6 +402,8 @@ type bgpPeer struct {
 	Password          string               `json:"password"`
 	SourceAddr        string               `json:"source_addr"`
 	DirectlyConnected bool                 `json:"directly_connected"`
+	RestartMode       string               `json:"restart_mode"`
+	RestartTime       string               `json:"restart_time"`
 }
 
 func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
@@ -1211,6 +1214,10 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv
 		peer.Password = password
 		peer.Extensions = v3res.Spec.Extensions
 		peer.SourceAddr = string(v3res.Spec.SourceAddress)
+		peer.RestartMode = withDefault(string(v3res.Spec.RestartMode), string(apiv3.RestartModeGracefulRestart))
+		if v3res.Spec.MaxRestartTime != nil {
+			peer.RestartTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.MaxRestartTime.Duration.Seconds())))
+		}
 		for _, subnet := range localSubnets {
 			if subnet.Contains(peer.PeerIP.IP) {
 				log.Infof("Local subnet %v contains peer IP %v", subnet, peer.PeerIP)
@@ -1221,4 +1228,11 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv
 	}
 
 	return
+}
+
+func withDefault(val, dflt string) string {
+	if val != "" {
+		return val
+	}
+	return dflt
 }
