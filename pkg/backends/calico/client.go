@@ -405,6 +405,7 @@ type bgpPeer struct {
 	RestartMode       string               `json:"restart_mode"`
 	RestartTime       string               `json:"restart_time"`
 	GatewayMode       string               `json:"gateway_mode"`
+	EnableBFD         bool                 `json:"enable_bfd"`
 }
 
 func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
@@ -1230,6 +1231,9 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv
 			peer.GatewayMode = "direct"
 		} else {
 			peer.GatewayMode = "recursive"
+		}
+		if v3res.Spec.FailureDetectionMode == apiv3.FailureDetectionModeBFDIfDirectlyConnected && peer.DirectlyConnected {
+			peer.EnableBFD = true
 		}
 	}
 
