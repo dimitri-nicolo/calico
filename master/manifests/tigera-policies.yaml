@@ -221,7 +221,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: name == 'TODO: es-client-tigera-elasticsearch'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
   types:
   - Ingress
   ingress:
@@ -242,7 +242,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: name == 'TODO: kibana-tigera-elasticsearch'
+      selector: k8s-app == 'tigera-secure'
       namespaceSelector: name == 'tigera-kibana'
     destination:
       ports: [9200]
@@ -269,59 +269,64 @@ spec:
       ports: [9200]
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-benchmarker'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-controller'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-server'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-snapshotter'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-reporter'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-        - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'intrusion-detection-controller'
       namespaceSelector: name == 'tigera-intrusion-detection'
-  # TODO: Need rule to for eck operator to reach ES?
-  # TODO: Need rule to for tigera operator to reach ES?
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-operator'
+      namespaceSelector: name == 'tigera-eck-operator'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-operator'
+      namespaceSelector: name == 'tigera-operator'
 
 ---
 
 # Allow internal communication within the ElasticSearch cluster
-# TODO: fix this
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -330,14 +335,14 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: cluster == 'tigera-elasticsearch'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
   types:
   - Ingress
   ingress:
   - action: Allow
     protocol: TCP
     source:
-      selector: cluster == 'tigera-elasticsearch'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
     destination:
       ports: [9300]
 
@@ -347,11 +352,11 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-tigera.kibana-access
-  namespace: tigera-elasticsearch
+  namespace: tigera-kibana
 spec:
   order: 1
   tier: allow-tigera
-  selector: name == 'TODO: kibana-tigera-elasticsearch'
+  selector: k8s-app == 'tigera-kibana'
   types:
   - Ingress
   ingress:
@@ -372,7 +377,20 @@ spec:
       namespaceSelector: name == 'tigera-intrusion-detection'
     destination:
       ports: [5601]
-  # TODO: Should eck or tigera operator have rules to access kibana?
+  - action: Allow
+    destination:
+      ports: [5601]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-operator'
+      namespaceSelector: name == 'tigera-eck-operator'
+  - action: Allow
+    destination:
+      ports: [5601]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-operator'
+      namespaceSelector: name == 'tigera-operator'
 
 ---
 
@@ -406,3 +424,4 @@ spec:
       - "fe80::/10"
   # Pass to subsequent tiers or profiles for further refinement
   - action: Pass
+
