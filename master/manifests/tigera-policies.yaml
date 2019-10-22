@@ -356,7 +356,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'tigera-kibana'
+  selector: k8s-app == 'tigera-secure'
   types:
   - Ingress
   ingress:
