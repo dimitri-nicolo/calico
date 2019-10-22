@@ -142,17 +142,22 @@ func compilePolicy(m *MatcherFactory, r resources.Resource, modified bool) (ingr
 	// NetworkPolicies will have been converted to Calico NetworkPolicies prior to this point.
 	var namespace EndpointMatcher
 	var selector EndpointMatcher
+	var serviceAccount EndpointMatcher
 	var ingress, egress []v3.Rule
 	var types []v3.PolicyType
 	var name string
 	switch res := r.(type) {
 	case *v3.NetworkPolicy:
 		namespace = m.Namespace(res.Namespace)
+		// borrow the ServiceAccounts matcher factory since it's functionality is a superset of what we need
+		serviceAccount = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
 		selector = m.Selector(res.Spec.Selector)
 		ingress, egress = res.Spec.Ingress, res.Spec.Egress
 		types = res.Spec.Types
 		name = fmt.Sprintf("|%s|%s/%s|", res.Spec.Tier, res.Namespace, res.Name)
 	case *v3.GlobalNetworkPolicy:
+		namespace = m.NamespaceSelector(res.Spec.NamespaceSelector)
+		serviceAccount = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
 		selector = m.Selector(res.Spec.Selector)
 		ingress, egress = res.Spec.Ingress, res.Spec.Egress
 		types = res.Spec.Types
@@ -169,6 +174,7 @@ func compilePolicy(m *MatcherFactory, r resources.Resource, modified bool) (ingr
 			Modified: modified,
 		}
 		ingressPol.add(m.Dst(namespace))
+		ingressPol.add(m.Dst(serviceAccount))
 		ingressPol.add(m.Dst(selector))
 	}
 
@@ -180,6 +186,7 @@ func compilePolicy(m *MatcherFactory, r resources.Resource, modified bool) (ingr
 			Modified: modified,
 		}
 		egressPol.add(m.Src(namespace))
+		egressPol.add(m.Src(serviceAccount))
 		egressPol.add(m.Src(selector))
 	}
 
