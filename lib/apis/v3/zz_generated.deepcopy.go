@@ -1591,12 +1591,12 @@ func (in *GlobalAlertStatus) DeepCopyInto(out *GlobalAlertStatus) {
 		in, out := &in.LastUpdate, &out.LastUpdate
 		*out = (*in).DeepCopy()
 	}
-	if in.LastFired != nil {
-		in, out := &in.LastFired, &out.LastFired
+	if in.LastExecuted != nil {
+		in, out := &in.LastExecuted, &out.LastExecuted
 		*out = (*in).DeepCopy()
 	}
-	if in.LastTriggered != nil {
-		in, out := &in.LastTriggered, &out.LastTriggered
+	if in.LastEvent != nil {
+		in, out := &in.LastEvent, &out.LastEvent
 		*out = (*in).DeepCopy()
 	}
 	if in.ErrorConditions != nil {

@@ -5090,18 +5090,24 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref common.ReferenceCallb
 							Format: "",
 						},
 					},
+					"healthy": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 					"executionState": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
 						},
 					},
-					"lastFired": {
+					"lastExecuted": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
-					"lastTriggered": {
+					"lastEvent": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
@@ -5119,7 +5125,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref common.ReferenceCallb
 						},
 					},
 				},
-				Required: []string{"active"},
+				Required: []string{"active", "healthy"},
 			},
 		},
 		Dependencies: []string{
