@@ -583,7 +583,7 @@ run_individual_test_oneshot() {
 
     # Populate Kubernetes API with data if it exists for this test.
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml ]]; then
-	    KUBECONFIG=/tests/confd_kubeconfig kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
+	    kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
     fi
 
     # For KDD, run Typha.
@@ -609,7 +609,7 @@ run_individual_test_oneshot() {
     # limitations.
     echo "Preparing Calico data for next test"
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml ]]; then
-	    KUBECONFIG=/tests/confd_kubeconfig kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
+	    kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
     fi
     calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
@@ -635,7 +635,6 @@ run_edited_individual_test_oneshot() {
 start_typha() {
     echo "Starting Typha"
     TYPHA_DATASTORETYPE=kubernetes \
-        KUBECONFIG=/tests/confd_kubeconfig \
         TYPHA_LOGSEVERITYSCREEN=debug \
 	typha >$LOGPATH/typha 2>&1 &
     TYPHA_PID=$!

@@ -251,7 +251,7 @@ UPDATE_EXPECTED_DATA?=false
 ## Run template tests against KDD
 test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl bin/typha run-k8s-apiserver
 	-git clean -fx etc/calico/confd
-	docker run --rm --net=host \
+	docker run --rm \
 	        $(EXTRA_DOCKER_ARGS) \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
@@ -262,6 +262,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
 		-e FELIX_TYPHAREADTIMEOUT=50 \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
+		-e KUBECONFIG=/tests/confd_kubeconfig \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_kdd.sh || \
 	{ \
@@ -283,7 +284,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 ## Run template tests against etcd
 test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl bin/calicoctl run-etcd run-k8s-apiserver
 	-git clean -fx etc/calico/confd
-	docker run --rm --net=host \
+	docker run --rm \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
@@ -293,6 +294,9 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		-e GO111MODULE=on \
+		-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+		-e ETCDCTL_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+		-e KUBECONFIG=/tests/confd_kubeconfig \
 		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_etcd.sh'
 	-git clean -fx etc/calico/confd
 
@@ -317,22 +321,27 @@ run-etcd: stop-etcd
 	--net=host \
 	--name calico-etcd $(COREOS_ETCD) \
 	etcd \
-	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
+	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://$(LOCAL_IP_ENV):4001" \
 	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
 
 ## Stops calico-etcd containers
 stop-etcd:
 	@-docker rm -f calico-etcd
 
+.PHONY: tests/confd_kubeconfig
+tests/confd_kubeconfig: tests/confd_kubeconfig.in
+	sed s/@@LOCAL_IP_ENV@@/$(LOCAL_IP_ENV)/ < tests/confd_kubeconfig.in > tests/confd_kubeconfig
+
 ## Kubernetes apiserver used for tests
-run-k8s-apiserver: stop-k8s-apiserver run-etcd
+run-k8s-apiserver: stop-k8s-apiserver run-etcd tests/confd_kubeconfig
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
 	gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
 		  /hyperkube apiserver --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
-		  --service-cluster-ip-range=10.101.0.0/16
+		  --service-cluster-ip-range=10.101.0.0/16 --insecure-bind-address=$(LOCAL_IP_ENV)
 	# Wait until the apiserver is accepting requests.
-	while ! docker exec calico-k8s-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+	docker cp tests/confd_kubeconfig calico-k8s-apiserver:/kubeconfig
+	while ! docker exec calico-k8s-apiserver kubectl --kubeconfig=/kubeconfig get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
 
 ## Stop Kubernetes apiserver
 stop-k8s-apiserver:
