@@ -488,6 +488,8 @@ github.com/tigera/confd-private v0.0.0-20191016172832-dbc3af017426 h1:QEka/YN6td
 github.com/tigera/confd-private v0.0.0-20191016172832-dbc3af017426/go.mod h1:M29XY76iJSDJp0+WlsdfZs4c2q7vqxr97YJIvPC8S64=
 github.com/tigera/confd-private v1.0.1-0.20191016172832-dbc3af017426 h1:lvoZ9wUk1DCcz1k5whdh1sJWxzU/A/j6LFQ0R2ybxKo=
 github.com/tigera/confd-private v1.0.1-0.20191016172832-dbc3af017426/go.mod h1:M29XY76iJSDJp0+WlsdfZs4c2q7vqxr97YJIvPC8S64=
+github.com/tigera/confd-private v1.0.1-0.20191021211022-91a6358c5366 h1:K1nQZxwhYsPMLIsngB1WZbS8j/iD6IbTRrYeBd/2ih0=
+github.com/tigera/confd-private v1.0.1-0.20191021211022-91a6358c5366/go.mod h1:M29XY76iJSDJp0+WlsdfZs4c2q7vqxr97YJIvPC8S64=
 github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a h1:UGZihZgeRqCfzcCbozs4FjZmaOsXV6S0giy17R5gRIU=
 github.com/tigera/felix-private v0.0.0-20190919144311-4759477d655a/go.mod h1:hun0cDm0Yy+kP93Qpu5LTCIwtqR61zEAZ22V1Cr93yg=
 github.com/tigera/felix-private v0.0.0-20191018190509-53c264bd3ab4 h1:uQZCdFhKODCNg902KHHaRzL0tN+0IUFfDrq/ca8Xejo=
