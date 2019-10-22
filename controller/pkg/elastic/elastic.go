@@ -255,7 +255,6 @@ func (e *Elastic) createOrUpdateIndex(ctx context.Context, index, mapping string
 }
 
 func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) error {
-	// Ensure Index exists, or update mappings if it does
 	exists, err := e.c.IndexExists(idx).Do(ctx)
 	if err != nil {
 		return err
@@ -267,25 +266,6 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 		}
 		if !r.Acknowledged {
 			return fmt.Errorf("not acknowledged index %s create", idx)
-		}
-	} else {
-		var m map[string]map[string]interface{}
-		err := json.Unmarshal([]byte(mapping), &m)
-		if err != nil {
-			return err
-		}
-
-		v := m["mappings"]
-		b, err := json.Marshal(&v)
-		if err != nil {
-			return err
-		}
-		r, err := e.c.PutMapping().Index(idx).BodyString(string(b)).Do(ctx)
-		if err != nil {
-			return err
-		}
-		if !r.Acknowledged {
-			return fmt.Errorf("not acknowledged index %s update", idx)
 		}
 	}
 	return nil
