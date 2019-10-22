@@ -2,7 +2,62 @@ kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
   name: default-deny
-  namespace: calico-monitoring
+  namespace: tigera-elasticsearch
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-kibana
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-intrusion-detection
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-manager
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-compliance
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-prometheus
 spec:
   podSelector:
     matchLabels: {}
@@ -13,7 +68,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
-  name: allow-cnx
+  name: allow-tigera
 spec:
   order: 100
 
@@ -23,11 +78,11 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.cnx-apiserver-access
+  name: allow-tigera.cnx-apiserver-access
   namespace: tigera-system
 spec:
   order: 1
-  tier: allow-cnx
+  tier: allow-tigera
   selector: k8s-app == 'cnx-apiserver'
   types:
   - Ingress
@@ -46,11 +101,11 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.cnx-manager-access
+  name: allow-tigera.cnx-manager-access
   namespace: tigera-manager
 spec:
   order: 1
-  tier: allow-cnx
+  tier: allow-tigera
   selector: k8s-app == 'cnx-manager'
   types:
   - Ingress
@@ -70,11 +125,11 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.compliance-server
+  name: allow-tigera.compliance-server
   namespace: tigera-compliance
 spec:
   order: 1
-  tier: allow-cnx
+  tier: allow-tigera
   selector: k8s-app == 'compliance-server'
   types:
   - Ingress
@@ -95,7 +150,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: calico-node-alertmanager
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   ingress:
   - ports:
@@ -113,7 +168,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: calico-node-alertmanager-mesh
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   ingress:
   - from:
@@ -144,7 +199,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: prometheus
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   ingress:
   - ports:
@@ -161,12 +216,12 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.elasticsearch-access
-  namespace: calico-monitoring
+  name: allow-tigera.elasticsearch-access
+  namespace: tigera-elasticsearch
 spec:
   order: 1
-  tier: allow-cnx
-  selector: name == 'es-client-tigera-elasticsearch'
+  tier: allow-tigera
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
   types:
   - Ingress
   ingress:
@@ -187,19 +242,22 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: name == 'kibana-tigera-elasticsearch'
+      selector: k8s-app == 'tigera-secure'
+      namespaceSelector: name == 'tigera-kibana'
     destination:
       ports: [9200]
   - action: Allow
     protocol: TCP
     source:
-      selector: job-name == 'elastic-tsee-installer'
+      selector: job-name == 'intrusion-detection-es-job-installer'
+      namespaceSelector: name == 'tigera-intrusion-detection'
     destination:
       ports: [9200]
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'es-curator'
+      selector: k8s-app == 'elastic-curator'
+      namespaceSelector: name == 'tigera-elasticsearch'
     destination:
       ports: [9200]
   - action: Allow
@@ -211,52 +269,60 @@ spec:
       ports: [9200]
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-benchmarker'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-controller'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-server'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-snapshotter'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-      - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-reporter'
       namespaceSelector: name == 'tigera-compliance'
   - action: Allow
     destination:
-      ports:
-        - 9200
+      ports: [9200]
     protocol: TCP
     source:
       selector: k8s-app == 'intrusion-detection-controller'
       namespaceSelector: name == 'tigera-intrusion-detection'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-operator'
+      namespaceSelector: name == 'tigera-eck-operator'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-operator'
+      namespaceSelector: name == 'tigera-operator'
 
 ---
 
@@ -264,19 +330,19 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.elasticsearch-internal
-  namespace: calico-monitoring
+  name: allow-tigera.elasticsearch-internal
+  namespace: tigera-elasticsearch
 spec:
   order: 1
-  tier: allow-cnx
-  selector: cluster == 'tigera-elasticsearch'
+  tier: allow-tigera
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
   types:
   - Ingress
   ingress:
   - action: Allow
     protocol: TCP
     source:
-      selector: cluster == 'tigera-elasticsearch'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
     destination:
       ports: [9300]
 
@@ -285,12 +351,12 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.kibana-access
-  namespace: calico-monitoring
+  name: allow-tigera.kibana-access
+  namespace: tigera-kibana
 spec:
   order: 1
-  tier: allow-cnx
-  selector: name == 'kibana-tigera-elasticsearch'
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-kibana'
   types:
   - Ingress
   ingress:
@@ -307,20 +373,35 @@ spec:
     protocol: TCP
     source:
       # Allow the installer to access Kibana
-      selector: job-name == 'elastic-tsee-installer'
+      selector: job-name == 'intrusion-detection-es-job-installer'
+      namespaceSelector: name == 'tigera-intrusion-detection'
     destination:
       ports: [5601]
+  - action: Allow
+    destination:
+      ports: [5601]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-operator'
+      namespaceSelector: name == 'tigera-eck-operator'
+  - action: Allow
+    destination:
+      ports: [5601]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-operator'
+      namespaceSelector: name == 'tigera-operator'
 
 ---
 
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-cnx.intrusion-detection-controller
+  name: allow-tigera.intrusion-detection-controller
   namespace: tigera-intrusion-detection
 spec:
   order: 1
-  tier: allow-cnx
+  tier: allow-tigera
   selector: k8s-app == 'intrusion-detection-controller'
   types:
     - Ingress
@@ -343,3 +424,4 @@ spec:
       - "fe80::/10"
   # Pass to subsequent tiers or profiles for further refinement
   - action: Pass
+

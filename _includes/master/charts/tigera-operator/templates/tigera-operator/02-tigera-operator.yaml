@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: tigera-operator
   namespace: tigera-operator
+  labels:
+    k8s-app: tigera-operator
 spec:
   replicas: 1
   selector:
@@ -12,6 +14,7 @@ spec:
     metadata:
       labels:
         name: tigera-operator
+        k8s-app: tigera-operator
     spec:
       tolerations:
         - effect: NoExecute
