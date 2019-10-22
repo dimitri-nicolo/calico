@@ -22,7 +22,7 @@ execute_test_suite() {
     rm $LOGPATH/rendered/*.cfg || true
 
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
-	run_extra_test test_direct_connection
+	run_extra_test test_dual_tor
 	run_extra_test test_bgp_password
 	run_extra_test test_node_deletion
 	run_extra_test test_idle_peers
@@ -257,7 +257,7 @@ EOF
     calicoctl delete bgppeer bgppeer-2
 }
 
-test_direct_connection() {
+test_dual_tor() {
     # Run confd as a background process.
     echo "Running confd as background process"
     NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
@@ -297,7 +297,7 @@ spec:
 EOF
 
     # Expect a "direct" peering.
-    test_confd_templates direct_connection/step1
+    test_confd_templates dual_tor/step1
 
     # Change the peering to omit source address.
     calicoctl apply -f - <<EOF
@@ -312,8 +312,43 @@ spec:
   sourceAddress: None
 EOF
 
-    # Expect a "direct" peering.
-    test_confd_templates direct_connection/step2
+    # Expect direct peering without source address.
+    test_confd_templates dual_tor/step2
+
+    # Change the peering to specify max restart time.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+EOF
+
+    # Expect "graceful restart time 10".
+    test_confd_templates dual_tor/step3
+
+    # Change the peering to specify LLGR.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+EOF
+
+    # Expect LLGR config with stale time 10.
+    test_confd_templates dual_tor/step4
 
     # Kill confd.
     kill -9 $CONFD_PID

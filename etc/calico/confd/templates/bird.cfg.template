@@ -135,7 +135,7 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- end}}
 {{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
   graceful restart time 0;
-  long lived graceful restart;
+  long lived graceful restart yes;
 {{- if ne $data.restart_time ""}}
   long lived stale time {{$data.restart_time}};
 {{- end}}
@@ -176,7 +176,7 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{- end}}
 {{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
   graceful restart time 0;
-  long lived graceful restart;
+  long lived graceful restart yes;
 {{- if ne $data.restart_time ""}}
   long lived stale time {{$data.restart_time}};
 {{- end}}
