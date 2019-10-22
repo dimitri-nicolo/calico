@@ -68,13 +68,16 @@ const (
 	InsecureMode = "insecure"
 )
 
-// Certificate file paths. If explicit certificates aren't provided
-// then self-signed certificates are generated and stored on these
-// paths.
 const (
+	// Certificate file paths. If explicit certificates aren't provided
+	// then self-signed certificates are generated and stored on these
+	// paths.
 	defaultKeyCertGenPath = "/etc/es-proxy/ssl/"
 	defaultCertFileName   = "cert"
 	defaultKeyFileName    = "key"
+
+	// We will use HTTPS if the env variable ELASTIC_SCHEME is not set.
+	defaultElasticScheme = "https"
 )
 
 // Config stores various configuration information for the es-proxy
@@ -137,7 +140,7 @@ func NewConfigFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	elasticScheme := getEnv(elasticSchemeEnv)
+	elasticScheme := getEnvOrDefaultString(elasticSchemeEnv, defaultElasticScheme)
 	elasticHost := getEnv(elasticHostEnv)
 	elasticPort := getEnv(elasticPortEnv)
 	elasticURL := &url.URL{
