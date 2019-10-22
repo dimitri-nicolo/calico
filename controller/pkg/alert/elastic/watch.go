@@ -70,11 +70,14 @@ func Condition(alert v3.GlobalAlert) *elastic.Condition {
 	case libcalicov3.GlobalAlertMetricCount:
 		valueKey = "doc_count"
 	default:
-		valueKey = fmt.Sprintf("%s.value", alert.Spec.Field)
+		valueKey = fmt.Sprintf("get(%q).value", alert.Spec.Field)
 	}
 
-	switch {
-	case len(alert.Spec.AggregateBy) == 0:
+	if _, ok := comparatorMap[alert.Spec.Condition]; !ok {
+		panic(fmt.Errorf("unknown comparator: %s", alert.Spec.Condition))
+	}
+
+	if len(alert.Spec.AggregateBy) == 0 {
 		switch alert.Spec.Metric {
 		case libcalicov3.GlobalAlertMetricCount:
 			return &elastic.Condition{
@@ -86,21 +89,15 @@ func Condition(alert v3.GlobalAlert) *elastic.Condition {
 			}
 		default:
 			return &elastic.Condition{
-				Compare: &elastic.Comparison{
-					Key:       fmt.Sprintf("ctx.payload.aggregations.%s", valueKey),
-					Operation: alert.Spec.Condition,
-					Value:     alert.Spec.Threshold,
+				Script: &elastic.Script{
+					Language: "painless",
+					Source: fmt.Sprintf("ctx.payload.aggregations.%s %s params.threshold",
+						valueKey, comparatorMap[alert.Spec.Condition]),
+					Params: JsonObject{
+						"threshold": alert.Spec.Threshold,
+					},
 				},
 			}
-		}
-	case len(alert.Spec.AggregateBy) == 1:
-		return &elastic.Condition{
-			ArrayCompare: &elastic.ArrayCompare{
-				ArrayPath:  fmt.Sprintf("ctx.payload.aggregations.%s.buckets", alert.Spec.AggregateBy[0]),
-				Path:       valueKey,
-				Quantifier: alert.Spec.Condition,
-				Value:      alert.Spec.Threshold,
-			},
 		}
 	}
 
@@ -122,12 +119,9 @@ func Condition(alert v3.GlobalAlert) *elastic.Condition {
 	source.WriteString("ctx.payload.aggregations")
 
 	for idx, term := range alert.Spec.AggregateBy {
-		source.WriteString(fmt.Sprintf(`.%s.buckets.stream().anyMatch(t%d -> t%d`, term, idx, idx))
+		source.WriteString(fmt.Sprintf(`.get(%q).buckets.stream().anyMatch(t%d -> t%d`, term, idx, idx))
 	}
 
-	if _, ok := comparatorMap[alert.Spec.Condition]; !ok {
-		panic(fmt.Errorf("unknown comparator: %s", alert.Spec.Condition))
-	}
 	source.WriteString(fmt.Sprintf(".%s %s params.threshold\n", valueKey, comparatorMap[alert.Spec.Condition]))
 
 	for _, _ = range alert.Spec.AggregateBy {
@@ -166,7 +160,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 			return &elastic.Transform{
 				Script: elastic.Script{
 					Language: "painless",
-					Source:   fmt.Sprintf(`[ "_value": [[ "%s(%s)": ctx.payload.aggregations.%s.value ]]]`, alert.Spec.Metric, alert.Spec.Field, alert.Spec.Field),
+					Source:   fmt.Sprintf(`[ "_value": [[ "%s(%s)": ctx.payload.aggregations.get(%q).value ]]]`, alert.Spec.Metric, alert.Spec.Field, alert.Spec.Field),
 				},
 			}
 		}
@@ -180,7 +174,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 		key = "doc_count"
 	default:
 		description = fmt.Sprintf("%s(%s)", alert.Spec.Metric, alert.Spec.Field)
-		key = fmt.Sprintf("%s.value", alert.Spec.Field)
+		key = fmt.Sprintf("get(%q).value", alert.Spec.Field)
 	}
 
 	/*
@@ -202,21 +196,27 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 		if idx > 0 {
 			script.WriteString(fmt.Sprintf(`.map(t%d -> t%d`, idx-1, idx-1))
 		}
-		script.WriteString(fmt.Sprintf(`.%s.buckets.stream()`, field))
+		script.WriteString(fmt.Sprintf(`.get(%q).buckets.stream()`, field))
 	}
 
 	maxIdx := len(alert.Spec.AggregateBy) - 1
-	if c, ok := comparatorMap[alert.Spec.Condition]; !ok {
-		panic(fmt.Errorf("unknown comparator: %s", alert.Spec.Condition))
-	} else {
-		script.WriteString(fmt.Sprintf(`.filter(t%d -> t%d.%s %s params.threshold)`, maxIdx, maxIdx, key, c))
+	if alert.Spec.Metric != "" {
+		if c, ok := comparatorMap[alert.Spec.Condition]; !ok {
+			panic(fmt.Errorf("unknown comparator: %s", alert.Spec.Condition))
+		} else {
+			script.WriteString(fmt.Sprintf(`.filter(t%d -> t%d.%s %s params.threshold)`, maxIdx, maxIdx, key, c))
+		}
 	}
 
 	script.WriteString(fmt.Sprintf(`.map(t%d -> [`, maxIdx))
+	var row []string
 	for idx, key := range alert.Spec.AggregateBy {
-		script.WriteString(fmt.Sprintf("%q: t%d.key, ", key, idx))
+		row = append(row, fmt.Sprintf("%q: t%d.key", key, idx))
 	}
-	script.WriteString(fmt.Sprintf("%q: t%d.%s", description, maxIdx, key))
+	if alert.Spec.Metric != "" {
+		row = append(row, fmt.Sprintf("%q: t%d.%s", description, maxIdx, key))
+	}
+	script.WriteString(strings.Join(row, ", "))
 	script.WriteString("]).collect(Collectors.toList())")
 
 	for i := 0; i < len(alert.Spec.AggregateBy)-1; i++ {

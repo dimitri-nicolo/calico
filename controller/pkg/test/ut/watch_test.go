@@ -335,6 +335,15 @@ func TestWatch(t *testing.T) {
 			DataSet:     "audit",
 		},
 	}, 200))
+	t.Run("dots in aggregateBy", f(v3.GlobalAlert{
+		Spec: libcalicov3.GlobalAlertSpec{
+			Description: "audit",
+			Severity:    100,
+			Lookback:    lookback,
+			DataSet:     "audit",
+			AggregateBy: []string{"responseObject.kind"},
+		},
+	}, 1))
 }
 
 func TestActionTransform(t *testing.T) {
