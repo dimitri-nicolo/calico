@@ -47,11 +47,12 @@ PACKAGE_NAME ?= github.com/projectcalico/confd
 
 CALICOCTL_VER=master
 CALICOCTL_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/calicoctl:$(CALICOCTL_VER)-$(ARCH)
+BIRD_VER=v0.3.3-138-ge37e4770
+BIRD_CONTAINER_NAME=calico/bird:$(BIRD_VER)-$(ARCH)
 TYPHA_VER=master
 TYPHA_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/typha:$(TYPHA_VER)-$(ARCH)
 K8S_VERSION?=v1.14.1
 ETCD_VER?=v3.3.7
-BIRD_VER=v0.3.1
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
@@ -351,13 +352,20 @@ bin/kubectl:
 	curl -sSf -L --retry 5 https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl -o $@
 	chmod +x $@
 
-bin/bird:
-	curl -sSf -L --retry 5 https://github.com/projectcalico/bird/releases/download/$(BIRD_VER)/bird -o $@
-	chmod +x $@
-
-bin/bird6:
-	curl -sSf -L --retry 5 https://github.com/projectcalico/bird/releases/download/$(BIRD_VER)/bird6 -o $@
-	chmod +x $@
+bin/bird bin/bird6:
+	-docker rm -f calico-bird
+	# Latest BIRD binaries are stored in automated builds of calico/bird.
+	# To get them, we create (but don't start) a container from that image.
+	docker pull $(BIRD_CONTAINER_NAME)
+	docker create --name calico-bird $(BIRD_CONTAINER_NAME) /bin/sh
+	# Then we copy the files out of the container.  Since docker preserves
+	# mtimes on its copy, check the file really did appear, then touch it
+	# to make sure that downstream targets get rebuilt.
+	docker cp calico-bird:/bird bin/ && \
+	docker cp calico-bird:/bird6 bin/ && \
+	  test -e $@ && \
+	  touch $@
+	-docker rm -f calico-bird
 
 bin/calico-node:
 	cp fakebinary $@
