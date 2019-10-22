@@ -18,7 +18,6 @@ import (
 	"context"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
@@ -53,13 +52,6 @@ func (r stagedKubernetesNetworkPolicies) Create(ctx context.Context, res *apiv3.
 		return nil, err
 	}
 
-	// Properly prefix the name
-	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), names.DefaultTierName)
-	if err != nil {
-		return nil, err
-	}
-	res.GetObjectMeta().SetName(backendPolicyName)
-
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, res)
 	if out != nil {
 		// Add the tier labels if necessary
@@ -86,13 +78,6 @@ func (r stagedKubernetesNetworkPolicies) Update(ctx context.Context, res *apiv3.
 		return nil, err
 	}
 
-	// Properly prefix the name
-	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), names.DefaultTierName)
-	if err != nil {
-		return nil, err
-	}
-	res.GetObjectMeta().SetName(backendPolicyName)
-
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, res)
 	if out != nil {
 		// Add the tier labels if necessary
@@ -108,8 +93,7 @@ func (r stagedKubernetesNetworkPolicies) Update(ctx context.Context, res *apiv3.
 
 // Delete takes name of the StagedKubernetesNetworkPolicy and deletes it. Returns an error if one occurs.
 func (r stagedKubernetesNetworkPolicies) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.StagedKubernetesNetworkPolicy, error) {
-	backendPolicyName := names.TieredPolicyName(name)
-	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, namespace, backendPolicyName)
+	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, namespace, name)
 	if out != nil {
 		// Add the tier labels if necessary
 		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
@@ -121,13 +105,9 @@ func (r stagedKubernetesNetworkPolicies) Delete(ctx context.Context, namespace, 
 // Get takes name of the StagedKubernetesNetworkPolicy, and returns the corresponding StagedKubernetesNetworkPolicy object,
 // and an error if there is any.
 func (r stagedKubernetesNetworkPolicies) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.StagedKubernetesNetworkPolicy, error) {
-	backendPolicyName := names.TieredPolicyName(name)
-	out, err := r.client.resources.Get(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, namespace, backendPolicyName)
+	out, err := r.client.resources.Get(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, namespace, name)
+
 	if out != nil {
-		// Add the tier labels if necessary
-		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
-		// Fill in the tier information from the policy name if we find it missing.
-		// We expect backend policies to have the right name (prefixed with tier name).
 		resOut := out.(*apiv3.StagedKubernetesNetworkPolicy)
 
 		return resOut, err
@@ -138,18 +118,9 @@ func (r stagedKubernetesNetworkPolicies) Get(ctx context.Context, namespace, nam
 // List returns the list of StagedKubernetesNetworkPolicy objects that match the supplied options.
 func (r stagedKubernetesNetworkPolicies) List(ctx context.Context, opts options.ListOptions) (*apiv3.StagedKubernetesNetworkPolicyList, error) {
 	res := &apiv3.StagedKubernetesNetworkPolicyList{}
-	// Add the name prefix if name is provided
-	if opts.Name != "" && !opts.Prefix {
-		opts.Name = names.TieredPolicyName(opts.Name)
-	}
 
 	if err := r.client.resources.List(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, apiv3.KindStagedKubernetesNetworkPolicyList, res); err != nil {
 		return nil, err
-	}
-
-	// Make sure the tier labels are added
-	for i := range res.Items {
-		res.Items[i].GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.Items[i].GetObjectMeta().GetLabels()))
 	}
 
 	return res, nil
@@ -158,10 +129,5 @@ func (r stagedKubernetesNetworkPolicies) List(ctx context.Context, opts options.
 // Watch returns a watch.Interface that watches the stagedKubernetesNetworkPolicies that match the
 // supplied options.
 func (r stagedKubernetesNetworkPolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
-	// Add the name prefix if name is provided
-	if opts.Name != "" {
-		opts.Name = names.TieredPolicyName(opts.Name)
-	}
-
 	return r.client.resources.Watch(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, &policyConverter{})
 }
