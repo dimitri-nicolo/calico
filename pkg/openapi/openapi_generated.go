@@ -4528,7 +4528,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"description", "severity", "period", "lookback", "dataSet", "query", "aggregateBy", "field", "metric", "condition", "threshold"},
+					Required: []string{"description", "severity", "dataSet"},
 				},
 			},
 			Dependencies: []string{
@@ -4549,18 +4549,24 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "",
 							},
 						},
+						"healthy": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
 						"executionState": {
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"string"},
 								Format: "",
 							},
 						},
-						"lastFired": {
+						"lastExecuted": {
 							SchemaProps: spec.SchemaProps{
 								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 							},
 						},
-						"lastTriggered": {
+						"lastEvent": {
 							SchemaProps: spec.SchemaProps{
 								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 							},
@@ -4578,7 +4584,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"active", "executionState", "lastFired", "lastTriggered", "errorConditions"},
+					Required: []string{"active", "healthy"},
 				},
 			},
 			Dependencies: []string{

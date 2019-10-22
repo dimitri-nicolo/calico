@@ -650,7 +650,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	if 1 != len(stagedGlobalNetworkPolicies.Items) {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
-	
+
 	// Should be listing the policy under "net-sec" tier
 	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
 	if err != nil {
@@ -659,7 +659,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	if 1 != len(stagedGlobalNetworkPolicies.Items) {
 		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
-	
+
 	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Get(name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting stagedGlobalNetworkPolicy %s (%s)", name, err)
@@ -965,11 +965,12 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 			Severity:    100,
 		},
 		Status: calico.GlobalAlertStatus{
-			LastUpdate:     v1.Time{Time: time.Now()},
+			LastUpdate:     &v1.Time{Time: time.Now()},
 			Active:         false,
+			Healthy:        false,
 			ExecutionState: "test",
-			LastFired:      v1.Time{Time: time.Now()},
-			LastTriggered:  v1.Time{Time: time.Now()},
+			LastExecuted:   &v1.Time{Time: time.Now()},
+			LastEvent:      &v1.Time{Time: time.Now()},
 			ErrorConditions: []calico.ErrorCondition{
 				{Type: "foo", Message: "bar"},
 			},
@@ -1015,7 +1016,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 
 	globalAlertUpdate := globalAlertServer.DeepCopy()
 	globalAlertUpdate.Spec.Metric = "count"
-	globalAlertUpdate.Status.LastUpdate = v1.Time{Time: time.Now()}
+	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
 	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
@@ -1023,19 +1024,19 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	if globalAlertServer.Spec.Metric != globalAlertUpdate.Spec.Metric {
 		return errors.New("didn't update spec.content")
 	}
-	if !globalAlertServer.Status.LastUpdate.Time.Equal(time.Time{}) {
+	if globalAlertServer.Status.LastUpdate != nil {
 		return errors.New("status was updated by Update()")
 	}
 
 	globalAlertUpdate = globalAlertServer.DeepCopy()
-	globalAlertUpdate.Status.LastUpdate = v1.Time{Time: time.Now()}
+	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
 	globalAlertUpdate.Labels = map[string]string{"foo": "bar"}
 	globalAlertUpdate.Spec.Metric = ""
 	globalAlertServer, err = globalAlertClient.UpdateStatus(globalAlertUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
 	}
-	if globalAlertServer.Status.LastUpdate.Time.Equal(time.Time{}) {
+	if globalAlertServer.Status.LastUpdate == nil {
 		return fmt.Errorf("didn't update status. %v != %v", globalAlertUpdate.Status, globalAlertServer.Status)
 	}
 	if _, ok := globalAlertServer.Labels["foo"]; ok {

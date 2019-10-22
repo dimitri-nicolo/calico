@@ -1,5 +1,5 @@
 hash: c3b0e5c6de5d932cc823de7b228f938f866c202cef92b9373ce0eaa18fbd11f8
-updated: 2019-10-18T15:15:13.621385014-07:00
+updated: 2019-10-22T19:49:38.26236-03:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -10,7 +10,7 @@ imports:
   - compute/metadata
   - internal
 - name: github.com/alecthomas/participle
-  version: 47e04ebc2ece1467df41ac58619473b857008ad1
+  version: 729a7c1de92a95b65b43767b5d76e0904a57a4ea
   subpackages:
   - lexer
 - name: github.com/Azure/go-autorest
@@ -80,7 +80,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/go-playground/locales
-  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
+  version: 9f105231d3a5f6877a2bf8321dfa15ea6f844b1b
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -143,9 +143,9 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/kubernetes/repo-infra
-  version: 9f4571ad7242bf3ec4b47365062498c2528f9a5f
+  version: e7bd7a7c8b3f900d5344bf5909c60f890f9719aa
 - name: github.com/leodido/go-urn
-  version: a67a23e1c1af3c66528573bb86a87246477277c1
+  version: a0f5013415294bb94553821ace21a1a74c0298cc
 - name: github.com/mailru/easyjson
   version: 2f5df55504ebc322e4d52d34df6a1f5b503bf26d
   subpackages:
@@ -181,7 +181,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: a11e66b78538cb02b97157a989a5afb4fa7def88
+  version: fa54e8b77c93318a0e1938df2654eec858babbc3
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -311,11 +311,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 0240832f5c3d9ddcdcd51c66edbf8cd889a54108
+  version: 0bbdf54effa2d03a4c877d09c98ecf9f5bcfb964
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: 5f2a59506353b8d5ba8cbbcd9f3c1f41f1eaf079
+  version: 16bce7d3dc4e458f2f6f56a1349cbbfcdc8a8fdf
   subpackages:
   - internal
   - internal/app_identity
@@ -352,7 +352,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: 556b9da3c05f2a935bc086fb5a0bb55dd8112d2d
+  version: cd1bd581694a11c089aea885a26247c5f783a4cf
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
