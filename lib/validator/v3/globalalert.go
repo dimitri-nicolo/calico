@@ -29,7 +29,7 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel) {
 func validateGlobalAlertPeriod(structLevel validator.StructLevel) {
 	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
 
-	if s.Period.Duration != 0 && s.Period.Duration < api.GlobalAlertMinPeriod {
+	if s.Period != nil && s.Period.Duration != 0 && s.Period.Duration < api.GlobalAlertMinPeriod {
 		structLevel.ReportError(
 			reflect.ValueOf(s.Period),
 			"Period",
@@ -43,7 +43,7 @@ func validateGlobalAlertPeriod(structLevel validator.StructLevel) {
 func validateGlobalAlertLookback(structLevel validator.StructLevel) {
 	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
 
-	if s.Lookback.Duration != 0 && s.Lookback.Duration < api.GlobalAlertMinLookback {
+	if s.Lookback != nil && s.Lookback.Duration != 0 && s.Lookback.Duration < api.GlobalAlertMinLookback {
 		structLevel.ReportError(
 			reflect.ValueOf(s.Lookback),
 			"Lookback",
