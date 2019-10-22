@@ -73,6 +73,8 @@ RUN chmod +x /bin/sumo-config.sh
 COPY ee_entrypoint.sh /bin/
 RUN chmod +x /bin/ee_entrypoint.sh
 
+COPY eks/bin/eks-log-forwarder-startup /bin/
+
 RUN mkdir /fluentd/etc/output_flows
 RUN mkdir /fluentd/etc/output_dns
 RUN mkdir /fluentd/etc/output_tsee_audit

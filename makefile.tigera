@@ -44,8 +44,5 @@ help:
 	$(MAKEFILE_LIST)
 	@echo
 
-clean: #no-op
-	@:
-
 clean-image: imagetag
 	-docker rmi $(BUILD_IMAGE):$(IMAGETAG) $(PUSH_IMAGE):$(IMAGETAG)
