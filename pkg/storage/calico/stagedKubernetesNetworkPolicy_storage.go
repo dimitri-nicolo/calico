@@ -104,11 +104,10 @@ func (rc StagedKubernetesNetworkPolicyConverter) convertToAAPIList(libcalicoList
 	}
 	aapiPolicyList.TypeMeta = lcgPolicyList.TypeMeta
 	aapiPolicyList.ListMeta = lcgPolicyList.ListMeta
+
 	for _, item := range lcgPolicyList.Items {
 		aapiPolicy := aapi.StagedKubernetesNetworkPolicy{}
 		rc.convertToAAPI(&item, &aapiPolicy)
-		if matched, err := pred.Matches(&aapiPolicy); err == nil && matched {
-			aapiPolicyList.Items = append(aapiPolicyList.Items, aapiPolicy)
-		}
+		aapiPolicyList.Items = append(aapiPolicyList.Items, aapiPolicy)
 	}
 }
