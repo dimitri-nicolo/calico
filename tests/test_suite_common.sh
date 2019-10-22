@@ -350,6 +350,84 @@ EOF
     # Expect LLGR config with stale time 10.
     test_confd_templates dual_tor/step4
 
+    # Add BFD.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+EOF
+
+    # Expect BFD to be enabled.
+    test_confd_templates dual_tor/step5
+
+    # Change peer IP so as not to be directly connected.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 192.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+EOF
+
+    # Expect different peer IP and BFD not enabled.
+    test_confd_templates dual_tor/step6
+
+    # Add BIRDGatewayMode DirectIfDirectlyConnected.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 192.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+  birdGatewayMode: DirectIfDirectlyConnected
+EOF
+
+    # No change, because not directly connected.
+    test_confd_templates dual_tor/step6
+
+    # Change peer IP so as to be directly connected.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+  birdGatewayMode: DirectIfDirectlyConnected
+EOF
+
+    # Expect BFD and gateway direct.
+    test_confd_templates dual_tor/step7
+
     # Kill confd.
     kill -9 $CONFD_PID
 

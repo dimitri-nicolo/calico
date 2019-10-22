@@ -17,6 +17,7 @@ spec:
   peerIP: 10.192.0.3
   asNumber: 64567
   sourceAddress: None
+  failureDetectionMode: BFDIfDirectlyConnected
 
 ---
 
