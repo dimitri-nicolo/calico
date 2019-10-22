@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package containers
 
@@ -104,7 +104,7 @@ func (t *TCPDump) Start() {
 
 	select {
 	case <-t.listeningStarted:
-	case <-time.After(30 * time.Second):
+	case <-time.After(60 * time.Second):
 		ginkgo.Fail("Failed to start tcpdump: it never reported that it was listening")
 	}
 
