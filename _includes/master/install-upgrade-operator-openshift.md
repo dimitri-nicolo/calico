@@ -102,13 +102,9 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterr
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-deployment-prometheus-operator.yaml -o manifests/04-deployment-prometheus-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus-operator.yaml -o manifests/04-serviceaccount-prometheus-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus.yaml -o manifests/04-serviceaccount-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/00-namespace-calico-monitoring.yaml -o manifests/00-namespace-calico-monitoring.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-alertmanager-secret.yaml -o manifests/99-alertmanager-secret.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-alertmanager-service.yaml -o manifests/99-alertmanager-service.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-elastic-curator.yaml -o manifests/99-elastic-curator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-kibana-service.yaml -o manifests/99-kibana-service.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-prometheus-service.yaml -o manifests/99-prometheus-service.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-tigera-es-config.yaml -o manifests/99-tigera-es-config.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-apiserver.yaml -o manifests/01-cr-apiserver.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-manager.yaml -o manifests/01-cr-manager.yaml
