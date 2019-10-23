@@ -1236,8 +1236,6 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv
 			peer.EnableBFD = true
 		}
 	}
-
-	return
 }
 
 func withDefault(val, dflt string) string {
