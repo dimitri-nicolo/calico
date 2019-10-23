@@ -703,6 +703,38 @@ st-checks:
 	# running on the host.
 	iptables-save | grep -q 'calico-st-allow-etcd' || iptables $(IPT_ALLOW_ETCD)
 
+.PHONY: dual-tor-test
+dual-tor-test: cnx-node.tar calico_test.created
+	$(MAKE) dual-tor-setup
+	$(MAKE) dual-tor-run-test
+	$(MAKE) dual-tor-cleanup
+
+.PHONY: dual-tor-setup
+dual-tor-setup: cnx-node.tar calico_test.created
+	git submodule update --init
+	cd tests/kind && make
+	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
+	chmod +x ./kubectl
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup tests/k8st/dual-tor/dualtor.sh
+
+.PHONY: dual-tor-run-test
+dual-tor-run-test:
+	docker run -t --rm \
+	    -v $(PWD):/code \
+	    -v /var/run/docker.sock:/var/run/docker.sock \
+	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
+	    -v $(PWD)/kubectl:/root/bin/kubectl \
+	    --privileged \
+	    --net host \
+	${TEST_CONTAINER_NAME} \
+	    sh -c 'echo "container started.." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
+	     cd /code/tests/k8st &&  nosetests dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+
+.PHONY: dual-tor-cleanup
+dual-tor-cleanup:
+	STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
+	rm ./kubectl
+   
 ## Get the kubeadm-dind-cluster script
 K8ST_VERSION?=v1.12
 DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh

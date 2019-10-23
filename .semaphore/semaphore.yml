@@ -2,7 +2,7 @@ version: v1.0
 name: node-private
 agent:
   machine:
-    type: e1-standard-2
+    type: e1-standard-4
     os_image: ubuntu1804
 blocks:
   - name: Run k8s-tests
@@ -23,4 +23,5 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
           # Checkout the code and run the Kubernetes tests.
           - checkout
+          - make dual-tor-test
           - make k8s-test
