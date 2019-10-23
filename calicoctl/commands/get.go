@@ -50,7 +50,8 @@ Options:
                                configuration in YAML or JSON format.
                                [default: ` + constants.DefaultConfigPath + `]
   -n --namespace=<NS>          Namespace of the resource.
-                               Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
+                               Only applicable to NetworkPolicy, StagedNetworkPolicy, StagedKubernetesNetworkPolicy,
+                               NetworkSet, and WorkloadEndpoint.
                                Uses the default namespace if not specified.
   -a --all-namespaces          If present, list the requested object(s) across all namespaces.
   --export                     If present, returns the requested object(s) stripped of
@@ -68,12 +69,15 @@ Description:
     * bgpPeer
     * felixConfiguration
     * globalNetworkPolicy
+    * stagedGlobalNetworkPolicy
     * globalNetworkSet
     * globalThreatFeed
     * hostEndpoint
     * ipPool
     * tier
     * networkPolicy
+    * stagedNetworkPolicy
+    * stagedKubernetesNetworkPolicy
     * networkSet
     * node
     * profile

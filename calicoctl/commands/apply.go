@@ -43,7 +43,8 @@ Options:
                             configuration in YAML or JSON format.
                             [default: ` + constants.DefaultConfigPath + `]
   -n --namespace=<NS>       Namespace of the resource.
-                            Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
+                            Only applicable to NetworkPolicy, StagedNetworkPolicy, StagedKubernetesNetworkPolicy,
+                            NetworkSet, and WorkloadEndpoint.
                             Uses the default namespace if not specified.
 
 Description:
@@ -56,11 +57,14 @@ Description:
     * bgpPeer
     * felixConfiguration
     * globalNetworkPolicy
+    * stagedGlobalNetworkPolicy
     * globalNetworkSet
     * hostEndpoint
     * ipPool
     * tier
     * networkPolicy
+    * stagedNetworkPolicy
+    * stagedKubernetesNetworkPolicy
     * networkSet
     * node
     * profile
