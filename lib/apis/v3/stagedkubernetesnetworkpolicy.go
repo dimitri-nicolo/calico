@@ -15,6 +15,7 @@
 package v3
 
 import (
+	"github.com/jinzhu/copier"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -111,4 +112,14 @@ func NewStagedKubernetesNetworkPolicyList() *StagedKubernetesNetworkPolicyList {
 			APIVersion: GroupVersionCurrent,
 		},
 	}
+}
+
+//ConvertStagedKubernetesPolicyToK8SEnforced converts a StagedKubernetesNetworkPolicy into a StagedAction, networkingv1 NetworkPolicy pair
+func ConvertStagedKubernetesPolicyToK8SEnforced(staged *StagedKubernetesNetworkPolicy) (StagedAction, *networkingv1.NetworkPolicy) {
+	//Convert StagedKubernetesNetworkPolicy to networkingv1.NetworkPolicy
+	enforced := networkingv1.NetworkPolicy{}
+	copier.Copy(&enforced.ObjectMeta, &staged.ObjectMeta)
+	copier.Copy(&enforced.Spec, &staged.Spec)
+	enforced.TypeMeta = metav1.TypeMeta{APIVersion: "networking.k8s.io/v1", Kind: "NetworkPolicy"}
+	return staged.Spec.StagedAction, &enforced
 }

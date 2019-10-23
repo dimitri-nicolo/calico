@@ -139,8 +139,8 @@ func NewStagedNetworkPolicyList() *StagedNetworkPolicyList {
 //ConvertStagedPolicyToEnforced converts a StagedNetworkPolicy into a StagedAction, NetworkPolicy pair
 func ConvertStagedPolicyToEnforced(staged *StagedNetworkPolicy) (StagedAction, *NetworkPolicy) {
 	//Convert StagedNetworkPolicy to NetworkPolicy
-	enforced := NetworkPolicy{}
+	enforced := NewNetworkPolicy()
 	copier.Copy(&enforced.ObjectMeta, &staged.ObjectMeta)
 	copier.Copy(&enforced.Spec, &staged.Spec)
-	return staged.Spec.StagedAction, &enforced
+	return staged.Spec.StagedAction, enforced
 }
