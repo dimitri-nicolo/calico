@@ -24,6 +24,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -81,5 +82,45 @@ var _ = Describe("StagedKubernetesNetworkPolicySpec", func() {
 			}
 			Expect(sknpFieldsByName).To(HaveKey(n))
 		}
+	})
+
+	It("should be able to properly convert from staged to enforced", func() {
+		staged := StagedKubernetesNetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "zinedine",
+				Namespace: "zidane",
+			},
+			Spec: StagedKubernetesNetworkPolicySpec{
+				StagedAction: StagedActionSet,
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{"label": "value"},
+				},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{
+					{
+						Ports: []networkingv1.NetworkPolicyPort{
+							{},
+						},
+						From: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"k": "v",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		stagedAction, enforced := ConvertStagedKubernetesPolicyToK8SEnforced(&staged)
+
+		//TODO: mgianluc all common fields should be checked, though following is good enough coverage
+		Expect(stagedAction).To(Equal(staged.Spec.StagedAction))
+		Expect(enforced.Spec.Ingress).To(Equal(staged.Spec.Ingress))
+		Expect(enforced.Spec.PodSelector).To(Equal(staged.Spec.PodSelector))
+		Expect(enforced.Namespace).To(Equal(staged.Namespace))
+		Expect(enforced.Name).To(Equal(staged.Name))
 	})
 })
