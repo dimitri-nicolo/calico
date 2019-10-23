@@ -934,6 +934,11 @@ endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
+## Vendor is now a no-op, but kept in place for backwards compatibility in our semaphore jobs.
+.PHONY: vendor
+vendor:
+	@echo "vendoring not required for gomod"
+
 ###############################################################################
 # Release
 ###############################################################################
