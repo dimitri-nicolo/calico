@@ -2,9 +2,9 @@
 title: Adopt a zero trust network model for security
 ---
 
-### Big picture 
+### Big picture
 
-Adopting a zero trust network model is best practice for securing workloads and hosts in your cloud-native strategy.  
+Adopting a zero trust network model is best practice for securing workloads and hosts in your cloud-native strategy.
 
 ### Value
 
@@ -101,11 +101,11 @@ At a high level, you will undertake the following steps to establish a Zero Trus
 1. Establish workload identity by using Service Accounts.
 1. Write initial whitelist policies for each service.
 
-After your Zero Trust Network is established, you will need to maintain it. 
+After your Zero Trust Network is established, you will need to maintain it.
 
 #### Install {{site.prodname}}
 
-Follow the [install instructions]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/) to get {{site.prodname}} software running in your cluster.
+Follow the [install instructions]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/) to get {{site.prodname}} software running in your cluster.
 
 #### Install Istio and enable {{site.prodname}} integration
 
@@ -148,15 +148,15 @@ For simple applications, especially if they are maintained by a single team, the
 
 If this is difficult to do from memory, you have several options.
 
-1. Run the application in a test environment with policy enabled.  
-    a. Look at service logs to see what connectivity has broken.   
-    b. Add rules that allow those flows and iterate until the application functions normally.    
+1. Run the application in a test environment with policy enabled.
+    a. Look at service logs to see what connectivity has broken.
+    b. Add rules that allow those flows and iterate until the application functions normally.
     c. Move on to the next service and repeat.
-1. Collect flow logs from a running instance of your application. Tigera Secure Enterprise Edition can be used for this purpose, or the Kiali dashboard that comes with Istio.    
-    a. Process the flow logs to determine the set of flows.    
+1. Collect flow logs from a running instance of your application. Tigera Secure Enterprise Edition can be used for this purpose, or the Kiali dashboard that comes with Istio.
+    a. Process the flow logs to determine the set of flows.
     b. Review the logged flows and add rules for each expected flow.
-1. Use Tigera Secure Enterprise Edition for policy, and put it into logging-only mode.    
-    a. In this mode “denied” connections are logged instead of dropped.    
+1. Use Tigera Secure Enterprise Edition for policy, and put it into logging-only mode.
+    a. In this mode “denied” connections are logged instead of dropped.
     b. Review the “denied” logs and add rules for each expected flow.
 
 When determining flows from a running application instance, be sure to review each rule you add with application developers to determine if it is legitimate and expected. The last thing you want is for a breach-in-progress to be enshrined as expected flows in policy!
@@ -192,7 +192,7 @@ spec:
 Things to notice in this example:
 
 - **Namespace**
-  
+
   Create a {{site.prodname}} NetworkPolicy in the same **namespace** as the service for the whitelist (microblog).
 
   <pre>
@@ -204,28 +204,28 @@ Things to notice in this example:
   {:.no-select-button}
 
 - **Selectors**
-  
+
   The selector controls which pods to apply policy. It should be the same selector used to define the Kubernetes Service.
 
   <pre>
   spec:
     selector: svc == 'post'
   </pre>
-  {:.no-select-button} 
+  {:.no-select-button}
 
 - **Service account by name**
-  
+
   In the **source:** selector, allow **api** and **search** by name. An alternative to selecting service accounts by name, is by namespaceSelector (next example).
 
   <pre>
   source:
     serviceAccount:
       names: ["api", "search"]
-  </pre> 
-  {:.no-select-button} 
+  </pre>
+  {:.no-select-button}
 
 - **Service account by namespaceSelector**
-  
+
   Service Accounts are uniquely identified by name and namespace. Use a **namespaceSelector** to fully-qualify the Service Accounts you are allowing, so if names are repeated in other namespaces they will not be granted access to the service.
 
   <pre>
@@ -236,9 +236,9 @@ Things to notice in this example:
   {:.no-select-button}
 
 - **Rules**
-  
+
   Scope your rules as tightly as possible. In this case we are allowing connection only on TCP port 8080.
-  
+
   <pre>
   destination:
     ports:
@@ -250,7 +250,7 @@ The above example lists the identities that need access to the post service by n
 
 However, some development teams don’t explicitly know who needs access to their service, and don’t need to know. The service might be very generic and used by lots of different applications across the organization---for example: a logging service. Instead of listing the Service Accounts that get access to the service explicitly one-by-one, you can use a label selector that selects on Service Accounts.
 
-In the following example, we have changed the **serviceAccount** clause. Instead of a name, we use a label selector. The **selector: svc-post = access** label grants access to the post service. 
+In the following example, we have changed the **serviceAccount** clause. Instead of a name, we use a label selector. The **selector: svc-post = access** label grants access to the post service.
 
 ```
 apiVersion: projectcalico.org/v3
@@ -275,9 +275,9 @@ spec:
 ```
 Define labels that indicate permission to access services in the cluster. Then, modify the ServiceAccounts for each identity that needs access. In this example, we would add the label **svc-post = access** to the **api** and **search** Service Accounts.
 
-Whether you choose to explicitly name the Service Accounts or use a label selector is up to you, and you can make a different choice for different services. Using explicit names works best for services that have a small number of clients, or when you want the service owner to be involved in the decision to allow something new to access the service. If some other team wants to get access to the service, they call up the owner of the service and ask them to grant access. In contrast, using labels is good when you want more decentralized control. The service owner defines the labels that grant access to the service and trusts the other development teams to label their Service Accounts when they need access. 
+Whether you choose to explicitly name the Service Accounts or use a label selector is up to you, and you can make a different choice for different services. Using explicit names works best for services that have a small number of clients, or when you want the service owner to be involved in the decision to allow something new to access the service. If some other team wants to get access to the service, they call up the owner of the service and ask them to grant access. In contrast, using labels is good when you want more decentralized control. The service owner defines the labels that grant access to the service and trusts the other development teams to label their Service Accounts when they need access.
 
-#### Maintain your zero trust network 
+#### Maintain your zero trust network
 
 The whitelist policies are tightly scoped to the exact expected flows in the applications running in the Zero Trust Network. If these applications are under active development the expected flows will change, and policy, therefore, also needs to change. Maintaining a Zero Trust Network means instituting a change control policy that ensures:
 

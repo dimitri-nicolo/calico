@@ -7,7 +7,7 @@ canonical_url: https://docs.tigera.io/master/maintenance/helm-upgrade-tsee
 
 Ensure that your Kubernetes cluster is already running version 2.4.2 of
 {{site.prodname}} and that {{site.prodname}} was installed using helm charts.
-Upgrades from earlier versions to {{page.version}} is not supported. 
+Upgrades from earlier versions to {{page.version}} is not supported.
 Upgrades from install methods other than helm charts is also not supported.
 
 ## Preparing your cluster for the helm upgrade
@@ -27,7 +27,7 @@ steps to upgrade.
 > your cluster.
 >
 > **Note**: For additional helm documentation, please refer to our
-> [**helm installation docs**]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/helm/).
+> [**helm installation docs**]({{site.url}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/helm/).
 {: .alert .alert-info}
 
 1. Find the helm installation names. We will use these names in the following

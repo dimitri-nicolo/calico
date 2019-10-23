@@ -32,10 +32,10 @@ In addition to adding the necessary Remote Cluster Configuration resources, you 
 Before you can add a Remote Cluster Configuration resource to a cluster, you must
 install {{site.prodname}} on the cluster, following the procedure appropriate to the
 cluster's datastore type.
-- [etcd](../../getting-started/kubernetes/installation/calico#installing-with-federation-using-etcd)
-- [Kubernetes API datastore](../../getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
+- [etcd](/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-etcd)
+- [Kubernetes API datastore](/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
 
-You will also need [calicoctl](../../getting-started/calicoctl/install) installed. `RemoteClusterConfiguration` is created with calicoctl.
+You will also need [calicoctl](/{{page.version}}/getting-started/calicoctl/install) installed. `RemoteClusterConfiguration` is created with calicoctl.
 
 ### About adding a Remote Cluster Configuration resource
 
@@ -53,7 +53,7 @@ If the remote cluster uses etcd as the {{site.prodname}} datastore, set the `dat
 resource to `etcdv3` and populate the `etcd*` fields. You must also fill in either the `kubeconfig` or the `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
-[`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/getting-started/kubernetes/installation/calico#installing-with-federation-using-etcd)
+[`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-etcd)
 will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and
 the Remote Cluster Configuration resource can reference the files using this path.
 
@@ -78,7 +78,7 @@ set the `datastoreType` in the Remote Cluster Configuration resource
 to `kubernetes` and populate the `kubeconfig` or `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
-[`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
+[`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
 will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration](/{{page.version}}/reference/resources/remoteclusterconfiguration)
 can reference the files using this path.
 

@@ -19,10 +19,10 @@ For a test environment, a minimum of 3 nodes is required. For a production envir
 
 - Refer to [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.
 
-- Ensure that your Docker Enterprise cluster also meets the {{site.prodname}} [system requirements](../requirements).
+- Ensure that your Docker Enterprise cluster also meets the {{site.prodname}} [system requirements](/{{page.version}}/getting-started/kubernetes/requirements).
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
 ## Install the Kubectl CLI Tool
 Install the Kubernetes command-line tool, kubectl, to deploy and manage applications on Kubernetes.
@@ -78,7 +78,7 @@ There are a few sections within the `calico-config` section of the `ConfigMap` t
 - `etcd_cert` uncomment and populate this field for TLS enabled etcd with the secret reference`"/calico-secrets/etcd-cert"`
 - `etcd_key` uncomment and populate this field for TLS enabled etcd with the secret reference`"/calico-secrets/etcd-key"`
 
-   > **Tip**: You can specify more than one `etcd_endpoint` IP using commas as delimiters. 
+   > **Tip**: You can specify more than one `etcd_endpoint` IP using commas as delimiters.
    {: .alert .alert-success}
 
 The `calico-etcd-secrets` secret section also needs to be updated with the base64 encoded strings from the UCP client bundle files.
@@ -265,8 +265,8 @@ Apply the manifest with the following cmd:
 kubectl apply -f manager-credentials.yaml
 ```
 
-Now retrieve the token from the cluster. 
-- Find the `cnx-user` service account name. 
+Now retrieve the token from the cluster.
+- Find the `cnx-user` service account name.
 - Get the service account's secret.
 - Retrieve the serets `.data.token` value
 - base64 decode the token

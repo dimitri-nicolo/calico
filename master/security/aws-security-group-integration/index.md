@@ -9,7 +9,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 enforcing granular access control between Kubernetes pods and AWS VPC resources.
 
 If you have
-[enabled the AWS Security Group integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration),
+[enabled the AWS Security Group integration](/{{page.version}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration),
 {{site.prodname}} allows you to control communications between
 [VPC members and pods](/{{page.version}}/security/aws-security-group-integration/vpc-member-access) and between
 [pods and VPC members](/{{page.version}}/security/aws-security-group-integration/pod-access).

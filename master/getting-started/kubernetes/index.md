@@ -11,8 +11,6 @@ This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
 
 You can use this quickstart to quickly and easily try {{side.prodname}} features.
 
-To deploy a cluster suitable for production, refer to [Installation](installation).
-
 ### How to
 
 #### Host requirements

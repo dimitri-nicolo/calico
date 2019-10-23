@@ -2,11 +2,11 @@
 ## Before you begin
 
 - Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
-  [system requirements](../requirements). If you don't, follow the steps in
+  [system requirements](/{{page.version}}/getting-started/kubernetes/requirements). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 {% endunless %}
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" upgrade=include.upgrade %}

@@ -24,9 +24,9 @@ If you used the manifests provided on the [Calico documentation site](https://do
 to install Calico, complete the {{site.prodname}} installation procedure that
 corresponds to your Calico installation method.
 
-- [Installing {{site.prodname}} for policy and networking](../installation/calico)
+- [Installing {{site.prodname}} for policy and networking](/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico)
 
-- [Installing {{site.prodname}} for policy](../installation/other)
+- [Installing {{site.prodname}} for policy](/{{page.version}}/reference/other-install-methods/kubernetes/installation/other)
 
 If you modified the manifests or used the
 [Integration Guide](https://docs.projectcalico.org/latest/getting-started/kubernetes/installation/integration)

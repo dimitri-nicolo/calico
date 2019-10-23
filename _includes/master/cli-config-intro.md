@@ -52,7 +52,7 @@ an error for that cluster.
 #### {{site.prodname}} AWS Security Group Integration
 
 If you are using
-[{{site.prodname}} AWS Security Group Integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration)
+[{{site.prodname}} AWS Security Group Integration](/{{page.version}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration)
 some additional environment variables need to be provided to `{{include.cli}}`
 to ensure endpoints have the proper labels when they are evaluated.
 

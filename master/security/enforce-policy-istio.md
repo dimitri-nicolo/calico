@@ -24,7 +24,7 @@ This how-to guide uses the following Calico features:
 
 ### Before you begin...
 
-[Install Calico and calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/calico)
+[Install Calico and calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/)
 
 ### How to
 
@@ -32,5 +32,5 @@ After you complete the steps to [enable application layer policy]({{site.baseurl
 
 ### Above and beyond
 
-- [Use service accounts in policy rules]({{site.baseurl}}/{{page.version}}/security/service-accounts) 
+- [Use service accounts in policy rules]({{site.baseurl}}/{{page.version}}/security/service-accounts)
 - [Use HTTP methods and paths in policy rules]({{site.baseurl}}/{{page.version}}/security/http-methods)

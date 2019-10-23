@@ -3,10 +3,10 @@ title: Overview
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/
 ---
 
-The [Quickstart](../../../getting-started/kubernetes/) uses an Elasticsearch operator to deploy an
+The [Quickstart](/{{page.version}}/getting-started/kubernetes/) uses an Elasticsearch operator to deploy an
 Elasticsearch cluster and a Kibana instance. You can use these to explore the feature set on a non-production cluster.
 
-For production, you must set up your own Elasticsearch cluster before [installing {{site.prodname}}](../../../getting-started/kubernetes/installation/).
+For production, you must set up your own Elasticsearch cluster before [installing {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/).
 
 {{site.prodname}} pushes detailed [flow logs](flow), [audit logs](ee-audit) and [DNS logs](dns) to Elasticsearch.
 The {{site.prodname}} Manager provides [flow log visualization](view#view-in-mgr). You can also use

@@ -216,7 +216,7 @@ Additionally, provide the CA and passwords for each of the roles:
 --set elasticsearch.elasticInstaller.password=$ELASTIC_INSTALLER_PASSWORD
 ```
 
-For help setting up these roles in your Elasticsearch cluster, see  [Setting up Elasticsearch roles]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/byo-elasticsearch#before-you-begin).
+For help setting up these roles in your Elasticsearch cluster, see  [Setting up Elasticsearch roles]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/byo-elasticsearch#before-you-begin).
 
 ### Setting an Auth Type
 
@@ -310,9 +310,9 @@ Error: validation failed: [unable to recognize "": no matches for kind "Alertman
 To remedy this, either upgrade helm to v2.14+, or pre-install the CRDs:
 
 ```
-kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
 ```
 
 Then install with `createCustomResources=false`.
 
->[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
+>[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)

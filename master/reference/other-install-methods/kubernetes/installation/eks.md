@@ -10,12 +10,12 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 ## Before you begin
 
 - Ensure that you have an EKS cluster with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html)
-  at least eks.2 (for aggregated API server support).   
-  
-- Ensure that your EKS nodes meet [system node requirements.](../../../getting-started/kubernetes/requirements)
+  at least eks.2 (for aggregated API server support).
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/#obtain-a-license-key).
+- Ensure that your EKS nodes meet [system node requirements.](/{{page.version}}/getting-started/kubernetes/requirements)
+
+- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
 - To follow the TLS certificate and key creation instructions below you'll need openssl.
 

@@ -178,39 +178,34 @@ toc:
     path: /reference/architecture/data-path
 - title: Frequently asked questions
   path: /reference/faq
-# TODO: Move source files into the reference section as well.
 - title: Other installation methods
   section:
   - title: Helm
     section:
     - title: Installing Tigera Secure EE using Helm
-      path: /getting-started/kubernetes/installation/helm/
+      path: /reference/other-install-methods/kubernetes/installation/helm/
   # TODO: Convert/merge this with "the hard way" documentation.
   - title: Manual
     section:
     - title: Introduction
-      path: /getting-started/kubernetes/installation/
+      path: /reference/other-install-methods/kubernetes/installation/
     - title: Installing Tigera Secure EE for policy and networking
-      path: /getting-started/kubernetes/installation/calico
+      path: /reference/other-install-methods/kubernetes/installation/calico
     - title: Installing Tigera Secure EE for policy only
-      path: /getting-started/kubernetes/installation/other
-    - title: Enabling application layer policy (optional)
-      path: /getting-started/kubernetes/installation/app-layer-policy
+      path: /reference/other-install-methods/kubernetes/installation/other
     - title: Enabling integration with AWS security groups (optional)
-      path: /getting-started/kubernetes/installation/aws-sg-integration
+      path: /reference/other-install-methods/kubernetes/installation/aws-sg-integration
     - title: Customizing the Calico manifests
-      path: /getting-started/kubernetes/installation/config-options
+      path: /reference/other-install-methods/kubernetes/installation/config-options
     - title: Customizing the Tigera Secure EE manifests
-      path: /getting-started/kubernetes/installation/hosted/cnx/cnx
-    - title: Integration guide (advanced)
-      path: /getting-started/kubernetes/installation/integration
+      path: /reference/other-install-methods/kubernetes/installation/hosted/cnx/cnx
     - title: Using your own Elasticsearch for logs
-      path: /getting-started/kubernetes/installation/byo-elasticsearch
+      path: /reference/other-install-methods/kubernetes/installation/byo-elasticsearch
     - title: Installing Tigera Secure EE on Docker Enterprise
-      path: /getting-started/kubernetes/installation/docker-ee
+      path: /reference/other-install-methods/kubernetes/installation/docker-ee
     - title: Installing Tigera Secure EE on Amazon EKS
-      path: /getting-started/kubernetes/installation/eks
+      path: /reference/other-install-methods/kubernetes/installation/eks
     - title: Installing Tigera Secure EE on Google GKE
-      path: /getting-started/kubernetes/installation/gke
+      path: /reference/other-install-methods/kubernetes/installation/gke
     - title: Installing Tigera Secure EE on Azure AKS
-      path: /getting-started/kubernetes/installation/aks
+      path: /reference/other-install-methods/kubernetes/installation/aks
