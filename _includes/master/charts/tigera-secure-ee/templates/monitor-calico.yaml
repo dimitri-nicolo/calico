@@ -959,6 +959,8 @@ rules:
   - apiGroups:
       - "projectcalico.org"
     resources:
+      - globalalerts
+      - globalalerts/status
       - globalthreatfeeds
       - globalthreatfeeds/status
       - globalnetworksets
