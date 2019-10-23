@@ -261,7 +261,7 @@ EOF
 test_dual_tor() {
     # Run confd as a background process.
     echo "Running confd as background process"
-    CONFD_ENABLE_DIRECT_CONNECTION_DETECTION=t NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_ENABLE_DIRECT_CONNECTION_DETECTION=true NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
     CONFD_PID=$!
     echo "Running with PID " $CONFD_PID
 

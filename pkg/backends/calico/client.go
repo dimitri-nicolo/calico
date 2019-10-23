@@ -123,7 +123,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		c.cache[k] = v
 	}
 
-	if len(os.Getenv(envEnableDirectConnectionDetection)) != 0 {
+	if os.Getenv(envEnableDirectConnectionDetection) == "true" {
 		c.enableDirectConnectionDetection = true
 	}
 
