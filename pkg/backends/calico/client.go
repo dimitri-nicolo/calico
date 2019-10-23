@@ -1215,7 +1215,7 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv
 	for _, peer := range peers {
 		peer.Password = password
 		peer.Extensions = v3res.Spec.Extensions
-		peer.SourceAddr = string(v3res.Spec.SourceAddress)
+		peer.SourceAddr = withDefault(string(v3res.Spec.SourceAddress), string(apiv3.SourceAddressUseNodeIP))
 		peer.RestartMode = withDefault(string(v3res.Spec.RestartMode), string(apiv3.RestartModeGracefulRestart))
 		if v3res.Spec.MaxRestartTime != nil {
 			peer.RestartTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.MaxRestartTime.Duration.Seconds())))

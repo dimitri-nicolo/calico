@@ -127,7 +127,7 @@ template bgp bgp_template {
 {{- else}}
 protocol bgp Global_{{$id}} from bgp_template {
   neighbor {{$data.ip}} as {{$data.as_num}};
-{{- if or (eq $data.source_addr "UseNodeIP") (eq $data.source_addr "")}}
+{{- if eq $data.source_addr "UseNodeIP"}}
   source address {{$node_ip}};  # The local address we use for the TCP connection
 {{- end}}
 {{- if $data.directly_connected}}
@@ -172,7 +172,7 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- else}}
 protocol bgp Node_{{$id}} from bgp_template {
   neighbor {{$data.ip}} as {{$data.as_num}};
-{{- if or (eq $data.source_addr "UseNodeIP") (eq $data.source_addr "")}}
+{{- if eq $data.source_addr "UseNodeIP"}}
   source address {{$node_ip}};  # The local address we use for the TCP connection
 {{- end}}
 {{- if $data.directly_connected}}
