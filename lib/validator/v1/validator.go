@@ -105,6 +105,10 @@ func init() {
 	registerFieldValidator("ipIpMode", validateIPIPMode)
 	registerFieldValidator("policyType", validatePolicyType)
 	registerFieldValidator("portName", validatePortName)
+	registerFieldValidator("sourceAddress", v3.RegexValidator("SourceAddress", v3.SourceAddressRegex))
+	registerFieldValidator("failureDetectionMode", v3.RegexValidator("FailureDetectionMode", v3.FailureDetectionModeRegex))
+	registerFieldValidator("restartMode", v3.RegexValidator("RestartMode", v3.RestartModeRegex))
+	registerFieldValidator("birdGatewayMode", v3.RegexValidator("BIRDGatewayMode", v3.BIRDGatewayModeRegex))
 
 	// Register struct validators.
 	// Shared types.
