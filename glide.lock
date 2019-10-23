@@ -1,5 +1,5 @@
-hash: c3b0e5c6de5d932cc823de7b228f938f866c202cef92b9373ce0eaa18fbd11f8
-updated: 2019-10-22T19:49:38.26236-03:00
+hash: 92882c07113fbae314070e7a9285a23c4872de1af7df7807badf2f27f259b662
+updated: 2019-10-23T01:06:11.579872929Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -247,7 +247,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/tigera/licensing
-  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
+  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -311,7 +311,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 0bbdf54effa2d03a4c877d09c98ecf9f5bcfb964
+  version: ab6dbf99d1006fd5137765d6950f1e98fcc6b0dd
   subpackages:
   - import
 - name: google.golang.org/appengine
