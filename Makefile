@@ -73,7 +73,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.22
+GO_BUILD_VER?=v0.26
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -136,18 +136,17 @@ MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
 
-# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys 
+# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys
 ifdef SSH_AUTH_DIR
-	EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro  
+	EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
 endif
 
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   mkdir -p .go-build-cache && \
+		   mkdir -p .go-build-cache && \
                    docker run --rm \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
@@ -295,7 +294,7 @@ clean-bin:
 
 
 .PHONY: signpost
-signpost: 
+signpost:
 	@echo "------------------------------------------------------------------------------"
 
 ###############################################################################

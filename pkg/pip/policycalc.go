@@ -2,8 +2,9 @@ package pip
 
 import (
 	"context"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"sync"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	log "github.com/sirupsen/logrus"
 
@@ -103,26 +104,58 @@ func (s *pip) applyPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (p
 	modified := make(policycalc.ModifiedResources)
 
 	for _, r := range rs {
+		// Convert staged policies to non-staged/enforced policies. Note that we don't care about the ordering
+		// here since we're currently only passing one resource at a time, and that we skip "delete" actions
+		// for staged policies since they don't exist in the first place.
+		var enforced resources.Resource = nil
+		var stagedAction v3.StagedAction
+
+		switch np := r.Resource.(type) {
+		case *v3.StagedNetworkPolicy:
+			_, enforced = v3.ConvertStagedPolicyToEnforced(np)
+		case *v3.StagedGlobalNetworkPolicy:
+			_, enforced = v3.ConvertStagedGlobalPolicyToEnforced(np)
+		case *v3.StagedKubernetesNetworkPolicy:
+			_, enforced = v3.ConvertStagedKubernetesPolicyToK8SEnforced(np)
+		}
+
+		// We use 'enforced' being set as a proxy for this being a staged policy so we can check whether it's a
+		// "delete" action (in which case we can ignore it).
+		if enforced != nil {
+			if r.Action == "delete" {
+				continue
+			}
+			// type StagedAction currently only has "set" and "delete". We map "set" to a "update" in resource
+			// action terms as that is the same as a "create".
+			if stagedAction == v3.StagedActionDelete {
+				r.Action = "delete"
+			} else {
+				r.Action = "update"
+			}
+		} else {
+			enforced = r.Resource
+		}
+
 		id := resources.GetResourceID(r.Resource)
-		modified.Add(r.Resource)
+		modified.Add(enforced)
 
 		switch r.Action {
 		case "update":
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
-				Resource:   r.Resource,
+				Resource:   enforced,
 				ResourceID: id,
 			}})
 		case "delete":
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
-				Resource:   r.Resource,
+				Resource:   enforced,
 				ResourceID: id,
 			}})
 		case "create":
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
-				Resource:   r.Resource,
+				Resource:   enforced,
 				ResourceID: id,
 			}})
 		}
