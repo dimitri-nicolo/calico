@@ -4,7 +4,7 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-1. The bundled ElasticSearch operator is configured to use a `StorageClass` called `elasticsearch-storage`.
+1. The bundled ElasticSearch operator is configured to use a `StorageClass` called `tigera-elasticsearch`.
    Create a StorageClass with that name providing persistent storage that meets the requirements.
 
    Example 1: Local storage.  You must also provision a persistent volume in this StorageClass for each ElasticSearch node.
@@ -15,7 +15,7 @@
    apiVersion: storage.k8s.io/v1
    kind: StorageClass
    metadata:
-     name: elasticsearch-storage
+     name: tigera-elasticsearch
    provisioner: kubernetes.io/no-provisioner
    volumeBindingMode: WaitForFirstConsumer
    ```
@@ -26,7 +26,7 @@
    apiVersion: storage.k8s.io/v1
    kind: StorageClass
    metadata:
-     name: elasticsearch-storage
+     name: tigera-elasticsearch
    provisioner: kubernetes.io/aws-ebs
    parameters:
      type: gp2

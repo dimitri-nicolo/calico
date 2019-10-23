@@ -62,7 +62,7 @@ in the [ElasticSearch operator documentation](https://github.com/upmc-enterprise
 
 The operator created cluster stores its data in volumes created through
 a Kubernetes `StorageClass`.  It is your responsibility to make a suitable StorageClass available.
-The cluster is configured to use a StorageClass called `elasticsearch-storage`, but this name can be modified
+The cluster is configured to use a StorageClass called `tigera-elasticsearch`, but this name can be modified
 to refer to any suitable StorageClass you have set up.
 
 #### Local

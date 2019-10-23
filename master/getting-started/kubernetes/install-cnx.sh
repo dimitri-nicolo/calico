@@ -40,7 +40,7 @@ DATASTORE=${DATASTORE:="etcdv3"}
 LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
 # Specify the type of elasticsearch storage to use: "none" or "local".
-# When none is selected, a StorageClass called "elasticsearch-storage" must
+# When none is selected, a StorageClass called "tigera-elasticsearch" must
 # be provisioned externally.
 #   ELASTIC_STORAGE="local" ./install-cnx.sh
 ELASTIC_STORAGE=${ELASTIC_STORAGE:="none"}
