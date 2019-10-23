@@ -151,16 +151,18 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
+DOCKER_RUN := mkdir -p .go-pkg-cache .lint-cache $(GOMOD_CACHE) && \
 			  docker run --rm \
 				 --net=host \
 				 $(EXTRA_DOCKER_ARGS) \
 				 -e LOCAL_USER_ID=$(MY_UID) \
 				 -e GOCACHE=/go-cache \
+				 -e GOLANGCI_LINT_CACHE=/lint-cache \
 				 -e GO111MODULE=off \
 				 -v $(HOME)/.glide:/home/user/.glide:rw \
 				 -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
 				 -v $${PWD}/.go-pkg-cache:/go-cache:rw \
+				 -v $${PWD}/.lint-cache:/lint-cache:rw \
 				 -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
 				 -w /go/src/github.com/tigera/calico-k8sapiserver \
 				 -e GOARCH=$(ARCH)

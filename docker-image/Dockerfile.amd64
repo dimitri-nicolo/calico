@@ -1,4 +1,4 @@
-FROM alpine:3.8 as base
+FROM alpine:3.9 as base
 
 # Put our binary in /code rather than directly in /usr/bin.  This allows the downstream builds
 # to more easily extract the apiserver build artifacts from the container.
