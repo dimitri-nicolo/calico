@@ -64,7 +64,7 @@ var globalDefaults = map[string]string{
 
 const envEnableDirectConnectionDetection = "CONFD_ENABLE_DIRECT_CONNECTION_DETECTION"
 
-// BACKENDCLIENTACCESSOR is an interface to access the backend client from the main v2 client.
+// backendClientAccessor is an interface to access the backend client from the main v2 client.
 type backendClientAccessor interface {
 	Backend() api.Client
 }
