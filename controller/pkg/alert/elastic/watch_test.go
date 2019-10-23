@@ -107,7 +107,7 @@ func TestPeriod(t *testing.T) {
 		return func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(Period(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{Period: v1.Duration{i}}})).Should(Equal(e))
+			g.Expect(Period(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{Period: &v1.Duration{i}}})).Should(Equal(e))
 		}
 	}
 
@@ -121,7 +121,7 @@ func TestLookback(t *testing.T) {
 		return func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(Lookback(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{Lookback: v1.Duration{i}}})).Should(Equal(e))
+			g.Expect(Lookback(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{Lookback: &v1.Duration{i}}})).Should(Equal(e))
 		}
 	}
 

@@ -245,17 +245,23 @@ func Trigger(period time.Duration) elastic.Trigger {
 }
 
 func Period(alert v3.GlobalAlert) time.Duration {
+	if alert.Spec.Period == nil {
+		return DefaultPeriod
+	}
 	period := alert.Spec.Period.Duration
 	if period <= 0 {
-		period = DefaultPeriod
+		return DefaultPeriod
 	}
 	return period
 }
 
 func Lookback(alert v3.GlobalAlert) time.Duration {
+	if alert.Spec.Lookback == nil {
+		return DefaultLookback
+	}
 	lookback := alert.Spec.Lookback.Duration
 	if lookback <= 0 {
-		lookback = DefaultLookback
+		return DefaultLookback
 	}
 	return lookback
 }

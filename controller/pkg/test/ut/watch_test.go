@@ -198,7 +198,7 @@ func TestWatch(t *testing.T) {
 		}
 	}
 
-	lookback := v1.Duration{time.Hour * 24 * 365 * 10}
+	lookback := &v1.Duration{time.Hour * 24 * 365 * 10}
 	t.Run("dns", f(v3.GlobalAlert{Spec: libcalicov3.GlobalAlertSpec{
 		Description: "dns",
 		Severity:    100,

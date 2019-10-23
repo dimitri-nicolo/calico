@@ -18,7 +18,7 @@ type watchData struct {
 }
 
 func NewAlertController(xPack elastic.XPackWatcher) controller.Controller {
-	return controller.NewController(watchData{xPack}, statser.SyncFailed)
+	return controller.NewController(watchData{xPack}, statser.ElasticSyncFailed)
 }
 
 func (d watchData) Put(ctx context.Context, name string, value interface{}) error {

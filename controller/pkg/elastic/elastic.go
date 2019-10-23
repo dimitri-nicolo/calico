@@ -63,7 +63,7 @@ func init() {
 	EventIndex = fmt.Sprintf(EventIndexPattern, clusterName)
 	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, clusterName)
 	DNSLogIndex = fmt.Sprintf(DNSLogIndexPattern, clusterName)
-	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, clusterName)
+	AuditIndex = fmt.Sprintf(AuditIndexPattern, clusterName)
 	WatchNamePrefix = fmt.Sprintf(WatchNamePrefixPattern, clusterName)
 }
 
@@ -819,6 +819,14 @@ func (e *Elastic) PutWatch(ctx context.Context, name string, body *PutWatchBody)
 	watchID := WatchNamePrefix + name
 	_, err := e.c.XPackWatchPut(watchID).Body(body).Do(ctx)
 	return err
+}
+
+func (e *Elastic) GetWatchStatus(ctx context.Context, name string) (*elastic.XPackWatchStatus, error) {
+	res, err := e.c.XPackWatchGet(WatchNamePrefix + name).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return res.Status, err
 }
 
 func (e *Elastic) DeleteWatch(ctx context.Context, m db.Meta) error {

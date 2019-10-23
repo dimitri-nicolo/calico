@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,9 +30,12 @@ func TestWatcher_processQueue(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlert: &v3.GlobalAlert{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	w := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	w := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	g.Expect(w).ShouldNot(BeNil())
 
@@ -85,8 +90,10 @@ func TestWatcher_processQueue(t *testing.T) {
 			Type: cache.Added,
 			Object: &v3.GlobalAlert{
 				ObjectMeta: v1.ObjectMeta{
-					Name:            "alert1",
-					ResourceVersion: "test",
+					Name: "alert1",
+				},
+				Spec: libcalicov3.GlobalAlertSpec{
+					Description: "test",
 				},
 			},
 		},
@@ -95,7 +102,7 @@ func TestWatcher_processQueue(t *testing.T) {
 	g.Expect(w.listAlertWatchers()).Should(HaveLen(2))
 	aw, ok := w.getAlertWatcher("alert1")
 	g.Expect(ok).Should(BeTrue())
-	g.Expect(aw.alert.ResourceVersion).Should(Equal("test"))
+	g.Expect(aw.alert.Spec.Description).Should(Equal("test"))
 
 	// an existing alert is modified
 	err = w.processQueue(cache.Deltas{
@@ -103,8 +110,10 @@ func TestWatcher_processQueue(t *testing.T) {
 			Type: cache.Added,
 			Object: &v3.GlobalAlert{
 				ObjectMeta: v1.ObjectMeta{
-					Name:            "alert1",
-					ResourceVersion: "test2",
+					Name: "alert1",
+				},
+				Spec: libcalicov3.GlobalAlertSpec{
+					Description: "test2",
 				},
 			},
 		},
@@ -113,7 +122,7 @@ func TestWatcher_processQueue(t *testing.T) {
 	g.Expect(w.listAlertWatchers()).Should(HaveLen(2))
 	aw, ok = w.getAlertWatcher("alert1")
 	g.Expect(ok).Should(BeTrue())
-	g.Expect(aw.alert.ResourceVersion).Should(Equal("test2"))
+	g.Expect(aw.alert.Spec.Description).Should(Equal("test2"))
 
 	// an existing alert is deleted
 	err = w.processQueue(cache.Deltas{
@@ -140,9 +149,12 @@ func TestWatcher_startAlert_stopAlert(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlert: &v3.GlobalAlert{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	w := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	w := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -173,9 +185,12 @@ func TestWatcher_startAlert_Exists(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlert: &v3.GlobalAlert{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	w := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	w := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -195,9 +210,12 @@ func TestWatcher_stopAlert_notExists(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlert: &v3.GlobalAlert{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	w := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	w := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -209,18 +227,22 @@ func TestWatcher_updateAlert_NotStarted(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	a := util.NewGlobalAlert("mock")
+	b := util.NewGlobalAlert("mock2")
 
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlert: &v3.GlobalAlert{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	w := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	w := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	g.Expect(func() { w.updateAlertWatcher(ctx, a, a.DeepCopy()) }).Should(Panic())
+	g.Expect(func() { w.updateAlertWatcher(ctx, a, b) }).Should(Panic())
 }
 
 func TestWatcher_updateAlert(t *testing.T) {
@@ -231,9 +253,12 @@ func TestWatcher_updateAlert(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlert: &v3.GlobalAlert{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	w := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	w := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -265,9 +290,12 @@ func TestWatcher_Ping(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlertList: &v3.GlobalAlertList{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	uut := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	uut := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	ch := make(chan struct{})
 	defer func() {
@@ -298,9 +326,12 @@ func TestWatcher_PingFail(t *testing.T) {
 	gaf := &calico.MockGlobalAlertInterface{
 		GlobalAlertList: &v3.GlobalAlertList{},
 	}
+	xpack := &idsElastic.MockXPackWatcher{
+		Err: errors.New("test"),
+	}
 	c := elastic.NewMockAlertsController()
 
-	uut := NewWatcher(gaf, c, nil, testClient).(*watcher)
+	uut := NewWatcher(gaf, c, xpack, testClient).(*watcher)
 
 	err := uut.Ping(ctx)
 	g.Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")

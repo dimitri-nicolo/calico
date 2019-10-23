@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -184,13 +185,12 @@ func (s *watcher) startAlertWatcher(ctx context.Context, f *v3.GlobalAlert) {
 		panic(fmt.Sprintf("Alert %s already started", f.Name))
 	}
 
-	fCopy := f.DeepCopy()
-	st := statser.NewStatser(fCopy)
+	st := statser.NewStatser(f.Name, s.xPack, s.globalAlertClient)
 	st.Run(ctx)
 
 	aw := alertWatcher{
 		alert:   f,
-		job:     job.NewJob(f, st, s.alertsController),
+		job:     job.NewJob(f.DeepCopy(), st, s.alertsController),
 		statser: st,
 	}
 
@@ -201,6 +201,11 @@ func (s *watcher) startAlertWatcher(ctx context.Context, f *v3.GlobalAlert) {
 }
 
 func (s *watcher) updateAlertWatcher(ctx context.Context, oldAlert, newAlert *v3.GlobalAlert) {
+	if reflect.DeepEqual(oldAlert.Spec, newAlert.Spec) {
+		log.WithField("name", newAlert.Name).Debug("Spec unchanged")
+		return
+	}
+
 	log.WithFields(log.Fields{
 		"name": newAlert.Name,
 	}).Debug("Updating alert")

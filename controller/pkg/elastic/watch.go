@@ -16,10 +16,46 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
+// https://github.com/elastic/elasticsearch/blob/master/client/rest-high-level/src/main/java/org/elasticsearch/client/watcher/ExecutionState.java
+const (
+	// WatchExecutionStateExecutionNotNeeded the condition of the watch was not met
+	WatchExecutionStateExecutionNotNeeded = "execution_not_needed"
+
+	// WatchExecutionStateThrottled Execution has been throttled due to time-based throttling - this might only affect
+	// a single action though
+	WatchExecutionStateThrottled = "throttled"
+
+	// WatchExecutionStateAcknowledged Execution has been throttled due to ack-based throttling/muting of an action
+	// - this might only affect a single action though
+	WatchExecutionStateAcknowledged = "acknowledged"
+
+	// WatchExecutionStateExecuted regular execution
+	WatchExecutionStateExecuted = "executed"
+
+	// WatchExecutionStateFailed an error in the condition or the execution of the input
+	WatchExecutionStateFailed = "failed"
+
+	// WatchExecutionStateThreadpoolRejection a rejection due to a filled up threadpool
+	WatchExecutionStateThreadpoolRejection = "threadpool_rejection"
+
+	// WatchExecutionStateNotExecutedWatchMissing the execution was scheduled, but in between the watch was deleted
+	WatchExecutionStateNotExecutedWatchMissing = "not_executed_watch_missing"
+
+	// WatchExecutionStateNotExecutedAlreadyQueued even though the execution was scheduled, it was not executed,
+	// because the watch was already queued in the thread pool
+	WatchExecutionStateNotExecutedAlreadyQueued = "not_executed_already_queued"
+
+	// WatchExecutionStateExecutedMultipleTimes this can happen when a watch was executed, but not completely finished
+	// (the triggered watch entry was not deleted), and then watcher is restarted (manually or due to host switch) -
+	// the triggered watch will be executed but the history entry already exists
+	WatchExecutionStateExecutedMultipleTimes = "executed_multiple_times"
+)
+
 type XPackWatcher interface {
 	ListWatches(ctx context.Context) ([]db.Meta, error)
 	ExecuteWatch(ctx context.Context, body *ExecuteWatchBody) (*elastic.XPackWatchRecord, error)
 	PutWatch(ctx context.Context, name string, body *PutWatchBody) error
+	GetWatchStatus(ctx context.Context, name string) (*elastic.XPackWatchStatus, error)
 	DeleteWatch(ctx context.Context, m db.Meta) error
 }
 

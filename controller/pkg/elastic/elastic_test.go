@@ -509,7 +509,9 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	}
 
 	return &http.Response{
+		Request:    req,
 		StatusCode: 500,
+		Body:       ioutil.NopCloser(strings.NewReader("")),
 	}, nil
 }
 

@@ -77,12 +77,18 @@ func (j *job) updateAlert(ctx context.Context, i interface{}) {
 
 	body, err := elastic.Watch(*j.alert)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"name": j.alert.Name,
+		}).WithError(err).Error("compilation failed")
 		j.statser.Error(statser.CompilationFailed, err)
 		return
 	}
 	j.statser.ClearError(statser.CompilationFailed)
 
 	j.controller.Add(ctx, j.alert.Name, body, func(err error) {
+		log.WithFields(log.Fields{
+			"name": j.alert.Name,
+		}).WithError(err).Error("installation failed")
 		j.statser.Error(statser.InstallationFailed, err)
 	}, j.statser)
 	j.statser.ClearError(statser.InstallationFailed)

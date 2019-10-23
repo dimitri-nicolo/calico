@@ -2,7 +2,9 @@ module github.com/tigera/intrusion-detection/controller
 
 go 1.13
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191015232519-60ba728ac4c5
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191022222544-fa54e8b77c93
+
+replace github.com/olivere/elastic/v7 => github.com/tigera/elastic-private/v7 v7.0.0-20191022150625-045a48bc6b72
 
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
@@ -18,13 +20,13 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/kelseyhightower/envconfig v1.3.0 // indirect
 	github.com/lithammer/dedent v1.1.0
-	github.com/olivere/elastic/v7 v7.0.6
+	github.com/olivere/elastic/v7 v7.0.9-0.20191022143522-081b1b2cdaca
 	github.com/onsi/gomega v1.7.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/projectcalico/libcalico-go v3.7.0-0.dev.0.20190328155702-d0e07165e343+incompatible
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/calico-k8sapiserver v2.6.0-0.dev.0.20191008025816-69c76a2d3f54+incompatible
+	github.com/tigera/calico-k8sapiserver v2.6.0-0.dev.0.20191022235142-4bad43c6c421+incompatible
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58

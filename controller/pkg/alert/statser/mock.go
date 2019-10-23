@@ -4,15 +4,12 @@ package statser
 
 import (
 	"context"
-	"time"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type MockStatser struct {
-	LastSuccessfulSync   time.Time
-	LastSuccessfulSearch time.Time
-	ErrorConditions      []v3.ErrorCondition
+	ErrorConditions []v3.ErrorCondition
 }
 
 var _ = Statser(&MockStatser{})
@@ -27,14 +24,6 @@ func (s *MockStatser) Status() v3.GlobalAlertStatus {
 	return v3.GlobalAlertStatus{
 		ErrorConditions: append(s.ErrorConditions),
 	}
-}
-
-func (s *MockStatser) SuccessfulSync() {
-	s.LastSuccessfulSync = time.Now()
-}
-
-func (s *MockStatser) SuccessfulSearch() {
-	s.LastSuccessfulSearch = time.Now()
 }
 
 func (s *MockStatser) Error(t string, err error) {
