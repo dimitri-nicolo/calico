@@ -12,8 +12,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Scroller is a subset of elastic.ScrollService
 type Scroller interface {
 	Do(context.Context) (*elastic.SearchResult, error)
+	Clear(context.Context) error
 }
 
 type scrollerEntry struct {
@@ -47,6 +49,10 @@ func (i *queryIterator) Next() bool {
 
 			r, err := scroller.Do(i.ctx)
 			if err == io.EOF {
+				if err := scroller.Clear(i.ctx); err != nil {
+					i.err = err
+					return false
+				}
 				i.scrollers = i.scrollers[1:]
 				continue
 			}

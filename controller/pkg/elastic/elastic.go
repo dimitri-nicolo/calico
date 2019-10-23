@@ -180,6 +180,7 @@ func (e *Elastic) ListDomainNameSets(ctx context.Context) ([]db.Meta, error) {
 func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
 	scroller := e.c.Scroll(idx).Version(true).FetchSource(false).Query(q)
+	defer scroller.Clear(ctx)
 
 	var ids []db.Meta
 	for {

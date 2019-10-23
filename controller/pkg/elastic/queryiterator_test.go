@@ -79,10 +79,13 @@ func TestElasticFlowLogIterator(t *testing.T) {
 		g.Expect(*actualHits[idx]).Should(Equal(expected[idx]), "Events are retrieved in order.")
 		g.Expect(actualKeys[idx]).Should(Equal(expectedKey))
 	}
+
+	g.Expect(scroll.clearCalled).Should(BeTrue())
 }
 
 type mockScroller struct {
-	results []*elastic.SearchResult
+	results     []*elastic.SearchResult
+	clearCalled bool
 }
 
 func (m *mockScroller) Do(context.Context) (*elastic.SearchResult, error) {
@@ -93,6 +96,11 @@ func (m *mockScroller) Do(context.Context) (*elastic.SearchResult, error) {
 	result := m.results[0]
 	m.results = m.results[1:]
 	return result, nil
+}
+
+func (m *mockScroller) Clear(context.Context) error {
+	m.clearCalled = true
+	return nil
 }
 
 func TestElasticFlowLogIteratorWithError(t *testing.T) {
@@ -125,7 +133,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 
 	scrollers := []scrollerEntry{
 		{db.QueryKeyFlowLogSourceIP, &mockScroller{
-			[]*elastic.SearchResult{
+			results: []*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
 						Hits: []*elastic.SearchHit{&sourceHit},
@@ -134,7 +142,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 			},
 		}, nil},
 		{db.QueryKeyFlowLogDestIP, &mockScroller{
-			[]*elastic.SearchResult{
+			results: []*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
 						Hits: []*elastic.SearchHit{&destHit},
@@ -165,10 +173,18 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 
 	g.Expect(results[0].Index).Should(Equal(sourceHit.Index))
 	g.Expect(results[1].Index).Should(Equal(destHit.Index))
+
+	for _, scroller := range scrollers {
+		g.Expect(scroller.scroller.(*mockScroller).clearCalled).Should(BeTrue())
+	}
 }
 
 type mockScrollerError struct{}
 
 func (m *mockScrollerError) Do(context.Context) (*elastic.SearchResult, error) {
 	return nil, errors.New("fail")
+}
+
+func (m *mockScrollerError) Clear(context.Context) error {
+	return nil
 }

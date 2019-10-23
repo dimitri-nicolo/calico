@@ -483,6 +483,12 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				Request:    req,
 				Body:       mustOpen("test_files/delete.domainnameset.1.r.json"),
 			}, nil
+		case u == baseURI+"/_search/scroll":
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       ioutil.NopCloser(strings.NewReader("")),
+			}, nil
 		default:
 			return &http.Response{
 				StatusCode: 404,
