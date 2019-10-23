@@ -9,3 +9,4 @@ etc/calico/confd/config
 /*.ps1
 /dist/*.zip
 *.exe
+/tests/confd_kubeconfig

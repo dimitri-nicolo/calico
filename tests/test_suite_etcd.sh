@@ -24,8 +24,8 @@ export LOGPATH=/tests/logs/etcd
 # We are using etcdv3.  Set the datastore parms for calicoctl/confd/etcdctl
 export ETCDCTL_API=3
 export DATASTORE_TYPE=etcdv3
-export ETCD_ENDPOINTS=http://127.0.0.2:2379
-export KUBECONFIG=/tests/confd_kubeconfig
+echo KUBECONFIG is $KUBECONFIG
+echo ETCD_ENDPOINTS is $ETCD_ENDPOINTS
 
 # Clean etcd of all data
 echo "Cleaning out etcd and deleting old logs"

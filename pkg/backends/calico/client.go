@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"reflect"
@@ -60,6 +61,8 @@ var globalDefaults = map[string]string{
 	"/calico/bgp/v1/global/node_mesh": `{"enabled": true}`,
 	globalLogging:                     "info",
 }
+
+const envEnableDirectConnectionDetection = "CONFD_ENABLE_DIRECT_CONNECTION_DETECTION"
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
 type backendClientAccessor interface {
@@ -120,6 +123,10 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		c.cache[k] = v
 	}
 
+	if os.Getenv(envEnableDirectConnectionDetection) == "true" {
+		c.enableDirectConnectionDetection = true
+	}
+
 	// Create secret watcher.  Must do this before the syncer, because updates from
 	// the syncer can trigger calling c.secretWatcher.MarkStale().
 	if c.secretWatcher, err = NewSecretWatcher(c); err != nil {
@@ -140,6 +147,8 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	// callback) then we terminate confd - the calico/node init process will restart the
 	// confd process.
 	c.nodeLogKey = fmt.Sprintf("/calico/bgp/v1/host/%s/loglevel", template.NodeName)
+	c.nodeIPv4Key = fmt.Sprintf("/calico/bgp/v1/host/%s/ip_addr_v4", template.NodeName)
+	c.nodeIPv6Key = fmt.Sprintf("/calico/bgp/v1/host/%s/ip_addr_v6", template.NodeName)
 	c.nodeV1Processor = updateprocessors.NewBGPNodeUpdateProcessor()
 
 	typhaAddr, err := discoverTyphaAddr(&confdConfig.Typha)
@@ -311,8 +320,16 @@ type client struct {
 	// This node's log level key.
 	nodeLogKey string
 
+	// This node's IP address keys.
+	nodeIPv4Key string
+	nodeIPv6Key string
+
 	// Subcomponent for accessing and watching secrets (that hold BGP passwords).
 	secretWatcher *secretWatcher
+
+	// Whether we auto-detect when peers are directly connected
+	// and configure "direct" instead of "multihop".
+	enableDirectConnectionDetection bool
 }
 
 // SetPrefixes is called from confd to notify this client of the full set of prefixes that will
@@ -388,11 +405,17 @@ func (c *client) OnInSync(source string) {
 }
 
 type bgpPeer struct {
-	PeerIP      cnet.IP              `json:"ip"`
-	ASNum       numorstring.ASNumber `json:"as_num,string"`
-	RRClusterID string               `json:"rr_cluster_id"`
-	Extensions  map[string]string    `json:"extensions"`
-	Password    string               `json:"password"`
+	PeerIP            cnet.IP              `json:"ip"`
+	ASNum             numorstring.ASNumber `json:"as_num,string"`
+	RRClusterID       string               `json:"rr_cluster_id"`
+	Extensions        map[string]string    `json:"extensions"`
+	Password          string               `json:"password"`
+	SourceAddr        string               `json:"source_addr"`
+	DirectlyConnected bool                 `json:"directly_connected"`
+	RestartMode       string               `json:"restart_mode"`
+	RestartTime       string               `json:"restart_time"`
+	GatewayMode       string               `json:"gateway_mode"`
+	EnableBFD         bool                 `json:"enable_bfd"`
 }
 
 func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
@@ -493,8 +516,9 @@ func (c *client) updatePeersV1() {
 					continue
 				}
 				peers = append(peers, &bgpPeer{
-					PeerIP: *ip,
-					ASNum:  v3res.Spec.ASNumber,
+					PeerIP:     *ip,
+					ASNum:      v3res.Spec.ASNumber,
+					SourceAddr: string(v3res.Spec.SourceAddress),
 				})
 			}
 			log.Debugf("Peers %#v", peers)
@@ -503,11 +527,9 @@ func (c *client) updatePeersV1() {
 				continue
 			}
 
-			password := c.getPassword(v3res)
+			c.setPeerConfigFieldsFromV3Resource(peers, v3res)
 
 			for _, peer := range peers {
-				peer.Extensions = v3res.Spec.Extensions
-				peer.Password = password
 				log.Debugf("Peer: %#v", peer)
 				if globalPass {
 					key := model.GlobalBGPPeerKey{PeerIP: peer.PeerIP}
@@ -558,16 +580,20 @@ func (c *client) updatePeersV1() {
 			continue
 		}
 
-		password := c.getPassword(v3res)
-
+		var peers []*bgpPeer
 		for _, peerNodeName := range peerNodeNames {
-			for _, peer := range c.nodeAsBGPPeers(peerNodeName) {
-				peer.Extensions = v3res.Spec.Extensions
-				peer.Password = password
-				for _, localNodeName := range localNodeNames {
-					key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
-					emit(key, peer)
-				}
+			peers = append(peers, c.nodeAsBGPPeers(peerNodeName)...)
+		}
+		if len(peers) == 0 {
+			continue
+		}
+
+		c.setPeerConfigFieldsFromV3Resource(peers, v3res)
+
+		for _, peer := range peers {
+			for _, localNodeName := range localNodeNames {
+				key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
+				emit(key, peer)
 			}
 		}
 	}
@@ -1138,4 +1164,93 @@ func (c *client) DeleteStaticRoutes(cidrs []string) {
 		c.keyUpdated(k)
 	}
 	c.onNewUpdates()
+}
+
+func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv3.BGPPeer) {
+
+	// Get the password, if one is configured
+	password := c.getPassword(v3res)
+
+	// If the BGPPeer has SourceAddress UseNodeIP, a potential direct connection
+	// subnet must also contain the node IP, so get those ready.
+	var sourceIPv4, sourceIPv6 net.IP
+	if v3res.Spec.SourceAddress == apiv3.SourceAddressUseNodeIP || v3res.Spec.SourceAddress == "" {
+		if sourceIPv4Str := c.cache[c.nodeIPv4Key]; sourceIPv4Str != "" {
+			sourceIPv4 = net.ParseIP(sourceIPv4Str)
+			if sourceIPv4 == nil {
+				log.Warnf("Failed to parse IPv4 %v", sourceIPv4Str)
+			}
+		}
+		if sourceIPv6Str := c.cache[c.nodeIPv6Key]; sourceIPv6Str != "" {
+			sourceIPv6 = net.ParseIP(sourceIPv6Str)
+			if sourceIPv6 == nil {
+				log.Warnf("Failed to parse IPv6 %v", sourceIPv6Str)
+			}
+		}
+	}
+
+	// To compute which peers are directly connected, first collect all of the subnets
+	// associated with local interfaces, and which include the source IP if specified.
+	var localSubnets []*net.IPNet
+	if ifaces, err := net.Interfaces(); err == nil {
+		for _, iface := range ifaces {
+			addrs, err := iface.Addrs()
+			if err != nil {
+				log.Warnf("Cannot get interface %v address(es): %v", iface, err)
+				continue
+			}
+			for _, addr := range addrs {
+				addrStr := addr.String()
+				_, ipNet, err := net.ParseCIDR(addrStr)
+				if err != nil {
+					log.WithError(err).WithField("Address", addrStr).Warning("Failed to parse CIDR")
+					continue
+				}
+				if sourceIPv4 != nil && ipNet.IP.To4() != nil && !(*ipNet).Contains(sourceIPv4) {
+					// IPv4 subnet does not contain the wanted source IP.
+					continue
+				}
+				if sourceIPv6 != nil && ipNet.IP.To16() != nil && !(*ipNet).Contains(sourceIPv6) {
+					// IPv6 subnet does not contain the wanted source IP.
+					continue
+				}
+				localSubnets = append(localSubnets, ipNet)
+			}
+		}
+	} else {
+		log.WithError(err).Warnf("Failed to enumerate interfaces")
+	}
+	log.Infof("Local subnets for IPv4 %v and IPv6 %v are: %v", sourceIPv4, sourceIPv6, localSubnets)
+
+	for _, peer := range peers {
+		peer.Password = password
+		peer.Extensions = v3res.Spec.Extensions
+		peer.SourceAddr = withDefault(string(v3res.Spec.SourceAddress), string(apiv3.SourceAddressUseNodeIP))
+		peer.RestartMode = withDefault(string(v3res.Spec.RestartMode), string(apiv3.RestartModeGracefulRestart))
+		if v3res.Spec.MaxRestartTime != nil {
+			peer.RestartTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.MaxRestartTime.Duration.Seconds())))
+		}
+		for _, subnet := range localSubnets {
+			if c.enableDirectConnectionDetection && subnet.Contains(peer.PeerIP.IP) {
+				log.Infof("Local subnet %v contains peer IP %v", subnet, peer.PeerIP)
+				peer.DirectlyConnected = true
+				break
+			}
+		}
+		if v3res.Spec.BIRDGatewayMode == apiv3.BIRDGatewayModeDirectIfDirectlyConnected && peer.DirectlyConnected {
+			peer.GatewayMode = "direct"
+		} else {
+			peer.GatewayMode = "recursive"
+		}
+		if v3res.Spec.FailureDetectionMode == apiv3.FailureDetectionModeBFDIfDirectlyConnected && peer.DirectlyConnected {
+			peer.EnableBFD = true
+		}
+	}
+}
+
+func withDefault(val, dflt string) string {
+	if val != "" {
+		return val
+	}
+	return dflt
 }

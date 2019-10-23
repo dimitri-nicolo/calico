@@ -47,11 +47,12 @@ PACKAGE_NAME ?= github.com/projectcalico/confd
 
 CALICOCTL_VER=master
 CALICOCTL_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/calicoctl:$(CALICOCTL_VER)-$(ARCH)
+BIRD_VER=v0.3.3-138-ge37e4770
+BIRD_CONTAINER_NAME=calico/bird:$(BIRD_VER)-$(ARCH)
 TYPHA_VER=master
 TYPHA_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/typha:$(TYPHA_VER)-$(ARCH)
 K8S_VERSION?=v1.14.1
 ETCD_VER?=v3.3.7
-BIRD_VER=v0.3.1
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
@@ -251,7 +252,7 @@ UPDATE_EXPECTED_DATA?=false
 ## Run template tests against KDD
 test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl bin/typha run-k8s-apiserver
 	-git clean -fx etc/calico/confd
-	docker run --rm --net=host \
+	docker run --rm \
 	        $(EXTRA_DOCKER_ARGS) \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
@@ -262,6 +263,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
 		-e FELIX_TYPHAREADTIMEOUT=50 \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
+		-e KUBECONFIG=/tests/confd_kubeconfig \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_kdd.sh || \
 	{ \
@@ -283,7 +285,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 ## Run template tests against etcd
 test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl bin/calicoctl run-etcd run-k8s-apiserver
 	-git clean -fx etc/calico/confd
-	docker run --rm --net=host \
+	docker run --rm \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
@@ -293,6 +295,9 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		-e GO111MODULE=on \
+		-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+		-e ETCDCTL_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+		-e KUBECONFIG=/tests/confd_kubeconfig \
 		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_etcd.sh'
 	-git clean -fx etc/calico/confd
 
@@ -317,22 +322,27 @@ run-etcd: stop-etcd
 	--net=host \
 	--name calico-etcd $(COREOS_ETCD) \
 	etcd \
-	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
+	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://$(LOCAL_IP_ENV):4001" \
 	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
 
 ## Stops calico-etcd containers
 stop-etcd:
 	@-docker rm -f calico-etcd
 
+.PHONY: tests/confd_kubeconfig
+tests/confd_kubeconfig: tests/confd_kubeconfig.in
+	sed s/@@LOCAL_IP_ENV@@/$(LOCAL_IP_ENV)/ < tests/confd_kubeconfig.in > tests/confd_kubeconfig
+
 ## Kubernetes apiserver used for tests
-run-k8s-apiserver: stop-k8s-apiserver run-etcd
+run-k8s-apiserver: stop-k8s-apiserver run-etcd tests/confd_kubeconfig
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
 	gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
 		  /hyperkube apiserver --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
-		  --service-cluster-ip-range=10.101.0.0/16
+		  --service-cluster-ip-range=10.101.0.0/16 --insecure-bind-address=$(LOCAL_IP_ENV)
 	# Wait until the apiserver is accepting requests.
-	while ! docker exec calico-k8s-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+	docker cp tests/confd_kubeconfig calico-k8s-apiserver:/kubeconfig
+	while ! docker exec calico-k8s-apiserver kubectl --kubeconfig=/kubeconfig get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
 
 ## Stop Kubernetes apiserver
 stop-k8s-apiserver:
@@ -342,13 +352,20 @@ bin/kubectl:
 	curl -sSf -L --retry 5 https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl -o $@
 	chmod +x $@
 
-bin/bird:
-	curl -sSf -L --retry 5 https://github.com/projectcalico/bird/releases/download/$(BIRD_VER)/bird -o $@
-	chmod +x $@
-
-bin/bird6:
-	curl -sSf -L --retry 5 https://github.com/projectcalico/bird/releases/download/$(BIRD_VER)/bird6 -o $@
-	chmod +x $@
+bin/bird bin/bird6:
+	-docker rm -f calico-bird
+	# Latest BIRD binaries are stored in automated builds of calico/bird.
+	# To get them, we create (but don't start) a container from that image.
+	docker pull $(BIRD_CONTAINER_NAME)
+	docker create --name calico-bird $(BIRD_CONTAINER_NAME) /bin/sh
+	# Then we copy the files out of the container.  Since docker preserves
+	# mtimes on its copy, check the file really did appear, then touch it
+	# to make sure that downstream targets get rebuilt.
+	docker cp calico-bird:/bird bin/ && \
+	docker cp calico-bird:/bird6 bin/ && \
+	  test -e $@ && \
+	  touch $@
+	-docker rm -f calico-bird
 
 bin/calico-node:
 	cp fakebinary $@

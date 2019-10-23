@@ -22,6 +22,8 @@ execute_test_suite() {
     rm $LOGPATH/rendered/*.cfg || true
 
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+	run_extra_test test_dual_tor
+	run_extra_test test_dual_tor_direct_not_enabled
 	run_extra_test test_bgp_password
 	run_extra_test test_node_deletion
 	run_extra_test test_idle_peers
@@ -254,6 +256,241 @@ EOF
     calicoctl delete node node4
     calicoctl delete bgppeer bgppeer-1
     calicoctl delete bgppeer bgppeer-2
+}
+
+test_dual_tor() {
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    CONFD_ENABLE_DIRECT_CONNECTION_DETECTION=true NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off.
+    turn_mesh_off
+
+    # Create 2 nodes with IPs directly on a local subnet, and a
+    # peering between them.
+    calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node1
+spec:
+  bgp:
+    ipv4Address: 172.17.0.5/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node2
+spec:
+  bgp:
+    ipv4Address: 172.17.0.6/24
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+EOF
+
+    # Expect a "direct" peering.
+    test_confd_templates dual_tor/step1
+
+    # Change the peering to omit source address.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+EOF
+
+    # Expect direct peering without source address.
+    test_confd_templates dual_tor/step2
+
+    # Change the peering to specify max restart time.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+EOF
+
+    # Expect "graceful restart time 10".
+    test_confd_templates dual_tor/step3
+
+    # Change the peering to specify LLGR.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+EOF
+
+    # Expect LLGR config with stale time 10.
+    test_confd_templates dual_tor/step4
+
+    # Add BFD.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+EOF
+
+    # Expect BFD to be enabled.
+    test_confd_templates dual_tor/step5
+
+    # Change peer IP so as not to be directly connected.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 192.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+EOF
+
+    # Expect different peer IP and BFD not enabled.
+    test_confd_templates dual_tor/step6
+
+    # Add BIRDGatewayMode DirectIfDirectlyConnected.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 192.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+  birdGatewayMode: DirectIfDirectlyConnected
+EOF
+
+    # No change, because not directly connected.
+    test_confd_templates dual_tor/step6
+
+    # Change peer IP so as to be directly connected.
+    calicoctl apply -f - <<EOF
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+  sourceAddress: None
+  maxRestartTime: 10s
+  restartMode: LongLivedGracefulRestart
+  failureDetectionMode: BFDIfDirectlyConnected
+  birdGatewayMode: DirectIfDirectlyConnected
+EOF
+
+    # Expect BFD and gateway direct.
+    test_confd_templates dual_tor/step7
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    calicoctl delete node node1
+    calicoctl delete node node2
+}
+
+test_dual_tor_direct_not_enabled() {
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off.
+    turn_mesh_off
+
+    # Create 2 nodes with IPs directly on a local subnet, and a
+    # peering between them.
+    calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node1
+spec:
+  bgp:
+    ipv4Address: 172.17.0.5/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node2
+spec:
+  bgp:
+    ipv4Address: 172.17.0.6/24
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  node: node1
+  peerIP: 172.17.0.6
+  asNumber: 64512
+EOF
+
+    # Expect a "multihop" peering, because direct detection is not enabled.
+    test_confd_templates dual_tor_direct_not_enabled/step1
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    calicoctl delete node node1
+    calicoctl delete node node2
 }
 
 test_node_deletion() {
@@ -583,7 +820,7 @@ run_individual_test_oneshot() {
 
     # Populate Kubernetes API with data if it exists for this test.
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml ]]; then
-	    KUBECONFIG=/tests/confd_kubeconfig kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
+	    kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
     fi
 
     # For KDD, run Typha.
@@ -609,7 +846,7 @@ run_individual_test_oneshot() {
     # limitations.
     echo "Preparing Calico data for next test"
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml ]]; then
-	    KUBECONFIG=/tests/confd_kubeconfig kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
+	    kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
     fi
     calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
@@ -635,7 +872,6 @@ run_edited_individual_test_oneshot() {
 start_typha() {
     echo "Starting Typha"
     TYPHA_DATASTORETYPE=kubernetes \
-        KUBECONFIG=/tests/confd_kubeconfig \
         TYPHA_LOGSEVERITYSCREEN=debug \
 	typha >$LOGPATH/typha 2>&1 &
     TYPHA_PID=$!
