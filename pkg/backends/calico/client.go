@@ -62,7 +62,9 @@ var globalDefaults = map[string]string{
 	globalLogging:                     "info",
 }
 
-// backendClientAccessor is an interface to access the backend client from the main v2 client.
+const envEnableDirectConnectionDetection = "CONFD_ENABLE_DIRECT_CONNECTION_DETECTION"
+
+// BACKENDCLIENTACCESSOR is an interface to access the backend client from the main v2 client.
 type backendClientAccessor interface {
 	Backend() api.Client
 }
@@ -119,6 +121,10 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	}
 	for k, v := range globalDefaults {
 		c.cache[k] = v
+	}
+
+	if len(os.Getenv(envEnableDirectConnectionDetection)) != 0 {
+		c.enableDirectConnectionDetection = true
 	}
 
 	// Create secret watcher.  Must do this before the syncer, because updates from
@@ -320,6 +326,10 @@ type client struct {
 
 	// Subcomponent for accessing and watching secrets (that hold BGP passwords).
 	secretWatcher *secretWatcher
+
+	// Whether we auto-detect when peers are directly connected
+	// and configure "direct" instead of "multihop".
+	enableDirectConnectionDetection bool
 }
 
 // SetPrefixes is called from confd to notify this client of the full set of prefixes that will
@@ -1221,7 +1231,7 @@ func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv
 			peer.RestartTime = fmt.Sprintf("%v", int(math.Round(v3res.Spec.MaxRestartTime.Duration.Seconds())))
 		}
 		for _, subnet := range localSubnets {
-			if subnet.Contains(peer.PeerIP.IP) {
+			if c.enableDirectConnectionDetection && subnet.Contains(peer.PeerIP.IP) {
 				log.Infof("Local subnet %v contains peer IP %v", subnet, peer.PeerIP)
 				peer.DirectlyConnected = true
 				break
