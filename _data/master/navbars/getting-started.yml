@@ -20,6 +20,10 @@ toc:
       path: /getting-started/kubernetes/managed-public-cloud/iks
     - title: Microsoft Azure Kubernetes Service (AKS)
       path: /getting-started/kubernetes/managed-public-cloud/aks
+  - title: Self-managed on-prem
+    section:
+    - title: Docker Enterprise
+      path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
   - title: Enabling application layer policy (optional)
     path: /getting-started/kubernetes/installation/app-layer-policy
   # - title: Tigera Secure EE the hard way
@@ -48,10 +52,6 @@ toc:
   #     path: /getting-started/kubernetes/hardway/end-user-rbac
   #   - title: Istio integration
   #     path: /getting-started/kubernetes/hardway/istio-integration
-  - title: Self-managed on-prem
-    section:
-    - title: Docker Enterprise
-      path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
