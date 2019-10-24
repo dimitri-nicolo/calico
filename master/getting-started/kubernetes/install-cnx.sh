@@ -966,7 +966,7 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
-  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml"
 
 
   # Irrespective of datastore type, for federation we'll need to create a federation secret since the manifests assume
@@ -1722,9 +1722,9 @@ installCNX() {
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
 
   if [ "${ELASTIC_STORAGE}" != "none" ]; then
-    applyElasticStorageManifest     # Apply elastic-storage.yaml
+    applyElasticStorageManifest   # Apply elastic-storage.yaml
   fi
-  applyElasticCRDManifest        # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
+  applyElasticCRDManifest         # Apply operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   applyOperatorManifest           # Apply operator.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
@@ -1744,7 +1744,7 @@ uninstallCNX() {
 
   deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
   deleteOperatorManifest         # Delete operator.yaml
-  deleteElasticCRDManifest      # Delete operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
+  deleteElasticCRDManifest       # Delete operator-crds.yaml containing Elasticsearch, Kibana and Prometheus resources
   deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
