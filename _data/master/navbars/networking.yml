@@ -6,6 +6,8 @@ toc:
   path: /networking/
 - title: Connecting workloads across networks that you do not control
   path: /networking/vxlan-ipip
+- title: Configure default IP pools
+  path: /networking/initial-ippool
 - title: Migrate from one IP pool to another
   path: /networking/migrate-pools
 - title: Route reflectors
