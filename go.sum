@@ -498,6 +498,8 @@ github.com/tigera/felix-private v0.0.0-20191018190509-53c264bd3ab4 h1:uQZCdFhKOD
 github.com/tigera/felix-private v0.0.0-20191018190509-53c264bd3ab4/go.mod h1:HRWE/+LRrXdJbo5VblcwHjQfOIK0ie7wccDUxlZppNo=
 github.com/tigera/felix-private v0.0.0-20191018230628-e3a86ca81c9b h1:rLQAnhqP0ejDGzgwUvUq4cCRPetBghUWSpsaXbtOp5U=
 github.com/tigera/felix-private v0.0.0-20191018230628-e3a86ca81c9b/go.mod h1:HRWE/+LRrXdJbo5VblcwHjQfOIK0ie7wccDUxlZppNo=
+github.com/tigera/felix-private v0.0.0-20191024031716-6289352955b1 h1:t4JLvTApKC/YOqq24RgATEiuGdW1gYoho0LcoSS+3Sg=
+github.com/tigera/felix-private v0.0.0-20191024031716-6289352955b1/go.mod h1:63W0pltbhb4R1BpctInumtKk0gyxkBAmQizjYjBPsWY=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v0.0.0-20190913172157-338f687c53ee h1:Za+XDAdUL2LPwEb7uadw/NM2dbox4JN77Kx4TRX4ue0=
@@ -514,6 +516,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191022222544-fa54e8b77c93 h1:g
 github.com/tigera/libcalico-go-private v1.7.2-0.20191022222544-fa54e8b77c93/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191023101351-06fbfcb69fbb h1:IJ4p5XePYptx6clIZttpnCcQOJNEIFwmhrj+OfyUWeI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191023101351-06fbfcb69fbb/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191023180429-19de633fc0bc h1:s2GDAqoQjljsrTbljv1KVy9BYPBvlYkq6n6p6UolAa0=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191023180429-19de633fc0bc/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
