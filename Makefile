@@ -241,14 +241,8 @@ local_build:
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/cni-plugin=../cni-plugin
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/kelseyhightower/confd=../confd
 else
-# Note that update_replace_pin invokes `go mod download`, which will fail for all but the last call in this target. That's
-# expected since the local directories are not volume mounted anymore.
 local_build:
-	-$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
-	-$(call update_replace_pin,github.com/projectcalico/typha,github.com/tigera/typha-private,master)
-	-$(call update_replace_pin,github.com/projectcalico/felix,github.com/tigera/felix-private,master)
-	-$(call update_replace_pin,github.com/projectcalico/cni-plugin,github.com/tigera/cni-plugin-private,master)
-	$(call update_replace_pin,github.com/kelseyhightower/confd,github.com/tigera/confd-private,master)
+	@echo "Building node-private"
 endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
