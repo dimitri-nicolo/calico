@@ -1327,10 +1327,12 @@ func validateStagedNetworkPolicy(structLevel validator.StructLevel) {
 				"StagedNetworkPolicySpec", "", reason("Selector field is required"), "")
 		}
 	} else {
+		empty := api.NewStagedNetworkPolicy()
+		empty.Spec.StagedAction = api.StagedActionDelete
 		//the network policy fields should all "zero-value" when the update type is "delete"
-		if !reflect.DeepEqual(api.NetworkPolicySpec{}, enforced.Spec) {
+		if !reflect.DeepEqual(empty.Spec, staged.Spec) {
 			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedNetworkPolicySpec", "", reason("Spec fields should all be zero-value is stagedAction is Delete"), "")
+				"StagedNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
 		}
 	}
 }
@@ -1488,9 +1490,11 @@ func validateStagedGlobalNetworkPolicy(structLevel validator.StructLevel) {
 		}
 	} else {
 		//the network policy fields should all "zero-value" when the update type is "delete"
-		if !reflect.DeepEqual(api.GlobalNetworkPolicySpec{}, enforced.Spec) {
+		empty := api.NewStagedGlobalNetworkPolicy()
+		empty.Spec.StagedAction = api.StagedActionDelete
+		if !reflect.DeepEqual(empty.Spec, staged.Spec) {
 			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedGlobalNetworkPolicySpec", "", reason("Spec fields should all be zero-value is stagedAction is Delete"), "")
+				"StagedGlobalNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
 		}
 	}
 }
@@ -1538,9 +1542,11 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 		}
 	} else {
 		//the network policy fields should all "zero-value" when the update type is "delete"
-		if !reflect.DeepEqual(api.NetworkPolicySpec{}, enforced.Spec) {
+		empty := api.NewStagedKubernetesNetworkPolicy()
+		empty.Spec.StagedAction = api.StagedActionDelete
+		if !reflect.DeepEqual(empty.Spec, staged.Spec) {
 			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedKubernetesNetworkPolicySpec", "", reason("Spec fields should all be zero-value is stagedAction is Delete"), "")
+				"StagedKubernetesNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
 		}
 	}
 }

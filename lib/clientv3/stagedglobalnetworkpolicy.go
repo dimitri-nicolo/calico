@@ -60,7 +60,7 @@ func (r stagedGlobalNetworkPolicies) Create(ctx context.Context, res *apiv3.Stag
 	if res.Spec.StagedAction != apiv3.StagedActionDelete {
 		defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 	} else {
-		res.Spec.Types = []apiv3.PolicyType{}
+		res.Spec.Types = []apiv3.PolicyType(nil)
 	}
 
 	if err := validator.Validate(res); err != nil {
@@ -104,7 +104,7 @@ func (r stagedGlobalNetworkPolicies) Update(ctx context.Context, res *apiv3.Stag
 	if res.Spec.StagedAction != apiv3.StagedActionDelete {
 		defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 	} else {
-		res.Spec.Types = []apiv3.PolicyType{}
+		res.Spec.Types = []apiv3.PolicyType(nil)
 	}
 
 	if err := validator.Validate(res); err != nil {
