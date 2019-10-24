@@ -159,10 +159,8 @@ EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/proje
 local_build:
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
-# Note that update_replace_pin invokes `go mod download`, which will fail for all but the last call in this target. That's
-# expected since the local directories are not volume mounted anymore.
 local_build:
-	$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
+	@echo "Building typha-private"
 endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
