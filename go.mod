@@ -1,10 +1,10 @@
 module github.com/tigera/es-proxy
 
-go 1.11
+go 1.13
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v2.4.1-0.20190605125757-c00322e56455+incompatible
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190913172157-338f687c53ee // indirect
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191023180429-19de633fc0bc // indirect
 	k8s.io/api => k8s.io/api v0.0.0-20180308224125-73d903622b73
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20180228050457-302974c03f7e
 	k8s.io/client-go => k8s.io/client-go v7.0.0+incompatible
@@ -13,14 +13,11 @@ replace (
 require (
 	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/sprig v2.20.0+incompatible // indirect
-	github.com/aquasecurity/kube-bench v0.0.29 // indirect
 	github.com/emicklei/go-restful v2.9.6+incompatible // indirect
 	github.com/go-ini/ini v1.42.0 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
-	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
-	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
@@ -28,6 +25,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
+	github.com/olivere/elastic v6.2.25+incompatible // indirect
 	github.com/olivere/elastic/v7 v7.0.6
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
