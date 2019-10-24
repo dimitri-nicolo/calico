@@ -236,7 +236,7 @@ spec:
     protocol: TCP
     source:
       selector: k8s-app == 'eks-log-forwarder'
-      namespaceSelector: name == 'tigera-compliance'
+      namespaceSelector: name == 'tigera-fluentd'
     destination:
       ports: [9200]
   - action: Allow
