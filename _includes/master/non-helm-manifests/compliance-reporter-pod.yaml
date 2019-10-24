@@ -79,6 +79,8 @@ spec:
           key: tigera.elasticsearch.ca.path
           optional: true
     volumeMounts:
+    - mountPath: /var/log/calico
+      name: var-log-calico
     - name: elastic-ca-cert-volume
       mountPath: /etc/ssl/elastic/
     livenessProbe:
@@ -87,6 +89,10 @@ spec:
         port: 9099
         host: localhost
   volumes:
+  - name: var-log-calico 
+    hostPath:
+      path: /var/log/calico
+      type: DirectoryOrCreate
   - name: elastic-ca-cert-volume
     secret:
       optional: true

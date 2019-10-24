@@ -10,4 +10,6 @@ imagePullSecrets:
   calico-pull-secret: ""
 complianceBenchmarker:
   runAsPrivileged: true
+complianceReporter:
+  runAsPrivileged: true
 {% endhelm %}

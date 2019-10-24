@@ -183,6 +183,10 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
     complianceReporter:
       image: #{imageRegistry}#{versions["compliance-reporter"].image}
       tag: #{versions["compliance-reporter"].version}
+      # Set to true to create a security context constraint for compliance reporter enabling
+      # it to write report logs volume-mounted from the host in environments where doing
+      # so is restricted.
+      runAsPrivileged: false
       env:
         # Optional environment variables for configuring the compliance reporter.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:

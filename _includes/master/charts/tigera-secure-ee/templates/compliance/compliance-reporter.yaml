@@ -118,7 +118,13 @@ template:
 {{- if .Values.complianceReporter.env }}
 {{ toYaml .Values.complianceReporter.env | indent 6 }}
 {{- end }}
+{{- if .Values.complianceReporter.runAsPrivileged }}
+      securityContext:
+        privileged: true
+{{- end }}
       volumeMounts:
+      - mountPath: /var/log/calico
+        name: var-log-calico
       - name: elastic-ca-cert-volume
         mountPath: /etc/ssl/elastic/
       livenessProbe:
@@ -126,6 +132,10 @@ template:
           path: /liveness
           port: 9099
     volumes:
+      - name: var-log-calico
+        hostPath:
+          path: /var/log/calico
+          type: DirectoryOrCreate
       - name: elastic-ca-cert-volume
         secret:
           optional: true
