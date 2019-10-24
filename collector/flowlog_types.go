@@ -421,6 +421,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 		AggregatedName: parts[5],
 	}
 	f.SrcLabels = stringToLabels(parts[6])
+	if srcType == FlowLogEndpointTypeNs {
+		namespace, name := extractNamespaceFromNetworkSet(f.SrcMeta.AggregatedName)
+		f.SrcMeta.Namespace = namespace
+		f.SrcMeta.AggregatedName = name
+	}
 
 	switch parts[7] {
 	case "wep":
@@ -440,6 +445,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 		AggregatedName: parts[10],
 	}
 	f.DstLabels = stringToLabels(parts[11])
+	if dstType == FlowLogEndpointTypeNs {
+		namespace, name := extractNamespaceFromNetworkSet(f.DstMeta.AggregatedName)
+		f.DstMeta.Namespace = namespace
+		f.DstMeta.AggregatedName = name
+	}
 
 	var sip, dip [16]byte
 	if parts[12] != "-" {
