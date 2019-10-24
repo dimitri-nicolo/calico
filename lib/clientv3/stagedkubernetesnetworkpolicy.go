@@ -54,12 +54,8 @@ func (r stagedKubernetesNetworkPolicies) Create(ctx context.Context, res *apiv3.
 
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, res)
 	if out != nil {
-		// Add the tier labels if necessary
-		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.StagedKubernetesNetworkPolicy), err
 	}
-	// Add the tier labels if necessary
-	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
 
 	return nil, err
 }
@@ -80,13 +76,8 @@ func (r stagedKubernetesNetworkPolicies) Update(ctx context.Context, res *apiv3.
 
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, res)
 	if out != nil {
-		// Add the tier labels if necessary
-		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.StagedKubernetesNetworkPolicy), err
 	}
-
-	// Add the tier labels if necessary
-	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
 
 	return nil, err
 }
@@ -95,8 +86,6 @@ func (r stagedKubernetesNetworkPolicies) Update(ctx context.Context, res *apiv3.
 func (r stagedKubernetesNetworkPolicies) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.StagedKubernetesNetworkPolicy, error) {
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, namespace, name)
 	if out != nil {
-		// Add the tier labels if necessary
-		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.StagedKubernetesNetworkPolicy), err
 	}
 	return nil, err
@@ -129,5 +118,5 @@ func (r stagedKubernetesNetworkPolicies) List(ctx context.Context, opts options.
 // Watch returns a watch.Interface that watches the stagedKubernetesNetworkPolicies that match the
 // supplied options.
 func (r stagedKubernetesNetworkPolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
-	return r.client.resources.Watch(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, &policyConverter{})
+	return r.client.resources.Watch(ctx, opts, apiv3.KindStagedKubernetesNetworkPolicy, nil)
 }

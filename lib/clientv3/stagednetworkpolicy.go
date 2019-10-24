@@ -63,7 +63,7 @@ func (r stagedNetworkPolicies) Create(ctx context.Context, res *apiv3.StagedNetw
 	if res.Spec.StagedAction != apiv3.StagedActionDelete {
 		defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 	} else {
-		res.Spec.Types = []apiv3.PolicyType{}
+		res.Spec.Types = []apiv3.PolicyType(nil)
 	}
 
 	if strings.HasPrefix(res.GetObjectMeta().GetName(), conversion.K8sNetworkPolicyNamePrefix) {
@@ -117,7 +117,7 @@ func (r stagedNetworkPolicies) Update(ctx context.Context, res *apiv3.StagedNetw
 	if res.Spec.StagedAction != apiv3.StagedActionDelete {
 		defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 	} else {
-		res.Spec.Types = []apiv3.PolicyType{}
+		res.Spec.Types = []apiv3.PolicyType(nil)
 	}
 
 	if strings.HasPrefix(res.GetObjectMeta().GetName(), conversion.K8sNetworkPolicyNamePrefix) {
