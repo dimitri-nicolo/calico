@@ -814,7 +814,7 @@ mod-download:
 	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
 
 .PHONY: ci
-ci: mod-download static-checks ut fv image-all build-windows-archive st
+ci: clean mod-download static-checks ut fv image-all assert-not-dirty build-windows-archive st
 
 ## Deploys images to registry
 cd:
@@ -826,6 +826,11 @@ ifndef BRANCH_NAME
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+
+# Assert no local changes after a clean build. This helps catch errors resulting from
+# misconfigured go.mod / go.sum / gitignore, etc.
+assert-not-dirty: 
+	@./hack/check-dirty.sh
 
 ###############################################################################
 # Release
