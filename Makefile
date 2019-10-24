@@ -80,7 +80,7 @@ local_build:
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
 local_build:
-	$(call update_replace_pin,github.com/projectcalico/libcalico-go,github.com/tigera/libcalico-go-private,master)
+	@echo "Building cni-plugin-private"
 endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) && \
