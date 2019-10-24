@@ -34,7 +34,7 @@ type Config struct {
 	// Controller specific data.
 	Namespace                  string        `envconfig:"TIGERA_COMPLIANCE_JOB_NAMESPACE" default:"calico-monitoring"`
 	JobStartDelay              time.Duration `envconfig:"TIGERA_COMPLIANCE_JOB_START_DELAY" default:"30m"`
-	MaxActiveJobs              int           `envconfig:"TIGERA_COMPLIANCE_MAX_ACTIVE_JOBS" default:"5"`
+	MaxActiveJobs              int           `envconfig:"TIGERA_COMPLIANCE_MAX_ACTIVE_JOBS" default:"1"`
 	MaxSuccessfulJobsHistory   int           `envconfig:"TIGERA_COMPLIANCE_MAX_SUCCESSFUL_JOBS_HISTORY" default:"2"`
 	MaxFailedJobsHistory       int           `envconfig:"TIGERA_COMPLIANCE_MAX_FAILED_JOBS_HISTORY" default:"10"`
 	IgnoreUnstartedReportAfter time.Duration `envconfig:"TIGERA_COMPLIANCE_IGNORE_UNSTARTED_REPORT_AFTER" default:"168h"`
