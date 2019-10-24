@@ -393,7 +393,7 @@ mod-download:
 version: image
 	docker run --rm $(BUILD_IMAGE):latest-$(ARCH) calico-typha --version
 
-ci: mod-download image-all version static-checks ut
+ci: clean mod-download image-all assert-not-dirty version static-checks ut
 ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 	@$(MAKE) k8sfv-test
 endif
@@ -413,6 +413,11 @@ k8sfv-test: image
 	cd .. && git clone https://github.com/projectcalico/felix.git && cd felix; \
 	[ ! -e ../typha/semaphore-felix-branch ] || git checkout $(cat ../typha/semaphore-felix-branch); \
 	JUST_A_MINUTE=true USE_TYPHA=true FV_TYPHAIMAGE=$(BUILD_IMAGE):latest TYPHA_VERSION=latest $(MAKE) k8sfv-test
+
+# Assert no local changes after a clean build. This helps catch errors resulting from
+# misconfigured go.mod / go.sum / gitignore, etc.
+assert-not-dirty:
+	@./hack/check-dirty.sh
 
 ###############################################################################
 # Release
