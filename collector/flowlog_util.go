@@ -135,11 +135,12 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData, ip [16]byte) (EndpointMet
 			Namespace:      flowLogNamespaceGlobal,
 		}
 	case model.NetworkSetKey:
+		namespace, name := extractNamespaceFromNetworkSet(k.Name)
 		// No Endpoint was found so instead, a NetworkSet was returned.
 		em = EndpointMetadata{
 			Type:           FlowLogEndpointTypeNs,
-			Namespace:      flowLogFieldNotIncluded,
-			AggregatedName: k.Name,
+			Namespace:      namespace,
+			AggregatedName: name,
 			Name:           k.Name,
 		}
 	default:
@@ -310,4 +311,16 @@ func stringToFlowExtras(origIPsStr string, numOrigIPStr string) FlowExtras {
 		OriginalSourceIPs:    unflattenIPSlice(ips),
 		NumOriginalSourceIPs: numOrigIP,
 	}
+}
+
+// There is support for both global and namespaced networkset. In case of
+// namespaced networkset, aggregatedName is namespace/name format. Extract
+// namespace and name from it.
+func extractNamespaceFromNetworkSet(aggregatedName string) (string, string) {
+	res := strings.Split(aggregatedName, "/")
+	if (len(res)) > 1 {
+		return res[0], res[1]
+	}
+
+	return flowLogFieldNotIncluded, aggregatedName
 }
