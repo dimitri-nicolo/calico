@@ -5,14 +5,12 @@ canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevent
 
 ## Flow Log Aggregation
 
-By default, {{site.prodname}} aggregates flow logs so that flows to and from
-pods in the same replica set are summarized if the flows are accepted (denied
-flows are not aggregated this way by default).  However, some of the [anomaly
-detection jobs look for pods that are behaving anomalously with respect to
-other pods in their replica set.
+By default, {{site.prodname}} collects and aggregates flow logs for all traffic that is allowed to pass to and
+from pods, while denied flows are collected but not aggregated by default. Aggregating flow data simplifies 
+some pieces of information, as individual flows are generalized according to their common components. This 
+allows users to search and visualize traffic patterns as opposed to individual connections.
 
-If you choose to use these jobs you will need to turn down the level of aggregation.  To do so,
-set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConfiguration][felixconfig].
+However, anomaly detection requires that additional flow data be stored. To do so, set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConfiguration][felixconfig].
 
 ## Enabling anomaly detection jobs
 
