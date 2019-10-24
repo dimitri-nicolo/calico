@@ -12,6 +12,8 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 - Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials) and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
+
 ### How to
 
 1. [Install {{site.prodname}}](#install-tigera-secure-ee)
@@ -29,6 +31,8 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
    ```
 
 1. Install your pull secret.
+
+   If pulling images directly from `quay.io/tigera`, you will likely want to use the credentials provided to you by your Tigera support representative. If using a private registry, use your private registry credentials instead.
 
    ```
    kubectl create secret generic tigera-pull-secret \

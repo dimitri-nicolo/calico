@@ -11,6 +11,7 @@ Install Tigera Secure in a Docker Enterprise deployed Kubernetes cluster.
 
 - [Create a compatible Docker EE cluster](#create-a-compatible-docker-ee-cluster)
 - [Gather the necessary resources](#gather-required-resources)
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
 
 #### Create a compatible Docker EE cluster
 
@@ -54,6 +55,8 @@ Install Tigera Secure in a Docker Enterprise deployed Kubernetes cluster.
    ```
 
 1. Install your pull secret.
+
+   If pulling images directly from `quay.io/tigera`, you will likely want to use the credentials provided to you by your Tigera support representative. If using a private registry, use your private registry credentials instead.
 
    ```
    kubectl create secret generic tigera-pull-secret \
