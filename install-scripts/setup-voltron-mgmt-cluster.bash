@@ -2,8 +2,8 @@
 
 # Patch the following for CNX Manager containers: 
 # - For cnx-manager, enable ENABLE_MULTI_CLUSTER_MANAGEMENT
-# - For cnx-manager-proxy, mount volume to use secret cnx-voltron-tunnel
-# - For cnx-manager-proxy, open 9449 port to accept tunnels
+# - For tigera-voltron, mount volume to use secret cnx-voltron-tunnel
+# - For tigera-voltron, open 9449 port to accept tunnels
 
 # Create certs that will be used for Voltron
 mkdir -p /tmp/certs
@@ -36,10 +36,10 @@ EOF
 # Extract the internal ip of a the master to populate VOLTRON_PUBLIC_IP
 INTERNAL_IP=$(kubectl get nodes -o wide | grep "master" | awk '{print $6}')
 echo "Using Voltron Public Ip ${INTERNAL_IP}"
-kubectl set env deployment cnx-manager  -ncalico-monitoring -c cnx-manager-proxy VOLTRON_PUBLIC_IP=${INTERNAL_IP}:30449
+kubectl set env deployment cnx-manager  -ncalico-monitoring -c tigera-voltron VOLTRON_PUBLIC_IP=${INTERNAL_IP}:30449
 
 kubectl patch deployment -n calico-monitoring cnx-manager --patch \
-'{"spec":{"template":{"spec":{"containers":[{"name":"cnx-manager","env":[{"name": "ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}]},{ "name":"cnx-manager-proxy","env":[{"name": "VOLTRON_TUNNEL_PORT", "value": "9449"}], "volumeMounts":[{"mountPath":"/certs/tunnel/","name":"cnx-voltron-tunnel"}]}],"volumes":[{"name":"cnx-voltron-tunnel","secret":{"secretName":"cnx-voltron-tunnel"}}]}}}}'
+'{"spec":{"template":{"spec":{"containers":[{"name":"cnx-manager","env":[{"name": "ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}]},{ "name":"tigera-voltron","env":[{"name": "VOLTRON_TUNNEL_PORT", "value": "9449"}], "volumeMounts":[{"mountPath":"/certs/tunnel/","name":"cnx-voltron-tunnel"}, {"mountPath":"/certs/tunnel-not-user/","name":"cnx-manager-tls"}]}],"volumes":[{"name":"cnx-voltron-tunnel","secret":{"secretName":"cnx-voltron-tunnel"}}]}}}}'
 
 kubectl apply -f - <<EOF
 apiVersion: v1
