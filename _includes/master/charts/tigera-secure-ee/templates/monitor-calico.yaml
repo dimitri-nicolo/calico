@@ -701,7 +701,7 @@ metadata:
   labels:
     k8s-app: es-curator
 spec:
-  schedule: "@daily"
+  schedule: "@hourly"
   jobTemplate:
     spec:
       template:
