@@ -376,7 +376,7 @@ spec:
         resources:
           requests:
             storage: {{.Values.elasticsearch.persistentVolume.capacity}}
-        storageClassName: elasticsearch-storage
+        storageClassName: tigera-elasticsearch
 
 ---
 

@@ -1,11 +1,11 @@
-# This manifest implements elasticsearch-storage using local host-path volumes.
+# This manifest implements tigera-elasticsearch using local host-path volumes.
 # It is not suitable for production use; and only works on single node clusters.
-# For production or multinode clusters, use a different elasticsearch-storage implementation.
+# For production or multinode clusters, use a different tigera-elasticsearch implementation.
 
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: elasticsearch-storage
+  name: tigera-elasticsearch
   namespace: calico-monitoring
 provisioner: kubernetes.io/host-path
 
@@ -24,4 +24,4 @@ spec:
   hostPath:
     path: /var/tigera/elastic-data/1
   persistentVolumeReclaimPolicy: Recycle
-  storageClassName: elasticsearch-storage
+  storageClassName: tigera-elasticsearch
