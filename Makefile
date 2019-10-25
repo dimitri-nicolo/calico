@@ -404,6 +404,8 @@ fix go-fmt goimports:
 ## Run what CI runs
 ci: clean static-checks tigera/cnx-apiserver fv ut check-generated-files
 
+GIT_VERSION?=$(shell git describe --tags --dirty --always)
+
 ## Deploys images to registry
 cd:
 ifndef CONFIRM
@@ -413,6 +415,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
+	$(MAKE) push-image IMAGETAG=${GIT_VERSION}
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
