@@ -67,6 +67,7 @@ BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/nul
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
+GIT_VERSION           ?= $(shell git describe --tags --dirty --always)
 
 VERSION_FLAGS   = -X main.VERSION=$(BUILD_VERSION) \
                   -X main.BUILD_DATE=$(BUILD_BUILD_DATE) \
@@ -339,6 +340,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images push-images IMAGETAG=${BRANCH_NAME}
+	$(MAKE) tag-images push-images IMAGETAG=${GIT_VERSION}
 
 # ensure we have a real imagetag
 imagetag:
