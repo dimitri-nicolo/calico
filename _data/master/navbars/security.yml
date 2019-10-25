@@ -145,11 +145,6 @@ toc:
   - title: CIS benchmarks
     path: /security/compliance-reports-cis
 
-- title: Defend against DoS attacks
-  path: /security/defend-dos-attack
-- title: Apply policy to Kubernetes node ports
-  path: /security/kubernetes-node-ports
-
 - title: Securing Tigera Secure EE component communications
   section:
   - title: Configuring encryption and authentication
