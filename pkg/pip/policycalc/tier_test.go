@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -60,9 +61,24 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		modified = make(ModifiedResources)
 		sel = NewEndpointSelectorHandler()
 		rd = &ResourceData{
-			Tiers:           tiers,
-			Namespaces:      nil,
-			ServiceAccounts: nil,
+			Tiers: tiers,
+			Namespaces: []*corev1.Namespace{{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "ns1",
+					Labels: map[string]string{
+						"nsl1": "nsv1",
+					},
+				},
+			}},
+			ServiceAccounts: []*corev1.ServiceAccount{{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "sa1",
+					Namespace: "ns1",
+					Labels: map[string]string{
+						"sal1": "sav1",
+					},
+				},
+			}},
 		}
 		f = &Flow{
 			Action: ActionAllow,
@@ -444,6 +460,32 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].IPVersion = &int_4
 		Expect(compute().Action).To(Equal(ActionUnknown))
+	})
+
+	// ---- Serviceaccount matcher ----
+
+	It("checking dest ingress allow exact match using serviceaccount selector", func() {
+		sa := "sa1"
+		f.Destination.ServiceAccount = &sa
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		np.Spec.ServiceAccountSelector = "sal1 == 'sav1'"
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Deny
+		Expect(compute().Action).To(Equal(ActionDeny))
+	})
+
+	It("checking dest ingress allow non-match using serviceaccount selector", func() {
+		sa := "sa1"
+		f.Destination.ServiceAccount = &sa
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		np.Spec.ServiceAccountSelector = "sal1 == 'nope'"
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Allow
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	// ---- Source.Nets / Source.NotNets ----
@@ -1186,5 +1228,119 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(ActionDeny))
 		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|deny"}))
+	})
+})
+
+var _ = Describe("Compiled tiers and gnpolicies tests", func() {
+	var f *Flow
+	var gnp *v3.GlobalNetworkPolicy
+	var tiers Tiers
+	var rd *ResourceData
+	var modified ModifiedResources
+	var sel *EndpointSelectorHandler
+	var compute func() EndpointResponse
+
+	setup := func(cfg *pipcfg.Config) {
+		gnp = &v3.GlobalNetworkPolicy{
+			TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+			ObjectMeta: v1.ObjectMeta{
+				Name: "policy",
+			},
+			Spec: v3.GlobalNetworkPolicySpec{
+				Tier:     "meh",
+				Selector: "all()",
+				Types:    typesIngress,
+				Ingress: []v3.Rule{{
+					Action: v3.Deny,
+				}},
+			},
+		}
+
+		tiers = Tiers{{gnp}}
+		modified = make(ModifiedResources)
+		sel = NewEndpointSelectorHandler()
+		rd = &ResourceData{
+			Tiers: tiers,
+			Namespaces: []*corev1.Namespace{{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "ns1",
+					Labels: map[string]string{
+						"nsl1": "nsv1",
+					},
+				},
+			}},
+			ServiceAccounts: []*corev1.ServiceAccount{{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      "sa1",
+					Namespace: "ns1",
+					Labels: map[string]string{
+						"sal1": "sav1",
+					},
+				},
+			}},
+		}
+		f = &Flow{
+			Action: ActionAllow,
+			Source: FlowEndpointData{
+				Type:   EndpointTypeNet,
+				Labels: map[string]string{},
+			},
+			Destination: FlowEndpointData{
+				Type:   EndpointTypeNet,
+				Labels: map[string]string{},
+			},
+		}
+
+		compute = func() EndpointResponse {
+			compiled := newCompiledTiersAndPolicies(cfg, rd, modified, sel)
+
+			// Tweak our flow reporter to match the policy type.
+			f.Source.cachedSelectorResults = sel.CreateSelectorCache()
+			f.Destination.cachedSelectorResults = sel.CreateSelectorCache()
+			if gnp.Spec.Types[0] == v3.PolicyTypeIngress {
+				f.Reporter = ReporterTypeDestination
+				return compiled.Calculate(f).Destination
+			}
+			f.Reporter = ReporterTypeSource
+			return compiled.Calculate(f).Source
+		}
+	}
+
+	BeforeEach(func() {
+		setup(&pipcfg.Config{})
+	})
+
+	// -- serviceaccounts --
+	It("matches using serviceaccounselector", func() {
+		sa := "sa1"
+		f.Destination.ServiceAccount = &sa
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		gnp.Spec.ServiceAccountSelector = "sal1 == 'sav1'"
+		Expect(compute().Action).To(Equal(ActionDeny))
+	})
+
+	It("doesn't apply if serviceaccountselector doesn't match", func() {
+		sa := "sa1"
+		f.Destination.ServiceAccount = &sa
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		gnp.Spec.ServiceAccountSelector = "sal1 == 'nope'"
+		Expect(compute().Action).To(Equal(ActionAllow))
+	})
+
+	// -- namespace selectors --
+	It("matches using namespaceselector", func() {
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		gnp.Spec.NamespaceSelector = "nsl1 == 'nsv1'"
+		Expect(compute().Action).To(Equal(ActionDeny))
+	})
+
+	It("doesn't apply if namespaceselector doesn't match", func() {
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		gnp.Spec.NamespaceSelector = "nsl1 == 'nomatch'"
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 })
