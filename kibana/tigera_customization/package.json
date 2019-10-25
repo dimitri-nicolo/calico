@@ -1,9 +1,9 @@
-
 {
   "name": "tigera_customization",
   "version": "0.1.0",
   "main": "index.js",
   "kibana": {
-    "version": "6.4.3"
-  }
+    "version": "7.3.2"
+  },
+  "website": "https://www.tigera.io/"
 }
