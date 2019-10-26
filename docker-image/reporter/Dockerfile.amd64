@@ -2,5 +2,4 @@ FROM scratch
 
 ADD bin/reporter-amd64 /reporter
 WORKDIR /
-USER 999
 ENTRYPOINT ["/reporter"]
