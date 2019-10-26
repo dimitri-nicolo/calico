@@ -3,6 +3,8 @@ REPO?=$(GCR_REPO)
 PUSH_IMAGE_BASE?=$(REPO)
 PUSH_IMAGE?=$(PUSH_IMAGE_BASE)/$(BUILD_IMAGE)
 
+GIT_VERSION?=$(shell git describe --tags --dirty --always)
+
 .PHONY: imagetag
 imagetag:
 ifndef IMAGETAG
@@ -21,9 +23,9 @@ image: imagetag $(BUILD_IMAGE)
 $(BUILD_IMAGE):
 	docker build --pull -t $(BUILD_IMAGE):$(IMAGETAG) .
 
-push: imagetag confirm image
-	docker tag $(BUILD_IMAGE):$(IMAGETAG) $(PUSH_IMAGE):$(IMAGETAG)
-	docker push $(PUSH_IMAGE):$(IMAGETAG)
+push: imagetag confirm
+	docker tag $(BUILD_IMAGE):$(IMAGETAG) $(PUSH_IMAGE):$(VERSION)
+	docker push $(PUSH_IMAGE):$(VERSION)
 
 ## Help
 .PHONY: help
