@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,27 +36,40 @@ var (
 // as their non-staged counterpart). This approach is less invasive to the existing Felix and dataplane driver code.
 const PolicyNamePrefixStaged = "staged:"
 
+func extractName(name string) string {
+	parts := strings.Split(name, "/")
+	if len(parts) == 2 {
+		return parts[1]
+	}
+
+	return name
+}
+
 // PolicyIsStaged returns true if the name of the policy indicates that it is a staged policy.
 func PolicyIsStaged(name string) bool {
-	return strings.HasPrefix(name, PolicyNamePrefixStaged)
+	n := extractName(name)
+	return strings.HasPrefix(n, PolicyNamePrefixStaged)
 }
 
 // PolicyNameLessThan checks if name1 is less that name2. Used for policy sorting. Staged policies are considered to be
 // less than the non-staged equivalent.
 func PolicyNameLessThan(name1, name2 string) bool {
-	if strings.HasPrefix(name1, PolicyNamePrefixStaged) {
-		name1 = strings.TrimPrefix(name1, PolicyNamePrefixStaged)
-		if name1 == name2 {
+	n1 := extractName(name1)
+	n2 := extractName(name2)
+
+	if strings.HasPrefix(n1, PolicyNamePrefixStaged) {
+		n1 = strings.TrimPrefix(n1, PolicyNamePrefixStaged)
+		if n1 == n2 {
 			return true
 		}
 	}
-	if strings.HasPrefix(name2, PolicyNamePrefixStaged) {
-		name2 = strings.TrimPrefix(name2, PolicyNamePrefixStaged)
-		if name1 == name2 {
+	if strings.HasPrefix(n2, PolicyNamePrefixStaged) {
+		n2 = strings.TrimPrefix(n2, PolicyNamePrefixStaged)
+		if n1 == n2 {
 			return false
 		}
 	}
-	return name1 < name2
+	return n1 < n2
 }
 
 type PolicyKey struct {

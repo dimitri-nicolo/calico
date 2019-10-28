@@ -50,15 +50,15 @@ var _ = Describe("Test the StagedNetworkPolicy update processor", func() {
 		Namespace: ns3,
 	}
 	v1StagedNetworkPolicyKey1 := model.PolicyKey{
-		Name: model.PolicyNamePrefixStaged + ns1 + "/" + name1,
+		Name: ns1 + "/" + model.PolicyNamePrefixStaged + name1,
 		Tier: "default",
 	}
 	v1StagedNetworkPolicyKey2 := model.PolicyKey{
-		Name: model.PolicyNamePrefixStaged + ns2 + "/" + name2,
+		Name: ns2 + "/" + model.PolicyNamePrefixStaged + name2,
 		Tier: "default",
 	}
 	v1StagedNetworkPolicyKey3 := model.PolicyKey{
-		Name: model.PolicyNamePrefixStaged + ns3 + "/" + name3,
+		Name: ns3 + "/" + model.PolicyNamePrefixStaged + name3,
 		Tier: mytier,
 	}
 
