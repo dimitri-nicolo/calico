@@ -20,7 +20,7 @@ import (
 const (
 	AlertEventType  = "alert"
 	DefaultPeriod   = time.Minute * 5
-	DefaultLookback = time.Minute * 5
+	DefaultLookback = time.Minute * 10
 	IndexActionName = "index_events"
 	QueryAggTerms   = "terms"
 	QuerySize       = 10000
