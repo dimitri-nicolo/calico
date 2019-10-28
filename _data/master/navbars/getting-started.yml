@@ -67,8 +67,6 @@ toc:
       path: /getting-started/openshift/installation/operator
     - title: Connecting to a dedicated etcd cluster (optional)
       path: /getting-started/openshift/installation/dedicated-etcd
-    - title: Using your own Elasticsearch for logs
-      path: /getting-started/openshift/installation/byo-elasticsearch
   - title: Upgrade to Tigera Secure EE
     path: /getting-started/openshift/upgrade-ee
 
