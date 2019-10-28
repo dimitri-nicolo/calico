@@ -25,20 +25,6 @@ spec:
       hostNetwork: true
       # This must be set when hostNetwork is true or else the cluster services won't resolve
       dnsPolicy: ClusterFirstWithHostNet
-{{- if .Values.openshift }}
-      initContainers:
-        # This initContainer is only required for OpenShift v4 when using installer-provisioned
-        # infrastructure (IPI) on AWS. Otherwise it should be removed.
-        - name: configure-security-groups
-          image: {{ template "tigera-operator.image" .Values.tigeraOperatorInit }}
-          env:
-            - name: OPENSHIFT
-              value: "true"
-            - name: REQUIRE_AWS
-              value: "true"
-            - name: KUBELET_KUBECONFIG
-              value: /etc/kubernetes/kubeconfig
-{{- end }}
       containers:
         - name: tigera-operator
           image: {{ template "tigera-operator.image" .Values.tigeraOperator}}
@@ -54,3 +40,5 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "tigera-operator"
+            - name: TIGERA_OPERATOR_INIT_IMAGE_VERSION
+              value: {{.Values.tigeraOperator.version}}
