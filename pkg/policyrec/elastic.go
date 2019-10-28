@@ -103,6 +103,8 @@ var (
 		"dest_port":        PRCompositeSourcesRawIdxDestPort,
 		"reporter":         PRCompositeSourcesRawIdxReporter,
 		"action":           PRCompositeSourcesRawIdxAction,
+		"source_name":      PRCompositeSourcesRawIdxSourceNameAggr,
+		"dest_name":        PRCompositeSourcesRawIdxDestNameAggr,
 	}
 
 	PRAggregatedTermsNamePolicies     = "policies"
