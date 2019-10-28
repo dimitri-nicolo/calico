@@ -38,7 +38,7 @@ func ConvertStagedNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (model.Key, er
 		return model.PolicyKey{}, err
 	}
 	return model.PolicyKey{
-		Name: model.PolicyNamePrefixStaged + v3key.Namespace + "/" + v3key.Name,
+		Name: v3key.Namespace + "/" + model.PolicyNamePrefixStaged + v3key.Name,
 		Tier: tier,
 	}, nil
 }

@@ -1327,12 +1327,11 @@ func validateStagedNetworkPolicy(structLevel validator.StructLevel) {
 				"StagedNetworkPolicySpec", "", reason("Selector field is required"), "")
 		}
 	} else {
-		empty := api.NewStagedNetworkPolicy()
-		empty.Spec.StagedAction = api.StagedActionDelete
-		//the network policy fields should all "zero-value" when the update type is "delete"
-		if !reflect.DeepEqual(empty.Spec, staged.Spec) {
+		empty := api.NetworkPolicySpec{}
+		empty.Tier = enforced.Spec.Tier
+		if !reflect.DeepEqual(empty, enforced.Spec) {
 			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
+				"StagedNetworkPolicySpec", "", reason("Spec fields, except Tier, should all be zero-value if stagedAction is Delete"), "")
 		}
 	}
 }
@@ -1490,11 +1489,11 @@ func validateStagedGlobalNetworkPolicy(structLevel validator.StructLevel) {
 		}
 	} else {
 		//the network policy fields should all "zero-value" when the update type is "delete"
-		empty := api.NewStagedGlobalNetworkPolicy()
-		empty.Spec.StagedAction = api.StagedActionDelete
-		if !reflect.DeepEqual(empty.Spec, staged.Spec) {
+		empty := api.GlobalNetworkPolicySpec{}
+		empty.Tier = enforced.Spec.Tier
+		if !reflect.DeepEqual(empty, enforced.Spec) {
 			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedGlobalNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
+				"StagedGlobalNetworkPolicySpec", "", reason("Spec fields, except Tier, should all be zero-value if stagedAction is Delete"), "")
 		}
 	}
 }

@@ -1796,9 +1796,10 @@ func init() {
 		),
 		Entry("should accept a valid StagedAction value 'Delete'",
 			&api.StagedGlobalNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
 				Spec: api.StagedGlobalNetworkPolicySpec{
 					StagedAction: api.StagedActionDelete,
+					Tier:         "eng",
 				},
 			}, true,
 		),
@@ -1929,9 +1930,10 @@ func init() {
 			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
 		Entry("allow missing Types",
 			&api.StagedNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
 				Spec: api.StagedNetworkPolicySpec{
 					StagedAction: api.StagedActionDelete,
+					Tier:         "eng",
 				},
 			}, true,
 		),
@@ -1954,9 +1956,10 @@ func init() {
 		),
 		Entry("should accept a valid StagedAction value 'Delete'",
 			&api.StagedNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
 				Spec: api.StagedNetworkPolicySpec{
 					StagedAction: api.StagedActionDelete,
+					Tier:         "eng",
 				},
 			}, true,
 		),
@@ -1997,9 +2000,10 @@ func init() {
 		),
 		Entry("should accept an empty Selector when StagedAction is Delete",
 			&api.StagedNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
 				Spec: api.StagedNetworkPolicySpec{
 					StagedAction: api.StagedActionDelete,
+					Tier:         "eng",
 				},
 			}, true,
 		),

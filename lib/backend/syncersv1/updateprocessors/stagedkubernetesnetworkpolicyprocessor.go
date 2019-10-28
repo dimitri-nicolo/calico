@@ -44,7 +44,7 @@ func ConvertStagedKubernetesNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (mod
 		return model.PolicyKey{}, err
 	}
 	return model.PolicyKey{
-		Name: model.PolicyNamePrefixStaged + v3key.Namespace + "/" + name,
+		Name: v3key.Namespace + "/" + model.PolicyNamePrefixStaged + name,
 		Tier: tier,
 	}, nil
 }
