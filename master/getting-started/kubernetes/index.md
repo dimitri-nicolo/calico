@@ -13,6 +13,12 @@ You can use this quickstart to quickly and easily try {{side.prodname}} features
 
 ### How to
 
+- [Host requirements](#host-requirements)
+- [Install Kubernetes](#install-kubernetes)
+- [Install {{site.prodname}}](#install-tigera-secure-ee)
+- [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
+- [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+
 #### Host requirements
 
 This article requires a Linux host that meets the following requirements.
@@ -58,6 +64,8 @@ This article requires a Linux host that meets the following requirements.
 
 #### Install {{site.prodname}}
 
+1. [Configure a storage class for {{site.prodname}}.]()
+
 1. Install the Tigera operators and custom resource definitions.
 
    ```
@@ -84,7 +92,7 @@ This article requires a Linux host that meets the following requirements.
    watch kubectl get tigerastatus
    ```
 
-   When it shows the `apiserver` with status `Available`, proceed to the next section.
+   Wait until the `apiserver` shows a status of `Available`, then proceed to the next section.
 
 #### Install the {{site.prodname}} license
 
@@ -100,11 +108,11 @@ You can now monitor progress with the following command:
 watch kubectl get tigerastatus
 ```
 
-When it shows all components with status `Available`, proceed to the next section.
+When all components show a status of `Available`, proceed to the next section.
 
 #### Secure {{site.prodname}} with network policy
 
-To secure the components which make up {{site.prodname}}, install the following set of network policies.
+To secure {{site.prodname}} component communications, install the following set of network policies.
 
 ```
 kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml

@@ -1,0 +1,5 @@
+---
+layout: null
+---
+
+{% include {{page.version}}/non-helm-manifests/custom-resources.yaml kubernetesProvider="AKS" %}

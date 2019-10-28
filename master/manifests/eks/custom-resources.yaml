@@ -2,4 +2,4 @@
 layout: null
 ---
 
-{% include {{page.version}}/non-helm-manifests/custom-resources.yaml kubernetesProvider="eks" %}
+{% include {{page.version}}/non-helm-manifests/custom-resources.yaml kubernetesProvider="EKS" %}

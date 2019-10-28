@@ -8,9 +8,19 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 ### Before you begin
 
-Ensure that you have an EKS cluster without Calico installed and with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html) at least eks.2 (for aggregated API server support).
+- Ensure that you have an EKS cluster without Calico installed and with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html) at least eks.2 (for aggregated API server support).
+
+- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials) and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
 ### How to
+
+- [Install {{site.prodname}}](#install-tigera-secure-ee)
+- [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
+- [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+
+#### Install {{site.prodname}}
+
+1. [Configure a storage class for {{site.prodname}} flow, DNS, and audit logs]()
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -38,7 +48,7 @@ Ensure that you have an EKS cluster without Calico installed and with [platform 
    watch kubectl get tigerastatus
    ```
 
-   Wait until the `apiserver` is showing a status of `Available`, then proceed to the next section.
+   Wait until the `apiserver` shows a status of `Available`, then proceed to the next section.
 
 #### Install the {{site.prodname}} license
 
@@ -54,12 +64,12 @@ You can now monitor progress with the following command:
 watch kubectl get tigerastatus
 ```
 
-When it shows all components with status `Available`, proceed to the next section.
+When all components show a status of `Available`, proceed to the next section.
 
 
-#### Secure Tigera Secure EE with network policy
+#### Secure {{site.prodname}} with network policy
 
-To secure the components which make up Tigera Secure EE, install the following set of network policies.
+To secure {{site.prodname}} component communications, install the following set of network policies.
 
 ```
 kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
