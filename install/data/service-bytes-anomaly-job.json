@@ -41,9 +41,6 @@
       }
     ],
     "influencers": [
-      "dest_name",
-      "dest_name_aggr",
-      "dest_namespace",
       "source_name",
       "source_name_aggr",
       "source_namespace"
