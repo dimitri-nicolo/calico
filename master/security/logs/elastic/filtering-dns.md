@@ -4,14 +4,37 @@ canonical_url: https://docs.tigera.io/master/security/logs/elastic/filtering-dns
 ---
 
 {{site.prodname}} supports filtering out DNS logs based on user provided
-configuration.  This functionality is intended to be used to suppress logs
-of low significance.
+configuration.  Use filtering to suppress logs of low significance.
 
-## Configuring DNS log filtering
+## Configure DNS filtering
+
+Configure filtering based on how {{site.prodname}} was deployed:
+- [Tigera operator deployment](#tigera-operator-deployment)
+- [Manual deployment](#manual-deployment)
+
+
+### Tigera operator deployment
+
+DNS log filtering is configured through a ConfigMap in the `tigera-operator`
+namespace.
+
+To enable DNS log filtering, follow these steps:
+
+1. Create a `filters` directory with a file calld `dns` with the contents of
+   your [desired filter](#filter-configuration-files).
+   If you are also adding [flow filters](filtering) also add the `flow` file
+   to the directory.
+1. Create the `fluentd-filters` ConfigMap in the `tigera-operator` namespace
+   with the following command.
+   ```bash
+   kubectl create configmap fluentd-filters -n tigera-operator --from-file=filters
+   ```
+
+### Manual deployment
 
 DNS log filtering is configured in the `tigera-es-config` ConfigMap.
 
-To enable DNS log filtering, follow these steps.
+To enable DNS log filtering, follow these steps:
 
 1. Set the `tigera.elasticsearch.dns-filtering` field in the `tigera-es-config`
    ConfigMap in the `calico-monitoring` Namespace to "true".  This ConfigMap can
@@ -26,7 +49,7 @@ To enable DNS log filtering, follow these steps.
      "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"update-date\":\"`date +'%s'`\"}}}}}"
    ```
 
-## Writing filter configuration files
+## Filter configuration files
 
 The filters defined by the ConfigMap are inserted into the fluentd configuration file.
 The [upstream fluentd documentation](https://docs.fluentd.org/filter/grep)
