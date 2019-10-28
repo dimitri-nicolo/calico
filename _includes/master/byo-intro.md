@@ -38,6 +38,7 @@ To complete the following procedure, you'll need:
 - A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards (see below).
 - A `tigera-ee-curator` user with permission to delete indices in Elasticsearch (see below).
 - A `tigera-ee-intrusion-detection` user with permission to process threat feeds, flow logs and security events (see below).
+ This user requires the "watcher_admin" role, or equivalent permissions, to process alerts.
 - A `tigera-ee-compliance-benchmarker` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-compliance-controller` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-compliance-reporter` user with permission to query and send documents to Elasticsearch (see below).
