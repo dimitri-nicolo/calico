@@ -3,42 +3,58 @@ title: Custom BGP Configuration
 canonical_url: https://docs.tigera.io/v2.3/usage/custom-bgp-config
 ---
 
+### Big picture
+
+Use customized BIRD configuration files to enable specialized use-cases.
+
+### Concepts
+
 In {{site.prodname}}, BGP is handled by [BIRD](https://github.com/projectcalico/bird).
-The BIRD configurations are templated out through [confd](https://github.com/kelseyhightower/confd).
-In some cases, you may want to modify the BIRD configuration in order to achieve
-features such as:
+The BIRD configurations are templated out through [confd](https://github.com/projectcalico/confd).
+You can modify the BIRD configuration to use BIRD features which are not typically exposed using the
+default configuration provided with {{site.prodname}}.
 
-* Dual top of rack (ToR) peering
-* Password-protected BGP peering
+Customization of BGP templates should be done only with the help of your Tigera Support representative.
 
-This document discusses how to overwrite the default BIRD BGP configuration
-and use customized BGP configurations for particular use cases.
+### How to
 
-### confd templates
+- [Update BGP configuration](#update-bgp-configuration)
+- Appy BGP customizations based on how you've deployed {{site.prodname}}:
+  - [Tigera operator](#tigera-operator)
+  - [Manual deployment](#manual-deployment)
 
-In order to overwrite the default BIRD confd templates, we first need replacement
-confd templates which are customized as desired. At this time, we only support a
-specific collection of BIRD templates. For more information on the functionality
-provided by these templates, please contact your Tigera support representative.
+#### Update BGP configuration
 
-### Overwriting confd templates
+Using the directions provided with the templates, set the correct values 
+for the BGP configuration using these resources:
 
-Once you have a set of confd templates, you will need to apply these templates to
-your {{site.nodecontainer}} instances. We can mount in our templates using a
-[Kubernetes ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/).
-This will allow us to mount in all our template files to each node in our cluster without
-needing to explicitly upload our templates to each host individually.
+- [BGP Configuration]({{site.url}}/{{page.version}}/reference/resources/bgpconfig)
+- [BGP Peer]({{site.url}}/{{page.version}}/reference/resources/bgppeer)
+- [calicoctl]({{site.url}}/{{page.version}}/reference/calicoctl)
 
-Create the `ConfigMap`:
+#### Tigera operator
 
-```
-kubectl create configmap bgp-templates -n kube-system --from-file=<path to directory of templates>
-```
+1. Create your confd templates.
+1. Create a ConfigMap from the templates.
 
-Once the configmap has been created, we need to create the appropriate volume mounts to make
-the templates available in the {{site.prodname}} node containers.
+  ```
+  kubectl create configmap bird-templates -n tigera-operator --from-file=<path to directory of templates>
+  ``` 
 
-Edit your `calico.yaml` file to add in the following for the `{{site.nodecontainer}}` container:
+  The created config map will be used to populate the {{site.prodname}} BIRD configuration file templates. If a template with the same name already exists within the node container, it will be overwritten with the contents from the config map.
+
+#### Manual deployment
+
+1. Create your confd templates.
+1. Apply these templates to your {{site.nodecontainer}} instances using a ConfigMap. 
+   For help, see [Kubernetes ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/).
+
+  ```
+  kubectl create configmap bgp-templates -n kube-system --from-file=<path to directory of templates> 
+  ```
+
+1. To make the templates available to the {{site.prodname}} node containers, edit your `calico.yaml`
+   file to add the following for the `{{site.nodecontainer}}` container:
 
 ```
 ...
@@ -113,30 +129,10 @@ spec:
 ...
 ```
 
-Now you will need to reapply the updated manifest with the following command.
+1. Reapply the updated manifest with the following command.
 
-```
-kubectl apply -f calico.yaml
-```
+   ```
+   kubectl apply -f calico.yaml
+   ```
 
-### Providing templated values
-
-It is also important to note that you may need to provide specific values to be
-rendered as a part of your BGP configuration by the BIRD confd templates. These
-values can be set in the
-[BGP Configuration]({{site.url}}/{{page.version}}/reference/resources/bgpconfig)
-and [BGP Peer]({{site.url}}/{{page.version}}/reference/resources/bgppeer)
-objects through [calicoctl]({{site.url}}/{{page.version}}/reference/calicoctl).
-Follow the directions provided with the templates you have received in order to ensure
-that all of the correct values are set for your BIRD configuration to render appropriately.
-
-### Applying your changes
-
-Once you have completed overwriting your BIRD templates and provided the template values,
-you will need to reapply the updated manifest with the following command.
-
-```
-kubectl apply -f calico.yaml
-```
-
-Your BGP configuration changes should now be active!
+   After the BIRD templates are overwritten, your BGP configuration changes are active!
