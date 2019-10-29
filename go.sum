@@ -447,6 +447,7 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191024182608-f36e1570d064 h1:l
 github.com/tigera/libcalico-go-private v1.7.2-0.20191024182608-f36e1570d064/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029034708-dced61f8cbce h1:rUrmBmmiUSJCbjM9QpVOnsGubTrCUdMAk6pXkLzZFdA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029034708-dced61f8cbce/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191029124438-7178a8ac60ab/go.mod h1:djIjYrfvRiXYGNGxN5foNct7r46RrWuLXa20bybhrlg=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tinylib/msgp v1.0.2 h1:DfdQrzQa7Yh2es9SuLkixqxuXS2SxsdYn0KbdrOGWD8=
