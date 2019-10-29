@@ -32,7 +32,11 @@ the install instructions from that point (inclusive) onwards.
 
 To complete the following procedure, you'll need:
 
-- An Elasticsearch cluster that meets the [requirements](/{{page.version}}/{{reqpath}}/requirements#elasticsearch-requirements).
+- An Elasticsearch cluster and Kibana instance that complies with the following:
+    - Elasticsearch version {{site.data.versions[page.version].first.components["elasticsearch"].version}}.
+    - Kibana version {{site.data.versions[page.version].first.components["kibana"].version}}.
+    - Kubernetes pods must be able to reach the Elasticsearch cluster.
+    - The Elasticsearch cluster must support username and password authentication.
 - A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch (see below).
 - A `tigera-ee-manager` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards (see below).

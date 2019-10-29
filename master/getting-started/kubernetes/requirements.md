@@ -52,5 +52,3 @@ IP ranges in your network, including:
 - [Istio v1.0](https://istio.io/about/notes/1.0/) or [Istio v1.1](https://istio.io/about/notes/1.1/)
 
 {% include {{page.version}}/reqs-kernel.md %}
-
-{% include {{page.version}}/reqs-byo-es.md %}
