@@ -1,5 +1,5 @@
-hash: 92882c07113fbae314070e7a9285a23c4872de1af7df7807badf2f27f259b662
-updated: 2019-10-23T01:06:11.579872929Z
+hash: 7f0a125b1746e0022eaecbb019e0af726cbfb4a6888ae5cfe5e8480d5c226cb0
+updated: 2019-10-29T09:56:05.891374-03:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -311,7 +311,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: ab6dbf99d1006fd5137765d6950f1e98fcc6b0dd
+  version: 9cc4af7d6b2c2a2e47f9cfaa500cd669b42e449b
   subpackages:
   - import
 - name: google.golang.org/appengine
@@ -402,7 +402,9 @@ imports:
   subpackages:
   - pkg/features
 - name: k8s.io/apimachinery
-  version: 302974c03f7e50f16561ba237db776ab93594ef6
+  version: fd25f8eb788210c3a8ee8f1f2f6f5b258624e557
+  repo: git@github.com:tigera/apimachinery-private.git
+  vcs: git
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
