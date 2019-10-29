@@ -16,8 +16,6 @@ toc:
       path: /getting-started/kubernetes/managed-public-cloud/eks
     - title: Google Kubernetes Engine (GKE)
       path: /getting-started/kubernetes/managed-public-cloud/gke
-    - title: IBM Cloud Kubernetes Service (IKS)
-      path: /getting-started/kubernetes/managed-public-cloud/iks
     - title: Microsoft Azure Kubernetes Service (AKS)
       path: /getting-started/kubernetes/managed-public-cloud/aks
   - title: Self-managed on-prem

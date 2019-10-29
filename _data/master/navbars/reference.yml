@@ -209,5 +209,3 @@ toc:
       path: /reference/other-install-methods/kubernetes/installation/eks
     - title: Installing Tigera Secure EE on Google GKE
       path: /reference/other-install-methods/kubernetes/installation/gke
-    - title: Installing Tigera Secure EE on Azure AKS
-      path: /reference/other-install-methods/kubernetes/installation/aks

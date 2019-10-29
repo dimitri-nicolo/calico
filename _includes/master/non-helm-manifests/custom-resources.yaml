@@ -1,10 +1,11 @@
 # This section includes base Tigera Secure installation configuration.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation
 apiVersion: operator.tigera.io/v1
 kind: Installation
 metadata:
   name: default
 spec:
-  # Install Tigera Secure
+  # Install Tigera Secure EE
   variant: TigeraSecureEnterprise
 
   # List of image pull secrets to use when installing images from a container registry.
@@ -12,16 +13,19 @@ spec:
   imagePullSecrets:
     - name: tigera-pull-secret
 
-  # Registry to use for pulling Tigera Secure images.
+  # Optionally, a custom registry to use for pulling images.
   # registry: <my-registry>
 
-  {% if include.kubernetesProvider == "eks" -%}
-  kubernetesProvider: EKS
-  {%- endif %}
+{%- if include.kubernetesProvider %}
+
+  # Enables provider-specific settings requried for compatibility.
+  kubernetesProvider: {{include.kubernetesProvider}}
+{%- endif %}
 
 ---
 
 # This section configures the Tigera web manager.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager
 apiVersion: operator.tigera.io/v1
 kind: Manager
 metadata:
@@ -35,6 +39,7 @@ spec:
 ---
 
 # This section installs and configures the Tigera Secure API server.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.APIServer
 apiVersion: operator.tigera.io/v1
 kind: APIServer
 metadata:
@@ -43,6 +48,7 @@ metadata:
 ---
 
 # This section installs and configures Tigera Secure compliance functionality.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Compliance
 apiVersion: operator.tigera.io/v1
 kind: Compliance
 metadata:
@@ -51,8 +57,30 @@ metadata:
 ---
 
 # This section installs and configures Tigera Secure intrusion detection functionality.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.IntrusionDetection
 apiVersion: operator.tigera.io/v1
 kind: IntrusionDetection
+metadata:
+  name: tigera-secure
+
+---
+
+# This section configures the Elasticsearch cluster used by Tigera Secure EE.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogStorage
+apiVersion: operator.tigera.io/v1
+kind: LogStorage
+metadata:
+  name: tigera-secure
+spec:
+  nodes:
+    count: 1
+
+---
+
+# This section configures collection of Tigera flow, DNS, and audit logs.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogCollector
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
 metadata:
   name: tigera-secure
 
@@ -90,27 +118,7 @@ spec:
 
 ---
 
-# This section creates / configures the Elasticsearch cluster where tigera logs are stored
-apiVersion: operator.tigera.io/v1
-kind: LogStorage
-metadata:
-  name: tigera-secure
-spec:
-  nodes:
-    count: 1
-
----
-
-apiVersion: operator.tigera.io/v1
-kind: LogCollector
-metadata:
-  name: tigera-secure
-
----
-
 # This section configures Prometheus monitoring of calico/node metrics.
-# TODO: Do we need to expose this? Can we either have the operator create it or configure
-# prometheus explicitly rather than exposing this config to the user?
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
