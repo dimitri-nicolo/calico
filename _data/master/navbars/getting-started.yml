@@ -109,3 +109,6 @@ toc:
       path: /getting-started/calicoq/configure/etcd
     - title: Kubernetes API datastore options
       path: /getting-started/calicoq/configure/kdd
+
+- title: Access the manager UI
+  path: /getting-started/access-the-manager

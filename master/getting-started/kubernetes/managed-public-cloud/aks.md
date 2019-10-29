@@ -46,9 +46,9 @@ Ensure that your AKS cluster that meets the following requirements.
 
 ### How to
 
-- [Install {{site.prodname}}](#install-tigera-secure-ee)
-- [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
-- [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+1. [Install {{site.prodname}}](#install-tigera-secure-ee)
+1. [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
+1. [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
 
 #### Install {{site.prodname}}
 
