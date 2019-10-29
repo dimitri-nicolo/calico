@@ -30,7 +30,7 @@ From this view, you can see the overview of all the anomaly detection jobs insta
 
 To enable an anomaly detection job:
 
-1. Click the gear icon at the far right of the job name and select "Start datafeed."
+1. Click the ellipsis icon at the far right of the job name and select "Start datafeed."
 1. Choose the start time, which is how far into the past the job should look for flow logs to analyze.
 1. Choose the end time.
 
