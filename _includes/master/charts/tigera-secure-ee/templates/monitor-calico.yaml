@@ -42,14 +42,14 @@ data:
   # when the disk exceeds this threshold. Lowering the value leads to lower
   # disk utilization, while increasing it by too much can have an impact on
   # the stability of your Elasticsearch cluster.
-  tigera.elasticsearch.max-total-storage-pct: 90
+  tigera.elasticsearch.max-total-storage-pct: "90"
   # TSEE will remove dns and flow log indices once the combined data exceeds this
   # threshold. The default value (80% of the cluster size) is used because flow
   # logs and dns logs often use the most disk space; this allows compliance and
   # security indices to be retained longer. The oldest indices are removed first.
   # Set this value to be lower than or equal to, the value for
   # max-total-storage-pct.
-  tigera.elasticsearch.max-logs-storage-pct: 80
+  tigera.elasticsearch.max-logs-storage-pct: "80"
   # Whether to include the custom flow filters defined below in the fluentd config
   # file.  Value must be "true" or "false".
   tigera.elasticsearch.flow-filtering: "false"
