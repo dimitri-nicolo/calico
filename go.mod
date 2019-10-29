@@ -12,7 +12,6 @@ require (
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
-	github.com/projectcalico/confd v3.2.0+incompatible // indirect
 	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.4.2
@@ -23,7 +22,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191023101351-06fbfcb69fbb
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191023103646-6c51073f7cfc
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
