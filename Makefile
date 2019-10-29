@@ -31,6 +31,10 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
 EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/* -v $(GOMOD_CACHE):/go/pkg/mod:rw
 GIT_CONFIG_SSH	  ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 GINKGO_ARGS		:= -mod=vendor

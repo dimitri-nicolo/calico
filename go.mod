@@ -2,6 +2,8 @@ module github.com/projectcalico/libcalico-go
 
 go 1.12
 
+replace k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20191029010004-132bc23c06b9
+
 require (
 	github.com/Azure/go-autorest v10.6.2+incompatible // indirect
 	github.com/Masterminds/goutils v1.1.0 // indirect
