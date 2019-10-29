@@ -2,7 +2,7 @@ module github.com/tigera/lma
 
 go 1.11
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191029124438-7178a8ac60ab // indirect
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d // indirect
 
 require (
 	github.com/golang/protobuf v1.3.1 // indirect
