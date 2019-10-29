@@ -28,7 +28,9 @@ COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
 COPY filters /fluentd/etc/filters
 
-ENV COMPLIANCE_LOG_FILE=/var/log/calico/compliance/reports.log
+# Compliance reports logs needs a regex pattern because there will be 
+# multiple logs (one per report type), e.g. compliance.network-access.reports.log
+ENV COMPLIANCE_LOG_FILE=/var/log/calico/compliance/compliance.*.reports.log
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 ENV POS_DIR=/var/log/calico
