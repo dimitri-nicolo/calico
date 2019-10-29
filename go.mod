@@ -10,7 +10,6 @@ require (
 	github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
 	github.com/containernetworking/plugins v0.0.0-20180925020009-646dbbace1b1
 	github.com/coreos/go-iptables v0.3.0 // indirect
-	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/golang/mock v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/juju/clock v0.0.0-20180808021310-bab88fc67299
@@ -33,7 +32,6 @@ require (
 	github.com/ugorji/go v1.1.7 // indirect
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
-	go.etcd.io/bbolt v1.3.3 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	k8s.io/api v0.0.0-20180628040859-072894a440bd
 	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
@@ -42,6 +40,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029124438-7178a8ac60ab
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
