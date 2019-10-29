@@ -52,7 +52,7 @@ Ensure that your AKS cluster that meets the following requirements.
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}]()
+1. [Configure a storage class for {{site.prodname}}.]()
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -68,7 +68,7 @@ Ensure that your AKS cluster that meets the following requirements.
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
-1. Install the Tigera custom resources.
+1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference](/{{page.version}}/reference/installation/api).
 
    ```
    kubectl create -f {{site.url}}/master/manifests/aks/custom-resources.yaml
