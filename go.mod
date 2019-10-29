@@ -9,7 +9,6 @@ require (
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v0.0.0-20180227141424-093482f3f8ce // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
-	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/influxdata/influxdb v0.0.0-20190102202943-dd481f35df2c // indirect
@@ -19,7 +18,6 @@ require (
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/osrg/gobgp v0.0.0-20170802061517-bbd1d99396fe
-	github.com/pquerna/ffjson v0.0.0-20190930134022-aa0246cd15f7 // indirect
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee
 	github.com/projectcalico/libcalico-go v1.7.2-0.20191015222346-3d38c58337f2
@@ -32,7 +30,6 @@ require (
 	github.com/tigera/licensing v2.6.0-0.dev+incompatible
 	github.com/vishvananda/netlink v0.0.0-20180501223456-f07d9d5231b9 // indirect
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
-	go.etcd.io/bbolt v1.3.3 // indirect
 	gopkg.in/square/go-jose.v2 v2.0.0-20190111193340-cbf0fd6a984a
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	gopkg.in/yaml.v2 v2.2.2
@@ -40,6 +37,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029124438-7178a8ac60ab
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
