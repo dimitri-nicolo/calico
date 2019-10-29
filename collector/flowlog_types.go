@@ -124,7 +124,7 @@ func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int) FlowSpec {
 
 func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
 	f.aggregateFlowLabels(mu)
-	f.FlowPolicies.aggregateMetricUpdate(mu)
+	f.aggregateFlowPolicies(mu)
 	f.aggregateFlowStats(mu)
 	f.aggregateFlowExtrasRef(mu)
 }
@@ -196,7 +196,7 @@ func NewFlowPolicies(mu MetricUpdate) FlowPolicies {
 	return fp
 }
 
-func (fp FlowPolicies) aggregateMetricUpdate(mu MetricUpdate) {
+func (fp FlowPolicies) aggregateFlowPolicies(mu MetricUpdate) {
 	if mu.ruleIDs == nil {
 		return
 	}
@@ -251,7 +251,6 @@ func (fer *flowExtrasRef) reset() {
 	if fer.originalSourceIPs != nil {
 		fer.originalSourceIPs.Reset()
 	}
-
 }
 
 // FlowExtras contains some additional useful information for flows.

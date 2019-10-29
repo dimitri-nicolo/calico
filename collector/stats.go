@@ -34,6 +34,16 @@ func (t TrafficDirection) String() string {
 	return TrafficDirOutboundStr
 }
 
+// RuleMatch type is used to indicate whether a rule match from an nflog is newly set, unchanged from the previous
+// value, or has been updated. In the latter case the existing entry should be reported and expired.
+type RuleMatch byte
+
+const (
+	RuleMatchUnchanged RuleMatch = iota
+	RuleMatchSet
+	RuleMatchIsDifferent
+)
+
 // ruleDirToTrafficDir converts the rule direction to the equivalent traffic direction
 // (useful for NFLOG based updates where ingress/inbound and egress/outbound are
 // tied).
@@ -51,15 +61,17 @@ const RuleTraceInitLen = 10
 // next-Tier/pass action. A RuleTrace also contains a endpoint that the rule
 // trace applied to,
 type RuleTrace struct {
-	path   []*calc.RuleID
-	action rules.RuleAction
+	path []*calc.RuleID
+
+	// The reported path. This is calculated and stored when metrics are reported.
+	rulesToReport []*calc.RuleID
 
 	// Counters to store the packets and byte counts for the RuleTrace
 	pktsCtr  Counter
 	bytesCtr Counter
 	dirty    bool
 
-	// Stores the Index of the RuleID that has a RuleAction Allow or Deny
+	// Stores the Index of the RuleID that has a RuleAction Allow or Deny.
 	verdictIdx int
 
 	// Optimization Note: When initializing a RuleTrace object, the pathArray
@@ -70,18 +82,14 @@ type RuleTrace struct {
 	pathArray [RuleTraceInitLen]*calc.RuleID
 }
 
-func NewRuleTrace() RuleTrace {
-	rt := RuleTrace{verdictIdx: -1}
+func (rt *RuleTrace) Init() {
+	rt.verdictIdx = -1
 	rt.path = rt.pathArray[:]
-	return rt
 }
 
 func (t *RuleTrace) String() string {
 	rtParts := make([]string, 0)
-	for _, tp := range t.path {
-		if tp == nil {
-			continue
-		}
+	for _, tp := range t.Path() {
 		rtParts = append(rtParts, fmt.Sprintf("(%s)", tp))
 	}
 	return fmt.Sprintf(
@@ -95,11 +103,60 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*calc.RuleID {
-	if t.verdictIdx >= 0 {
-		return t.path[:t.verdictIdx+1]
-	} else {
+	if t.rulesToReport != nil {
+		return t.rulesToReport
+	}
+	if t.verdictIdx < 0 {
 		return nil
 	}
+
+	// The reported rules have not been calculated or have changed. Calculate them now.
+	t.rulesToReport = make([]*calc.RuleID, 0, t.verdictIdx)
+
+	// Iterate through the ruleIDs gathered in the nflog path. The IDs will be ordered by staged policies and tiers.
+	// e.g.   tier1.SNP1 tier1.SNP2 tier1(EOT) tier2.SNP2 tier2(EOT)
+	//     or tier1.SNP1 tier1.NP1  [n/a]      tier2.NP1  [n/a]
+	// Both of these represent possible outcomes for the same two tiers. There will be staged matches up to the first
+	// enforced policy match, or the end-of-tier action (in which case there will be a hit for each staged policy).
+	//
+	// We don't add end of tier passes since they are only used for internal bookkeeping.
+	for i := 0; i <= t.verdictIdx; i++ {
+		r := t.path[i]
+		if r == nil || r.IsEndOfTierPass() {
+			continue
+		}
+
+		endOfTierIndex := func() int {
+			for j := i + 1; j <= t.verdictIdx; j++ {
+				if t.path[j] != nil && t.path[j].Tier != r.Tier {
+					return j - 1
+				}
+			}
+			return t.verdictIdx
+		}
+
+		if model.PolicyIsStaged(r.Name) {
+			// This is a staged policy. If the rule is an implicit drop then we only include it if the end-of-tier
+			// pass action has also been hit.
+			if r.IsImplicitDropRule() {
+				finalIdx := endOfTierIndex()
+				if t.path[finalIdx] == nil || !t.path[finalIdx].IsEndOfTierPass() {
+					// This is an implicit drop, but there is no end of tier pass - we do not need to add this entry.
+					continue
+				}
+			}
+
+			// Add the report and then continue to the next entry in the path.
+			t.rulesToReport = append(t.rulesToReport, r)
+			continue
+		}
+
+		// This is an enforced policy, so just add the rule. There should be no more rules this tier, so jump to the end
+		// of the tier (we might already be at that index, e.g. if we are processing the verdict).
+		t.rulesToReport = append(t.rulesToReport, r)
+		i = endOfTierIndex()
+	}
+	return t.rulesToReport
 }
 
 func (t *RuleTrace) ToString() string {
@@ -145,45 +202,60 @@ func (t *RuleTrace) ClearDirtyFlag() {
 	t.bytesCtr.ResetDelta()
 }
 
-func (t *RuleTrace) addRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
-	if tierIdx >= t.Len() {
+func (t *RuleTrace) addRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes int) RuleMatch {
+	t.maybeResizePath(matchIdx)
+
+	ru := RuleMatchUnchanged
+
+	if existingRuleID := t.path[matchIdx]; existingRuleID == nil {
+		// Position is empty, insert and be done. Start revision at 1 to match the expected initial revisions of any
+		// staged policy matches (which will be zero value + 1 i.e. 1)
+		t.path[matchIdx] = rid
+		ru = RuleMatchSet
+	} else if !existingRuleID.Equals(rid) {
+		// Position is not empty, and does not match the new value.
+		return RuleMatchIsDifferent
+	}
+
+	// Set as dirty and increment the match revision number for this tier.
+	t.dirty = true
+
+	if !model.PolicyIsStaged(rid.Name) && rid.Action != rules.RuleActionPass {
+		// This is a verdict action, so increment counters and set our verdict index.
+		t.pktsCtr.Increase(numPkts)
+		t.bytesCtr.Increase(numBytes)
+		t.verdictIdx = matchIdx
+	}
+
+	return ru
+}
+
+func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, matchIdx, numPkts, numBytes int) {
+	// Set the match rule and increment the match revision number for this tier.
+	t.path[matchIdx] = rid
+	t.dirty = true
+
+	// Reset the reporting path so that we recalculate it next report.
+	t.rulesToReport = nil
+
+	if !model.PolicyIsStaged(rid.Name) && rid.Action != rules.RuleActionPass {
+		// This is a verdict action, so reset and set counters and set our verdict index.
+		t.pktsCtr.ResetAndSet(numPkts)
+		t.bytesCtr.ResetAndSet(numBytes)
+		t.verdictIdx = matchIdx
+	}
+}
+
+// maybeResizePath may resize the tier array based on the index of the tier.
+func (t *RuleTrace) maybeResizePath(matchIdx int) {
+	if matchIdx >= t.Len() {
 		// Insertion Index is beyond than current length. Grow the path slice as long
 		// as necessary.
-		incSize := (tierIdx / RuleTraceInitLen) * RuleTraceInitLen
+		incSize := (matchIdx / RuleTraceInitLen) * RuleTraceInitLen
 		newPath := make([]*calc.RuleID, t.Len()+incSize)
 		copy(newPath, t.path)
 		t.path = newPath
-		t.path[tierIdx] = rid
-	} else {
-		existingRuleID := t.path[tierIdx]
-		switch {
-		case existingRuleID == nil:
-			// Position is empty, insert and be done.
-			t.path[tierIdx] = rid
-		case !existingRuleID.Equals(rid):
-			return false
-		}
 	}
-	if rid.Action != rules.RuleActionPass {
-		t.pktsCtr.Increase(numPkts)
-		t.bytesCtr.Increase(numBytes)
-		t.verdictIdx = tierIdx
-	}
-	t.dirty = true
-	return true
-}
-
-func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) {
-	if rid.Action == rules.RuleActionPass {
-		t.path[tierIdx] = rid
-		return
-	}
-	// New tracepoint is not a next-Tier action truncate at this Index.
-	t.path[tierIdx] = rid
-	t.pktsCtr = *NewCounter(numPkts)
-	t.bytesCtr = *NewCounter(numBytes)
-	t.dirty = true
-	t.verdictIdx = tierIdx
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
@@ -224,6 +296,14 @@ func (t *Tuple) GetDestPort() int {
 	return t.l4Dst
 }
 
+func (t *Tuple) SourceNet() net.IP {
+	return net.IP(t.src[:16])
+}
+
+func (t *Tuple) DestNet() net.IP {
+	return net.IP(t.dst[:16])
+}
+
 // Data contains metadata and statistics such as rule counters and age of a
 // connection(Tuple). Each Data object contains:
 // - 2 RuleTrace's - Ingress and Egress - each providing information on the
@@ -235,7 +315,8 @@ func (t *Tuple) GetDestPort() int {
 type Data struct {
 	Tuple Tuple
 
-	origSourceIPs *boundedSet
+	origSourceIPs       *boundedSet
+	origSourceIPsActive bool
 
 	// Contains endpoint information corresponding to source and
 	// destination endpoints. Either of these values can be nil
@@ -258,24 +339,26 @@ type Data struct {
 	IngressRuleTrace RuleTrace
 	EgressRuleTrace  RuleTrace
 
-	createdAt  time.Duration
-	updatedAt  time.Duration
-	ageTimeout time.Duration
-	dirty      bool
+	updatedAt     time.Duration
+	ruleUpdatedAt time.Duration
+
+	dirty bool
 }
 
-func NewData(tuple Tuple, duration time.Duration, maxOriginalIPsSize int) *Data {
+func NewData(tuple Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize int) *Data {
 	now := monotime.Now()
-	return &Data{
-		Tuple:            tuple,
-		origSourceIPs:    NewBoundedSet(maxOriginalIPsSize),
-		IngressRuleTrace: NewRuleTrace(),
-		EgressRuleTrace:  NewRuleTrace(),
-		createdAt:        now,
-		updatedAt:        now,
-		ageTimeout:       duration,
-		dirty:            true,
+	d := &Data{
+		Tuple:         tuple,
+		origSourceIPs: NewBoundedSet(maxOriginalIPsSize),
+		updatedAt:     now,
+		ruleUpdatedAt: now,
+		dirty:         true,
+		srcEp:         srcEp,
+		dstEp:         dstEp,
 	}
+	d.IngressRuleTrace.Init()
+	d.EgressRuleTrace.Init()
+	return d
 }
 
 func (d *Data) String() string {
@@ -329,20 +412,20 @@ func (d *Data) IsDirty() bool {
 	return d.dirty
 }
 
-func (d *Data) CreatedAt() time.Duration {
-	return d.createdAt
-}
-
 func (d *Data) UpdatedAt() time.Duration {
 	return d.updatedAt
+}
+
+func (d *Data) RuleUpdatedAt() time.Duration {
+	return d.ruleUpdatedAt
 }
 
 func (d *Data) DurationSinceLastUpdate() time.Duration {
 	return monotime.Since(d.updatedAt)
 }
 
-func (d *Data) DurationSinceCreate() time.Duration {
-	return monotime.Since(d.createdAt)
+func (d *Data) DurationSinceLastRuleUpdate() time.Duration {
+	return monotime.Since(d.ruleUpdatedAt)
 }
 
 // Returns the final action of the RuleTrace
@@ -443,37 +526,37 @@ func (d *Data) SetDestinationEndpointData(dep *calc.EndpointData) {
 	d.dstEp = dep
 }
 
-func (d *Data) AddRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
-	var ok bool
+func (d *Data) AddRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) RuleMatch {
+	var ru RuleMatch
 	switch ruleID.Direction {
 	case rules.RuleDirIngress:
-		ok = d.IngressRuleTrace.addRuleID(ruleID, tierIdx, numPkts, numBytes)
+		ru = d.IngressRuleTrace.addRuleID(ruleID, matchIdx, numPkts, numBytes)
 	case rules.RuleDirEgress:
-		ok = d.EgressRuleTrace.addRuleID(ruleID, tierIdx, numPkts, numBytes)
+		ru = d.EgressRuleTrace.addRuleID(ruleID, matchIdx, numPkts, numBytes)
 	}
 
-	if ok {
+	if ru != RuleMatchUnchanged {
 		d.touch()
 		d.setDirtyFlag()
 	}
-	return ok
+	return ru
 }
 
-func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
+func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
 	switch ruleID.Direction {
 	case rules.RuleDirIngress:
-		d.IngressRuleTrace.replaceRuleID(ruleID, tierIdx, numPkts, numBytes)
+		d.IngressRuleTrace.replaceRuleID(ruleID, matchIdx, numPkts, numBytes)
 	case rules.RuleDirEgress:
-		d.EgressRuleTrace.replaceRuleID(ruleID, tierIdx, numPkts, numBytes)
+		d.EgressRuleTrace.replaceRuleID(ruleID, matchIdx, numPkts, numBytes)
 	}
 
 	d.touch()
 	d.setDirtyFlag()
-	return true
 }
 
 func (d *Data) AddOriginalSourceIPs(bs *boundedSet) {
 	d.origSourceIPs.Combine(bs)
+	d.origSourceIPsActive = true
 	d.isConnection = true
 	d.touch()
 	d.setDirtyFlag()
@@ -510,22 +593,22 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	if d.isConnection {
 		// Report connection stats.
 		if expired || d.IsDirty() {
-			// Track if we need to send a seprate expire metric update. This is required when we've only
-			// are reporting Original IP metric updates and want to send a corresponding expiration metric
-			// update. When they are correlated with regular metric updates and connection metrics, we don't
-			// need to send this.
-			sendOrigIPExpire := true
+			// Track if we need to send a separate expire metric update. This is required when we are only
+			// reporting Original IP metric updates and want to send a corresponding expiration metric update.
+			// When they are correlated with regular metric updates and connection metrics, we don't need to
+			// send this.
+			sendOrigSourceIPsExpire := true
 			if d.EgressRuleTrace.FoundVerdict() {
-				sendOrigIPExpire = false
 				c <- d.metricUpdateEgressConn(ut)
 			}
 			if d.IngressRuleTrace.FoundVerdict() {
-				sendOrigIPExpire = false
+				sendOrigSourceIPsExpire = false
 				c <- d.metricUpdateIngressConn(ut)
 			}
 
 			// We may receive HTTP Request data after we've flushed the connection counters.
-			if d.NumUniqueOriginalSourceIPs() != 0 || (expired && sendOrigIPExpire) {
+			if (expired && d.origSourceIPsActive && sendOrigSourceIPsExpire) || d.NumUniqueOriginalSourceIPs() != 0 {
+				d.origSourceIPsActive = !expired
 				c <- d.metricUpdateOrigSourceIPs(ut)
 			}
 
@@ -535,7 +618,6 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 			d.clearConnDirtyFlag()
 			d.EgressRuleTrace.ClearDirtyFlag()
 			d.IngressRuleTrace.ClearDirtyFlag()
-
 		}
 	} else {
 		// Report rule trace stats.
@@ -546,11 +628,6 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 		if (expired || d.IngressRuleTrace.IsDirty()) && d.IngressRuleTrace.FoundVerdict() {
 			c <- d.metricUpdateIngressNoConn(ut)
 			d.IngressRuleTrace.ClearDirtyFlag()
-		}
-		// We may receive HTTP Request data after we've flushed the connection counters.
-		if (expired || d.IsDirty()) && d.NumUniqueOriginalSourceIPs() != 0 {
-			c <- d.metricUpdateOrigSourceIPs(ut)
-			d.dirty = false
 		}
 
 		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves

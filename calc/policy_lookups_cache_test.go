@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -322,6 +322,12 @@ var _ = Describe("RuleID tests", func() {
 		Entry("Namespaced network policy in non default tier", "netsec", "np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.np-2|allow"),
 		Entry("Kubernetes network policy", "default", "knp.default.allow-all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/knp.default.allow-all|allow"),
 		Entry("Profile", "", "kns.ns3", "ns3", 0, rules.RuleDirIngress, rules.RuleActionAllow, "__PROFILE__|ns3/__PROFILE__.kns.ns3|allow"),
+
+		Entry("Staged Global network policy", "default", "staged:gnp-1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|default.staged:gnp-1|allow"),
+		Entry("Staged Global network policy in non default tier", "tier-1", "staged:gnp-2", "", 2, rules.RuleDirEgress, rules.RuleActionPass, "tier-1|tier-1.staged:gnp-2|pass"),
+		Entry("Staged Namespaced network policy", "default", "staged:np-1", "ns1", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|ns1/default.staged:np-1|allow"),
+		Entry("Staged Namespaced network policy in non default tier", "netsec", "staged:np-2", "ns2", 0, rules.RuleDirIngress, rules.RuleActionAllow, "netsec|ns2/netsec.staged:np-2|allow"),
+		Entry("Staged Kubernetes network policy", "default", "staged:knp.default.allow-all", "test", 0, rules.RuleDirIngress, rules.RuleActionAllow, "default|test/staged:knp.default.allow-all|allow"),
 	)
 })
 

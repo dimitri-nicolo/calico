@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -17,30 +17,76 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+// ===== A note on data structures for storing policy matches =====
+//
+// We store the various nflog matches that we need to report as a metric update in a flattened slice.
+//
+// For each tier, we need to store at most a match for each staged policy *and* and a verdict match (for end-of-tier
+// drop, or policy match for policy after all staged policies).
+//     SP1 SP2 ... SPn EOTD
+//
+// Suppose we have a tier that contains the following:
+//     P1 P2 SP1 SP2 P3 SP3 P4 SP4 SP5
+//
+// We need 5 buckets to contain all possible results of the tier.
+// If we match any of the real policies P1-P4, then we cannot match any of the staged policies after that point. We
+// can use n (the nth staged policy) as the index into this tiers set results, and for each real policy match
+// we assign it the index of the next staged policy.
+//
+// So, in the above example, the offset for this tier, into the full set of policy matches would be:
+//     P1 P2 SP1 SP2 P3 SP3 P4 SP4 SP5 <EOTD or EOTP>
+//      0  0   0   1  2   2  3   3   4              5    <- The "policy match index"
+//
+// e.g. in position 2, we can have a result from either P3 or SP3. If the result is P3 then we do not need to consider
+//      the data in position 3, 4 or 5 - that is because P3 is an enforced policy and so none of the subsequent
+//      policies in the tier can be hit.
+//
+// In the event of an end-of-tier-pass (i.e. the tier contains only staged policies), any staged policy that has not had
+// an explicit hit, will be recorded as an end-of-tier drop for that policy. This is effectively the outcome *should*
+// the staged policy be enforced.
+//
+// With multiple tiers, the policy match index increments across the ordered set of tiers.
+
 type EndpointData struct {
-	Key          model.Key
-	OrderedTiers []string
+	Key model.Key
+
+	// Whether the endpoint is local or not.
+	IsLocal bool
+
+	// Ingress and egress match data.
+	Ingress *MatchData
+	Egress  *MatchData
 
 	// EndpointData will have either an Endpoint OR a Networkset.
 	// The networkset will only be set in the EndpointData if an
 	// endpoint for the IP is not found.
 	Endpoint   interface{}
 	Networkset interface{}
-
-	// ImplicitDrop*RuleID is used to track the last policy in each tier that
-	// selected this endpoint in the Ingress or Egress rule directions. These
-	// special RuleIDs are created so that implictly dropped packets in each
-	// tier can be counted against these policies as being responsible for
-	// denying the packet.
-	ImplicitDropIngressRuleID map[string]*RuleID
-	ImplicitDropEgressRuleID  map[string]*RuleID
 }
 
-// IsLocal returns if this EndpointData corresponds to a local endpoint or not.
-// This works because, we don't process tier information for remote endpoints
-// and only do so for remote endpoints.
-func (e *EndpointData) IsLocal() bool {
-	return e.OrderedTiers != nil
+type MatchData struct {
+	// The map of policy ID to match index.
+	PolicyMatches map[PolicyID]int
+
+	// The map of tier to end-of-tier match index.
+	TierData map[string]*TierData
+
+	// The profile match index.
+	ProfileMatchIndex int
+}
+
+type TierData struct {
+	// ImplicitDropRuleID is used to track the last policy in each tier that
+	// selected this endpoint. This special RuleID is created so that implicitly
+	// dropped packets in each tier can be counted against these policies as
+	// being responsible for denying the packet.
+	//
+	// May be set to nil if the tier only contains staged policies.
+	ImplicitDropRuleID *RuleID
+
+	// The index into the policy match slice that the implicit drop rule is added. This is always the last
+	// index for this tier and equal to FirstPolicyMatchIndex+len(StagedPolicyImplicitDropRuleIDs).
+	EndOfTierMatchIndex int
 }
 
 // IsHostEndpoint returns if this EndpointData corresponds to a hostendpoint.
@@ -88,56 +134,13 @@ func (ec *EndpointLookupsCache) RegisterWith(remoteEndpointDispatcher *dispatche
 // handler (below) is this method records tier information for local endpoints while this information
 // is ignored for remote endpoints.
 func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, filteredTiers []tierInfo) {
-	createEndpointData := func() *EndpointData {
-		ed := &EndpointData{
-			Key:                       key,
-			Endpoint:                  ep,
-			OrderedTiers:              make([]string, len(filteredTiers)),
-			ImplicitDropIngressRuleID: map[string]*RuleID{},
-			ImplicitDropEgressRuleID:  map[string]*RuleID{},
-		}
-	processTiers:
-		for i := range filteredTiers {
-			ti := filteredTiers[i]
-			ed.OrderedTiers[i] = ti.Name
-			if len(ti.OrderedPolicies) == 0 {
-				continue
-			}
-			ingressAssigned := false
-			egressAssigned := false
-			for j := len(ti.OrderedPolicies) - 1; j >= 0; j-- {
-				pol := ti.OrderedPolicies[j]
-				namespace, tier, name, err := deconstructPolicyName(pol.Key.Name)
-				if err != nil {
-					log.WithError(err).Error("Unable to parse policy name")
-					continue
-				}
-				if pol.GovernsIngress() && !ingressAssigned {
-					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
-						rules.RuleDirIngress, rules.RuleActionDeny)
-					ed.ImplicitDropIngressRuleID[ti.Name] = rid
-					ingressAssigned = true
-				}
-				if pol.GovernsEgress() && !egressAssigned {
-					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
-						rules.RuleDirEgress, rules.RuleActionDeny)
-					ed.ImplicitDropEgressRuleID[ti.Name] = rid
-					egressAssigned = true
-				}
-				if ingressAssigned && egressAssigned {
-					continue processTiers
-				}
-			}
-		}
-		return ed
-	}
 	switch k := key.(type) {
 	case model.WorkloadEndpointKey:
 		if ep == nil {
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.WorkloadEndpoint)
-			ed := createEndpointData()
+			ed := ec.CreateEndpointData(key, ep, filteredTiers)
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromWorkloadEndpoint(endpoint))
 		}
 	case model.HostEndpointKey:
@@ -145,12 +148,97 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.HostEndpoint)
-			ed := createEndpointData()
+			ed := ec.CreateEndpointData(key, ep, filteredTiers)
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromHostEndpoint(endpoint))
 		}
 	}
 	log.Infof("Updating endpoint cache with local endpoint data %v", key)
 	return
+}
+
+// CreateEndpointData creates the endpoint data based on tier
+func (ec *EndpointLookupsCache) CreateEndpointData(key model.Key, ep interface{}, filteredTiers []tierInfo) *EndpointData {
+	ed := &EndpointData{
+		Key:      key,
+		Endpoint: ep,
+		IsLocal:  true,
+		Ingress: &MatchData{
+			PolicyMatches:     make(map[PolicyID]int),
+			TierData:          make(map[string]*TierData),
+			ProfileMatchIndex: -1,
+		},
+		Egress: &MatchData{
+			PolicyMatches:     make(map[PolicyID]int),
+			TierData:          make(map[string]*TierData),
+			ProfileMatchIndex: -1,
+		},
+	}
+	var policyMatchIdxIngress, policyMatchIdxEgress int
+	for _, ti := range filteredTiers {
+		if len(ti.OrderedPolicies) == 0 {
+			continue
+		}
+		tdIngress := &TierData{}
+		tdEgress := &TierData{}
+		var hasIngress, hasEgress bool
+		for _, pol := range ti.OrderedPolicies {
+			namespace, tier, name, err := deconstructPolicyName(pol.Key.Name)
+			if err != nil {
+				log.WithError(err).Error("Unable to parse policy name")
+				continue
+			}
+			if pol.GovernsIngress() {
+				// Add a ingress implicit drop lookup..
+				rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
+					rules.RuleDirIngress, rules.RuleActionDeny)
+				ed.Ingress.PolicyMatches[rid.PolicyID] = policyMatchIdxIngress
+
+				if model.PolicyIsStaged(pol.Key.Name) {
+					// Increment the match index. We don't do this for non-staged policies because they replace the
+					// subsequent staged policy in the results.
+					policyMatchIdxIngress++
+				} else {
+					// This is a non-staged policy, update our end-of-tier match.
+					tdIngress.ImplicitDropRuleID = rid
+				}
+				hasIngress = true
+			}
+			if pol.GovernsEgress() {
+				// Add a egress implicit drop lookup..
+				rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
+					rules.RuleDirEgress, rules.RuleActionDeny)
+				ed.Egress.PolicyMatches[rid.PolicyID] = policyMatchIdxEgress
+
+				if model.PolicyIsStaged(pol.Key.Name) {
+					// Increment the match index. We don't do this for non-staged policies because they replace the
+					// subsequent staged policy in the results.
+					policyMatchIdxEgress++
+				} else {
+					// This is a non-staged policy, update our end-of-tier match.
+					tdEgress.ImplicitDropRuleID = rid
+				}
+				hasEgress = true
+			}
+		}
+
+		// If there were any policies then set the end-of-tier match index and add the tier lookup.
+		if hasIngress {
+			tdIngress.EndOfTierMatchIndex = policyMatchIdxIngress
+			policyMatchIdxIngress++
+			ed.Ingress.TierData[ti.Name] = tdIngress
+		}
+		if hasEgress {
+			tdEgress.EndOfTierMatchIndex = policyMatchIdxEgress
+			policyMatchIdxEgress++
+			ed.Egress.TierData[ti.Name] = tdEgress
+		}
+	}
+
+	// Update the profile match index.
+	ed.Ingress.ProfileMatchIndex = policyMatchIdxIngress
+	ed.Egress.ProfileMatchIndex = policyMatchIdxEgress
+
+	return ed
 }
 
 // OnUpdate is the callback method registered with the RemoteEndpointDispatcher for
@@ -269,6 +357,7 @@ func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed *Endpo
 	// short interval. Otherwise, create a new IP to endpoint
 	// mapping entry.
 	existingEps, ok := ec.ipToEndpoints[ip]
+
 	if !ok {
 		ec.ipToEndpoints[ip] = []*EndpointData{ed}
 	} else {

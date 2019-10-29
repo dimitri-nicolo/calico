@@ -517,7 +517,7 @@ func describeAsyncTests(baseTests []StateList, l license) {
 						remoteEds := []*EndpointData{}
 						eds := lookupsCache.GetAllEndpointData()
 						for _, ed := range eds {
-							if ed.IsLocal() {
+							if ed.IsLocal {
 								continue
 							}
 							remoteEds = append(remoteEds, ed)
@@ -680,7 +680,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		remoteEds := []*EndpointData{}
 		eds := lookupsCache.GetAllEndpointData()
 		for _, ed := range eds {
-			if ed.IsLocal() {
+			if ed.IsLocal {
 				continue
 			}
 			remoteEds = append(remoteEds, ed)
