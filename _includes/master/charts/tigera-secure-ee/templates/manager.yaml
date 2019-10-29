@@ -355,6 +355,16 @@ spec:
                 key: tigera.elasticsearch.password
                 optional: true
             {{- else }}
+{{- if .Values.elasticsearch.manager.password }}
+          - name: ELASTIC_USER
+            value: {{ .Values.elasticsearch.manager.username | quote }}
+          - name: ELASTIC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tigera-es-config
+                key: tigera.elasticsearch.password
+                optional: true
+{{- else }}
           - name: ELASTIC_USERNAME
             value: "elastic"
           - name: ELASTIC_PASSWORD
@@ -362,6 +372,7 @@ spec:
               secretKeyRef:
                 name: tigera-elasticsearch-es-elastic-user
                 key: elastic
+            {{- end }}
             {{- end }}
           - name: ELASTIC_CA
             valueFrom:

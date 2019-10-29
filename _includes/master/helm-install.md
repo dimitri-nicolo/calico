@@ -45,6 +45,12 @@ curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% 
 
 {%- if include.method == "full" %}
 
+### Configure Elastic storage
+
+The bundled ElasticSearch operator is configured to use a `StorageClass` called `tigera-elasticsearch`.
+
+Create a StorageClass with that name providing persistent storage that meets the requirements.
+
 ### Create values.yaml for {{ site.prodname }} Core
 
 In this step, you create a values.yaml file with your configuration values to build a running cluster.
@@ -180,44 +186,6 @@ Now that the **{{ site.prodname }} Core** chart is installed, please move on to 
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
 
-#### Connect to Elasticsearch & Kibana
-
-By default, {{ site.prodname }} launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster with kibana for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch & kibana, define the address in your yaml:
-
-```yaml
-elasticsearch:
-  host: my.elasticsearch.co
-  port: 9200
-kibana:
-  host: my.kibana.co
-  port: 5601
-```
-
-If the address you use to connect to the kibana UI in your browser differs from the address it is accessible from in the Kubernetes cluster, also set kibanaURL:
-
-```yaml
-manager:
-  kibanaURL: https://www.my.kibana.co
-```
-
-Additionally, provide the CA and passwords for each of the roles:
-
-```
---set-file elasticsearch.tls.ca=./ElasticSearchCA.pem \
---set elasticsearch.fluentd.password=$FLUENTD_PASSWORD \
---set elasticsearch.manager.password=$MANAGER_PASSWORD \
---set elasticsearch.curator.password=$CURATOR_PASSWORD \
---set elasticsearch.compliance.benchmarker.password=$COMPLIANCE_BENCHMARKER_PASSWORD \
---set elasticsearch.compliance.controller.password=$COMPLIANCE_CONTROLLER_PASSWORD \
---set elasticsearch.compliance.reporter.password=$COMPLIANCE_REPORTER_PASSWORD \
---set elasticsearch.compliance.snapshotter.password=$COMPLIANCE_SNAPSHOTTER_PASSWORD \
---set elasticsearch.compliance.server.password=$COMPLIANCE_SERVER_PASSWORD \
---set elasticsearch.intrusionDetection.password=$IDS_PASSWORD \
---set elasticsearch.elasticInstaller.password=$ELASTIC_INSTALLER_PASSWORD
-```
-
-For help setting up these roles in your Elasticsearch cluster, see  [Setting up Elasticsearch roles]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/byo-elasticsearch#before-you-begin).
-
 ### Setting an Auth Type
 
 **Basic auth**
@@ -252,13 +220,24 @@ manager:
 
 ### Install {{ site.prodname }}
 
-Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
+0. Pre-install the CRDs.
 
-```
-helm install ./tigera-secure-ee-{% include chart_version_name %}.tgz \
-  --namespace calico-monitoring \
-  --set-file imagePullSecrets.cnx-pull-secret=./config.json
-```
+   Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
+
+   ```
+   kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+   ```
+
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
+
+1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
+
+   ```
+   helm install ./tigera-secure-ee-{% include chart_version_name %}.tgz \
+     --namespace calico-monitoring \
+     --set createCustomResources=false \
+     --set-file imagePullSecrets.cnx-pull-secret=./config.json
+   ```
 
    >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
@@ -299,20 +278,23 @@ kubectl port-forward -n calico-monitoring svc/cnx-manager 9443 & \
 
 Sign in by navigating to https://localhost:9443 and login.
 
-### FAQ - Helm v2.13
+#### Connect to Elasticsearch & Kibana
 
-Due to [a bug in helm v2.13 and below](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to register before Helm attempts to create resources that require them, producing the following error:
-
-```
-Error: validation failed: [unable to recognize "": no matches for kind "Alertmanager" in version "monitoring.coreos.com/v1", unable to recognize "": no matches for kind "ElasticsearchCluster" in version "enterprises.upmc.com/v1", unable to recognize "": no matches for kind "Prometheus" in version "monitoring.coreos.com/v1", unable to recognize "": no matches for kind "PrometheusRule" in version "monitoring.coreos.com/v1", unable to recognize "": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"]
-```
-
-To remedy this, either upgrade helm to v2.14+, or pre-install the CRDs:
+You can connect to ElasticSearch and Kibana using the default user `elastic` that is used for installation.
+In order to change the user to ElasticSearch and Kibana you need to provide the passwords for each of the roles:
 
 ```
-kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+helm upgrade $DEPLOYMENT $CHART_NAME
+--set elasticsearch.fluentd.password=$FLUENTD_PASSWORD \
+--set elasticsearch.manager.password=$MANAGER_PASSWORD \
+--set elasticsearch.curator.password=$CURATOR_PASSWORD \
+--set elasticsearch.compliance.benchmarker.password=$COMPLIANCE_BENCHMARKER_PASSWORD \
+--set elasticsearch.compliance.controller.password=$COMPLIANCE_CONTROLLER_PASSWORD \
+--set elasticsearch.compliance.reporter.password=$COMPLIANCE_REPORTER_PASSWORD \
+--set elasticsearch.compliance.snapshotter.password=$COMPLIANCE_SNAPSHOTTER_PASSWORD \
+--set elasticsearch.compliance.server.password=$COMPLIANCE_SERVER_PASSWORD \
+--set elasticsearch.intrusionDetection.password=$IDS_PASSWORD \
+--reuse-values --recreate-pods
 ```
 
-Then install with `createCustomResources=false`.
-
->[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
+For help setting up these roles in your Elasticsearch cluster, see  [Setting up Elasticsearch roles]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/byo-elasticsearch#before-you-begin)

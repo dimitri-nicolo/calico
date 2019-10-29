@@ -23,7 +23,7 @@ key: {{ $ca.Key | b64enc }}
 
 
 {{- define "tigera-secure-ee.elasticsearch.mode" -}}
-{{- if or (or (or (or (or (or (or (or (or (or (or (or .Values.elasticsearch.host) .Values.elasticsearch.tls.ca) .Values.elasticsearch.fluentd.password) .Values.elasticsearch.manager.password) .Values.elasticsearch.curator.password) .Values.elasticsearch.compliance.controller.password) .Values.elasticsearch.compliance.reporter.password) .Values.elasticsearch.compliance.snapshotter.password) .Values.elasticsearch.compliance.server.password) .Values.elasticsearch.compliance.benchmarker.password) .Values.elasticsearch.intrusionDetection.password) .Values.elasticsearch.elasticInstaller.password -}}
+{{- if or (or .Values.elasticsearch.host) .Values.elasticsearch.tls.ca -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.host -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.tls.ca -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.fluentd.password -}}

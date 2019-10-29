@@ -515,6 +515,16 @@ spec:
                   name: elastic-fluentd-user
                   key: password
 {{- else }}
+{{- if .Values.elasticsearch.fluentd.password }}
+            - name: ELASTIC_USER
+              value: {{ .Values.elasticsearch.fluentd.username | quote }}
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-fluentd-user
+                  key: password
+                  optional: true
+{{- else }}
             - name: ELASTIC_USER
               value: "elastic"
             - name: ELASTIC_PASSWORD
@@ -522,6 +532,7 @@ spec:
                 secretKeyRef:
                   name: tigera-elasticsearch-es-elastic-user
                   key: elastic
+{{- end }}
 {{- end }}
             - name: AWS_KEY_ID
               valueFrom:
@@ -805,6 +816,16 @@ spec:
                       name: elastic-curator-user
                       key: password
 {{- else }}
+{{- if .Values.elasticsearch.curator.password }}
+                - name: ELASTIC_USER
+                  value: {{ .Values.elasticsearch.curator.username | quote }}
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: elastic-curator-user
+                      key: password
+                      optional: true
+{{- else }}
                 - name: ELASTIC_USER
                   value: "elastic"
                 - name: ELASTIC_PASSWORD
@@ -812,6 +833,7 @@ spec:
                     secretKeyRef:
                       name: tigera-elasticsearch-es-elastic-user
                       key: elastic
+{{- end }}
 {{- end }}
                 - name: ES_CURATOR_BACKEND_CERT
                   value: /etc/curator/elastic/ca.pem
@@ -1093,6 +1115,20 @@ spec:
                 name: elastic-ee-intrusion-detection
                 key: password
 {{- else }}
+{{- if .Values.elasticsearch.intrusionDetection.password }}
+          - name: ELASTIC_USER
+            value: {{ .Values.elasticsearch.intrusionDetection.username | quote }}
+          - name: ELASTIC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: elastic-ee-intrusion-detection
+                key: password
+                optional: true
+          - name: ELASTIC_HOST
+            value: tigera-elasticsearch-es-http.calico-monitoring.svc.cluster.local
+          - name: ELASTIC_PORT
+            value: "9200"
+{{- else }}
           - name: ELASTIC_USER
             value: "elastic"
           - name: ELASTIC_PASSWORD
@@ -1105,6 +1141,7 @@ spec:
             value: tigera-elasticsearch-es-http.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
             value: "9200"
+{{- end}}
 {{- end}}
           - name: ELASTIC_CA
             value: /certs/ca.pem

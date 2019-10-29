@@ -103,6 +103,16 @@ spec:
                   name: tigera-es-config
                   key: tigera.elasticsearch.port
 {{- if eq $elasticMode "operator" }}
+{{- if .Values.elasticsearch.compliance.benchmarker.password }}
+            - name: ELASTIC_USER
+              value: {{ .Values.elasticsearch.compliance.benchmarker.username | quote }}
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: benchmarker.password
+                  optional: true
+{{- else }}
             - name: ELASTIC_USER
               value: "elastic"
             - name: ELASTIC_PASSWORD
@@ -111,6 +121,7 @@ spec:
                   name: tigera-elasticsearch-es-elastic-user
                   key: elastic
                   optional: true
+{{- end }}
 {{- else }}
             - name: ELASTIC_USER
               valueFrom:

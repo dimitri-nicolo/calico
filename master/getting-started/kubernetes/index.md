@@ -56,6 +56,12 @@ This article requires a Linux host that meets the following requirements.
    kubectl taint nodes --all node-role.kubernetes.io/master-
    ```
 
+#### Configure Elastic storage
+
+The bundled ElasticSearch operator is configured to use a `StorageClass` called `tigera-elasticsearch`.
+
+Create a StorageClass with that name providing persistent storage that meets the requirements. 
+
 #### Install {{site.prodname}}
 
 1. Install the Tigera operators and custom resource definitions.
