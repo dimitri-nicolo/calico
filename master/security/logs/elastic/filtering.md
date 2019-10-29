@@ -6,14 +6,13 @@ canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/filtering
 {{site.prodname}} supports filtering out flow logs based on user provided
 configuration.  Use filtering to suppress logs of low significance.
 
-
 ## Configure flow filtering
 
 Configure filtering based on how {{site.prodname}} was deployed:
-- [Tigera operator deployment](#tigera-operator-deployment)
-- [Manual deployment](#manual-deployment)
+- [Operator deployment](#operator-deployment)
+- [Manual/Helm deployment](#manualhelm-deployment)
 
-### Tigera operator deployment
+### Operator deployment
 
 Flow log filtering is configured through a ConfigMap in the `tigera-operator`
 namespace.
@@ -30,7 +29,7 @@ To enable flow log filtering, follow these steps:
    kubectl create configmap fluentd-filters -n tigera-operator --from-file=filters
    ```
 
-### Manual deployment
+### Manual/Helm deployment
 
 Flow log filtering is configured in the `tigera-es-config` ConfigMap.
 
