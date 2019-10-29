@@ -15,11 +15,6 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-const (
-	// ReportLogFilename is the expected filename for Compliance report logs
-	ReportLogFilename = "reports.log"
-)
-
 // LogDispatcher is the external interface for dispatchers. For now there is only the file dispatcher.
 type LogDispatcher interface {
 	Initialize() error
@@ -76,10 +71,6 @@ func (d *fileDispatcher) Dispatch(data interface{}) error {
 		// assume d.logger is non-nil.
 		_, err := d.logger.Write(b)
 		if err != nil {
-			// NOTE: the FlowLogsReporter ignores errors returned by Dispatch,
-			// so log the error here.  We don't want to do anything more drastic
-			// like retrying because we don't know if the error is even
-			// recoverable.
 			log.WithError(err).Error("unable to write archive data to file")
 			return err
 		}
@@ -93,7 +84,7 @@ func (d *fileDispatcher) Dispatch(data interface{}) error {
 			// This indicates a bug, not a runtime error since we should always
 			// be able to serialize.
 			log.WithError(err).
-				WithField("FlowLog", d).
+				WithField("Report", d).
 				Panic("unable to serialize archive data to JSON")
 		}
 		if err = writeLog(b); err != nil {
