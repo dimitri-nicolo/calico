@@ -4,7 +4,6 @@ package query
 
 import (
 	"fmt"
-	"go/token"
 	"strings"
 
 	"github.com/alecthomas/participle"
@@ -155,7 +154,7 @@ func (c Comparator) String() string {
 
 func quoteIfNeeded(s string) string {
 	// requires golang 1.13
-	if !(token.IsKeyword(s) || token.IsIdentifier(s)) {
+	if !(IsKeyword(s) || IsIdentifier(s)) {
 		return fmt.Sprintf("%q", s)
 	}
 	return s
