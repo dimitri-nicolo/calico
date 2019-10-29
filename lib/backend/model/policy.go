@@ -36,40 +36,45 @@ var (
 // as their non-staged counterpart). This approach is less invasive to the existing Felix and dataplane driver code.
 const PolicyNamePrefixStaged = "staged:"
 
-func extractName(name string) string {
-	parts := strings.Split(name, "/")
-	if len(parts) == 2 {
-		return parts[1]
+// stagedToEnforcedV1Name converts the v1 name from staged (if it is) to the equivalent enforced name, and returns
+// whether the original name indicated a staged policy.
+func stagedToEnforcedV1Name(name string) (bool, string) {
+	var namespace string
+	var staged bool
+	if parts := strings.Split(name, "/"); len(parts) == 2 {
+		namespace, name = parts[0], parts[1]
 	}
-
-	return name
+	if staged = strings.HasPrefix(name, PolicyNamePrefixStaged); staged {
+		name = strings.TrimPrefix(name, PolicyNamePrefixStaged)
+	}
+	if namespace == "" {
+		return staged, name
+	}
+	return staged, namespace + "/" + name
 }
 
 // PolicyIsStaged returns true if the name of the policy indicates that it is a staged policy.
 func PolicyIsStaged(name string) bool {
-	n := extractName(name)
-	return strings.HasPrefix(n, PolicyNamePrefixStaged)
+	staged, _ := stagedToEnforcedV1Name(name)
+	return staged
 }
 
 // PolicyNameLessThan checks if name1 is less that name2. Used for policy sorting. Staged policies are considered to be
 // less than the non-staged equivalent.
 func PolicyNameLessThan(name1, name2 string) bool {
-	n1 := extractName(name1)
-	n2 := extractName(name2)
+	staged1, name1 := stagedToEnforcedV1Name(name1)
+	staged2, name2 := stagedToEnforcedV1Name(name2)
 
-	if strings.HasPrefix(n1, PolicyNamePrefixStaged) {
-		n1 = strings.TrimPrefix(n1, PolicyNamePrefixStaged)
-		if n1 == n2 {
-			return true
-		}
+	if name1 != name2 {
+		return name1 < name2
 	}
-	if strings.HasPrefix(n2, PolicyNamePrefixStaged) {
-		n2 = strings.TrimPrefix(n2, PolicyNamePrefixStaged)
-		if n1 == n2 {
-			return false
-		}
+
+	if staged1 == staged2 {
+		return false
 	}
-	return n1 < n2
+
+	// Names are equal, but staging is not. Staged policies are considered lower than enforced.
+	return staged1
 }
 
 type PolicyKey struct {
