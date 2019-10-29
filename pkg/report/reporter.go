@@ -3,6 +3,7 @@ package report
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -38,6 +39,13 @@ const (
 
 	// The full set of zero-trust flags for an endpoint.
 	ZeroTrustFlags = ZeroTrustWhenEndpointFlagsSet | ZeroTrustWhenEndpointFlagsUnset
+
+	// Compliance report logs need to be written to separate log files (one per report type), in order
+	// to avoid write conflicts when report jobs run concurrently.
+	// The pattern will be ReportLogFilenamePrefix + Report Type + ReportLogFilenameSuffix
+	//			e.g. compliance.network-access.reports.log
+	ReportLogFilenamePrefix = "compliance"
+	ReportLogFilenameSuffix = "reports.log"
 )
 
 // Run is the entrypoint to start running the reporter.
@@ -70,7 +78,7 @@ func Run(
 		}).Info("Creating Archive Logs FileDispatcher")
 		longTermArchiver = archive.NewFileDispatcher(
 			reportCfg.ArchiveLogsDirectory,
-			archive.ReportLogFilename,
+			fmt.Sprintf("%s.%s.%s", ReportLogFilenamePrefix, reportCfg.ReportType.Name, ReportLogFilenameSuffix),
 			reportCfg.ArchiveLogsMaxFileSizeMB,
 			reportCfg.ArchiveLogsMaxFiles,
 		)
