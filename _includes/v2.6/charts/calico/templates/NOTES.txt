@@ -1,0 +1,5 @@
+Thank you for installing Tigera Secure Enterprise Edition!
+
+To complete your installation, please follow the instructions here:
+
+- https://docs.tigera.io/v2.6/getting-started/kubernetes/installation/helm

@@ -1,0 +1,3 @@
+data:
+  # Edit this field with the URL of your Kibana instance.
+  tigera.cnx-manager.kibana-url: https://your-kibana-url:5601

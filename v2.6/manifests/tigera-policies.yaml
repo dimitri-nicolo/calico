@@ -1,0 +1,427 @@
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-elasticsearch
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-kibana
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-intrusion-detection
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-manager
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-compliance
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-prometheus
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+# Tier containing policies to allow access to Tigera Secure EE.
+apiVersion: projectcalico.org/v3
+kind: Tier
+metadata:
+  name: allow-tigera
+spec:
+  order: 100
+
+---
+
+# Allow the Kubernetes API Server access to Tigera Secure EE API Server.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.cnx-apiserver-access
+  namespace: tigera-system
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'cnx-apiserver'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      # This policy allows Tigera Secure EE API Server access from anywhere: replace it with
+      # the addresses of your Kubernetes API Servers if those are static.
+      nets: ["0.0.0.0/0"]
+    destination:
+      # The ports Tigera Secure EE API Server and Tigera Secure EE Query Server are configured to listen on.
+      ports: [443, 5443, 8080, 10443]
+---
+# Allow users to access Tigera Secure EE Manager.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.manager-access
+  namespace: tigera-manager
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-manager'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      # This policy allows access to Tigera Secure EE Manager from anywhere: narrow it down if
+      # only certain subnets should be allowed.
+      nets: ["0.0.0.0/0"]
+    destination:
+      # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
+      ports: [9443]
+---
+
+# Allow internal communication to compliance-server from Manager.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.compliance-server
+  namespace: tigera-compliance
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'compliance-server'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-manager'
+      namespaceSelector: name == 'tigera-manager'
+    destination:
+      ports: [5443]
+
+---
+
+# This manifest creates a network policy to allow traffic to Alertmanager
+# (TCP port 9093).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: calico-node-alertmanager
+  namespace: tigera-prometheus
+spec:
+  ingress:
+  - ports:
+    - port: 9093
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+---
+
+# This manifest creates a network policy to allow traffic between
+# Alertmanagers for HA configuration (TCP port 6783).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: calico-node-alertmanager-mesh
+  namespace: tigera-prometheus
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - alertmanager
+        - key: alertmanager
+          operator: In
+          values:
+          - calico-node-alertmanager
+    ports:
+    - port: 6783
+      protocol: TCP
+    - port: 6783
+      protocol: UDP
+  podSelector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+---
+
+# This manifest creates a network policy to allow traffic to access the
+# Prometheus (TCP port 9090).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prometheus
+  namespace: tigera-prometheus
+spec:
+  ingress:
+  - ports:
+    - port: 9090
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: prometheus
+      prometheus: calico-node-prometheus
+---
+
+# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
+# intrusion detection installer
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.elasticsearch-access
+  namespace: tigera-elasticsearch
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'fluentd-node'
+      namespaceSelector: name == 'tigera-fluentd'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'eks-log-forwarder'
+      namespaceSelector: name == 'tigera-fluentd'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-secure'
+      namespaceSelector: name == 'tigera-kibana'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: job-name == 'intrusion-detection-es-job-installer'
+      namespaceSelector: name == 'tigera-intrusion-detection'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-curator'
+      namespaceSelector: name == 'tigera-elasticsearch'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-manager'
+      namespaceSelector: name == 'tigera-manager'
+    destination:
+      ports: [9200]
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-benchmarker'
+      namespaceSelector: name == 'tigera-compliance'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-controller'
+      namespaceSelector: name == 'tigera-compliance'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-server'
+      namespaceSelector: name == 'tigera-compliance'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-snapshotter'
+      namespaceSelector: name == 'tigera-compliance'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-reporter'
+      namespaceSelector: name == 'tigera-compliance'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'intrusion-detection-controller'
+      namespaceSelector: name == 'tigera-intrusion-detection'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-operator'
+      namespaceSelector: name == 'tigera-eck-operator'
+  - action: Allow
+    destination:
+      ports: [9200]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-operator'
+      namespaceSelector: name == 'tigera-operator'
+
+---
+
+# Allow internal communication within the ElasticSearch cluster
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.elasticsearch-internal
+  namespace: tigera-elasticsearch
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+    destination:
+      ports: [9300]
+
+---
+# Allow access to Kibana
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.kibana-access
+  namespace: tigera-kibana
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-secure'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      # This policy allows access to Kibana from anywhere.
+      # Narrow this down to your management network or remove this
+      # policy to block access to Kibana.
+      nets: ["0.0.0.0/0"]
+    destination:
+      ports: [5601]
+  - action: Allow
+    protocol: TCP
+    source:
+      # Allow the installer to access Kibana
+      selector: job-name == 'intrusion-detection-es-job-installer'
+      namespaceSelector: name == 'tigera-intrusion-detection'
+    destination:
+      ports: [5601]
+  - action: Allow
+    destination:
+      ports: [5601]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'elastic-operator'
+      namespaceSelector: name == 'tigera-eck-operator'
+  - action: Allow
+    destination:
+      ports: [5601]
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-operator'
+      namespaceSelector: name == 'tigera-operator'
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.intrusion-detection-controller
+  namespace: tigera-intrusion-detection
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'intrusion-detection-controller'
+  types:
+    - Ingress
+    - Egress
+  ingress:
+  # Intrusion detection controller doesn't listen on any external ports
+  - action: Deny
+  egress:
+  # Block any link local IPs, e.g. cloud metadata, which are often targets
+  # of server-side request forgery (SSRF) attacks
+  - action: Deny
+    protocol: TCP
+    destination:
+      nets:
+      - "169.254.0.0/16"
+  - action: Deny
+    protocol: TCP
+    destination:
+      nets:
+      - "fe80::/10"
+  # Pass to subsequent tiers or profiles for further refinement
+  - action: Pass
+

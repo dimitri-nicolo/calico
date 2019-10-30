@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee --namespace calico-monitoring --execute templates/operator.yaml %}
+createCustomResources: false
+runElasticsearchOperatorClusterAdmin: true
+{% endhelm %}

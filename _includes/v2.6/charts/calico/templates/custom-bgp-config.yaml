@@ -1,0 +1,16 @@
+{{- if include "calico.customBgpTemplates" . }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: bgp-templates
+  namespace: kube-system
+data:
+  bird.cfg.template: |
+{{ .Values.bgp.birdConfigTemplate | indent 4 }}
+  bird_ipam.cfg.template: |
+{{ .Values.bgp.birdIpamConfigTemplate | indent 4 }}
+  bird6.cfg.template: |
+{{ .Values.bgp.bird6ConfigTemplate | indent 4 }}
+  bird6_ipam.cfg.template: |
+{{ .Values.bgp.bird6IpamConfigTemplate | indent 4 }}
+{{- end }}

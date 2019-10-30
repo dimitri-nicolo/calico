@@ -1,0 +1,5 @@
+# This section installs and configures the Tigera Secure API server.
+apiVersion: operator.tigera.io/v1
+kind: APIServer
+metadata:
+  name: tigera-secure

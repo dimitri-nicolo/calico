@@ -1,0 +1,190 @@
+{{ if .Values.cloudControllers.enabled -}}
+# Create the ServiceAccount and roles necessary for Tigera Cloud Controllers.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-cloud-controllers
+  namespace: kube-system
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-cloud-controllers
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+{{- if eq .Values.datastore "kubernetes" }}
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - globalnetworkpolicies
+      - networkpolicies
+      - tiers
+      - clusterinformations
+      - licensekeys
+      - hostendpoints
+    verbs:
+      - create
+      - get
+      - list
+      - update
+      - watch
+      - delete
+{{- end }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-cloud-controllers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-cloud-controllers
+subjects:
+- kind: ServiceAccount
+  name: tigera-cloud-controllers
+  namespace: kube-system
+---
+
+# This manifest deploys the Tigera Cloud Controllers.
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tigera-cloud-controllers
+  namespace: kube-system
+  labels:
+    k8s-app: tigera-cloud-controllers
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ''
+spec:
+  # The controllers can only have a single active instance.
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: tigera-cloud-controllers
+      namespace: kube-system
+      labels:
+        k8s-app: tigera-cloud-controllers
+    spec:
+      serviceAccountName: tigera-cloud-controllers
+      tolerations:
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: CriticalAddonsOnly
+          operator: Exists
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: tigera-cloud-controllers
+          image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+{{ tuple .Values.cloudControllers.resources | include "calico.resourceLimits" | indent 10 -}}
+          readinessProbe:
+            exec:
+              command:
+                - check-status
+                - -r
+            periodSeconds: 10
+            failureThreshold: 3
+          env:
+{{- if eq .Values.datastore "kubernetes" }}
+            # Use Kubernetes API as the backing datastore.
+            - name: DATASTORE_TYPE
+              value: "kubernetes"
+{{- else }}
+            # Use Etcd as the backing datastore.
+            - name: DATASTORE_TYPE
+              value: "etcdv3"
+            # The location of the etcd cluster.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower }}-config
+                  key: etcd_endpoints
+            # Location of the CA certificate for etcd.
+            - name: ETCD_CA_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower }}-config
+                  key: etcd_ca
+            # Location of the client key for etcd.
+            - name: ETCD_KEY_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower }}-config
+                  key: etcd_key
+            # Location of the client certificate for etcd.
+            - name: ETCD_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower }}-config
+                  key: etcd_cert
+{{- end }}
+            # Enabling health reporting requires additional IAM permissions for tigera-cloud-controllers
+            - name: CLOUDWATCH_HEALTHREPORTING_ENABLED
+              value: "false"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: VPCS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: vpcs
+            - name: SQS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: sqs_url
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: aws_region
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-cloud-controllers-credentials
+                  key: aws_access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-cloud-controllers-credentials
+                  key: aws_secret_access_key
+            - name: TIGERA_ENFORCED_GROUP_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: enforced_sg
+            - name: TIGERA_TRUST_ENFORCED_GROUP_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: trust_sg
+{{- if eq .Values.datastore "etcd" }}
+          volumeMounts:
+            # Mount in the etcd TLS secrets.
+            - mountPath: /calico-secrets
+              name: etcd-certs
+      volumes:
+        # Mount in the etcd TLS secrets.
+        - name: etcd-certs
+          secret:
+            secretName: calico-etcd-secrets
+            defaultMode: 0400
+{{- end }}
+{{- end }}

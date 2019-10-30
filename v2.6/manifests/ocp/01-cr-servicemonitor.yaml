@@ -1,0 +1,22 @@
+# This section configures Prometheus monitoring of calico/node metrics.
+# TODO: Do we need to expose this? Can we either have the operator create it or configure
+# prometheus explicitly rather than exposing this config to the user?
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: calico-node-monitor
+  namespace: tigera-prometheus
+  labels:
+    team: network-operators
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+  namespaceSelector:
+    matchNames:
+    - calico-system
+  endpoints:
+  - port: calico-metrics-port
+    interval: 5s
+    scrapeTimeout: 5s
+    honorLabels: true

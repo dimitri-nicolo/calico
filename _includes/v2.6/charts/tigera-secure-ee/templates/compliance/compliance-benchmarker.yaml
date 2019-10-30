@@ -1,0 +1,238 @@
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-benchmarker
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: tigera-compliance-benchmarker
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - list
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-compliance-benchmarker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-compliance-benchmarker
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-benchmarker
+  namespace: calico-monitoring
+
+---
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: compliance-benchmarker
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-benchmarker
+spec:
+  selector:
+    matchLabels:
+      k8s-app: compliance-benchmarker
+  template:
+    metadata:
+      name: compliance-benchmarker
+      namespace: calico-monitoring
+      labels:
+        k8s-app: compliance-benchmarker
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: tigera-compliance-benchmarker
+      # Used to determine what flags that the kubernetes components are run with.
+      hostPID: true
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: compliance-benchmarker
+          image: {{.Values.complianceBenchmarker.image}}:{{ .Values.complianceBenchmarker.tag }}
+{{ tuple .Values.complianceBenchmarker.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
+          env:
+            - name: LOG_LEVEL
+              value: "info"
+            - name: NODENAME
+              valueFrom: 
+                fieldRef: 
+                  fieldPath: spec.nodeName
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
+{{- if eq $elasticMode "operator" }}
+{{- if .Values.elasticsearch.compliance.benchmarker.password }}
+            - name: ELASTIC_USER
+              value: {{ .Values.elasticsearch.compliance.benchmarker.username | quote }}
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: benchmarker.password
+                  optional: true
+{{- else }}
+            - name: ELASTIC_USER
+              value: "elastic"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-elasticsearch-es-elastic-user
+                  key: elastic
+                  optional: true
+{{- end }}
+{{- else }}
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: benchmarker.username
+                  optional: true
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: benchmarker.password
+                  optional: true
+{{- end }}
+            - name: ELASTIC_SSL_VERIFY
+              value: "true"
+            - name: ELASTIC_CA
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.ca.path
+                  optional: true
+{{- if .Values.complianceBenchmarker.env }}
+{{ toYaml .Values.complianceBenchmarker.env | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: var-lib-etcd
+              mountPath: /var/lib/etcd
+              readOnly: true
+            - name: var-lib-kubelet
+              mountPath: /var/lib/kubelet
+              readOnly: true
+            - name: etc-systemd
+              mountPath: /etc/systemd
+              readOnly: true
+            - name: etc-kubernetes
+              mountPath: /etc/kubernetes
+              readOnly: true
+            - name: usr-bin
+              mountPath: /usr/bin
+              readOnly: true
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/ssl/elastic/
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
+      volumes:
+{{- if eq $elasticMode "operator" }}
+        - name: elastic-ca-cert-volume
+          secret:
+            optional: true
+            defaultMode: 420
+            items:
+              - key: tls.crt
+                path: ca.pem
+            secretName: tigera-elasticsearch-es-http-certs-public
+{{- else }}
+        - name: elastic-ca-cert-volume
+          secret:
+            optional: true
+            items:
+              - key: tigera.elasticsearch.ca
+                path: ca.pem
+            secretName: tigera-es-config
+  {{- end }}
+        - name: var-lib-etcd
+          hostPath:
+            path: "/var/lib/etcd"
+        - name: var-lib-kubelet
+          hostPath:
+            path: "/var/lib/kubelet"
+        - name: etc-systemd
+          hostPath:
+            path: "/etc/systemd"
+        - name: etc-kubernetes
+          hostPath:
+            path: "/etc/kubernetes"
+        - name: usr-bin
+          hostPath:
+            path: "/usr/bin"
+{{- if .Values.complianceBenchmarker.runAsPrivileged }}
+---
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: tigera-compliance-benchmarker
+allowHostDirVolumePlugin: true
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: true
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: true
+allowedCapabilities: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+priority: null
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:calico-monitoring:tigera-compliance-benchmarker
+groups:
+- system:authenticated
+volumes:
+- '*'
+{{- end }}
