@@ -76,9 +76,21 @@ var (
 		resources.TypeCalicoGlobalNetworkPolicies: {
 			listCalicoGlobalNetworkPolicies,
 		},
+		resources.TypeCalicoStagedNetworkPolicies: {
+			listCalicoStagedNetworkPolicies,
+		},
+		resources.TypeCalicoStagedGlobalNetworkPolicies: {
+			listCalicoStagedGlobalNetworkPolicies,
+		},
+		resources.TypeCalicoStagedKubernetesNetworkPolicies: {
+			func(c ClientSet) (resources.ResourceList, error) {
+				return c.StagedKubernetesNetworkPolicies("").List(metav1.ListOptions{})
+			},
+		},
 	}
 )
 
+// listCalicoNetworkPolicies lists Calico NetworkPolicies across all tiers.
 func listCalicoNetworkPolicies(c ClientSet) (resources.ResourceList, error) {
 	// List tiers.
 	tiers, err := c.Tiers().List(metav1.ListOptions{})
@@ -116,6 +128,8 @@ func listCalicoNetworkPolicies(c ClientSet) (resources.ResourceList, error) {
 	npList.Items = nps
 	return npList, nil
 }
+
+// listCalicoGlobalNetworkPolicies lists Calico GlobalNetworkPolicies across all tiers.
 func listCalicoGlobalNetworkPolicies(c ClientSet) (resources.ResourceList, error) {
 	// List tiers.
 	tiers, err := c.Tiers().List(metav1.ListOptions{})
@@ -127,6 +141,59 @@ func listCalicoGlobalNetworkPolicies(c ClientSet) (resources.ResourceList, error
 	var npList *v3.GlobalNetworkPolicyList
 	for _, tier := range tiers.Items {
 		nps, err := c.GlobalNetworkPolicies().List(metav1.ListOptions{
+			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if npList == nil {
+			npList = nps
+		} else {
+			npList.Items = append(npList.Items, nps.Items...)
+		}
+	}
+	return npList, nil
+}
+
+// listCalicoStagedNetworkPolicies lists Calico StagedNetworkPolicies across all tiers.
+func listCalicoStagedNetworkPolicies(c ClientSet) (resources.ResourceList, error) {
+	// List tiers.
+	tiers, err := c.Tiers().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// List network policies. When going through the AAPIS we need to list on a tier by tier basis.
+	var npList *v3.StagedNetworkPolicyList
+	for _, tier := range tiers.Items {
+		nps, err := c.StagedNetworkPolicies("").List(metav1.ListOptions{
+			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if npList == nil {
+			npList = nps
+		} else {
+			npList.Items = append(npList.Items, nps.Items...)
+		}
+	}
+
+	return npList, nil
+}
+
+// listCalicoStagedGlobalNetworkPolicies lists Calico StagedGlobalNetworkPolicies across all tiers.
+func listCalicoStagedGlobalNetworkPolicies(c ClientSet) (resources.ResourceList, error) {
+	// List tiers.
+	tiers, err := c.Tiers().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// List global network policies. When going through the AAPIS we need to list on a tier by tier basis.
+	var npList *v3.StagedGlobalNetworkPolicyList
+	for _, tier := range tiers.Items {
+		nps, err := c.StagedGlobalNetworkPolicies().List(metav1.ListOptions{
 			LabelSelector: apiv3.LabelTier + "=" + tier.Name,
 		})
 		if err != nil {
