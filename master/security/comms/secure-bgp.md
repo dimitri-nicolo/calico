@@ -56,7 +56,7 @@ To use a password on a BGP peering:
 For example:
 
 ```
-kubectl create -f <<EOF
+kubectl create -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -80,7 +80,7 @@ The {{site.noderunning}} pod must have permission to access that secret.  To all
 {{site.noderunning}} to access that secret, you would configure:
 
 ```
-kubectl create -f <<EOF
+kubectl create -f - <<EOF
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
