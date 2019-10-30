@@ -73,7 +73,7 @@ To add threat feeds to {{site.prodname}} for automatic updates (default is once 
    kubectl apply -f <your_threatfeed_filename>
    ```
 
-3. In {{site.prodname}} Manager, go to the “Anomaly Detection” page to view events that are generated when an endpoint in the cluster queries a name on the list.
+3. In {{site.prodname}} Manager, go to the “Alerts” page to view events that are generated when an endpoint in the cluster queries a name on the list.
 
 #### Push threat feed updates
 
@@ -108,7 +108,7 @@ Use the push method if your threat feeds that are not in newline-delimited forma
 
    See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
 
-4. In {{site.prodname}} Manager, go the “Anomaly Detection” page to view events that are generated when an endpoint in the cluster queries a name on the list.
+4. In {{site.prodname}} Manager, go the “Alerts” page to view events that are generated when an endpoint in the cluster queries a name on the list.
 
 ### Above and beyond
 

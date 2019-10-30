@@ -71,7 +71,7 @@ To add threat feeds to {{site.prodname}} for automatic updates (default is once 
    kubectl apply -f <your_threatfeed_filename>
    ```
 
-3. In {{site.prodname}} Manager, go to the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
+3. In {{site.prodname}} Manager, go to the “Alerts” page to view events that are generated when an IP is displayed on the threat feed list.
 
 #### Push threat feed updates
 
@@ -106,7 +106,7 @@ Use the push method if your threat feeds that are not in newline-delimited forma
 
    See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
 
-4. In {{site.prodname}} Manager, go the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
+4. In {{site.prodname}} Manager, go the “Alerts" page to view events that are generated when an IP is displayed on the threat feed list.
 
 #### Block traffic to a cluster
 
@@ -191,7 +191,7 @@ If you haven’t already adjusted your [aggregation flows](#before-you-begin), w
 
 #### Check search results
 
-Open {{site.prodname}} Manager, and navigate to the “Anomaly Detection” page. If any of your pods have been communicating with the IP addresses in the FEODO tracker feed, you will see the results listed on this page. It is normal to not see any events listed on this page.
+Open {{site.prodname}} Manager, and navigate to the “Alerts” page. If any of your pods have been communicating with the IP addresses in the FEODO tracker feed, you will see the results listed on this page. It is normal to not see any events listed on this page.
 
 #### Block pods from contacting IPs
 

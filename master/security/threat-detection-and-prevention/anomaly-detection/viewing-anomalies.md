@@ -13,7 +13,7 @@ You can select and run whichever anomaly detection jobs best suit your environme
 
 The intrusion detection controller periodically polls Elastic for results from anomaly detection jobs. You can see the results (called "anomalies") in the {{ site.prodname }} Manager. It is normal to not see any events listed on this page.
 
-Open {{ site.prodname }} Manager, and navigate to the “Anomaly Detection” page. If any of your pods or replica sets are identified as engaging in anomalous activity, you will see the results listed on this page. Note that anomaly detection results are curated to remove uncertain anomaly detection events, and expected anomalies in Kubernetes (such as pod creation or deletion).
+Open {{ site.prodname }} Manager, and navigate to the “Alerts” page. If any of your pods or replica sets are identified as engaging in anomalous activity, you will see the results listed on this page. Note that anomaly detection results are curated to remove uncertain anomaly detection events, and expected anomalies in Kubernetes (such as pod creation or deletion).
 
 ### Viewing unfiltered anomaly detection results
 
