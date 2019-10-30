@@ -23,8 +23,10 @@ To enable flow log filtering, follow these steps:
    your [desired filter](#filter-configuration-files).
    If you are also adding [dns filters](filtering-dns) also add the `dns` file
    to the directory.
+
 1. Create the `fluentd-filters` ConfigMap in the `tigera-operator` namespace
    with the following command.
+
    ```bash
    kubectl create configmap fluentd-filters -n tigera-operator --from-file=filters
    ```

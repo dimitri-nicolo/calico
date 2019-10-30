@@ -357,7 +357,7 @@ You can manually run reports at any time. For example, run a manual report:
 
 {{ site.prodname }} GlobalReport schedules Kubernetes Jobs which create a single-run pod to generate a report and store it
 in Elasticsearch. Because you need to run manual reports as a pod, you need higher permissions: allow `create` access
-access for pods in namespace `calico-monitoring` using the `tigera-compliance-reporter` service account.
+access for pods in namespace `tigera-compliance` using the `tigera-compliance-reporter` service account.
 
 To manually run a report:
 
@@ -380,8 +380,9 @@ To manually run a report:
    ```bash
    # Apply the compliance report pod
    kubectl apply -f compliance-reporter-pod.yaml
+
    # Query the status of the pod
-   kubectl get pod <podname> -n=calico-monitoring
+   kubectl get pod <podname> -n tigera-compliance
    ```
 
 >**Note**: Manually-generated reports do not appear in GlobalReport status.

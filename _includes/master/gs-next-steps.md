@@ -5,10 +5,10 @@ demonstrates the main features.
 
 For more detailed documentation on {{site.prodname}} features, see here:
 - [Install calicoq](/{{page.version}}/getting-started/calicoq/)
-- [Denied Packet Notifications](/{{page.version}}/security/metrics/metrics)
+- [Denied Packet Notifications](/{{page.version}}/reference/other-install-methods/security/metrics/metrics)
 - [Configuring Felix](/{{page.version}}/reference/felix/configuration)
-- [Configuring Prometheus](/{{page.version}}/security/configuration/prometheus)
-- [Configuring Alertmanager](/{{page.version}}/security/configuration/alertmanager)
+- [Configuring Prometheus](/{{page.version}}/reference/other-install-methods/security/configuration/prometheus)
+- [Configuring Alertmanager](/{{page.version}}/reference/other-install-methods/security/configuration/alertmanager)
 - [Configuring Audit Logging](/{{page.version}}/security/logs/elastic/ee-audit)
 - [Configuring RBAC](/{{page.version}}/reference/cnx/rbac-tiered-policies)
 - [Configuring access to remote clusters](/{{page.version}}/networking/federation/configure-rcc) (federation only)

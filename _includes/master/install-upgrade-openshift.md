@@ -126,7 +126,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 {% endif %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See the [Metrics](/{{page.version}}/security/metrics/) section for more information.
+See the [Metrics](/{{page.version}}/reference/other-install-methods/security/metrics/) section for more information.
 
 {% if include.upgrade %}
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" elasticsearch="external" upgrade=include.upgrade %}
