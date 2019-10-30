@@ -202,7 +202,7 @@ endif
 		-v $(HOME)/.glide:/home/user/.glide:rw \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		calico/go-build \
+		$(CALICO_BUILD) \
 		sh -c 'glide install --strip-vendor'
 	# Generate the protobuf bindings for Felix
 	# Cannot do this together with vendoring since docker permissions in go-build are not perfect
@@ -214,7 +214,7 @@ endif
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		calico/go-build \
+		$(CALICO_BUILD) \
 		sh -c 'go build $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
 
 .PHONY: binary
@@ -458,6 +458,6 @@ clean:
 	-docker rm -f calico-build
 	-docker rmi calico/build
 	-docker rmi $(BUILD_IMAGE) -f
-	-docker rmi calico/go-build -f
+	-docker rmi $(CALICO_BUILD) -f
 	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
 	rm -f $(TOOLING_IMAGE_CREATED)
