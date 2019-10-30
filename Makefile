@@ -404,7 +404,7 @@ fix go-fmt goimports:
 ## Run what CI runs
 ci: clean static-checks tigera/cnx-apiserver fv ut check-generated-files
 
-GIT_VERSION?=$(shell git describe --tags --dirty --always)
+GIT_VERSION?=$(shell git describe --tags --dirty --always --long)
 
 ## Deploys images to registry
 cd:
