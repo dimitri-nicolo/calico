@@ -40,6 +40,8 @@ spec:
     servicePort: 9443
 ```
 
+> Note: You must ensure the {{site.prodname}} manager receives a HTTPS (TLS) connection, not unencrypted HTTP. If you require TLS termination at your ingress, you will need to either use a proxy that supports transparent HTTP/2 proxying, for example, Envoy, or re-originate a TLS connection from your proxy to the {{site.prodname}} manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} manager.
+
 #### Access using a LoadBalancer service
 
 Kubernetes services can be exposed outside of the cluster [by configuring type `LoadBalancer`](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/) in the service specification. This requires that your cluster be configured with a service load balancer controller to implement the external load balancer. Most managed Kubernetes platforms support this.
@@ -62,6 +64,8 @@ spec:
     targetPort: 9443
     protocol: TCP
 ```
+
+> Note: You must ensure the {{site.prodname}} manager receives a HTTPS (TLS) connection, not unencrypted HTTP. If you require TLS termination at your load balancer, you will need to either use a load balancer that supports transparent HTTP/2 proxying, or re-originate a TLS connection from your load balancer to the {{site.prodname}} manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} manager.
 
 After creating the service, it may take a few minutes for the load balancer to be created. Once complete, the load balancer IP address will appear as an `ExternalIP` in `kubectl get services -n tigera-manager tigera-manager-external`.
 
