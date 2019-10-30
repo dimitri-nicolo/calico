@@ -1,0 +1,211 @@
+bigheader: "Reference"
+path: /reference
+order: 5
+toc:
+- title: Reference
+  path: /reference/
+- title: Installation
+  path: /reference/installation/api
+- title: calicoctl
+  section:
+  - title: Overview
+    path: /reference/calicoctl/
+  - title: create
+    path: /reference/calicoctl/create
+  - title: replace
+    path: /reference/calicoctl/replace
+  - title: apply
+    path: /reference/calicoctl/apply
+  - title: delete
+    path: /reference/calicoctl/delete
+  - title: get
+    path: /reference/calicoctl/get
+  - title: patch
+    path: /reference/calicoctl/patch
+  - title: label
+    path: /reference/calicoctl/label
+  - title: convert
+    path: /reference/calicoctl/convert
+  - title: ipam
+    section:
+    - title: Overview
+      path: /reference/calicoctl/ipam/
+    - title: release
+      path: /reference/calicoctl/ipam/release
+    - title: show
+      path: /reference/calicoctl/ipam/show
+  - title: node
+    section:
+    - title: Overview
+      path: /reference/calicoctl/node/
+    - title: run
+      path: /reference/calicoctl/node/run
+    - title: status
+      path: /reference/calicoctl/node/status
+    - title: diags
+      path: /reference/calicoctl/node/diags
+    - title: checksystem
+      path: /reference/calicoctl/node/checksystem
+  - title: version
+    path: /reference/calicoctl/version
+- title: Resource definitions
+  section:
+    - title: Overview
+      path: /reference/resources/
+    - title: BGP configuration
+      path: /reference/resources/bgpconfig
+    - title: BGP peer
+      path: /reference/resources/bgppeer
+    - title: Felix configuration
+      path: /reference/resources/felixconfig
+    - title: Global network policy
+      path: /reference/resources/globalnetworkpolicy
+    - title: Global network set
+      path: /reference/resources/globalnetworkset
+    - title: Global Report
+      path: /reference/resources/globalreport
+    - title: Global Threat Feed
+      path: /reference/resources/globalthreatfeed
+    - title: Host endpoint
+      path: /reference/resources/hostendpoint
+    - title: IP pool
+      path: /reference/resources/ippool
+    - title: License Key
+      path: /reference/resources/licensekey
+    - title: Network policy
+      path: /reference/resources/networkpolicy
+    - title: Network set
+      path: /reference/resources/networkset
+    - title: Node
+      path: /reference/resources/node
+    - title: Profile
+      path: /reference/resources/profile
+    - title: Remote Cluster Configuration
+      path: /reference/resources/remoteclusterconfiguration
+    - title: Tier
+      path: /reference/resources/tier
+    - title: Workload endpoint
+      path: /reference/resources/workloadendpoint
+- title: Configuring etcd RBAC
+  section:
+  - title: Overview
+    path: /reference/etcd-rbac/
+  - title: Generating certificates
+    path: /reference/etcd-rbac/certificate-generation
+  - title: Creating users and roles
+    path: /reference/etcd-rbac/users-and-roles
+  - title: Segmenting etcd on Kubernetes (basic)
+    path: /reference/etcd-rbac/kubernetes
+  - title: Segmenting etcd on Kubernetes (advanced)
+    path: /reference/etcd-rbac/kubernetes-advanced
+  - title: Calico key and path prefixes
+    path: /reference/etcd-rbac/calico-etcdv3-paths
+- title: cnx-node
+  path: /reference/node/configuration
+- title: calicoq
+  section:
+  - title: Overview
+    path: /reference/calicoq/
+  - title: Selectors
+    path: /reference/calicoq/selectors
+  - title: Endpoint
+    path: /reference/calicoq/endpoint
+  - title: Eval
+    path: /reference/calicoq/eval
+  - title: Host
+    path: /reference/calicoq/host
+  - title: Policy
+    path: /reference/calicoq/policy
+  - title: Version
+    path: /reference/calicoq/version
+- title: Felix
+  section:
+  - title: Configuration
+    path: /reference/felix/configuration
+  - title: Prometheus statistics
+    path: /reference/felix/prometheus
+- title: Typha
+  section:
+  - title: Overview
+    path: /reference/typha/
+  - title: Configuration
+    path: /reference/typha/configuration
+- title: Dikastes
+  path: /reference/dikastes/configuration
+- title: Tigera Secure EE Compliance Reports
+  section:
+    - title: Overview
+      path: /reference/compliance-reports/
+    - title: Inventory Report
+      path: /reference/compliance-reports/inventory
+    - title: Network Access Report
+      path: /reference/compliance-reports/network-access
+    - title: Policy Audit Report
+      path: /reference/compliance-reports/policy-audit
+    - title: CIS Benchmark
+      path: /reference/compliance-reports/cis-benchmark
+- title: Tigera Secure EE CNI plugins
+  path: /reference/cni-plugin/configuration
+- title: Tigera Secure EE Kubernetes controllers
+  path: /reference/kube-controllers/configuration
+- title: Tigera Secure EE Manager
+  section:
+    - title: Configuring user authentication
+      path: /reference/cnx/authentication
+    - title: Configuring Tigera Secure EE RBAC for Tiered Policies
+      path: /reference/cnx/rbac-tiered-policies
+    - title: Configuring Tigera Secure EE RBAC for Elasticsearch
+      path: /reference/cnx/rbac-elasticsearch
+    - title: Editing policies
+      path: /reference/cnx/policy-editor
+    - title: Deploying Tigera Secure EE Manager
+      path: /reference/cnx/recommendations
+- title: REST API Reference
+  path: /reference/cnx/apidocs
+- title: Configuration on public clouds
+  section:
+  - title: Amazon Web Services
+    path: /reference/public-cloud/aws
+  - title: Azure
+    path: /reference/public-cloud/azure
+  - title: Google Compute Engine
+    path: /reference/public-cloud/gce
+- title: Architecture
+  section:
+  - title: Introduction
+    path: /reference/architecture/
+  - title: cnx-node
+    path: /reference/architecture/components
+  - title: Data path
+    path: /reference/architecture/data-path
+- title: Frequently asked questions
+  path: /reference/faq
+- title: Other installation methods
+  section:
+  - title: Helm
+    section:
+    - title: Installing Tigera Secure EE using Helm
+      path: /reference/other-install-methods/kubernetes/installation/helm/
+  # TODO: Convert/merge this with "the hard way" documentation.
+  - title: Manual
+    section:
+    - title: Introduction
+      path: /reference/other-install-methods/kubernetes/installation/
+    - title: Installing Tigera Secure EE for policy and networking
+      path: /reference/other-install-methods/kubernetes/installation/calico
+    - title: Installing Tigera Secure EE for policy only
+      path: /reference/other-install-methods/kubernetes/installation/other
+    - title: Enabling integration with AWS security groups (optional)
+      path: /reference/other-install-methods/kubernetes/installation/aws-sg-integration
+    - title: Customizing the Calico manifests
+      path: /reference/other-install-methods/kubernetes/installation/config-options
+    - title: Customizing the Tigera Secure EE manifests
+      path: /reference/other-install-methods/kubernetes/installation/hosted/cnx/cnx
+    - title: Using your own Elasticsearch for logs
+      path: /reference/other-install-methods/kubernetes/installation/byo-elasticsearch
+    - title: Installing Tigera Secure EE on Docker Enterprise
+      path: /reference/other-install-methods/kubernetes/installation/docker-ee
+    - title: Installing Tigera Secure EE on Amazon EKS
+      path: /reference/other-install-methods/kubernetes/installation/eks
+    - title: Installing Tigera Secure EE on Google GKE
+      path: /reference/other-install-methods/kubernetes/installation/gke

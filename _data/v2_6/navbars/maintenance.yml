@@ -1,0 +1,22 @@
+bigheader: "Maintenance"
+path: /maintenance
+order: 4
+toc:
+- title: Maintenance
+  path: /maintenance/
+- title: Upgrading
+  section:
+  - title: Kubernetes
+    path: /maintenance/kubernetes-upgrade-tsee
+  - title: Helm
+    path: /maintenance/helm-upgrade-tsee
+  - title: OpenShift
+    path: /maintenance/openshift-upgrade-tsee
+- title: Decommissioning a node
+  path: /maintenance/decommissioning-a-node
+- title: Monitor Calico component metrics
+  path: /maintenance/monitor-component-metrics  
+- title: Component logs
+  path: /maintenance/component-logs
+- title: Troubleshooting
+  path: /maintenance/troubleshooting

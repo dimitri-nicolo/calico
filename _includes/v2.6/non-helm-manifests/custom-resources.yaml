@@ -1,0 +1,180 @@
+# This section includes base Tigera Secure installation configuration.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  name: default
+spec:
+  # Install Tigera Secure EE
+  variant: TigeraSecureEnterprise
+
+  # List of image pull secrets to use when installing images from a container registry.
+  # If specified, secrets must be created in the `tigera-operator` namespace.
+  imagePullSecrets:
+    - name: tigera-pull-secret
+
+  # Optionally, a custom registry to use for pulling images.
+  # registry: <my-registry>
+
+{%- if include.kubernetesProvider %}
+
+  # Enables provider-specific settings requried for compatibility.
+  kubernetesProvider: {{include.kubernetesProvider}}
+{%- endif %}
+
+---
+
+# This section configures the Tigera web manager.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager
+apiVersion: operator.tigera.io/v1
+kind: Manager
+metadata:
+  name: tigera-secure
+spec:
+  # Authentication configuration for accessing the Tigera manager.
+  # Default is to use token-based authentication.
+  auth:
+    type: Token
+
+---
+
+# This section installs and configures the Tigera Secure API server.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.APIServer
+apiVersion: operator.tigera.io/v1
+kind: APIServer
+metadata:
+  name: tigera-secure
+
+---
+
+# This section installs and configures Tigera Secure compliance functionality.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Compliance
+apiVersion: operator.tigera.io/v1
+kind: Compliance
+metadata:
+  name: tigera-secure
+
+---
+
+# This section installs and configures Tigera Secure intrusion detection functionality.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.IntrusionDetection
+apiVersion: operator.tigera.io/v1
+kind: IntrusionDetection
+metadata:
+  name: tigera-secure
+
+---
+
+# This section configures the Elasticsearch cluster used by Tigera Secure EE.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogStorage
+apiVersion: operator.tigera.io/v1
+kind: LogStorage
+metadata:
+  name: tigera-secure
+spec:
+  nodes:
+    count: 1
+
+---
+
+# This section configures collection of Tigera flow, DNS, and audit logs.
+# For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogCollector
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
+metadata:
+  name: tigera-secure
+
+---
+
+# This section configures the Tigera Secure Prometheus deployment.
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: calico-node-prometheus
+  namespace: tigera-prometheus
+spec:
+  baseImage: quay.io/prometheus/prometheus
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  serviceAccountName: prometheus
+  serviceMonitorSelector:
+    matchLabels:
+      team: network-operators
+  version: v2.7.1
+  retention: 24h
+  resources:
+    requests:
+      memory: 400Mi
+  ruleSelector:
+    matchLabels:
+      role: calico-prometheus-rules
+      prometheus: calico-node-prometheus
+  alerting:
+    alertmanagers:
+      - namespace: tigera-prometheus
+        name: calico-node-alertmanager
+        port: web
+        scheme: http
+
+---
+
+# This section configures Prometheus monitoring of calico/node metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: calico-node-monitor
+  namespace: tigera-prometheus
+  labels:
+    team: network-operators
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+  namespaceSelector:
+    matchNames:
+    - calico-system
+  endpoints:
+  - port: calico-metrics-port
+    interval: 5s
+    scrapeTimeout: 5s
+    honorLabels: true
+
+---
+
+# This section installs a Prometheus alert manager.
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: calico-node-alertmanager
+  namespace: tigera-prometheus
+spec:
+  version: v0.16.1
+  baseImage: quay.io/prometheus/alertmanager
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  replicas: 3
+
+---
+
+# This section configures denied packets alerting rules in Prometheus.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: calico-prometheus-dp-rate
+  namespace: tigera-prometheus
+  labels:
+    role: calico-prometheus-rules
+    prometheus: calico-node-prometheus
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+    - alert: DeniedPacketsRate
+      expr: rate(calico_denied_packets[10s]) > 50
+      labels:
+        severity: critical
+      annotations:
+{%- raw %}
+        summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+        description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
+{% endraw %}

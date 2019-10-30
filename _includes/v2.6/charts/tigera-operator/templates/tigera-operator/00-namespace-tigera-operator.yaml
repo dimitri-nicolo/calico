@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tigera-operator
+  annotations:
+{{- if .Values.openshift }}
+    openshift.io/node-selector: ""
+{{- end }}
+  labels:
+    name: tigera-operator
+{{- if .Values.openshift }}
+    openshift.io/run-level: "0"
+{{- end }}

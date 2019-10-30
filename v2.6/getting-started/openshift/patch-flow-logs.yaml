@@ -1,0 +1,34 @@
+spec:
+  template:
+    spec:
+     containers:
+      - name: calico-node
+        env:
+          # Enable Tigera Secure EE Prometheus denied packet reporting
+          - name: FELIX_PROMETHEUSREPORTERENABLED
+            value: "true"
+          # Make Tigera Secure EE Prometheus metrics available on port 9081
+          - name: FELIX_PROMETHEUSREPORTERPORT
+            value: "9081"
+          # Enable Tigera Secure EE Flow Log generation
+          - name: FELIX_FLOWLOGSFILEENABLED
+            value: "true"
+          # Include endpoint labels in Tigera Secure EE Flow Log
+          - name: FELIX_FLOWLOGSFILEINCLUDELABELS
+            value: "true"
+          # Include policies in Tigera Secure EE Flow Log
+          - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
+            value: "true"
+          # Enable processing network sets in EE Flow Logs
+          - name: FELIX_FLOWLOGSENABLENETWORKSETS
+            value: "true"
+        volumeMounts:
+          - mountPath: /var/log/calico
+            name: var-log-calico
+            readOnly: false
+     volumes:
+       # Used for calico logs
+       - name: var-log-calico
+         hostPath:
+           type: DirectoryOrCreate
+           path: /var/log/calico

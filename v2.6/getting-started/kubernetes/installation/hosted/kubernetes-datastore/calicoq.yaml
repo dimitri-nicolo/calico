@@ -1,0 +1,131 @@
+---
+layout: null
+---
+# {{site.prodname}} Version {{site.data.versions[page.version].first.title}}
+# https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
+# This manifest includes the following component versions:
+#   {{page.registry}}{% include component_image component="calicoq" %}
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calicoq
+  namespace: kube-system
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: calicoq
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
+  serviceAccountName: calicoq
+  containers:
+  - name: calicoq
+    image: {{page.registry}}{% include component_image component="calicoq" %}
+    command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
+    env:
+    - name: DATASTORE_TYPE
+      value: kubernetes
+    # Sets Default Security Groups if tigera-aws-config exists
+    - name: TIGERA_DEFAULT_SECURITY_GROUPS
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-aws-config
+          key: default_sgs
+          optional: true
+    # Sets Pod Security Group if tigera-aws-config exists
+    - name: TIGERA_POD_SECURITY_GROUP
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-aws-config
+          key: pod_sg
+          optional: true
+    volumeMounts:
+    # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+    # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
+    #- name: tigera-federation-remotecluster
+    #  mountPath: "/etc/tigera-federation-remotecluster"
+    #  readOnly: true
+  volumes:
+  # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+  # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
+  # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
+  # These are the same secrets as configured in the calico-typha manifest.
+  #- name: tigera-federation-remotecluster
+  #  secret:
+  #    secretName: tigera-federation-remotecluster
+  #    defaultMode: 0400
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: calicoq
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - serviceaccounts
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["extensions"]
+    resources:
+      - networkpolicies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - networkpolicies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - globalfelixconfigs
+      - felixconfigurations
+      - bgppeers
+      - globalbgpconfigs
+      - bgpconfigurations
+      - ippools
+      - globalnetworkpolicies
+      - globalnetworksets
+      - remoteclusterconfigurations
+      - networkpolicies
+      - tiers
+      - clusterinformations
+      - licensekeys
+      - hostendpoints
+      - profiles
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: calicoq
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calicoq
+subjects:
+- kind: ServiceAccount
+  name: calicoq
+  namespace: kube-system
+

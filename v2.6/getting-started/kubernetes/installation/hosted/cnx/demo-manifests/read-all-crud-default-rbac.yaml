@@ -1,0 +1,135 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: ui-needed-listers
+rules:
+- apiGroups: ["networking.k8s.io","extensions",""]
+  resources: ["networkpolicies","namespaces"]
+  verbs: ["watch","list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers","tier.networkpolicies","tier.globalnetworkpolicies","globalnetworksets"]
+  verbs: ["watch","list"]
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: ui-traffic-stats
+rules:
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090"]
+  verbs: ["get","create"]
+# Access to flow logs, audit logs, and statistics
+- apiGroups: ["lma.tigera.io"]
+  resources: ["index"]
+  resourceNames: ["flows", "audit*", "events", "dns"]
+  verbs: ["get"]
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-ui-needed-lister
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: ui-needed-listers
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-ui-traffic-stats
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: ui-traffic-stats
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: default-tier-policy-cruder
+rules:
+# To access Calico policy in a tier, the user requires get access to that tier.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  resourceNames: ["default"]
+  verbs: ["get"]
+# This allows configuration of the kubernetes NetworkPolicy resources (these are always in the default tier).
+# This is required if the user needs to be able to modify the Calico-rendered Kubernetes resources in the UI.
+- apiGroups: ["networking.k8s.io", "extensions"]
+  resources: ["networkpolicies"]
+  verbs: ["*"]
+# This allows configuration of the Calico NetworkPolicy resources in the default tier.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.networkpolicies"]
+  resourceNames: ["default.*"]
+  verbs: ["*"]
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: all-tier-policy-reader
+rules:
+# To access Calico policy in a tier, the user requires get access to that tier. This provides get
+# access to all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+# This allows read access of the kubernetes NetworkPolicy resources (these are always in the default tier).
+- apiGroups: ["networking.k8s.io", "extensions"]
+  resources: ["networkpolicies"]
+  verbs: ["get","watch","list"]
+# This allows read access of the Calico NetworkPolicy and GlobalNetworkPolicy resources in all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.networkpolicies","tier.globalnetworkpolicies"]
+  verbs: ["get","watch","list"]
+
+---
+
+# This allows the user read access to all Calico and Kubernetes policy resources across all tiers and namespaces.
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-all-tier-policy-reader
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: all-tier-policy-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# This allows the user full read/write access to Calico and Kubernetes NetworkPolicy resources in the
+# default tier and default namespace.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-default-namespace-and-tier-policy-cruder
+  namespace: default
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: default-tier-policy-cruder
+  apiGroup: rbac.authorization.k8s.io

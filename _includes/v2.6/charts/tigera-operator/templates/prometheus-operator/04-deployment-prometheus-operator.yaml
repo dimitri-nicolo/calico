@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+  labels:
+    operator: prometheus
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        operator: prometheus
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: calico-prometheus-operator
+      containers:
+      - name: calico-prometheus-operator
+        image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.version}}
+        args:
+          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+          - --config-reloader-image={{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
+          - --config-reloader-memory=25Mi
+          - --namespaces=tigera-prometheus
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi

@@ -1,0 +1,15 @@
+# Service for access to Prometheus.
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-node-prometheus
+  namespace: tigera-prometheus
+spec:
+  type: ClusterIP
+  ports:
+  - name: web
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus: calico-node-prometheus

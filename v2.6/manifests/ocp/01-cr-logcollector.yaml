@@ -1,0 +1,5 @@
+# This section installs and configures Tigera Secure log collector functionality.
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
+metadata:
+  name: tigera-secure

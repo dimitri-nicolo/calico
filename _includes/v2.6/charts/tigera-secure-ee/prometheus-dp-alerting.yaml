@@ -1,0 +1,20 @@
+# This manifest is used to create the denied packets alerting rules in Prometheus.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: calico-prometheus-dp-rate
+  namespace: calico-monitoring
+  labels:
+    role: calico-prometheus-rules
+    prometheus: calico-node-prometheus
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+    - alert: DeniedPacketsRate
+      expr: rate(calico_denied_packets[10s]) > 50
+      labels:
+        severity: critical
+      annotations:
+        summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+        description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
