@@ -178,6 +178,12 @@ func (x *xrefCache) processUpdatesOfType(updateType syncer.UpdateType, updates [
 		for i := range updates {
 			id := updates[i].ResourceID
 			cache := x.caches[id.TypeMeta]
+			if cache == nil {
+				// Update type is not required.
+				log.Infof("Event for resource that is not managed by cache: %s", id)
+				continue
+			}
+
 			entry := cache.get(id)
 			if entry == nil {
 				// Deletion for a resource that is not in our cache. Unexpected, but just log and skip.

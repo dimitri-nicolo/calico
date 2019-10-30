@@ -20,8 +20,7 @@ import (
 	. "github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/lma/pkg/list"
-
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/api"
 )
 
 var (
@@ -33,6 +32,13 @@ var (
 
 	gnp1 = apiv3.GlobalNetworkPolicy{
 		TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gnp1",
+			ResourceVersion: "1",
+		},
+	}
+	sgnp1 = apiv3.StagedGlobalNetworkPolicy{
+		TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gnp1",
 			ResourceVersion: "1",
@@ -54,6 +60,14 @@ var (
 	}
 	np1 = apiv3.NetworkPolicy{
 		TypeMeta: resources.TypeCalicoNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "np1",
+			Namespace:       namespace1,
+			ResourceVersion: "1",
+		},
+	}
+	snp1 = apiv3.StagedNetworkPolicy{
+		TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "np1",
 			Namespace:       namespace1,
@@ -107,6 +121,14 @@ var (
 	}
 	knp1 = networkingv1.NetworkPolicy{
 		TypeMeta: resources.TypeK8sNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "knp1",
+			Namespace:       namespace1,
+			ResourceVersion: "1",
+		},
+	}
+	sknp1 = apiv3.StagedKubernetesNetworkPolicy{
+		TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "knp1",
 			Namespace:       namespace1,
@@ -172,6 +194,11 @@ func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *tim
 			TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
 			Items:    []apiv3.GlobalNetworkPolicy{gnp1},
 		}
+	case resources.TypeCalicoStagedGlobalNetworkPolicies:
+		l = &apiv3.StagedGlobalNetworkPolicyList{
+			TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
+			Items:    []apiv3.StagedGlobalNetworkPolicy{sgnp1},
+		}
 	case resources.TypeCalicoGlobalNetworkSets:
 		l = &apiv3.GlobalNetworkSetList{
 			TypeMeta: resources.TypeCalicoGlobalNetworkSets,
@@ -186,6 +213,11 @@ func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *tim
 		l = &apiv3.NetworkPolicyList{
 			TypeMeta: resources.TypeCalicoNetworkPolicies,
 			Items:    []apiv3.NetworkPolicy{np1, np2},
+		}
+	case resources.TypeCalicoStagedNetworkPolicies:
+		l = &apiv3.StagedNetworkPolicyList{
+			TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
+			Items:    []apiv3.StagedNetworkPolicy{snp1},
 		}
 	case resources.TypeCalicoTiers:
 		l = &apiv3.TierList{
@@ -206,6 +238,11 @@ func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *tim
 		l = &networkingv1.NetworkPolicyList{
 			TypeMeta: resources.TypeK8sNetworkPolicies,
 			Items:    []networkingv1.NetworkPolicy{knp1, knp2},
+		}
+	case resources.TypeCalicoStagedKubernetesNetworkPolicies:
+		l = &apiv3.StagedKubernetesNetworkPolicyList{
+			TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
+			Items:    []apiv3.StagedKubernetesNetworkPolicy{sknp1},
 		}
 	case resources.TypeK8sPods:
 		l = &corev1.PodList{
@@ -284,9 +321,9 @@ var _ = Describe("Replay namespace deletion", func() {
 
 		By("Checking for the expected updates")
 		// There should be one update of each kind and none from namespace 2. We should get no deletion events.
-		Expect(cb.updates).To(HaveLen(10))
+		Expect(cb.updates).To(HaveLen(11))
 		checkUpdates(cb.updates, syncer.UpdateTypeSet, []resources.Resource{
-			&gnp1, &gns1, &tier1, &hep1, &np2, &knp2, &ep2, &pod2, &sa2, &ns2,
+			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &np2, &knp2, &ep2, &pod2, &sa2, &ns2,
 		})
 	})
 
@@ -300,12 +337,12 @@ var _ = Describe("Replay namespace deletion", func() {
 
 		By("Checking for the expected updates")
 		// There should be one update of each resource, followed by delete events for everything in namespace2.
-		Expect(cb.updates).To(HaveLen(22))
-		checkUpdates(cb.updates[:16], syncer.UpdateTypeSet, []resources.Resource{
-			&gnp1, &gns1, &tier1, &hep1, &np1, &np2, &knp1, &knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
+		Expect(cb.updates).To(HaveLen(27))
+		checkUpdates(cb.updates[:19], syncer.UpdateTypeSet, []resources.Resource{
+			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &np1, &snp1, &np2, &knp1, &sknp1, &knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
 		})
-		checkUpdates(cb.updates[16:], syncer.UpdateTypeDeleted, []resources.Resource{
-			&np1, &knp1, &ep1, &pod1, &sa1, &ns1,
+		checkUpdates(cb.updates[19:], syncer.UpdateTypeDeleted, []resources.Resource{
+			&np1, &snp1, &knp1, &sknp1, &ep1, &pod1, &sa1, &ns1,
 		})
 	})
 })
