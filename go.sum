@@ -333,8 +333,8 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
-github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478 h1:0XTiC5KkDPZ/S5w7AxTO2W5Kb09IsJZvF4eod+k9cpw=
-github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
+github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20191030050937-be2e3fd6c28a+incompatible h1:KjtgpVZ/FxYy4M7ZfAHzJfvxeUoya3nEaV/pmX9zPm8=
+github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20191030050937-be2e3fd6c28a+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible h1:pk7vCQcoL0aIkYq2snaRrwMc7DkcfYVkNw3Ffl9q3E8=
 github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible/go.mod h1:Gzhim0mzJ3D6EDYGC1Z/IisLS2b5CRB2Ols3UvhcUMc=
 github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca h1:9laas6D2ksBhG59qHozzboKtj+dpipNJ2LD3DyRA3rA=

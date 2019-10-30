@@ -28,7 +28,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
-	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
+	github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20191030050937-be2e3fd6c28a+incompatible
 	github.com/tigera/compliance v2.6.0-0.dev.0.20190916173451-1ab25cb2ae7d+incompatible
 	github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
 	gopkg.in/go-playground/validator.v9 v9.29.0 // indirect
