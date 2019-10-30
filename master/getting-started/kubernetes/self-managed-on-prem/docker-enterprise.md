@@ -98,3 +98,10 @@ To secure {{site.prodname}} component communications, install the following set 
 ```
 kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
 ```
+
+### Above and beyond
+
+- [Access the manager UI](/{{page.version}}/getting-started/access-the-manager)
+- [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
+- [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
+- [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)
