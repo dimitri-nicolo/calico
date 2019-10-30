@@ -5,14 +5,14 @@ go 1.12
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191007172056-a1ffe3734ca6
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27
-	github.com/tigera/es-proxy => github.com/tigera/es-proxy-image v0.0.0-20191002000210-bd4f9c342a03
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20191018195438-615c03951bab
-	k8s.io/api => k8s.io/api v0.0.0-20180308224125-73d903622b73
-	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20180228050457-302974c03f7e
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d
+	github.com/tigera/es-proxy => github.com/tigera/es-proxy-image v0.0.0-20191030024341-da41989fb61c
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
+	k8s.io/api => k8s.io/api v0.0.0-20180628040859-072894a440bd
+	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20180327025904-5ae41ac86efd
-	k8s.io/client-go => k8s.io/client-go v7.0.0+incompatible
+	k8s.io/client-go => k8s.io/client-go v8.0.0+incompatible
 )
 
 require (
@@ -27,10 +27,8 @@ require (
 	github.com/go-openapi/jsonreference v0.19.3 // indirect
 	github.com/go-openapi/spec v0.19.3 // indirect
 	github.com/gogo/protobuf v1.3.0 // indirect
-	github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20190915194858-d3ddacdb130f // indirect
-	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mailru/easyjson v0.7.0 // indirect
@@ -56,9 +54,9 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tigera/calico-k8sapiserver v2.5.1+incompatible
+	github.com/tigera/calico-k8sapiserver v2.6.0-0.dev.0.20191030050937-be2e3fd6c28a+incompatible
 	github.com/tigera/es-proxy v0.0.0-00010101000000-000000000000
-	github.com/tigera/lma v0.0.0-20191008200933-68c38659f7f0
+	github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
 	golang.org/x/net v0.0.0-20191009170851-d66e71096ffb // indirect
