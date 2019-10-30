@@ -101,12 +101,12 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tigera.cnx-manager-access
+  name: allow-tigera.manager-access
   namespace: tigera-manager
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'cnx-manager'
+  selector: k8s-app == 'tigera-manager'
   types:
   - Ingress
   ingress:
@@ -137,7 +137,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'cnx-manager'
+      selector: k8s-app == 'tigera-manager'
       namespaceSelector: name == 'tigera-manager'
     destination:
       ports: [5443]
@@ -263,7 +263,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'cnx-manager'
+      selector: k8s-app == 'tigera-manager'
       namespaceSelector: name == 'tigera-manager'
     destination:
       ports: [9200]

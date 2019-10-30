@@ -120,14 +120,7 @@ kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
 
 ### Above and beyond
 
-**[Experiment with OIDC authentication strategy](/{{page.version}}/reference/cnx/authentication)**
-
-**[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
-
-**[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
-
-**[Secure a simple application using the Kubernetes `NetworkPolicy` API]({{site.url}}/{{page.version}}/security/simple-policy-cnx)**
-
-**[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API]({{site.url}}/{{page.version}}/security/advanced-policy)**
-
-**[Install and configure calicoctl](/{{page.version}}/getting-started/calicoctl/install)**
+- [Access the manager UI](/{{page.version}}/getting-started/access-the-manager)
+- [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
+- [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
+- [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)

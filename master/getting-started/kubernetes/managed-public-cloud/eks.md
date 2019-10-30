@@ -14,9 +14,9 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 ### How to
 
-- [Install {{site.prodname}}](#install-tigera-secure-ee)
-- [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
-- [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+1. [Install {{site.prodname}}](#install-tigera-secure-ee)
+1. [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
+1. [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
 
 #### Install {{site.prodname}}
 
@@ -77,7 +77,7 @@ kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
 
 ### Above and beyond
 
-- [Install calicoctl command line tool]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)
+- [Access the manager UI](/{{page.version}}/getting-started/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)
