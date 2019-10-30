@@ -1,5 +1,5 @@
-hash: 7f0a125b1746e0022eaecbb019e0af726cbfb4a6888ae5cfe5e8480d5c226cb0
-updated: 2019-10-29T09:56:05.891374-03:00
+hash: 701037d31357c3a59ed260c33c98ea5a4db6482de84976e5cb467dcdc9a05a29
+updated: 2019-10-30T04:25:54.435915208Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -104,7 +104,7 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/google/gopacket
-  version: 0ad7f2610e344e58c1c95e2adda5c3258da8e97b
+  version: b7586607157b64351ab71d7f6ed36f71f2e83393
   subpackages:
   - layers
 - name: github.com/google/uuid
@@ -181,7 +181,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: fa54e8b77c93318a0e1938df2654eec858babbc3
+  version: cf245bbeba6d597c9d8e0c926c9a45477b0a3b26
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -311,11 +311,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 9cc4af7d6b2c2a2e47f9cfaa500cd669b42e449b
+  version: b2a7f28a184a6e7aea33316b2d8a321cc9d7e138
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: 16bce7d3dc4e458f2f6f56a1349cbbfcdc8a8fdf
+  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
   - internal
   - internal/app_identity
