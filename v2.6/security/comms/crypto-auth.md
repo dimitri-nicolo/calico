@@ -150,6 +150,18 @@ For more high level information on certificates, keys, and CAs, see
 > (i.e. what it says in the browser address bar).
 {: .alert .alert-info}
 
+### Configuring {{site.prodname}} Manager UI TLS
+
+Configure manager TLS based on how you've deployed {{site.prodname}}
+- [Operator deployment](#operator-deployment)
+- [Manual/Helm deployment](#manualhelm-deployment)
+
+#### Operator deployment
+
+For clusters installed using the Tigera Operator, see how to [configure manager TLS](manager-tls).
+
+#### Manual/Helm deployment
+
 Once you have the proper server certificates, you will need to add them to the
 {{site.prodname}} Manager. During installation of the {{site.prodname}} Manager, you should have run
 the following command.
@@ -172,6 +184,8 @@ certificates.
 ```
 kubectl delete pod <cnx-manager-pod-name> -n kube-system
 ```
+
+### Issues with certificates
 
 If your web browser still does not display `Secure` in the address bar, the most
 common reasons and their fixes are listed below.
