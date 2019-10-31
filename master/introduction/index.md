@@ -13,7 +13,7 @@ layout: docwithnav
     <h3 style="margin-top: 5px">What is {{site.prodname}}?</h3>
     <p> Modern applications are more distributed, dynamically orchestrated, and run across multi-cloud infrastructure. To protect workloads and enforce compliance, connectivity must be established and secured in a highly dynamic environment that includes microservices, containers, and virtual machines. </p>
 <p>{{site.prodname}} provides secure application connectivity across multi-cloud and legacy environments, with the enterprise control and compliance capabilities required for mission-critical deployments.</p>
-</p>Designed from the ground up as cloud-native software, {{site.prodname}} builds on leading open source projects like [Calico](https://docs.projectcalico.org/). It connects and secures container, virtual machine, and bare metal host workloads in public cloud and private data centers. </p>
+<p>Designed from the ground up as cloud-native software, {{site.prodname}} builds on leading open source projects like <a href="https://docs.projectcalico.org/">Calico</a>. It connects and secures container, virtual machine, and bare metal host workloads in public cloud and private data centers. </p>
   </div>
 </div>
 
