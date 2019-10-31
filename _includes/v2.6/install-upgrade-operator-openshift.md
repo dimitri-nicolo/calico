@@ -134,6 +134,12 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o ma
    sed -i "s/SECRET/${SECRET}/" manifests/02-pull-secret.yaml
    ```
 
+#### Create Elastic storage
+
+The ElasticSearch operator that comes with {{site.prodname}} is configured to use a `StorageClass` named `tigera-elasticsearch`.
+Before continuing to create the cluster, you must create a StorageClass.
+Please refer to the [Kubernetes storage classes](https://kubernetes.io/docs/concepts/storage/storage-classes/) documentation page for more details.
+
 #### Create the cluster
 
 Start the cluster creation with the following command and wait for it to complete.
