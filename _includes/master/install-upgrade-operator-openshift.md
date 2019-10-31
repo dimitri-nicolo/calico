@@ -139,7 +139,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o ma
 
 The ElasticSearch operator that comes with {{site.prodname}} is configured to use a `StorageClass` named `tigera-elasticsearch`.
 Before continuing to create the cluster, you must create a StorageClass.
-Please refer to the [Kubernetes storage classes](https://kubernetes.io/docs/concepts/storage/storage-classes/) documentation page for more details.
+Please refer to the [Kubernetes storage classes](https://kubernetes.io/docs/concepts/storage/storage-classes/) and [OpenShift persistent storage](https://docs.openshift.com/container-platform/4.2/storage/understanding-persistent-storage.html) pages for more details.
 
 #### Create the cluster
 
