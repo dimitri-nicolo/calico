@@ -107,6 +107,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-manager.yaml -o manifests
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-compliance.yaml -o manifests/01-cr-compliance.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-intrusiondetection.yaml -o manifests/01-cr-intrusiondetection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logstorage.yaml -o manifests/01-cr-logstorage.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logcollector.yaml -o manifests/01-cr-logcollector.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheus.yaml -o manifests/01-cr-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheusrule.yaml -o manifests/01-cr-prometheusrule.yaml
