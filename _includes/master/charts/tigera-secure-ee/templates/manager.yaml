@@ -299,8 +299,6 @@ spec:
         volumeMounts:
         - mountPath: /certs/https
           name: cnx-manager-tls
-        - mountPath: /certs/tunnel
-          name: cnx-manager-tls
         livenessProbe:
           httpGet:
             path: /voltron/api/health
