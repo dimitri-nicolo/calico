@@ -67,7 +67,7 @@ BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/nul
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
-GIT_VERSION           ?= $(shell git describe --tags --dirty --always)
+GIT_VERSION           ?= $(shell git describe --tags --dirty --always --long)
 
 VERSION_FLAGS   = -X main.VERSION=$(BUILD_VERSION) \
                   -X main.BUILD_DATE=$(BUILD_BUILD_DATE) \
