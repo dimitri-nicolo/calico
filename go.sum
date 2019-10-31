@@ -451,8 +451,12 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191029034708-dced61f8cbce/go.m
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029124438-7178a8ac60ab/go.mod h1:djIjYrfvRiXYGNGxN5foNct7r46RrWuLXa20bybhrlg=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d h1:/GlBiu7ZNKSPqsuqBod9SQVVrKMHVg1wHOx/NNt7NOI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d/go.mod h1:Wv8okOjae86NpPkLSyGDvg1RyqPcb3y++Ff/47qSjo4=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191030070723-1653fc75aba3 h1:MeHGJ+6BGvcxIntKlCDoy+NUJSxWuzg37PcP8JMM9vY=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191030070723-1653fc75aba3/go.mod h1:Wv8okOjae86NpPkLSyGDvg1RyqPcb3y++Ff/47qSjo4=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
+github.com/tigera/licensing v2.7.0-0.dev+incompatible h1:q60X+JHLPhQJPYHsuYBOQ7x0lWLZAUdA6H/HZrULhMI=
+github.com/tigera/licensing v2.7.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tinylib/msgp v1.0.2 h1:DfdQrzQa7Yh2es9SuLkixqxuXS2SxsdYn0KbdrOGWD8=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
