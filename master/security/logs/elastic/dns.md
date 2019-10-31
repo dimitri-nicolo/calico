@@ -81,8 +81,8 @@ Please note that, to try this and the following examples in your own cluster:
 -  You will need to run curl from a host or pod that is allowed by {{site.prodname}} policy to
    connect to the Elasticsearch API service.  In our non-production demo setup
    (`monitor-calico.yaml`), the fluentd pods have such access, so you can use `kubectl get po -n
-   calico-monitoring` to find the name of a fluentd pod and then `kubectl exec <fluentd pod name> -n
-   calico-monitoring -- curl ...` to perform the query.
+   tigera-fluentd` to find the name of a fluentd pod and then `kubectl exec <fluentd pod name> -n
+   tigera-fluentd -- curl ...` to perform the query.
 
 Note that that query can also be written with a JSON body, like this:
 

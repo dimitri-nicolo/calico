@@ -107,7 +107,7 @@ spec:
       memory: 400Mi
   ruleSelector:
     matchLabels:
-      role: calico-prometheus-rules
+      role: tigera-prometheus-rules
       prometheus: calico-node-prometheus
   alerting:
     alertmanagers:
@@ -160,10 +160,10 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: calico-prometheus-dp-rate
+  name: tigera-prometheus-dp-rate
   namespace: tigera-prometheus
   labels:
-    role: calico-prometheus-rules
+    role: tigera-prometheus-rules
     prometheus: calico-node-prometheus
 spec:
   groups:

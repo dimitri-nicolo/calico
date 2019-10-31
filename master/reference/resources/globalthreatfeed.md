@@ -10,11 +10,11 @@ security purposes.
  * a set of IP addresses or IP prefixes, with content type IPSet, or
  * a set of domain names, with content type DomainNameSet
 
-For each IPSet threat feed, {{site.prodname}} automatically monitors flow logs for members of the set. 
+For each IPSet threat feed, {{site.prodname}} automatically monitors flow logs for members of the set.
 IPSet threat feeds can also be configured to be synchronized to a [global network set](./globalnetworkset),
 allowing you to use them as a dynamically-updating blacklist by incorporating the global network set into network policy.
 
-For each DomainNameSet threat feed, {{site.prodname}} automatically monitors DNS logs for queries (QNAME) or answers (RR NAME or RDATA) that contain members of the set. 
+For each DomainNameSet threat feed, {{site.prodname}} automatically monitors DNS logs for queries (QNAME) or answers (RR NAME or RDATA) that contain members of the set.
 
 For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
@@ -49,9 +49,7 @@ spec:
           value: "text/plain"
         - name: "APIKey"
           valueFrom:
-            # secrets selected must be in the
-            # "calico-monitoring" namespace in order
-            # to be used
+            # secrets selected must be in the "tigera-intrusion-detection" namespace in order to be used
             secretKeyRef:
               name: "example-threat-feed"
               key: "apikey"
@@ -181,8 +179,8 @@ malware.badstuff
 hackers.r.us
 ```
 
-Internationalized domain names (IDNA) may be encoded either as Unicode in UTF-8 format, or as 
-ASCII-Compatible Encoding (ACE) according to [RFC 5890][idna].  
+Internationalized domain names (IDNA) may be encoded either as Unicode in UTF-8 format, or as
+ASCII-Compatible Encoding (ACE) according to [RFC 5890][idna].
 
 #### HTTPHeader
 
@@ -207,7 +205,7 @@ ASCII-Compatible Encoding (ACE) according to [RFC 5890][idna].
 #### KeyRef
 
 KeyRef tells {{site.prodname}} where to get the value for a header.  The referenced Kubernetes object
-(either a config map or a secret) must be in the `calico-monitoring` namespace.
+(either a config map or a secret) must be in the `tigera-intrusion-detection` namespace.
 
 | Field    | Description                                               | Accepted Values | Schema | Default |
 |----------|-----------------------------------------------------------|-----------------|--------|---------|

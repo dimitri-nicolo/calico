@@ -8,7 +8,7 @@ Use {{ site.prodname }} CIS benchmark compliance reports to assess compliance fo
 
 ### Value
 
-Being able to assess your Kubernetes clusters against CIS benchmarks is a standard requirement for your organization’s security and compliance posture. 
+Being able to assess your Kubernetes clusters against CIS benchmarks is a standard requirement for your organization’s security and compliance posture.
 
 {{ site.prodname }} CIS benchmark compliance reports provide this view into your Kubernetes clusters. Plus, the reports strengthen your threat detection capability, providing a more comprehensive view than looking only at network data.
 
@@ -22,11 +22,11 @@ This how-to guide uses the following {{ site.prodname }} features:
 
 ### Concepts
 
-#### Kubernetes CIS benchmarks 
+#### Kubernetes CIS benchmarks
 
 As part of {{ site.prodname }} installation, each node runs a pod named compliance-benchmarker that executes Kubernetes CIS benchmarks every hour (default). We recommend that you review the CIS benchmark best practices for securing cluster component configurations here: [CIS benchmarks downloads](https://learn.cisecurity.org/benchmarks).
 
-#### Configure Global Report 
+#### Configure Global Report
 
 The {{ site.prodname }} **global report** is the resource for configuring CIS benchmark reports including scheduling, filtering, setting thresholds, and exporting reports in .csv format.
 
@@ -35,9 +35,10 @@ The {{ site.prodname }} **global report** is the resource for configuring CIS be
 ### Before you begin...
 
 Ensure that the compliance-benchmarker is running, and that the cis-benchmark report type is installed:
+
 ```
-kubectl get -ncalico-monitoring daemonset compliance-benchmarker
-kubectl get -ncalico-monitoring globalreporttype cis-benchmark
+kubectl get -n tigera-compliance daemonset compliance-benchmarker
+kubectl get globalreporttype cis-benchmark
 ```
 
 ### How To
@@ -114,12 +115,12 @@ To change the delay, go to the installation manifest, and uncomment and set the 
 
 #### Address the CIS benchmark results
 
-We recommend the following approach to CIS benchmark reports results: 
+We recommend the following approach to CIS benchmark reports results:
 1. Download the Kubernetes CIS benchmarks and export your full CIS benchmark results in .csv format.
 1. In the compliance dashboard, review the “Top-Failed Tests” section to identify which tests are the most problematic.
 1. Cross reference the top-failed tests to identify which nodes are failing that test.
 1. Look up those tests in the [Kubernetes benchmark document](https://downloads.cisecurity.org/#/) and follow the remediation steps to resolve the failure.
-1. Discuss with your infrastructure and security team if this remediation is viable within your organization. 
+1. Discuss with your infrastructure and security team if this remediation is viable within your organization.
   1. If so, update your nodes with the fix and ensure that the test passes on the next generation of the report.
   1. If the fix is not viable but is an acceptable risk to take within the organization, configure the report specification to exclude that test index so that it no longer shown in the report.
   1. If the fix is not viable and not an acceptable risk to take on, keep the failing test within the report so that your team is reminded to address the issue as soon as possible.
@@ -133,7 +134,7 @@ You can manually run reports at any time. For example, run a manual report:
 
 {{ site.prodname }} GlobalReport schedules Kubernetes Jobs which create a single-run pod to generate a report and store it
 in Elasticsearch. Because you need to run manual reports as a pod, you need higher permissions: allow `create` access
-access for pods in namespace `calico-monitoring` using the `tigera-compliance-reporter` service account.
+access for pods in namespace `tigera-compliance` using the `tigera-compliance-reporter` service account.
 
 To manually run a report:
 
@@ -150,6 +151,7 @@ To manually run a report:
      - `TIGERA_COMPLIANCE_REPORT_NAME`
      - `TIGERA_COMPLIANCE_REPORT_START_TIME`
      - `TIGERA_COMPLIANCE_REPORT_END_TIME`
+
 1. Apply the updated manifest, and query the status of the pod to ensure it completes.
    Upon completion, the report is available in {{ site.prodname }} Manager.
 
@@ -157,7 +159,7 @@ To manually run a report:
    # Apply the compliance report pod
    kubectl apply -f compliance-reporter-pod.yaml
    # Query the status of the pod
-   kubectl get pod <podname> -n=calico-monitoring
+   kubectl get pod <podname> -n=tigera-compliance
    ```
 
 >**Note**: Manually-generated reports do not appear in GlobalReport status.

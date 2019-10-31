@@ -26,7 +26,8 @@ existing default config before re-applying it.
 ```bash
 kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
 ```
-In addition, the {{site.prodname}} Manager needs to have application layer policy support enabled:
+
+If you have installed {{site.prodname}} using the manual or helm installation methods, the {{site.prodname}} Manager must also have application layer policy support enabled. This can be accomplished with the following commands:
 
 ```bash
 kubectl patch configmap tigera-cnx-manager-config -n calico-monitoring -p '{"data":{"tigera.cnx-manager.alp-support":"true"}}'

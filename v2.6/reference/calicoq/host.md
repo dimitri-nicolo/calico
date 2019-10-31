@@ -35,10 +35,10 @@ Sample output follows.
 ```
 Policies and profiles for each endpoint on host "tigera-kubetest-01":
 
-Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
+Workload endpoint k8s/tigera-prometheus.alertmanager-calico-node-alertmanager-0/eth0
   Policies:
   Profiles:
-    Profile "ns.projectcalico.org/calico-monitoring"
+    Profile "ns.projectcalico.org/tigera-prometheus"
 
 Workload endpoint k8s/kube-system.kube-dns-3913472980-fgf9m/eth0
   Policies:

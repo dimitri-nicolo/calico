@@ -11,6 +11,9 @@ Federation allows you to:
 
 - [Create Kubernetes services that span multiple clusters while still keeping fine-grained policy](#federated-services).
 
+> Note: Federation is currently only supported when using the manual and helm installation paths.
+{: .alert .alert-info}
+
 ## Terminology
 
 When discussing federation, we use the following terms:

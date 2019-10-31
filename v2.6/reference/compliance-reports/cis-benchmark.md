@@ -10,7 +10,7 @@ The following sample command uses a GlobalReport to create a daily CIS benchmark
 kubectl apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalReport
-metadata: 
+metadata:
   name: daily-cis-benchmark-report
 spec:
   reportType: cis-benchmark
@@ -18,15 +18,9 @@ spec:
 EOF
 ```
 
-## Openshift
+### Openshift
+
 While there is no extra setup configuration required by the user to generate a benchmark report for Openshift, the result sets will be different than a report generated for regular Kubernetes clusters. Use the [Openshift Container Platform security guide](https://static.open-scap.org/ssg-guides/ssg-ocp3-guide-default.html) to cross-reference the benchmark results.
-
-## Security Note
-Executing the CIS benchmarks requires running a pod with some elevated privileges. This includes access to the host’s process space, and volume mounting certain directories (/var/lib, /etc/systemd, /etc/kubernetes, /usr/bin) as read-only. If this is not considered an acceptable risk to your security organization, you can disable this feature by running the following command:
-
-```
-kubectl delete daemonset -n calico-monitoring compliance-benchmarker
-```
 
 ### Downloadable reports
 
@@ -61,11 +55,11 @@ A .csv file of test result summaries per node.
 
 #### failed-tests.csv
 
-A .csv file of tests that have failed. 
+A .csv file of tests that have failed.
 
 | Heading | Description | Format |
 |----|----|
-| nodeName  | Node where the test is executed. | string | 
+| nodeName  | Node where the test is executed. | string |
 | testIndex | Index of the test on the Kubernetes CIS benchmark. | string |
 | status    | Test results: PASS, FAIL, INFO. | string |
 | scored    | Indicates whether the Kubernetes CIS benchmark counts this test towards their scoring. | string |
