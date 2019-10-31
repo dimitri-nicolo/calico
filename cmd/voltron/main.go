@@ -24,25 +24,26 @@ const (
 
 // Config is a configuration used for Voltron
 type config struct {
-	Port               int `default:"5555"`
-	Host               string
-	TunnelPort         int    `default:"5566" split_words:"true"`
-	TunnelHost         string `split_words:"true"`
-	TunnelCert         string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
-	TunnelKey          string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
-	LogLevel           string `default:"INFO"`
-	TemplatePath       string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
-	PublicIP           string `default:"127.0.0.1:32453" split_words:"true"`
-	HTTPSCert          string `default:"/certs/https/cert" split_words:"true" json:"-"`
-	HTTPSKey           string `default:"/certs/https/key" split_words:"true" json:"-"`
-	K8sConfigPath      string `split_words:"true"`
-	KeepAliveEnable    bool   `default:"true" split_words:"true"`
-	KeepAliveInterval  int    `default:"100" split_words:"true"`
-	K8sEndpoint        string `default:"https://kubernetes.default" split_words:"true"`
-	ComplianceEndpoint string `default:"https://compliance.calico-monitoring.svc.cluster.local" split_words:"true"`
-	ElasticEndpoint    string `default:"https://127.0.0.1:8443" split_words:"true"`
-	NginxEndpoint      string `default:"http://127.0.0.1:8080" split_words:"true"`
-	PProf              bool   `default:"false"`
+	Port                         int `default:"5555"`
+	Host                         string
+	TunnelPort                   int    `default:"5566" split_words:"true"`
+	TunnelHost                   string `split_words:"true"`
+	TunnelCert                   string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
+	TunnelKey                    string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
+	LogLevel                     string `default:"INFO"`
+	TemplatePath                 string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
+	PublicIP                     string `default:"127.0.0.1:32453" split_words:"true"`
+	HTTPSCert                    string `default:"/certs/https/cert" split_words:"true" json:"-"`
+	HTTPSKey                     string `default:"/certs/https/key" split_words:"true" json:"-"`
+	K8sConfigPath                string `split_words:"true"`
+	KeepAliveEnable              bool   `default:"true" split_words:"true"`
+	KeepAliveInterval            int    `default:"100" split_words:"true"`
+	K8sEndpoint                  string `default:"https://kubernetes.default" split_words:"true"`
+	ComplianceEndpoint           string `default:"https://compliance.calico-monitoring.svc.cluster.local" split_words:"true"`
+	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
+	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
+	PProf                        bool   `default:"false"`
+	EnableMultiClusterManagement bool   `default:"false" split_words:"true"`
 }
 
 func (cfg config) String() string {
@@ -71,34 +72,39 @@ func main() {
 
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 
-	pemCert, err := utils.LoadPEMFromFile(cfg.TunnelCert)
-	if err != nil {
-		log.WithError(err).Fatal("couldn't load tunnel cert from file")
-	}
-
-	pemKey, err := utils.LoadPEMFromFile(cfg.TunnelKey)
-	if err != nil {
-		log.WithError(err).Fatal("couldn't load tunnel key from file")
-	}
-
-	tunnelX509Cert, tunnelX509Key, err := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
-	if err != nil {
-		log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
-	}
-
-	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
-		server.WithTemplate(cfg.TemplatePath),
-		server.WithPublicAddr(cfg.PublicIP),
-		server.WithKeepClusterKeys(),
-		server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
-		server.WithAuthentication(config),
+	}
 
-		// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
-		server.WithAutoRegister(),
+	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
+
+	if cfg.EnableMultiClusterManagement {
+		pemCert, err := utils.LoadPEMFromFile(cfg.TunnelCert)
+		if err != nil {
+			log.WithError(err).Fatal("couldn't load tunnel cert from file")
+		}
+
+		pemKey, err := utils.LoadPEMFromFile(cfg.TunnelKey)
+		if err != nil {
+			log.WithError(err).Fatal("couldn't load tunnel key from file")
+		}
+
+		tunnelX509Cert, tunnelX509Key, err := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
+		if err != nil {
+			log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
+		}
+
+		opts = append(opts,
+			server.WithTemplate(cfg.TemplatePath),
+			server.WithPublicAddr(cfg.PublicIP),
+			server.WithKeepClusterKeys(),
+			server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
+			server.WithAuthentication(config),
+
+			// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
+			server.WithAutoRegister())
 	}
 
 	targets, err := bootstrap.ProxyTargets([]bootstrap.Target{
@@ -147,22 +153,24 @@ func main() {
 		log.Fatalf("Failed to create server: %s", err)
 	}
 
-	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
-	if err != nil {
-		log.Fatalf("Failed to create tunnel listener: %s", err)
+	if cfg.EnableMultiClusterManagement {
+		lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
+		if err != nil {
+			log.Fatalf("Failed to create tunnel listener: %s", err)
+		}
+
+		go func() {
+			err := srv.ServeTunnelsTLS(lisTun)
+			log.Fatalf("Tunnel server exited: %s", err)
+		}()
+
+		go func() {
+			err := srv.WatchK8s()
+			log.Fatalf("K8s watcher exited: %s", err)
+		}()
+
+		log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())
 	}
-
-	go func() {
-		err := srv.ServeTunnelsTLS(lisTun)
-		log.Fatalf("Tunnel server exited: %s", err)
-	}()
-
-	go func() {
-		err := srv.WatchK8s()
-		log.Fatalf("K8s watcher exited: %s", err)
-	}()
-
-	log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())
 
 	log.Infof("Voltron listens for HTTP request at %s", addr)
 	if err := srv.ListenAndServeHTTPS(); err != nil {
