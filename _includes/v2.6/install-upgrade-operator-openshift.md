@@ -135,6 +135,10 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o ma
    sed -i "s/SECRET/${SECRET}/" manifests/02-pull-secret.yaml
    ```
 
+#### Create storage class
+
+{{site.prodname}} requires storage for logs and reports. Before creating the cluster, you must [create a StorageClass for {{site.prodname}}]().
+
 #### Create the cluster
 
 Start the cluster creation with the following command and wait for it to complete.
@@ -142,11 +146,6 @@ Start the cluster creation with the following command and wait for it to complet
 ```bash
 openshift-install create cluster
 ```
-
-#### Create Elastic storage
-
-The ElasticSearch operator that comes with {{site.prodname}} is configured to use a `StorageClass` named `tigera-elasticsearch`.
-Before continuing to create the cluster, you must [create a StorageClass for {{site.prodname}}]().
 
 #### Install the {{site.prodname}} license
 
