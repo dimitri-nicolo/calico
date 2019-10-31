@@ -25,7 +25,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 1. Install the Tigera operators and custom resource definitions.
 
    ```
-   kubectl create -f {{site.url}}/master/manifests/tigera-operator.yaml
+   kubectl create -f {{site.url}}/{{page.version}}/manifests/tigera-operator.yaml
    ```
 
 1. Install your pull secret.
@@ -39,7 +39,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference](/{{page.version}}/reference/installation/api).
 
    ```
-   kubectl create -f {{site.url}}/master/manifests/eks/custom-resources.yaml
+   kubectl create -f {{site.url}}/{{page.version}}/manifests/eks/custom-resources.yaml
    ```
 
    You can now monitor progress with the following command:
@@ -72,7 +72,7 @@ When all components show a status of `Available`, proceed to the next section.
 To secure {{site.prodname}} component communications, install the following set of network policies.
 
 ```
-kubectl create -f {{site.url}}/master/manifests/tigera-policies.yaml
+kubectl create -f {{site.url}}/{{page.version}}/manifests/tigera-policies.yaml
 ```
 
 ### Above and beyond
