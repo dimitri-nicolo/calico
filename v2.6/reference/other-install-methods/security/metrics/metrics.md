@@ -60,7 +60,7 @@ Once Prometheus scrapes a node and collects policy metrics, it will be
 available at Prometheus until the metric is considered _stale_, i.e.,
 Prometheus has not seen any updates to this metric for some time. This time is
 configurable. Refer to
-[Configuring Prometheus configuration](/{{page.version}}/security/configuration/prometheus)
+[Configuring Prometheus configuration](/{{page.version}}/reference/other-install-methods/security/configuration/prometheus)
 for more information.
 
 Because of metrics being expired, as just described, it is entirely possible

@@ -198,7 +198,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
 
    > **Note**: To configure storage for Prometheus instance please refer to the
-   > [configuring prometheus storage](/{{page.version}}/security/configuration/prometheus#storage).
+   > [configuring prometheus storage](/{{page.version}}/reference/other-install-methods/security/configuration/prometheus#storage).
    {: .alert .alert-success}
 
 {% if include.platform == "docker-ee" %}

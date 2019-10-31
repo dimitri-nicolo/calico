@@ -89,15 +89,15 @@ information about the policies for endpoints on a given host.
    ```
    Policies and profiles for each endpoint on host "k8s-node1":
 
-   Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
+   Workload endpoint k8s/tigera-prometheus.alertmanager-calico-node-alertmanager-0/eth0
      Policies:
-       Policy "calico-monitoring/knp.default.calico-node-alertmanager" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s' && alertmanager == 'calico-node-alertmanager' && app == 'alertmanager') && projectcalico.org/namespace == 'calico-monitoring'")
-       Policy "calico-monitoring/knp.default.calico-node-alertmanager-mesh" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s' && alertmanager == 'calico-node-alertmanager' && app == 'alertmanager') && projectcalico.org/namespace == 'calico-monitoring'")
-       Policy "calico-monitoring/knp.default.default-deny" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'calico-monitoring'")
+       Policy "tigera-prometheus/knp.default.calico-node-alertmanager" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s' && alertmanager == 'calico-node-alertmanager' && app == 'alertmanager') && projectcalico.org/namespace == 'tigera-prometheus'")
+       Policy "tigera-prometheus/knp.default.calico-node-alertmanager-mesh" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s' && alertmanager == 'calico-node-alertmanager' && app == 'alertmanager') && projectcalico.org/namespace == 'tigera-prometheus'")
+       Policy "tigera-prometheus/knp.default.default-deny" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'tigera-prometheus'")
      Profiles:
-       Profile "kns.calico-monitoring"
+       Profile "kns.tigera-prometheus"
      Rule matches:
-       Policy "calico-monitoring/knp.default.calico-node-alertmanager-mesh" inbound rule 1 source match; selector "(projectcalico.org/namespace == 'calico-monitoring') && (projectcalico.org/orchestrator == 'k8s' && app in { 'alertmanager' } && alertmanager in { 'calico-node-alertmanager' })"
+       Policy "tigera-prometheus/knp.default.calico-node-alertmanager-mesh" inbound rule 1 source match; selector "(projectcalico.org/namespace == 'tigera-prometheus') && (projectcalico.org/orchestrator == 'k8s' && app in { 'alertmanager' } && alertmanager in { 'calico-node-alertmanager' })"
 
    ...
 
@@ -116,7 +116,7 @@ information about the policies for endpoints on a given host.
    rules that deny or allow that endpoint as a packet source or destination.
 
    Focusing on the
-   `k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0` endpoint:
+   `k8s/tigera-prometheus.alertmanager-calico-node-alertmanager-0/eth0` endpoint:
 
    - The first two policies are defined in the monitor-calico.yaml manifest.
      The selectors here have been translated from the original NetworkPolicies to

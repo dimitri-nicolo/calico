@@ -201,10 +201,7 @@ May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop LOGandDROP: IN=tunl0 O
 
 When the reporting of denied packet metrics is enabled, Felix keeps counts of
 recently denied packets and publishes these as Prometheus metrics on the port
-configured by the `PrometheusReporterPort` setting.  Please
-see the
-[Metrics]({{site.url}}/{{page.version}}/security/metrics/metrics) section for
-more details.
+configured by the `PrometheusReporterPort` setting.
 
 Note that denied packet metrics are independent of the DropActionOverride
 setting.  Specifically, if packets that would normally be denied are being

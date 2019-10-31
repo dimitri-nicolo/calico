@@ -4,6 +4,9 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 ---
 
 
+> Note: AWS security group integration is currently only supported when using the manual and helm installation paths.
+{: .alert .alert-info}
+
 
 {{site.prodname}} integrates AWS security groups and network policy,
 enforcing granular access control between Kubernetes pods and AWS VPC resources.

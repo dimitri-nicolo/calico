@@ -108,17 +108,6 @@ toc:
   - title: iptables
     path: /security/logs/iptables
 
-- title: Metrics
-  section:
-  - title: Overview
-    path: /security/metrics/
-  - title: Policy metrics in Prometheus
-    path: /security/metrics/metrics
-  - title: Configuring Prometheus
-    path: /security/configuration/prometheus
-  - title: Configuring Alertmanager
-    path: /security/configuration/alertmanager
-
 - title: Threat detection and prevention
   section:
   - title: Anomaly detection
