@@ -320,9 +320,7 @@ spec:
     destination:
       ports: [9200]
     protocol: TCP
-    source:
-      selector: k8s-app == 'tigera-operator'
-      namespaceSelector: name == 'tigera-operator'
+    # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
 
 ---
 
@@ -388,9 +386,7 @@ spec:
     destination:
       ports: [5601]
     protocol: TCP
-    source:
-      selector: k8s-app == 'tigera-operator'
-      namespaceSelector: name == 'tigera-operator'
+    # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
 
 ---
 
