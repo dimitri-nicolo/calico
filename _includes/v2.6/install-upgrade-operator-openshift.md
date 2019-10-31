@@ -135,12 +135,6 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o ma
    sed -i "s/SECRET/${SECRET}/" manifests/02-pull-secret.yaml
    ```
 
-#### Create Elastic storage
-
-The ElasticSearch operator that comes with {{site.prodname}} is configured to use a `StorageClass` named `tigera-elasticsearch`.
-Before continuing to create the cluster, you must create a StorageClass.
-Please refer to the [Kubernetes storage classes](https://kubernetes.io/docs/concepts/storage/storage-classes/) and [OpenShift persistent storage](https://docs.openshift.com/container-platform/4.2/storage/understanding-persistent-storage.html) pages for more details.
-
 #### Create the cluster
 
 Start the cluster creation with the following command and wait for it to complete.
@@ -149,16 +143,21 @@ Start the cluster creation with the following command and wait for it to complet
 openshift-install create cluster
 ```
 
+#### Create Elastic storage
+
+The ElasticSearch operator that comes with {{site.prodname}} is configured to use a `StorageClass` named `tigera-elasticsearch`.
+Before continuing to create the cluster, you must [create a StorageClass for {{site.prodname}}]().
+
 #### Install the {{site.prodname}} license
 
 In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
-Before applying the license, wait until the Tigera API server is ready with:
+Before applying the license, wait until the Tigera API server is ready with the following command:
 
 ```
 watch oc get tigerastatus
 ```
 
-The Tigera API server is ready when the `apiserver` component in the tigerastatus output has `True` under the Available column.
+Wait until the `apiserver` shows a status of `Available`. 
 
 Once the Tigera API server is ready, apply the license:
 
