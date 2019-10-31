@@ -6,6 +6,7 @@
 # only expected changes have happened.
 
 DEBUG="false"
+FAILED=0
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 mkdir -p $TEST_DIR/tmp
 
@@ -44,6 +45,7 @@ function checkConfiguration() {
     echo "  ## configuration is correct"
   else
     echo " XXX configuration is not correct"
+    FAILED=1
     $DEBUG && diff $EXPECTED $UUT
   fi
 }
@@ -105,6 +107,7 @@ EKS_VARS=$(cat <<EOM
 MANAGED_K8S=true
 K8S_PLATFORM=eks
 EKS_CLOUDWATCH_LOG_GROUP=/aws/eks/eks-audit-test/cluster/
+EKS_CLOUDWATCH_LOG_FETCH_INTERVAL=10
 EOM
 )
 
@@ -190,3 +193,5 @@ EOM
 checkConfiguration $TEST_DIR/tmp/eks-log-stream-pfx.env eks-log-stream-pfx "EKS - Log Stream Prefix overwritten"
 
 rm -f $TMP
+
+exit $FAILED

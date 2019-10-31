@@ -9,9 +9,16 @@ setup_secure_es_conf() {
   sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${1}/out-es.conf
 }
 
+# fluentd tries to watch Docker logs and write everything to screen
+# by default: prevent this.
+echo > /fluentd/etc/fluent.conf
+
 if [ "${MANAGED_K8S}" == "true" ]; then
-  # start from scratch
-  > /fluentd/etc/fluent.conf
+  # Managed Kubernetes (only EKS supported for now) needs an additional fluentd instance to
+  # scrape kube-apiserver audit logs from CloudWatch.
+  # This runs as an additional fluentd instance in the cluster, so it doesn't need to include any
+  # of the regular logging that follows this if block.  Those logs are scraped by a separate
+  # fluentd instance.
 
   # source
   if [ "${K8S_PLATFORM}" == "eks" ]; then
