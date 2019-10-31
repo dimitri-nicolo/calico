@@ -167,5 +167,5 @@ When it shows all components with status `Available`, proceed to the next sectio
 To secure the components which make up {{site.prodname}}, install the following set of network policies.
 
 ```
-oc create -f {{site.url}}/master/manifests/tigera-policies.yaml
+oc create -f {{site.url}}/{{page.version}}/manifests/tigera-policies.yaml
 ```
