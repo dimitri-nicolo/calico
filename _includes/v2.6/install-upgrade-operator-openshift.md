@@ -1,7 +1,3 @@
-> **Important**: These instructions have been tested using the latest build of master in https://github.com/openshift/installer (version v4.2+)
->                and only the bundled Elasticsearch operator.
-{: .alert .alert-danger}
-
 ### Big picture
 
 Install an OpenShift v4 cluster with {{site.prodname}}.
