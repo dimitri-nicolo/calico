@@ -90,7 +90,7 @@ rules:
 {{- if eq .Values.rbac "pre23" }}
   resources: ["tier.networkpolicies","tier.globalnetworkpolicies"]
 {{- else }}
-  resources: ["networkpolicies","globalnetworkpolicies"]
+  resources: ["networkpolicies","globalnetworkpolicies","stagednetworkpolicies","stagedglobalnetworkpolicies"]
 {{- end }}
   verbs: ["*"]
 
@@ -158,6 +158,11 @@ rules:
     - tier.globalnetworkpolicies
     - networkpolicies
     - tier.networkpolicies
+    - stagedglobalnetworkpolicies
+    - tier.stagedglobalnetworkpolicies
+    - stagednetworkpolicies
+    - tier.stagednetworkpolicies
+    - stagedkubernetesnetworkpolicies
   verbs:
     - list
 - apiGroups: ["projectcalico.org"]
@@ -340,6 +345,9 @@ data:
         resources:
         - globalnetworkpolicies
         - networkpolicies
+        - stagedglobalnetworkpolicies
+        - stagednetworkpolicies
+        - stagedkubernetesnetworkpolicies 
         - globalnetworksets
         - networksets
         - tiers
