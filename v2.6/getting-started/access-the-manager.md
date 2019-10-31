@@ -80,3 +80,7 @@ kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443
 ```
 
 You can now access the manager UI in your browser at `https://localhost:9443`.
+
+### Above and beyond
+
+- [Create a user and login to the manager UI]({{site.url}}/{{page.version}}/getting-started/create-user-login)
