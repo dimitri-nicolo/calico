@@ -25,7 +25,7 @@ may be used to specify the resource type on the CLI:
 For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `globalnetworkpolicy.projectcalico.org`, `globalnetworkpolicies.projectcalico.org` and abbreviations such as
-`globalreport.p` and `globalnetworkpolicies.p`.
+`globalnetworkpolicy.p` and `globalnetworkpolicies.p`.
 
 ### Sample YAML
 
