@@ -27,12 +27,18 @@ rules:
   - apiGroups: ["projectcalico.org"]
     resources:
       - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
       - networkpolicies
+      - stagednetworkpolicies
+      - stagedkubernetesnetworkpolicies
       - tier.globalnetworkpolicies
+      - tier.stagedglobalnetworkpolicies
       - tier.networkpolicies
+      - tier.stagednetworkpolicies
       - tiers
       - hostendpoints
       - globalnetworksets
+      - networksets
     verbs:
       - get
       - list

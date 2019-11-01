@@ -427,7 +427,7 @@ rules:
   # Use both networkpolicies and tier.networkpolicies, and globalnetworkpolicies and tier.globalnetworkpolicies resource
   # types to ensure identical behavior irrespective of the Calico RBAC scheme (see the ClusterRole
   # "ee-calico-tiered-policy-passthru" for more details).
-  resources: ["tiers","networkpolicies","tier.networkpolicies","globalnetworkpolicies","tier.globalnetworkpolicies","namespaces","globalnetworksets"]
+  resources: ["tiers","networkpolicies","tier.networkpolicies","globalnetworkpolicies","tier.globalnetworkpolicies","stagednetworkpolicies","tier.stagednetworkpolicies","stagedglobalnetworkpolicies","tier.stagedglobalnetworkpolicies","stagedkubernetesnetworkpolicies","namespaces","globalnetworksets","networksets"]
   verbs: ["watch","list"]
 # Access to statistics
 - apiGroups: [""]
@@ -467,7 +467,7 @@ rules:
   # Use both networkpolicies and tier.networkpolicies, and globalnetworkpolicies and tier.globalnetworkpolicies resource
   # types to ensure identical behavior irrespective of the Calico RBAC scheme (see the ClusterRole
   # "ee-calico-tiered-policy-passthru" for more details).
-  resources: ["tiers","networkpolicies","tier.networkpolicies","globalnetworkpolicies","tier.globalnetworkpolicies","globalnetworksets"]
+  resources: ["tiers","networkpolicies","tier.networkpolicies","globalnetworkpolicies","tier.globalnetworkpolicies","stagednetworkpolicies","tier.stagednetworkpolicies","stagedglobalnetworkpolicies","tier.stagedglobalnetworkpolicies","stagedkubernetesnetworkpolicies","globalnetworksets","networksets"]
   verbs: ["create","update","delete","patch","get","watch","list"]
 # Additional "list" requests that the Tigera EE Manager needs
 - apiGroups: [""]
