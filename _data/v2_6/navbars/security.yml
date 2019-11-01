@@ -142,6 +142,9 @@ toc:
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
 
+  - title: Provide TLS certificates for Typha and Node
+    path: /security/comms/typha-node-tls
+
   - title: Scheduling to well-known nodes
     path: /security/comms/reduce-nodes
 
