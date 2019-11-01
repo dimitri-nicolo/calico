@@ -40,9 +40,8 @@ var _ = Describe("Test request parsing", func() {
 		Entry("Bad token: Bearer: token",
 			&http.Request{Header: http.Header{"Authorization": []string{"Bearer: token"}}}),
 		Entry("No authorization header and empty string for impersonate user header",
-			&http.Request{Header: http.Header{"Authorization": []string{"Bearer"}, "Impersonate-User" : []string{""}}}),
+			&http.Request{Header: http.Header{"Authorization": []string{"Bearer"}, "Impersonate-User": []string{""}}}),
 		Entry("No authorization header and empty impersonate user header",
-			&http.Request{Header: http.Header{"Authorization": []string{"Bearer"}, "Impersonate-User" : []string{}}}),
-
+			&http.Request{Header: http.Header{"Authorization": []string{"Bearer"}, "Impersonate-User": []string{}}}),
 	)
 })

@@ -298,7 +298,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
-			Name:                    FlowlogBuckets,
+			Name: FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      AggregatedTerms,
 			AggSumInfos:             UIAggregationSums,
@@ -415,7 +415,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
-			Name:                    FlowlogBuckets,
+			Name: FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      AggregatedTerms,
 			AggSumInfos:             UIAggregationSums,
@@ -556,7 +556,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
-			Name:                    FlowlogBuckets,
+			Name: FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      AggregatedTerms,
 			AggSumInfos:             UIAggregationSums,
