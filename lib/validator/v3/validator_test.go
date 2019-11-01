@@ -1881,14 +1881,6 @@ func init() {
 				},
 			}, true,
 		),
-		Entry("should reject an empty selector value when StagedAction is Set",
-			&api.StagedGlobalNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec: api.StagedGlobalNetworkPolicySpec{
-					StagedAction: api.StagedActionSet,
-				},
-			}, false,
-		),
 		Entry("should accept an empty selector value when StagedAction is Delete",
 			&api.StagedGlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
@@ -1896,12 +1888,6 @@ func init() {
 					StagedAction: "Delete",
 				},
 			}, true,
-		),
-		Entry("should reject an empty selector value when StagedAction is not set",
-			&api.StagedGlobalNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec:       api.StagedGlobalNetworkPolicySpec{},
-			}, false,
 		),
 
 		// NetworkPolicySpec Types field checks.
@@ -2041,14 +2027,6 @@ func init() {
 				},
 			}, true,
 		),
-		Entry("should reject an empty Selector when StagedAction is Set",
-			&api.StagedNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec: api.StagedNetworkPolicySpec{
-					StagedAction: api.StagedActionSet,
-				},
-			}, false,
-		),
 		Entry("should accept an empty Selector when StagedAction is Delete",
 			&api.StagedNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
@@ -2057,12 +2035,6 @@ func init() {
 					Tier:         "eng",
 				},
 			}, true,
-		),
-		Entry("should reject an empty Selector when StagedAction is not set",
-			&api.StagedNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec:       api.StagedNetworkPolicySpec{},
-			}, false,
 		),
 
 		// Tiers.

@@ -5358,7 +5358,6 @@ func schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicySpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"selector"},
 			},
 		},
 		Dependencies: []string{
@@ -7290,7 +7289,6 @@ func schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref common.ReferenceCallb
 						},
 					},
 				},
-				Required: []string{"selector"},
 			},
 		},
 		Dependencies: []string{
