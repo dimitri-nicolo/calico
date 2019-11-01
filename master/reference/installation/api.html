@@ -477,6 +477,20 @@ AdditionalLogStoreSpec
 <p>Configuration for exporting flow, audit, and DNS logs to external storage.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>additionalSources</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AdditionalLogSourceSpec">
+AdditionalLogSourceSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configuration for importing audit logs from managed kubernetes cluster log sources.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -808,6 +822,37 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.AdditionalLogSourceSpec">AdditionalLogSourceSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.LogCollectorSpec">LogCollectorSpec</a>)
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>eksCloudwatchLog</code><br>
+<em>
+<a href="#operator.tigera.io/v1.EksCloudwatchLogsSpec">
+EksCloudwatchLogsSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified with EKS Provider in Installation, enables fetching EKS
+audit logs.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.AdditionalLogStoreSpec">AdditionalLogStoreSpec
 </h3>
 <p>
@@ -891,8 +936,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Authority configures the OAuth2/OIDC authority/issuer when using OAuth2 or OIDC login.
-Default: <a href="https://accounts.google.com">https://accounts.google.com</a></p>
+<p>Authority configures the OAuth2/OIDC authority/issuer when using OAuth2 or OIDC login.</p>
 </td>
 </tr>
 <tr>
@@ -944,7 +988,7 @@ options are: Token, Basic, OIDC, OAuth</p>
 <td>
 <em>(Optional)</em>
 <p>IPPools contains a list of IP pools to use for allocating pod IP addresses. At most one IP pool
-may be specified. If omitted, a single pool will be configured. If empty, no IP pools will be created.</p>
+may be specified. If omitted, a single pool will be configured when needed.</p>
 </td>
 </tr>
 <tr>
@@ -1003,12 +1047,78 @@ string
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.TigeraStatusCondition">TigeraStatusCondition</a>)
 </p>
+<p>ConditionStatus represents the status of a particular condition. A condition may be one of: True, False, Unknown.</p>
+<h3 id="operator.tigera.io/v1.EksCloudwatchLogsSpec">EksCloudwatchLogsSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AdditionalLogSourceSpec">AdditionalLogSourceSpec</a>)
+</p>
+<p>EksConfigSpec defines configuration for fetching EKS audit logs.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>region</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>AWS Region EKS cluster is hosted in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>groupName</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Cloudwatch log-group name containing EKS audit logs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>streamPrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Prefix of Cloudwatch log stream containing EKS audit logs in the log-group.
+Default: kube-apiserver-audit-</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>fetchInterval</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Cloudwatch audit log fetching interval.
+Default: 600</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.EncapsulationType">EncapsulationType
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.IPPool">IPPool</a>)
 </p>
+<p>EncapsulationType is the type of encapsulation to use on an IP pool. Valid
+options are: IPIP, VXLAN, IPIPCrossSubnet, VXLANCrossSubnet, None.</p>
 <h3 id="operator.tigera.io/v1.IPPool">IPPool
 </h3>
 <p>
@@ -1099,10 +1209,11 @@ Default: &lsquo;all()&rsquo;</p>
 <td>
 <code>replicas</code><br>
 <em>
-int64
+int32
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Replicas defines how many replicas each index will have. See <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/scalability.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/scalability.html</a></p>
 </td>
 </tr>
@@ -1289,6 +1400,20 @@ AdditionalLogStoreSpec
 <td>
 <em>(Optional)</em>
 <p>Configuration for exporting flow, audit, and DNS logs to external storage.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>additionalSources</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AdditionalLogSourceSpec">
+AdditionalLogSourceSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Configuration for importing audit logs from managed kubernetes cluster log sources.</p>
 </td>
 </tr>
 </tbody>
@@ -1717,7 +1842,7 @@ string
 </em>
 </td>
 <td>
-<p>Location of the syslog server. exmple: tcp://1.2.3.4:601</p>
+<p>Location of the syslog server. example: tcp://1.2.3.4:601</p>
 </td>
 </tr>
 <tr>
