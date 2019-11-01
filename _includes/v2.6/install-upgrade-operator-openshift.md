@@ -1,7 +1,3 @@
-> **Important**: These instructions have been tested using the latest build of master in https://github.com/openshift/installer (version v4.2+)
->                and only the bundled Elasticsearch operator.
-{: .alert .alert-danger}
-
 ### Big picture
 
 Install an OpenShift v4 cluster with {{site.prodname}}.
@@ -111,6 +107,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-manager.yaml -o manifests
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-compliance.yaml -o manifests/01-cr-compliance.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-intrusiondetection.yaml -o manifests/01-cr-intrusiondetection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logstorage.yaml -o manifests/01-cr-logstorage.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logcollector.yaml -o manifests/01-cr-logcollector.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheus.yaml -o manifests/01-cr-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheusrule.yaml -o manifests/01-cr-prometheusrule.yaml
@@ -146,9 +143,22 @@ Start the cluster creation with the following command and wait for it to complet
 openshift-install create cluster
 ```
 
+#### Create storage class
+
+{{site.prodname}} requires storage for logs and reports. Before finishing the installation, you must [create a StorageClass for {{site.prodname}}]().
+
 #### Install the {{site.prodname}} license
 
 In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
+Before applying the license, wait until the Tigera API server is ready with the following command:
+
+```
+watch oc get tigerastatus
+```
+
+Wait until the `apiserver` shows a status of `Available`. 
+
+Once the Tigera API server is ready, apply the license:
 
 ```
 oc create -f </path/to/license.yaml>
