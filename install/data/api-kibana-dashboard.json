@@ -165,7 +165,7 @@
   {
     "id": "221596f0-fb4b-11e9-907a-5b28a6195afd",
     "type": "index-pattern",
-    "version": 2,
+    "version": "2",
     "attributes": {
       "title": "tigera_secure_ee_events*",
       "timeFieldName": "time",
