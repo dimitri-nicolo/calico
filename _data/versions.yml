@@ -1565,7 +1565,7 @@ v2.6:
   note: ""
   tigera-operator:
     image: tigera/operator
-    version: master
+    version: release-v1.0
     registry: quay.io
   calico:
     minor_version: v3.10
