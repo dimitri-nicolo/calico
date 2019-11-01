@@ -374,35 +374,6 @@ var _ = Describe("Flow log types tests", func() {
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
-			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
-			muWithoutAWSMetaDstEndpointMeta.tuple.dst = ipStrTo16Byte("169.254.169.254")
-			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, FlowPrefixName)
-			Expect(err).To(BeNil())
-			expectedFlowMeta = FlowMeta{
-				Tuple: Tuple{
-					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					proto: 6,
-					l4Src: -1, // Is the only attribute that gets disregarded.
-					l4Dst: 80,
-				},
-				SrcMeta: EndpointMetadata{
-					Type:           "wep",
-					Namespace:      "kube-system",
-					Name:           "-",
-					AggregatedName: "iperf-4235-*", // Keeping just the Generate Name
-				},
-				DstMeta: EndpointMetadata{
-					Type:           "net", // No EndpointMeta associated but Dst IP AWS Metadata Server
-					Namespace:      "-",
-					Name:           "-",
-					AggregatedName: "aws",
-				},
-				Action:   "allow",
-				Reporter: "dst",
-			}
-			Expect(flowMeta).Should(Equal(expectedFlowMeta))
-
 			muWithEndpointMetaWithoutGenerateName := muWithEndpointMeta
 			muWithEndpointMetaWithoutGenerateName.dstEp = &calc.EndpointData{
 				Key: model.WorkloadEndpointKey{

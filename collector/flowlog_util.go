@@ -33,9 +33,8 @@ const (
 	FlowLogEndpointTypeNs  FlowLogEndpointType = "ns"
 	FlowLogEndpointTypeNet FlowLogEndpointType = "net"
 
-	PrivateNet       FlowLogSubnetType = "pvt"
-	AWSMetaServerNet FlowLogSubnetType = "aws"
-	PublicNet        FlowLogSubnetType = "pub"
+	PrivateNet FlowLogSubnetType = "pvt"
+	PublicNet  FlowLogSubnetType = "pub"
 )
 
 // extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
@@ -210,13 +209,6 @@ func getSubnetType(addrBytes [16]byte) FlowLogSubnetType {
 	isPrivateIP := private24BitBlock.Contains(IP) || private20BitBlock.Contains(IP) || private16BitBlock.Contains(IP)
 	if isPrivateIP {
 		return PrivateNet
-	}
-
-	// Based on https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
-	_, awsMetaBlock, _ := net.ParseCIDR("169.254.169.254/32")
-	isAWSMeta := awsMetaBlock.Contains(IP)
-	if isAWSMeta {
-		return AWSMetaServerNet
 	}
 
 	return PublicNet
