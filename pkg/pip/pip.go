@@ -50,9 +50,9 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams) (*Flow
 	// Construct the query.
 	// TODO(rlb): This should be fully parsed from the HTTP request.
 	q := &pelastic.CompositeAggregationQuery{
-		Name:                    FlowlogBuckets,
-		DocumentIndex:           params.DocumentIndex,
-		Query:                   params.Query,
+		Name:          FlowlogBuckets,
+		DocumentIndex: params.DocumentIndex,
+		Query:         params.Query,
 		AggCompositeSourceInfos: UICompositeSources,
 		AggNestedTermInfos:      AggregatedTerms,
 		AggSumInfos:             UIAggregationSums,

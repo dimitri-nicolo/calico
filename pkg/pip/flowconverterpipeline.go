@@ -156,9 +156,9 @@ func (p *pip) SearchAndProcessFlowLogs(
 	//TODO(rlb): Should really calculate this based on the original query from the UI, but at the moment we don't
 	//           parse that.
 	modifiedQuery := &elastic.CompositeAggregationQuery{
-		DocumentIndex:           query.DocumentIndex,
-		Query:                   query.Query,
-		Name:                    query.Name,
+		DocumentIndex: query.DocumentIndex,
+		Query:         query.Query,
+		Name:          query.Name,
 		AggCompositeSourceInfos: PIPCompositeSources,
 		AggNestedTermInfos:      AggregatedTerms,
 		AggSumInfos:             UIAggregationSums,
