@@ -61,7 +61,7 @@ def gen_chart_specific_values_v2_6(versions, imageRegistry, chart, forDocs)
           cpu: #"2000m"
           memory: #"1024Mi"
       # kibanaURL is used to populate a link to Kibana from the Manager web UI.
-      kibanaURL: ''
+      kibanaURL: 'https://127.0.0.1:30601'
  
     # Configuration for the manager UI proxy.
     voltron:
