@@ -160,7 +160,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 			return &elastic.Transform{
 				Script: elastic.Script{
 					Language: "painless",
-					Source:   fmt.Sprintf(`[ "_value": [[ "%s(%s)": ctx.payload.aggregations.get(%q).value ]]]`, alert.Spec.Metric, alert.Spec.Field, alert.Spec.Field),
+					Source:   fmt.Sprintf(`[ "_value": [[ "%s": ctx.payload.aggregations.get(%q).value ]]]`, alert.Spec.Metric, alert.Spec.Field),
 				},
 			}
 		}
@@ -173,7 +173,7 @@ func Transform(alert v3.GlobalAlert) *elastic.Transform {
 		description = "count"
 		key = "doc_count"
 	default:
-		description = fmt.Sprintf("%s(%s)", alert.Spec.Metric, alert.Spec.Field)
+		description = fmt.Sprintf("%s", alert.Spec.Metric)
 		key = fmt.Sprintf("get(%q).value", alert.Spec.Field)
 	}
 
