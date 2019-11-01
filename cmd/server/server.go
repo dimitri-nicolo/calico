@@ -16,6 +16,7 @@ import (
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/compliance/pkg/policyrec"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/compliance/pkg/tls"
 	"github.com/tigera/compliance/pkg/version"
@@ -49,10 +50,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup policy recommendation helper.
+	prec := policyrec.NewPolicyRecommendationEngine(datastore.MustGetKubernetesClient(), ec)
+
 	// Create and start the server
 	auth := esprox.NewK8sAuth(datastore.MustGetKubernetesClient(), datastore.MustGetConfig(), cfg.EnableMultiClusterClient)
 	rbhf := server.NewStandardRbacHelperFactory(auth)
-	s := server.New(ec, clientSet, rbhf, ":"+*apiPort, *keyPath, *certPath)
+	s := server.New(ec, clientSet, rbhf, prec, ":"+*apiPort, *keyPath, *certPath)
 
 	s.Start()
 

@@ -403,8 +403,9 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d h1:/
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d/go.mod h1:Wv8okOjae86NpPkLSyGDvg1RyqPcb3y++Ff/47qSjo4=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
-github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b h1:I6epdZIQQyBUxhO6FbVKKP4h4/P/BoHtLRybbqhUw94=
 github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b/go.mod h1:XXPshLkLWp66xn4bPtkvc9pv3HNgN1JZqfl9Tdf0p6I=
+github.com/tigera/lma v0.0.0-20191104174029-36b62fc5f234 h1:GYO+r8UJCRUaKnu6RdZrrqyNL6T1+ZZEH+mY+TgOwIw=
+github.com/tigera/lma v0.0.0-20191104174029-36b62fc5f234/go.mod h1:XXPshLkLWp66xn4bPtkvc9pv3HNgN1JZqfl9Tdf0p6I=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
