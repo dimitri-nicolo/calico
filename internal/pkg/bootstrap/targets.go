@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 // Target is the format for env variable to set proxy targets
@@ -75,10 +74,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 		}
 
 		if t.CABundlePath != "" {
-			pt.CA, err = utils.LoadX509FromFile(t.CABundlePath)
-			if err != nil {
-				return nil, errors.WithMessage(err, "LoadX509FromFile")
-			}
+			pt.CAPem = t.CABundlePath
 		}
 
 		if t.PathReplace != nil && t.PathRegexp == nil {

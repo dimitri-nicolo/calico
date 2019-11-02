@@ -85,6 +85,11 @@ func loadKeys() (interface{}, interface{}, error) {
 }
 
 func createCert(email string, parent *x509.Certificate, isCA bool) (*x509.Certificate, error) {
+	bytes, _ := createX509Cert(email, isCA, parent)
+	return x509.ParseCertificate(bytes)
+}
+
+func createX509Cert(email string, isCA bool, parent *x509.Certificate) ([]byte, error) {
 	templ := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		EmailAddresses:        []string{email},
@@ -96,32 +101,33 @@ func createCert(email string, parent *x509.Certificate, isCA bool) (*x509.Certif
 		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
 		DNSNames:              []string{"voltron"},
 	}
-
 	if isCA {
 		templ.KeyUsage |= x509.KeyUsageCertSign
 	}
-
 	if parent == nil {
 		parent = templ
 	}
-
 	pubKey, privKey, err := loadKeys()
 	if err != nil {
 		return nil, err
 	}
-
 	bytes, err := x509.CreateCertificate(rand.Reader, templ, templ, pubKey, privKey)
 	if err != nil {
 		return nil, err
 	}
-
-	return x509.ParseCertificate(bytes)
+	return bytes, nil
 }
 
 // CreateSelfSignedX509Cert creates a self-signed certificate using predefined
 // keys that includes the given email
 func CreateSelfSignedX509Cert(email string, isCA bool) (*x509.Certificate, error) {
 	return createCert(email, nil, isCA)
+}
+
+// CreateSelfSignedX509CertBinary creates a self-signed certificate using predefined
+// keys that includes the given email
+func CreateSelfSignedX509CertBinary(email string, isCA bool) ([]byte, error) {
+	return createX509Cert(email, isCA, nil)
 }
 
 // CreateSignedX509Cert creates a cert signed by a parent cert using predefined

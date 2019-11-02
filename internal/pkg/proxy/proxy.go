@@ -5,6 +5,7 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -19,7 +20,7 @@ type Target struct {
 	Path  string
 	Dest  *url.URL
 	Token string
-	CA    *x509.Certificate
+	CAPem string
 
 	// PathRegexp, if not nil, check if Regexp matches the path
 	PathRegexp *regexp.Regexp
@@ -45,7 +46,7 @@ func New(tgts []Target) (*Proxy, error) {
 	err := func() (e error) {
 		defer func() {
 			if r := recover(); r != nil {
-				e = errors.Errorf("mux.HandleFunc paniced: %s", r)
+				e = errors.Errorf("mux.HandleFunc panicked: %s", r)
 			}
 		}()
 
@@ -53,7 +54,8 @@ func New(tgts []Target) (*Proxy, error) {
 			if t.Dest == nil {
 				return errors.Errorf("bad target %d, no destination", i)
 			}
-			if t.CA != nil && t.Dest.Scheme != "https" {
+			if len(t.CAPem) != 0 && t.Dest.Scheme != "https" {
+				log.Debugf("Configuring CA cert for secure communication %s for %s", t.CAPem, t.Dest.Scheme)
 				return errors.Errorf("CA configured for url scheme %q", t.Dest.Scheme)
 			}
 			p.mux.HandleFunc(t.Path, newTargetHandler(t))
@@ -79,13 +81,23 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 	} else if tgt.Dest.Scheme == "https" {
 		var tlsCfg *tls.Config
 
-		if tgt.CA == nil {
+		if len(tgt.CAPem) == 0 {
 			tlsCfg = &tls.Config{
 				InsecureSkipVerify: true,
 			}
 		} else {
-			ca := x509.NewCertPool()
-			ca.AddCert(tgt.CA)
+			log.Debugf("Detected secure transport for %s. Will pick up system cert pool", tgt.Dest)
+			var ca *x509.CertPool
+			ca, err := x509.SystemCertPool()
+			if err != nil {
+				log.Debugf("Creating a new cert pool due to %s", err)
+				ca = x509.NewCertPool()
+			}
+			file, err := ioutil.ReadFile(tgt.CAPem)
+			if err != nil {
+				log.Fatalf("Could not read cert from file %s", tgt.CAPem)
+			}
+			ca.AppendCertsFromPEM(file)
 			tlsCfg = &tls.Config{
 				RootCAs: ca,
 			}
@@ -114,6 +126,7 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 		}
 
 		if token != "" {
+			log.Debugf("Adding authorization token %#v", token)
 			r.Header.Set("Authorization", token)
 		}
 

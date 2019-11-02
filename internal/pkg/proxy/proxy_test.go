@@ -2,21 +2,24 @@ package proxy_test
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
+
+	"github.com/tigera/voltron/internal/pkg/test"
+	"github.com/tigera/voltron/internal/pkg/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/test"
-	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 func init() {
@@ -360,30 +363,37 @@ var _ = Describe("Proxy", func() {
 	})
 
 	Describe("When CA bundle configured", func() {
-		ca, _ := test.CreateSelfSignedX509Cert("xyz", true)
-
 		It("Should fail for http target", func() {
-			_, err := proxy.New([]proxy.Target{
+			file, _, err := createCa()
+			Expect(err).NotTo(HaveOccurred())
+			defer os.Remove(file.Name())
+
+			_, err = proxy.New([]proxy.Target{
 				{
 					Path: "/path",
 					Dest: &url.URL{
 						Scheme: "http",
 						Host:   "some",
 					},
-					CA: ca,
+					CAPem: file.Name(),
 				},
 			})
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("Should work if the certs match", func() {
+			file, ca, err := createCa()
+			Expect(err).NotTo(HaveOccurred())
+			defer os.Remove(file.Name())
+
 			server := httptest.NewUnstartedServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					// just returns 200
 				}),
 			)
 
-			certPem := test.PemEncodeCert(ca)
+			parseCert, _ := x509.ParseCertificate(ca)
+			certPem := test.PemEncodeCert(parseCert)
 			cert, err := tls.X509KeyPair(certPem, []byte(test.PrivateRSA))
 			Expect(err).NotTo(HaveOccurred())
 
@@ -401,7 +411,6 @@ var _ = Describe("Proxy", func() {
 				{
 					Path: "/path",
 					Dest: srvURL,
-					CA:   ca,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -416,6 +425,10 @@ var _ = Describe("Proxy", func() {
 		})
 
 		It("Should fail if the certs do not match", func() {
+			file, _, err := createCa()
+			Expect(err).NotTo(HaveOccurred())
+			defer os.Remove(file.Name())
+
 			server := httptest.NewUnstartedServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					// just returns 200
@@ -440,9 +453,9 @@ var _ = Describe("Proxy", func() {
 
 			p, err := proxy.New([]proxy.Target{
 				{
-					Path: "/path",
-					Dest: srvURL,
-					CA:   ca,
+					Path:  "/path",
+					Dest:  srvURL,
+					CAPem: file.Name(),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -457,6 +470,20 @@ var _ = Describe("Proxy", func() {
 		})
 	})
 })
+
+func createCa() (*os.File, []byte, error) {
+	ca, _ := test.CreateSelfSignedX509CertBinary("xyz", true)
+	file, err := ioutil.TempFile("", "test-certificate")
+	if err != nil {
+		return nil, nil, err
+	}
+	_, err = file.Write(ca)
+
+	if err != nil {
+		return nil, nil, err
+	}
+	return file, ca, nil
+}
 
 type transport struct {
 	rt func(*http.Request) (*http.Response, error)
