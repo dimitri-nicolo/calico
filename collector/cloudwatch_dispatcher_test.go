@@ -161,14 +161,6 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - net - - pub - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
-			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
-			muWithoutAWSMetaDstEndpointMeta.tuple.dst = ipStrTo16Byte("169.254.169.254")
-			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, FlowPrefixName)
-			Expect(err).To(BeNil())
-			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - net - - aws - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
 			By("aggregating on prefix name and reporting original source IPs")
 			flowMeta, err = NewFlowMeta(muWithOrigSourceIPs, FlowPrefixName)
 			Expect(err).To(BeNil())
