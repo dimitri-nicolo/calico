@@ -126,7 +126,6 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 		}
 
 		if token != "" {
-			log.Debugf("Adding authorization token %#v", token)
 			r.Header.Set("Authorization", token)
 		}
 
