@@ -144,6 +144,9 @@ toc:
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
 
+  - title: Provide TLS certificates for the API server
+    path: /security/comms/apiserver-tls
+
   - title: Provide TLS certificates for Typha and Node
     path: /security/comms/typha-node-tls
 
