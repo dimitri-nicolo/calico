@@ -13,7 +13,6 @@ import (
 
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/util"
 )
 
@@ -102,7 +101,7 @@ func checkAuthorized(req *http.Request, atr authzv1.ResourceAttributes, k8sAuth 
 	return k8sAuth.Authorize(reqWithCtx)
 }
 
-func QueryElasticsearchFlows(ctx context.Context, c elastic.Client, params *PolicyRecommendationParams) ([]*api.Flow, error) {
+func QueryElasticsearchFlows(ctx context.Context, ca CompositeAggregator, params *PolicyRecommendationParams) ([]*api.Flow, error) {
 	query := BuildElasticQuery(params)
-	return SearchFlows(ctx, c, query, params)
+	return SearchFlows(ctx, ca, query, params)
 }

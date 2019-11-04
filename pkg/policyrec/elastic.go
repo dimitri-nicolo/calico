@@ -126,8 +126,15 @@ func BuildElasticQuery(params *PolicyRecommendationParams) elastic.Query {
 	return elastic.NewRawStringQuery(qs)
 }
 
+// CompositeAggregator is an interface to provide composite aggregation via Elasticsearch.
+type CompositeAggregator interface {
+	SearchCompositeAggregations(
+		context.Context, *pelastic.CompositeAggregationQuery, pelastic.CompositeAggregationKey,
+	) (<-chan *pelastic.CompositeAggregationBucket, <-chan error)
+}
+
 // TODO: Add special error handling for elastic queries that are rejected because elastic permissions are bad.
-func SearchFlows(ctx context.Context, c pelastic.Client, query elastic.Query, params *PolicyRecommendationParams) ([]*api.Flow, error) {
+func SearchFlows(ctx context.Context, c CompositeAggregator, query elastic.Query, params *PolicyRecommendationParams) ([]*api.Flow, error) {
 	aggQuery := &pelastic.CompositeAggregationQuery{
 		DocumentIndex:           params.DocumentIndex,
 		Query:                   query,
