@@ -4,8 +4,6 @@ go 1.13
 
 replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191029214447-cf245bbeba6d
 
-replace github.com/olivere/elastic/v7 => github.com/tigera/elastic-private/v7 v7.0.0-20191022150625-045a48bc6b72
-
 require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
@@ -19,7 +17,7 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/kelseyhightower/envconfig v1.3.0 // indirect
 	github.com/lithammer/dedent v1.1.0
-	github.com/olivere/elastic/v7 v7.0.9-0.20191022143522-081b1b2cdaca
+	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
 	github.com/onsi/gomega v1.7.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/projectcalico/libcalico-go v3.7.0-0.dev.0.20190328155702-d0e07165e343+incompatible
