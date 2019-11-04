@@ -105,7 +105,7 @@ Use the push method if your threat feeds that are not in newline-delimited forma
        "domains" : ["malicious.badstuff", "hacks.r.us"]
    }
    ```
-
+   Note that in order to push data to ES, you'll need to configure a policy that allows that information to reach the ES cluster.
    See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
 
 4. In {{site.prodname}} Manager, go the “Alerts” page to view events that are generated when an endpoint in the cluster queries a name on the list.
