@@ -85,7 +85,6 @@ module Jekyll
         --set prometheus.scrapeTargets.node.service.nodePort=30909 \
         --set kibana.service.type=NodePort \
         --set kibana.service.nodePort=30601 \
-        --set manager.kibanaURL=http://127.0.0.1:30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
 
       # Add mock elasticsearch settings if required for rendering in the docs.
