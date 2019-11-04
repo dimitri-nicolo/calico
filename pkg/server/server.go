@@ -12,17 +12,19 @@ import (
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/tigera/compliance/pkg/policyrec"
 	"github.com/tigera/lma/pkg/api"
 )
 
 // New creates a new server.
-func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
+func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, pre policyrec.RecommendationEngine, addr string, key string, cert string) ServerControl {
 	s := &server{
 		key:  key,
 		cert: cert,
 		rr:   rr,
 		rcg:  rcg,
 		rhf:  rhf,
+		pre:  pre,
 	}
 
 	// Create a new pattern matching MUX.
@@ -32,6 +34,7 @@ func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFa
 	// mux.Get(urlGet, http.HandlerFunc(s.handleVersion))
 	mux.Get(UrlList, http.HandlerFunc(s.handleListReports))
 	mux.Get(UrlDownload, http.HandlerFunc(s.handleDownloadReports))
+	mux.Get(UrlPolicyRecommendation, http.HandlerFunc(s.handlePolicyRecommendation))
 
 	// Create a new server using the MUX.
 	s.server = &http.Server{
@@ -52,6 +55,9 @@ type server struct {
 	rr      api.ReportRetriever
 	rcg     ReportConfigurationGetter
 	rhf     RbacHelperFactory
+
+	// Tag along the policy recommendation helper.
+	pre policyrec.RecommendationEngine
 
 	// Track all of the reports and report types. We don't expect these to change too often, so we only need to
 	// update the lists every so often. Access to this data should be through getReportTypes.
