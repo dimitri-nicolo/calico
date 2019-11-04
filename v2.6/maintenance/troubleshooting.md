@@ -23,6 +23,23 @@ To view debug logs on some {{site.prodname}} components, set the `LogSeverityScr
 
 To report a problem, contact Tigera Support.
 
+### Alert diagnostics
+
+The developer console can provide diagnostic information if you
+have an issue with your alerts and need to contact Support. Please
+execute the following queries and provide the output along with your
+alert definition.
+
+```
+GET _watcher/watch/tigera_secure_ee.<cluster_name>.<alert_name>
+POST _watcher/watch/tigera_secure_ee.<cluster_name>.<alert_name>/_execute
+{
+  "action_modes": {
+    "index_events": "force_simulate"
+  }
+}
+```
+
 ### Containers do not have network connectivity
 
 #### Check for mismatched node names

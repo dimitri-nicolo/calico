@@ -58,6 +58,8 @@ toc:
       path: /reference/resources/bgppeer
     - title: Felix configuration
       path: /reference/resources/felixconfig
+    - title: Global Alert
+      path: /reference/resources/globalalert
     - title: Global network policy
       path: /reference/resources/globalnetworkpolicy
     - title: Global network set

@@ -110,6 +110,8 @@ toc:
 
 - title: Threat detection and prevention
   section:
+  - title: Alerts
+    path: /security/threat-detection-and-prevention/alerts
   - title: Anomaly detection
     section:
     - title: Overview
