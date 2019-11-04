@@ -4805,7 +4805,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"selector"},
 				},
 			},
 			Dependencies: []string{
@@ -6566,7 +6565,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"selector"},
 				},
 			},
 			Dependencies: []string{
