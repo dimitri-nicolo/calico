@@ -49,7 +49,7 @@ steps to upgrade.
    ```
 1. Pre-install the CRDs.
 
-   If you installed with (`createCustomResources: false`), please pre-install the CRDs before upgrade:
+   If you installed with `createCustomResources: false`, pre-install the CRDs:
 
    ```
    kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
