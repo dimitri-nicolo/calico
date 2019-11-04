@@ -1337,13 +1337,7 @@ func validateStagedNetworkPolicy(structLevel validator.StructLevel) {
 	_, enforced := api.ConvertStagedPolicyToEnforced(&staged)
 	validateNetworkPolicySpec(&enforced.Spec, structLevel)
 
-	//If StagedAction is Set or not set at all, then selector is a required field
-	if staged.Spec.StagedAction == api.StagedActionSet || staged.Spec.StagedAction == "" {
-		if staged.Spec.Selector == "" {
-			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedNetworkPolicySpec", "", reason("Selector field is required"), "")
-		}
-	} else {
+	if staged.Spec.StagedAction == api.StagedActionDelete {
 		empty := api.NetworkPolicySpec{}
 		empty.Tier = enforced.Spec.Tier
 		if !reflect.DeepEqual(empty, enforced.Spec) {
@@ -1498,13 +1492,7 @@ func validateStagedGlobalNetworkPolicy(structLevel validator.StructLevel) {
 	_, enforced := api.ConvertStagedGlobalPolicyToEnforced(&staged)
 	validateGlobalNetworkPolicySpec(&enforced.Spec, structLevel)
 
-	//If StagedAction is Set or not set at all, then podSelector is a required field
-	if staged.Spec.StagedAction == api.StagedActionSet || staged.Spec.StagedAction == "" {
-		if staged.Spec.Selector == "" {
-			structLevel.ReportError(reflect.ValueOf(staged.Spec),
-				"StagedGlobalNetworkPolicySpec", "", reason("selector field is required"), "")
-		}
-	} else {
+	if staged.Spec.StagedAction == api.StagedActionDelete {
 		//the network policy fields should all "zero-value" when the update type is "delete"
 		empty := api.GlobalNetworkPolicySpec{}
 		empty.Tier = enforced.Spec.Tier
@@ -1551,6 +1539,7 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 	validateNetworkPolicySpec(&enforced.Spec, structLevel)
 
 	//If StagedAction is Set or not set at all, then podSelector is a required field
+	//PodSelector is a required field for k8s policies, so enforcing it to be consistent
 	if spec.StagedAction == api.StagedActionSet || spec.StagedAction == "" {
 		if reflect.DeepEqual(metav1.LabelSelector{}, staged.Spec.PodSelector) {
 			structLevel.ReportError(reflect.ValueOf(spec),
