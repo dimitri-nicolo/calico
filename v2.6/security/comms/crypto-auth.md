@@ -233,7 +233,14 @@ If you do not require TLS termination, configure your proxy to "pass thru" the T
 
 ## Prometheus connections
 
-### Format your certificates
+Configure TLS based on your deployment.
+
+> **Note**: Operator deployment does not support configuring TLS for Prometheus.
+{: .alert .alert-info}
+
+### Manual/Helm deployment
+
+#### Format your certificates
 
 In order to secure connections between Prometheus and {{site.prodname}}, you will need to first
 have the following:
@@ -252,7 +259,7 @@ to the CA certificate.
 cat calico.pem ca.pem >> concat-cert.pem
 ```
 
-### Mount your certificates into {{site.prodname}}
+#### Mount your certificates into {{site.prodname}}
 
 You now need to mount the {{site.prodname}} certificate (the concatenated certificate) and key
 into the `{{site.nodecontainer}}` daemonset.
@@ -371,7 +378,7 @@ daemonset as shown below.
               ...
 ```
 
-### Mount your certificates into Prometheus
+#### Mount your certificates into Prometheus
 
 > **Note**: The following changes need to be made to the `monitor-calico.yaml` file or your equivalent manifest.
 {: .alert .alert-info}
@@ -446,7 +453,7 @@ endpoint scheme to use TLS by specifying `scheme: https`.
 > field and instead set `insecureskipVerify` to `true`.
 {: .alert .alert-info}
 
-### Reapply your changes
+#### Reapply your changes
 
 Apply your changes.
 
