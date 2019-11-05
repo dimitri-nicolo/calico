@@ -209,8 +209,6 @@ toc:
       path: /reference/other-install-methods/kubernetes/installation/config-options
     - title: Customizing the Tigera Secure EE manifests
       path: /reference/other-install-methods/kubernetes/installation/hosted/cnx/cnx
-    - title: Using your own Elasticsearch for logs
-      path: /reference/other-install-methods/kubernetes/installation/byo-elasticsearch
     - title: Installing Tigera Secure EE on Docker Enterprise
       path: /reference/other-install-methods/kubernetes/installation/docker-ee
     - title: Installing Tigera Secure EE on Amazon EKS

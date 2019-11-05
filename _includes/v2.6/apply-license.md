@@ -40,4 +40,3 @@
    {{include.cli}} get licensekey default
    ```
 {% endif %}
-1. Continue to [Installing metrics and logs](#installing-metrics-and-logs)

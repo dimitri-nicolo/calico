@@ -297,4 +297,190 @@ helm upgrade $DEPLOYMENT $CHART_NAME
 --reuse-values --recreate-pods
 ```
 
-For help setting up these roles in your Elasticsearch cluster, see  [Setting up Elasticsearch roles]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/byo-elasticsearch#before-you-begin)
+If you're using the Elasticsearch X-Pack security then you may wish to use the following roles. You should
+use the [Kibana Role Management API](https://www.elastic.co/guide/en/kibana/7.3/role-management-api.html),
+since some roles include permissions on both Kibana and Elasticsearch.
+
+They may also be useful as a reference for defining alternative security configuration.
+
+1. fluentd role for creating indices and sending logs to Elasticsearch  (`tigera-ee-fluentd`)
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "monitor", "manage_index_templates" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "create_index", "write" ]
+         }
+       ]
+     }
+   }
+   ```
+
+1. {{site.prodname}} Manager role for querying Elasticsearch (`tigera-ee-manager`)
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "monitor" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*", ".kibana" ],
+           "privileges": [ "read"]
+         }
+       ]
+     }
+   }
+   ```
+
+1. {{site.prodname}} role for installing machine learning jobs, Watcher jobs, and Kibana dashboards (`tigera-ee-installer`)
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "manage_ml", "manage_watcher" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "read"]
+         }
+       ]
+     },
+     "kibana": [
+       {
+         "privileges": ["all"]
+       }
+     ]
+   }
+   ```
+
+1. {{site.prodname}} Curator role for deleting indices older than retention period in Elasticsearch (`tigera-ee-curator`)
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "monitor", "manage_index_templates" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "all"]
+         }
+       ]
+     }
+   }
+   ```
+
+1. {{site.prodname}} intrusion detection controller role for processing threat feeds, flow logs and security events. (`tigera-ee-intrusion-detection`)
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "monitor", "manage_index_templates"],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "read"]
+         },
+         {
+           "names": [ ".tigera.ipset.*", "tigera_secure_ee_events.*", ".tigera.domainnameset.*" ],
+           "privileges": [ "all"]
+         }
+       ]
+     }
+   }
+   ```
+
+1. {{site.prodname}} compliance report and dashboard for assessing the compliance posture of the cluster.
+
+    1. Compliance benchmarker role for storing benchmark results  (`tigera-ee-compliance-benchmarker`)
+
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_benchmark_results.*" ],
+               "privileges": [ "create_index", "write", "view_index_metadata", "read" ]
+             }
+           ]
+         }
+       }
+       ```
+
+    1. Compliance controller role for querying last archived reports  (`tigera-ee-compliance-controller`)
+
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_compliance_reports.*" ],
+               "privileges": [ "read" ]
+             }
+           ]
+         }
+       }
+       ```
+
+    1. Compliance reporter role for querying archived audit information and storing reports  (`tigera-ee-compliance-reporter`)
+
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_audit_*" ],
+               "privileges": [ "read" ]
+             },
+             {
+               "names": [ "tigera_secure_ee_snapshots.*" ],
+               "privileges": [ "read" ]
+             },
+             {
+               "names": [ "tigera_secure_ee_benchmark_results.*" ],
+               "privileges": [ "read" ]
+             },
+             {
+               "names": [ "tigera_secure_ee_compliance_reports.*" ],
+               "privileges": [ "create_index", "write", "view_index_metadata", "read" ]
+             }
+           ]
+         }
+       }
+       ```
+
+    1. Compliance snapshotter role for recording daily configuration audits  (`tigera-ee-compliance-snapshotter`)
+
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_snapshots.*" ],
+               "privileges": [ "create_index", "write", "view_index_metadata", "read" ]
+             }
+           ]
+         }
+       }
+       ```
+
+    1. Compliance server role for querying archived reports (`tigera-ee-compliance-server`)
+
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_compliance_reports.*" ],
+               "privileges": [ "read" ]
+             }
+           ]
+         }
+       }

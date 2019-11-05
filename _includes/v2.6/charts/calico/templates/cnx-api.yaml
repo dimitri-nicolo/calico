@@ -347,7 +347,7 @@ data:
         - networkpolicies
         - stagedglobalnetworkpolicies
         - stagednetworkpolicies
-        - stagedkubernetesnetworkpolicies 
+        - stagedkubernetesnetworkpolicies
         - globalnetworksets
         - networksets
         - tiers

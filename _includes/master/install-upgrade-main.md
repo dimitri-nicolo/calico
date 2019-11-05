@@ -209,28 +209,10 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 
 {% include {{page.version}}/apply-license.md cli="kubectl" %}
 
-{% if include.upgrade %}
-## Installing metrics and logs
-{% include {{page.version}}/byo-intro.md upgrade=include.upgrade %}
-
-### Set up access to your cluster from Kubernetes
-
-{% include {{page.version}}/elastic-secure.md %}
-
-### Installing Prometheus, Alertmanager, and Fluentd
-
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="external" upgrade=include.upgrade %}
-
-{% else %}
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator"%}
-{% endif %}
-
+{% unless include.upgrade %}
 1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
 
-{% if include.upgrade %}
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" elasticsearch="external" upgrade=include.upgrade %}
-{% else %}
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
 {% include {{page.version}}/gs-next-steps.md %}
-{% endif %}
+{% endunless %}

@@ -139,7 +139,7 @@ spec:
     - resource: networkpolicies
     - resource: stagedglobalnetworkpolicies
     - resource: stagednetworkpolicies
-    - resource: stagedkubernetesnetworkpolicies      
+    - resource: stagedkubernetesnetworkpolicies
   downloadTemplates:
   - name: summary.csv
     template: |-

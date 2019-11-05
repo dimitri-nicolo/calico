@@ -42,20 +42,6 @@ in the cluster. If you do not have your own Prometheus, the following commands w
 Operator, Prometheus, and Alertmanager instances for you. They will also deploy Fluentd{% if include.elasticsearch == "operator" %}, and
 optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
-{% unless include.upgrade %}
-1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, do not complete any more steps in this section. Instead, refer to
-   [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
-
-   For demonstration or proof of concept installs, you can use the bundled
-   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
-   next step to complete a demonstration or proof of concept install.
-
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
-{% endunless %}
-
 1. Download the flow logs patch for {{site.prodname}} node.
 
    ```
@@ -68,17 +54,6 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    oc patch daemonset {{site.noderunning}} -n kube-system --patch "$(cat patch-flow-logs.yaml)"
    ```
 
-{% else %}
-{% unless include.elasticsearch == "external" %}
-
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
-   to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
-   operator continue to the next step instead.
-
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
-{% endunless %}
 {% endif %}
 
 1. Apply the following manifest to set network policy that allows access to the {{site.prodname}} API server.
@@ -183,16 +158,6 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
     curl --compressed -O \
     {{docpath}}{{secure}}/monitor-calico.yaml
     ```
-{% endif %}
-
-{% if include.elasticsearch != "operator" %}
-1. Update the `tigera-es-config` configmap with information on how to reach the BYO Elasticsearch cluster.
-   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
-   Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through.
-   ```
-   sed -i -e "s?__ELASTICSEARCH_HOST__?<elasticsearch-host>?g" monitor-calico.yaml
-   sed -i -e "s?__KIBANA_HOST__?<kibana-host>?g" monitor-calico.yaml
-   ```
 {% endif %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
