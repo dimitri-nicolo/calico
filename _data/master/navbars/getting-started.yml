@@ -104,7 +104,7 @@ toc:
     - title: Kubernetes API datastore options
       path: /getting-started/calicoq/configure/kdd
 
-- title: Access the manager UI
+- title: Configure access to the manager UI
   path: /getting-started/access-the-manager
 
 - title: Login in to the manager UI

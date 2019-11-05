@@ -1,5 +1,5 @@
 ---
-title: Access the manager UI
+title: Configure access to the manager UI
 ---
 
 ### Big picture
