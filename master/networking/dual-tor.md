@@ -17,21 +17,21 @@ operate normally.
 
 This how-to guide uses the following features:
 
-**BGPPeer** resource with:
-- sourceAddress field
-- failureDetectionMode field
-- restartMode field
-- maxRestartTime field
-- birdGatewayMode field
+**BGPPeer** resource with these fields:
+- sourceAddress
+- failureDetectionMode
+- restartMode
+- maxRestartTime
+- birdGatewayMode
 
 ### Concepts
 
 #### Dual ToR (Top of Rack) routing
 
-There are infinitely many ways to connect {{site.prodname}} nodes to an infrastructure
-fabric, such that the fabric propagates the workload routes from each node to all of the
-other nodes.  For the purposes of this guide we cut that possibility space down a little
-by making three basic assumptions:
+There are many ways to connect {{site.prodname}} nodes to an infrastructure fabric, such
+that the fabric propagates the workload routes from each node to all of the other nodes.
+For the purposes of this guide we cut that possibility space down a little by making three
+basic assumptions:
 
 1. There is a BGP speaker per rack, that all of the nodes in the rack peer with, and that
    provides connection to other racks and to the outside world.  We call this the Top of
@@ -54,10 +54,10 @@ the cluster nodes are connected to the ToRs in their rack.  For example, within 
 there could be two independent layer 2 networks, or there could be point-to-point links
 between each node and each ToR.
 
-Here's an indication of how a dual ToR setup can look, showing just two racks and two
-nodes in each rack.  In reality the connections *between* racks would be more complex than
+Here's an example of how a dual ToR setup can look, showing just two racks and two nodes
+in each rack.  In reality, the connections *between* racks would be more complex than
 shown here, but that makes no difference to the support and setup that we need for the
-{{site.prodname}} nodes in the lower half of the picture.  The "client", "ra-server" and
+{{site.prodname}} nodes in the lower half of the diagram.  The "client", "ra-server" and
 "rb-server" boxes represent Kubernetes pods:
 
 ![dual-tor]({{site.baseurl}}/images/dual-tor.png)
@@ -73,8 +73,8 @@ Linux then decides how to balance traffic across the available paths, including 
 this is informed by TCP and UDP port numbers as well as source and destination IP
 addresses, whether the decision is made per-packet, per-connection, or in some other way,
 and so on; and the details here have varied with Linux kernel version.  For a clear
-account of what the exact options and behaviour have been for different kernel versions,
-please see [this blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/).
+account of the exact options and behaviors for different kernel versions, please see [this
+blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/).
 
 We recommend using a 4.17 or later kernel with `fib_multipath_hash_policy = 1`.  That
 gives load-balancing per-flow for both IPv4 and IPv6, based on a hash of the source and
@@ -87,34 +87,33 @@ We want to allow for either of a cluster node's links to fail at any time, and f
 to and from that node to continue flowing when that happens.  That means that IP data to
 or from that node must not use a NIC-specific address as its source or destination IP.
 (If it did, that address would become invalid when the associated link went down, and
-further data packets would be unable to be routed to that address.)  Instead, therefore,
-the standard solution is to define a "loopback" IP address for each node, not associated
-with either NIC, and arrange that all connections between nodes use their loopback IP
-addresses as source and destination, instead of NIC-specific addresses.
+further data packets would be unable to be routed to that address.)  Instead, the standard
+solution is to define a "loopback" IP address for each node, not associated with either
+NIC, and arrange that all connections between nodes use their loopback IP addresses as
+source and destination, instead of NIC-specific addresses.
 
-> **Note**: In a Kubernetes cluster, the connections that need to use loopback IP
-> addresses include:
->
-> -  The kubelet on each node connecting to the API server.
->
-> -  The API server's connection to its backing etcd database, and peer connections between
->    the etcd cluster members.
->
-> -  Pod connections that involve an SNAT or MASQUERADE in the data path, as can be the
->    case when connecting to a Service through a cluster IP or NodePort.
->
-> -  Direct connections between pod IPs on different nodes.  Although these connections
->    have pod IPs as their source and destination, they still rely on the source node
->    having a route to the destination pod IP, and it is important that this route is via
->    the loopback IP of the destination node, not via one of its interface-specific
->    addresses.
-{: .alert .alert-info}
+Note that in a Kubernetes cluster, the connections that need to use loopback IP addresses
+include:
+
+-  The kubelet on each node connecting to the API server.
+
+-  The API server's connection to its backing etcd database, and peer connections between
+   the etcd cluster members.
+
+-  Pod connections that involve an SNAT or MASQUERADE in the data path, as can be the
+   case when connecting to a Service through a cluster IP or NodePort.
+
+-  Direct connections between pod IPs on different nodes.  Although these connections
+   have pod IPs as their source and destination, they still rely on the source node
+   having a route to the destination pod IP, and it is important that this route is via
+   the loopback IP of the destination node, not via one of its interface-specific
+   addresses.
 
 Despite what the name might suggest, these loopback IP address must be routable from the
 other nodes in the cluster.  They are called "loopback" only because they are often
 provisioned through definition on the Linux loopback ("lo") interface.
 
-#### Except... NIC-specific addresses for BGP
+#### NIC-specific addresses for BGP
 
 There is one case where we still want to use NIC-specific addresses, for the
 {{site.prodname}} node's BGP sessions to its ToR routers.  If there is a loss of
@@ -122,15 +121,15 @@ connectivity between the node and a ToR router, we specifically *want* the corre
 BGP session to fail, because that will trigger removing or deprioritising the routes that
 were learnt over that BGP session.
 
-In terms of BIRD config, we can get that behaviour in a dual ToR setup by omitting the
-"source address" field that {{site.prodname}} would normally specify, and we've added a
-new `sourceAddress` field to the `BGPPeer` resource for that purpose.  Setting
-`sourceAddress` to `None` allows [Linux to compute the source
-address](http://linux-ip.net/html/routing-saddr-selection.html) for the BGP session
-automatically, which in practice gives the local NIC-specific address in the same subnet
-as the ToR router IP that we are peering with.
+{{site.prodname}} incorporates BIRD as its BGP speaker, and in terms of BIRD config, we
+can get that behaviour in a dual ToR setup by omitting the "source address" field that
+{{site.prodname}} would normally specify.  There is now a `sourceAddress` field in the
+`BGPPeer` resource for that purpose.  Setting `sourceAddress` to `None` allows [Linux to
+compute the source address](http://linux-ip.net/html/routing-saddr-selection.html) for the
+BGP session automatically, which in practice gives the local NIC-specific address in the
+same subnet as the ToR router IP that we are peering with.
 
-#### Fast link failure handling, with BFD and LLGR
+#### Fast link failure handling with BFD and LLGR
 
 With standard BIRD config, including Graceful Restart, it can take 210s for a link failure
 to be notified to other BGP peers such that they remove the routes over that link:
@@ -149,8 +148,8 @@ For fast detection, the solution is to enable BFD on the relevant BGP peerings.
 protocol that detects very quickly when forwarding along a particular path stops working -
 whether that's because a link has broken somewhere, or some software component along the
 path.  With BIRD it is trivial to enable BFD on directly-connected peerings, and dual ToR
-peerings are in practice directly-connected.  Therefore there is now a
-`failureDetectionMode` field, in the `BGPPeer` resource, that enables this.
+peerings are in practice directly-connected.  There is now a `failureDetectionMode` field
+in the `BGPPeer` resource, that enables this.
 
 For quickly propagating the consequences of link failure to other routers, traditional BGP
 graceful restart (GR) would be actively harmful: the whole point of GR is not to propagate
@@ -333,18 +332,18 @@ settings.
 
 To do that, you will need to:
 
-1. install and configure
-   [calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
+1. Install and configure
+   [calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
 
-2. set the correct AS number on each {{site.prodname}} node
+2. Set the correct AS number on each {{site.prodname}} node.
 
-3. label each {{site.prodname}} node, if your BGPPeer configuration uses labels
+3. Label each {{site.prodname}} node, if your BGPPeer configuration uses labels.
 
-4. configure BGPPeer resources for the desired BGP peerings between each {{site.prodname}}
+4. Configure BGPPeer resources for the desired BGP peerings between each {{site.prodname}}
    node and its ToR routers.
 
-Your details here will be deployment-specific, but here we show what that detail would be
-for our example cluster and addressing scheme, following an [AS per
+Your details will be deployment-specific, but here we show what that detail would be for
+our example cluster and addressing scheme, following an [AS per
 rack]({{site.baseurl}}/{{page.version}}/networking/design/l3-interconnect-fabric#the-as-per-rack-model)
 model with AS 65001 for the first rack, 65002 for the second, and so on.
 
@@ -504,7 +503,7 @@ spec:
 EOF
 ```
 
-What then happens is:
+What happens then is:
 
 -  The {{site.prodname}} BIRD daemon that runs on each node advertises a /32 route for
    that node's loopback address.
