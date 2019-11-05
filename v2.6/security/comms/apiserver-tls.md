@@ -1,5 +1,5 @@
 ---
-title: Provide TLS certificates for the {{site.prodname}} API server
+title: Provide TLS certificates for the API server
 ---
 
 ### Big picture
