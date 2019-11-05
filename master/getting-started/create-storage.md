@@ -33,7 +33,7 @@ The storage provided by the cluster. Storage classes can be used with dynamic pr
 **Determine storage support**
 
 Determine the storage types that are available on your cluster. If you are using dynamic provisioning, verify it is supported. 
-If you are using local disks, you may find the **sig-storage local static** provisioner useful. It creates and manages PersistentVolumes by watching for disks mounted in a configured directory.
+If you are using local disks, you may find the [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner) useful. It creates and manages PersistentVolumes by watching for disks mounted in a configured directory.
 
   > **Note**: Do not use the host path storage provisioner. This provisioner is not suitable for production and results in scalability issues, instability, and data loss. 
 {: .alert .alert-info}
@@ -48,7 +48,7 @@ Before installing {{site.prodname}}, create a storage class named, `tigera-elast
 
 ##### Preprovisioned local disks
 
-In the following example, we create a **StorageClass** to use when explicitly adding **PersistentVolumes** for local disks. This can be performed manually, or using the [sig-storage-local-static-provisioner](#determine-storage-support).
+In the following example, we create a **StorageClass** to use when explicitly adding **PersistentVolumes** for local disks. This can be performed manually, or using the [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner).
 
 ```
 apiVersion: storage.k8s.io/v1
