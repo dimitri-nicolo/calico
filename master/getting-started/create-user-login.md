@@ -19,6 +19,7 @@ The {{site.prodname}} Manager supports the following user authentication methods
 
 - **Token authentication (default)**: The user is a service account. When a service account is created, an associated secret is created that contains a signed bearer token for that service account.
 - **OIDC authentication**: The user is managed outside of the cluster (typically, by the identity provider used by the OIDC authorization server.)
+- **OAuth authentication**: The user is managed outside of the cluster (typically, by the identity provider used by the OAuth authorization server.) For OpenShift clusters, we recommend using OAuth authentication against OpenShift's internal OAuth server.
 - **Basic authentication**: (for testing only) The user is a username. Note that basic authentication is not suitable for production environments.
 
 #### Cluster roles
@@ -36,6 +37,7 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 - [Configure the Tigera Secure EE authentication method](#configure-the-tigera-secure-ee-authentication-method)
 - [Create a user and login using token-based authentication](#create-a-user-and-login-using-token-based-authentication)
 - [Create a user and login using OIDC authentication](#create-a-user-and-login-using-oidc-authentication)
+- [Create a user and login using OAuth2 authentication](#create-a-user-and-login-using-oauth2-authentication)
 - [Create a user and login using basic authentication](#create-a-user-and-login-using-basic-authentication)
 
 > Note: For OpenShift, replace `kubectl` in the commands below with `oc`.
@@ -59,6 +61,14 @@ Provide your own values for `<oidc_auth_server>` and `<client_id>` and run:
 
 ```bash
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OIDC", "authority": "<oidc_auth_server>", "clientID": "<client_id>"}}}'
+```
+
+**OAuth2 authentication**
+
+Provide your own values for `<oauth2_auth_server>` and `<client_id>` and run:
+
+```bash
+kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
 **Basic authentication (for testing only)**
@@ -112,6 +122,11 @@ Now that we have the token, we can proceed to login! Go to the {{site.prodname}}
 
 1. Consult your OIDC identity provider's documentation to manage users.
 1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
+
+#### Create a user and login using OAuth2 authentication
+
+1. Consult your OAuth2 identity provider's documentation to manage users.
+1. Go to the {{site.prodname}} Manager UI. The OAuth2 authorization flow starts automatically.
 
 #### Create a user and login using basic authentication
 
