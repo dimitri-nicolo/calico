@@ -283,6 +283,10 @@ for installing {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-star
 > **Note**: {{site.prodname}} installs by default with
 > [IP-in-IP]({{site.baseurl}}/{{page.version}}/networking/vxlan-ipip) enabled, but for
 > on-prem deployments as imagined here IP-in-IP is not needed and should be disabled.
+> With our [operator-based
+> install]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes), you can do that
+> by setting `encapsulation: None`; see the [install
+> reference]({{site.baseurl}}/{{page.version}}/reference/installation/api) for details.
 {: .alert .alert-info}
 
 However, when the method reaches the point of needing to configure a Tigera-specific
