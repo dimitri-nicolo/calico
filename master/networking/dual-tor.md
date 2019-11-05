@@ -280,6 +280,11 @@ other plane.
 Now you can follow your preferred method for deploying Kubernetes, and [our documentation
 for installing {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started).
 
+> **Note**: {{site.prodname}} installs by default with
+> [IP-in-IP]({{site.baseurl}}/{{page.version}}/networking/vxlan-ipip) enabled, but for
+> on-prem deployments as imagined here IP-in-IP is not needed and should be disabled.
+{: .alert .alert-info}
+
 However, when the method reaches the point of needing to configure a Tigera-specific
 resource - typically, the license key - you may see that that fails.  If that happens, the
 explanation for it is that the various components of {{site.prodname}} have been scheduled
