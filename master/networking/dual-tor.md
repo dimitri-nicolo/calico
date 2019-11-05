@@ -223,15 +223,15 @@ For the example here, we use 172.31.X.Y, where:
 
 -  For the ToR router in each plane, we use `NODE_NUMBER` = 250.
 
-So for the first node in rack 4, for example,
+So for the first node in rack A, for example,
 
--  its loopback address would be 172.31.40.1
+-  its loopback address would be 172.31.10.1
 
--  its interface-address on the NIC attached to plane 1 would be 172.31.41.1, with default
-   gateway 172.31.41.250
+-  its interface-address on the NIC attached to plane 1 would be 172.31.11.1, with default
+   gateway 172.31.11.250
 
--  its interface-address on the NIC attached to plane 2 would be 172.31.42.1, with default
-   gateway 172.31.42.250.
+-  its interface-address on the NIC attached to plane 2 would be 172.31.12.1, with default
+   gateway 172.31.12.250.
 
 #### Boot cluster nodes with those addresses
 
@@ -261,11 +261,11 @@ also need those addresses to be reachable *during* the cluster installation.  To
 that, each node needs static routes like this for the loopback addresses of other nodes in
 the same rack:
 
-    ip route add 172.31.40.0/24 nexthop dev eth0 nexthop dev eth1
+    ip route add 172.31.10.0/24 nexthop dev eth0 nexthop dev eth1
 
-and like this for the loopback addresses of nodes in each other rack (here, rack 5):
+and like this for the loopback addresses of nodes in each other rack (here, rack B):
 
-    ip route add 172.31.50.0/24 nexthop via 172.31.41.250 nexthop via 172.31.42.250
+    ip route add 172.31.20.0/24 nexthop via 172.31.11.250 nexthop via 172.31.12.250
 
 You should also configure loopback address routes on the ToR routers, and on any
 intermediate infrastructure routers; details for that will be deployment-dependent.
@@ -482,24 +482,24 @@ loopback address.  For example, if one of the connectivity planes is broken, the
 routing may still - wrongly - show ECMP routes to a loopback address via both planes.
 
 To get the correct dynamic advertisement, configure the loopback address CIDRs as disabled
-{{site.prodname}} IP pools.  For example, for the loopback CIDRs for racks 4 and 5:
+{{site.prodname}} IP pools.  For example, for the loopback CIDRs for racks A and B:
 
 ```
 kubectl create -f -<<EOF
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
-  name: loopbacks-rack-4
+  name: loopbacks-rack-a
 spec:
-  cidr: 172.31.40.0/24
+  cidr: 172.31.10.0/24
   disabled: True
 ---
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
-  name: loopbacks-rack-5
+  name: loopbacks-rack-b
 spec:
-  cidr: 172.31.50.0/24
+  cidr: 172.31.20.0/24
   disabled: True
 EOF
 ```
@@ -526,14 +526,14 @@ If you look at the Linux routing table on any cluster node, you should see ECMP 
 like this to the loopback address of every other node in other racks:
 
 ```
-172.31.60.4/32
-   nexthop via 172.31.51.250 dev eth0
-   nexthop via 172.31.52.250 dev eth1
+172.31.20.4/32
+   nexthop via 172.31.11.250 dev eth0
+   nexthop via 172.31.12.250 dev eth1
 ```
 and like this to the loopback address of every other node in the same rack:
 
 ```
-172.31.50.4/32
+172.31.10.4/32
    nexthop dev eth0
    nexthop dev eth1
 ```
@@ -543,8 +543,8 @@ for the nodes where those pods were scheduled, like this:
 
 ```
 10.244.192.128/26
-   nexthop via 172.31.51.250 dev eth0
-   nexthop via 172.31.52.250 dev eth1
+   nexthop via 172.31.11.250 dev eth0
+   nexthop via 172.31.12.250 dev eth1
 ```
 
 If you do something to break the connectivity between racks of one of the planes, you
@@ -552,8 +552,8 @@ should see, within only a few seconds, that the affected routes change to have a
 path only, via the plane that is still unbroken; for example:
 
 ```
-172.31.60.4/32 via 172.31.52.250 dev eth1`
-10.244.192.128/26 via 172.31.52.250 dev eth1
+172.31.20.4/32 via 172.31.12.250 dev eth1`
+10.244.192.128/26 via 172.31.12.250 dev eth1
 ```
 
 When the connectivity break is repaired, those routes should change to become ECMP again.
