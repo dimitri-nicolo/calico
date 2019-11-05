@@ -192,8 +192,9 @@ deployment:
 - [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
 - [Install Kubernetes and Tigera Secure EE](#install-kubernetes-and-tigera-secure-ee)
 - [Configure Tigera Secure EE to peer with ToR routers](#configure-tigera-secure-ee-to-peer-with-tor-routers)
-- [Configure Tigera Secure EE to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
 - [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
+- [Complete Tigera Secure EE installation](#complete-tigera-secure-ee-installation)
+- [Configure Tigera Secure EE to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
 - [Verify the deployment](#verify-the-deployment)
 
 The precise details will likely differ for any specific deployment.  For example, you may
@@ -279,10 +280,34 @@ other plane.
 Now you can follow your preferred method for deploying Kubernetes, and [our documentation
 for installing {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started).
 
+However, when the method reaches the point of needing to configure a Tigera-specific
+resource - typically, the license key - you may see that that fails.  If that happens, the
+explanation for it is that the various components of {{site.prodname}} have been scheduled
+to nodes that are split across different racks, and we don't yet have a working data path
+between pods running in different racks.
+
+> **Note**: To be more precise: at this point, we have a working data path between any
+> components that are running on the nodes with host networking - i.e. using the nodes'
+> loopback addresses - but not yet where the source or destination is a non-host-networked
+> pod - i.e. using an IP from the pod CIDR range.  In particular, the Tigera API server
+> runs as a non-host-networked pod, and we do not yet have connectivity between it and the
+> Kubernetes API server, if those have been scheduled to nodes in different racks.
+{: .alert .alert-info}
+
+If you see this problem, the solution is to defer the rest of the {{site.prodname}}
+installation for now and move on to the next two steps here, which will establish the
+missing connectivity.
+
+If you do not see this problem, that's OK too; it means the relevant {{site.prodname}}
+components have not been scheduled in a problematic way.  Continue on to the next two
+steps here, which are still needed for the cluster to provide connectivity between all
+future pods.
+
 #### Configure Tigera Secure EE to peer with ToR routers
 
-[Configure BGPPeer resources](bgp) to tell each {{site.prodname}} node to peer with the
-ToR routers for its rack, with the following field settings.
+Now, in principle, you should [configure BGPPeer resources](bgp) to tell each
+{{site.prodname}} node to peer with the ToR routers for its rack, with the following field
+settings.
 
 -  `sourceAddress: None` to allow BIRD to choose the BGP peering source address
    automatically.
@@ -297,9 +322,148 @@ ToR routers for its rack, with the following field settings.
 -  `birdGatewayMode: DirectIfDirectlyConnected` to enable the "direct" next hop algorithm
    as described above, if that is helpful for optimal interworking with your ToR routers.
 
+To do that, you will need to:
+
+1. install and configure
+   [calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
+
+2. set the correct AS number on each {{site.prodname}} node
+
+3. label each {{site.prodname}} node, if your BGPPeer configuration uses labels
+
+4. configure BGPPeer resources for the desired BGP peerings between each {{site.prodname}}
+   node and its ToR routers.
+
+Your details here will be deployment-specific, but here we show what that detail would be
+for our example cluster and addressing scheme, following an [AS per
+rack]({{site.baseurl}}/{{page.version}}/networking/design/l3-interconnect-fabric#the-as-per-rack-model)
+model with AS 65001 for the first rack, 65002 for the second, and so on.
+
+To set the correct AS number of each {{site.prodname}} node:
+
+```
+# For nodes in rack A:
+calicoctl patch node <name> -p '{"spec":{"bgp": {"asNumber": "65001"}}}'
+...
+# For nodes in rack B:
+calicoctl patch node <name> -p '{"spec":{"bgp": {"asNumber": "65002"}}}'
+...
+```
+
+To give each {{site.prodname}} node a label for its rack:
+
+```
+# For nodes in rack A:
+kubectl label node <name> rack=ra
+...
+# For nodes in rack B:
+kubectl label node <name> rack=rb
+...
+```
+
+To configure the node to ToR peerings for rack A:
+
+```
+calicoctl apply -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: ra1
+spec:
+  nodeSelector: "rack == 'ra'"
+  peerIP: 172.31.11.250
+  asNumber: 65001
+  sourceAddress: None
+  failureDetectionMode: BFDIfDirectlyConnected
+  restartMode: LongLivedGracefulRestart
+  birdGatewayMode: DirectIfDirectlyConnected
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: ra2
+spec:
+  nodeSelector: "rack == 'ra'"
+  peerIP: 172.31.12.250
+  asNumber: 65001
+  sourceAddress: None
+  failureDetectionMode: BFDIfDirectlyConnected
+  restartMode: LongLivedGracefulRestart
+  birdGatewayMode: DirectIfDirectlyConnected
+EOF
+```
+
+Similarly for rack B:
+
+```
+calicoctl apply -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: rb1
+spec:
+  nodeSelector: "rack == 'rb'"
+  peerIP: 172.31.21.250
+  asNumber: 65002
+  sourceAddress: None
+  failureDetectionMode: BFDIfDirectlyConnected
+  restartMode: LongLivedGracefulRestart
+  birdGatewayMode: DirectIfDirectlyConnected
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: rb2
+spec:
+  nodeSelector: "rack == 'rb'"
+  peerIP: 172.31.22.250
+  asNumber: 65002
+  sourceAddress: None
+  failureDetectionMode: BFDIfDirectlyConnected
+  restartMode: LongLivedGracefulRestart
+  birdGatewayMode: DirectIfDirectlyConnected
+EOF
+```
+
+And so on for the other racks.
+
 Once BGPPeer resources have been configured, you should [disable the full node-to-node
 mesh](bgp#disabling-the-full-node-to-node-bgp-mesh) so that the BGPPeer configuration is
-used instead.
+used instead:
+
+```
+calicoctl apply -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: BGPConfiguration
+metadata:
+  name: default
+spec:
+  nodeToNodeMeshEnabled: false
+EOF
+```
+
+#### Configure your ToR routers and infrastructure
+
+You obviously need to configure your ToR routers to accept all the BGP peerings from
+{{site.prodname}} nodes, and to configure whatever is needed to propagate routes between
+the ToR routers in different racks.  In addition we recommend consideration of the
+following points.
+
+BFD should be enabled if possible on all BGP sessions - both to the {{site.prodname}}
+nodes, and between racks in your core infrastructure - so that a break in connectivity
+anywhere can be rapidly detected.  The handling should be to initiate LLGR procedures if
+possible, or else terminate the BGP session non-gracefully.
+
+LLGR should be enabled if possible on all BGP sessions - again, both to the
+{{site.prodname}} nodes, and between racks in your core infrastructure.  Traditional BGP
+graceful restart should not be used, because this will delay the cluster's response to a
+break in one of the connectivity planes.
+
+#### Complete Tigera Secure EE installation
+
+If you didn't complete the {{site.prodname}} installation above, now return to that and
+retry the step that failed.  It should now succeed.  Then do the remaining steps of the
+installation.
 
 #### Configure Tigera Secure EE to advertise loopback addresses
 
@@ -346,23 +510,6 @@ What then happens is:
    routes being more specific.
 
 If you prefer, you can now delete the static loopback routes.
-
-#### Configure your ToR routers and infrastructure
-
-You obviously need to configure your ToR routers to accept all the BGP peerings from
-{{site.prodname}} nodes, and to configure whatever is needed to propagate routes between
-the ToR routers in different racks.  In addition we recommend consideration of the
-following points.
-
-BFD should be enabled if possible on all BGP sessions - both to the {{site.prodname}}
-nodes, and between racks in your core infrastructure - so that a break in connectivity
-anywhere can be rapidly detected.  The handling should be to initiate LLGR procedures if
-possible, or else terminate the BGP session non-gracefully.
-
-LLGR should be enabled if possible on all BGP sessions - again, both to the
-{{site.prodname}} nodes, and between racks in your core infrastructure.  Traditional BGP
-graceful restart should not be used, because this will delay the cluster's response to a
-break in one of the connectivity planes.
 
 #### Verify the deployment
 
