@@ -382,6 +382,8 @@ github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJy
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/tigera/cni-plugin-private v1.11.1-0.20191030002256-dc90257fed2a h1:MtaRKz0EMvsbBQCfOLbOXQNQMcmAGfTTGAmdcaP2fo0=
 github.com/tigera/cni-plugin-private v1.11.1-0.20191030002256-dc90257fed2a/go.mod h1:1JSzRT1wx9/r96HICGlHR3Xgw4eYQH+CQSpQhKL8ASo=
+github.com/tigera/confd-private v0.0.0-20191105105201-010405d0de34 h1:FOON7T4dY5vyU1W7dGb9aKDpHaF0Z4u0SgBtZuEV7o8=
+github.com/tigera/confd-private v0.0.0-20191105105201-010405d0de34/go.mod h1:P57BQtpm2/HqEGIf53MgxQndRz1aCuM86Zt0fKFC2qY=
 github.com/tigera/confd-private v1.0.1-0.20191030011622-25866dc4c6bc h1:tlTnA4yNuZS3xJU1J4Bv//ogf4bJTdciS3WCsYTXJ6E=
 github.com/tigera/confd-private v1.0.1-0.20191030011622-25866dc4c6bc/go.mod h1:P57BQtpm2/HqEGIf53MgxQndRz1aCuM86Zt0fKFC2qY=
 github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca h1:9laas6D2ksBhG59qHozzboKtj+dpipNJ2LD3DyRA3rA=
