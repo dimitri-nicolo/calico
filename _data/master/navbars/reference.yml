@@ -84,6 +84,12 @@ toc:
       path: /reference/resources/profile
     - title: Remote Cluster Configuration
       path: /reference/resources/remoteclusterconfiguration
+    - title: Staged Global Network Policy
+      path: /reference/resources/stagedglobalnetworkpolicy
+    - title: Staged Kubernetes Network Policy
+      path: /reference/resources/stagedkubernetesnetworkpolicy
+    - title: Staged Network Policy
+      path: /reference/resources/stagednetworkpolicy
     - title: Tier
       path: /reference/resources/tier
     - title: Workload endpoint
