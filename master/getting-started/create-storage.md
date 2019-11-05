@@ -6,14 +6,9 @@ title: Create storage for logs and reports
 
 Before installing {{site.prodname}}, you must configure persistent storage for flow logs, DNS logs, audit logs, and compliance reports.
 
-
 ### Concepts
 
 Before configuring a storage class for {{site.prodname}}, the following terms will help you understand storage interactions.
-
-#### Storage class
-
-The storage provided by the cluster. Storage classes can be used with dynamic provisioners to automatically provision persistent volumes on demand, or with manually-provisioned persistent volumes. Different storage classes provide different service levels. 
 
 #### Persistent volume
 
@@ -28,6 +23,10 @@ Used by pods to request and mount storage volumes. The claim specifies the volum
 Provisions types of persistent volumes on demand. Although most managed public-cloud clusters provide a dynamic provisioner using cloud-specific storage APIs (for example, Amazon EBS or Google persistent disks), not all clusters have a dynamic provisioner. 
 
 When a pod makes a persistent volume claim from a storage class that uses a dynamic provisioner, the volume is automatically created. If the storage class does not use a dynamic provisioner (for example the local storage class), the volumes must be created in advance. For help, see the [Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/).
+
+#### Storage class
+
+The storage provided by the cluster. Storage classes can be used with dynamic provisioners to automatically provision persistent volumes on demand, or with manually-provisioned persistent volumes. Different storage classes provide different service levels. 
 
 ### Before you begin...
 
@@ -49,7 +48,7 @@ Before installing {{site.prodname}}, create a storage class named, `tigera-elast
 
 ##### Preprovisioned local disks
 
-In the following example, we create a **StorageClass** to use when explicitly adding **PersistentVolumes** for local disks. This can be performed manually, or using the [sig-storage-local-static-provisioner](noted above).
+In the following example, we create a **StorageClass** to use when explicitly adding **PersistentVolumes** for local disks. This can be performed manually, or using the [sig-storage-local-static-provisioner](#determine-storage-support).
 
 ```
 apiVersion: storage.k8s.io/v1
@@ -80,4 +79,4 @@ volumeBindingMode: WaitForFirstConsumer
 
 ### Above and beyond
 
-- [Scale the {{site.prodname}} cluster]({{site.baseurl}}/{{page.version}}/TBD)
+- [Adjust size of Elasticsearch cluster]()
