@@ -60,5 +60,5 @@ toc:
   path: /networking/get-started-ip-addresses
 - title: Advertise Kubernetes service IP addresses
   path: /networking/advertise-service-ips
-- title: Deploying a dual ToR cluster
+- title: Deploy a dual ToR cluster
   path: /networking/dual-tor

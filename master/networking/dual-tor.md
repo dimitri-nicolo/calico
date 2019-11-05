@@ -4,11 +4,11 @@ title: Deploying a dual ToR cluster
 
 ### Big picture
 
-Deploy a dual ToR cluster to provide redundant connectivity between your workloads.
+Deploy a dual plane cluster to provide redundant connectivity between your workloads.
 
 ### Value
 
-A dual ToR cluster provides two independent planes of connectivity between all cluster
+A dual plane cluster provides two independent planes of connectivity between all cluster
 nodes.  If a link or software component breaks somewhere in one of those planes, cluster
 nodes can still communicate over the other plane, and the cluster as a whole continues to
 operate normally.
