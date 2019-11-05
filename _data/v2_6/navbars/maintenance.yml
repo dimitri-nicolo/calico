@@ -4,6 +4,8 @@ order: 4
 toc:
 - title: Maintenance
   path: /maintenance/
+- title: Adjust the log storage size
+  path: /maintenance/adjust-log-storage-size
 - title: Upgrading
   section:
   - title: Kubernetes
