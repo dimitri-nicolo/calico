@@ -189,11 +189,11 @@ deployment:
 - [Decide your IP addressing scheme](#decide-your-ip-addressing-scheme)
 - [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
 - [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
-- [Install Kubernetes and Tigera Secure EE](#install-kubernetes-and-tigera-secure-ee)
-- [Configure Tigera Secure EE to peer with ToR routers](#configure-tigera-secure-ee-to-peer-with-tor-routers)
+- [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-tigera-secure-ee)
+- [Configure {{site.prodname}} to peer with ToR routers](#configure-tigera-secure-ee-to-peer-with-tor-routers)
 - [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
-- [Complete Tigera Secure EE installation](#complete-tigera-secure-ee-installation)
-- [Configure Tigera Secure EE to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
+- [Complete {{site.prodname}} installation](#complete-tigera-secure-ee-installation)
+- [Configure {{site.prodname}} to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
 - [Verify the deployment](#verify-the-deployment)
 
 The precise details will likely differ for any specific deployment.  For example, you may
@@ -274,7 +274,7 @@ node, and `ip route` should show two ECMP routes to any other loopback address. 
 somehow break one of the connectivity planes, the ping should still work by using the
 other plane.
 
-#### Install Kubernetes and Tigera Secure EE
+#### Install Kubernetes and {{site.prodname}}
 
 Now you can follow your preferred method for deploying Kubernetes, and [our documentation
 for installing {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started).
@@ -311,7 +311,7 @@ components have not been scheduled in a problematic way.  Continue on to the nex
 steps here, which are still needed for the cluster to provide connectivity between all
 future pods.
 
-#### Configure Tigera Secure EE to peer with ToR routers
+#### Configure {{site.prodname}} to peer with ToR routers
 
 Now, in principle, you should [configure BGPPeer resources](bgp) to tell each
 {{site.prodname}} node to peer with the ToR routers for its rack, with the following field
@@ -467,13 +467,13 @@ LLGR should be enabled if possible on all BGP sessions - again, both to the
 graceful restart should not be used, because this will delay the cluster's response to a
 break in one of the connectivity planes.
 
-#### Complete Tigera Secure EE installation
+#### Complete {{site.prodname}} installation
 
 If you didn't complete the {{site.prodname}} installation above, now return to that and
 retry the step that failed.  It should now succeed.  Then do the remaining steps of the
 installation.
 
-#### Configure Tigera Secure EE to advertise loopback addresses
+#### Configure {{site.prodname}} to advertise loopback addresses
 
 Although we already configured static /24 routes for the loopback address, for
 bootstrapping, we want BGP to advertise, dynamically, the true reachability of each
