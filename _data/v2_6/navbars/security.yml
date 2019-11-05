@@ -93,6 +93,8 @@ toc:
       path: /security/logs/elastic/dns
     - title: Accessing logs
       path: /security/logs/elastic/view
+    - title: Configure data retention
+      path: /security/logs/retention
     - title: Configuring Elasticsearch
       path: /security/logs/configure-elastic
     - title: Archiving logs to S3
