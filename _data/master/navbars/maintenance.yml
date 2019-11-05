@@ -10,8 +10,6 @@ toc:
     path: /maintenance/kubernetes-upgrade-tsee
   - title: Helm
     path: /maintenance/helm-upgrade-tsee
-  - title: OpenShift
-    path: /maintenance/openshift-upgrade-tsee
 - title: Decommissioning a node
   path: /maintenance/decommissioning-a-node
 - title: Monitor Calico component metrics
