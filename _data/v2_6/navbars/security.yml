@@ -143,6 +143,9 @@ toc:
   - title: Provide TLS certificates for the manager UI
     path: /security/comms/manager-tls
 
+  - title: Provide TLS certificates for log storage
+    path: /security/comms/log-storage-tls
+
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
 
