@@ -47,6 +47,15 @@ steps to upgrade.
    ```bash
    helm upgrade <helm installation name for tigera-secure-ee-core> tigera-secure-ee-core-{% include chart_version_name %}.tgz
    ```
+1. Pre-install the CRDs.
+
+   If you installed with `createCustomResources: false`, pre-install the CRDs:
+
+   ```
+   kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+   ```
+
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
 
 1. Run the Helm upgrade command for `tigera-secure-ee`
    ```bash
