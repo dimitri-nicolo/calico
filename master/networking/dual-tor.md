@@ -481,7 +481,7 @@ To get the correct dynamic advertisement, configure the loopback address CIDRs a
 {{site.prodname}} IP pools.  For example, for the loopback CIDRs for racks 4 and 5:
 
 ```
-calicoctl create -f -<<EOF
+kubectl create -f -<<EOF
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
