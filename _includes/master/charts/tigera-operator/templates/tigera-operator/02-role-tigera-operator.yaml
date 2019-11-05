@@ -23,6 +23,8 @@ rules:
       - nodes
     verbs:
       - 'list'
+      # We need this for Typha autoscaling
+      - 'watch'
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
