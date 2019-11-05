@@ -131,15 +131,14 @@ same subnet as the ToR router IP that we are peering with.
 
 #### Fast link failure handling with BFD and LLGR
 
-With standard BIRD config, including Graceful Restart, it can take 210s for a link failure
-to be notified to other BGP peers such that they remove the routes over that link:
+By default it takes 210s for a link failure to be notified to other BGP peers:
 
--  90s of BGP hold time - i.e the time it takes for BGP to notice the loss of connectivity
+-  90s of BGP hold time - the time it takes for BGP to notice the loss of connectivity
 
--  120s of Graceful Restart time - i.e. the default time allowed for BIRD software
-   restarts without impacting the dataplane.
+-  120s of Graceful Restart time - the time allowed for graceful restart of BGP peers,
+   before routes over the failed link are removed.
 
-For a dual ToR deployment we want link failure to be detected and propagated as quickly as
+In a dual ToR deployment we want link failure to be detected and propagated as quickly as
 possible, so that routes over the broken link can be withdrawn or deprioritised, and nodes
 can react by switching to use routes via the other, still-working plane.
 
