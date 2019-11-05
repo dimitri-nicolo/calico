@@ -103,7 +103,7 @@ kubectl get serviceaccount jane -n default -o jsonpath="{.secrets[].name}"
 With the secret name, we can retrieve the token:
 
 ```bash
-kubectl get secret <token_name> -n default -o jsonpath="{.data.token}" | base64 -D
+kubectl get secret <token_name> -n default -o jsonpath="{.data.token}" | base64 --decode
 ```
 
 Now that we have the token, we can proceed to login! Go to the {{site.prodname}} UI and submit the token.
