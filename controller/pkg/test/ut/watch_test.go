@@ -227,7 +227,7 @@ func TestWatch(t *testing.T) {
 			Condition:   "gte",
 			Threshold:   0,
 		},
-	}, 10))
+	}, 21))
 	t.Run("dns.count.agg2", f(v3.GlobalAlert{
 		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
@@ -239,7 +239,7 @@ func TestWatch(t *testing.T) {
 			Condition:   "gte",
 			Threshold:   0,
 		},
-	}, 20))
+	}, 37))
 	t.Run("dns.sum.agg0", f(v3.GlobalAlert{
 		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
@@ -264,7 +264,7 @@ func TestWatch(t *testing.T) {
 			Condition:   "gte",
 			Threshold:   0,
 		},
-	}, 10))
+	}, 21))
 	t.Run("dns.sum.agg2", f(v3.GlobalAlert{
 		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query for ${qname} yields ${rrsets.rdata}",
@@ -277,7 +277,7 @@ func TestWatch(t *testing.T) {
 			Condition:   "gte",
 			Threshold:   0,
 		},
-	}, 20))
+	}, 37))
 	t.Run("dns.query[0]", f(v3.GlobalAlert{
 		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "query",
@@ -318,7 +318,7 @@ func TestWatch(t *testing.T) {
 			Condition:   "gt",
 			Threshold:   0,
 		},
-	}, 10))
+	}, 17))
 	t.Run("flows", f(v3.GlobalAlert{
 		Spec: libcalicov3.GlobalAlertSpec{
 			Description: "flows",

@@ -310,17 +310,17 @@ func TestTermQueryAggs(t *testing.T) {
 
 		agg := QueryAgg{
 			Field:       "abc",
-			Aggregation: "foo",
+			Aggregation: "terms",
 			Child: &QueryAgg{
 				Field:       "def",
-				Aggregation: "bar",
+				Aggregation: "sum",
 			},
 		}
 
 		b, err := json.Marshal(&agg)
 		g.Expect(err).ShouldNot(HaveOccurred())
 
-		g.Expect(b).Should(MatchJSON(`{"abc":{"foo":{"field":"abc"},"aggs":{"def":{"bar":{"field":"def"}}}}}`))
+		g.Expect(b).Should(MatchJSON(`{"abc":{"terms":{"field":"abc","size":10000},"aggs":{"def":{"sum":{"field":"def"}}}}}`))
 	})
 }
 

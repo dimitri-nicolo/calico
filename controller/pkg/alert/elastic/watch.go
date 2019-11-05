@@ -18,12 +18,13 @@ import (
 )
 
 const (
-	AlertEventType  = "alert"
-	DefaultPeriod   = time.Minute * 5
-	DefaultLookback = time.Minute * 10
-	IndexActionName = "index_events"
-	QueryAggTerms   = "terms"
-	QuerySize       = 10000
+	AlertEventType    = "alert"
+	DefaultPeriod     = time.Minute * 5
+	DefaultLookback   = time.Minute * 10
+	IndexActionName   = "index_events"
+	QueryAggTerms     = "terms"
+	QueryAggTermsSize = 10000
+	QuerySize         = 10000
 )
 
 var (
@@ -385,10 +386,14 @@ type QueryAgg struct {
 }
 
 func (q QueryAgg) MarshalJSON() ([]byte, error) {
+	aggregation := JsonObject{
+		"field": q.Field,
+	}
+	if q.Aggregation == QueryAggTerms {
+		aggregation["size"] = QueryAggTermsSize
+	}
 	res := JsonObject{
-		q.Aggregation: JsonObject{
-			"field": q.Field,
-		},
+		q.Aggregation: aggregation,
 	}
 	if q.Child != nil {
 		res["aggs"] = q.Child
