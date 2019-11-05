@@ -20,7 +20,7 @@ By default, the {{site.prodname}} manager UI uses self-signed TLS certificates o
 To provide certificates for use during deployment you must create a secret before applying the 'custom-resource.yaml' or before creating the Installation resource. To specify certificates for use in the manager, create a secret using the following command:
 
 ```bash
-kubectl create secret manager-tls -n tigera-operator --from-file=cert=</path/to/certificate-file> --from-file=key=</path/to/key-file>
+kubectl create secret generic manager-tls -n tigera-operator --from-file=cert=</path/to/certificate-file> --from-file=key=</path/to/key-file>
 ```
 
 To update existing certificates, run the following command:
