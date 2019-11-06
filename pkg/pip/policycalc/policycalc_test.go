@@ -277,6 +277,48 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionDeny))
 
+		By("Checking a flow from networkset in namespace1 to a dest not in namespace ns1 is unaffected")
+		f = &policycalc.Flow{
+			Reporter: policycalc.ReporterTypeSource,
+			Source: policycalc.FlowEndpointData{
+				Type:      policycalc.EndpointTypeNs,
+				Namespace: "ns1",
+				Labels:    map[string]string{},
+			},
+			Destination: policycalc.FlowEndpointData{
+				Type:      policycalc.EndpointTypeWep,
+				Namespace: "ns2",
+				Labels:    map[string]string{},
+			},
+			Action: policycalc.ActionAllow,
+		}
+
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeFalse())
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
+
+		By("Checking a flow from source not in namespace ns1 to a networkset in namespace ns1 is unaffected")
+		f = &policycalc.Flow{
+			Reporter: policycalc.ReporterTypeSource,
+			Source: policycalc.FlowEndpointData{
+				Type:      policycalc.EndpointTypeWep,
+				Namespace: "ns2",
+				Labels:    map[string]string{},
+			},
+			Destination: policycalc.FlowEndpointData{
+				Type:      policycalc.EndpointTypeNs,
+				Namespace: "ns1",
+				Labels:    map[string]string{},
+			},
+			Action: policycalc.ActionAllow,
+		}
+
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeFalse())
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
+
 		By("Checking a flow with destination in namespace ns1 is recalculated")
 		f = &policycalc.Flow{
 			Reporter: policycalc.ReporterTypeDestination,

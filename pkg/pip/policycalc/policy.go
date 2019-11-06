@@ -173,6 +173,7 @@ func compilePolicy(m *MatcherFactory, r resources.Resource, modified bool) (ingr
 			Rules:    compileRules(m, namespace, ingress),
 			Modified: modified,
 		}
+		ingressPol.add(m.Dst(m.CalicoEndpointSelector()))
 		ingressPol.add(m.Dst(namespace))
 		ingressPol.add(m.Dst(serviceAccount))
 		ingressPol.add(m.Dst(selector))
@@ -185,6 +186,7 @@ func compilePolicy(m *MatcherFactory, r resources.Resource, modified bool) (ingr
 			Rules:    compileRules(m, namespace, egress),
 			Modified: modified,
 		}
+		egressPol.add(m.Src(m.CalicoEndpointSelector()))
 		egressPol.add(m.Src(namespace))
 		egressPol.add(m.Src(serviceAccount))
 		egressPol.add(m.Src(selector))
