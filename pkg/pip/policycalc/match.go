@@ -182,6 +182,16 @@ func (m *MatcherFactory) Dst(em EndpointMatcher) FlowMatcher {
 	}
 }
 
+// CalicoEndpointSelector endpoints matcher
+func (m *MatcherFactory) CalicoEndpointSelector() EndpointMatcher {
+	return func(_ *Flow, ed *FlowEndpointData) MatchType {
+		if ed.isCalicoEndpoint() {
+			return MatchTypeTrue
+		}
+		return MatchTypeFalse
+	}
+}
+
 // ServiceAccounts endpoints matcher
 func (m *MatcherFactory) ServiceAccounts(sa *v3.ServiceAccountMatch) EndpointMatcher {
 	if sa == nil {
