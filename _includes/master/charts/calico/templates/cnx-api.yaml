@@ -471,12 +471,7 @@ spec:
           periodSeconds: 10
 {{- if .Values.apiserver.runAsPrivileged }}
         securityContext:
-          runAsNonRoot: true
           privileged: true
-{{- else }}
-        securityContext:
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
 {{- end }}
       - name: cnx-queryserver
         image: {{.Values.queryserver.image}}:{{.Values.queryserver.tag}}
