@@ -102,6 +102,7 @@ The metrics `cnx_policy_rule_packets`, `cnx_policy_rule_bytes` and `cnx_policy_r
 labels: `tier`, `policy`, `namespace`, `rule_index`, `action`, `traffic_direction`, `rule_direction`.
 
 Using these metrics, one can identify allow, and denied byte rate and packet rate, both inbound and outbound, indexed by both policy and rule. {{site.prodname}} Manager Dashboard makes heavy usage of these metrics.
+Staged policy names are prefixed with "staged:". 
 
 Example queries:
 - Query counts for rules: Packet rates for specific rule by traffic_direction

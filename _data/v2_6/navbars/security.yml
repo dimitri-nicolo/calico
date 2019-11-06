@@ -17,6 +17,9 @@ toc:
 - title: Get started with tiered policy
   path: /security/tiered-policy
 
+- title: Staged network policies
+  path: /security/staged-network-policies
+
 - title: Enforce network policy using Istio
   path: /security/enforce-policy-istio
 
