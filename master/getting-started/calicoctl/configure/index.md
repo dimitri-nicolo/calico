@@ -36,7 +36,5 @@ and examples.
 
 > **Note**: When running `calicoctl` inside a container, any environment variables and
 > configuration files must be passed to the container so they are available to
-> the process inside. It can be useful to keep a running container (that sleeps) configured
-> for your datastore, then it is possible to `exec` into the container and have an
-> already configured environment.
+> the process inside.
 {: .alert .alert-info}

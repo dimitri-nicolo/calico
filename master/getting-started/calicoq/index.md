@@ -14,9 +14,6 @@ corresponds to your desired deployment.
 
 - [As a container on a single host](#installing-calicoq-as-a-container-on-a-single-host)
 
-- [As a Kubernetes pod](#installing-calicoq-as-a-kubernetes-pod)
-
-
 ## Installing calicoq as a binary on a single host
 
 {% include {{page.version}}/ctl-binary-install.md cli="calicoq" codepath="/calicoq" %}
