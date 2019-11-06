@@ -10,6 +10,7 @@ Install {{site.prodname}} on a GKE managed Kubernetes cluster.
 
 - [Create a compatible GKE cluster](#create-a-compatible-gke-cluster)
 - [Gather the necessary resources](#gather-required-resources)
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
 
 #### Create a compatible GKE cluster
 
@@ -50,6 +51,8 @@ Ensure that your GKE cluster that meets the following requirements:
    ```
 
 1. Install your pull secret.
+
+   If pulling images directly from `quay.io/tigera`, you will likely want to use the credentials provided to you by your Tigera support representative. If using a private registry, use your private registry credentials instead.
 
    ```
    kubectl create secret generic tigera-pull-secret \

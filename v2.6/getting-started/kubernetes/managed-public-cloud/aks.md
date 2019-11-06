@@ -15,6 +15,7 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 - [Create a compatible AKS cluster](#create-a-compatible-aks-cluster)
 - [Gather the necessary resources](#gather-required-resources)
 - [Enable transparent mode](#enable-transparent-mode)
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
 
 #### Create a compatible AKS cluster
 
@@ -61,6 +62,8 @@ Ensure that your AKS cluster that meets the following requirements.
    ```
 
 1. Install your pull secret.
+
+   If pulling images directly from `quay.io/tigera`, you will likely want to use the credentials provided to you by your Tigera support representative. If using a private registry, use your private registry credentials instead.
 
    ```
    kubectl create secret generic tigera-pull-secret \

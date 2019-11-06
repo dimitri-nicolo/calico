@@ -104,6 +104,8 @@ toc:
     - title: Kubernetes API datastore options
       path: /getting-started/calicoq/configure/kdd
 
+- title: Install from a private registry
+  path: /getting-started/private-registry
 - title: Configure storage for logs and reports
   path: /getting-started/create-storage
 - title: Configure access to the manager UI
