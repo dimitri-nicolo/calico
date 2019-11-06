@@ -5,12 +5,5 @@ ADD bin/server-amd64 /code/server
 RUN chgrp -R 0 /code && \
     chmod -R g=u /code
 
-
-RUN addgroup -S csgroup 
-RUN adduser -S -D 999 csgroup 
-
 WORKDIR /code
-
-USER 999 
-
 ENTRYPOINT ["/code/server"]
