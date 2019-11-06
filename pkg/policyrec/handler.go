@@ -62,6 +62,9 @@ func ValidatePolicyRecommendationParams(params *PolicyRecommendationParams) erro
 	if params.EndpointName == "" {
 		return fmt.Errorf("endpoint_name cannot be empty")
 	}
+	if params.Namespace == "" {
+		return fmt.Errorf("namespace cannot be empty")
+	}
 
 	return nil
 }

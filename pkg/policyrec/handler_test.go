@@ -59,7 +59,7 @@ var _ = Describe("Policy Recommendation Unit Tests for handler functions", func(
 		Entry("Request body missing endpoint name", missingEndpointName, nil, true),
 		Entry("Request body missing start time", missingStartTime, nil, true),
 		Entry("Request body missing end time", missingEndTime, nil, true),
-		Entry("Request body missing namespace (global)", missingNamespace, globalParams, false),
+		Entry("Request body missing namespace (global)", missingNamespace, globalParams, true),
 		Entry("Request body is improperly formatted JSON", improperJSONRequestBody, nil, true),
 	)
 })
