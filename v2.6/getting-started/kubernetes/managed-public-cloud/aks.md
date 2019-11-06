@@ -52,7 +52,7 @@ Ensure that your AKS cluster that meets the following requirements.
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.]()
+1. [Configure a storage class for {{site.prodname}}.](/{{page.version}}/getting-started/create-storage)
 
 1. Install the Tigera operators and custom resource definitions.
 
