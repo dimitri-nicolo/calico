@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 	certutil "k8s.io/client-go/util/cert"
 
@@ -16,6 +17,7 @@ import (
 func main() {
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
+	log.SetFormatter(&logutils.Formatter{})
 	parsedLogLevel, err := log.ParseLevel(logLevelStr)
 	if err == nil {
 		logLevel = parsedLogLevel
