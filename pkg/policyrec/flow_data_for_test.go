@@ -35,6 +35,8 @@ var (
 	pod2     = "pod-2"
 	pod3Aggr = "pod-3-*"
 	pod3     = "pod-3"
+	ns1      = "netset-1"
+	ns1Aggr  = "netset-1"
 
 	// Labels
 	pod1LabelsBlue = map[string]string{
@@ -58,6 +60,10 @@ var (
 		"pod-name":                 pod3,
 		"pod-namespace":            namespace2,
 		"controller-revision-hash": "xyz123",
+	}
+	ns1Labels = map[string]string{
+		"name":      ns1,
+		"namespace": namespace1,
 	}
 
 	// Flow Endpoints - source
@@ -112,6 +118,13 @@ var (
 		Type: api.EndpointTypeNet,
 		Name: api.FlowLogNetworkPrivate,
 		Port: &port53,
+	}
+	flowEndpointNamespace3NetworkSet1DestinationTCP80 = api.FlowEndpointData{
+		Type:      api.EndpointTypeNs,
+		Name:      ns1Aggr,
+		Namespace: namespace1,
+		Labels:    ns1Labels,
+		Port:      &port80,
 	}
 
 	// Flows
@@ -218,6 +231,16 @@ var (
 		Proto:       &protoTCP,
 		Policies:    []string{namespace2DefaultAllowProfile},
 	}
+
+	// pod2 -> ns1 allow port 80
+	flowPod2ToNs1Allow80ReporterSource = api.Flow{
+		Reporter:    api.ReporterTypeSource,
+		Action:      api.ActionAllow,
+		Source:      flowEndpointNamespace1Pod2Source,
+		Destination: flowEndpointNamespace3NetworkSet1DestinationTCP80,
+		Proto:       &protoTCP,
+		Policies:    []string{namespace1DefaultAllowProfile},
+	}
 )
 
 // Expected Policies
@@ -306,7 +329,8 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protoUDPNS,
 					Destination: v3.EntityRule{
-						Ports: []numorstring.Port{numorstring.SinglePort(port53)},
+						NamespaceSelector: "!all()",
+						Ports:             []numorstring.Port{numorstring.SinglePort(port53)},
 					},
 				},
 			},
@@ -340,7 +364,8 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
-						Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
+						Selector:          "pod-name == 'pod-3' && pod-namespace == 'namespace2' && projectcalico.org/namespace == 'namespace2'",
+						NamespaceSelector: "all()",
 						Ports: []numorstring.Port{
 							numorstring.SinglePort(port5432),
 							numorstring.SinglePort(port8080),
@@ -382,8 +407,9 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
-						Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
-						Ports:    []numorstring.Port{numorstring.SinglePort(port5432)},
+						Selector:          "pod-name == 'pod-3' && pod-namespace == 'namespace2' && projectcalico.org/namespace == 'namespace2'",
+						NamespaceSelector: "all()",
+						Ports:             []numorstring.Port{numorstring.SinglePort(port5432)},
 					},
 				},
 			},
@@ -409,7 +435,8 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{
-						Selector: "name == 'pod-1' && namespace == 'namespace1'",
+						Selector:          "name == 'pod-1' && namespace == 'namespace1' && projectcalico.org/namespace == 'namespace1'",
+						NamespaceSelector: "all()",
 					},
 					Destination: v3.EntityRule{
 						Ports: []numorstring.Port{
@@ -422,7 +449,8 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{
-						Selector: "name == 'pod-2' && namespace == 'namespace1'",
+						Selector:          "name == 'pod-2' && namespace == 'namespace1' && projectcalico.org/namespace == 'namespace1'",
+						NamespaceSelector: "all()",
 					},
 					Destination: v3.EntityRule{
 						Ports: []numorstring.Port{numorstring.SinglePort(port5432)},

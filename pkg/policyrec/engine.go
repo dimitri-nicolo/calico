@@ -25,6 +25,18 @@ var labelKeysToIgnore = set.FromArray([]string{
 	"app.kubernetes.io/instance",
 })
 
+const noNamespace = ""
+
+// Special selector for working with cross namespaced traffic.
+// TODO(doublek): This should be moved into selectorBuilder once
+// we get nicer namespaceSelector behavior.
+type crossNamespaceSelector string
+
+const (
+	allNamespacedEndpointsSelector    = "all()"
+	allNonNamespacedEndpointsSelector = "!all()"
+)
+
 // The rules for recommend policy are aggregated per endpoint + protocol with
 // a list of ports and computed selector.
 
@@ -104,7 +116,7 @@ func (ere *endpointRecommendationEngine) ProcessFlow(flow api.Flow) error {
 	// Make sure we only process flows that have either source or destination endpoint name/namespace
 	// that we expect.
 	if !ere.matchesSourceEndpoint(flow) && !ere.matchesDestinationEndpoint(flow) {
-		return fmt.Errorf("namespace/name of flow %v don't match request", flow)
+		return fmt.Errorf("namespace/name of flow %v don't match request or endpoint isn't a Workload Endpoint", flow)
 	}
 
 	// Update selector from flow.
@@ -131,14 +143,14 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 	if len(ere.egressRules) > 0 {
 		policyTypes = append(policyTypes, v3.PolicyTypeEgress)
 	}
-	if ere.policyNamespace == "" {
+	if ere.policyNamespace == noNamespace {
 		// If the engine is for an endpoint with no namespace, then we
 		// recommend a globalnetworkpolicy.
 		gnp := v3.NewStagedGlobalNetworkPolicy()
 		gnp.ObjectMeta = metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s.%s", ere.policyTier, ere.policyName),
 		}
-		policySelector := ere.policySelector.Expression()
+		policySelector := ere.policySelector.Expression(noNamespace)
 		if policySelector == "" {
 			log.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
 			return nil, fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
@@ -158,7 +170,7 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 			Name:      fmt.Sprintf("%s.%s", ere.policyTier, ere.policyName),
 			Namespace: ere.policyNamespace,
 		}
-		policySelector := ere.policySelector.Expression()
+		policySelector := ere.policySelector.Expression(noNamespace)
 		if policySelector == "" {
 			log.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
 			return nil, fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
@@ -228,6 +240,7 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 			endpointNamespace: flow.Source.Namespace,
 			protocol:          numorstring.ProtocolFromInt(*flow.Proto),
 		}
+
 		rule, ok := ere.ingressTraffic[erpp]
 		if ok {
 			rule.selector.IntersectLabels(flow.Source.Labels)
@@ -246,16 +259,16 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 // constructRulesFromTraffic creates ingress and egress rules for use in a policy.
 func (ere *endpointRecommendationEngine) constructRulesFromTraffic() {
 	if len(ere.egressTraffic) != 0 {
-		ere.egressRules = rulesFromTraffic(v3.PolicyTypeEgress, ere.egressTraffic)
+		ere.egressRules = ere.rulesFromTraffic(v3.PolicyTypeEgress, ere.egressTraffic)
 	}
 	if len(ere.ingressTraffic) != 0 {
-		ere.ingressRules = rulesFromTraffic(v3.PolicyTypeIngress, ere.ingressTraffic)
+		ere.ingressRules = ere.rulesFromTraffic(v3.PolicyTypeIngress, ere.ingressTraffic)
 	}
 }
 
 // rulesFromTraffic is a convenience method for converting intermediate traffic representation
 // to libcalico-go v3 Rule object.
-func rulesFromTraffic(policyType v3.PolicyType, trafficAndSelector map[endpointRulePerProtocol]entityRule) []v3.Rule {
+func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyType, trafficAndSelector map[endpointRulePerProtocol]entityRule) []v3.Rule {
 	log.WithField("policyType", policyType).Debugf("Processing rules for traffic %+v", trafficAndSelector)
 	rules := make([]v3.Rule, 0)
 	for erpp, rule := range trafficAndSelector {
@@ -272,11 +285,36 @@ func rulesFromTraffic(policyType v3.PolicyType, trafficAndSelector map[endpointR
 				Ports: ports,
 			},
 		}
+		// The entityRule is translated to an ingress or egress policy depending on the
+		// policyType specified. Rule selectors are constructed based on the following.
+		// Rule selectors only select endpoints within the main policy selectors namespace.
+		// To workaround this issue, we do the following:
+		// 1. For namespaced endpoints not belonging to the current policy's endpoint, we
+		//    include the "all()" as the namespaceSelector to select all namespaced endpoints
+		//    and then specify the current policy's namespace using the hidden
+		//    "projectcalico.org/namespace == '<namespace>'" selector.
+		// 2. For global/non-namespaced endpoints, we specify a "!all()" selector which
+		//    will select all non namespaced endpoints.
+		// TODO(doublek): Fix this when we have nicer namespaced selectors.
 		switch policyType {
 		case v3.PolicyTypeEgress:
-			newRule.Destination.Selector = rule.selector.Expression()
+			namespaceName := ""
+			if erpp.endpointNamespace == noNamespace {
+				newRule.Destination.NamespaceSelector = allNonNamespacedEndpointsSelector
+			} else if erpp.endpointNamespace != ere.endpointNamespace {
+				newRule.Destination.NamespaceSelector = allNamespacedEndpointsSelector
+				namespaceName = erpp.endpointNamespace
+			}
+			newRule.Destination.Selector = rule.selector.Expression(namespaceName)
 		case v3.PolicyTypeIngress:
-			newRule.Source.Selector = rule.selector.Expression()
+			namespaceName := ""
+			if erpp.endpointNamespace == noNamespace {
+				newRule.Source.NamespaceSelector = allNonNamespacedEndpointsSelector
+			} else if erpp.endpointNamespace != ere.endpointNamespace {
+				newRule.Source.NamespaceSelector = allNamespacedEndpointsSelector
+				namespaceName = erpp.endpointNamespace
+			}
+			newRule.Source.Selector = rule.selector.Expression(namespaceName)
 		}
 		rules = append(rules, newRule)
 	}
@@ -286,12 +324,16 @@ func rulesFromTraffic(policyType v3.PolicyType, trafficAndSelector map[endpointR
 
 // Check if the flow matches the source endpoint.
 func (ere *endpointRecommendationEngine) matchesSourceEndpoint(flow api.Flow) bool {
-	return flow.Source.Name == ere.endpointName && flow.Source.Namespace == ere.endpointNamespace
+	return flow.Source.Name == ere.endpointName &&
+		flow.Source.Namespace == ere.endpointNamespace &&
+		flow.Source.Type == api.EndpointTypeWep
 }
 
 // Check if the flow matches the destination endpoint.
 func (ere *endpointRecommendationEngine) matchesDestinationEndpoint(flow api.Flow) bool {
-	return flow.Destination.Name == ere.endpointName && flow.Destination.Namespace == ere.endpointNamespace
+	return flow.Destination.Name == ere.endpointName &&
+		flow.Destination.Namespace == ere.endpointNamespace &&
+		flow.Destination.Type == api.EndpointTypeWep
 }
 
 // selectorBuilder wraps a map to provide convenience methods selector construction.
@@ -329,7 +371,7 @@ func (sb selectorBuilder) IntersectLabels(labels map[string]string) {
 
 // Expression constructs a selector expression for the labels stored in the
 // selectorBuilder. Currently only "&&"-ed selector expressions are supported.
-func (sb selectorBuilder) Expression() string {
+func (sb selectorBuilder) Expression(namespace string) string {
 	if len(sb) == 0 {
 		return ""
 	}
@@ -339,6 +381,9 @@ func (sb selectorBuilder) Expression() string {
 			continue
 		}
 		expressionParts = append(expressionParts, fmt.Sprintf("%s == '%s'", k, v))
+	}
+	if namespace != "" {
+		expressionParts = append(expressionParts, fmt.Sprintf("%s == '%s'", v3.LabelNamespace, namespace))
 	}
 	return strings.Join(expressionParts, " && ")
 }

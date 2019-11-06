@@ -110,6 +110,14 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		err = re.ProcessFlow(flowPod2ToPod3Allow5432ReporterDestination)
 		Expect(err).ToNot(BeNil())
 	})
+	It("should reject flows that are for endpoint type that isn't wep", func() {
+		By("Initializing a recommendationengine with namespace and name")
+		re = policyrec.NewEndpointRecommendationEngine(ns1Aggr, namespace1, ns1, defaultTier, nil)
+
+		By("Processing flow that don't match")
+		err = re.ProcessFlow(flowPod2ToNs1Allow80ReporterSource)
+		Expect(err).ToNot(BeNil())
+	})
 })
 
 // Test Utilities
@@ -201,6 +209,7 @@ func matchEntityRule(actual, expected v3.EntityRule) bool {
 	match := set.FromArray(actual.Nets).ContainsAll(set.FromArray(expected.Nets)) &&
 		set.FromArray(actual.Ports).ContainsAll(set.FromArray(expected.Ports)) &&
 		matchSelector(actual.Selector, expected.Selector) &&
+		matchSelector(actual.NamespaceSelector, expected.NamespaceSelector) &&
 		set.FromArray(actual.NotNets).ContainsAll(set.FromArray(expected.NotNets))
 	if actual.ServiceAccounts != nil && expected.ServiceAccounts != nil {
 		return match &&
