@@ -1546,16 +1546,11 @@ func init() {
 		}}, true),
 
 		// GlobalNetworkPolicy validation.
-		Entry("disallow name with invalid character", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
-			Spec: api.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("disallow name with mixed case characters", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
-			Spec: api.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("allow valid name", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
-			Spec: api.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
-		Entry("disallow k8s policy name", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
-			Spec: api.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("disallow name with dot", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
-			Spec: api.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
+		Entry("disallow name with invalid character", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
+		Entry("disallow name with mixed case characters", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"}}, false),
+		Entry("allow valid name", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
+		Entry("disallow k8s policy name", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"}}, false),
+		Entry("disallow name with dot", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"}}, false),
 		Entry("should reject GlobalNetworkPolicy with both PreDNAT and DoNotTrack",
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
@@ -1563,7 +1558,6 @@ func init() {
 					PreDNAT:        true,
 					DoNotTrack:     true,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, false,
 		),
@@ -1573,7 +1567,6 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					PreDNAT:        true,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1584,7 +1577,6 @@ func init() {
 					PreDNAT:        false,
 					DoNotTrack:     true,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1595,7 +1587,6 @@ func init() {
 					PreDNAT:        true,
 					ApplyOnForward: true,
 					Egress:         []api.Rule{{Action: "Allow"}},
-					Selector:       "foo == \"bar\"",
 				},
 			}, false,
 		),
@@ -1606,10 +1597,10 @@ func init() {
 					PreDNAT:        true,
 					ApplyOnForward: true,
 					Ingress:        []api.Rule{{Action: "Allow"}},
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
+
 		// GlobalNetworkPolicySpec ApplyOnForward field checks.
 		Entry("should accept GlobalNetworkPolicy ApplyOnForward but not PreDNAT",
 			&api.GlobalNetworkPolicy{
@@ -1617,7 +1608,6 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					PreDNAT:        false,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1627,7 +1617,6 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					DoNotTrack:     false,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1637,7 +1626,6 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					PreDNAT:        true,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1647,7 +1635,6 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					DoNotTrack:     true,
 					ApplyOnForward: true,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1658,7 +1645,6 @@ func init() {
 					PreDNAT:        false,
 					DoNotTrack:     false,
 					ApplyOnForward: false,
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1668,7 +1654,6 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					PreDNAT:        true,
 					ApplyOnForward: false,
-					Selector:       "foo == \"bar\"",
 				},
 			}, false,
 		),
@@ -1678,25 +1663,22 @@ func init() {
 				Spec: api.GlobalNetworkPolicySpec{
 					DoNotTrack:     true,
 					ApplyOnForward: false,
-					Selector:       "foo == \"bar\"",
 				},
 			}, false,
 		),
+
 		// GlobalNetworkPolicySpec Types field checks.
 		Entry("allow missing Types",
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec: api.GlobalNetworkPolicySpec{
-					Selector: "foo == \"bar\"",
-				},
+				Spec:       api.GlobalNetworkPolicySpec{},
 			}, true,
 		),
 		Entry("allow empty Types",
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Types:    []api.PolicyType{},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{},
 				},
 			}, true,
 		),
@@ -1704,8 +1686,7 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeIngress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeIngress},
 				},
 			}, true,
 		),
@@ -1713,8 +1694,7 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1722,8 +1702,7 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1731,8 +1710,7 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeEgress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeEgress, api.PolicyTypeEgress},
 				},
 			}, false,
 		),
@@ -1740,8 +1718,7 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Types:    []api.PolicyType{"unexpected"},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{"unexpected"},
 				},
 			}, false,
 		),
@@ -1750,9 +1727,8 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Ingress:  []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Ingress: []api.Rule{{Action: "Allow"}},
+					Types:   []api.PolicyType{api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1760,9 +1736,8 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow"}},
+					Types:  []api.PolicyType{api.PolicyTypeIngress},
 				},
 			}, true,
 		),
@@ -1770,9 +1745,8 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Ingress:  []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress},
-					Selector: "foo == \"bar\"",
+					Ingress: []api.Rule{{Action: "Allow"}},
+					Types:   []api.PolicyType{api.PolicyTypeIngress},
 				},
 			}, true,
 		),
@@ -1780,9 +1754,8 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Ingress:  []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Ingress: []api.Rule{{Action: "Allow"}},
+					Types:   []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1790,9 +1763,8 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow"}},
+					Types:  []api.PolicyType{api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1800,9 +1772,8 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow"}},
+					Types:  []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1813,7 +1784,6 @@ func init() {
 					PreDNAT:        true,
 					ApplyOnForward: true,
 					Types:          []api.PolicyType{api.PolicyTypeIngress},
-					Selector:       "foo == \"bar\"",
 				},
 			}, true,
 		),
@@ -1824,7 +1794,6 @@ func init() {
 					PreDNAT:        true,
 					ApplyOnForward: true,
 					Types:          []api.PolicyType{api.PolicyTypeEgress},
-					Selector:       "foo == \"bar\"",
 				},
 			}, false,
 		),
@@ -1835,7 +1804,6 @@ func init() {
 					PreDNAT:        true,
 					ApplyOnForward: true,
 					Types:          []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector:       "foo == \"bar\"",
 				},
 			}, false,
 		),
@@ -1843,25 +1811,10 @@ func init() {
 			&api.GlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.GlobalNetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow", HTTP: &api.HTTPMatch{Methods: []string{"GET"}}}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow", HTTP: &api.HTTPMatch{Methods: []string{"GET"}}}},
+					Types:  []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, false,
-		),
-		Entry("disallow all selector fields to be empty",
-			&api.GlobalNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec:       api.GlobalNetworkPolicySpec{},
-			}, false,
-		),
-		Entry("allow Selector field to be empty if ServiceAccountSelector is not empty",
-			&api.GlobalNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec: api.GlobalNetworkPolicySpec{
-					ServiceAccountSelector: "role == \"intern\"",
-				},
-			}, true,
 		),
 
 		// StagedGlobalNetworkPolicySpec Types field checks.
@@ -1938,32 +1891,23 @@ func init() {
 		),
 
 		// NetworkPolicySpec Types field checks.
-		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
-		Entry("disallow name with dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("disallow name with mixed case", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("allow valid name of 253 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
-		Entry("disallow a name of 254 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("allow k8s policy name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
+		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
+		Entry("disallow name with dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"}}, false),
+		Entry("disallow name with mixed case", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"}}, false),
+		Entry("allow valid name of 253 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])}}, true),
+		Entry("disallow a name of 254 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])}}, false),
+		Entry("allow k8s policy name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"}}, true),
 		Entry("allow missing Types",
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec: api.NetworkPolicySpec{
-					Selector: "foo == \"bar\"",
-				},
+				Spec:       api.NetworkPolicySpec{},
 			}, true,
 		),
 		Entry("allow empty Types",
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Types:    []api.PolicyType{},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{},
 				},
 			}, true,
 		),
@@ -1971,8 +1915,7 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeIngress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeIngress},
 				},
 			}, true,
 		),
@@ -1980,8 +1923,7 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1989,8 +1931,7 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -1998,8 +1939,7 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Types:    []api.PolicyType{api.PolicyTypeEgress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{api.PolicyTypeEgress, api.PolicyTypeEgress},
 				},
 			}, false,
 		),
@@ -2007,31 +1947,24 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Types:    []api.PolicyType{"unexpected"},
-					Selector: "foo == \"bar\"",
+					Types: []api.PolicyType{"unexpected"},
 				},
-			}, false,
-		),
-		Entry("disallow all selector fields from being empty",
-			&api.NetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec:       api.NetworkPolicySpec{},
 			}, false,
 		),
 
 		// StagedNetworkPolicySpec Types field checks.
 		Entry("allow valid name", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
-			Spec: api.StagedNetworkPolicySpec{Selector: "foo == \"bar\"", StagedAction: api.StagedActionSet}}, true),
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
 		Entry("disallow name with dot", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
-			Spec: api.StagedNetworkPolicySpec{Selector: "foo == \"bar\"", StagedAction: api.StagedActionSet}}, false),
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
 		Entry("disallow name with mixed case", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
-			Spec: api.StagedNetworkPolicySpec{Selector: "foo == \"bar\"", StagedAction: api.StagedActionSet}}, false),
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
 		Entry("allow valid name of 253 chars", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])},
-			Spec: api.StagedNetworkPolicySpec{Selector: "foo == \"bar\"", StagedAction: api.StagedActionSet}}, true),
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
 		Entry("disallow a name of 254 chars", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])},
-			Spec: api.StagedNetworkPolicySpec{Selector: "foo == \"bar\"", StagedAction: api.StagedActionSet}}, false),
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
 		Entry("allow k8s policy name", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
-			Spec: api.StagedNetworkPolicySpec{Selector: "foo == \"bar\"", StagedAction: api.StagedActionSet}}, true),
+			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
 		Entry("allow missing Types",
 			&api.StagedNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
@@ -2113,18 +2046,12 @@ func init() {
 		Entry("Tier: disallow other chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
 
 		// NetworkPolicy Object MetaData checks.
-		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
-		Entry("allow name with single dot - tier", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "th.ing"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
-		Entry("disallow name with multiple dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("allow valid name of 253 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, true),
-		Entry("disallow a name of 254 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
-		Entry("disallow name with invalid character", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
-			Spec: api.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}, false),
+		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
+		Entry("allow name with single dot - tier", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "th.ing"}}, true),
+		Entry("disallow name with multiple dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"}}, false),
+		Entry("allow valid name of 253 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])}}, true),
+		Entry("disallow a name of 254 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])}}, false),
+		Entry("disallow name with invalid character", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
 
 		// In the initial implementation, we validated against the following two cases but we found
 		// that prevented us from doing a smooth upgrade from type-less to typed policy since we
@@ -2136,9 +2063,8 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Ingress:  []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Ingress: []api.Rule{{Action: "Allow"}},
+					Types:   []api.PolicyType{api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -2146,9 +2072,8 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow"}},
+					Types:  []api.PolicyType{api.PolicyTypeIngress},
 				},
 			}, true,
 		),
@@ -2156,9 +2081,8 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Ingress:  []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress},
-					Selector: "foo == \"bar\"",
+					Ingress: []api.Rule{{Action: "Allow"}},
+					Types:   []api.PolicyType{api.PolicyTypeIngress},
 				},
 			}, true,
 		),
@@ -2166,9 +2090,8 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Ingress:  []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Ingress: []api.Rule{{Action: "Allow"}},
+					Types:   []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -2176,9 +2099,8 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow"}},
+					Types:  []api.PolicyType{api.PolicyTypeEgress},
 				},
 			}, true,
 		),
@@ -2186,9 +2108,8 @@ func init() {
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.NetworkPolicySpec{
-					Egress:   []api.Rule{{Action: "Allow"}},
-					Types:    []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
-					Selector: "foo == \"bar\"",
+					Egress: []api.Rule{{Action: "Allow"}},
+					Types:  []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, true,
 		),
