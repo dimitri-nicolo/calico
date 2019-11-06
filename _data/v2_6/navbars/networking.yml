@@ -22,7 +22,7 @@ toc:
   path: /networking/external-connectivity
 - title: Configuring a node IP address and subnet
   path: /networking/node
-- title: Configuring MTU
+- title: Configure MTU to maximize network performance
   path: /networking/mtu
 - title: Custom BGP configuration 
   path: /networking/custom-bgp-config
