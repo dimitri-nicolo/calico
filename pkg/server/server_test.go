@@ -354,7 +354,7 @@ func (t *tester) getRecommendation(expStatus int, params lpolicyrec.PolicyRecomm
 	recommendUrl := "http://" + t.addr + "/compliance/recommend"
 	paramsData, err := json.Marshal(params)
 	Expect(err).To(BeNil())
-	req, err := http.NewRequest("POST", recommendUrl, bytes.NewBuffer(paramsData))
+	req, err := http.NewRequest("GET", recommendUrl, bytes.NewBuffer(paramsData))
 	Expect(err).To(BeNil())
 	r, err := t.client.Do(req)
 	Expect(err).NotTo(HaveOccurred())

@@ -34,10 +34,7 @@ func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFa
 	// mux.Get(urlGet, http.HandlerFunc(s.handleVersion))
 	mux.Get(UrlList, http.HandlerFunc(s.handleListReports))
 	mux.Get(UrlDownload, http.HandlerFunc(s.handleDownloadReports))
-	// TODO(doublek): Switch this to a GET and rework query parameters
-	// The browser cannot issue GET request with a body. So we accept requests with
-	// a POST method.
-	mux.Post(UrlPolicyRecommendation, http.HandlerFunc(s.handlePolicyRecommendation))
+	mux.Get(UrlPolicyRecommendation, http.HandlerFunc(s.handlePolicyRecommendation))
 
 	// Create a new server using the MUX.
 	s.server = &http.Server{
