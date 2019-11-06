@@ -138,10 +138,28 @@ access for pods in namespace `tigera-compliance` using the `tigera-compliance-re
 
 To manually run a report:
 
-1. Download the pod template.
+1. Download the pod template corresponding to your installation method.  
+   **Operator**
 
    ```bash
    curl -O {{site.url}}/{{page.version}}/manifests/compliance-reporter-pod.yaml
+   ```
+   **Helm**
+   ```bash
+   curl -o {{site.baseurl}}/{{page.version}}/manifests/compliance-reporter-pod-es-config.yaml
+   ```
+
+1. If you installed using the Operator, properly configure the template to read the correct certificates.
+   First we will need to get the name of the `compliance-reporter-token`
+   ```bash
+   kubectl get secrets -n tigera-compliance
+   ```
+   The secret name should look something like this: `compliance-reporter-token-hmpaq`
+
+   With the proper secret name, add it to your pod template
+   ```bash
+   export COMPLIANCE_REPORTER_TOKEN=<secret name>
+   sed -i -e "s?<COMPLIANCE_REPORTER_TOKEN>?$COMPLIANCE_REPORTER_TOKEN?g" compliance-reporter-pod.yaml
    ```
 
 1. Edit the template as follows:
