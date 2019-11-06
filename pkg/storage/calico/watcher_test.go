@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,10 +41,12 @@ func testWatch(t *testing.T, list bool) {
 		store.client.NetworkPolicies().Delete(ctx, "default", "default.bar", options.DeleteOptions{})
 	}()
 
-	policyFoo := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
+	policyFoo := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}, 
+		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
 	policyFoo.SetCreationTimestamp(metav1.Time{time.Now()})
 	policyFoo.SetUID("test_uid_foo")
-	policyBar := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.bar"}}
+	policyBar := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.bar"},
+		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
 	policyBar.SetCreationTimestamp(metav1.Time{time.Now()})
 	policyBar.SetUID("test_uid_bar")
 
