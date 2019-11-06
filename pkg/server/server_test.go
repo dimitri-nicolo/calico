@@ -24,10 +24,8 @@ import (
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
-	"github.com/tigera/compliance/pkg/policyrec"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/lma/pkg/api"
-	lpolicyrec "github.com/tigera/lma/pkg/policyrec"
 )
 
 // startTester starts and returns a server tester. This can be used to issue summary and report queries and to
@@ -50,7 +48,7 @@ func startTester() *tester {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Starting the compliance server")
-	s := server.New(t, t, t, t, t.addr, "", "")
+	s := server.New(t, t, t, t.addr, "", "")
 	s.Start()
 	t.server = s
 	t.client = &http.Client{Timeout: time.Second * 10}
@@ -84,10 +82,6 @@ type tester struct {
 	// Control parameters for the archived ReportData get summary response.
 	report    *api.ArchivedReportData
 	reportErr error
-
-	// Control parameters for policy recommendation responses.
-	precResponses *policyrec.PolicyRecommendationResponse
-	precError     error
 
 	// Internal data for managing the server and client.
 	addr   string
@@ -348,41 +342,4 @@ func (t *tester) CanGetReportType(x string) (bool, error) {
 		return false, fmt.Errorf("cannot get report type")
 	}
 	return false, nil
-}
-
-func (t *tester) getRecommendation(expStatus int, params lpolicyrec.PolicyRecommendationParams, exp *policyrec.PolicyRecommendationResponse) {
-	recommendUrl := "http://" + t.addr + "/compliance/recommend"
-	paramsData, err := json.Marshal(params)
-	Expect(err).To(BeNil())
-	req, err := http.NewRequest("POST", recommendUrl, bytes.NewBuffer(paramsData))
-	Expect(err).To(BeNil())
-	r, err := t.client.Do(req)
-	Expect(err).NotTo(HaveOccurred())
-	defer r.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	Expect(err).NotTo(HaveOccurred())
-
-	Expect(r.StatusCode).To(Equal(expStatus))
-	if expStatus == http.StatusOK {
-		output := &policyrec.PolicyRecommendationResponse{}
-		err = json.Unmarshal(bodyBytes, output)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(output).To(Equal(exp))
-	}
-}
-
-// NewPolicyRecommendationRbacHelper to satisfy RbacHelperFactory interface
-func (t *tester) NewPolicyRecommendationRbacHelper(req *http.Request) server.PolicyRecommendationRbacHelper {
-	// We don't store any state for a particular request, so no need to instantiate a new instance each time.
-	return t
-}
-
-// CanGetPolicyRecommendation to satisfy PolicyRecommendationRbacHelper interface
-func (t *tester) CanGetPolicyRecommendation() (bool, error) {
-	return true, nil
-}
-
-// GetRecommendation to satisfy the RecommendationEngine interface
-func (t *tester) GetRecommendation(ctx context.Context, params *lpolicyrec.PolicyRecommendationParams) (*policyrec.PolicyRecommendationResponse, error) {
-	return t.precResponses, t.precError
 }
