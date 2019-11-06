@@ -47,7 +47,3 @@
 
 **Next step**:
 [Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/getting-started/{{include.cli}}/configure/).
-
-## Installing {{include.cli}} as a Kubernetes pod
-
-{% include {{page.version}}/load-docker.md yaml=include.cli %}
