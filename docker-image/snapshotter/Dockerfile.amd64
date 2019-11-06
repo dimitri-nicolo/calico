@@ -2,5 +2,4 @@ FROM scratch
 
 ADD bin/snapshotter-amd64 /snapshotter
 WORKDIR /
-USER 999 
 ENTRYPOINT ["/snapshotter"]
