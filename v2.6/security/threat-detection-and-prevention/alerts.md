@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.6/security/threat-detection-and-prevent
 
 ### Big picture
 
-Define alert criteria for the Alerts page in {site.prodname}} Manager based on collected flow, DNS, and audit logs. 
+Define alert criteria for the Alerts page in {{site.prodname}} Manager based on collected flow, DNS, and audit logs. 
 
 ### Value 
 
