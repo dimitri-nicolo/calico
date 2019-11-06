@@ -28,12 +28,6 @@ const (
 	SortDescendingSuffix   = "/descending"
 )
 
-const (
-	// We use the compliance basepath so that request is automatically
-	// routed to the compliance server with no additional changes elsewhere
-	UrlPolicyRecommendation = "/compliance/recommend"
-)
-
 var (
 	ValidSortBy = []string{
 		"reportName", "reportTypeName", "generationTime", "startTime", "endTime",

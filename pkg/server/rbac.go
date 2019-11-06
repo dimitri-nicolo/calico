@@ -34,7 +34,6 @@ type K8sAuthInterface interface {
 
 type RbacHelperFactory interface {
 	NewReportRbacHelper(*http.Request) ReportRbacHelper
-	NewPolicyRecommendationRbacHelper(*http.Request) PolicyRecommendationRbacHelper
 }
 
 type standardRbacHelperFactory struct {
