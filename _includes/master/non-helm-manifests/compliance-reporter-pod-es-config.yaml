@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: run-reporter
-  namespace: tigera-compliance
+  namespace: calico-monitoring
   labels:
     k8s-app: compliance-reporter
 spec:
@@ -37,36 +37,52 @@ spec:
     - name: LOG_LEVEL
       value: "warning"
     - name: ELASTIC_INDEX_SUFFIX
-      value: cluster
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-es-config
+          key: tigera.elasticsearch.cluster-name
     - name: ELASTIC_SCHEME
-      value: https
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-es-config
+          key: tigera.elasticsearch.scheme
+          optional: true
     - name: ELASTIC_HOST
-      value: tigera-secure-es-http.tigera-elasticsearch.svc
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-es-config
+          key: tigera.elasticsearch.host
     - name: ELASTIC_PORT
-      value: "9200"
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-es-config
+          key: tigera.elasticsearch.port
+          optional: true
     - name: ELASTIC_USER
       valueFrom:
         secretKeyRef:
-          name: tigera-ee-compliance-reporter-elasticsearch-access
-          key: username
+          name: elastic-compliance-user
+          key: reporter.username
           optional: true
     - name: ELASTIC_PASSWORD
       valueFrom:
         secretKeyRef:
-          name: tigera-ee-compliance-reporter-elasticsearch-access
-          key: password
+          name: elastic-compliance-user
+          key: reporter.password
           optional: true
     - name: ELASTIC_SSL_VERIFY
       value: "true"
     - name: ELASTIC_CA
-      value: /etc/ssl/elastic/ca.pem
+      valueFrom:
+        configMapKeyRef:
+          name: tigera-es-config
+          key: tigera.elasticsearch.ca.path
+          optional: true
     volumeMounts:
     - mountPath: /var/log/calico
       name: var-log-calico
     - name: elastic-ca-cert-volume
       mountPath: /etc/ssl/elastic/
-    - name: tigera-compliance-reporter-token
-      mountPath: /var/run/secrets/kubernetes.io/serviceaccount
     livenessProbe:
       httpGet:
         path: /liveness
@@ -81,10 +97,6 @@ spec:
     secret:
       optional: true
       items:
-      - key: tls.crt
+      - key: tigera.elasticsearch.ca
         path: ca.pem
-      secretName: tigera-secure-es-http-certs-public
-  - name: tigera-compliance-reporter-token
-    secret:
-      defaultMode: 420
-      secretName: <COMPLIANCE_REPORTER_TOKEN>
+      secretName: tigera-es-config
