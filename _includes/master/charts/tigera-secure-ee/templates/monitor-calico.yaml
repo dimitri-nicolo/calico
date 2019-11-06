@@ -893,9 +893,6 @@ spec:
       containers:
       - name: install
         image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
-        securityContext:
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
 {{ tuple .Values.elasticTseeInstaller.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
         env:
 {{- if eq $elasticMode "external" }}
