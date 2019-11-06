@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 
@@ -49,8 +48,7 @@ func TestNetworkPolicyCreate(t *testing.T) {
 
 	key := "projectcalico.org/networkpolicies/default/default.foo"
 	out := &calico.NetworkPolicy{}
-	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 
 	// verify that kv pair is empty before set
 	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
@@ -84,8 +82,7 @@ func TestNetworkPolicyCreateWithTTL(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
+	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	key := "projectcalico.org/networkpolicies/default/default.foo"
 
 	out := &calico.NetworkPolicy{}
@@ -103,8 +100,7 @@ func TestNetworkPolicyCreateWithKeyExist(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	key, _ := testPropogateStore(ctx, t, store, obj)
 	out := &calico.NetworkPolicy{}
 	err := store.Create(ctx, key, obj, out, 0)
@@ -121,8 +117,7 @@ func TestNetworkPolicyCreateDisallowK8sPrefix(t *testing.T) {
 
 	key := fmt.Sprintf("projectcalico.org/networkpolicies/%s/%s", ns, name)
 	out := &calico.NetworkPolicy{}
-	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name}}
 
 	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, ns, name, options.GetOptions{})
 	if libcPolicy != nil {
@@ -139,8 +134,7 @@ func TestNetworkPolicyGet(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	tests := []struct {
 		key               string
@@ -185,8 +179,7 @@ func TestNetworkPolicyUnconditionalDelete(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	tests := []struct {
 		key               string
@@ -224,8 +217,7 @@ func TestNetworkPolicyConditionalDelete(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
 	tests := []struct {
 		precondition        *storage.Preconditions
@@ -253,8 +245,7 @@ func TestNetworkPolicyConditionalDelete(t *testing.T) {
 		if !reflect.DeepEqual(storedObj, out) {
 			t.Errorf("#%d: pod want=%#v, get=%#v", i, storedObj, out)
 		}
-		key, storedObj = testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+		key, storedObj = testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 	}
 }
 
@@ -276,8 +267,7 @@ func TestNetworkPolicyGetToList(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	tests := []struct {
 		key         string
@@ -329,8 +319,7 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 		testCleanup(t, ctx, store, gnpStore)
 		store.client.NetworkPolicies().Delete(ctx, "default", "default.non-existing", options.DeleteOptions{})
 	}()
-	key, storeObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+	key, storeObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
 	tests := []struct {
 		key                 string
@@ -451,8 +440,7 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
 
-	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}}
+	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	input.SetCreationTimestamp(metav1.Time{time.Now()})
 	input.SetUID("test_uid")
 	key := "projectcalico.org/networkpolicies/default/default.foo"
@@ -477,8 +465,7 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 	ctx, store, gnpStore := testSetup(t)
 	defer testCleanup(t, ctx, store, gnpStore)
-	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"},
-		Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}})
+	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}})
 
 	errChan := make(chan error, 1)
 	var firstToFinish sync.WaitGroup
@@ -536,16 +523,13 @@ func TestNetworkPolicyList(t *testing.T) {
 		storedObj *calico.NetworkPolicy
 	}{{
 		key: "projectcalico.org/networkpolicies/default/foo",
-		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}},
+		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}},
 	}, {
 		key: "projectcalico.org/networkpolicies/default1/foo",
-		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default1", Name: "foo"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}},
+		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default1", Name: "foo"}},
 	}, {
 		key: "projectcalico.org/networkpolicies/default1/bar",
-		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default1", Name: "bar"},
-			Spec: api.NetworkPolicySpec{Selector: "foo == \"bar\""}},
+		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default1", Name: "bar"}},
 	}}
 
 	for i, ps := range preset {

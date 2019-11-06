@@ -154,8 +154,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "default"
 	defaultTierPolicyName := "default" + "." + name
 	policyClient := client.ProjectcalicoV3().NetworkPolicies(ns)
-	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
-		Spec: calico.NetworkPolicySpec{Selector: "foo == \"bar\""}}
+	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
 
 	// start from scratch
 	policies, err := policyClient.List(metav1.ListOptions{})
@@ -199,8 +198,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName},
-		Spec: calico.NetworkPolicySpec{Tier: "net-sec", Selector: "foo == \"bar\""}}
+	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.NetworkPolicySpec{Tier: "net-sec"}}
 	policyServer, err = policyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
@@ -500,8 +498,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	globalNetworkPolicyClient := client.ProjectcalicoV3().GlobalNetworkPolicies()
 	defaultTierPolicyName := "default" + "." + name
-	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
-		Spec: calico.GlobalNetworkPolicySpec{Selector: "foo == \"bar\""}}
+	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
 
 	// start from scratch
 	globalNetworkPolicies, err := globalNetworkPolicyClient.List(metav1.ListOptions{})
@@ -532,8 +529,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName},
-		Spec: calico.GlobalNetworkPolicySpec{Tier: "net-sec", Selector: "foo == \"bar\""}}
+	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.GlobalNetworkPolicySpec{Tier: "net-sec"}}
 	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
@@ -637,8 +633,7 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName},
-		Spec: calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
+	netSecPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\"", Tier: "net-sec"}}
 	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
