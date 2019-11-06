@@ -183,3 +183,10 @@ To secure the components which make up {{site.prodname}}, install the following 
 ```
 oc create -f {{site.url}}/{{page.version}}/manifests/tigera-policies.yaml
 ```
+
+### Above and beyond
+
+- [Configure access to the manager UI](/{{page.version}}/getting-started/access-the-manager)
+- [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
+- [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
+- [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)
