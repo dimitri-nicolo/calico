@@ -369,7 +369,7 @@ To manually run a report:
    ```
    **Helm**
    ```bash
-   curl -o {{site.baseurl}}/{{page.version}}/manifests/compliance-reporter-pod-es-config.yaml
+   curl -o {{site.url}}/{{page.version}}/manifests/compliance-reporter-pod-es-config.yaml
    ```
 
 1. If you installed using the Operator, properly configure the template to read the correct certificates.
