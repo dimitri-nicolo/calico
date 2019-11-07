@@ -473,8 +473,6 @@ What happens then is:
 -  The static /24 routes are still present as well, but are ignored because of the /32
    routes being more specific.
 
-If you prefer, you can now delete the static loopback routes.
-
 #### Verify the deployment
 
 If you examine traffic and connections within the cluster - for example, using `ss` or
