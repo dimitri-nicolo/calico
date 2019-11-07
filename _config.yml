@@ -137,6 +137,3 @@ defaults:
       path: v2.6
     values:
       version: v2.6
-      # Pre-release v2.6 builds are pulled from GCR.
-      # Should be removed before releasing.
-      registry: gcr.io/unique-caldron-775/cnx/
