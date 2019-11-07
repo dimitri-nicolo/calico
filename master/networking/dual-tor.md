@@ -243,9 +243,8 @@ future pods.
 
 #### Configure {{site.prodname}} to peer with ToR routers
 
-Now, in principle, you should [configure BGPPeer resources](bgp) to tell each
-{{site.prodname}} node to peer with the ToR routers for its rack, with the following field
-settings.
+Configure each {{site.prodname}} node to peer with the ToR routers using the BGPPeer
+resource.  The following settings are recommended for dual ToR configurations.
 
 -  `sourceAddress: None` to allow Linux to choose different interface-specific source
    addresses for the BGP sessions to the two ToRs.
