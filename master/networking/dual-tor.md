@@ -395,14 +395,7 @@ Once BGPPeer resources have been configured, you should [disable the full node-t
 mesh](bgp#disabling-the-full-node-to-node-bgp-mesh):
 
 ```
-calicoctl apply -f - <<EOF
-apiVersion: projectcalico.org/v3
-kind: BGPConfiguration
-metadata:
-  name: default
-spec:
-  nodeToNodeMeshEnabled: false
-EOF
+calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'
 ```
 
 #### Configure your ToR routers and infrastructure
