@@ -102,16 +102,16 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr), because:
 Here are the steps you will need to successfully deploy a Kubernetes cluster with
 {{site.prodname}} across multiple racks with dual plane connectivity:
 
-- [Decide your IP addressing scheme](#decide-your-ip-addressing-scheme)
-- [Decide your ECMP usage policy](#decide-your-ecmp-usage-policy)
-- [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
-- [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
-- [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-tigera-secure-ee)
-- [Configure {{site.prodname}} to peer with ToR routers](#configure-tigera-secure-ee-to-peer-with-tor-routers)
-- [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
-- [Complete {{site.prodname}} installation](#complete-tigera-secure-ee-installation)
-- [Configure {{site.prodname}} to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
-- [Verify the deployment](#verify-the-deployment)
+1.  [Decide your IP addressing scheme](#decide-your-ip-addressing-scheme)
+1.  [Decide your ECMP usage policy](#decide-your-ecmp-usage-policy)
+1.  [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
+1.  [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
+1.  [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-tigera-secure-ee)
+1.  [Configure {{site.prodname}} to peer with ToR routers](#configure-tigera-secure-ee-to-peer-with-tor-routers)
+1.  [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
+1.  [Complete {{site.prodname}} installation](#complete-tigera-secure-ee-installation)
+1.  [Configure {{site.prodname}} to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
+1.  [Verify the deployment](#verify-the-deployment)
 
 The precise details will likely differ for any specific deployment.  For example, you may
 use a Kubernetes installer that insists on booting and provisioning all the nodes as part
