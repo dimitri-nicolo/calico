@@ -1,6 +1,5 @@
 ---
 title: Prometheus statistics
-redirect_from: latest/reference/felix/prometheus
 canonical_url: https://docs.tigera.io/v2.3/reference/felix/prometheus
 ---
 

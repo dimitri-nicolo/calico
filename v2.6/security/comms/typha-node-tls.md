@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for Typha and Node
+redirect_from: latest/security/comms/typha-node-tls
 ---
 
 ### Big picture

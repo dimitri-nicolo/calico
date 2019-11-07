@@ -1,6 +1,5 @@
 ---
 title: Configuring a node IP address and subnet
-redirect_from: latest/networking/node
 canonical_url: 'https://docs.tigera.io/v2.3/usage/configuration/node'
 ---
 

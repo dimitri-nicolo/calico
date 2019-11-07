@@ -1,5 +1,6 @@
 ---
 title: Trace and block suspicious domains
+redirect_from: latest/security/threat-detection-and-prevention/suspicious-domains
 canonical_url: https://docs.tigera.io/master/security/threat-detection-and-prevention/suspicious-domains
 ---
 

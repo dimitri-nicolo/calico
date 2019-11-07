@@ -1,6 +1,5 @@
 ---
 title: Configuring BGP peers
-redirect_from: latest/networking/bgp
 canonical_url: 'https://docs.tigera.io/v2.3/usage/configuration/bgp'
 ---
 

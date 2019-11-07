@@ -1,5 +1,6 @@
 ---
 title: Policy metrics in Prometheus
+redirect_from: latest/reference/other-install-methods/security/metrics/metrics
 canonical_url: https://docs.tigera.io/v2.3/usage/metrics/metrics
 ---
 

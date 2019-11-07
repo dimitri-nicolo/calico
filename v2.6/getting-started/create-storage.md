@@ -1,5 +1,6 @@
 ---
 title: Configure storage for logs and reports
+redirect_from: latest/getting-started/create-storage
 ---
 
 ### Big picture

@@ -1,5 +1,6 @@
 ---
 title: Installing Tigera Secure EE on Google GKE
+redirect_from: latest/reference/other-install-methods/kubernetes/installation/gke
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on Azure AKS
-redirect_from: latest/getting-started/kubernetes/installation/aks
 canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/aks
 ---
 

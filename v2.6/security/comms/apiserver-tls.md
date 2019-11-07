@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for the API server
+redirect_from: latest/security/comms/apiserver-tls
 ---
 
 ### Big picture

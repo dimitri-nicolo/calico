@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on Docker Enterprise
-redirect_from: latest/getting-started/kubernetes/installation/docker-ee
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
 ---
 

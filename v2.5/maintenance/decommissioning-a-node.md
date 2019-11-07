@@ -1,6 +1,5 @@
 ---
 title: Decommissioning a node
-redirect_from: latest/maintenance/decommissioning-a-node
 canonical_url: 'https://docs.tigera.io/v2.3/usage/decommissioning-a-node'
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Log in to Tigera Secure EE Manager UI
+redirect_from: latest/getting-started/create-user-login
 ---
 
 ### Big picture

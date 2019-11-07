@@ -1,6 +1,5 @@
 ---
 title: CIS benchmark report
-redirect_from: latest/reference/compliance-reports/cis-benchmark
 ---
 
 To create a CIS benchmark report, create a `GlobalReport` with the `reportType` set to `cis-benchmark`.

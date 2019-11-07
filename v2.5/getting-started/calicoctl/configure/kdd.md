@@ -1,6 +1,5 @@
 ---
 title: Configuring calicoctl to connect to the Kubernetes API datastore
-redirect_from: latest/getting-started/calicoctl/configure/kdd
 canonical_url: 'https://docs.tigera.io/v2.3/usage/calicoctl/configure/kdd'
 ---
 

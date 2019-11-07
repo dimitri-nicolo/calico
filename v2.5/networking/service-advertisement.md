@@ -1,6 +1,5 @@
 ---
 title: Advertising Kubernetes services over BGP
-redirect_from: latest/networking/service-advertisement
 canonical_url: 'https://docs.tigera.io/v2.3/usage/service-advertisement'
 ---
 

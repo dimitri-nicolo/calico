@@ -1,5 +1,6 @@
 ---
 title: Installing from a private registry
+redirect_from: latest/getting-started/private-registry
 ---
 
 {% assign operator = site.data.versions[page.version].first.tigera-operator %}

@@ -1,5 +1,6 @@
 ---
 title: Configure MTU to maximize network performance
+redirect_from: latest/networking/mtu
 canonical_url: 'https://docs.tigera.io/v2.6/networking/mtu'
 ---
 

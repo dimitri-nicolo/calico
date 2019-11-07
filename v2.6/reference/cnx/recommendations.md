@@ -1,5 +1,6 @@
 ---
 title: Deploying Tigera Secure EE Manager
+redirect_from: latest/reference/cnx/recommendations
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/recommendations
 ---
 

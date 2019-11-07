@@ -1,5 +1,6 @@
 ---
 title: Alerts
+redirect_from: latest/security/threat-detection-and-prevention/alerts
 canonical_url: https://docs.tigera.io/v2.6/security/threat-detection-and-prevention/alerts
 ---
 

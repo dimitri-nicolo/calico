@@ -1,5 +1,6 @@
 ---
 title: Staged Kubernetes Network policy
+redirect_from: latest/reference/resources/stagedkubernetesnetworkpolicy
 ---
 
 A staged kubernetes network policy resource (`StagedKubernetesNetworkPolicy`) represents a staged version

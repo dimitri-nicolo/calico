@@ -1,6 +1,5 @@
 ---
 title: Frequently asked questions
-redirect_from: latest/reference/faq
 canonical_url: https://docs.tigera.io/v2.3/usage/troubleshooting/faq
 ---
 

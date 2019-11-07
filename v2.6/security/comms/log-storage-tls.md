@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for log storage
+redirect_from: latest/security/comms/log-storage-tls
 ---
 
 ### Big picture

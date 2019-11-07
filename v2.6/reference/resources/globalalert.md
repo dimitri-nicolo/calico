@@ -1,5 +1,6 @@
 ---
 title: Global Alert
+redirect_from: latest/reference/resources/globalalert
 ---
 
 A global alert resource represents a query that is periodically run

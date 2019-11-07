@@ -1,6 +1,5 @@
 ---
 title: Configuring Dikastes
-redirect_from: latest/reference/dikastes/configuration
 canonical_url: https://docs.tigera.io/v2.3/reference/dikastes/configuration
 ---
 

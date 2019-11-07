@@ -1,5 +1,6 @@
 ---
 title: Trace and block suspicious IPs
+redirect_from: latest/security/threat-detection-and-prevention/suspicious-IPs
 canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/suspicious-IPs
 ---
 

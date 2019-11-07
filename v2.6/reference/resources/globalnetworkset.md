@@ -1,5 +1,6 @@
 ---
 title: Global network set
+redirect_from: latest/reference/resources/globalnetworkset
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globalnetworkset
 ---
 

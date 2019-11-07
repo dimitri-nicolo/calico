@@ -1,5 +1,6 @@
 ---
 title: System requirements
+redirect_from: latest/getting-started/kubernetes/requirements
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/requirements
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Summary
+redirect_from: latest/reference/host-endpoints/summary
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/summary'
 ---
 

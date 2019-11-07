@@ -1,6 +1,5 @@
 ---
 title: Creating users and roles
-redirect_from: latest/reference/etcd-rbac/users-and-roles
 canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/users-and-roles'
 ---
 
