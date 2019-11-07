@@ -21,7 +21,7 @@ CORE_MAPPED_IMAGES = {'cnxApiserver': 'apiserver',
                       'typha': 'typha',
                       'kubeControllers': 'kubeControllers',
                       'cloudControllers': 'cloudControllers'}
-                      
+
 VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
                           'cloudControllers': 'cloud-controllers',
                           'kubeControllers': 'cnx-kube-controllers',
@@ -42,6 +42,19 @@ EE_MAPPED_IMAGES = {'intrusion-detection-controller': 'intrusionDetectionControl
                     'compliance-snapshotter': 'complianceSnapshotter',
                     'compliance-reporter': 'complianceReporter',
                     'compliance-benchmarker': 'complianceBenchmarker'}
+
+# This should by synced with other similar ones spread across various files.
+EXCLUDED_IMAGES_BY_VER = {
+    'v2.3': ['compliance-snapshotter',
+             'intrusion-detection-controller',
+             'compliance-server',
+             'compliance-controller',
+             'compliance-reporter',
+             'compliance-benchmarker',
+             'kibana'],
+    'v2.4': ['compliance-benchmarker'],
+    'v2.6': ['cnx-manager-proxy'],
+}
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
@@ -105,19 +118,31 @@ def test_ee_chart_values_updated():
     values = tar.extractfile('tigera-secure-ee/values.yaml').read()
     core_values = yaml.safe_load(values)
 
-    # compare expected/actual imageNames:tag in the chart values.yaml
+    # Load all the image definitions and mappings from <repo-root>/_config.yaml
+    config_images = dict()
     with open('%s/../_config.yml' % PATH) as f:
         config_images = yaml.safe_load(f)
-        for config_image in config_images['imageNames']:
-            if config_image in EE_MAPPED_IMAGES:
-                if config_image in VERSIONS_MAPPED_IMAGES:
-                    expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[config_image]]['version']
-                else:
-                    expected_ver = versions[RELEASE_STREAM][0]['components'][config_image]['version']
+    assert len(config_images) != 0
 
-                expected_image = 'quay.io/' + config_images['imageNames'][config_image] + ':%s' % expected_ver
-                image_path = core_values[EE_MAPPED_IMAGES[config_image]]['image']
-                image_tag = core_values[EE_MAPPED_IMAGES[config_image]]['tag']
+    images_to_exclude = dict()
+    if RELEASE_STREAM in EXCLUDED_IMAGES_BY_VER:
+        images_to_exclude = EXCLUDED_IMAGES_BY_VER[RELEASE_STREAM]
 
-                print expected_image
-                assert expected_image == image_path + ':' + image_tag
+    # compare expected/actual imageNames:tag in the chart values.yaml
+    for config_image in config_images['imageNames']:
+        if config_image in EE_MAPPED_IMAGES:
+            if config_image in VERSIONS_MAPPED_IMAGES:
+                expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[config_image]]['version']
+            else:
+                expected_ver = versions[RELEASE_STREAM][0]['components'][config_image]['version']
+
+            image_name = config_images['imageNames'][config_image]
+            if image_name.split("/")[1] in images_to_exclude:
+                continue
+            print 'Checking {}'.format(image_name)
+            expected_image = 'quay.io/' + image_name + ':%s' % expected_ver
+            image_path = core_values[EE_MAPPED_IMAGES[config_image]]['image']
+            image_tag = core_values[EE_MAPPED_IMAGES[config_image]]['tag']
+
+            print expected_image
+            assert expected_image == image_path + ':' + image_tag
