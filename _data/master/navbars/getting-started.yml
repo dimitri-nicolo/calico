@@ -110,5 +110,5 @@ toc:
   path: /getting-started/create-storage
 - title: Configure access to the manager UI
   path: /getting-started/access-the-manager
-- title: Login in to the manager UI
+- title: Log in to the manager UI
   path: /getting-started/create-user-login
