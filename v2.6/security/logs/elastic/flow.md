@@ -32,7 +32,7 @@ This information should assist you in constructing queries.
 | `packets_in`          | long              | Number of incoming packets since the last export. |
 | `packets_out`         | long              | Number of outgoing packets since the last export. |
 | `proto`               | keyword           | Protocol. |
-| `policies`            | array of keywords | The policy or policies that allowed or denied this flow. |
+| `policies`            | array of keywords | The policy or policies that allowed or denied this flow. Staged policy names are prefixed with "staged:". |
 | `source_ip`           | ip                | The IP address of the source pod. A hyphen indicates aggregation. |
 | `source_name`         | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the source pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated.</p>{:/} |
 | `source_name_aggr`    | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The aggregated name of the source pod.<br>&#x25cf;&nbsp;<code>pvt</code>: the endpoint is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet.</p>{:/} |
