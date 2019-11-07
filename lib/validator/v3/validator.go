@@ -1270,12 +1270,6 @@ func validateNetworkPolicySpec(spec *api.NetworkPolicySpec, structLevel validato
 			}
 		}
 	}
-
-	if spec.Selector == "" && spec.ServiceAccountSelector == "" {
-		//At least one of such fields should be specified
-		structLevel.ReportError(reflect.ValueOf(spec),
-			"NetworkPolicySpec", "", reason("One of following fields should be specified: Selector, ServiceAccountSelector"), "")
-	}
 }
 
 func validateNetworkPolicy(structLevel validator.StructLevel) {
@@ -1341,6 +1335,7 @@ func validateStagedNetworkPolicy(structLevel validator.StructLevel) {
 	validateObjectMetaLabels(structLevel, staged.Labels)
 
 	_, enforced := api.ConvertStagedPolicyToEnforced(&staged)
+
 	if staged.Spec.StagedAction == api.StagedActionDelete {
 		empty := api.NetworkPolicySpec{}
 		empty.Tier = enforced.Spec.Tier
@@ -1432,13 +1427,6 @@ func validateGlobalNetworkPolicySpec(spec *api.GlobalNetworkPolicySpec, structLe
 			}
 		}
 	}
-
-	if spec.Selector == "" && spec.NamespaceSelector == "" && spec.ServiceAccountSelector == "" {
-		//At least one of such fields should be specified
-		structLevel.ReportError(reflect.ValueOf(spec),
-			"GlobalNetworkPolicySpec", "", reason("One of following fields should be specified: Selector, NamespaceSelector, ServiceAccountSelector"), "")
-	}
-
 }
 
 func validateGlobalNetworkPolicy(structLevel validator.StructLevel) {
@@ -1503,6 +1491,7 @@ func validateStagedGlobalNetworkPolicy(structLevel validator.StructLevel) {
 	validateObjectMetaLabels(structLevel, staged.Labels)
 
 	_, enforced := api.ConvertStagedGlobalPolicyToEnforced(&staged)
+
 	if staged.Spec.StagedAction == api.StagedActionDelete {
 		//the network policy fields should all "zero-value" when the update type is "delete"
 		empty := api.GlobalNetworkPolicySpec{}
@@ -1548,17 +1537,7 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 	v3snp := snpKVPair.Value.(*api.StagedNetworkPolicy)
 	spec := v3snp.Spec
 
-	_, enforced := api.ConvertStagedPolicyToEnforced(v3snp)
-	validateNetworkPolicySpec(&enforced.Spec, structLevel)
-
-	//If StagedAction is Set or not set at all, then podSelector is a required field
-	//PodSelector is a required field for k8s policies, so enforcing it to be consistent
-	if spec.StagedAction == api.StagedActionSet || spec.StagedAction == "" {
-		if reflect.DeepEqual(metav1.LabelSelector{}, staged.Spec.PodSelector) {
-			structLevel.ReportError(reflect.ValueOf(spec),
-				"StagedKubernetesNetworkPolicySpec", "", reason("podSelector field is required"), "")
-		}
-	} else {
+	if spec.StagedAction == api.StagedActionDelete {
 		//the network policy fields should all "zero-value" when the update type is "delete"
 		empty := api.NewStagedKubernetesNetworkPolicy()
 		empty.Spec.StagedAction = api.StagedActionDelete
@@ -1566,6 +1545,9 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 			structLevel.ReportError(reflect.ValueOf(staged.Spec),
 				"StagedKubernetesNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
 		}
+	} else {
+		_, enforced := api.ConvertStagedPolicyToEnforced(v3snp)
+		validateNetworkPolicySpec(&enforced.Spec, structLevel)
 	}
 }
 
