@@ -149,7 +149,7 @@ openshift-install create cluster
 
 #### Create storage class
 
-{{site.prodname}} requires storage for logs and reports. Before finishing the installation, you must [create a StorageClass for {{site.prodname}}]().
+{{site.prodname}} requires storage for logs and reports. Before finishing the installation, you must [create a StorageClass for {{site.prodname}}](/{{page.version}}/getting-started/create-storage).
 
 #### Install the {{site.prodname}} license
 
