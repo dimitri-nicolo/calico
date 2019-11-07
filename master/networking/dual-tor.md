@@ -1,5 +1,5 @@
 ---
-title: Deploying a dual ToR cluster
+title: Deploy a dual ToR cluster
 ---
 
 ### Big picture
@@ -65,9 +65,9 @@ please see [this blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-tw
 Loopback IP addresses are IP addresses which are assigned to a loopback interface on the
 node.  Despite what the name might suggest, loopback IP addresses can be used for sending
 and receiving data to and from other nodes.  They help to provide redundant networking,
-because using a loopback address avoids tying traffic to a particular interface's IP
-address and, in a dual ToR setup, allows that traffic to continue flowing even if a
-particular interface goes down.
+because using a loopback address avoids tying traffic to a particular interface and, in a
+dual ToR setup, allows that traffic to continue flowing even if a particular interface
+goes down.
 
 #### BFD
 
@@ -218,11 +218,11 @@ for installing {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-star
 > reference]({{site.baseurl}}/{{page.version}}/reference/installation/api) for details.
 {: .alert .alert-info}
 
-However, when the method reaches the point of needing to configure a Tigera-specific
-resource - typically, the license key - you may see that fail.  If that happens, the
-explanation for it is that the various components of {{site.prodname}} have been scheduled
-to nodes that are split across different racks, and we don't yet have a working data path
-between pods running in different racks.
+When you reach the point of configuring a Tigera-specific resource - typically, the
+license key - you may see that fail.  If that happens, the explanation is that the various
+components of {{site.prodname}} have been scheduled to nodes that are split across
+different racks, and we don't yet have a working data path between pods running in
+different racks.
 
 > **Note**: To be more precise: at this point, we have a working data path between any
 > components that are running on the nodes with host networking - i.e. using the nodes'
@@ -283,7 +283,7 @@ settings.
    >
    > If they cannot, an effective workaround is to configure the ToRs to do "next hop
    > keep" for all routes, with "gateway direct" on the {{site.prodname}} nodes.  In
-   > effect the “gateway direct” applies a “next hop self” when needed, but not otherwise.
+   > effect the “gateway direct” applies a “next hop self” when needed, but otherwise not.
    {: .alert .alert-info}
 
 To do that, you will need to:
@@ -298,8 +298,8 @@ To do that, you will need to:
 4. Configure BGPPeer resources for the desired BGP peerings between each {{site.prodname}}
    node and its ToR routers.
 
-Your details will be deployment-specific, but here we show what that detail would be for
-our example cluster and addressing scheme, following an [AS per
+Your details will be deployment-specific, but here we show those steps for our example
+cluster and addressing scheme, following an [AS per
 rack]({{site.baseurl}}/{{page.version}}/networking/design/l3-interconnect-fabric#the-as-per-rack-model)
 model with AS 65001 for the first rack, 65002 for the second, and so on.
 
@@ -392,8 +392,7 @@ EOF
 And so on for the other racks.
 
 Once BGPPeer resources have been configured, you should [disable the full node-to-node
-mesh](bgp#disabling-the-full-node-to-node-bgp-mesh) so that the BGPPeer configuration is
-used instead:
+mesh](bgp#disabling-the-full-node-to-node-bgp-mesh):
 
 ```
 calicoctl apply -f - <<EOF
@@ -408,10 +407,10 @@ EOF
 
 #### Configure your ToR routers and infrastructure
 
-You obviously need to configure your ToR routers to accept all the BGP peerings from
-{{site.prodname}} nodes, and to configure whatever is needed to propagate routes between
-the ToR routers in different racks.  In addition we recommend consideration of the
-following points.
+You should configure your ToR routers to accept all the BGP peerings from
+{{site.prodname}} nodes, to reflect routes between the nodes in that rack, and to
+propagate routes between the ToR routers in different racks.  In addition we recommend
+consideration of the following points.
 
 BFD should be enabled if possible on all BGP sessions - both to the {{site.prodname}}
 nodes, and between racks in your core infrastructure - so that a break in connectivity
@@ -425,8 +424,8 @@ break in one of the connectivity planes.
 
 #### Complete {{site.prodname}} installation
 
-If you didn't complete the {{site.prodname}} installation above, now return to that and
-retry the step that failed.  It should now succeed.  Then do the remaining steps of the
+If you didn't complete the {{site.prodname}} installation above, return to that and retry
+the step that failed.  It should now succeed.  Then do any remaining steps of the
 installation.
 
 #### Configure {{site.prodname}} to advertise loopback addresses
@@ -461,8 +460,8 @@ EOF
 
 What happens then is:
 
--  The {{site.prodname}} BIRD daemon that runs on each node advertises a /32 route for
-   that node's loopback address.
+-  {{site.prodname}}, on each node, advertises a /32 route for that node's loopback
+   address.
 
 -  That /32 route is propagated dynamically through the BGP network, according as the dual
    connectivity planes are or are not working.
