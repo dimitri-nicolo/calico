@@ -29,14 +29,17 @@ EXCLUDED_IMAGES = ['calico-upgrade',
 
 # _config.yml contains latest images, need to exclude newer
 # images from old releases
-EXCLUDED_IMAGES_BY_VER = {'v2.3': ['compliance-snapshotter',
-                      'intrusion-detection-controller',
-                      'compliance-server',
-                      'compliance-controller',
-                      'compliance-reporter',
-                      'compliance-benchmarker',
-                      'kibana'],
-                      'v2.4': ['compliance-benchmarker']}
+EXCLUDED_IMAGES_BY_VER = {
+    'v2.3': ['compliance-snapshotter',
+             'intrusion-detection-controller',
+             'compliance-server',
+             'compliance-controller',
+             'compliance-reporter',
+             'compliance-benchmarker',
+             'kibana'],
+    'v2.4': ['compliance-benchmarker'],
+    'v2.6': ['cnx-manager-proxy'],
+}
 
 # _config.yml and _data/versions.yml have diff names
 VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',

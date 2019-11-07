@@ -10,7 +10,7 @@ REGISTRY = tests.REGISTRY
 
 
 def test_image_registry_updated():
-    req = requests.get("%s/%s/getting-started/kubernetes/installation/calico" % (DOCS_URL, RELEASE_STREAM))
+    req = requests.get("%s/%s/getting-started/private-registry" % (DOCS_URL, RELEASE_STREAM))
     assert req.status_code == 200
 
     page = BeautifulSoup(req.content, features="html.parser").find("p", text="Use the following commands to pull the required Tigera Secure EE images.").find_next('code')
