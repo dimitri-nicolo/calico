@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE on OpenShift v4.x
+title: Installing Calico Enterprise on OpenShift v4.x
 redirect_from: latest/getting-started/openshift/installation/index
 ---
 

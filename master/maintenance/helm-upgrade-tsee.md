@@ -1,5 +1,5 @@
 ---
-title: Upgrading Tigera Secure EE from an earlier release using Helm
+title: Upgrading Calico Enterprise from an earlier release using Helm
 canonical_url: https://docs.tigera.io/master/maintenance/helm-upgrade-tsee
 ---
 
@@ -39,16 +39,16 @@ steps to upgrade.
    Your output should look like the following:
    ```bash
    NAME                    REVISION        UPDATED                         STATUS          CHART                  APP VERSION     NAMESPACE
-   coiled-bat              1               Fri Jul 19 13:44:37 2019        DEPLOYED        tigera-secure-ee-core-                 default
-   fashionable-anteater    1               Fri Jul 19 14:28:50 2019        DEPLOYED        tigera-secure-ee-
+   coiled-bat              1               Fri Jul 19 13:44:37 2019        DEPLOYED        calico-enterprise-ee-core-                 default
+   fashionable-anteater    1               Fri Jul 19 14:28:50 2019        DEPLOYED        calico-enterprise-ee-
    ```
 
-1. Run the Helm upgrade command for `tigera-secure-ee-core`
+1. Run the Helm upgrade command for `calico-enterprise-ee-core`
    ```bash
-   helm upgrade <helm installation name for tigera-secure-ee-core> tigera-secure-ee-core-{% include chart_version_name %}.tgz
+   helm upgrade <helm installation name for calico-enterprise-ee-core> calico-enterprise-ee-core-{% include chart_version_name %}.tgz
    ```
 
-1. Run the Helm upgrade command for `tigera-secure-ee`
+1. Run the Helm upgrade command for `calico-enterprise-ee`
    ```bash
-   helm upgrade <helm installation name for tigera-secure-ee> tigera-secure-ee-{% include chart_version_name %}.tgz
+   helm upgrade <helm installation name for calico-enterprise-ee> calico-enterprise-ee-{% include chart_version_name %}.tgz
    ```

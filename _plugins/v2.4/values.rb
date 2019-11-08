@@ -38,7 +38,7 @@ end
 
 
 def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
-  if chart == "tigera-secure-ee"
+  if chart == "calico-enterprise-ee"
     versionsYml = <<~EOF
     runElasticsearchOperatorClusterAdmin: false
     createCustomResources: true
@@ -267,9 +267,9 @@ def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
       tag: #{versions["prometheus"]}
       scrapeTargets:
         # Node settings grant control over the Prometheus instance tasked with
-        # scraping Tigera Secure EE node.
+        # scraping Calico Enterprise node.
         node:
-          # Configuration for the service which fronts the Prometheus instance scraping Tigera Secure EE node.
+          # Configuration for the service which fronts the Prometheus instance scraping Calico Enterprise node.
           service:
             type: NodePort
             nodePort:

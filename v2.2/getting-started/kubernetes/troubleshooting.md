@@ -1,5 +1,5 @@
 ---
-title: Troubleshooting Tigera Secure EE for Kubernetes
+title: Troubleshooting Calico Enterprise for Kubernetes
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/troubleshooting
 ---
 

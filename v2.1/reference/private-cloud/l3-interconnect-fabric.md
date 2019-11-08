@@ -1,5 +1,5 @@
 ---
-title: IP Interconnect Fabrics in Tigera Secure EE
+title: IP Interconnect Fabrics in Calico Enterprise
 canonical_url: https://docs.tigera.io/v2.3/reference/private-cloud/l3-interconnect-fabric
 lead_text: 'Where large-scale IP networks and hardware collide'
 ---

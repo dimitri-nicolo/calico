@@ -1,5 +1,5 @@
 ---
-title: Tigera Secure EE API endpoints
+title: Calico Enterprise API endpoints
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/apidocs
 layout: swagger
 ---

@@ -1,5 +1,5 @@
 ---
-title: Upgrading Tigera Secure EE from an earlier release
+title: Upgrading Calico Enterprise from an earlier release
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee
 ---
 

@@ -1,7 +1,7 @@
-# This manifest adds the additional Tigera Secure EE Manager components to a cluster
-# that has already had the Calico part of Tigera Secure EE deployed.
+# This manifest adds the additional Calico Enterprise Manager components to a cluster
+# that has already had the Calico part of Calico Enterprise deployed.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
-# - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
+# - This manifest makes the Calico Enterprise Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
 
@@ -68,7 +68,7 @@ data:
 ---
 
 {{- if eq .Values.manager.service.type "NodePort" }}
-# Optionally update this Service to change how Tigera Secure EE Manager is accessed.
+# Optionally update this Service to change how Calico Enterprise Manager is accessed.
 # If using Google login, the URL for the web server must be configured
 # as a redirect URI in the Google project.  If the web server will be
 # accessed at https://<host>:<port>, add https://<host>:<port>/login/oidc/callback
@@ -186,7 +186,7 @@ spec:
       containers:
       - name: cnx-manager
         image: {{.Values.manager.image}}:{{.Values.manager.tag}}
-{{ tuple .Values.manager.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
+{{ tuple .Values.manager.resources | include "calico-enterprise-ee.resourceLimits" | indent 8 -}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -268,7 +268,7 @@ spec:
           periodSeconds: 10
       - name: cnx-manager-proxy
         image: {{.Values.managerProxy.image}}:{{.Values.managerProxy.tag}}
-{{ tuple .Values.managerProxy.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
+{{ tuple .Values.managerProxy.resources | include "calico-enterprise-ee.resourceLimits" | indent 8 -}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -310,7 +310,7 @@ spec:
           periodSeconds: 10
       - name: tigera-es-proxy
         image: {{.Values.esProxy.image}}:{{.Values.esProxy.tag}}
-{{ tuple .Values.esProxy.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
+{{ tuple .Values.esProxy.resources | include "calico-enterprise-ee.resourceLimits" | indent 8 -}}
         env:
           - name: LOG_LEVEL
             value: "info"
@@ -460,7 +460,7 @@ rules:
 
 ---
 
-# Allow users to access Tigera Secure EE Manager.
+# Allow users to access Calico Enterprise Manager.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -476,11 +476,11 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      # This policy allows access to Tigera Secure EE Manager from anywhere: narrow it down if
+      # This policy allows access to Calico Enterprise Manager from anywhere: narrow it down if
       # only certain subnets should be allowed.
       nets: ["0.0.0.0/0"]
     destination:
-      # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
+      # By default, Calico Enterprise Manager is accessed over https. Update this if needed.
       ports: [9443]
 ---
 

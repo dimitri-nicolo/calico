@@ -1,5 +1,5 @@
 ---
-title: Quickstart for Tigera Secure EE on Kubernetes
+title: Quickstart for Calico Enterprise on Kubernetes
 canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/
 ---
 
@@ -15,9 +15,9 @@ You can use this quickstart to quickly and easily try {{side.prodname}} features
 
 - [Host requirements](#host-requirements)
 - [Install Kubernetes](#install-kubernetes)
-- [Install {{site.prodname}}](#install-tigera-secure-ee)
-- [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
-- [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+- [Install {{site.prodname}}](#install-calico-enterprise-ee)
+- [Install the {{site.prodname}} license](#install-the-calico-enterprise-ee-license)
+- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-ee-with-network-policy)
 
 #### Host requirements
 

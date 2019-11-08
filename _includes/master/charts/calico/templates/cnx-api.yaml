@@ -289,7 +289,7 @@ spec:
 
 ---
 
-# Audit policy for the Tigera Secure EE API Server.
+# Audit policy for the Calico Enterprise API Server.
 apiVersion: v1
 kind: ConfigMap
 metadata:

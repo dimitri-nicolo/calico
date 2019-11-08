@@ -1,5 +1,5 @@
 ---
-title: Upgrading Tigera Secure EE from an earlier release on OpenShift
+title: Upgrading Calico Enterprise from an earlier release on OpenShift
 canonical_url: https://docs.tigera.io/v2.5/maintenance/openshift-upgrade-tsee
 ---
 

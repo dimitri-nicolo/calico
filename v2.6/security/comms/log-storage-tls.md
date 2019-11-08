@@ -21,7 +21,7 @@ This how-to guide uses the following features:
 
 By default, the {{site.prodname}} log storage uses self-signed certificates on connections. To provide TLS certificates,
 get the certificate and key pair for the {{site.prodname}} log storage using any X.509-compatible tool or from your organization's 
-Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `tigera-secure-es-http.tigera-elasticsearch.svc`.
+Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `calico-enterprise-elasticsearch-cert.tigera-elasticsearch.svc`.
 
 ### How to
 
@@ -32,15 +32,15 @@ before creating the LogStorage resource. To specify certificates for use by the 
 using the following command:
 
 ```bash
-kubectl create secret generic tigera-secure-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file>
+kubectl create secret generic calico-enterprise-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file>
 ```
 
 To update existing certificates, run the following command:
 
 ```bash
-kubectl create secret generic tigera-secure-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
+kubectl create secret generic calico-enterprise-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
 ```
 
 > **Note**: If the {{site.prodname}} log storage already exists, you must manually delete the log storage pods one by one
->after updating the secret. These pods will be in the `tigera-elasticsearch` namespace and be prefixed with `tigera-secure`.
+>after updating the secret. These pods will be in the `tigera-elasticsearch` namespace and be prefixed with `calico-enterprise`.
 >The other {{site.prodname}} components will be unable to communicate with the log storage until the pods are restarted.

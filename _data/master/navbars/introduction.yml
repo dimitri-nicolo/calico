@@ -2,5 +2,5 @@ bigheader: "Introduction"
 path: /introduction
 order: 0
 toc:
-- title: About Tigera Secure EE
+- title: About Calico Enterprise
   path: /introduction/

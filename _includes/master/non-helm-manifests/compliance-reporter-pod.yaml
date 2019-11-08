@@ -41,7 +41,7 @@ spec:
     - name: ELASTIC_SCHEME
       value: https
     - name: ELASTIC_HOST
-      value: tigera-secure-es-http.tigera-elasticsearch.svc
+      value: calico-enterprise-es-http.tigera-elasticsearch.svc
     - name: ELASTIC_PORT
       value: "9200"
     - name: ELASTIC_USER
@@ -83,7 +83,7 @@ spec:
       items:
       - key: tls.crt
         path: ca.pem
-      secretName: tigera-secure-es-http-certs-public
+      secretName: calico-enterprise-es-http-certs-public
   - name: tigera-compliance-reporter-token
     secret:
       defaultMode: 420

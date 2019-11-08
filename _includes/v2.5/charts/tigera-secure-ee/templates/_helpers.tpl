@@ -3,7 +3,7 @@ calico-node
 {{- end -}}
 
 
-{{- define "tigera-secure-ee.manager.tls" -}}
+{{- define "calico-enterprise-ee.manager.tls" -}}
 {{- if or .Values.manager.tls.cert .Values.manager.tls.key -}}
 {{- $_ := required "Must specify both or neither of ee_manager_cert or ee_manager_key" .Values.manager.tls.cert -}}
 {{- $_ := required "Must specify both or neither of ee_manager_cert or ee_manager_key" .Values.manager.tls.key -}}
@@ -22,7 +22,7 @@ key: {{ $ca.Key | b64enc }}
 {{- end }}
 
 
-{{- define "tigera-secure-ee.elasticsearch.mode" -}}
+{{- define "calico-enterprise-ee.elasticsearch.mode" -}}
 {{- if or (or (or (or (or (or (or (or (or (or (or (or .Values.elasticsearch.host) .Values.elasticsearch.tls.ca) .Values.elasticsearch.fluentd.password) .Values.elasticsearch.manager.password) .Values.elasticsearch.curator.password) .Values.elasticsearch.compliance.controller.password) .Values.elasticsearch.compliance.reporter.password) .Values.elasticsearch.compliance.snapshotter.password) .Values.elasticsearch.compliance.server.password) .Values.elasticsearch.compliance.benchmarker.password) .Values.elasticsearch.intrusionDetection.password) .Values.elasticsearch.elasticInstaller.password -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.host -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.tls.ca -}}
@@ -49,7 +49,7 @@ operator
 {{- end -}}
 
 
-{{- define "tigera-secure-ee.resourceLimits" -}}
+{{- define "calico-enterprise-ee.resourceLimits" -}}
 {{- $component := index . 0 -}}
 {{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
 resources:
@@ -74,7 +74,7 @@ resources:
 {{ end }}
 {{- end -}}
 
-{{- define "tigera-secure-ee.kibanaURL" }}
+{{- define "calico-enterprise-ee.kibanaURL" }}
 {{- if .Values.manager.kibanaURL }}
   {{- .Values.manager.kibanaURL }}
 {{- else if .Values.kibana.host -}}

@@ -1,4 +1,4 @@
-{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
+{{- $elasticMode := include "calico-enterprise-ee.elasticsearch.mode" . }}
 ---
 
 # This ConfigMap contains customizations for Elasticsearch and Curator.
@@ -455,7 +455,7 @@ spec:
       containers:
         - name: fluentd
           image: {{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
-{{ tuple .Values.fluentd.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
+{{ tuple .Values.fluentd.resources | include "calico-enterprise-ee.resourceLimits" | indent 10 -}}
           env:
             - name: FLUENT_UID
               value: "0"
@@ -749,7 +749,7 @@ spec:
           containers:
             - name: tigera-es-curator
               image: {{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
-{{ tuple .Values.esCurator.resources | include "tigera-secure-ee.resourceLimits" | indent 14 -}}
+{{ tuple .Values.esCurator.resources | include "calico-enterprise-ee.resourceLimits" | indent 14 -}}
               env:
                 - name: ELASTIC_INDEX_SUFFIX
                   valueFrom:
@@ -892,7 +892,7 @@ spec:
       containers:
       - name: install
         image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
-{{ tuple .Values.elasticTseeInstaller.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
+{{ tuple .Values.elasticTseeInstaller.resources | include "calico-enterprise-ee.resourceLimits" | indent 8 -}}
         env:
 {{- if eq $elasticMode "external" }}
           - name: USER

@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE on OpenShift
+title: Installing Calico Enterprise on OpenShift
 ---
 
 {% include {{page.version}}/install-upgrade-openshift.md %}

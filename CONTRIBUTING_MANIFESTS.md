@@ -67,15 +67,15 @@ There are two reasons:
 
 ### Choosing between helm charts
 
-We've split Tigera Secure EE into two helm charts:
+We've split Calico Enterprise into two helm charts:
 
-- tigera-secure-ee-core
-- tigera-secure-ee
+- calico-enterprise-ee-core
+- calico-enterprise-ee
 
-By default, the helm plugin renders `tigera-secure-ee-core` (aka `calico`). To render the other chart, pass `tigera-secure-ee` as the first arg in the helm includer (before any `--execute`'s):
+By default, the helm plugin renders `calico-enterprise-ee-core` (aka `calico`). To render the other chart, pass `calico-enterprise-ee` as the first arg in the helm includer (before any `--execute`'s):
 
 ```
-{% helm tigera-secure-ee --execute templates/manager.yaml %}
+{% helm calico-enterprise-ee --execute templates/manager.yaml %}
 ping: pong
 {% endhelm %}
 ```
@@ -91,7 +91,7 @@ The helm chart is "smart" when it comes to the elasticsearch connection:
 It's a PITA to specify all credentials on every invocations when rendering the BYO manifests:
 
 ```yaml
-{% helm tigera-secure-ee %}
+{% helm calico-enterprise-ee %}
 elasticsearch:
   host: <>
   tls:
@@ -123,7 +123,7 @@ elasticsearch:
 So we created a special `secure-es` flag which instructs `helm.rb` to pass that^ to helm:
 
 ```
-{% helm tigera-secure-ee secure-es %}
+{% helm calico-enterprise-ee secure-es %}
 createCustomResources: false
 {% endhelm %}
 ```
@@ -136,14 +136,14 @@ Much simpler!
 
 To add a new resource, ask yourself if there's an existing rendered manifest this belongs in. The following information explains how dependencies are handled in the install procedure and should help you to identify which manifest to add it to:
 
-[chart] charts/tigera-secure-ee-core:
+[chart] charts/calico-enterprise-ee-core:
 
 - calico.yaml
   - gets nodes "ready" by installing networking
   - installs cnx-apiserver (for application of Calico resources via kubectl)
   - creates CRDs
 
-[chart] charts/tigera-secure-ee:
+[chart] charts/calico-enterprise-ee:
 
 1. operator.yaml
    - installs 3rd party CRDs

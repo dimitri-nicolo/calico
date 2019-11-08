@@ -1,6 +1,5 @@
-{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
+{{- $elasticMode := include "calico-enterprise.elasticsearch.mode" . }}
 {{- $kibanaBasePath := "tigera-kibana" }}
-
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:

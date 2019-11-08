@@ -33,7 +33,7 @@ There are many different types of threat intelligence feeds (community-curated, 
 Privileges to manage GlobalThreatFeed and GlobalNetworkPolicy.
 
 #### Recommended
-We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Tigera Secure aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**. 
+We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Calico Enterprise aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**. 
 
 ### How to
 

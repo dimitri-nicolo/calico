@@ -1,5 +1,5 @@
 ---
-title: Tigera Secure EE System Requirements
+title: Calico Enterprise System Requirements
 canonical_url: https://docs.tigera.io/v2.3/reference/requirements
 ---
 

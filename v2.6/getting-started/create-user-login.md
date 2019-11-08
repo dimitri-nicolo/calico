@@ -1,5 +1,5 @@
 ---
-title: Log in to Tigera Secure EE Manager UI
+title: Log in to Calico Enterprise Manager UI
 redirect_from: latest/getting-started/create-user-login
 ---
 
@@ -35,7 +35,7 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 
 ### How to
 
-- [Configure the Tigera Secure EE authentication method](#configure-the-tigera-secure-ee-authentication-method)
+- [Configure the Calico Enterprise authentication method](#configure-the-calico-enterprise-ee-authentication-method)
 - [Create a user and login using token-based authentication](#create-a-user-and-login-using-token-based-authentication)
 - [Create a user and login using OIDC authentication](#create-a-user-and-login-using-oidc-authentication)
 - [Create a user and login using OIDC authentication with prepopulated configuration](#create-a-user-and-login-using-oidc-authentication-with-prepopulated-configuration)
@@ -44,9 +44,9 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 
 > Note: For OpenShift, replace `kubectl` in the commands below with `oc`.
 
-#### Configure the Tigera Secure EE authentication method
+#### Configure the Calico Enterprise authentication method
 
-The {{site.prodname}} authentication method can be configured through the [Manager API resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager) named `tigera-secure`.
+The {{site.prodname}} authentication method can be configured through the [Manager API resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager) named `calico-enterprise`.
 If the authentication type is not specified, the default authentication method is `Token`.
 
 Run one of the following commands to configure authentication for {{site.prodname}}.
@@ -54,7 +54,7 @@ Run one of the following commands to configure authentication for {{site.prodnam
 **Token authentication (default)**
 
 ```bash
-kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Token"}}}'
+kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "Token"}}}'
 ```
 
 **OIDC authentication**
@@ -62,7 +62,7 @@ kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": 
 Provide your own values for `<oidc_auth_server>` and `<client_id>` and run:
 
 ```bash
-kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OIDC", "authority": "<oidc_auth_server>", "clientID": "<client_id>"}}}'
+kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "OIDC", "authority": "<oidc_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
 If you are planning to use OIDC authentication with prepopulated configuration, keep `authority` value `<oidc_auth_server>` empty.
@@ -72,13 +72,13 @@ If you are planning to use OIDC authentication with prepopulated configuration, 
 Provide your own values for `<oauth2_auth_server>` and `<client_id>` and run:
 
 ```bash
-kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
+kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
 **Basic authentication (for testing only)**
 
 ```bash
-kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
+kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
 ```
 
 #### Create a user and login using token-based authentication

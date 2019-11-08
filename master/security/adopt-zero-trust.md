@@ -152,10 +152,10 @@ If this is difficult to do from memory, you have several options.
     a. Look at service logs to see what connectivity has broken.
     b. Add rules that allow those flows and iterate until the application functions normally.
     c. Move on to the next service and repeat.
-1. Collect flow logs from a running instance of your application. Tigera Secure Enterprise Edition can be used for this purpose, or the Kiali dashboard that comes with Istio.
+1. Collect flow logs from a running instance of your application. Calico Enterprise can be used for this purpose, or the Kiali dashboard that comes with Istio.
     a. Process the flow logs to determine the set of flows.
     b. Review the logged flows and add rules for each expected flow.
-1. Use Tigera Secure Enterprise Edition for policy, and put it into logging-only mode.
+1. Use Calico Enterprise for policy, and put it into logging-only mode.
     a. In this mode “denied” connections are logged instead of dropped.
     b. Review the “denied” logs and add rules for each expected flow.
 

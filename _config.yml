@@ -11,8 +11,8 @@ plugins:
 
 url: https://docs.tigera.io
 
-prodname: Tigera Secure EE
-prodnamedash: tigera-secure-ee
+prodname: Calico Enterprise
+prodnamedash: calico-enterprise
 nodecontainer: cnx-node
 repository: projectcalico/calico
 noderunning: calico-node

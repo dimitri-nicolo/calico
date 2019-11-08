@@ -146,7 +146,7 @@ toc:
     path: /security/compliance-managed-cloud 
   - title: Configure CIS benchmark reports
     path: /security/compliance-reports-cis 
-- title: Secure Tigera Secure EE component communications
+- title: Secure Calico Enterprise component communications
   section:
   - title: Provide TLS certificates for the manager UI
     path: /security/comms/manager-tls
@@ -162,7 +162,7 @@ toc:
     path: /security/comms/typha-node-tls
   - title: Schedule components to well-known nodes
     path: /security/comms/reduce-nodes
-  - title: Secure Tigera Secure EE Prometheus endpoints
+  - title: Secure Calico Enterprise Prometheus endpoints
     path: /security/comms/secure-metrics
   - title: Secure BGP sessions
     path: /security/comms/secure-bgp

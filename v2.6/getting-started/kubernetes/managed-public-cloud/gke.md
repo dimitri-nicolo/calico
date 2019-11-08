@@ -37,9 +37,9 @@ Ensure that your GKE cluster that meets the following requirements:
 
 ### How to
 
-1. [Install {{site.prodname}}](#install-tigera-secure-ee)
-1. [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
-1. [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+1. [Install {{site.prodname}}](#install-calico-enterprise-ee)
+1. [Install the {{site.prodname}} license](#install-the-calico-enterprise-ee-license)
+1. [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-ee-with-network-policy)
 
 #### Install {{site.prodname}}
 

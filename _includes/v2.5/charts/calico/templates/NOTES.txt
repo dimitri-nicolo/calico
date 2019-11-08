@@ -1,4 +1,4 @@
-Thank you for installing Tigera Secure Enterprise Edition!
+Thank you for installing Calico Enterprise!
 
 To complete your installation, please follow the instructions here:
 

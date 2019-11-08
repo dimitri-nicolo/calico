@@ -1,5 +1,5 @@
 ---
-title: Tigera Secure EE BIRD Route Reflector container
+title: Calico Enterprise BIRD Route Reflector container
 canonical_url: https://docs.tigera.io/v2.3/usage/routereflector
 ---
 

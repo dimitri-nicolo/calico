@@ -1,5 +1,5 @@
 ---
-title: Tigera Secure EE Manager Policy Editor
+title: Calico Enterprise Manager Policy Editor
 redirect_from: latest/reference/cnx/policy-editor
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/policy-editor
 ---

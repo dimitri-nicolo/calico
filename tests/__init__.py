@@ -9,5 +9,5 @@ QUAY_API_TOKEN = os.environ.get('QUAY_API_TOKEN') or 'fake-token'
 
 # helm
 S3_BASE_URL = os.environ.get('S3_BASE_URL') or "https://s3.amazonaws.com/tigera-public/ee/charts"
-EE_CORE_URL = os.environ.get('EE_CORE_URL') or "{0}/tigera-secure-ee-core-{1}-{2}.tgz"
-EE_URL = os.environ.get('EE_URL') or "{0}/tigera-secure-ee-{1}-{2}.tgz"
+EE_CORE_URL = os.environ.get('EE_CORE_URL') or "{0}/calico-enterprise-ee-core-{1}-{2}.tgz"
+EE_URL = os.environ.get('EE_URL') or "{0}/calico-enterprise-ee-{1}-{2}.tgz"

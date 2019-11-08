@@ -1,7 +1,7 @@
 bigheader: "Introduction"
-abstract: "Background information on Tigera Secure EE"
+abstract: "Background information on Calico Enterprise"
 path: /introduction
 order: 0
 toc:
-- title: About Tigera Secure EE
+- title: About Calico Enterprise
   path: /introduction/

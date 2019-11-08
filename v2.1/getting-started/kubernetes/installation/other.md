@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE for policy (advanced)
+title: Installing Calico Enterprise for policy (advanced)
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
 ---
 

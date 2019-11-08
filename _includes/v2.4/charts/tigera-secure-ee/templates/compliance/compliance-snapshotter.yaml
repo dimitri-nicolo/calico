@@ -89,7 +89,7 @@ spec:
       containers:
         - name: compliance-snapshotter
           image: {{.Values.complianceSnapshotter.image}}:{{ .Values.complianceSnapshotter.tag }}
-{{ tuple .Values.complianceSnapshotter.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
+{{ tuple .Values.complianceSnapshotter.resources | include "calico-enterprise-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
               value: "info"

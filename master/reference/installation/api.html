@@ -13,7 +13,7 @@ The Kubernetes resources below configure {{site.prodname}} installation. Each re
 </li>
 </ul>
 <h2 id="operator.tigera.io/v1">operator.tigera.io/v1</h2>
-<p>API Schema definitions for configuring the installation of Calico and Tigera Secure EE</p>
+<p>API Schema definitions for configuring the installation of Calico and Calico Enterprise</p>
 Resource Types:
 <ul><li>
 <a href="#operator.tigera.io/v1.APIServer">APIServer</a>
@@ -35,7 +35,7 @@ Resource Types:
 <h3 id="operator.tigera.io/v1.APIServer">APIServer
 </h3>
 <p>APIServer installs the Tigera API server and related resources. At most one instance
-of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
+of this resource is supported. It must be named &ldquo;calico-enterprise&rdquo;.</p>
 <table>
 <thead>
 <tr>
@@ -110,7 +110,7 @@ APIServerStatus
 <h3 id="operator.tigera.io/v1.Compliance">Compliance
 </h3>
 <p>Compliance installs the components required for Tigera compliance reporting. At most one instance
-of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
+of this resource is supported. It must be named &ldquo;calico-enterprise&rdquo;.</p>
 <table>
 <thead>
 <tr>
@@ -184,7 +184,7 @@ ComplianceStatus
 </table>
 <h3 id="operator.tigera.io/v1.Installation">Installation
 </h3>
-<p>Installation configures an installation of Calico or Tigera Secure EE. At most one instance
+<p>Installation configures an installation of Calico or Calico Enterprise. At most one instance
 of this resource is supported. It must be named &ldquo;default&rdquo;. The Installation API installs core networking
 and network policy components, and provides general install-time configuration.</p>
 <table>
@@ -236,7 +236,7 @@ InstallationSpec
 </em>
 </td>
 <td>
-<p>Specification of the desired state for the Calico or Tigera Secure EE installation.</p>
+<p>Specification of the desired state for the Calico or Calico Enterprise installation.</p>
 <br/>
 <br/>
 <table>
@@ -265,7 +265,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Registry is the default Docker registry used for component Docker images. If specified,
-all Calico and Tigera Secure images will be pulled from this registry.</p>
+all Calico and Calico Enterprise images will be pulled from this registry.</p>
 </td>
 </tr>
 <tr>
@@ -325,7 +325,7 @@ InstallationStatus
 </em>
 </td>
 <td>
-<p>Most recently observed state for the Calico or Tigera Secure EE installation.</p>
+<p>Most recently observed state for the Calico or Calico Enterprise installation.</p>
 </td>
 </tr>
 </tbody>
@@ -333,7 +333,7 @@ InstallationStatus
 <h3 id="operator.tigera.io/v1.IntrusionDetection">IntrusionDetection
 </h3>
 <p>IntrusionDetection installs the components required for Tigera intrusion detection. At most one instance
-of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
+of this resource is supported. It must be named &ldquo;calico-enterprise&rdquo;.</p>
 <table>
 <thead>
 <tr>
@@ -408,7 +408,7 @@ IntrusionDetectionStatus
 <h3 id="operator.tigera.io/v1.LogCollector">LogCollector
 </h3>
 <p>LogCollector installs the components required for Tigera flow and DNS log collection. At most one instance
-of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;. When created, this installs fluentd on all nodes
+of this resource is supported. It must be named &ldquo;calico-enterprise&rdquo;. When created, this installs fluentd on all nodes
 configured to collect Tigera log data and export it to Tigera&rsquo;s Elasticsearch cluster as well as any additionally configured destinations.</p>
 <table>
 <thead>
@@ -512,8 +512,8 @@ LogCollectorStatus
 <h3 id="operator.tigera.io/v1.LogStorage">LogStorage
 </h3>
 <p>LogStorage installs the components required for Tigera flow and DNS log storage. At most one instance
-of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;. When created, this installs an Elasticsearch cluster for use by
-Tigera Secure.</p>
+of this resource is supported. It must be named &ldquo;calico-enterprise&rdquo;. When created, this installs an Elasticsearch cluster for use by
+Calico Enterprise.</p>
 <table>
 <thead>
 <tr>
@@ -628,8 +628,8 @@ LogStorageStatus
 </table>
 <h3 id="operator.tigera.io/v1.Manager">Manager
 </h3>
-<p>Manager installs the Tigera Secure manager graphical user interface. At most one instance
-of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
+<p>Manager installs the Calico Enterprise manager graphical user interface. At most one instance
+of this resource is supported. It must be named &ldquo;calico-enterprise&rdquo;.</p>
 <table>
 <thead>
 <tr>
@@ -679,7 +679,7 @@ ManagerSpec
 </em>
 </td>
 <td>
-<p>Specification of the desired state for the Tigera Secure EE manager.</p>
+<p>Specification of the desired state for the Calico Enterprise manager.</p>
 <br/>
 <br/>
 <table>
@@ -694,7 +694,7 @@ Auth
 </td>
 <td>
 <em>(Optional)</em>
-<p>Auth defines the authentication strategy for the Tigera Secure manager GUI.</p>
+<p>Auth defines the authentication strategy for the Calico Enterprise manager GUI.</p>
 </td>
 </tr>
 </table>
@@ -710,14 +710,14 @@ ManagerStatus
 </em>
 </td>
 <td>
-<p>Most recently observed state for the Tigera Secure EE manager.</p>
+<p>Most recently observed state for the Calico Enterprise manager.</p>
 </td>
 </tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.TigeraStatus">TigeraStatus
 </h3>
-<p>TigeraStatus represents the most recently observed status for Calico or a Tigera Secure EE functional area.</p>
+<p>TigeraStatus represents the most recently observed status for Calico or a Calico Enterprise functional area.</p>
 <table>
 <thead>
 <tr>
@@ -1225,7 +1225,7 @@ int32
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.Installation">Installation</a>)
 </p>
-<p>InstallationSpec defines configuration for a Calico or Tigera Secure EE installation.</p>
+<p>InstallationSpec defines configuration for a Calico or Calico Enterprise installation.</p>
 <table>
 <thead>
 <tr>
@@ -1259,7 +1259,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Registry is the default Docker registry used for component Docker images. If specified,
-all Calico and Tigera Secure images will be pulled from this registry.</p>
+all Calico and Calico Enterprise images will be pulled from this registry.</p>
 </td>
 </tr>
 <tr>
@@ -1314,7 +1314,7 @@ CalicoNetworkSpec
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.Installation">Installation</a>)
 </p>
-<p>InstallationStatus defines the observed state of the Calico or Tigera Secure installation.</p>
+<p>InstallationStatus defines the observed state of the Calico or Calico Enterprise installation.</p>
 <table>
 <thead>
 <tr>
@@ -1562,7 +1562,7 @@ is an opaque string which can be monitored for changes to perform actions when K
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.Manager">Manager</a>)
 </p>
-<p>ManagerSpec defines configuration for the Tigera Secure manager GUI.</p>
+<p>ManagerSpec defines configuration for the Calico Enterprise manager GUI.</p>
 <table>
 <thead>
 <tr>
@@ -1582,7 +1582,7 @@ Auth
 </td>
 <td>
 <em>(Optional)</em>
-<p>Auth defines the authentication strategy for the Tigera Secure manager GUI.</p>
+<p>Auth defines the authentication strategy for the Calico Enterprise manager GUI.</p>
 </td>
 </tr>
 </tbody>
@@ -1593,7 +1593,7 @@ Auth
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.Manager">Manager</a>)
 </p>
-<p>ManagerStatus defines the observed state of the Tigera Secure manager GUI.</p>
+<p>ManagerStatus defines the observed state of the Calico Enterprise manager GUI.</p>
 <table>
 <thead>
 <tr>

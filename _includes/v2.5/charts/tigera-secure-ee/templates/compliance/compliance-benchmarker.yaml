@@ -78,7 +78,7 @@ spec:
       containers:
         - name: compliance-benchmarker
           image: {{.Values.complianceBenchmarker.image}}:{{ .Values.complianceBenchmarker.tag }}
-{{ tuple .Values.complianceBenchmarker.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
+{{ tuple .Values.complianceBenchmarker.resources | include "calico-enterprise-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
               value: "info"

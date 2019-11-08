@@ -1,4 +1,4 @@
-{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
+{{- $elasticMode := include "calico-enterprise-ee.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -113,7 +113,7 @@ spec:
       containers:
         - name: compliance-controller
           image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
-{{ tuple .Values.complianceController.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
+{{ tuple .Values.complianceController.resources | include "calico-enterprise-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
               value: "info"

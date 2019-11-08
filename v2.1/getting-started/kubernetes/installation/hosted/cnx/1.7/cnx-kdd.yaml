@@ -1,16 +1,16 @@
 ---
 layout: null
 ---
-# This manifest adds the additional Tigera Secure EE Manager components to a cluster
-# that has already had the Calico part of Tigera Secure EE deployed.
+# This manifest adds the additional Calico Enterprise Manager components to a cluster
+# that has already had the Calico part of Calico Enterprise deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
 #   not using the provided hosted Calico manifest you must update
 #   references to that resource in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the Tigera Secure EE API server and Kubernetes API server.
-# - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
+#   between the Calico Enterprise API server and Kubernetes API server.
+# - This manifest makes the Calico Enterprise Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
 
@@ -35,7 +35,7 @@ data:
 
 ---
 
-# Optionally update this ConfigMap to enable TLS with certificate verification when Tigera Secure EE API
+# Optionally update this ConfigMap to enable TLS with certificate verification when Calico Enterprise API
 # server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
@@ -53,7 +53,7 @@ data:
 
 ---
 
-# Optionally update this Service to change how Tigera Secure EE Manager is accessed.
+# Optionally update this Service to change how Calico Enterprise Manager is accessed.
 # If using Google login, the URL for the web server must be configured
 # as a redirect URI in the Google project.  If the web server will be
 # accessed at https://<host>:<port>, add https://<host>:<port>/login/oidc/callback

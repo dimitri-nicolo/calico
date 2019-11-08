@@ -106,11 +106,11 @@ Here are the steps you will need to successfully deploy a Kubernetes cluster wit
 1.  [Decide your ECMP usage policy](#decide-your-ecmp-usage-policy)
 1.  [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
 1.  [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
-1.  [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-tigera-secure-ee)
-1.  [Configure {{site.prodname}} to peer with ToR routers](#configure-tigera-secure-ee-to-peer-with-tor-routers)
+1.  [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-calico-enterprise-ee)
+1.  [Configure {{site.prodname}} to peer with ToR routers](#configure-calico-enterprise-ee-to-peer-with-tor-routers)
 1.  [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
-1.  [Complete {{site.prodname}} installation](#complete-tigera-secure-ee-installation)
-1.  [Configure {{site.prodname}} to advertise loopback addresses](#configure-tigera-secure-ee-to-advertise-loopback-addresses)
+1.  [Complete {{site.prodname}} installation](#complete-calico-enterprise-ee-installation)
+1.  [Configure {{site.prodname}} to advertise loopback addresses](#configure-calico-enterprise-ee-to-advertise-loopback-addresses)
 1.  [Verify the deployment](#verify-the-deployment)
 
 The precise details will likely differ for any specific deployment.  For example, you may

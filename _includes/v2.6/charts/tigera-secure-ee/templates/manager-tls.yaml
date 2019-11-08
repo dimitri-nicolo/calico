@@ -6,4 +6,4 @@ metadata:
   name: cnx-manager-tls
   namespace: calico-monitoring
 data:
-{{ include "tigera-secure-ee.manager.tls" . | indent 2 }}
+{{ include "calico-enterprise-ee.manager.tls" . | indent 2 }}

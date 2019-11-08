@@ -29,7 +29,7 @@ This how-to guide uses the following {{site.prodname}} features:
 Using domain names in policy rules is limited to only egress allow rules. {{site.prodname}} allows connections only to IP addresses returned from DNS lookups to trusted DNS servers. The supported DNS types are: A, AAAA, and CNAME records. The domain name must be an exact match; for example, **google.com** is treated as distinct from **www.google.com**.
 
 > **Note:** Kubernetes labels provide a similar convenience for
-> services within the cluster. Tigera Secure EE does not support using
+> services within the cluster. Calico Enterprise does not support using
 > domain names for services within the cluster. Use Kubernetes labels
 > for services within the cluster.
 {: .alert .alert-info}

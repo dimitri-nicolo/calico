@@ -1,5 +1,5 @@
 ---
-title: 'The Tigera Secure EE Data Path: IP Routing and iptables'
+title: 'The Calico Enterprise Data Path: IP Routing and iptables'
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/data-path
 ---
 

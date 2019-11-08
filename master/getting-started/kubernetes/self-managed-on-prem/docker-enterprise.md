@@ -1,11 +1,11 @@
 ---
-title: Installing Tigera Secure EE on Docker Enterprise
+title: Installing Calico Enterprise on Docker Enterprise
 canonical_url: https://docs.tigera.io/master/getting-started/kubernetes/self-managed-on-prem/docker-enterprise
 ---
 
 ### Big picture
 
-Install Tigera Secure in a Docker Enterprise deployed Kubernetes cluster.
+Install Calico Enterprise in a Docker Enterprise deployed Kubernetes cluster.
 
 ### Before you begin
 
@@ -34,9 +34,9 @@ Install Tigera Secure in a Docker Enterprise deployed Kubernetes cluster.
 
 ### How to
 
-- [Install {{site.prodname}}](#install-tigera-secure-ee)
-- [Install the {{site.prodname}} license](#install-the-tigera-secure-ee-license)
-- [Secure {{site.prodname}} with network policy](#secure-tigera-secure-ee-with-network-policy)
+- [Install {{site.prodname}}](#install-calico-enterprise-ee)
+- [Install the {{site.prodname}} license](#install-the-calico-enterprise-ee-license)
+- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-ee-with-network-policy)
 
 #### Install {{site.prodname}}
 

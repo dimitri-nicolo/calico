@@ -30,7 +30,7 @@ To copy the flow/audit/dns logs to Amazon S3 cloud object storage, follow these 
    ```
 
 1. Update the [LogCollector](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
-   resource named, `tigera-secure` to include an [S3 section](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.S3StoreSpec)
+   resource named, `calico-enterprise` to include an [S3 section](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.S3StoreSpec)
    with your information noted from above.
    Example:
 
@@ -38,7 +38,7 @@ To copy the flow/audit/dns logs to Amazon S3 cloud object storage, follow these 
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
-     name: tigera-secure
+     name: calico-enterprise
    spec:
      additionalStores:
        s3:
@@ -50,7 +50,7 @@ To copy the flow/audit/dns logs to Amazon S3 cloud object storage, follow these 
    before applying it, or after installation by editing the resource with the command:
 
    ```
-   kubectl edit logcollector tigera-secure
+   kubectl edit logcollector calico-enterprise
    ```
 
 #### Manual/Helm deployment

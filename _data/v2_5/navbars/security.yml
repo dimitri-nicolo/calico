@@ -6,9 +6,9 @@ toc:
   path: /security/
 - title: Kubernetes network policy
   path: /security/kubernetes-network-policy
-- title: Tigera Secure EE network policy
+- title: Calico Enterprise network policy
   path: /security/calico-network-policy
-- title: Tigera Secure EE policy tutorial
+- title: Calico Enterprise policy tutorial
   path: /security/simple-policy-cnx
 - title: Stars policy tutorial
   path: /security/stars-policy/
@@ -46,13 +46,13 @@ toc:
     path: /security/host-endpoints/tutorial
   - title: Connection tracking
     path: /security/host-endpoints/conntrack
-- title: Securing Tigera Secure EE component communications
+- title: Securing Calico Enterprise component communications
   section:
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
   - title: Scheduling to well-known nodes
     path: /security/comms/reduce-nodes
-  - title: Securing Tigera Secure EE Prometheus endpoints
+  - title: Securing Calico Enterprise Prometheus endpoints
     path: /security/comms/secure-metrics
 - title: AWS security group integration
   section:

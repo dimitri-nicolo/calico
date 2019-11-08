@@ -286,30 +286,30 @@ spec:
               value: "true"
             # Additional Felix configuration options
 {{- if .Values.node.prometheusMetricsPort }}
-            # Enable Tigera Secure EE Prometheus denied packet reporting
+            # Enable Calico Enterprise Prometheus denied packet reporting
             - name: FELIX_PROMETHEUSREPORTERENABLED
               value: "true"
-            # Make Tigera Secure EE Prometheus metrics available on port 9081
+            # Make Calico Enterprise Prometheus metrics available on port 9081
             - name: FELIX_PROMETHEUSREPORTERPORT
               value: {{ .Values.node.prometheusMetricsPort | quote }}
 {{- else }}
-            # Enable Tigera Secure EE Prometheus denied packet reporting
+            # Enable Calico Enterprise Prometheus denied packet reporting
             - name: FELIX_PROMETHEUSREPORTERENABLED
               value: "false"
 {{- end }}
-            # Enable Tigera Secure EE Flow Log generation
+            # Enable Calico Enterprise Flow Log generation
             - name: FELIX_FLOWLOGSFILEENABLED
               value: "true"
-            # Include endpoint labels in Tigera Secure EE Flow Log
+            # Include endpoint labels in Calico Enterprise Flow Log
             - name: FELIX_FLOWLOGSFILEINCLUDELABELS
               value: "true"
-            # Include policies in Tigera Secure EE Flow Log
+            # Include policies in Calico Enterprise Flow Log
             - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
               value: "true"
             # Enable processing network sets in EE Flow Logs
             - name: FELIX_FLOWLOGSENABLENETWORKSETS
               value: "true"
-            # Enable Tigera Secure EE DNS Log generation, with a limit of 1000 logs per node per 5 minutes
+            # Enable Calico Enterprise DNS Log generation, with a limit of 1000 logs per node per 5 minutes
             - name: FELIX_DNSLOGSFILEENABLED
               value: "true"
             - name: FELIX_DNSLOGSFILEPERNODELIMIT

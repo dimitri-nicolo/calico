@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE on OpenShift
+title: Installing Calico Enterprise on OpenShift
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.

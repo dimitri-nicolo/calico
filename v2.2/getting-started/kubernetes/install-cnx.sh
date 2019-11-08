@@ -3,13 +3,13 @@ layout: null
 ---
 #!/usr/bin/env bash
 #
-# Script to install Tigera Secure EE on a kubeadm cluster. Requires the docker
+# Script to install Calico Enterprise on a kubeadm cluster. Requires the docker
 # authentication json file. Note the script must be run on master node.
 
 trap "exit 1" TERM
 export TOP_PID=$$
 
-# Override VERSION to point to alternate Tigera Secure EE docs version, e.g.
+# Override VERSION to point to alternate Calico Enterprise docs version, e.g.
 #   VERSION=v2.1 ./install-cnx.sh
 #
 # VERSION is used to retrieve manifests, e.g.
@@ -18,7 +18,7 @@ export TOP_PID=$$
 #   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/calico.yaml
 VERSION=${VERSION:="{{page.version}}"}
 
-# Override DOCS_LOCATION to point to alternate Tigera Secure EE docs location, e.g.
+# Override DOCS_LOCATION to point to alternate Calico Enterprise docs location, e.g.
 #   DOCS_LOCATION="https://docs.tigera.io" ./install-cnx.sh
 #
 DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
@@ -65,7 +65,7 @@ DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE:="basic"}
 # Only used for the kubernetes datastore.
 POLICY_ONLY=${POLICY_ONLY:=0}
 
-# cleanup Tigera Secure EE installation
+# cleanup Calico Enterprise installation
 CLEANUP=0
 
 # Convenience variables to cut down on tiresome typing
@@ -132,7 +132,7 @@ checkSettings() {
   [ "$ETCD_ENDPOINTS" ] && echo '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
 
   echo
-  echo -n "About to "$1" Tigera Secure EE. "
+  echo -n "About to "$1" Calico Enterprise. "
   promptToContinue
 }
 
@@ -142,7 +142,7 @@ checkSettings() {
 fatalError() {
   >&2 echo "Fatal Error: $@"
   if [ "$CLEANUP" -eq 0 ]; then  # If this is a fresh install (not an uninstall), tell user how to retry
-    >&2 echo "In order to retry installation, uninstall Tigera Secure EE first (i.e. re-run with \"-u\" flag)."
+    >&2 echo "In order to retry installation, uninstall Calico Enterprise first (i.e. re-run with \"-u\" flag)."
   fi
   kill -s TERM $TOP_PID   # we're likely running in a subshell, signal parent by PID
 }
@@ -154,15 +154,15 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
-          [-l license.yaml]    # Specify the path to the Tigera Secure EE license file; default "license.yaml". Note license is required.
+          [-l license.yaml]    # Specify the path to the Calico Enterprise license file; default "license.yaml". Note license is required.
           [-c config.json]     # Docker authentication config file (from Tigera); default: "config.json"
-          [-d docs_location]   # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
+          [-d docs_location]   # Calico Enterprise documentation location; default: "https://docs.tigera.io"
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
           [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "local"
           [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
-          [-v version]         # Tigera Secure EE version; default: "v2.1"
-          [-u]                 # Uninstall Tigera Secure EE
+          [-v version]         # Calico Enterprise version; default: "v2.1"
+          [-u]                 # Uninstall Calico Enterprise
           [-q]                 # Quiet (don't prompt)
           [-m]                 # Download manifests (then quit)
           [-h]                 # Print usage
@@ -217,7 +217,7 @@ validateSettings() {
 
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
-    [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a Tigera Secure EE license file, e.g. '-l license.yaml'"
+    [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a Calico Enterprise license file, e.g. '-l license.yaml'"
 
     # Confirm license file is readable
     [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
@@ -392,12 +392,12 @@ checkNetworkManager() {
 
     # Raise a warning that NM is running. It's possible the user has
     # configured exceptions for "cali*" and "tunl*" interfaces which
-    # should be sufficient for NM and Tigera Secure EE to interoperate.
+    # should be sufficient for NM and Calico Enterprise to interoperate.
     echo
     echo "  WARNING: We've detected that NetworkManager is running. Unless you've"
-    echo "  configured exceptions for Tigera Secure EE network interfaces, NetworkManager"
-    echo "  will interfere with Tigera Secure EE networking. Remove, disable, or configure"
-    echo "  NetworkingManager to ignore Tigera Secure EE network interfaces. Refer to"
+    echo "  configured exceptions for Calico Enterprise network interfaces, NetworkManager"
+    echo "  will interfere with Calico Enterprise networking. Remove, disable, or configure"
+    echo "  NetworkingManager to ignore Calico Enterprise network interfaces. Refer to"
     echo "  \"Troubleshooting\" on https://docs.tigera.io for more information."
     promptToContinue
   else
@@ -415,7 +415,7 @@ checkNumberOfCores() {
   cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
   if [ $? -eq 0 ]; then
     if [ "$cores" \< "$MIN_REQUIRED_CORES" ]; then
-      echo "Warning: Tigera Secure EE requires ${MIN_REQUIRED_CORES} processor cores, however it looks as though your machine has only ${cores} core(s)."
+      echo "Warning: Calico Enterprise requires ${MIN_REQUIRED_CORES} processor cores, however it looks as though your machine has only ${cores} core(s)."
     else
       echo "Verified your machine has the required minimum number (${MIN_REQUIRED_CORES}) of processor cores : ${cores} present."
     fi
@@ -963,7 +963,7 @@ downloadManifests() {
   fi
 
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
-    echo "Tigera Secure EE manifests downloaded."
+    echo "Calico Enterprise manifests downloaded."
     kill -s TERM $TOP_PID   # quit
   fi
 }
@@ -1315,7 +1315,7 @@ deleteCNXManagerSecret() {
 reportSuccess() {
   echo
   echo "---------------------------------------------------------------------------------------"
-  echo "Tigera Secure EE installation is complete. Tigera Secure EE is listening on all network interfaces on port 30003."
+  echo "Calico Enterprise installation is complete. Calico Enterprise is listening on all network interfaces on port 30003."
   echo "For example:"
   echo "  https://127.0.0.1:30003"
   echo "  https://$(ip route get 8.8.8.8 | head -1 | awk '{print $7}'):30003"
@@ -1329,7 +1329,7 @@ reportSuccess() {
 }
 
 #
-# installCNX() - install Tigera Secure EE
+# installCNX() - install Calico Enterprise
 #
 installCNX() {
   checkSettings install           # Verify settings are correct with user
@@ -1373,7 +1373,7 @@ installCNX() {
 }
 
 #
-# uninstallCNX() - remove Tigera Secure EE and related changes.
+# uninstallCNX() - remove Calico Enterprise and related changes.
 # Ignore errors.
 #
 uninstallCNX() {
@@ -1414,7 +1414,7 @@ parseOptions "$@"               # Set up variables based on args
 validateSettings                # Check for missing files/dirs
 
 if [ "$CLEANUP" -eq 1 ]; then
-  uninstallCNX                  # Remove Tigera Secure EE, cleanup related files
+  uninstallCNX                  # Remove Calico Enterprise, cleanup related files
 else
-  installCNX                    # Install Tigera Secure EE
+  installCNX                    # Install Calico Enterprise
 fi

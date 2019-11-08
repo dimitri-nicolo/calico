@@ -130,7 +130,7 @@ toc:
   path: /reference/typha/configuration
 - title: Dikastes
   path: /reference/dikastes/configuration
-- title: Tigera Secure EE Compliance Reports
+- title: Calico Enterprise Compliance Reports
   section:
     - title: Overview
       path: /reference/compliance-reports/
@@ -140,21 +140,21 @@ toc:
       path: /reference/compliance-reports/network-access
     - title: Policy Audit Report
       path: /reference/compliance-reports/policy-audit
-- title: Tigera Secure EE CNI Plugins
+- title: Calico Enterprise CNI Plugins
   path: /reference/cni-plugin/configuration
-- title: Tigera Secure EE Kubernetes Controllers
+- title: Calico Enterprise Kubernetes Controllers
   path: /reference/kube-controllers/configuration
-- title: Tigera Secure EE Manager
+- title: Calico Enterprise Manager
   section:
     - title: Configuring user authentication
       path: /reference/cnx/authentication
-    - title: Configuring Tigera Secure EE RBAC for Tiered Policies
+    - title: Configuring Calico Enterprise RBAC for Tiered Policies
       path: /reference/cnx/rbac-tiered-policies
-    - title: Configuring Tigera Secure EE RBAC for Elasticsearch
+    - title: Configuring Calico Enterprise RBAC for Elasticsearch
       path: /reference/cnx/rbac-elasticsearch
     - title: Editing policies
       path: /reference/cnx/policy-editor
-    - title: Deploying Tigera Secure EE Manager
+    - title: Deploying Calico Enterprise Manager
       path: /reference/cnx/recommendations
 - title: REST API Reference
   path: /reference/cnx/apidocs

@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-ee --execute templates/monitor-calico.yaml %}
+{% helm calico-enterprise-ee --execute templates/monitor-calico.yaml %}
 createCustomResources: false
 fluentd:
   runAsPrivileged: true

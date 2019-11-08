@@ -1,7 +1,7 @@
-# This file contains Tigera Secure EE tiered security policy to control connectivity to Tigera Secure EE Manager and Tigera Secure EE API Server.
+# This file contains Calico Enterprise tiered security policy to control connectivity to Calico Enterprise Manager and Calico Enterprise API Server.
 # See the documentation for a full reference on tiered security policy.
 
-# Tier containing policies to allow access to Tigera Secure EE.
+# Tier containing policies to allow access to Calico Enterprise.
 apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
@@ -11,7 +11,7 @@ spec:
 
 ---
 
-# Allow the Kubernetes API Server access to Tigera Secure EE API Server.
+# Allow the Kubernetes API Server access to Calico Enterprise API Server.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -27,9 +27,9 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      # This policy allows Tigera Secure EE API Server access from anywhere: replace it with
+      # This policy allows Calico Enterprise API Server access from anywhere: replace it with
       # the addresses of your Kubernetes API Servers if those are static.
       nets: ["0.0.0.0/0"]
     destination:
-      # The ports Tigera Secure EE API Server and Tigera Secure EE Query Server are configured to listen on.
+      # The ports Calico Enterprise API Server and Calico Enterprise Query Server are configured to listen on.
       ports: [443, 5443, 8080, 10443]

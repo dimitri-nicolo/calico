@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE on Azure AKS
+title: Installing Calico Enterprise on Azure AKS
 canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/aks
 ---
 

@@ -19,9 +19,9 @@ module Jekyll
       super
 
       @chart = "calico"
-      if extra_args.start_with?("tigera-secure-ee")
-        @chart = "tigera-secure-ee"
-        extra_args.slice! "tigera-secure-ee"
+      if extra_args.start_with?("calico-enterprise-ee")
+        @chart = "calico-enterprise-ee"
+        extra_args.slice! "calico-enterprise-ee"
       end
       if extra_args.start_with?("tigera-operator")
         @chart = "tigera-operator"

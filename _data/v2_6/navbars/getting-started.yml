@@ -24,7 +24,7 @@ toc:
       path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
   - title: Enabling application layer policy (optional)
     path: /getting-started/kubernetes/installation/app-layer-policy
-  # - title: Tigera Secure EE the hard way
+  # - title: Calico Enterprise the hard way
   #   section:
   #   - title: Introduction
   #     path: /getting-started/kubernetes/hardway/
@@ -50,7 +50,7 @@ toc:
   #     path: /getting-started/kubernetes/hardway/end-user-rbac
   #   - title: Istio integration
   #     path: /getting-started/kubernetes/hardway/istio-integration
-  - title: Upgrade from Calico to Tigera Secure EE
+  - title: Upgrade from Calico to Calico Enterprise
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
 - title: OpenShift
@@ -59,7 +59,7 @@ toc:
     path: /getting-started/openshift/requirements
   - title: Installation
     section:
-    - title: Installing Tigera Secure EE on OpenShift v4
+    - title: Installing Calico Enterprise on OpenShift v4
       path: /getting-started/openshift/installation/
 
 - title: Bare metal hosts

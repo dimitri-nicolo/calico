@@ -1,9 +1,9 @@
 bigheader: "Usage"
-abstract: "How to configure and troubleshoot Tigera Secure EE systems"
+abstract: "How to configure and troubleshoot Calico Enterprise systems"
 path: /usage
 order: 2
 toc:
-- title: Using Tigera Secure EE
+- title: Using Calico Enterprise
   path: /usage/
 - title: calicoctl
   section:
@@ -29,13 +29,13 @@ toc:
       path: /usage/calicoq/configure/etcd
     - title: Kubernetes API datastore options
       path: /usage/calicoq/configure/kdd
-- title: Securing Tigera Secure EE communications
+- title: Securing Calico Enterprise communications
   section:
   - title: Scheduling to well-known nodes
     path: /usage/reduce-nodes
   - title: Configuring encryption and authentication
     path: /usage/encrypt-comms
-  - title: Securing endpoints with Tigera Secure EE policy
+  - title: Securing endpoints with Calico Enterprise policy
     path: /usage/policy/secure-metrics
 - title: Logs
   section:
