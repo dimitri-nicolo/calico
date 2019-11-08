@@ -24,7 +24,7 @@ toc:
   path: /networking/node
 - title: Configuring MTU
   path: /networking/mtu
-- title: Custom BGP configuration 
+- title: Custom BGP configuration
   path: /networking/custom-bgp-config
 - title: Assigning IP addresses based on topology
   path: /networking/assigning-ip-addresses-topology
@@ -60,3 +60,5 @@ toc:
   path: /networking/get-started-ip-addresses
 - title: Advertise Kubernetes service IP addresses
   path: /networking/advertise-service-ips
+- title: Deploy a dual ToR cluster
+  path: /networking/dual-tor
