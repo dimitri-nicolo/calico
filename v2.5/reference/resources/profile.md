@@ -1,6 +1,5 @@
 ---
 title: Profile
-redirect_from: latest/reference/resources/profile
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/profile
 ---
 

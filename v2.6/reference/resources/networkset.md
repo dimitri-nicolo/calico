@@ -1,5 +1,6 @@
 ---
 title: Network set
+redirect_from: latest/reference/resources/networkset
 ---
 
 A network set resource (NetworkSet) represents an arbitrary set of IP subnetworks/CIDRs,

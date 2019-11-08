@@ -1,6 +1,5 @@
 ---
 title: Configuring the Tigera Secure EE Kubernetes controllers
-redirect_from: latest/reference/kube-controllers/configuration
 canonical_url: https://docs.tigera.io/v2.3/reference/kube-controllers/configuration
 ---
 

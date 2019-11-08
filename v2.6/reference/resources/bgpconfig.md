@@ -1,5 +1,6 @@
 ---
 title: BGP configuration
+redirect_from: latest/reference/resources/bgpconfig
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/bgpconfig
 ---
 

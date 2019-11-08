@@ -1,5 +1,6 @@
 ---
 title: Installing Tigera Secure EE on Docker Enterprise
+redirect_from: latest/getting-started/kubernetes/self-managed-on-prem/docker-enterprise
 canonical_url: https://docs.tigera.io/master/getting-started/kubernetes/self-managed-on-prem/docker-enterprise
 ---
 

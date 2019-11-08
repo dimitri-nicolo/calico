@@ -1,6 +1,5 @@
 ---
 title: Component logs
-redirect_from: latest/maintenance/component-logs
 canonical_url: 'https://docs.tigera.io/v2.3/usage/troubleshooting/logging'
 ---
 

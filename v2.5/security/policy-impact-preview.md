@@ -1,6 +1,5 @@
 ---
 title: Previewing the impact of policy changes
-redirect_from: latest/security/policy-impact-preview
 ---
 
 ### Big picture

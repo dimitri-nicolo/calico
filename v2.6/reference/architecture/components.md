@@ -1,5 +1,6 @@
 ---
 title: Anatomy of a cnx-node container
+redirect_from: latest/reference/architecture/components
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/components
 ---
 

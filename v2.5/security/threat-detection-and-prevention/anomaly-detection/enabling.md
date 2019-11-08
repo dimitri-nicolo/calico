@@ -1,6 +1,5 @@
 ---
 title: Enabling anomaly detection
-redirect_from: latest/security/threat-detection-and-prevention/anomaly-detection/enabling
 canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/enabling
 ---
 

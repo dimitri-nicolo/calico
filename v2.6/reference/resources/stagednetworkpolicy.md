@@ -1,5 +1,6 @@
 ---
 title: Staged Network policy
+redirect_from: latest/reference/resources/stagednetworkpolicy
 ---
 
 A staged network policy resource (`StagedNetworkPolicy`) represents an ordered set of rules which are applied

@@ -1,6 +1,5 @@
 ---
 title: Configuring Tigera Secure EE RBAC for Elasticsearch
-redirect_from: latest/reference/cnx/rbac-elasticsearch
 ---
 
 The {{site.prodname}} allows administrators the ability to manage access to Elasticsearch indices from the UI.

@@ -1,6 +1,5 @@
 ---
 title: Felix configuration
-redirect_from: latest/reference/resources/felixconfig
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/felixconfig
 ---
 

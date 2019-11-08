@@ -1,5 +1,6 @@
 ---
 title: Adjust the log storage size
+redirect_from: latest/maintenance/adjust-log-storage-size
 ---
 
 ### Big picture

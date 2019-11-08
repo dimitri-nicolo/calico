@@ -1,5 +1,6 @@
 ---
 title: Calico over IP fabrics
+redirect_from: latest/networking/design/l3-interconnect-fabric
 canonical_url: 'https://docs.tigera.io/v2.4/networking/design/l3-interconnect-fabric'
 ---
 

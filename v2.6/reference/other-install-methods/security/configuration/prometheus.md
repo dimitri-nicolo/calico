@@ -1,5 +1,6 @@
 ---
 title: Configuring Prometheus
+redirect_from: latest/reference/other-install-methods/security/configuration/prometheus
 canonical_url: https://docs.tigera.io/v2.5/security/configuration/prometheus
 ---
 

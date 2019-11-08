@@ -1,6 +1,5 @@
 ---
 title: calicoq policy
-redirect_from: latest/reference/calicoq/policy
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/policy
 ---
 

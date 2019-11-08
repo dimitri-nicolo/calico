@@ -1,5 +1,6 @@
 ---
 title: DNS logs
+redirect_from: latest/security/logs/elastic/dns
 canonical_url: https://docs.tigera.io/master/security/logs/elastic/dns
 ---
 

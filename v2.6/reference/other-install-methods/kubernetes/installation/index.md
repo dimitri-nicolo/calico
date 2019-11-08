@@ -1,5 +1,6 @@
 ---
 title: Installing Tigera Secure EE on Kubernetes
+redirect_from: latest/reference/other-install-methods/kubernetes/installation/index
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/
 ---
 

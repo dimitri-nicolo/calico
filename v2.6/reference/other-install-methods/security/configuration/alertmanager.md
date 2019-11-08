@@ -1,5 +1,6 @@
 ---
 title: Configuring Alertmanager
+redirect_from: latest/reference/other-install-methods/security/configuration/alertmanager
 canonical_url: https://docs.tigera.io/v2.5/security/configuration/alertmanager
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Global report
+redirect_from: latest/reference/resources/globalreport
 ---
 
 A global report resource is a configuration for generating compliance reports. A global report configuration in {{ site.prodname }} lets you:

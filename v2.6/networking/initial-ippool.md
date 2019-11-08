@@ -1,5 +1,6 @@
 ---
 title: Configure default IP pools
+redirect_from: latest/networking/initial-ippool
 canonical_url: ""
 ---
 

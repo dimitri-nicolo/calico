@@ -1,5 +1,6 @@
 ---
 title: Security
+redirect_from: latest/security/index
 canonical_url: 'https://docs.tigera.io/v2.4/security/index'
 ---
 

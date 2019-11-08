@@ -1,5 +1,6 @@
 ---
 title: Configure data retention
+redirect_from: latest/security/logs/retention
 ---
 
 ### Big picture

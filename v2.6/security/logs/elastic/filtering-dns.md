@@ -1,5 +1,6 @@
 ---
 title: Filtering out DNS logs
+redirect_from: latest/security/logs/elastic/filtering-dns
 canonical_url: https://docs.tigera.io/master/security/logs/elastic/filtering-dns
 ---
 

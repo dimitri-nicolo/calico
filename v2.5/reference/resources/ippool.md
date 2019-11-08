@@ -1,6 +1,5 @@
 ---
 title: IP pool
-redirect_from: latest/reference/resources/ippool
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/ippool
 ---
 

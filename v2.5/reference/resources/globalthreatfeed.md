@@ -1,6 +1,5 @@
 ---
 title: Global thread feed
-redirect_from: latest/reference/resources/globalthreatfeed
 ---
 
 A global threat feed resource (GlobalThreatFeed) represents a feed of threat intelligence used for

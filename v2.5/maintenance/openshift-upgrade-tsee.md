@@ -1,6 +1,5 @@
 ---
 title: Upgrading Tigera Secure EE from an earlier release on OpenShift
-redirect_from: latest/maintenance/openshift-upgrade-tsee
 canonical_url: https://docs.tigera.io/v2.5/maintenance/openshift-upgrade-tsee
 ---
 

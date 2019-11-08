@@ -1,5 +1,6 @@
 ---
 title: Selector-based policies
+redirect_from: latest/reference/host-endpoints/selector
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/selector'
 ---
 

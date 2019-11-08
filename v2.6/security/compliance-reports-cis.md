@@ -1,5 +1,6 @@
 ---
 title: CIS benchmark compliance reports for Kubernetes
+redirect_from: latest/security/compliance-reports-cis
 ---
 
 ### Big picture

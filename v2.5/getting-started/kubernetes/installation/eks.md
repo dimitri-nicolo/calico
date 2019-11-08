@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on Amazon EKS
-redirect_from: latest/getting-started/kubernetes/installation/eks
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
 ---
 

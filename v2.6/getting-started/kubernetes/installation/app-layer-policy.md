@@ -1,5 +1,6 @@
 ---
 title: Enabling application layer policy
+redirect_from: latest/getting-started/kubernetes/installation/app-layer-policy
 canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/app-layer-policy
 ---
 

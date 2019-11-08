@@ -1,5 +1,6 @@
 ---
 title: Trace and Block Suspicious External IP Addresses
+redirect_from: latest/security/logs/elastic/ingress
 canonical_url: https://docs.tigera.io/master/security/logs/elastic/ingress
 ---
 

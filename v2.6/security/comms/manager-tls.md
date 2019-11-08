@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for the manager UI
+redirect_from: latest/security/comms/manager-tls
 ---
 
 ### Big picture

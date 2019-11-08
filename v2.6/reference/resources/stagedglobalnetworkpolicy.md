@@ -1,5 +1,6 @@
 ---
 title: Staged Global Network Policy
+redirect_from: latest/reference/resources/stagedglobalnetworkpolicy
 ---
 
 A staged global network policy resource (`StagedGlobalNetworkPolicy`) represents an ordered set of rules which are applied

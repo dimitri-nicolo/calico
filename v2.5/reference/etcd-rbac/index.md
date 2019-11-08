@@ -1,6 +1,5 @@
 ---
 title: Setting up etcd certificates for RBAC
-redirect_from: latest/reference/etcd-rbac/index
 canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/'
 ---
 

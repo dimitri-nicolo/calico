@@ -1,5 +1,6 @@
 ---
 title: Configure access to the manager UI
+redirect_from: latest/getting-started/access-the-manager
 ---
 
 ### Big picture
