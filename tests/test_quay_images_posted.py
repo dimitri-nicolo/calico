@@ -38,7 +38,7 @@ EXCLUDED_IMAGES_BY_VER = {
              'compliance-benchmarker',
              'kibana'],
     'v2.4': ['compliance-benchmarker'],
-    'v2.6': ['cnx-manager-proxy'],
+    'v2.6': ['cnxManagerProxy'],
 }
 
 # _config.yml and _data/versions.yml have diff names
@@ -58,7 +58,7 @@ with open('%s/../_config.yml' % PATH) as f:
 
 # remove any images from older releases
 if EXCLUDED_IMAGES_BY_VER.has_key(RELEASE_STREAM):
-    [ALL_IMAGES.remove(x) for x in EXCLUDED_IMAGES_BY_VER[RELEASE_STREAM]]
+    [ALL_IMAGES.remove(x) for x in EXCLUDED_IMAGES_BY_VER[RELEASE_STREAM] if x in ALL_IMAGES]
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
