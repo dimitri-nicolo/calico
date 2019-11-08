@@ -149,6 +149,9 @@ toc:
   - title: Provide TLS certificates for log storage
     path: /security/comms/log-storage-tls
 
+  - title: Provide TLS certificates for Kibana
+    path: /security/comms/kibana-tls
+
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
 
