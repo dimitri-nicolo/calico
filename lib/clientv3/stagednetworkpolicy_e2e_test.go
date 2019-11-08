@@ -124,6 +124,16 @@ var _ = testutils.E2eDatastoreDescribe("StagedNetworkPolicy tests", testutils.Da
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: StagedNetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ") with error:"))
 
+			if config.Spec.DatastoreType == apiconfig.Kubernetes {
+				By("Creating the StagedNetworkPolicy in a non-existing namespace")
+				_, outError = c.StagedNetworkPolicies().Create(ctx, &apiv3.StagedNetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "non-existing", Name: name1},
+					Spec:       spec1,
+				}, options.SetOptions{})
+				Expect(outError).To(HaveOccurred())
+				Expect(outError.Error()).To(ContainSubstring("error with field StagedNetworkPolicy:" + tieredNetworkPolicyName("non-existing", name1, tier) + " = 'precondition' (resource does not exist: StagedNetworkPolicy(" + tieredNetworkPolicyName("non-existing", name1, tier) + ") with error: namespaces \"non-existing\" not found)"))
+			}
+
 			By("Attempting to creating a new StagedNetworkPolicy with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.StagedNetworkPolicies().Create(ctx, &apiv3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: rv},
@@ -139,7 +149,6 @@ var _ = testutils.E2eDatastoreDescribe("StagedNetworkPolicy tests", testutils.Da
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res1).To(MatchResource(apiv3.KindStagedNetworkPolicy, namespace1, tieredPolicyName(name1, tier), spec1))
 
 			// Track the version of the original data for name1.
 			rv1_1 := res1.ResourceVersion

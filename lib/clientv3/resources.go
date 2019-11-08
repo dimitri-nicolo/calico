@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -114,6 +114,23 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind st
 	if kvp != nil {
 		return c.kvPairToResource(kvp), err
 	}
+	switch err.(type) {
+	case cerrors.ErrorResourceDoesNotExist:
+		var name string
+		if namespace.IsNamespaced(kind) {
+			name = kind + ":" + in.GetObjectMeta().GetNamespace() + "/" + in.GetObjectMeta().GetName()
+		} else {
+			name = kind + ":" + in.GetObjectMeta().GetName()
+		}
+		return nil, cerrors.ErrorValidation{
+			ErroredFields: []cerrors.ErroredField{{
+				Reason: err.Error(),
+				Name:   name,
+				Value:  "precondition",
+			}},
+		}
+	}
+
 	return nil, err
 }
 
