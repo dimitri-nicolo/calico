@@ -1,1 +1,1 @@
-scripts/certs/clean-self-signed.sh
+../scripts/certs/clean-self-signed.sh

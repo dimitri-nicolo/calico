@@ -9,7 +9,7 @@
 mkdir -p /tmp/certs
 echo ${PWD}
 
-bash clean-self-signed.sh /tmp/certs
+bash $(pwd)/clean-self-signed.sh /tmp/certs
 bash self-signed.sh /tmp/certs
 
 os=$(uname -s)
@@ -26,6 +26,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: cnx-voltron-tunnel
+  namespace: tigera-manager
 type: Opaque
 data:
   cert: ${CERT64}
@@ -36,17 +37,17 @@ EOF
 # Extract the internal ip of a the master to populate VOLTRON_PUBLIC_IP
 INTERNAL_IP=$(kubectl get nodes -o wide | grep "master" | awk '{print $6}')
 echo "Using Voltron Public Ip ${INTERNAL_IP}"
-kubectl set env deployment cnx-manager  -ncalico-monitoring -c tigera-voltron VOLTRON_PUBLIC_IP=${INTERNAL_IP}:30449
+kubectl set env deployment tigera-manager  -ntigera-manager -c tigera-voltron VOLTRON_PUBLIC_IP=${INTERNAL_IP}:30449
 
-kubectl patch deployment -n calico-monitoring cnx-manager --patch \
-'{"spec":{"template":{"spec":{"containers":[{"name":"cnx-manager","env":[{"name": "ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}]},{ "name":"tigera-voltron","env":[{"name": "VOLTRON_TUNNEL_PORT", "value": "9449"}], "volumeMounts":[{"mountPath":"/certs/tunnel/","name":"cnx-voltron-tunnel"}, {"mountPath":"/certs/tunnel-not-user/","name":"cnx-manager-tls"}]}],"volumes":[{"name":"cnx-voltron-tunnel","secret":{"secretName":"cnx-voltron-tunnel"}}]}}}}'
+kubectl patch deployment -n tigera-manager tigera-manager --patch \
+'{"metadata": {"annotations": {"unsupported.operator.tigera.io/ignore": "true"}}, "spec":{"template":{"spec":{"containers":[{"name":"tigera-manager","env":[{"name": "ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}]},{ "name":"tigera-voltron","env":[{"name": "VOLTRON_TUNNEL_PORT", "value": "9449"}, {"name": "VOLTRON_ENABLE_MULTI_CLUSTER_MANAGEMENT", "value": "true"}], "volumeMounts":[{"mountPath":"/certs/tunnel/","name":"cnx-voltron-tunnel"}]}],"volumes":[{"name":"cnx-voltron-tunnel","secret":{"secretName":"cnx-voltron-tunnel"}}]}}}}'
 
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Service
 metadata:
-  name: cnx-voltron
-  namespace: calico-monitoring
+  name: tigera-voltron
+  namespace: tigera-manager
 spec:
   type: NodePort
   ports:
@@ -55,12 +56,11 @@ spec:
       protocol: TCP
       name: tunnels
   selector:
-    k8s-app: cnx-manager
-
+    k8s-app: tigera-manager
 EOF
 
 # Monitor deployment for cnx-manager
-kubectl rollout status -n calico-monitoring deployment/cnx-manager
+kubectl rollout status -n tigera-manager deployment/tigera-manager
 if [ $? -ne 0 ]; then
   echo >&2 "Patching cnx-manager deployment failed"
   exit 1

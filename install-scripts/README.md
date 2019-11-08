@@ -1,17 +1,13 @@
 
 # MCM Installation Guide
 
-Setup for Multi-Cluster Management is now tailored for TSEE v2.5.1 using Helm charts. Please follow the [User Guide](https://docs.google.com/document/d/1CbJvorX3wXWMxRLqN8DJDerp-iidBN88Z5ll1_4Ziw8/edit?usp=sharing).
+Setup for Multi-Cluster Management is now tailored for TSEE v2.6 using Operator. You will need to follow up the steps below to setup a management or a managed cluster on top of standalone cluster.
 
 Note: [How to Manage Multiple Terraforms](#how-to-manage-multiple-terraforms).
 
-## Standalone Cluster (new Voltron-only architecture)
+## Standalone Cluster
 
-*This step is temporary*
-
-This step is required to a standalone TSEE cluster with multi cluster mode disabled. 
-
-Please follow the [setup-cnx-manager-management-cluster.bash](/install-scripts/setup-cnx-manager-management-cluster.bash).
+This step is required to install TSEE as a standalone cluster. You can follow [the quick start guide] (https://docs.tigera.io/master/getting-started/kubernetes/)
 
 ## Management Cluster
 

@@ -1,1 +1,1 @@
-scripts/certs/self-signed.sh
+../scripts/certs/self-signed.sh
