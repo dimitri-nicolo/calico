@@ -140,6 +140,8 @@ toc:
     path: /security/compliance-reports
   - title: CIS benchmarks
     path: /security/compliance-reports-cis
+  - title: Configure compliance reporting for managed cloud providers
+    path: /security/compliance-managed-cloud
 
 - title: Securing Tigera Secure EE component communications
   section:
