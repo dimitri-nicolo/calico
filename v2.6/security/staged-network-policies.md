@@ -74,23 +74,23 @@ policies, the RBAC for Calico staged network policy and staged global network po
 ### How to
 
 - [Create a new staged policy](#create-a-new-staged-policy)
-- [Update a staged policy](#update-a-staged-policy)
+- [Stage updates to an enforced policy](#stage-updates-to-an-enforced-policy)
 - [View impact of a staged policy](#view-impact-of-a-staged-policy)
 - [Enforce a staged policy](#enforce-a-staged-policy)
 - [Create a staged policy using kubectl](#create-a-staged-policy-using-kubectl)
 
 #### Create a new staged policy
 
-From the **Policies** pane in the UI, create a new policy in the required tier. Make the required changes and click the
+From the **Create Policy** page in the UI, craft a new policy and click the
 **STAGE** button.
 
 In the Policies pane the new staged policy is indicated by a **STAGED** tag. 
 
 ![A new policy first created in staged mode]({{site.url}}/images/staged-network-policies/new.png)
 
-#### Update a staged policy
+#### Stage updates to an enforced policy
 
-From the **Policies** pane in the UI, edit the policy, and click **STAGE**. 
+From the **Policies** pane in the UI, edit the enforced policy, and click **STAGE**.
 
 In the Policies pane both the enforced policy and the staged policy will be present. Unless the order is explicitly
 modified, the staged policy is inserted before the enforced policy.
@@ -153,9 +153,9 @@ You can manage staged policies the same way as enforced policies using `kubectl`
 apiVersion: projectcalico.org/v3
 kind: StagedGlobalNetworkPolicy
 metadata:
-  name: internal-access.allow-tcp-6379
+  name: default.allow-tcp-6379
 spec:
-  tier: internal-access
+  tier: default
   selector: role == 'database'
   types:
   - Ingress
@@ -178,10 +178,10 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: StagedNetworkPolicy
 metadata:
-  name: internal-access.allow-tcp-6379
-  namespace: production
+  name: default.allow-tcp-6379
+  namespace: default
 spec:
-  tier: internal-access
+  tier: default
   selector: role == 'database'
   types:
   - Ingress
