@@ -57,7 +57,7 @@ metadata:
   name: tigera-elasticsearch
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
-reclaimPolicy: Reclaim
+reclaimPolicy: Retain
 ```
 
 ##### AWS EBS disks
