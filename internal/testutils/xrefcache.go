@@ -341,6 +341,42 @@ func (t *XrefCacheTester) DeleteGlobalNetworkSet(nameIdx Name) {
 }
 
 //
+// -- NetworkSet access --
+//
+
+func (t *XrefCacheTester) GetNetworkSet(nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryNetworkSet {
+	r := getResourceId(resources.TypeCalicoNetworkSets, nameIdx, namespaceIdx)
+	e := t.Get(r)
+	if e == nil {
+		return nil
+	}
+	return e.(*xrefcache.CacheEntryNetworkSet)
+}
+
+func (t *XrefCacheTester) SetNetworkSet(nameIdx Name, namespaceIdx Namespace, labels Label, nets Net) {
+	r := getResourceId(resources.TypeCalicoNetworkSets, nameIdx, namespaceIdx)
+	t.OnUpdate(syncer.Update{
+		Type:       syncer.UpdateTypeSet,
+		ResourceID: r,
+		Resource: &apiv3.NetworkSet{
+			TypeMeta:   r.TypeMeta,
+			ObjectMeta: getObjectMeta(r, labels),
+			Spec: apiv3.NetworkSetSpec{
+				Nets: getCalicoNets(nets),
+			},
+		},
+	})
+}
+
+func (t *XrefCacheTester) DeleteNetworkSet(nameIdx Name, namespaceIdx Namespace) {
+	r := getResourceId(resources.TypeCalicoNetworkSets, nameIdx, namespaceIdx)
+	t.OnUpdate(syncer.Update{
+		Type:       syncer.UpdateTypeDeleted,
+		ResourceID: r,
+	})
+}
+
+//
 // -- Calico GlobalNetworkPolicy access --
 //
 

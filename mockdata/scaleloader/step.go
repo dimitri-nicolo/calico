@@ -151,7 +151,7 @@ func (s *Step) GetIndex() string {
 		return "tigera_secure_ee_audit_kube"
 	case resources.TypeCalicoGlobalNetworkPolicies, resources.TypeCalicoGlobalNetworkSets,
 		resources.TypeCalicoHostEndpoints, resources.TypeCalicoNetworkPolicies,
-		resources.TypeCalicoTiers:
+		resources.TypeCalicoTiers, resources.TypeCalicoNetworkSets:
 		return "tigera_secure_ee_audit_ee"
 	default:
 		logrus.Fatalf("Unsupported resource %s", s.GetTypeMeta())
@@ -170,7 +170,7 @@ func (s *Step) GetMsg(revision int, timestamp string) (string, error) {
 
 	case resources.TypeCalicoGlobalNetworkPolicies, resources.TypeCalicoGlobalNetworkSets,
 		resources.TypeCalicoHostEndpoints, resources.TypeCalicoNetworkPolicies,
-		resources.TypeCalicoTiers:
+		resources.TypeCalicoTiers, resources.TypeCalicoNetworkSets:
 
 		return s.getAuditV1Beta(revision, timestamp)
 	}
@@ -340,6 +340,7 @@ type ObjRef struct {
 // Example objectRefs
 //"objectRef":{"resource":"pods","namespace":"compliance-testing","name":"database-f5c74785f-m7vd2","apiVersion":"v1"}
 //"objectRef":{"resource":"globalnetworksets","name":"google-dns","apiGroup":"projectcalico.org","apiVersion":"v3"},
+//"objectRef":{"resource":"networksets", namespace":"compliance-testing", "name":"google-dns","apiGroup":"projectcalico.org","apiVersion":"v3"},
 //"objectRef":{"resource":"tiers","name":"internal-access","apiGroup":"projectcalico.org","apiVersion":"v3"},
 //"objectRef":{"resource":"networkpolicies","namespace":"compliance-testing","name":"internal-access.allow-mysql","apiGroup":"projectcalico.org","apiVersion":"v3"},
 //"objectRef":{"resource":"networkpolicies","namespace":"compliance-testing","name":"default-deny","apiGroup":"networking.k8s.io","apiVersion":"v1"},

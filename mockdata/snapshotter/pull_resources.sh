@@ -48,7 +48,7 @@ do
 done
 
 # Namespaced resources
-declare -a namespaced_tigera_resources=("networkpolicies")
+declare -a namespaced_tigera_resources=("networkpolicies" "networksets")
 
 for res in "${namespaced_tigera_resources[@]}"
 do

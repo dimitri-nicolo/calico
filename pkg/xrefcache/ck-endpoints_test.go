@@ -244,6 +244,108 @@ var _ = Describe("Pods cache verification", func() {
 		))
 	})
 
+	It("should track the set of applied policies and overall settings (with namespaced networkset)", func() {
+		By("applying np1 select1 with an ingress allow select1 rule")
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
+			},
+			nil,
+			&Order1,
+		)
+
+		By("applying np2 select2 with an ingress allow select2 rule")
+		tester.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Source, Select2, NoNamespaceSelector),
+			},
+			nil,
+			&Order1,
+		)
+
+		By("applying np1 select1 with an egress allow select1 rule")
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+			nil,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Destination, Select1, NoNamespaceSelector),
+			},
+			&Order1,
+		)
+
+		By("creating ns1 with label1 and internet exposed")
+		tester.SetNetworkSet(Name1, Namespace1, Label1, Public)
+
+		By("creating ns2 with label2 and all addresses private")
+		tester.SetNetworkSet(Name2, Namespace1, Label2, Private)
+
+		By("creating a pod1 with label 1")
+		tester.SetPod(Name1, Namespace1, Label1, IP1, NoServiceAccount, NoPodOptions)
+
+		By("checking pod1 xref with two policies in the cache")
+		pod := tester.GetPod(Name1, Namespace1)
+		Expect(pod).NotTo(BeNil())
+		Expect(pod.AppliedPolicies.Len()).To(Equal(2))
+		gnp1 := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
+		Expect(gnp1).NotTo(BeNil())
+		Expect(gnp1.SelectedPods.Len()).To(Equal(1))
+		gnp2 := tester.GetGlobalNetworkPolicy(TierDefault, Name2)
+		Expect(gnp2).NotTo(BeNil())
+		Expect(gnp2.SelectedPods.Len()).To(Equal(0))
+		np1 := tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+		Expect(np1).NotTo(BeNil())
+		Expect(np1.SelectedPods.Len()).To(Equal(1))
+
+		By("checking cross-ref calculated flags are not yet set")
+		Expect(gnp1.Flags).To(BeZero())
+		Expect(np1.Flags).To(BeZero())
+
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
+		Expect(gnp1.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
+		
+		Expect(np1.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryInternetExposedEgress,
+		))
+		
+		By("checking the pod settings have inherited the expected policy configuration from gnp1 and np1")
+		Expect(pod.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress | xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryInternetExposedEgress,
+		))
+
+		By("updating np1 to include a namespace selector")
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
+			nil,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Destination, Select1, Select1),
+			},
+			&Order1,
+		)
+
+		By("checking the np1 flags have been updated")
+		np1 = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+		Expect(np1).NotTo(BeNil())
+		Expect(np1.SelectedPods.Len()).To(Equal(1))
+		Expect(np1.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedEgress | xrefcache.CacheEntryOtherNamespaceExposedEgress,
+		))
+
+		By("checking the pod settings have inherited the expected policy configuration from gnp1 and np1")
+		pod = tester.GetPod(Name1, Namespace1)
+		Expect(pod).NotTo(BeNil())
+		Expect(pod.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryInternetExposedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress | xrefcache.CacheEntryOtherNamespaceExposedEgress,
+		))
+	})
+
 	It("should handle tracking matching services", func() {
 		By("sending in-sync")
 		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
