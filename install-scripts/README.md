@@ -7,7 +7,7 @@ Note: [How to Manage Multiple Terraforms](#how-to-manage-multiple-terraforms).
 
 ## Standalone Cluster
 
-This step is required to install TSEE as a standalone cluster. You can follow [the quick start guide] (https://docs.tigera.io/master/getting-started/kubernetes/)
+This step is required to install TSEE as a standalone cluster. You can follow [the quick start guide](https://docs.tigera.io/master/getting-started/kubernetes/)
 
 ## Management Cluster
 
