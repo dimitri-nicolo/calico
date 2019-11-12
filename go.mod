@@ -43,7 +43,7 @@ require (
 	github.com/pquerna/ffjson v0.0.0-20190930134022-aa0246cd15f7 // indirect
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
 	github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef // indirect
-	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee
+	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/common v0.2.0 // indirect
 	github.com/robfig/cron v1.2.0
