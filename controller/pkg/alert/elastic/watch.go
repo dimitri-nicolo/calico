@@ -471,26 +471,29 @@ String resolve(String key, def t) {
 }
 `)) + "\n"
 
-var actionTransformCode = strings.TrimSpace(dedent.Dedent(`
-	return [
-		'_doc': ctx.payload._value.stream()
-			.map(t -> {[
-				'time': ctx.trigger.triggered_time,
-				'type': params.type,
-				'description': description(t),
-				'severity': params.severity,
-				'record': t
-			]})
-			.collect(Collectors.toList())
-	]
-`))
+func actionTransformCode(name string) string {
+	return strings.TrimSpace(dedent.Dedent(fmt.Sprintf(`
+		return [
+			'_doc': ctx.payload._value.stream()
+				.map(t -> {[
+					'time': ctx.trigger.triggered_time,
+					'type': params.type,
+                    'alert': %q,
+					'description': description(t),
+					'severity': params.severity,
+					'record': t
+				]})
+				.collect(Collectors.toList())
+		]
+`, name)))
+}
 
 func ActionTransform(alert v3.GlobalAlert) *elastic.Transform {
 	return &elastic.Transform{
 		elastic.Script{
 			// This doesn't work for nested
 			Language: "painless",
-			Source:   util.PainlessFmt(ResolveCode + GenerateDescriptionFunction(alert.Spec.Description) + actionTransformCode),
+			Source:   util.PainlessFmt(ResolveCode + GenerateDescriptionFunction(alert.Spec.Description) + actionTransformCode(alert.Name)),
 			Params: JsonObject{
 				"type":        AlertEventType,
 				"description": alert.Spec.Description,
