@@ -32,6 +32,9 @@ func NewNetworkSetUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 }
 
 func convertNetworkSetV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
+	if v3key.Kind != apiv3.KindNetworkSet {
+		return nil, errors.New("Key is not a valid NetworkSet resource")
+	}
 	if v3key.Name == "" || v3key.Namespace == "" {
 		return model.NetworkSetKey{}, errors.New("Missing Name or Namespace field to create a v1 NetworkSet Key")
 	}
@@ -77,4 +80,29 @@ func convertNetworkSetV2ToV1Value(val interface{}) (interface{}, error) {
 	}
 
 	return v1value, nil
+}
+
+// Convert v3 KVPair to the equivalent v1 KVPair.
+func ConvertNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
+	// Validate against incorrect key/value kinds.  This indicates a code bug rather
+	// than a user error.
+	v3key, ok := kvp.Key.(model.ResourceKey)
+	if !ok {
+		return nil, errors.New("Key is not a valid ResourceKey")
+	}
+	v1key, err := convertNetworkSetV2ToV1Key(v3key)
+	if err != nil {
+		return nil, err
+	}
+
+	v1value, err := convertNetworkSetV2ToV1Value(kvp.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.KVPair{
+		Key:      v1key,
+		Value:    v1value,
+		Revision: kvp.Revision,
+	}, nil
 }
