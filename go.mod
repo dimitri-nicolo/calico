@@ -42,7 +42,6 @@ require (
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pquerna/ffjson v0.0.0-20190930134022-aa0246cd15f7 // indirect
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
-	github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef // indirect
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/common v0.2.0 // indirect
@@ -64,6 +63,7 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.27.0
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.2.5 // indirect
 	k8s.io/api v0.0.0-20180628040859-072894a440bd
 	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
 	k8s.io/apiserver v0.0.0-20190324105220-f881eae9ec04
