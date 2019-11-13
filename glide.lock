@@ -1,5 +1,5 @@
-hash: fba41d09f212b548c862118daeb1e2264d28cc7457d114a948063831af1b7017
-updated: 2019-11-04T10:50:53.987325955-08:00
+hash: b0242e4c74eae105c8f572a3a71d590bbefb30a377bae010c1f3565a4cb4bdcb
+updated: 2019-11-11T15:27:15.505445051-08:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -84,7 +84,7 @@ imports:
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
-  version: 71201497bace774495daed26a3874fd339e0b538
+  version: f87b1403479a348651dbf5f07f5cc6e5fcf07008
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -181,7 +181,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 2e8fb3428e69ca244d241bf9c9d6f3ebc7928f64
+  version: fdda32d56026c8ab8903f398ba1a7c3e3e42fd2f
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -311,7 +311,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: d415e1c6f9573d887d4bd689c64f4fe3e417ce1e
+  version: 9d59ce8a7f66443c9a512593b020a8248c2e4e1c
   subpackages:
   - import
 - name: google.golang.org/appengine

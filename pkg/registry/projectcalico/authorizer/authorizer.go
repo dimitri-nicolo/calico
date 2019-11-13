@@ -75,7 +75,7 @@ func isTieredPolicy(attr k8sauth.Attributes) bool {
 	}
 
 	switch attr.GetResource() {
-	case "networkpolicies", "globalnetworkpolicies":
+	case "networkpolicies", "globalnetworkpolicies", "stagednetworkpolicies", "stagedglobalnetworkpolicies":
 		return true
 	}
 
