@@ -65,3 +65,33 @@ if [ $? -ne 0 ]; then
   echo >&2 "Patching cnx-manager deployment failed"
   exit 1
 fi
+
+kubectl apply -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.manager-access
+  namespace: tigera-manager
+spec:
+  tier: allow-tigera
+  order: 1
+  selector: k8s-app == "tigera-manager"
+  serviceAccountSelector: ''
+  ingress:
+    - action: Allow
+      protocol: TCP
+      source:
+        nets:
+          - 0.0.0.0/0
+      destination:
+        ports:
+          - '9443'
+    - action: Allow
+      protocol: TCP
+      source: {}
+      destination:
+        ports:
+          - '9449'
+  types:
+    - Ingress
+EOF

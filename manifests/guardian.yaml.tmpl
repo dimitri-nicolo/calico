@@ -1,22 +1,27 @@
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: tigera-mcm
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: cnx-guardian
-  namespace: calico-monitoring
+  name: tigera-guardian
+  namespace: tigera-mcm
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: cnx-guardian-config
-  namespace: calico-monitoring
+  name: tigera-guardian-config
+  namespace: tigera-mcm
 data:
   # Server port for Guardian
-  cnx-guardian.port: "9443"
+  tigera-guardian.port: "9443"
   # Logging level
-  cnx-guardian.log-level: "DEBUG"
+  tigera-guardian.log-level: "INFO"
   # Proxy Targets
-  cnx-guardian.proxy-targets: '[
+  tigera-guardian.proxy-targets: '[
     {
       "path": "/api/",
       "url": "https://kubernetes.default",
@@ -31,25 +36,19 @@ data:
     },
     {
       "path": "/tigera-elasticsearch/",
-      "url": "https://cnx-es-proxy-local.calico-monitoring.svc.cluster.local:8443",
-      "pathRegexp": "^/tigera-elasticsearch/?",
-      "pathReplace": "/"
+      "url": "https://tigera-manager.tigera-manager.svc:9443"
     },
     {
       "path": "/compliance/",
-      "url": "https://compliance.calico-monitoring.svc.cluster.local"
-    },
-    {
-      "path": "/compliance-reports/",
-      "url": "https://compliance.calico-monitoring.svc.cluster.local"
+      "url": "https://compliance.tigera-compliance.svc.cluster.local"
     }]'
   # This tells Guardian how to reach Voltron
-  cnx-guardian.voltron-url: {{.VoltronURL}}
+  tigera-guardian.voltron-url: {{.VoltronURL}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: cnx-guardian-impersonator-role
+  name: tigera-guardian
 rules:
   - apiGroups: [""]
     resources: ["users", "groups", "serviceaccounts"]
@@ -58,21 +57,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: cnx-guardian-impersonator
+  name: tigera-guardian
 roleRef:
   kind: ClusterRole
-  name: cnx-guardian-impersonator-role
+  name: tigera-guardian
   apiGroup: rbac.authorization.k8s.io
 subjects:
   - kind: ServiceAccount
-    name: cnx-guardian
-    namespace: calico-monitoring
+    name: tigera-guardian
+    namespace: tigera-mcm
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: cnx-guardian-certs
-  namespace: calico-monitoring
+  name: tigera-guardian-certs
+  namespace: tigera-mcm
 type: Opaque
 data:
   guardian.crt: {{.GuardianTLSCert | base64}}
@@ -85,23 +84,23 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cnx-guardian
-  namespace: calico-monitoring
+  name: tigera-guardian
+  namespace: tigera-mcm
   labels:
-    k8s-app: cnx-guardian
+    k8s-app: tigera-guardian
 spec:
   replicas: 1
   selector:
     matchLabels:
-      k8s-app: cnx-guardian
+      k8s-app: tigera-guardian
   strategy:
     type: Recreate
   template:
     metadata:
-      name: cnx-guardian
-      namespace: calico-monitoring
+      name: tigera-guardian
+      namespace: tigera-mcm
       labels:
-        k8s-app: cnx-guardian
+        k8s-app: tigera-guardian
       annotations:
         # Mark this pod as a critical add-on; when enabled,
         # the critical add-on scheduler reserves resources
@@ -112,7 +111,7 @@ spec:
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
-      serviceAccountName: cnx-guardian
+      serviceAccountName: tigera-guardian
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
@@ -122,38 +121,36 @@ spec:
         - key: CriticalAddonsOnly
           operator: Exists
       # Use the same pull secret as the rest of TSEE
-      imagePullSecrets:
-        - name: cnx-pull-secret
       containers:
-        - name: cnx-guardian
+        - name: tigera-guardian
           image: {{VOLTRON_DOCKER_PUSH_REPO}}/tigera/guardian:{{VOLTRON_DOCKER_TAG}}
           imagePullPolicy: IfNotPresent
           env:
             - name: GUARDIAN_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: cnx-guardian-config
-                  key: cnx-guardian.port
+                  name: tigera-guardian-config
+                  key: tigera-guardian.port
             - name: GUARDIAN_LOGLEVEL
               valueFrom:
                 configMapKeyRef:
-                  name: cnx-guardian-config
-                  key: cnx-guardian.log-level
+                  name: tigera-guardian-config
+                  key: tigera-guardian.log-level
             - name: GUARDIAN_PROXY_TARGETS
               valueFrom:
                 configMapKeyRef:
-                  name: cnx-guardian-config
-                  key: cnx-guardian.proxy-targets
+                  name: tigera-guardian-config
+                  key: tigera-guardian.proxy-targets
             - name: GUARDIAN_VOLTRON_URL
               valueFrom:
                 configMapKeyRef:
-                  name: cnx-guardian-config
-                  key: cnx-guardian.voltron-url
+                  name: tigera-guardian-config
+                  key: tigera-guardian.voltron-url
           # QUESTION: Should we have resource limits defined?
           resources: {}
           volumeMounts:
             - mountPath: /certs/
-              name: cnx-guardian-certs
+              name: tigera-guardian-certs
               readOnly: true
           livenessProbe:
             httpGet:
@@ -171,6 +168,6 @@ spec:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
       volumes:
-        - name: cnx-guardian-certs
+        - name: tigera-guardian-certs
           secret:
-            secretName: cnx-guardian-certs
+            secretName: tigera-guardian-certs

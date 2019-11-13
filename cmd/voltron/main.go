@@ -39,7 +39,7 @@ type config struct {
 	KeepAliveEnable              bool   `default:"true" split_words:"true"`
 	KeepAliveInterval            int    `default:"100" split_words:"true"`
 	K8sEndpoint                  string `default:"https://kubernetes.default" split_words:"true"`
-	ComplianceEndpoint           string `default:"https://compliance.calico-monitoring.svc.cluster.local" split_words:"true"`
+	ComplianceEndpoint           string `default:"https://compliance.tigera-compliance.svc.cluster.local" split_words:"true"`
 	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
