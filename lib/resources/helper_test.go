@@ -98,6 +98,17 @@ var _ = Describe("types", func() {
 		_, ok = list.(*apiv3.GlobalNetworkSetList)
 		Expect(ok).To(BeTrue())
 
+		// Network Sets
+		By("creating a namespaced Network Set instance using NewResource")
+		rh = GetResourceHelperByTypeMeta(TypeCalicoNetworkSets)
+		Expect(rh).ToNot(BeNil())
+		res = rh.NewResource()
+		_, ok = res.(*apiv3.NetworkSet)
+		Expect(ok).To(BeTrue())
+		list = rh.NewResourceList()
+		_, ok = list.(*apiv3.NetworkSetList)
+		Expect(ok).To(BeTrue())
+
 		// Network Policies
 		By("creating a Network Policies instance using NewResource")
 		rh = GetResourceHelperByTypeMeta(TypeCalicoNetworkPolicies)

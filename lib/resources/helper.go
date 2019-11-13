@@ -34,6 +34,7 @@ var (
 	TypeCalicoGlobalNetworkPolicies           = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkPolicy}
 	TypeCalicoStagedGlobalNetworkPolicies     = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindStagedGlobalNetworkPolicy}
 	TypeCalicoGlobalNetworkSets               = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkSet}
+	TypeCalicoNetworkSets                     = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindNetworkSet}
 	TypeCalicoHostEndpoints                   = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindHostEndpoint}
 	TypeCalicoNetworkPolicies                 = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindNetworkPolicy}
 	TypeCalicoStagedNetworkPolicies           = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindStagedNetworkPolicy}
@@ -239,6 +240,13 @@ var (
 			&apiv3.GlobalNetworkSetList{},
 			[]metav1.TypeMeta{},
 			"globalnetworksets",
+		},
+		{
+			TypeCalicoNetworkSets,
+			&apiv3.NetworkSet{},
+			&apiv3.NetworkSetList{},
+			[]metav1.TypeMeta{},
+			"networksets",
 		},
 		{
 			TypeCalicoNetworkPolicies,
