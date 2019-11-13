@@ -9,6 +9,9 @@ Note: [How to Manage Multiple Terraforms](#how-to-manage-multiple-terraforms).
 
 This step is required to install TSEE as a standalone cluster. You can follow [the quick start guide](https://docs.tigera.io/master/getting-started/kubernetes/)
 
+You will need to create a service account and retrieve its token to access the UI. Please follow the [create-ui-user.sh](/install-scripts/create-ui-user.sh) script that creates service account `ui-user` and binds its to `tigera-network-admin`.
+The token can be retrieved using [token.sh](/install-scripts/token.sh). You can access the UI on `https://127.0.0.1:9443/` after running [port-forward.sh](/install-scripts/port-forward.sh).
+
 ## Management Cluster
 
 This step is required to enable multi cluster mode on a standalone TSEE cluster. A standalone already has Voltron installed. All you need to do is to enable the multi cluster mode that allows an user to create managed clusters.
@@ -25,6 +28,8 @@ Create a managed cluster via CNX manager UI and apply the manifest for guardian.
 This step is required to enable multi cluster client mode on a standalone TSEE cluster.
 
 Please follow the [setup-guardian-app-cluster.bash](/install-scripts/setup-guardian-app-cluster.bash).
+
+You will be required to create a service account to access the data from the managed cluster. Please see the section above for further instructions.
 
 ## How to Manage Multiple Terraforms
 
