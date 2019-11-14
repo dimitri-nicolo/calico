@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/list"
 )

@@ -21,6 +21,7 @@ import (
 	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/ips"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -292,6 +293,7 @@ func newEndpointHandler(config *config.Config) resourceHandler {
 		podIstioSidecarAnnotation:  config.PodIstioSidecarAnnotation,
 		podIstioContainerRegex:     podIstioContainerRegex,
 		podIstioInitContainerRegex: podIstioInitContainerRegex,
+		includeStaged:              config.IncludeStagedNetworkPolicies,
 	}
 }
 
@@ -304,6 +306,7 @@ type endpointHandler struct {
 	podIstioSidecarAnnotation  string
 	podIstioInitContainerRegex *regexp.Regexp
 	podIstioContainerRegex     *regexp.Regexp
+	includeStaged              bool
 }
 
 // kinds implements the resourceHandler interface.
@@ -313,13 +316,14 @@ func (c *endpointHandler) kinds() []metav1.TypeMeta {
 
 // register implements the resourceHandler interface.
 func (c *endpointHandler) register(cache CacheAccessor) {
+	nptm := policyKinds(c.includeStaged)
 	c.CacheAccessor = cache
-	c.EndpointLabelSelector().RegisterCallbacks(KindsNetworkPolicy, c.policyMatchStarted, c.policyMatchStopped)
+	c.EndpointLabelSelector().RegisterCallbacks(nptm, c.policyMatchStarted, c.policyMatchStopped)
 	c.IPOrEndpointManager().RegisterCallbacks(KindsServices, c.ipMatchStarted, c.ipMatchStopped)
 
 	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
 	// changes to the cross-referencing will result in a notification here where we will requeue any changed endpoints.
-	for _, kind := range KindsNetworkPolicy {
+	for _, kind := range nptm {
 		c.RegisterOnUpdateHandler(
 			kind,
 			syncer.UpdateType(CacheEntryFlagsNetworkPolicy),

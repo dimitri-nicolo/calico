@@ -9,10 +9,11 @@ import (
 	"os"
 	"path"
 
+	"gopkg.in/natefinch/lumberjack.v2"
+
 	api "github.com/tigera/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // LogDispatcher is the external interface for dispatchers. For now there is only the file dispatcher.

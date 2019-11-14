@@ -7,9 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/felix/labelindex"
-	"github.com/projectcalico/libcalico-go/lib/selector"
-
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
 // This is just a wrapper around the Felix InheritIndex helper, but uses ResourceID selector and label identifiers and

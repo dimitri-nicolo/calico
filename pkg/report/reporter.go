@@ -12,8 +12,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
-
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/archive"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
@@ -21,7 +21,6 @@ import (
 	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
-
 	api "github.com/tigera/lma/pkg/api"
 )
 

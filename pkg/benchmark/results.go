@@ -3,6 +3,7 @@ package benchmark
 
 import (
 	"github.com/aquasecurity/kube-bench/check"
+
 	api "github.com/tigera/lma/pkg/api"
 )
 

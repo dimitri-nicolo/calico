@@ -11,8 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
-
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/lma/pkg/list"
 )
 

@@ -2,8 +2,9 @@
 package list
 
 import (
-	lmaL "github.com/tigera/lma/pkg/list"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	lmaL "github.com/tigera/lma/pkg/list"
 )
 
 // Source is the interface used for listing the current configured resources from source.

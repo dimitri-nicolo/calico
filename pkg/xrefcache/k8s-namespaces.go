@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/syncer"
 )
 

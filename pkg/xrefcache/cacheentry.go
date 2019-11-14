@@ -2,7 +2,7 @@
 package xrefcache
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/compliance/pkg/syncer"
 )

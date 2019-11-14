@@ -71,6 +71,9 @@ type Config struct {
 	ArchiveLogsDirectory     string `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_DIR" default:"/var/log/calico/compliance"`
 	ArchiveLogsMaxFiles      int    `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_MAX_FILES" default:"2"`
 	ArchiveLogsMaxFileSizeMB int    `envconfig:"TIGERA_COMPLIANCE_ARCHIVE_LOGS_MAX_FILESIZE_MB" default:"50"`
+
+	// Whether staged network policies should be included in the cache calculations.
+	IncludeStagedNetworkPolicies bool `envconfig:"TIGERA_COMPLIANCE_INCLUDE_STAGED_NETWORK_POLICIES" default:"false"`
 }
 
 func MustLoadConfig() *Config {

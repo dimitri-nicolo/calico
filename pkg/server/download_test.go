@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("Download tests", func() {

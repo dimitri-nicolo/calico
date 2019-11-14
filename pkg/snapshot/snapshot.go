@@ -7,11 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/errors"
 	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/list"
 	api "github.com/tigera/lma/pkg/api"

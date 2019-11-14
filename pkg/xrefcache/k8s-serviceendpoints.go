@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/ips"
 	"github.com/tigera/compliance/pkg/syncer"
 )

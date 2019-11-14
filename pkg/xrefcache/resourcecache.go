@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/dispatcher"
 	"github.com/tigera/compliance/pkg/keyselector"
 	"github.com/tigera/compliance/pkg/labelselector"
