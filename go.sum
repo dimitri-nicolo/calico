@@ -461,6 +461,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191112004501-3b1a933c2ea5 h1:Z
 github.com/tigera/libcalico-go-private v1.7.2-0.20191112004501-3b1a933c2ea5/go.mod h1:Wv8okOjae86NpPkLSyGDvg1RyqPcb3y++Ff/47qSjo4=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191113000542-a24be7825ab6 h1:dq/GStBxG+yyUqZJebdzLzkaHBhBsYMZsBhHeYP5bt0=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191113000542-a24be7825ab6/go.mod h1:UOFusdYkBaG14sNhTTB+PIa69AjFBE15rJ1XLnoqr8E=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191113223902-f77f93773a83 h1:1t6XJ8IctIFDXLb96z958H6MMe+UmF0FFrEB47ElxBU=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191113223902-f77f93773a83/go.mod h1:6iZKDaVRAw3oU1QlCnG49RRi0voOFP/C0oq0+8Rv1s0=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v2.7.0-0.dev+incompatible h1:q60X+JHLPhQJPYHsuYBOQ7x0lWLZAUdA6H/HZrULhMI=
@@ -627,6 +629,8 @@ gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7/go.mod h1:JAlM8MvJe8wmxCU4Bl
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.5 h1:ymVxjfMaHvXD8RqPRmzHHsB3VvucivSkIAvJFDI5O3c=
+gopkg.in/yaml.v2 v2.2.5/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20181108184350-ae8f1f9103cc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
