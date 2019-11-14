@@ -60,12 +60,13 @@ func ConvertStagedKubernetesNetworkPolicyV3ToV1Value(val interface{}) (interface
 		return nil, nil
 	}
 
+	//From StagedK8s to networkingv1
+	_, v1np := apiv3.ConvertStagedKubernetesPolicyToK8SEnforced(staged)
 	c := conversion.Converter{}
-	snpKVPair, err := c.StagedKubernetesNetworkPolicyToStaged(staged)
+	kvp, err := c.K8sNetworkPolicyToCalico(v1np)
 	if err != nil {
 		return nil, err
 	}
-
-	v3snp := snpKVPair.Value.(*apiv3.StagedNetworkPolicy)
-	return ConvertStagedNetworkPolicyV3ToV1Value(v3snp)
+	v3snp := kvp.Value.(*apiv3.NetworkPolicy)
+	return ConvertNetworkPolicyV3ToV1Value(v3snp)
 }

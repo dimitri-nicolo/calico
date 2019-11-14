@@ -1522,22 +1522,7 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 	validateObjectMetaAnnotations(structLevel, staged.Annotations)
 	validateObjectMetaLabels(structLevel, staged.Labels)
 
-	c := calicoconversion.Converter{}
-	snpKVPair, err := c.StagedKubernetesNetworkPolicyToStaged(&staged)
-	if err != nil {
-		structLevel.ReportError(
-			reflect.ValueOf(staged.Spec),
-			"PolicySpec",
-			"",
-			reason(fmt.Sprintf("conversion to stagednetworkpolicy failed %v", err)),
-			"",
-		)
-	}
-
-	v3snp := snpKVPair.Value.(*api.StagedNetworkPolicy)
-	spec := v3snp.Spec
-
-	if spec.StagedAction == api.StagedActionDelete {
+	if staged.Spec.StagedAction == api.StagedActionDelete {
 		//the network policy fields should all "zero-value" when the update type is "delete"
 		empty := api.NewStagedKubernetesNetworkPolicy()
 		empty.Spec.StagedAction = api.StagedActionDelete
@@ -1546,8 +1531,21 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 				"StagedKubernetesNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
 		}
 	} else {
-		_, enforced := api.ConvertStagedPolicyToEnforced(v3snp)
-		validateNetworkPolicySpec(&enforced.Spec, structLevel)
+		c := calicoconversion.Converter{}
+		_, v1np := api.ConvertStagedKubernetesPolicyToK8SEnforced(&staged)
+		npKVPair, err := c.K8sNetworkPolicyToCalico(v1np)
+		if err != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(staged.Spec),
+				"PolicySpec",
+				"",
+				reason(fmt.Sprintf("conversion to stagednetworkpolicy failed %v", err)),
+				"",
+			)
+		}
+
+		v3np := npKVPair.Value.(*api.NetworkPolicy)
+		validateNetworkPolicySpec(&v3np.Spec, structLevel)
 	}
 }
 
