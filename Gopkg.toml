@@ -35,6 +35,10 @@
   source = "github.com/tigera/libcalico-go-private"
 
 [[override]]
+  revision = "73d903622b7391f3312dcbac6483fed484e185f8"
+  name = "k8s.io/api"
+
+[[override]]
   revision = "4972c8e335e32ab65ba45bde0a99c6544c8a8e4c"
   name = "k8s.io/apimachinery"
 
