@@ -2,6 +2,8 @@
 package xrefcache
 
 import (
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +22,7 @@ import (
 var (
 	KindsNetworkSet = []metav1.TypeMeta{
 		resources.TypeCalicoGlobalNetworkSets,
+		resources.TypeCalicoNetworkSets,
 	}
 )
 
@@ -87,6 +90,37 @@ func (v *versionedCalicoGlobalNetworkSet) GetCalicoV1NetworkSet() *model.Network
 // IsNamespaced implements the VersionedNetworkSetResource interface.
 func (v *versionedCalicoGlobalNetworkSet) IsNamespaced() bool {
 	return false
+}
+
+// versionedCalicoNetworkSet implements the VersionedNetworkSetResource for a Calico NetworkSet kind.
+type versionedCalicoNetworkSet struct {
+	*apiv3.NetworkSet
+	v1 *model.NetworkSet
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoNetworkSet) GetPrimary() resources.Resource {
+	return v.NetworkSet
+}
+
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkSet) GetCalicoV3() resources.Resource {
+	return v.NetworkSet
+}
+
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkSet) GetCalicoV1() interface{} {
+	return v.v1
+}
+
+// GetCalicoV1NetworkSet implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkSet) GetCalicoV1NetworkSet() *model.NetworkSet {
+	return v.v1
+}
+
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkSet) IsNamespaced() bool {
+	return true
 }
 
 // newNetworkSetHandler creates a new handler used for the NetworkSet cache.
@@ -160,25 +194,55 @@ func (c *networkSetHandler) convertToVersioned(res resources.Resource) (Versione
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
+	case *pcv3.NetworkSet:
+		res = &apiv3.NetworkSet{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
 	}
 
-	in := res.(*apiv3.GlobalNetworkSet)
+	switch in := res.(type) {
+	case *apiv3.NetworkSet:
+		in = res.(*apiv3.NetworkSet)
 
-	v1, err := updateprocessors.ConvertGlobalNetworkSetV3ToV1(&model.KVPair{
-		Key: model.ResourceKey{
-			Kind: apiv3.KindGlobalNetworkSet,
-			Name: in.Name,
-		},
-		Value: in,
-	})
-	if err != nil {
-		return nil, err
+		v1, err := updateprocessors.ConvertNetworkSetV3ToV1(&model.KVPair{
+			Key: model.ResourceKey{
+				Kind:      apiv3.KindNetworkSet,
+				Name:      in.Name,
+				Namespace: in.Namespace,
+			},
+			Value: in,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return &versionedCalicoNetworkSet{
+			NetworkSet: in,
+			v1:         v1.Value.(*model.NetworkSet),
+		}, nil
+	case *apiv3.GlobalNetworkSet:
+		in = res.(*apiv3.GlobalNetworkSet)
+
+		v1, err := updateprocessors.ConvertGlobalNetworkSetV3ToV1(&model.KVPair{
+			Key: model.ResourceKey{
+				Kind: apiv3.KindGlobalNetworkSet,
+				Name: in.Name,
+			},
+			Value: in,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return &versionedCalicoGlobalNetworkSet{
+			GlobalNetworkSet: in,
+			v1:               v1.Value.(*model.NetworkSet),
+		}, nil
 	}
 
-	return &versionedCalicoGlobalNetworkSet{
-		GlobalNetworkSet: in,
-		v1:               v1.Value.(*model.NetworkSet),
-	}, nil
+	return nil, fmt.Errorf("unhandled resource type: %v", res)
 }
 
 // scanNets checks the nets in the resource for certain properties (currently just if it contains any non-private

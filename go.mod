@@ -6,7 +6,7 @@ replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364
 	github.com/tigera/es-proxy => github.com/tigera/es-proxy-image v0.0.0-20191030024341-da41989fb61c
 	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
 	k8s.io/api => k8s.io/api v0.0.0-20180628040859-072894a440bd
@@ -42,7 +42,7 @@ require (
 	github.com/onsi/gomega v1.7.0
 	github.com/projectcalico/felix v3.8.2+incompatible
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
-	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee
+	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
@@ -73,5 +73,6 @@ require (
 	k8s.io/apimachinery v0.0.0-20191006235458-f9f2f3f8ab02
 	k8s.io/apiserver v0.0.0-20191009120923-2647efb97187
 	k8s.io/client-go v11.0.0+incompatible
+	k8s.io/klog v0.4.0
 	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d // indirect
 )

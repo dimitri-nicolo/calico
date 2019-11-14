@@ -11,7 +11,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 )
 
 type resourceHelper struct {
@@ -68,6 +68,11 @@ var (
 		resources.TypeCalicoGlobalNetworkSets: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.GlobalNetworkSets().List(metav1.ListOptions{})
+			},
+		},
+		resources.TypeCalicoNetworkSets: {
+			func(c ClientSet) (resources.ResourceList, error) {
+				return c.NetworkSets("").List(metav1.ListOptions{})
 			},
 		},
 		resources.TypeCalicoNetworkPolicies: {

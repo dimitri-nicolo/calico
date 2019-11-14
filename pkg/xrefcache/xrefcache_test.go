@@ -432,6 +432,31 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(gns))
 
+		By("Creating, storing and then deleting a calico namespaced network set")
+		var netset *apiv3.NetworkSet
+		tester.SetNetworkSet(Name1, Namespace1, Label1, Public|Private)
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoNetworkSets)).To(HaveLen(1))
+		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoNetworkSets, func(ce xrefcache.CacheEntry) error {
+			netset = ce.GetCalicoV3().(*apiv3.NetworkSet)
+			tester.XrefCache.OnUpdates([]syncer.Update{
+				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
+			})
+			return nil
+		})
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoNetworkSets)).To(HaveLen(0))
+
+		By("Creating a AAPIS netset (from the original calico netset) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(netset),
+				Resource:   &pcv3.NetworkSet{TypeMeta: netset.TypeMeta, ObjectMeta: netset.ObjectMeta, Spec: netset.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(netset))
+		Expect(res).ToNot(BeNil())
+		Expect(res.GetCalicoV3()).To(Equal(netset))
+
 		By("Creating, storing and then deleting a calico global network policy")
 		var gnp *apiv3.GlobalNetworkPolicy
 		tester.SetGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1)

@@ -48,7 +48,7 @@ type versionedCalicoTier struct {
 	v1 *model.Tier
 }
 
-// GetPrimary implements the VersionedNetworkSetResource interface.
+// GetPrimary implements the VersionedTierResource interface.
 func (v *versionedCalicoTier) GetPrimary() resources.Resource {
 	return v.Tier
 }
@@ -61,7 +61,7 @@ func (v *versionedCalicoTier) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// GetCalicoV1Key implements the VersionedPolicyResource interface.
+// GetCalicoV1Key implements the VersionedTierResource interface.
 func (v *versionedCalicoTier) GetCalicoV1Key() model.TierKey {
 	return model.TierKey{
 		Name: v.Name,

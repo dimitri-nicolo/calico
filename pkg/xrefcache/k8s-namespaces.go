@@ -53,7 +53,7 @@ type versionedK8sNamespace struct {
 	v1 *model.Profile
 }
 
-// GetPrimary implements the VersionedNetworkSetResource interface.
+// GetPrimary implements the VersionedNamespaceResource interface.
 func (v *versionedK8sNamespace) GetPrimary() resources.Resource {
 	return v.Namespace
 }

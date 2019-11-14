@@ -19,8 +19,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/resources"
 	. "github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/lma/pkg/list"
 	"github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/list"
 )
 
 var (
@@ -48,6 +48,14 @@ var (
 		TypeMeta: resources.TypeCalicoGlobalNetworkSets,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "gns1",
+			ResourceVersion: "1",
+		},
+	}
+	netset1 = apiv3.NetworkSet{
+		TypeMeta: resources.TypeCalicoNetworkSets,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "ns1",
+			Namespace:       namespace1,
 			ResourceVersion: "1",
 		},
 	}
@@ -204,6 +212,11 @@ func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *tim
 			TypeMeta: resources.TypeCalicoGlobalNetworkSets,
 			Items:    []apiv3.GlobalNetworkSet{gns1},
 		}
+	case resources.TypeCalicoNetworkSets:
+		l = &apiv3.NetworkSetList{
+			TypeMeta: resources.TypeCalicoNetworkSets,
+			Items:    []apiv3.NetworkSet{netset1},
+		}
 	case resources.TypeCalicoHostEndpoints:
 		l = &apiv3.HostEndpointList{
 			TypeMeta: resources.TypeCalicoHostEndpoints,
@@ -337,12 +350,13 @@ var _ = Describe("Replay namespace deletion", func() {
 
 		By("Checking for the expected updates")
 		// There should be one update of each resource, followed by delete events for everything in namespace2.
-		Expect(cb.updates).To(HaveLen(27))
-		checkUpdates(cb.updates[:19], syncer.UpdateTypeSet, []resources.Resource{
-			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &np1, &snp1, &np2, &knp1, &sknp1, &knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
+		Expect(cb.updates).To(HaveLen(29))
+		checkUpdates(cb.updates[:20], syncer.UpdateTypeSet, []resources.Resource{
+			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &netset1, &np1, &snp1, &np2, &knp1, &sknp1, &knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
 		})
-		checkUpdates(cb.updates[19:], syncer.UpdateTypeDeleted, []resources.Resource{
-			&np1, &snp1, &knp1, &sknp1, &ep1, &pod1, &sa1, &ns1,
+		
+		checkUpdates(cb.updates[20:], syncer.UpdateTypeDeleted, []resources.Resource{
+			&np1, &snp1, &knp1, &sknp1, &netset1, &ep1, &pod1, &sa1, &ns1,
 		})
 	})
 })
@@ -352,6 +366,6 @@ func checkUpdates(updates []syncer.Update, expectedType syncer.UpdateType, expec
 	for i, update := range updates {
 		Expect(update.Type).To(Equal(expectedType), fmt.Sprintf("Unexpected type at index %d", i))
 		r = append(r, update.Resource)
-	}
+	}		
 	Expect(r).Should(ConsistOf(expectedResources))
 }

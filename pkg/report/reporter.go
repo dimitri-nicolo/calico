@@ -425,7 +425,7 @@ func (r *reporter) isInScope(id apiv3.ResourceID) bool {
 		}
 		_, ok := r.services[nid]
 		return ok
-	case resources.TypeCalicoGlobalNetworkSets:
+	case resources.TypeCalicoGlobalNetworkSets, resources.TypeCalicoNetworkSets:
 		return false
 	default:
 		return false
