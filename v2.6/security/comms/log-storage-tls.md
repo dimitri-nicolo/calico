@@ -21,7 +21,7 @@ This how-to guide uses the following features:
 
 By default, the {{site.prodname}} log storage uses self-signed certificates on connections. To provide TLS certificates,
 get the certificate and key pair for the {{site.prodname}} log storage using any X.509-compatible tool or from your organization's 
-Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `tigera-secure-elasticsearch-cert.tigera-elasticsearch.svc`.
+Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `tigera-secure-es-http.tigera-elasticsearch.svc`.
 
 ### How to
 
