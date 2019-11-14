@@ -24,7 +24,16 @@ spec:
     - action: Allow
       protocol: TCP
       source:
-        selector: k8s-app == "tigera-manager"||k8s-app == "tigera-guardian"
+        selector: k8s-app == "tigera-manager"
+        namespaceSelector: name == "tigera-manager"
+      destination:
+        ports:
+          - '5443'
+    - action: Allow
+      protocol: TCP
+      source:
+        selector: k8s-app == "tigera-guardian"
+        namespaceSelector: name == "tigera-mcm"
       destination:
         ports:
           - '5443'
