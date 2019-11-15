@@ -1,5 +1,5 @@
-hash: b0242e4c74eae105c8f572a3a71d590bbefb30a377bae010c1f3565a4cb4bdcb
-updated: 2019-11-11T15:27:15.505445051-08:00
+hash: ee109689d618886ff5c4c7ca38b13ce139d53ed6803257a3a0c401ed78dfdddb
+updated: 2019-11-15T18:11:40.388203327Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -176,12 +176,10 @@ imports:
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
   - json
-- name: github.com/projectcalico/go-yaml
-  version: 955bc3e451ef0c9df8b9113bf2e341139cdafab2
 - name: github.com/projectcalico/go-yaml-wrapper
-  version: 598e54215bee41a19677faa4f0c32acd2a87eb56
+  version: 090425220c545f6d179db17af395f5aac30b6926
 - name: github.com/projectcalico/libcalico-go
-  version: fdda32d56026c8ab8903f398ba1a7c3e3e42fd2f
+  version: f77f93773a836c30f941a07bf528cfe08e4105cf
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -247,7 +245,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/tigera/licensing
-  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
+  version: 3c126d3f9ffe1d1147e766f45c0c20d57d081c76
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -311,7 +309,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 9d59ce8a7f66443c9a512593b020a8248c2e4e1c
+  version: 1c71899d35ca07586495ab5b33711a8b592faad7
   subpackages:
   - import
 - name: google.golang.org/appengine
@@ -364,7 +362,7 @@ imports:
   - json
   - jwt
 - name: gopkg.in/yaml.v2
-  version: 670d4cfef0544295bc27a114dbac37980d83185a
+  version: f90ceb4f409096b60e2e9076b38b304b8246e5fa
 - name: k8s.io/api
   version: 73d903622b7391f3312dcbac6483fed484e185f8
   subpackages:

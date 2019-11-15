@@ -1,5 +1,9 @@
 package: github.com/tigera/calico-k8sapiserver
 import:
+- package: gopkg.in/yaml.v2
+  version: v2.2.5
+- package: github.com/projectcalico/go-yaml-wrapper
+  version: calico
 - package: github.com/coreos/etcd
   version: 95a726a27e09030f9ccbd9982a1508f5a6d25ada
   subpackages:
@@ -8,7 +12,7 @@ import:
   - mvcc/mvccpb
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
-  version: fdda32d56026c8ab8903f398ba1a7c3e3e42fd2f
+  version: f77f93773a836c30f941a07bf528cfe08e4105cf
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -19,7 +23,7 @@ import:
   - lib/options
   - lib/watch
 - package: github.com/tigera/licensing
-  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
+  version: 3c126d3f9ffe1d1147e766f45c0c20d57d081c76
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
