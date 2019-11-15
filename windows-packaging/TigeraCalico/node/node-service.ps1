@@ -91,8 +91,10 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_
     Write-Host "Management IP detected on vSwitch: $mgmtIP."
     Start-Sleep 10
 
-    Write-Host "Restarting BGP service to pick up any interface renumbering..."
-    Restart-Service RemoteAccess
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
+        Write-Host "Restarting BGP service to pick up any interface renumbering..."
+        Restart-Service RemoteAccess
+    }
 }
 
 $env:CALICO_NODENAME_FILE = ".\nodename"
