@@ -9,17 +9,19 @@ import (
 )
 
 type MockSets struct {
-	Name          string
-	Version       interface{}
-	Metas         []Meta
-	Value         interface{}
-	Time          time.Time
-	Error         error
-	DeleteCalled  bool
-	DeleteName    string
-	DeleteVersion *int64
-	DeleteError   error
-	PutError      error
+	Name              string
+	SeqNo             interface{}
+	PrimaryTerm       interface{}
+	Metas             []Meta
+	Value             interface{}
+	Time              time.Time
+	Error             error
+	DeleteCalled      bool
+	DeleteName        string
+	DeleteSeqNo       *int64
+	DeletePrimaryTerm *int64
+	DeleteError       error
+	PutError          error
 
 	m     sync.Mutex
 	calls []Call
@@ -36,14 +38,20 @@ func (m *MockSets) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
 func (m *MockSets) DeleteIPSet(ctx context.Context, meta Meta) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "DeleteIPSet", Name: meta.Name, Version: meta.Version})
+	m.calls = append(m.calls, Call{Method: "DeleteIPSet", Name: meta.Name, SeqNo: meta.SeqNo, PrimaryTerm: meta.PrimaryTerm})
 	m.DeleteCalled = true
 	m.DeleteName = meta.Name
-	if meta.Version == nil {
-		m.DeleteVersion = nil
+	if meta.SeqNo == nil {
+		m.DeleteSeqNo = nil
 	} else {
-		i := struct{ i int64 }{*meta.Version}
-		m.DeleteVersion = &i.i
+		i := struct{ i int64 }{*meta.SeqNo}
+		m.DeleteSeqNo = &i.i
+	}
+	if meta.PrimaryTerm == nil {
+		m.DeletePrimaryTerm = nil
+	} else {
+		i := struct{ i int64 }{*meta.PrimaryTerm}
+		m.DeletePrimaryTerm = &i.i
 	}
 	return m.DeleteError
 }
@@ -51,14 +59,20 @@ func (m *MockSets) DeleteIPSet(ctx context.Context, meta Meta) error {
 func (m *MockSets) DeleteDomainNameSet(ctx context.Context, meta Meta) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "DeleteDomainNameSet", Name: meta.Name, Version: meta.Version})
+	m.calls = append(m.calls, Call{Method: "DeleteDomainNameSet", Name: meta.Name, SeqNo: meta.SeqNo, PrimaryTerm: meta.PrimaryTerm})
 	m.DeleteCalled = true
 	m.DeleteName = meta.Name
-	if meta.Version == nil {
-		m.DeleteVersion = nil
+	if meta.SeqNo == nil {
+		m.DeleteSeqNo = nil
 	} else {
-		i := struct{ i int64 }{*meta.Version}
-		m.DeleteVersion = &i.i
+		i := struct{ i int64 }{*meta.SeqNo}
+		m.DeleteSeqNo = &i.i
+	}
+	if meta.PrimaryTerm == nil {
+		m.DeletePrimaryTerm = nil
+	} else {
+		i := struct{ i int64 }{*meta.PrimaryTerm}
+		m.DeletePrimaryTerm = &i.i
 	}
 	return m.DeleteError
 }

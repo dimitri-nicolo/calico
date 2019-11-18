@@ -179,7 +179,7 @@ func (e *Elastic) ListDomainNameSets(ctx context.Context) ([]db.Meta, error) {
 
 func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
-	scroller := e.c.Scroll(idx).Version(true).FetchSource(false).Query(q)
+	scroller := e.c.Scroll(idx).FetchSource(false).Query(q)
 	defer scroller.Clear(ctx)
 
 	var ids []db.Meta
@@ -196,7 +196,11 @@ func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 			return nil, err
 		}
 		for _, hit := range res.Hits.Hits {
-			ids = append(ids, db.Meta{Name: hit.Id, Version: hit.Version})
+			ids = append(ids, db.Meta{
+				Name:        hit.Id,
+				SeqNo:       hit.SeqNo,
+				PrimaryTerm: hit.PrimaryTerm,
+			})
 		}
 	}
 }
@@ -481,8 +485,11 @@ func (e *Elastic) DeleteDomainNameSet(ctx context.Context, m db.Meta) error {
 
 func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
 	ds := e.c.Delete().Index(idx).Id(m.Name)
-	if m.Version != nil {
-		ds = ds.Version(*m.Version)
+	if m.SeqNo != nil {
+		ds = ds.IfSeqNo(*m.SeqNo)
+	}
+	if m.PrimaryTerm != nil {
+		ds = ds.IfPrimaryTerm(*m.PrimaryTerm)
 	}
 	_, err := ds.Do(ctx)
 	return err
@@ -800,7 +807,11 @@ func (e *Elastic) ListWatches(ctx context.Context) ([]db.Meta, error) {
 	var res []db.Meta
 	for _, hit := range result.Hits.Hits {
 		if strings.HasPrefix(hit.Id, WatchNamePrefix) {
-			res = append(res, db.Meta{Name: hit.Id[len(WatchNamePrefix):], Version: hit.Version})
+			res = append(res, db.Meta{
+				Name:        hit.Id[len(WatchNamePrefix):],
+				SeqNo:       hit.SeqNo,
+				PrimaryTerm: hit.PrimaryTerm,
+			})
 		}
 	}
 	return res, nil

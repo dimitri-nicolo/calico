@@ -163,8 +163,9 @@ func TestController_GC_Success(t *testing.T) {
 
 			gcName := "shouldGC"
 			noGCName := "shouldNotGC"
-			var gcVer int64 = 6
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, Version: &gcVer}, db.Meta{Name: noGCName})
+			var gcSeqNo int64 = 7
+			var gcPrimaryTerm int64 = 8
+			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -175,7 +176,12 @@ func TestController_GC_Success(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: gcName, Version: &gcVer}))
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{
+				Method:      "Delete" + tc.name,
+				Name:        gcName,
+				SeqNo:       &gcSeqNo,
+				PrimaryTerm: &gcPrimaryTerm,
+			}))
 			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1), "should only GC one set")
 		})
 	}
@@ -186,8 +192,9 @@ func TestController_Update_Success(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			name := "test"
-			var version int64 = 10
-			dbm := &db.MockSets{Metas: []db.Meta{{Name: name, Version: &version}}}
+			var seqNo int64 = 11
+			var primaryTerm int64 = 12
+			dbm := &db.MockSets{Metas: []db.Meta{{Name: name, SeqNo: &seqNo, PrimaryTerm: &primaryTerm}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -307,8 +314,9 @@ func TestController_GC_NotFound(t *testing.T) {
 			uut := tc.makeUUT(dbm)
 
 			gcName := "shouldGC"
-			var gcVer int64 = 6
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, Version: &gcVer})
+			var gcSeqNo int64 = 7
+			var gcPrimaryTerm int64 = 8
+			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -318,7 +326,12 @@ func TestController_GC_NotFound(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: gcName, Version: &gcVer}))
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{
+				Method:      "Delete" + tc.name,
+				Name:        gcName,
+				SeqNo:       &gcSeqNo,
+				PrimaryTerm: &gcPrimaryTerm,
+			}))
 			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1))
 
 			dbm.Metas = nil
@@ -339,8 +352,9 @@ func TestController_GC_Error(t *testing.T) {
 			uut := tc.makeUUT(dbm)
 
 			gcName := "shouldGC"
-			var gcVer int64 = 6
-			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, Version: &gcVer})
+			var gcSeqNo int64 = 7
+			var gcPrimaryTerm int64 = 8
+			dbm.Metas = append(dbm.Metas, db.Meta{Name: gcName, SeqNo: &gcSeqNo, PrimaryTerm: &gcPrimaryTerm})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -350,7 +364,12 @@ func TestController_GC_Error(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: gcName, Version: &gcVer}))
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{
+				Method:      "Delete" + tc.name,
+				Name:        gcName,
+				SeqNo:       &gcSeqNo,
+				PrimaryTerm: &gcPrimaryTerm,
+			}))
 			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1))
 
 			dbm.DeleteError = nil

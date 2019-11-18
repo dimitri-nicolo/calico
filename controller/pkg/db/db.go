@@ -8,8 +8,9 @@ import (
 )
 
 type Meta struct {
-	Name    string
-	Version *int64
+	Name        string
+	SeqNo       *int64
+	PrimaryTerm *int64
 }
 
 type IPSet interface {

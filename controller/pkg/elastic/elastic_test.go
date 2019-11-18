@@ -284,8 +284,9 @@ func TestElastic_Delete_Set(t *testing.T) {
 	err = e.DeleteIPSet(ctx, db.Meta{Name: "test"})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	two := int64(2)
-	err = e.DeleteDomainNameSet(ctx, db.Meta{Name: "test", Version: &two})
+	three := int64(3)
+	four := int64(4)
+	err = e.DeleteDomainNameSet(ctx, db.Meta{Name: "test", SeqNo: &three, PrimaryTerm: &four})
 	g.Expect(err).ToNot(HaveOccurred())
 }
 

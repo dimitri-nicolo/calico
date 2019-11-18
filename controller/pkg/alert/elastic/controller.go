@@ -34,8 +34,9 @@ func (d watchData) List(ctx context.Context) ([]db.Meta, error) {
 
 func (d watchData) Delete(ctx context.Context, m db.Meta) error {
 	log.WithFields(log.Fields{
-		"name":    m.Name,
-		"version": m.Version,
+		"name":        m.Name,
+		"seqNo":       m.SeqNo,
+		"primaryTerm": m.PrimaryTerm,
 	}).Debug("Delete watch")
 	return d.XPackWatcher.DeleteWatch(ctx, m)
 }

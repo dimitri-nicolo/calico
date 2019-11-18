@@ -234,17 +234,18 @@ func (c *controller) updateObject(ctx context.Context, u update) {
 }
 
 func (c *controller) purgeObject(ctx context.Context, m db.Meta) {
-	var fields log.Fields
-	if m.Version != nil {
-		fields = log.Fields{
-			"name":    m.Name,
-			"version": m.Version,
-		}
+	fields := log.Fields{
+		"name": m.Name,
+	}
+	if m.SeqNo != nil {
+		fields["seqNo"] = m.SeqNo
 	} else {
-		fields = log.Fields{
-			"name":    m.Name,
-			"version": "nil",
-		}
+		fields["seqNo"] = "nil"
+	}
+	if m.PrimaryTerm != nil {
+		fields["primaryTerm"] = m.PrimaryTerm
+	} else {
+		fields["primaryTerm"] = "nil"
 	}
 
 	err := c.data.Delete(ctx, m)
