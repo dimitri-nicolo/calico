@@ -1,6 +1,6 @@
 {{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 kind: NetworkPolicy
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: default-deny
   namespace: calico-monitoring
@@ -8,7 +8,7 @@ spec:
   podSelector:
     matchLabels: {}
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: calico-prometheus-operator
@@ -21,7 +21,7 @@ subjects:
   name: calico-prometheus-operator
   namespace: calico-monitoring
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: calico-prometheus-operator
@@ -74,7 +74,7 @@ metadata:
   namespace: calico-monitoring
 ---
 
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: calico-prometheus-operator
@@ -83,6 +83,9 @@ metadata:
     operator: prometheus
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      operator: prometheus
   template:
     metadata:
       labels:
@@ -407,7 +410,7 @@ spec:
 # This manifest includes some additional resources required to
 # deploy Prometheus Operator with Openshift.
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: calico-prometheus-operator-finalizers
@@ -423,7 +426,7 @@ rules:
   - "*"
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: calico-prometheus-operator-finalizers
