@@ -14,22 +14,39 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/internet"
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
 var (
 	// The network policy cache is populated by both Kubernetes and Calico policy types.
-	KindsNetworkPolicy = []metav1.TypeMeta{
+	KindsNetworkPolicyWithStaged = []metav1.TypeMeta{
+		resources.TypeCalicoStagedGlobalNetworkPolicies,
+		resources.TypeCalicoStagedNetworkPolicies,
+		resources.TypeCalicoStagedKubernetesNetworkPolicies,
+		resources.TypeCalicoGlobalNetworkPolicies,
+		resources.TypeCalicoNetworkPolicies,
+		resources.TypeK8sNetworkPolicies,
+	}
+	// The network policy cache is populated by both Kubernetes and Calico policy types.
+	KindsNetworkPolicyWithoutStaged = []metav1.TypeMeta{
 		resources.TypeCalicoGlobalNetworkPolicies,
 		resources.TypeCalicoNetworkPolicies,
 		resources.TypeK8sNetworkPolicies,
 	}
 )
+
+func policyKinds(includeStaged bool) []metav1.TypeMeta {
+	if includeStaged {
+		return KindsNetworkPolicyWithStaged
+	}
+	return KindsNetworkPolicyWithoutStaged
+}
 
 // VersionedPolicyResource is an extension to the VersionedResource interface with some NetworkPolicy specific
 // helper methods.
@@ -40,6 +57,7 @@ type VersionedPolicyResource interface {
 	GetCalicoV3IngressRules() []apiv3.Rule
 	GetCalicoV3EgressRules() []apiv3.Rule
 	IsNamespaced() bool
+	IsStaged() bool
 }
 
 // CacheEntryNetworkPolicy is a cache entry in the NetworkPolicy cache. Each entry implements the CacheEntry
@@ -76,7 +94,9 @@ func (c *CacheEntryNetworkPolicy) setVersionedResource(r VersionedResource) {
 // versionedCalicoNetworkPolicy implements the VersionedNetworkSetResource for a Calico NetworkPolicy kind.
 type versionedCalicoNetworkPolicy struct {
 	*apiv3.NetworkPolicy
-	v1 *model.Policy
+	v1                 *model.Policy
+	v1Key              model.PolicyKey
+	enforcedFromStaged bool
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -106,10 +126,7 @@ func (v *versionedCalicoNetworkPolicy) GetCalicoV1() interface{} {
 
 // GetCalicoV1Key implements the VersionedPolicyResource interface.
 func (v *versionedCalicoNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
-	return model.PolicyKey{
-		Name: v.Namespace + "/" + v.Name,
-		Tier: v.Spec.Tier,
-	}
+	return v.v1Key
 }
 
 // GetCalicoV1Policy implements the VersionedPolicyResource interface.
@@ -122,10 +139,17 @@ func (v *versionedCalicoNetworkPolicy) IsNamespaced() bool {
 	return true
 }
 
-// versionedCalicoNetworkPolicy implements the VersionedNetworkSetResource for a Calico GlobalNetworkPolicy kind.
+// IsStaged implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) IsStaged() bool {
+	return false
+}
+
+// versionedCalicoGlobalNetworkPolicy implements the VersionedNetworkSetResource for a Calico GlobalNetworkPolicy kind.
 type versionedCalicoGlobalNetworkPolicy struct {
 	*apiv3.GlobalNetworkPolicy
-	v1 *model.Policy
+	v1                 *model.Policy
+	v1Key              model.PolicyKey
+	enforcedFromStaged bool
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -155,10 +179,7 @@ func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1() interface{} {
 
 // GetCalicoV1Key implements the VersionedPolicyResource interface.
 func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
-	return model.PolicyKey{
-		Name: v.Name,
-		Tier: v.Spec.Tier,
-	}
+	return v.v1Key
 }
 
 // GetCalicoV1Policy implements the VersionedPolicyResource interface.
@@ -171,11 +192,17 @@ func (v *versionedCalicoGlobalNetworkPolicy) IsNamespaced() bool {
 	return false
 }
 
-// versionedCalicoNetworkPolicy implements the VersionedNetworkSetResource for a K8s NetworkPolicy kind.
+// IsStaged implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) IsStaged() bool {
+	return false
+}
+
+// versionedK8sNetworkPolicy implements the VersionedNetworkSetResource for a K8s NetworkPolicy kind.
 type versionedK8sNetworkPolicy struct {
 	*networkingv1.NetworkPolicy
-	v3 *apiv3.NetworkPolicy
-	v1 *model.Policy
+	v3    *apiv3.NetworkPolicy
+	v1    *model.Policy
+	v1Key model.PolicyKey
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -205,10 +232,7 @@ func (v *versionedK8sNetworkPolicy) GetCalicoV1() interface{} {
 
 // GetCalicoV1Key implements the VersionedPolicyResource interface.
 func (v *versionedK8sNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
-	return model.PolicyKey{
-		Name: v.Namespace + "/" + v.v3.Name,
-		Tier: "default",
-	}
+	return v.v1Key
 }
 
 // GetCalicoV1Policy implements the VersionedPolicyResource interface.
@@ -221,15 +245,183 @@ func (v *versionedK8sNetworkPolicy) IsNamespaced() bool {
 	return true
 }
 
+// IsStaged implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) IsStaged() bool {
+	return false
+}
+
+// versionedCalicoStagedNetworkPolicy implements the VersionedNetworkSetResource for a Calico StagedNetworkPolicy kind.
+type versionedCalicoStagedNetworkPolicy struct {
+	*apiv3.StagedNetworkPolicy
+	v3    *apiv3.NetworkPolicy
+	v1    *model.Policy
+	v1Key model.PolicyKey
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetPrimary() resources.Resource {
+	return v.StagedNetworkPolicy
+}
+
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3() resources.Resource {
+	return v.v3
+}
+
+// GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+	return v.v3.Spec.Ingress
+}
+
+// GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+	return v.v3.Spec.Egress
+}
+
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV1() interface{} {
+	return v.v1
+}
+
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
+	return v.v1Key
+}
+
+// GetCalicoV1Policy implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) GetCalicoV1Policy() *model.Policy {
+	return v.v1
+}
+
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) IsNamespaced() bool {
+	return true
+}
+
+// IsStaged implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedNetworkPolicy) IsStaged() bool {
+	return true
+}
+
+// versionedCalicoStagedGlobalNetworkPolicy implements the VersionedNetworkSetResource for a Calico
+// StagedGlobalNetworkPolicy kind.
+type versionedCalicoStagedGlobalNetworkPolicy struct {
+	*apiv3.StagedGlobalNetworkPolicy
+	v3    *apiv3.GlobalNetworkPolicy
+	v1    *model.Policy
+	v1Key model.PolicyKey
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetPrimary() resources.Resource {
+	return v.StagedGlobalNetworkPolicy
+}
+
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3() resources.Resource {
+	return v.v3
+}
+
+// GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+	return v.v3.Spec.Ingress
+}
+
+// GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+	return v.v3.Spec.Egress
+}
+
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV1() interface{} {
+	return v.v1
+}
+
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
+	return v.v1Key
+}
+
+// GetCalicoV1Policy implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) GetCalicoV1Policy() *model.Policy {
+	return v.v1
+}
+
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) IsNamespaced() bool {
+	return false
+}
+
+// IsStaged implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedGlobalNetworkPolicy) IsStaged() bool {
+	return true
+}
+
+// versionedCalicoStagedKubernetesNetworkPolicy implements the VersionedNetworkSetResource for a
+// StagedKubernetesNetworkPolicy kind.
+type versionedCalicoStagedKubernetesNetworkPolicy struct {
+	*apiv3.StagedKubernetesNetworkPolicy
+	enforced *networkingv1.NetworkPolicy
+	v3       *apiv3.NetworkPolicy
+	v1       *model.Policy
+	v1Key    model.PolicyKey
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetPrimary() resources.Resource {
+	return v.StagedKubernetesNetworkPolicy
+}
+
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3() resources.Resource {
+	return v.v3
+}
+
+// GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
+	return v.v3.Spec.Ingress
+}
+
+// GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
+	return v.v3.Spec.Egress
+}
+
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1() interface{} {
+	return v.v1
+}
+
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
+	return v.v1Key
+}
+
+// GetCalicoV1Policy implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) GetCalicoV1Policy() *model.Policy {
+	return v.v1
+}
+
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) IsNamespaced() bool {
+	return true
+}
+
+// IsStaged implements the VersionedPolicyResource interface.
+func (v *versionedCalicoStagedKubernetesNetworkPolicy) IsStaged() bool {
+	return true
+}
+
 // newNetworkPolicyHandler creates a new handler used for the NetworkPolicy cache.
-func newNetworkPolicyHandler() resourceHandler {
-	return &networkPolicyHandler{}
+func newNetworkPolicyHandler(cfg *config.Config) resourceHandler {
+	return &networkPolicyHandler{includeStaged: cfg.IncludeStagedNetworkPolicies}
 }
 
 // networkPolicyHandler implements the resourceHandler interface for the NetworkPolicy cache.
 type networkPolicyHandler struct {
 	CacheAccessor
-	converter conversion.Converter
+	converter     conversion.Converter
+	includeStaged bool
 }
 
 // register implements the resourceHandler interface.
@@ -254,7 +446,7 @@ func (c *networkPolicyHandler) register(cache CacheAccessor) {
 
 // register implements the resourceHandler interface.
 func (c *networkPolicyHandler) kinds() []metav1.TypeMeta {
-	return KindsNetworkPolicy
+	return policyKinds(c.includeStaged)
 }
 
 // newCacheEntry implements the resourceHandler interface.
@@ -323,6 +515,7 @@ func (c *networkPolicyHandler) recalculate(id apiv3.ResourceID, entry CacheEntry
 // convertToVersioned implements the resourceHandler interface.
 func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
+	// TODO(rlb): We could get rid of this if we has a single source of truth for the resources.
 	switch tr := res.(type) {
 	case *pcv3.NetworkPolicy:
 		res = &apiv3.NetworkPolicy{
@@ -336,28 +529,66 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 			ObjectMeta: tr.ObjectMeta,
 			Spec:       tr.Spec,
 		}
+	case *pcv3.StagedNetworkPolicy:
+		res = &apiv3.StagedNetworkPolicy{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	case *pcv3.StagedGlobalNetworkPolicy:
+		res = &apiv3.StagedGlobalNetworkPolicy{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	case *pcv3.StagedKubernetesNetworkPolicy:
+		res = &apiv3.StagedKubernetesNetworkPolicy{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
 	}
 
 	switch in := res.(type) {
 	case *apiv3.NetworkPolicy:
+		log.Debug("NetworkPolicy update")
 		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(in)
+		if err != nil {
+			return nil, err
+		}
+		v1Key, err := updateprocessors.ConvertNetworkPolicyV3ToV1Key(model.ResourceKey{
+			Name:      in.GetName(),
+			Namespace: in.GetNamespace(),
+			Kind:      apiv3.KindNetworkPolicy,
+		})
 		if err != nil {
 			return nil, err
 		}
 		return &versionedCalicoNetworkPolicy{
 			NetworkPolicy: in,
 			v1:            v1.(*model.Policy),
+			v1Key:         v1Key.(model.PolicyKey),
 		}, nil
 	case *apiv3.GlobalNetworkPolicy:
+		log.Debug("GlobalNetworkPolicy update")
 		v1, err := updateprocessors.ConvertGlobalNetworkPolicyV3ToV1Value(in)
+		if err != nil {
+			return nil, err
+		}
+		v1Key, err := updateprocessors.ConvertGlobalNetworkPolicyV3ToV1Key(model.ResourceKey{
+			Name: in.GetName(),
+			Kind: apiv3.KindNetworkPolicy,
+		})
 		if err != nil {
 			return nil, err
 		}
 		return &versionedCalicoGlobalNetworkPolicy{
 			GlobalNetworkPolicy: in,
 			v1:                  v1.(*model.Policy),
+			v1Key:               v1Key.(model.PolicyKey),
 		}, nil
 	case *networkingv1.NetworkPolicy:
+		log.Debug("Kubernetes NetworkPolicy update")
 		kvp, err := c.converter.K8sNetworkPolicyToCalico(in)
 		if err != nil {
 			return nil, err
@@ -367,10 +598,107 @@ func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (Versi
 		if err != nil {
 			return nil, err
 		}
+		v1Key, err := updateprocessors.ConvertNetworkPolicyV3ToV1Key(kvp.Key.(model.ResourceKey))
+		if err != nil {
+			return nil, err
+		}
 		return &versionedK8sNetworkPolicy{
 			NetworkPolicy: in,
 			v3:            v3,
 			v1:            v1.(*model.Policy),
+			v1Key:         v1Key.(model.PolicyKey),
+		}, nil
+	case *apiv3.StagedNetworkPolicy:
+		log.Debug("StagedNetworkPolicy update")
+		action, np := apiv3.ConvertStagedPolicyToEnforced(in)
+		if action == apiv3.StagedActionDelete {
+			// The staged action is a delete, so simply remove from the cache since there is nothing to cross reference.
+			log.Debug("Staged delete - remove from cache")
+			return nil, nil
+		}
+
+		// Convert to the v1 policy value and key.
+		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(np)
+		if err != nil {
+			return nil, err
+		}
+		v1Key, err := updateprocessors.ConvertStagedNetworkPolicyV3ToV1Key(model.ResourceKey{
+			Name:      in.GetName(),
+			Namespace: in.GetNamespace(),
+			Kind:      apiv3.KindStagedNetworkPolicy,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return &versionedCalicoStagedNetworkPolicy{
+			StagedNetworkPolicy: in,
+			v3:                  np,
+			v1:                  v1.(*model.Policy),
+			v1Key:               v1Key.(model.PolicyKey),
+		}, nil
+	case *apiv3.StagedGlobalNetworkPolicy:
+		log.Debug("StagedGlobalNetworkPolicy update")
+		action, gnp := apiv3.ConvertStagedGlobalPolicyToEnforced(in)
+		if action == apiv3.StagedActionDelete {
+			// The staged action is a delete, so simply remove from the cache since there is nothing to cross reference.
+			log.Debug("Staged delete - remove from cache")
+			return nil, nil
+		}
+
+		// Convert to the v1 policy value and key.
+		v1, err := updateprocessors.ConvertGlobalNetworkPolicyV3ToV1Value(gnp)
+		if err != nil {
+			return nil, err
+		}
+		v1Key, err := updateprocessors.ConvertStagedGlobalNetworkPolicyV3ToV1Key(model.ResourceKey{
+			Name: in.GetName(),
+			Kind: apiv3.KindStagedGlobalNetworkPolicy,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return &versionedCalicoStagedGlobalNetworkPolicy{
+			StagedGlobalNetworkPolicy: in,
+			v3:                        gnp,
+			v1:                        v1.(*model.Policy),
+			v1Key:                     v1Key.(model.PolicyKey),
+		}, nil
+	case *apiv3.StagedKubernetesNetworkPolicy:
+		log.Debug("StagedKubernetesNetworkPolicy update")
+		action, knp := apiv3.ConvertStagedKubernetesPolicyToK8SEnforced(in)
+		if action == apiv3.StagedActionDelete {
+			// The staged action is a delete, so simply remove from the cache since there is nothing to cross reference.
+			log.Debug("Staged delete - remove from cache")
+			return nil, nil
+		}
+		kvp, err := c.converter.K8sNetworkPolicyToCalico(knp)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert to the v1 policy value and key.
+		v3 := kvp.Value.(*apiv3.NetworkPolicy)
+		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(v3)
+		if err != nil {
+			return nil, err
+		}
+		v1Key, err := updateprocessors.ConvertStagedKubernetesNetworkPolicyV3ToV1Key(model.ResourceKey{
+			Name:      in.GetName(),
+			Namespace: in.GetNamespace(),
+			Kind:      apiv3.KindStagedKubernetesNetworkPolicy,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return &versionedCalicoStagedKubernetesNetworkPolicy{
+			StagedKubernetesNetworkPolicy: in,
+			enforced:                      knp,
+			v3:                            v3,
+			v1:                            v1.(*model.Policy),
+			v1Key:                         v1Key.(model.PolicyKey),
 		}, nil
 	}
 

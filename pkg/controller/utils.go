@@ -24,16 +24,16 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
 	"github.com/projectcalico/libcalico-go/lib/resources"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 )

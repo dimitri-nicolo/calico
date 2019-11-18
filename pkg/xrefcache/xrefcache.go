@@ -57,7 +57,7 @@ func NewXrefCache(cfg *config.Config, healthy func()) XrefCache {
 		newNamespacesHandler(),
 		newServiceAccountHandler(),
 		newTierHandler(),
-		newNetworkPolicyHandler(),
+		newNetworkPolicyHandler(cfg),
 		newNetworkPolicyRuleSelectorsEngine(),
 		newNetworkSetHandler(),
 	}
@@ -271,7 +271,10 @@ func (x *xrefCache) processQueue() {
 
 // Get implements the XrefCache interface.
 func (x *xrefCache) Get(id apiv3.ResourceID) CacheEntry {
-	return x.caches[id.TypeMeta].get(id)
+	if c := x.caches[id.TypeMeta]; c != nil {
+		return c.get(id)
+	}
+	return nil
 }
 
 // RegisterOnStatusUpdateHandler implements the XrefCache interface.

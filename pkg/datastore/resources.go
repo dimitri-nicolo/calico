@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 )
 

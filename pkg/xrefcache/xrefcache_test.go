@@ -7,11 +7,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	networkingv1 "k8s.io/api/networking/v1"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -506,5 +508,191 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		res = tester.XrefCache.Get(resources.GetResourceID(np))
 		Expect(res).ToNot(BeNil())
 		Expect(res.GetCalicoV3()).To(Equal(np))
+
+		By("Creating, storing and then deleting a staged calico network policy")
+		snp := tester.SetStagedNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionSet).(*apiv3.StagedNetworkPolicy)
+		ids := tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedNetworkPolicies)
+		Expect(ids).To(HaveLen(1))
+
+		// Get the entry from the cache - the staged policy is converted to the equivalent v3 type.
+		var ok bool
+		res = tester.XrefCache.Get(ids[0])
+		Expect(res).ToNot(BeNil())
+		snp2, ok := res.GetPrimary().(*apiv3.StagedNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(snp2).To(Equal(snp))
+
+		// Delete and re-check cache
+		tester.DeleteStagedNetworkPolicy(Name1, Name1, Namespace1)
+		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedNetworkPolicies)
+		Expect(ids).To(HaveLen(0))
+
+		By("Creating a AAPIS staged np (from the original calico staged np) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(snp),
+				Resource:   &pcv3.StagedNetworkPolicy{TypeMeta: snp.TypeMeta, ObjectMeta: snp.ObjectMeta, Spec: snp.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(snp))
+		Expect(res).ToNot(BeNil())
+		snp2, ok = res.GetPrimary().(*apiv3.StagedNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(snp2).To(Equal(snp))
+
+		By("Creating, storing and then deleting a staged calico global network policy")
+		sgnp := tester.SetStagedGlobalNetworkPolicy(Name1, Name1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionSet).(*apiv3.StagedGlobalNetworkPolicy)
+		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedGlobalNetworkPolicies)
+		Expect(ids).To(HaveLen(1))
+
+		// Get the entry from the cache - the staged policy is converted to the equivalent v3 type.
+		res = tester.XrefCache.Get(ids[0])
+		Expect(res).ToNot(BeNil())
+		sgnp2, ok := res.GetPrimary().(*apiv3.StagedGlobalNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(sgnp2).To(Equal(sgnp))
+
+		// Delete and re-check cache
+		tester.DeleteStagedGlobalNetworkPolicy(Name1, Name1)
+		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedGlobalNetworkPolicies)
+		Expect(ids).To(HaveLen(0))
+
+		By("Creating a AAPIS staged np (from the original calico staged np) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(sgnp),
+				Resource:   &pcv3.StagedGlobalNetworkPolicy{TypeMeta: sgnp.TypeMeta, ObjectMeta: sgnp.ObjectMeta, Spec: sgnp.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
+		Expect(res).ToNot(BeNil())
+		sgnp2, ok = res.GetPrimary().(*apiv3.StagedGlobalNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(sgnp2).To(Equal(sgnp))
+
+		By("Creating, storing and then deleting a staged kubernetes network policy")
+		sknp := tester.SetStagedKubernetesNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil, apiv3.StagedActionSet).(*apiv3.StagedKubernetesNetworkPolicy)
+		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedKubernetesNetworkPolicies)
+		Expect(ids).To(HaveLen(1))
+
+		// Get the entry from the cache - the staged policy is converted to the equivalent v3 type.
+		res = tester.XrefCache.Get(ids[0])
+		Expect(res).ToNot(BeNil())
+		sknp2, ok := res.GetPrimary().(*apiv3.StagedKubernetesNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(sknp2).To(Equal(sknp))
+
+		// Delete and re-check cache
+		tester.DeleteStagedKubernetesNetworkPolicy(Name1, Namespace1)
+		ids = tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoStagedKubernetesNetworkPolicies)
+		Expect(ids).To(HaveLen(0))
+
+		By("Creating a AAPIS staged np (from the original calico staged np) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(sknp),
+				Resource:   &pcv3.StagedKubernetesNetworkPolicy{TypeMeta: sknp.TypeMeta, ObjectMeta: sknp.ObjectMeta, Spec: sknp.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(sknp))
+		Expect(res).ToNot(BeNil())
+		sknp2, ok = res.GetPrimary().(*apiv3.StagedKubernetesNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(sknp2).To(Equal(sknp))
+	})
+
+	It("should handle policy ordering of staged policy sets and deletion from staged policy deletes", func() {
+		tester := NewXrefCacheTester()
+
+		By("Creating v3 policy types")
+		tester.SetTier(Name1, Order1)
+		tester.SetDefaultTier()
+
+		gnp := tester.SetGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1).(*apiv3.GlobalNetworkPolicy)
+		np := tester.SetNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10).(*apiv3.NetworkPolicy)
+		knp := tester.SetK8sNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil).(*networkingv1.NetworkPolicy)
+
+		res := tester.XrefCache.Get(resources.GetResourceID(gnp))
+		Expect(res).ToNot(BeNil())
+		cegnp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(cegnp.GetCalicoV3()).To(Equal(gnp))
+		Expect(cegnp.IsStaged()).To(BeFalse())
+
+		res = tester.XrefCache.Get(resources.GetResourceID(np))
+		Expect(res).ToNot(BeNil())
+		cenp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(cenp.GetCalicoV3()).To(Equal(np))
+		Expect(cenp.IsStaged()).To(BeFalse())
+
+		res = tester.XrefCache.Get(resources.GetResourceID(knp))
+		Expect(res).ToNot(BeNil())
+		ceknp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(ceknp.GetPrimary()).To(Equal(knp))
+		Expect(ceknp.IsStaged()).To(BeFalse())
+
+		By("Creating staged policy sets")
+		sgnp := tester.SetStagedGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1, "")
+		snp := tester.SetStagedNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionSet)
+		sknp := tester.SetStagedKubernetesNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil, "")
+
+		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
+		Expect(res).ToNot(BeNil())
+		cesgnp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(cesgnp.IsStaged()).To(BeTrue())
+
+		res = tester.XrefCache.Get(resources.GetResourceID(snp))
+		Expect(res).ToNot(BeNil())
+		cesnp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(cesnp.IsStaged()).To(BeTrue())
+
+		res = tester.XrefCache.Get(resources.GetResourceID(sknp))
+		Expect(res).ToNot(BeNil())
+		cesknp, ok := res.(*xrefcache.CacheEntryNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(cesknp.IsStaged()).To(BeTrue())
+
+		By("Checking staged policies come immediately before the v3 policy")
+		ordered := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(ordered).To(HaveLen(2))
+		Expect(ordered[0].Tier.GetObjectMeta().GetName()).To(Equal("tier-1"))
+		Expect(ordered[0].OrderedPolicies).To(HaveLen(4))
+		Expect(ordered[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{cesgnp, cegnp, cesnp, cenp}))
+
+		Expect(ordered[1].Tier.GetObjectMeta().GetName()).To(Equal("default"))
+		Expect(ordered[1].OrderedPolicies).To(HaveLen(2))
+		Expect(ordered[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{cesknp, ceknp}))
+
+		By("Creating staged policy deletes")
+		tester.SetStagedGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1, apiv3.StagedActionDelete)
+		tester.SetStagedNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10, apiv3.StagedActionDelete)
+		tester.SetStagedKubernetesNetworkPolicy(Name1, Namespace1, Select1, []networkingv1.NetworkPolicyIngressRule{}, nil, apiv3.StagedActionDelete)
+
+		res = tester.XrefCache.Get(resources.GetResourceID(sgnp))
+		Expect(res).To(BeNil())
+
+		res = tester.XrefCache.Get(resources.GetResourceID(snp))
+		Expect(res).To(BeNil())
+
+		res = tester.XrefCache.Get(resources.GetResourceID(sknp))
+		Expect(res).To(BeNil())
+
+		By("Checking staged policies are no longer in ordered tiers")
+		ordered = tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(ordered).To(HaveLen(2))
+		Expect(ordered[0].Tier.GetObjectMeta().GetName()).To(Equal("tier-1"))
+		Expect(ordered[0].OrderedPolicies).To(HaveLen(2))
+		Expect(ordered[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{cegnp, cenp}))
+
+		Expect(ordered[1].Tier.GetObjectMeta().GetName()).To(Equal("default"))
+		Expect(ordered[1].OrderedPolicies).To(HaveLen(1))
+		Expect(ordered[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{ceknp}))
 	})
 })

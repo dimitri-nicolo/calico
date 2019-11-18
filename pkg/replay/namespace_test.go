@@ -17,6 +17,7 @@ import (
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	. "github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/lma/pkg/api"

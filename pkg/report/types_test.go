@@ -5,9 +5,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	api "github.com/tigera/lma/pkg/api"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	api "github.com/tigera/lma/pkg/api"
 )
 
 var _ = Describe("ArchivedReportData.UID", func() {

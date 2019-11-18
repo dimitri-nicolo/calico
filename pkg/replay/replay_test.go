@@ -14,6 +14,7 @@ import (
 	"k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	mockEvent "github.com/tigera/compliance/pkg/event/mock"
 	mockList "github.com/tigera/compliance/pkg/list/mock"
 	. "github.com/tigera/compliance/pkg/replay"
