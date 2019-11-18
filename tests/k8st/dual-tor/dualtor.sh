@@ -59,7 +59,7 @@ function install_tsee() {
         ${kubectl} apply -f -
 
     # Install Calicoctl on master node, avoid network disruption during bgp configuration.
-    wget -O - https://docs.tigera.io/master/getting-started/kubernetes/installation/hosted/calicoctl.yaml | \
+    cat ${manifest_base}/calicoctl.yaml | \
         sed 's,hostNetwork: true,hostNetwork: true\n  nodeName: kind-control-plane,' | \
         ${kubectl} apply -f -
 }
