@@ -398,6 +398,13 @@ spec:
   elasticsearchRef:
     name: tigera-elasticsearch
   podTemplate:
+{{- if .Values.imagePullSecrets }}
+    spec:
+      imagePullSecrets:
+  {{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+  {{- end }}
+{{- end }}
     metadata:
       namespace: calico-monitoring
       labels:
