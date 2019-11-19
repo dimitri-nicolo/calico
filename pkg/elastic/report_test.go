@@ -342,4 +342,31 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		ensureUTC(r.Reports) // Normalize the times to make them comparable.
 		Expect(r.Reports).To(Equal([]*api.ArchivedReportData{r7, r1, r3, r2, r5, r4, r6}))
 	})
+
+	It("should create an index with the correct index settings", func() {
+
+		cfg := MustLoadConfig()
+		cfg.ElasticReplicas = 2
+		cfg.ElasticShards = 7
+		t := ts.Add(72 * time.Hour)
+		rep := &api.ArchivedReportData{
+			ReportData: &apiv3.ReportData{
+				ReportTypeName: "testindexsettings",
+				ReportName:     "testindexsettings",
+				StartTime:      metav1.Time{t},
+				EndTime:        metav1.Time{t.Add(2 * time.Minute)},
+				GenerationTime: metav1.Time{t.Add(-time.Minute)},
+			},
+		}
+
+		elasticClient, err := NewFromConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep, t)).ToNot(HaveOccurred())
+
+		index := elasticClient.ClusterIndex(ReportsIndex, t.Format(IndexTimeFormat))
+		testIndexSettings(cfg, index, map[string]string{
+			"number_of_replicas": "2",
+			"number_of_shards":   "7",
+		})
+	})
 })
