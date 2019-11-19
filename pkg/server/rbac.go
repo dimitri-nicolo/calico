@@ -5,9 +5,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	authzv1 "k8s.io/api/authorization/v1"
+	"github.com/tigera/lma/pkg/util"
 
-	esprox "github.com/tigera/es-proxy/pkg/middleware"
+	authzv1 "k8s.io/api/authorization/v1"
 )
 
 type ReportRbacHelper interface {
@@ -163,7 +163,7 @@ func (l *reportRbacHelper) canGetReportType(reportTypeName string) (bool, error)
 // checkAuthorized returns true if the request is allowed for the resources decribed in provieded attributes
 func (l *reportRbacHelper) checkAuthorized(atr authzv1.ResourceAttributes) (bool, error) {
 
-	ctx := esprox.NewContextWithReviewResource(l.Request.Context(), &atr)
+	ctx := util.NewContextWithReviewResource(l.Request.Context(), &atr)
 	req := l.Request.WithContext(ctx)
 
 	stat, err := l.k8sAuth.Authorize(req)

@@ -355,7 +355,7 @@ var _ = Describe("Replay namespace deletion", func() {
 		checkUpdates(cb.updates[:20], syncer.UpdateTypeSet, []resources.Resource{
 			&gnp1, &sgnp1, &gns1, &tier1, &hep1, &netset1, &np1, &snp1, &np2, &knp1, &sknp1, &knp2, &ep1, &ep2, &pod1, &pod2, &sa1, &sa2, &ns1, &ns2,
 		})
-		
+
 		checkUpdates(cb.updates[20:], syncer.UpdateTypeDeleted, []resources.Resource{
 			&np1, &snp1, &knp1, &sknp1, &netset1, &ep1, &pod1, &sa1, &ns1,
 		})
@@ -367,6 +367,6 @@ func checkUpdates(updates []syncer.Update, expectedType syncer.UpdateType, expec
 	for i, update := range updates {
 		Expect(update.Type).To(Equal(expectedType), fmt.Sprintf("Unexpected type at index %d", i))
 		r = append(r, update.Resource)
-	}		
+	}
 	Expect(r).Should(ConsistOf(expectedResources))
 }

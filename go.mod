@@ -7,7 +7,6 @@ replace (
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364
-	github.com/tigera/es-proxy => github.com/tigera/es-proxy-image v0.0.0-20191030024341-da41989fb61c
 	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
 	k8s.io/api => k8s.io/api v0.0.0-20180628040859-072894a440bd
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
@@ -55,7 +54,6 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tigera/calico-k8sapiserver v2.6.0-0.dev.0.20191030050937-be2e3fd6c28a+incompatible
-	github.com/tigera/es-proxy v0.0.0-00010101000000-000000000000
 	github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
