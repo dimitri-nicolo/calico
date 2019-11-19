@@ -82,7 +82,7 @@ spec:
 #   Once the upgrade is complete, the Role and ClusterRole definitions can be further updated to provide per-tier
 #   granularity of Calico policy RBAC. Refer to the Tigera documentation for details.
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ee-calico-tiered-policy-passthru
 rules:
@@ -97,7 +97,7 @@ rules:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ee-calico-tiered-policy-passthru
 subjects:
@@ -114,7 +114,7 @@ roleRef:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: calico:system:auth-delegator
@@ -129,7 +129,7 @@ subjects:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: calico-auth-reader
@@ -145,7 +145,7 @@ subjects:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: cnx-manager-pip
@@ -187,7 +187,7 @@ rules:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: cnx-manager-pip
@@ -214,7 +214,7 @@ metadata:
 # Give cnx-apiserver ServiceAccount permissions needed for
 # accessing various backing CRDs and K8s networkpolicies.
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: cnx-apiserver-role
 rules:
@@ -256,7 +256,7 @@ rules:
       - "*"
 
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: cnx-apiserver-binding
@@ -271,7 +271,7 @@ subjects:
 
 ---
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-extension-apiserver-auth-access
 rules:
@@ -286,7 +286,7 @@ rules:
       - extension-apiserver-authentication
 
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: tigera-extension-apiserver-auth-access
@@ -356,7 +356,7 @@ data:
 
 ---
 
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cnx-apiserver
