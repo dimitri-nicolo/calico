@@ -41,6 +41,8 @@ const (
 	PingPeriod                = time.Minute
 	Create                    = "create"
 	Delete                    = "delete"
+	DefaultReplicas           = 0
+	DefaultShards             = 5
 )
 
 var (
@@ -77,6 +79,11 @@ type domainNameSetDoc struct {
 	Domains   db.DomainNameSetSpec `json:"domains"`
 }
 
+type IndexSettings struct {
+	Replicas int `json:"number_of_replicas"`
+	Shards   int `json:"number_of_shards"`
+}
+
 type Elastic struct {
 	c                           *elastic.Client
 	url                         *url.URL
@@ -86,10 +93,10 @@ type Elastic struct {
 	elasticIsAlive              bool
 	cancel                      context.CancelFunc
 	once                        sync.Once
+	indexSettings               IndexSettings
 }
 
-func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elastic, error) {
-
+func NewElasticWithIndexSettings(h *http.Client, url *url.URL, username, password string, indexSettings IndexSettings) (*Elastic, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -111,9 +118,14 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 		ipSetMappingCreated:         make(chan struct{}),
 		domainNameSetMappingCreated: make(chan struct{}),
 		eventMappingCreated:         make(chan struct{}),
+		indexSettings:               indexSettings,
 	}
 
 	return e, nil
+}
+
+func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elastic, error) {
+	return NewElasticWithIndexSettings(h, url, username, password, IndexSettings{DefaultReplicas, DefaultShards})
 }
 
 func (e *Elastic) Run(ctx context.Context) {
@@ -265,7 +277,19 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 		return err
 	}
 	if !exists {
-		r, err := e.c.CreateIndex(idx).Body(mapping).Do(ctx)
+		mappingMap := make(map[string]interface{})
+		if err := json.Unmarshal([]byte(mapping), &mappingMap); err != nil {
+			return err
+		}
+		settings, err := json.Marshal(map[string]interface{}{
+			"mappings": mappingMap,
+			"settings": e.indexSettings,
+		})
+		if err != nil {
+			return err
+		}
+
+		r, err := e.c.CreateIndex(idx).Body(string(settings)).Do(ctx)
 		if err != nil {
 			return err
 		}
