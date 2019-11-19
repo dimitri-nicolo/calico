@@ -28,6 +28,8 @@ type Config struct {
 	ElasticIndexSuffix       string        `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
 	ElasticConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"5"`
 	ElasticConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
+	ElasticShards            int           `envconfig:"ELASTIC_SHARDS" default:"5"`
+	ElasticReplicas          int           `envconfig:"ELASTIC_REPLICAS" default:"0"`
 
 	// Parsed values.
 	ParsedElasticURL *url.URL

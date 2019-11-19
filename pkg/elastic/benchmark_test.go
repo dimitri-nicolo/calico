@@ -10,7 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/api"
 	. "github.com/tigera/lma/pkg/elastic"
 )
 
@@ -172,5 +172,22 @@ var _ = Describe("Benchmark elastic tests", func() {
 		Expect(br.Benchmarks).To(Equal(b1))
 
 		Eventually(res).Should(BeClosed())
+	})
+
+	It("should create an index with the correct index settings", func() {
+		cfg := MustLoadConfig()
+		cfg.ElasticReplicas = 2
+		cfg.ElasticShards = 7
+
+		elasticClient, err := NewFromConfig(cfg)
+		Expect(err).ToNot(HaveOccurred())
+		elasticClient.StoreBenchmarks(context.Background(), b1)
+
+		index := elasticClient.ClusterIndex(BenchmarksIndex, b1.Timestamp.Format(IndexTimeFormat))
+
+		testIndexSettings(cfg, index, map[string]string{
+			"number_of_replicas": "2",
+			"number_of_shards":   "7",
+		})
 	})
 })

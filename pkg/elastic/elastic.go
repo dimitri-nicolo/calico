@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -23,6 +24,11 @@ const (
 	createIndexMaxRetries    = 3
 	createIndexRetryInterval = 1 * time.Second
 )
+
+type IndexSettings struct {
+	Replicas int `json:"number_of_replicas"`
+	Shards   int `json:"number_of_shards"`
+}
 
 type Client interface {
 	api.BenchmarksQuery
@@ -47,7 +53,8 @@ type Client interface {
 // client implements the Client interface.
 type client struct {
 	*elastic.Client
-	indexSuffix string
+	indexSuffix   string
+	indexSettings IndexSettings
 }
 
 // doFunc invokes the Do on the search service. This is added to allow us to mock out the client in test code.
@@ -90,14 +97,15 @@ func NewFromConfig(cfg *Config) (Client, error) {
 
 	return New(
 		h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, cfg.ElasticIndexSuffix,
-		cfg.ElasticConnRetries, cfg.ElasticConnRetryInterval, cfg.ParsedLogLevel == log.DebugLevel)
+		cfg.ElasticConnRetries, cfg.ElasticConnRetryInterval, cfg.ParsedLogLevel == log.DebugLevel, cfg.ElasticReplicas,
+		cfg.ElasticShards)
 }
 
 // New returns a new elastic client using the supplied parameters. This method performs retries if creation of the
 // client fails.
 func New(
 	h *http.Client, url *url.URL, username, password, indexSuffix string,
-	retries int, retryInterval time.Duration, trace bool,
+	retries int, retryInterval time.Duration, trace bool, replicas int, shards int,
 ) (Client, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
@@ -117,7 +125,7 @@ func New(
 	for i := 0; i < retries; i++ {
 		log.Info("Connecting to elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
-			return &client{c, indexSuffix}, nil
+			return &client{c, indexSuffix, IndexSettings{replicas, shards}}, nil
 		}
 		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
@@ -161,11 +169,26 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 		return nil
 	}
 
+	mappingMap := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(mapping), &mappingMap); err != nil {
+		return err
+	}
+
+	settingsMap := map[string]interface{}{
+		"mappings": mappingMap,
+		"settings": c.indexSettings,
+	}
+
+	settings, err := json.Marshal(settingsMap)
+	if err != nil {
+		return err
+	}
+
 	// Create index.
 	clog.Info("index doesn't exist, creating...")
 	createIndex, err := c.
 		CreateIndex(index).
-		Body(mapping).
+		Body(string(settings)).
 		Do(context.Background())
 	if err != nil {
 		if elastic.IsConflict(err) {
