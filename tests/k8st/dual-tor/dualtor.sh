@@ -27,7 +27,7 @@ tmpd=$(mktemp -d -t calico.XXXXXX)
 function load_image() {
     local node=$1
     docker cp ./cnx-node.tar ${node}:/cnx-node.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /cnx-node.tar 
+    docker exec -t ${node} ctr -n=k8s.io images import /cnx-node.tar
     docker exec -t ${node} rm /cnx-node.tar
 }
 
@@ -314,7 +314,7 @@ EOF
     done
     ${kubectl} get po --all-namespaces -o wide
 
-    echo "sleep 30 seoncds"
+    echo "sleep 30 seconds"
     sleep 30
 
     # Disable the full mesh and configure Calico nodes to peer instead
@@ -692,4 +692,3 @@ function do_cleanup {
 for step in ${STEPS}; do
     eval do_${step}
 done
-
