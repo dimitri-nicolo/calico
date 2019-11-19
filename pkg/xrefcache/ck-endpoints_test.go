@@ -307,12 +307,12 @@ var _ = Describe("Pods cache verification", func() {
 			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress |
 				xrefcache.CacheEntryOtherNamespaceExposedIngress,
 		))
-		
+
 		Expect(np1.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedEgress |
 				xrefcache.CacheEntryInternetExposedEgress,
 		))
-		
+
 		By("checking the pod settings have inherited the expected policy configuration from gnp1 and np1")
 		Expect(pod.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress |
