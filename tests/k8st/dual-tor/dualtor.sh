@@ -136,6 +136,9 @@ protocol bgp rb1 {
   passive on;
   bfd on;
 }
+protocol static {
+  route 172.31.10.0/23 via "eth0";
+}
 EOF
     docker exec bird-a1 birdcl configure
     cat <<EOF | docker exec -i bird-b1 sh -c "cat > /etc/bird/peer-ra1.conf"
@@ -152,13 +155,11 @@ protocol bgp ra1 {
   neighbor 172.31.1.2 as 65001;
   bfd on;
 }
+protocol static {
+  route 172.31.20.0/23 via "eth0";
+}
 EOF
     docker exec bird-b1 birdcl configure
-
-    # Configure static routes from the ToRs to each loopback address
-    # that we will assign.
-    docker exec bird-a1 ip r a 172.31.10.0/23 dev eth0
-    docker exec bird-b1 ip r a 172.31.20.0/23 dev eth0
 
     if ${DUAL}; then
 	# Now with a second connectivity plane, that becomes:
@@ -212,6 +213,9 @@ protocol bgp rb2 {
   passive on;
   bfd on;
 }
+protocol static {
+  route 172.31.10.0/23 via "eth0";
+}
 EOF
 	docker exec bird-a2 birdcl configure
 	cat <<EOF | docker exec -i bird-b2 sh -c "cat > /etc/bird/peer-ra2.conf"
@@ -228,10 +232,11 @@ protocol bgp ra2 {
   neighbor 172.31.2.2 as 65001;
   bfd on;
 }
+protocol static {
+  route 172.31.20.0/23 via "eth0";
+}
 EOF
 	docker exec bird-b2 birdcl configure
-	docker exec bird-a2 ip r a 172.31.10.0/23 dev eth0
-	docker exec bird-b2 ip r a 172.31.20.0/23 dev eth0
     fi
 
     # Use kind to create and set up a 4 node Kubernetes cluster, with 2
