@@ -9,7 +9,7 @@ metadata:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-cloud-controllers
 rules:
@@ -40,7 +40,7 @@ rules:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: tigera-cloud-controllers
@@ -55,7 +55,7 @@ subjects:
 ---
 
 # This manifest deploys the Tigera Cloud Controllers.
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tigera-cloud-controllers
@@ -67,6 +67,9 @@ metadata:
 spec:
   # The controllers can only have a single active instance.
   replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: tigera-cloud-controllers
   strategy:
     type: Recreate
   template:

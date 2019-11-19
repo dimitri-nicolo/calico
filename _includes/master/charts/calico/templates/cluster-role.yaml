@@ -1,7 +1,7 @@
 # Include a clusterrole for the {{ include "calico_node_role_name" . }} DaemonSet,
 # and bind it to the {{ include "calico_node_role_name" . }} serviceaccount.
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ include "calico_node_role_name" . }}
 rules:
@@ -159,7 +159,7 @@ rules:
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: {{ include "calico_node_role_name" . }}
