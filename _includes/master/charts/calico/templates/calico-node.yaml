@@ -383,9 +383,12 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {{- end }}
-{{- if include "calico.customBgpTemplates" . }}
-            - mountPath: /etc/calico/confd/templates
-              name: bird-templates
+{{- if .Values.bgp }}
+  {{- range $key, $value := .Values.bgp }}
+            - name: bird-templates
+              mountPath: /etc/calico/confd/templates/{{ $key }}
+              subPath: {{ $key }}
+  {{- end }}
 {{- end }}
             - name: policysync
               mountPath: /var/run/nodeagent
@@ -448,7 +451,7 @@ spec:
 {{- else }}
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
 {{- end }}
-{{- if include "calico.customBgpTemplates" . }}
+{{- if .Values.bgp }}
         - name: bird-templates
           configMap:
             name: bgp-templates
