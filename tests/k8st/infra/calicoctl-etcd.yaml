@@ -1,8 +1,3 @@
-# Calico Version v3.7.3
-# https://docs.projectcalico.org/v3.7/releases#v3.7.3
-# This manifest includes the following component versions:
-#   calico/ctl:v3.7.3
-
 apiVersion: v1
 kind: Pod
 metadata:
@@ -11,10 +6,11 @@ metadata:
 spec:
   nodeSelector:
     beta.kubernetes.io/os: linux
-  hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
   containers:
   - name: calicoctl
-    image: calico/ctl:master
+    image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master
     command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
     env:
     - name: ETCD_ENDPOINTS

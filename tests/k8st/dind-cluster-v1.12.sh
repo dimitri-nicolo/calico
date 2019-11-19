@@ -1845,7 +1845,7 @@ function dind::up {
 
       # Install TSEE version of calicoctl, since it has extra resources in it.
       # The tests use calicoctl to execute some commands.
-      dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/calicoctl.yaml
+      dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/calicoctl-etcd.yaml
       ;;
     calico-kdd)
       manifest_base=tests/k8st/infra
