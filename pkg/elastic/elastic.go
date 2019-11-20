@@ -169,26 +169,14 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 		return nil
 	}
 
-	mappingMap := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(mapping), &mappingMap); err != nil {
-		return err
-	}
-
-	settingsMap := map[string]interface{}{
-		"mappings": mappingMap,
-		"settings": c.indexSettings,
-	}
-
-	settings, err := json.Marshal(settingsMap)
-	if err != nil {
-		return err
-	}
-
 	// Create index.
 	clog.Info("index doesn't exist, creating...")
 	createIndex, err := c.
 		CreateIndex(index).
-		Body(string(settings)).
+		BodyJson(map[string]interface{}{
+			"mappings": json.RawMessage(mapping),
+			"settings": c.indexSettings,
+		}).
 		Do(context.Background())
 	if err != nil {
 		if elastic.IsConflict(err) {
