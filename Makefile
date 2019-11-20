@@ -308,10 +308,12 @@ endif
 	git diff master...HEAD -- $(ORIG_VERSION) > backport_main.patch
 	git diff master...HEAD -- _includes/$(ORIG_VERSION) > backport_includes.patch
 	git diff master...HEAD -- _data/`echo $(ORIG_VERSION) | tr . _` > backport_data.patch
+	git diff master...HEAD -- _plugins/$(ORIG_VERSION) > backport_helm_values.patch
 
 	-git apply --3way -p2 --directory=$(VERSION) backport_main.patch
 	-git apply --3way -p3 --directory=_includes/$(VERSION) backport_includes.patch
 	-git apply --3way -p3 --directory=_data/`echo $(VERSION) | tr . _` backport_data.patch
+	-git apply --3way -p3 --directory=_plugins/$(VERSION) backport_helm_values.patch
 	# "error: unrecognized input" can be ignored if you didn't modify those directories.
 	# "error: patch failed" means you will need to manually patch certain directories.
 
