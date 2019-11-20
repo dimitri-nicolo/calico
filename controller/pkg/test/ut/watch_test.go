@@ -160,18 +160,7 @@ func TestWatch(t *testing.T) {
 			}()
 
 			// Install the event mapping
-			mappingMap := make(map[string]interface{})
-			if err := json.Unmarshal([]byte(elastic.EventMapping), &mappingMap); err != nil {
-				panic(err.Error())
-			}
-			settings, err := json.Marshal(map[string]interface{}{
-				"mappings": mappingMap,
-			})
-			if err != nil {
-				panic(err.Error())
-			}
-
-			_, err = elasticClient.CreateIndex(elastic.EventIndex).Body(string(settings)).Do(ctx)
+			_, err := elasticClient.CreateIndex(elastic.EventIndex).Body(elastic.EventMapping).Do(ctx)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			body, err := alertElastic.Watch(alert)
