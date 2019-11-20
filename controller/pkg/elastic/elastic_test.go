@@ -40,7 +40,7 @@ func TestNewElastic_Fail(t *testing.T) {
 		},
 	}
 
-	_, err = NewElastic(client, u, "", "")
+	_, err = NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).ShouldNot(BeNil())
 }
 
@@ -53,7 +53,7 @@ func TestElastic_GetIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -88,7 +88,7 @@ func TestElastic_GetIPSetModified(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -127,7 +127,7 @@ func TestElastic_QueryIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -153,7 +153,7 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -181,7 +181,7 @@ func TestElastic_ListSets(t *testing.T) {
 		Transport: http.RoundTripper(rt),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -222,7 +222,7 @@ func TestElastic_Put_Set(t *testing.T) {
 		Transport: http.RoundTripper(rt),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -275,7 +275,7 @@ func TestElastic_Delete_Set(t *testing.T) {
 		Transport: http.RoundTripper(rt),
 	}
 
-	e, err := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "", DefaultIndexSettings())
 	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())

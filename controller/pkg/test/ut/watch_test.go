@@ -160,7 +160,9 @@ func TestWatch(t *testing.T) {
 			}()
 
 			// Install the event mapping
-			_, err := elasticClient.CreateIndex(elastic.EventIndex).Body(elastic.EventMapping).Do(ctx)
+			_, err := elasticClient.CreateIndex(elastic.EventIndex).BodyJson(map[string]interface{}{
+				"mappings": json.RawMessage(elastic.EventMapping),
+			}).Do(ctx)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			body, err := alertElastic.Watch(alert)

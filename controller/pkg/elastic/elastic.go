@@ -41,6 +41,8 @@ const (
 	PingPeriod                = time.Minute
 	Create                    = "create"
 	Delete                    = "delete"
+	DefaultReplicas           = 0
+	DefaultShards             = 5
 )
 
 var (
@@ -77,6 +79,15 @@ type domainNameSetDoc struct {
 	Domains   db.DomainNameSetSpec `json:"domains"`
 }
 
+type IndexSettings struct {
+	Replicas int `json:"number_of_replicas"`
+	Shards   int `json:"number_of_shards"`
+}
+
+func DefaultIndexSettings() IndexSettings {
+	return IndexSettings{DefaultReplicas, DefaultShards}
+}
+
 type Elastic struct {
 	c                           *elastic.Client
 	url                         *url.URL
@@ -86,10 +97,10 @@ type Elastic struct {
 	elasticIsAlive              bool
 	cancel                      context.CancelFunc
 	once                        sync.Once
+	indexSettings               IndexSettings
 }
 
-func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elastic, error) {
-
+func NewElastic(h *http.Client, url *url.URL, username, password string, indexSettings IndexSettings) (*Elastic, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -111,6 +122,7 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 		ipSetMappingCreated:         make(chan struct{}),
 		domainNameSetMappingCreated: make(chan struct{}),
 		eventMappingCreated:         make(chan struct{}),
+		indexSettings:               indexSettings,
 	}
 
 	return e, nil
@@ -265,7 +277,10 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 		return err
 	}
 	if !exists {
-		r, err := e.c.CreateIndex(idx).Body(mapping).Do(ctx)
+		r, err := e.c.CreateIndex(idx).BodyJson(map[string]interface{}{
+			"mappings": json.RawMessage(mapping),
+			"settings": e.indexSettings,
+		}).Do(ctx)
 		if err != nil {
 			return err
 		}

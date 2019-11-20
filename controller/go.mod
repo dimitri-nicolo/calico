@@ -18,9 +18,11 @@ require (
 	github.com/kelseyhightower/envconfig v1.3.0 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
+	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.7.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/projectcalico/libcalico-go v3.7.0-0.dev.0.20190328155702-d0e07165e343+incompatible
+	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829 // indirect
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20191030050937-be2e3fd6c28a+incompatible

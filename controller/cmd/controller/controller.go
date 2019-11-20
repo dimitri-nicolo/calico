@@ -151,7 +151,22 @@ func main() {
 			InsecureSkipVerify: os.Getenv("INSECURE_SKIP_VERIFY") == "yes",
 		}}
 	}
-	e, err := elastic.NewElastic(h, u, user, pass)
+
+	indexSettings := elastic.DefaultIndexSettings()
+
+	if replicas := os.Getenv("ELASTIC_REPLICAS"); replicas != "" {
+		if indexSettings.Replicas, err = strconv.Atoi(replicas); err != nil || indexSettings.Replicas < 0 {
+			panic("ELASTIC_REPLICAS must be a non negative integer")
+		}
+	}
+
+	if shards := os.Getenv("ELASTIC_SHARDS"); shards != "" {
+		if indexSettings.Shards, err = strconv.Atoi(shards); err != nil || indexSettings.Shards < 1 {
+			panic("ELASTIC_SHARDS must be a positive integer")
+		}
+	}
+
+	e, err := elastic.NewElastic(h, u, user, pass, indexSettings)
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elastic")
 	}

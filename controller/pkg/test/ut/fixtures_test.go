@@ -150,7 +150,7 @@ func TestMain(m *testing.M) {
 		panic("could not install license: " + err.Error())
 	}
 
-	uut, err = elastic.NewElastic(&http.Client{}, u, "", "")
+	uut, err = elastic.NewElastic(&http.Client{}, u, "", "", elastic.DefaultIndexSettings())
 	if err != nil {
 		panic("could not create unit under test: " + err.Error())
 	}
