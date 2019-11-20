@@ -28,55 +28,97 @@ spec:
         metadata:
           type: object
         spec:
+          description: Specification of the desired state for Tigera log storage.
           properties:
-            certificate:
-              description: Certificate defines what secret contains the ssl certificate
-                to use for the elasticsearch cluster. If nothing is specified a self
-                signed one is created. This certificate is used for inter-cluster
-                communication and for k8 resources that need access to the cluster
-              type: object
             indices:
               description: Index defines the configuration for the indices in the
-                elasticsearch cluster
+                Elasticsearch cluster.
               properties:
                 replicas:
                   description: Replicas defines how many replicas each index will
                     have. See https://www.elastic.co/guide/en/elasticsearch/reference/current/scalability.html
-                  format: int64
+                  format: int32
                   type: integer
-              required:
-                - replicas
               type: object
             nodes:
-              description: Node defines the configuration for the elasticsearch cluster
-                nodes. The nodes created will all be of type master, data, and ingest,
-                and the number of nodes, where their data is stored, and what the
-                resource requirements are configured here
+              description: Nodes defines the configuration for a set of identical
+                Elasticsearch cluster nodes, each of type master, data, and ingest.
               properties:
                 count:
-                  description: Count defines the number of nodes that the elasticsearch
-                    cluster will have
+                  description: Count defines the number of nodes in the Elasticsearch
+                    cluster.
                   format: int64
                   type: integer
                 resourceRequirements:
-                  description: ResourceRequirements represents the resource limits
-                    and requirements for the elasticsearch cluster (i.e. cpu, size)
+                  description: ResourceRequirements defines the resource limits and
+                    requirements for the Elasticsearch cluster.
                   type: object
-                storageClass:
-                  description: StorageClass sets the storage class that the nodes
-                    will use to store their data
-                  type: object
+              type: object
+            retention:
+              description: Retention defines how long data is retained in the Elasticsearch
+                cluster before it is cleared.
+              properties:
+                auditReports:
+                  description: 'AuditReports configures the retention period for audit
+                    logs, in days.  Logs written on a day that started at least this
+                    long ago are removed.  To keep logs for at least x days, use a
+                    retention period of x+1. Default: 367'
+                  format: int32
+                  type: integer
+                complianceReports:
+                  description: 'ComplianceReports configures the retention period
+                    for compliance reports, in days. Reports are output from the analysis
+                    of the system state and audit events for compliance reporting.
+                    Consult the Compliance Reporting documentation for more details
+                    on reports. Logs written on a day that started at least this long
+                    ago are removed.  To keep logs for at least x days, use a retention
+                    period of x+1. Default: 367'
+                  format: int32
+                  type: integer
+                flows:
+                  description: 'Flows configures the retention period for flow logs,
+                    in days.  Logs written on a day that started at least this long
+                    ago are removed.  To keep logs for at least x days, use a retention
+                    period of x+1. Default: 8'
+                  format: int32
+                  type: integer
+                snapshots:
+                  description: 'Snapshots configures the retention period for snapshots,
+                    in days. Snapshots are periodic captures of resources which along
+                    with audit events are used to generate reports. Consult the Compliance
+                    Reporting documentation for more details on snapshots. Logs written
+                    on a day that started at least this long ago are removed.  To
+                    keep logs for at least x days, use a retention period of x+1.
+                    Default: 367'
+                  format: int32
+                  type: integer
+              required:
+              - flows
+              - auditReports
+              - snapshots
+              - complianceReports
               type: object
           type: object
         status:
+          description: Most recently observed state for Tigera log storage.
           properties:
+            elasticsearchHash:
+              description: ElasticsearchHash represents the current revision and configuration
+                of the installed Elasticsearch cluster. This is an opaque string which
+                can be monitored for changes to perform actions when Elasticsearch
+                is modified.
+              type: string
+            kibanaHash:
+              description: KibanaHash represents the current revision and configuration
+                of the installed Kibana dashboard. This is an opaque string which
+                can be monitored for changes to perform actions when Kibana is modified.
+              type: string
             state:
-              description: State indicates the state of the deployment by the LogStorage
-                controller
+              description: State provides user-readable status.
               type: string
           type: object
   version: v1
   versions:
-    - name: v1
-      served: true
-      storage: true
+  - name: v1
+    served: true
+    storage: true

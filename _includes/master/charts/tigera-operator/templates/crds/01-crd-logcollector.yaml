@@ -28,12 +28,78 @@ spec:
         metadata:
           type: object
         spec:
+          description: Specification of the desired state for Tigera log collection.
+          properties:
+            additionalStores:
+              description: Configuration for exporting flow, audit, and DNS logs to
+                external storage.
+              properties:
+                s3:
+                  description: If specified, enables exporting of flow, audit, and
+                    DNS logs to Amazon S3 storage.
+                  properties:
+                    bucketName:
+                      description: Name of the S3 bucket to send logs
+                      type: string
+                    bucketPath:
+                      description: Path in the S3 bucket where to send logs
+                      type: string
+                    region:
+                      description: AWS Region of the S3 bucket
+                      type: string
+                  required:
+                  - region
+                  - bucketName
+                  - bucketPath
+                  type: object
+                syslog:
+                  description: If specified, enables exporting of flow, audit, and
+                    DNS logs to syslog.
+                  properties:
+                    endpoint:
+                      description: 'Location of the syslog server. example: tcp://1.2.3.4:601'
+                      type: string
+                    packetsize:
+                      description: 'PacketSize defines the maximum size of packets
+                        to send to syslog. In general this is only needed if you notice
+                        long logs being truncated. Default: 1024'
+                      format: int32
+                      type: integer
+                  required:
+                  - endpoint
+                  type: object
+              type: object
+            additionalSources:
+              description: Configuration for importing audit logs from managed
+                kubernetes cluster log sources.
+              properties:
+                eksCloudwatchLog:
+                  description: If specified, enables fetching audit logs from EKS
+                    cluster to support compliance reports.
+                  properties:
+                    region:
+                      description: AWS region EKS cluster is hosted in.
+                      type: string
+                    groupName:
+                      description: Name of the log-group containing audit logs when enabled in EKS.
+                      type: string
+                    streamPrefix:
+                      description: Cloudwatch audit log stream prefix, default 'kube-apiserver-audit-'.
+                      type: string
+                    fetchInterval:
+                      description: Log fetch interval expressed in seconds, default 600.
+                      type: string
+                  required:
+                  - region
+                  - groupName
+                  type: object
+              type: object
           type: object
         status:
+          description: Most recently observed state for Tigera log collection.
           properties:
             state:
-              description: State indicates the state of the daemonset by the LogCollector
-                controller
+              description: State provides user-readable status.
               type: string
           type: object
   version: v1
