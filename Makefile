@@ -14,7 +14,7 @@ ELASTIC_VERSION ?= 7.3.2
 K8S_VERSION      ?= v1.11.3
 ETCD_VERSION     ?= v3.3.7
 KUBE_BENCH_VERSION ?= b649588f46c54c84cd9c88510680b5a651f12d46
-LIBCALICO_GO_VERSION ?= v0.0.0-20190920203615-2ac87253de27
+LIBCALICO_GO_VERSION ?= v0.0.0-20191113215606-944388dd8364
 
 ###############################################################################
 # Both native and cross architecture builds are supported.

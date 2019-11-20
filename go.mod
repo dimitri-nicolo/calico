@@ -7,7 +7,7 @@ replace (
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20191030012622-bce3b9ce279b
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20191120195944-af590c01bfe8
 	k8s.io/api => k8s.io/api v0.0.0-20180628040859-072894a440bd
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20180327025904-5ae41ac86efd
