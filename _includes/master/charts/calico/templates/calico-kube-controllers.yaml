@@ -26,6 +26,9 @@ spec:
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
+{{ if .Values.controlPlaneNodeSelector }}
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
         - key: CriticalAddonsOnly

@@ -33,6 +33,10 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       serviceAccountName: tigera-federation-controller
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
 {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
 {{- range $key, $value := .Values.imagePullSecrets }}

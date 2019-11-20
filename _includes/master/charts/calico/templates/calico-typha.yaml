@@ -142,6 +142,9 @@ spec:
               topologyKey: kubernetes.io/hostname
       nodeSelector:
         beta.kubernetes.io/os: linux
+{{ if .Values.controlPlaneNodeSelector }}
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       hostNetwork: true
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
@@ -411,6 +414,10 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       containers:
         - image: {{ .Values.cpHorizontalAutoscaler.image }}:{{ .Values.cpHorizontalAutoscaler.tag }}
           name: autoscaler
@@ -510,6 +517,10 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       containers:
         - image: {{ .Values.cpVerticalAutoscaler.image }}:{{ .Values.cpVerticalAutoscaler.tag }}
           name: autoscaler

@@ -79,6 +79,10 @@ spec:
       labels:
         k8s-app: tigera-cloud-controllers
     spec:
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       serviceAccountName: tigera-cloud-controllers
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
