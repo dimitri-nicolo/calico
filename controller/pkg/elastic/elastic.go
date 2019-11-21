@@ -21,6 +21,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 const (
@@ -228,15 +229,9 @@ func (e *Elastic) PutDomainNameSet(ctx context.Context, name string, set db.Doma
 }
 
 func (e *Elastic) putSet(ctx context.Context, name string, idx string, c <-chan struct{}, body interface{}) error {
-
 	// Wait for the Sets Mapping to be created
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(CreateIndexWaitTimeout):
-		return errors.New("Timeout waiting for index creation")
-	case <-c:
-		break
+	if err := util.WaitForChannel(ctx, c, CreateIndexWaitTimeout); err != nil {
+		return err
 	}
 
 	// Put document
@@ -512,13 +507,8 @@ func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
 
 func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterface) error {
 	// Wait for the SecurityEvent Mapping to be created
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(CreateIndexWaitTimeout):
-		return errors.New("Timeout waiting for index creation")
-	case <-e.eventMappingCreated:
-		break
+	if err := util.WaitForChannel(ctx, e.eventMappingCreated, CreateIndexWaitTimeout); err != nil {
+		return err
 	}
 	_, err := e.c.Index().Index(EventIndex).Id(f.ID()).BodyJson(f).Do(ctx)
 	return err
@@ -842,6 +832,11 @@ func (e *Elastic) ExecuteWatch(ctx context.Context, body *ExecuteWatchBody) (*el
 }
 
 func (e *Elastic) PutWatch(ctx context.Context, name string, body *PutWatchBody) error {
+	// Wait for the SecurityEvent Mapping to be created
+	if err := util.WaitForChannel(ctx, e.eventMappingCreated, CreateIndexWaitTimeout); err != nil {
+		return err
+	}
+
 	watchID := WatchNamePrefix + name
 	_, err := e.c.XPackWatchPut(watchID).Body(body).Do(ctx)
 	return err
