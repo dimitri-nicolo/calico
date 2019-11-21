@@ -432,6 +432,8 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191113223902-f77f93773a83 h1:1t6XJ8IctIFDXLb96z958H6MMe+UmF0FFrEB47ElxBU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191113223902-f77f93773a83/go.mod h1:6iZKDaVRAw3oU1QlCnG49RRi0voOFP/C0oq0+8Rv1s0=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191120194820-00382998ff0b h1:oOZUpYEBstg+SAmc7/jhQKFpPCI5vbqgk9IiOJ2UR1Y=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191120194820-00382998ff0b/go.mod h1:6iZKDaVRAw3oU1QlCnG49RRi0voOFP/C0oq0+8Rv1s0=
 github.com/tigera/licensing v2.7.0-0.dev.0.20191114203016-3c126d3f9ffe+incompatible h1:kkJMH7e5WqoJYW1ek38OoAWAJ4b37ReKMpXe06dUUYI=
 github.com/tigera/licensing v2.7.0-0.dev.0.20191114203016-3c126d3f9ffe+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
