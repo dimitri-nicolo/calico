@@ -34,10 +34,16 @@ follow these steps.
    kubectl apply -f cnx-api.yaml
    ```
 
-   Or
+   or for clusters installed with `helm`
 
    ```
    kubectl edit configmap audit-policy-ee -n kube-system
+   ```
+
+   or for clusters installed with the `operator`
+
+   ```
+   kubectl edit configmap tigera-audit-policy -n tigera-system
    ```
 
 1. Restart the cnx-apiserver pod to pick up the new policy (note that this will cause API downtime).
