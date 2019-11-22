@@ -44,6 +44,9 @@ type config struct {
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
 	EnableMultiClusterManagement bool   `default:"false" split_words:"true"`
+	KibanaEndpoint               string `default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601" split_words:"true"`
+	KibanaBasePath               string `default:"/tigera-kibana" split_words:"true"`
+	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
 }
 
 func (cfg config) String() string {
@@ -127,6 +130,11 @@ func main() {
 		{
 			Path: "/compliance/",
 			Dest: cfg.ComplianceEndpoint,
+		},
+		{
+			Path:         cfg.KibanaBasePath,
+			Dest:         cfg.KibanaEndpoint,
+			CABundlePath: cfg.KibanaCABundlePath,
 		},
 		{
 			Path: "/",
