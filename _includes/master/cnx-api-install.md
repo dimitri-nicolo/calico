@@ -109,8 +109,8 @@
    as cnx-api.yaml. That is how we will refer to it in later steps.
 
    ```bash
-   curl --compressed -o cnx-api.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/cnx-api-kdd-eks.yaml
+     curl --compressed -o cnx-api.yaml \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml
    ```
 
 {% elsif include.platform == "gke" %}
@@ -122,7 +122,7 @@
    curl --compressed -o cnx-api.yaml \
    {{site.url}}/{{page.version}}/manifests/gke/cnx-api-kdd.yaml
    ```
-   
+
 {% elsif include.platform == "aks" %}
 
 1. Download the AKS {{site.prodname}} manifest and save the file
