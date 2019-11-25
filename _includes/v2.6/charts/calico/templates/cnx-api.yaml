@@ -380,6 +380,9 @@ spec:
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
+{{ if .Values.controlPlaneNodeSelector }}
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       serviceAccountName: cnx-apiserver
       tolerations:
         - key: node-role.kubernetes.io/master

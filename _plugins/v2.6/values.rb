@@ -441,6 +441,10 @@ def gen_chart_specific_values_v2_6(versions, imageRegistry, chart, forDocs)
           memory: #"1024Mi"
     
     network: calico
+
+    # controlPlaneNodeSelector is a dictionary of node selectors to apply to
+    # all 'control-plane' components.
+    controlPlaneNodeSelector: {}
     
     # initialPool configures the pool used by Calico when using calico-ipam.
     # Note that these settings are only applied during initial install.
