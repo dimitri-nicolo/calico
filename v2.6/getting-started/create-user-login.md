@@ -104,17 +104,11 @@ For example, the following command gives the service account jane in the default
 kubectl create clusterrolebinding jane-access --clusterrole tigera-network-admin --serviceaccount default:jane
 ```
 
-Next, get the token from the service account. First, get the name of the secret containing the token attached to the service account.
+Next, get the token from the service account.
 Using the running example of a service account named jane in the default namespace:
 
 ```bash
-kubectl get serviceaccount jane -n default -o jsonpath="{.secrets[].name}"
-```
-
-With the secret name, we can retrieve the token:
-
-```bash
-kubectl get secret <token_name> -n default -o jsonpath="{.data.token}" | base64 --decode
+{% raw %}kubectl get secret $(kubectl get serviceaccount jane -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep token) -o go-template='{{.data.token | base64decode}}' && echo{% endraw %}
 ```
 
 Now that we have the token, we can proceed to login! Go to the {{site.prodname}} UI and submit the token.
