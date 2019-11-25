@@ -456,7 +456,10 @@ def gen_chart_specific_values_v2_6(versions, imageRegistry, chart, forDocs)
     
     # Sets the ipam. Can be 'calico-ipam' or 'host-local'
     ipam: calico-ipam
-    
+
+    # Sets the mtu.
+    mtu: "1440"
+
     datastore: kubernetes
     app_layer_policy:
       enabled: false
