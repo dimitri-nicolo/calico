@@ -4,12 +4,20 @@ redirect_from: latest/security/logs/elastic/index
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/
 ---
 
-The [Quickstart](/{{page.version}}/getting-started/kubernetes/) uses an Elasticsearch operator to deploy an
-Elasticsearch cluster and a Kibana instance. You can use these to explore the feature set on a non-production cluster.
+{{site.prodname}} uses an Elasticsearch operator to deploy an Elasticsearch cluster and a Kibana instance. The 
+Elasticsearch cluster is used to store all {{site.prodname}} related data according to the specified retention 
+settings to make sure the cluster does not run out of disk space.
 
-For production, you must set up your own Elasticsearch cluster before [installing {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/).
-
-{{site.prodname}} pushes detailed [flow logs](flow), [audit logs](ee-audit) and [DNS logs](dns) to Elasticsearch.
-The {{site.prodname}} Manager provides [flow log visualization](view#view-in-mgr). You can also use
-either [Kibana](view#accessing-logs-from-kibana) or [the Elasticsearch API](view#accessing-logs-from-the-elasticsearch-api)
-to query flow, audit and DNS logs.
+In this section we will elaborate on the specifics of the collected data and how to access and configure your cluster:
+* [Flow logs](flow)
+* [Audit logs](ee-audit)
+* [DNS logs](dns)
+* [Flow log visualization](view#view-in-mgr)
+* [Kibana](view#accessing-logs-from-kibana)
+* [Elasticsearch API](view#accessing-logs-from-the-elasticsearch-api)
+* [Data Retention](../retention)
+* [Filtering flow logs](filtering)
+* [Filtering DNS logs](filtering-dns)
+* [Archiving to syslog](syslog)
+* [Archiving to S3](s3-archive)
+* [Tracing external IP addresses](ingress)

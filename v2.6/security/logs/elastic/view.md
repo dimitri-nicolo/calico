@@ -32,7 +32,7 @@ You can access the logs from the
 [Elasticsearch Search API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search.html)
 under the following indices.
 
-- **Flow logs**: `tigera_secure_ee_flows`
+- **Flow logs**: `tigera_secure_ee_flows*`
 
 - **Audit logs**: `tigera_secure_ee_audit*`
 
