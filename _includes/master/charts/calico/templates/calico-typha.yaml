@@ -165,7 +165,7 @@ spec:
         fsGroup: 65534
       containers:
       - name: calico-typha
-        image: {{.Values.typha.image}}:{{.Values.typha.tag}}
+        image: {{ join ":" (list .Values.typha.image .Values.typha.tag) }}
 {{ tuple .Values.typha.resources | include "calico.resourceLimits" | indent 8 -}}
         volumeMounts:
         - name: calico-typha-ca
@@ -419,7 +419,7 @@ spec:
 {{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
 {{- end }}
       containers:
-        - image: {{ .Values.cpHorizontalAutoscaler.image }}:{{ .Values.cpHorizontalAutoscaler.tag }}
+        - image: {{ join ":" (list .Values.cpHorizontalAutoscaler.image .Values.cpHorizontalAutoscaler.tag) }}
           name: autoscaler
           command:
             - /cluster-proportional-autoscaler
@@ -522,7 +522,7 @@ spec:
 {{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
 {{- end }}
       containers:
-        - image: {{ .Values.cpVerticalAutoscaler.image }}:{{ .Values.cpVerticalAutoscaler.tag }}
+        - image: {{ join ":" (list .Values.cpVerticalAutoscaler.image .Values.cpVerticalAutoscaler.tag) }}
           name: autoscaler
           command:
             - /cpvpa

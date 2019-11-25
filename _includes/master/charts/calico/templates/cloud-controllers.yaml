@@ -96,7 +96,7 @@ spec:
 {{- end }}
       containers:
         - name: tigera-cloud-controllers
-          image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
+          image: {{ join ":" (list .Values.cloudControllers.image .Values.cloudControllers.tag) }}
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
