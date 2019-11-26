@@ -49,7 +49,7 @@ spec:
       hostNetwork: true
       containers:
         - name: calico-kube-controllers
-          image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
+          image: {{ join ":" (list .Values.kubeControllers.image .Values.kubeControllers.tag) }}
 {{ tuple .Values.kubeControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # The location of the etcd cluster.
@@ -101,7 +101,7 @@ spec:
 {{- else if eq .Values.network "calico" }}
       containers:
         - name: calico-kube-controllers
-          image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
+          image: {{ join ":" (list .Values.kubeControllers.image .Values.kubeControllers.tag) }}
 {{ tuple .Values.kubeControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # Choose which controllers to run.
