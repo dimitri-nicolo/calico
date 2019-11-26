@@ -95,7 +95,7 @@ v2.6:
       registry: quay.io
     prometheus-operator:
       image: coreos/prometheus-operator
-      version: v0.29.0
+      version: v0.34.0
       registry: quay.io
     prometheus:
       image: prometheus/prometheus
@@ -107,7 +107,7 @@ v2.6:
       registry: quay.io
     prometheus-config-reloader:
       image: coreos/prometheus-config-reloader
-      version: v0.29.0
+      version: v0.34.0
       registry: quay.io
     configmap-reload:
       image: coreos/configmap-reload
@@ -1657,7 +1657,7 @@ master:
       registry: quay.io
     prometheus-operator:
       image: coreos/prometheus-operator
-      version: v0.29.0
+      version: v0.34.0
       registry: quay.io
     prometheus:
       image: prometheus/prometheus
@@ -1669,7 +1669,7 @@ master:
       registry: quay.io
     prometheus-config-reloader:
       image: coreos/prometheus-config-reloader
-      version: v0.29.0
+      version: v0.34.0
       registry: quay.io
     configmap-reload:
       image: coreos/configmap-reload
