@@ -5,6 +5,7 @@
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
 {{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
+{{- $kibanaBasePath := "tigera-kibana" }}
 # Update this ConfigMap with the Google login client id.
 kind: ConfigMap
 apiVersion: v1
@@ -243,10 +244,16 @@ spec:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.elasticsearch-api-url
           - name: CNX_ELASTICSEARCH_KIBANA_URL
+
+{{- if eq $elasticMode "operator" }}
+            value: {{ print "/" $kibanaBasePath }}
+{{- else }}
             valueFrom:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.kibana-url
+{{- end }}
+
           - name: CNX_ENABLE_ERROR_TRACKING
             valueFrom:
               configMapKeyRef:
@@ -296,12 +303,24 @@ spec:
             value: "9443"
           - name: VOLTRON_LOGLEVEL
             value: "info"
+{{- if eq $elasticMode "operator" }}
+          - name: VOLTRON_KIBANA_ENDPOINT
+            value: "https://tigera-kibana-kb-http.calico-monitoring.svc:5601"
+          - name: VOLTRON_KIBANA_BASE_PATH
+            value: {{ print "/" $kibanaBasePath "/" }}
+          - name: VOLTRON_KIBANA_CA_BUNDLE_PATH
+            value: "/certs/kibana/tls.crt"
+{{- end}}
 {{- if .Values.voltron.env }}
 {{ toYaml .Values.voltron.env | indent 10 }}
 {{- end }}
         volumeMounts:
         - mountPath: /certs/https
           name: cnx-manager-tls
+{{- if eq $elasticMode "operator" }}
+        - mountPath: /certs/kibana
+          name: tigera-kibana-kb-http-certs-public
+{{- end}}
         livenessProbe:
           httpGet:
             path: /voltron/api/health
@@ -405,6 +424,11 @@ spec:
       - name: cnx-manager-tls
         secret:
           secretName: cnx-manager-tls
+{{- if eq $elasticMode "operator" }}
+      - name: tigera-kibana-kb-http-certs-public
+        secret:
+          secretName: tigera-kibana-kb-http-certs-public
+{{- end}}
       - name: tigera-es-proxy-tls
         secret:
           optional: true
