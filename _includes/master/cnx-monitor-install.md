@@ -322,23 +322,6 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    ssh <jumpbox> -L 127.0.0.1:33601:<docker node>:33601
    ```
 
-{% elsif include.elasticsearch == "operator" %}
-   By default, Kibana is made accessible via a NodePort listening on port 30601
-
-{% if include.orch == "openshift" %}
-   You may need to create an OpenShift route or Ingress if the NodePort is not accessible.
-
-   Ensure that the Route is created with tls termination set to Edge. Also, ensure that the host
-   specified in the route is resolvable from within the cluster, and to update cnx.yaml with the
-   hostname as specified in the route, apply the change and restart the cnx-manager pod.
-
-{% else %}
-   You may need to create an ssh tunnel if the node is not accessible - for example:
-
-   ```bash
-   ssh <jumpbox> -L 127.0.0.1:30601:<kubernetes node>:30601
-   ```
-{% endif %}
 {% endif %}
 
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
