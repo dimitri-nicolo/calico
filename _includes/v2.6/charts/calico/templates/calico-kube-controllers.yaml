@@ -23,6 +23,11 @@ spec:
         k8s-app: calico-kube-controllers
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
+{{- if eq .Values.datastore "etcd" }}
+        # This contains a hash of the {{include "variant_name" . | lower}}-config ConfigMap
+        # and can be updated to trigger a rolling update if the ConfigMap is updated.
+        calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
+{{- end }}
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux

@@ -27,6 +27,12 @@ spec:
         # priority scheduling and that its resources are reserved
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
+        # This contains a hash of the {{include "variant_name" . | lower}}-config ConfigMap
+        # and can be updated to trigger a rolling update if the ConfigMap is updated.
+        calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
+{{- if .Values.bgp }}
+        custom-bgp-configmap-hash: {{ tuple "custom-bgp-config.yaml" . | include "calico.hash" }}
+{{- end }}
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
