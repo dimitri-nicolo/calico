@@ -77,6 +77,31 @@ allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 ```
 
+##### AKS Azure Files storage
+
+In the following example for an AKS cloud provider integration, the **StorageClass** tells {{site.prodname}} to use LRS disks for log storage.
+   > **Note**: Premium Storage is recommended for databases greater than 100GiB and for production installations.
+{: .alert .alert-info}
+
+```
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: tigera-elasticsearch
+provisioner: kubernetes.io/azure-file
+mountOptions:
+  - uid=1000
+  - gid=1000
+  - mfsymlinks
+  - nobrl
+  - cache=none
+parameters:
+  skuName: Standard_LRS
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+```
+
 ### Above and beyond
 
 - [Adjust size of Elasticsearch cluster]()
