@@ -109,7 +109,7 @@ ifeq ($(LOCAL_BUILD),true)
 endif
 
 # Versions and location of dependencies used in the build.
-BIRD_VER?=v0.3.3-145-g049d13dc
+BIRD_VER?=v0.3.3-147-g1c33c691
 BIRD_IMAGE ?= calico/bird:$(BIRD_VER)-$(ARCH)
 
 # Versions and locations of dependencies used in tests.
@@ -734,7 +734,7 @@ dual-tor-run-test:
 dual-tor-cleanup:
 	STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
 	rm ./kubectl
-   
+
 ## Get the kubeadm-dind-cluster script
 K8ST_VERSION?=v1.12
 DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh
