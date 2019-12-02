@@ -483,6 +483,11 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
     node:
       image: #{imageRegistry}#{versions["cnx-node"].image}
       tag: #{versions["cnx-node"].version}
+
+      # configure which port prometheus metrics are served on.
+      # setting to a positive number will also annotate calico-node with the prometheus scrape autodiscovery annotations.
+      # set to 0 to disable prometheus metrics altogether.
+      prometheusMetricsPort: 9081
       env:
         # Optional environment variables for configuring Calico node.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
