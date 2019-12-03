@@ -4,7 +4,8 @@ layout: null
 {% helm --execute templates/calico-config.yaml --execute templates/calico-etcd-secrets.yaml --execute templates/calico-typha.yaml --execute templates/tigera-federation-sa.yaml --execute templates/tigera-federation-controller.yaml --execute templates/calico-node.yaml --execute templates/calico-kube-controllers.yaml --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml --execute templates/rbac.yaml --execute templates/cluster-role.yaml %}
 datastore: kubernetes
 network: calico
-disable_ipip: true
+initialPool:
+  ipIpMode: Never
 typha:
   enabled: true
 federation:
