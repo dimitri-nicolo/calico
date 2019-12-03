@@ -1,5 +1,5 @@
 ---
-title: Querying remote clusters with calicoq
+title: Query remote clusters with calicoq
 canonical_url: https://docs.tigera.io/v2.3/usage/federation/calicoq
 ---
 

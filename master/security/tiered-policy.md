@@ -1,5 +1,5 @@
 ---
-title: Tiered Policy Demo
+title: Create tiered policies
 canonical_url: https://docs.tigera.io/v2.3/getting-started/cnx/tiered-policy-cnx/
 ---
 

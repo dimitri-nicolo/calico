@@ -1,5 +1,5 @@
 ---
-title: Previewing the impact of policy changes
+title: Preview policy impacts
 ---
 
 ### Big picture

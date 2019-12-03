@@ -1,5 +1,5 @@
 ---
-title: Compliance reports
+title: Configure compliance reports
 ---
 
 ### Big picture

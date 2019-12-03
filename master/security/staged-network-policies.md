@@ -1,6 +1,6 @@
 ---
-title: Staged network policies
-description: Create staged network policies. Describes the ability to stage Calico and native Kubernetes network policies to safely observe traffic implications without impacting traffic flow.
+title: Create staged policies
+description: Describes how to stage Calico and native Kubernetes network policies to safely observe traffic implications without impacting traffic flow.
 ---
 
 ### Big picture

@@ -1,5 +1,5 @@
 ---
-title: Configuring a node IP address and subnet
+title: Configure IP autodetection
 canonical_url: 'https://docs.tigera.io/v2.3/usage/configuration/node'
 ---
 

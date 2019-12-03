@@ -1,5 +1,5 @@
 ---
-title: Enabling VPC members to access pods
+title: Enable VPC members to access pods
 canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/vpc-member-access
 ---
 

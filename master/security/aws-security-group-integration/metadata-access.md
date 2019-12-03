@@ -1,5 +1,5 @@
 ---
-title: Enabling access to AWS metadata
+title: Enable access to AWS metadata
 canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/metadata-access
 ---
 
