@@ -277,7 +277,7 @@ spec:
               value: "false"
             # Set Felix logging to "info"
             - name: FELIX_LOGSEVERITYSCREEN
-              value: "info"
+              value: {{ .Values.node.logLevel }}
             - name: FELIX_HEALTHENABLED
               value: "true"
             # Additional Felix configuration options
