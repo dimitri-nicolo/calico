@@ -488,11 +488,12 @@ def gen_chart_specific_values_v2_6(versions, imageRegistry, chart, forDocs)
       # setting to a positive number will also annotate calico-node with the prometheus scrape autodiscovery annotations.
       # set to 0 to disable prometheus metrics altogether.
       prometheusMetricsPort: 9081
+      logLevel: info
       env:
         # Optional environment variables for configuring Calico node.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
-        # - name: FELIX_LOGSEVERITYSCREEN
-        #   value: "debug"
+        # - name: FELIX_REPORTINGINTERVALSECS
+        #   value: "500"
       # Optional configuration for setting resource limits on the Calico node container.
       resources:
         requests:
