@@ -200,3 +200,22 @@ By design, reports are scheduled to generate 30 minutes after the specified end 
 time to pass for all the relevant data within the specified start and end time to be fully processed and stored. This delay can be modified
 by setting the `TIGERA_COMPLIANCE_JOB_START_DELAY` environment variable on the `compliance-controller` deployment to the
 desired [Golang duration](https://godoc.org/time#Duration).
+
+### GlobalAlert reports error "Trying to create too many buckets"
+
+```
+“Trying to create too many buckets. Must be less than or equal to: [10000] but was [10001]. This limit can be set by changing the [search.max_buckets] cluster level setting."
+```
+
+The GlobalAlert system has a hard limit of 10000 aggregation keys per
+query, and will fail to generate generate alerts if nested aggregations
+result in the number of keys exceeding this limit.  The “healthy“ status
+of the GlobalAlert will be set to false until the number of aggregation
+keys returned by the query no longer exceeds this limit.
+
+Careful selection of queries and `aggregateBy` keys will mitigate this issue.
+GlobalAlerts should consider the size of the keyspace used in the
+`aggregateBy` field and order from least expansive to most. For example:
+Namespace should precede pod name. Avoid aggregating by source or destination
+port unless the query selects specific ports. Ephemeral ports used by clients
+number in the tens of thousands and a single host can trigger this condition.
