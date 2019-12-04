@@ -238,6 +238,9 @@ func init() {
 	registerStructValidator(validate, validatePull, api.Pull{})
 	registerStructValidator(validate, validateGlobalAlertSpec, api.GlobalAlertSpec{})
 	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeedSpec{})
+	registerStructValidator(validate, validateFeedFormat, api.ThreatFeedFormat{})
+	registerStructValidator(validate, validateFeedFormatJSON, api.ThreatFeedFormatJSON{})
+	registerStructValidator(validate, validateFeedFormatCSV, api.ThreatFeedFormatCSV{})
 	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
 	registerStructValidator(validate, validateSecretKeyRef, k8sv1.SecretKeySelector{})
@@ -1574,75 +1577,6 @@ func validatePull(structLevel validator.StructLevel) {
 			"")
 	}
 	return
-}
-
-func validateGlobalThreatFeedSpec(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalThreatFeedSpec)
-	if s.Content == api.ThreatFeedContentDomainNameSet && s.GlobalNetworkSet != nil {
-		structLevel.ReportError(
-			reflect.ValueOf(s.Content),
-			"Content",
-			"",
-			reason(string(api.ThreatFeedContentDomainNameSet)+" does not support syncing with a GlobalNetworkSet"),
-			"",
-		)
-	}
-}
-
-func validateHTTPHeader(structLevel validator.StructLevel) {
-	h := structLevel.Current().Interface().(api.HTTPHeader)
-	if h.Value != "" && h.ValueFrom != nil {
-		structLevel.ReportError(
-			reflect.ValueOf(h.Value),
-			"Value",
-			"",
-			reason("Value cannot be used when ValueFrom is used"),
-			"")
-	}
-}
-
-func validateConfigMapKeyRef(structLevel validator.StructLevel) {
-	c := structLevel.Current().Interface().(k8sv1.ConfigMapKeySelector)
-	for _, errStr := range k8svalidation.IsQualifiedName(c.Name) {
-		structLevel.ReportError(
-			reflect.ValueOf(c.Name),
-			"ConfigMapKeyRef.Name",
-			"",
-			reason(errStr),
-			"",
-		)
-	}
-	for _, errStr := range k8svalidation.IsConfigMapKey(c.Key) {
-		structLevel.ReportError(
-			reflect.ValueOf(c.Name),
-			"ConfigMapKeyRef.Key",
-			"",
-			reason(errStr),
-			"",
-		)
-	}
-}
-
-func validateSecretKeyRef(structLevel validator.StructLevel) {
-	c := structLevel.Current().Interface().(k8sv1.SecretKeySelector)
-	for _, errStr := range k8svalidation.IsQualifiedName(c.Name) {
-		structLevel.ReportError(
-			reflect.ValueOf(c.Name),
-			"SecretKeyRef.Name",
-			"",
-			reason(errStr),
-			"",
-		)
-	}
-	for _, errStr := range k8svalidation.IsConfigMapKey(c.Key) {
-		structLevel.ReportError(
-			reflect.ValueOf(c.Name),
-			"SecretKeyRef.Key",
-			"",
-			reason(errStr),
-			"",
-		)
-	}
 }
 
 func validateReportTemplate(structLevel validator.StructLevel) {

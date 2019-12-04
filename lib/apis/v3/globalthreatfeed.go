@@ -68,18 +68,33 @@ type Pull struct {
 }
 
 type HTTPPull struct {
-	Format  ThreatFeedFormat `json:"format,omitempty" validate:"omitempty,eq=NewlineDelimited"`
+	Format  ThreatFeedFormat `json:"format,omitempty" validate:"omitempty"`
 	URL     string           `json:"url" validate:"required,url"`
 	Headers []HTTPHeader     `json:"headers,omitempty" validate:"dive"`
 }
 
-type ThreatFeedFormat string
+type ThreatFeedFormat struct {
+	NewlineDelimited *ThreatFeedFormatNewlineDelimited `json:"newlineDelimited,omitempty"`
+	JSON             *ThreatFeedFormatJSON             `json:"json,omitempty" validate:"omitempty"`
+	CSV              *ThreatFeedFormatCSV              `json:"csv,omitempty" validate:"omitempty"`
+}
 
-const (
-	ThreatFeedFormatNewlineDelimited ThreatFeedFormat = "NewlineDelimited"
-)
+type ThreatFeedFormatNewlineDelimited struct{}
 
-var ThreatFeedFormatDefault = ThreatFeedFormatNewlineDelimited
+type ThreatFeedFormatJSON struct {
+	Path string `json:"path,omitempty" validate:"required"`
+}
+
+type ThreatFeedFormatCSV struct {
+	FieldNum         *uint  `json:"fieldNum,omitempty" validate:"required_without=FieldName"`
+	FieldName        string `json:"fieldName,omitempty" validate:"required_without=FieldNum"`
+	Header           bool   `json:"header"`
+	ColumnDelimiter  string `json:"columnDelimiter"`
+	CommentDelimiter string `json:"commentDelimiter"`
+	FieldsPerRecord  *int   `json:"fieldsPerRecord"`
+}
+
+const DefaultCSVDelimiter = ','
 
 type HTTPHeader struct {
 	Name      string            `json:"name" validate:"printascii"`

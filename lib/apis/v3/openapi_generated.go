@@ -202,6 +202,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicy":               schema_libcalico_go_lib_apis_v3_StagedNetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicyList":           schema_libcalico_go_lib_apis_v3_StagedNetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.StagedNetworkPolicySpec":           schema_libcalico_go_lib_apis_v3_StagedNetworkPolicySpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormat":                  schema_libcalico_go_lib_apis_v3_ThreatFeedFormat(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatCSV":               schema_libcalico_go_lib_apis_v3_ThreatFeedFormatCSV(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatJSON":              schema_libcalico_go_lib_apis_v3_ThreatFeedFormatJSON(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatNewlineDelimited":  schema_libcalico_go_lib_apis_v3_ThreatFeedFormatNewlineDelimited(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier":                              schema_libcalico_go_lib_apis_v3_Tier(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierList":                          schema_libcalico_go_lib_apis_v3_TierList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec":                          schema_libcalico_go_lib_apis_v3_TierSpec(ref),
@@ -5996,8 +6000,7 @@ func schema_libcalico_go_lib_apis_v3_HTTPPull(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"format": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormat"),
 						},
 					},
 					"url": {
@@ -6023,7 +6026,7 @@ func schema_libcalico_go_lib_apis_v3_HTTPPull(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader", "github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormat"},
 	}
 }
 
@@ -9153,6 +9156,112 @@ func schema_libcalico_go_lib_apis_v3_StagedNetworkPolicySpec(ref common.Referenc
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ThreatFeedFormat(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"newlineDelimited": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatNewlineDelimited"),
+						},
+					},
+					"json": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatJSON"),
+						},
+					},
+					"csv": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatCSV"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatCSV", "github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatJSON", "github.com/projectcalico/libcalico-go/lib/apis/v3.ThreatFeedFormatNewlineDelimited"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ThreatFeedFormatCSV(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"fieldNum": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"fieldName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"header": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"columnDelimiter": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"commentDelimiter": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"fieldsPerRecord": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+				Required: []string{"header", "columnDelimiter", "commentDelimiter", "fieldsPerRecord"},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ThreatFeedFormatJSON(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"path": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ThreatFeedFormatNewlineDelimited(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+			},
+		},
 	}
 }
 

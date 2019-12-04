@@ -48,8 +48,10 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 		Pull: &apiv3.Pull{
 			Period: "24h",
 			HTTP: &apiv3.HTTPPull{
-				Format: apiv3.ThreatFeedFormatNewlineDelimited,
-				URL:    "https://tigera.io/feed",
+				Format: apiv3.ThreatFeedFormat{
+					NewlineDelimited: &apiv3.ThreatFeedFormatNewlineDelimited{},
+				},
+				URL: "https://tigera.io/feed",
 				Headers: []apiv3.HTTPHeader{
 					{Name: "Accept", Value: "text/plain"},
 					{
@@ -73,8 +75,10 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 		Pull: &apiv3.Pull{
 			Period: "10h",
 			HTTP: &apiv3.HTTPPull{
-				Format: apiv3.ThreatFeedFormatNewlineDelimited,
-				URL:    "https://projectcalico.org/feed",
+				Format: apiv3.ThreatFeedFormat{
+					NewlineDelimited: &apiv3.ThreatFeedFormatNewlineDelimited{},
+				},
+				URL: "https://projectcalico.org/feed",
 				Headers: []apiv3.HTTPHeader{
 					{Name: "Accept", Value: "text/plain"},
 					{
