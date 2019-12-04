@@ -4,87 +4,93 @@ order: 3
 toc:
 - title: Security
   path: /security/
-
 - title: Adopt a zero trust network model for security
   path: /security/adopt-zero-trust   
-
-- title: Get started with Kubernetes network policy
-  path: /security/kubernetes-network-policy
-
-- title: Get started with Calico network policy
-  path: /security/calico-network-policy
-
-- title: Get started with tiered policy
-  path: /security/tiered-policy
-
-- title: Staged network policies
-  path: /security/staged-network-policies
-
-- title: Enforce network policy using Istio
-  path: /security/enforce-policy-istio
-
-- title: Enable default deny for Kubernetes pods
-  path: /security/kubernetes-default-deny  
-
-- title: Use namespace in policy rules
-  path: /security/namespace-policy
-
-- title: Use service accounts in policy rules
-  path: /security/service-accounts  
-
-- title: Use HTTP methods and paths in policy rules
-  path: /security/http-methods 
-
-- title: Use ICMP/ping in policy rules
-  path: /security/icmp-ping
-
-- title: Use external IPs or networks in policy rules
-  path: /security/external-ips-policy
-
-- title: Protect hosts
-  path: /security/protect-hosts
-
-- title: Apply policy to Kubernetes node ports
-  path: /security/kubernetes-node-ports
-
-- title: Apply policy to services exposed externally as cluster IPs
-  path: /security/services-cluster-ips   
-
-- title: Apply policy to host forwarded traffic
-  path: /security/host-forwarded-traffic
-
-- title: Enable extreme high-connection workloads
-  path: /security/high-connection-workloads
-
-- title: Defend against DoS attacks
-  path: /security/defend-dos-attack
-
-- title: Use domain names in policy rules
-  path: /security/domain-based-policy
-
-- title: Preview the impact of policy changes
-  path: /security/policy-impact-preview
-  
-- title: AWS security group integration
+- title: Get started with basic policy
   section:
-  - title: Overview
-    path: /security/aws-security-group-integration/
-  - title: Interconnecting your VPC and cluster
-    path: /security/aws-security-group-integration/interconnection
-  - title: Enabling pods to access VPC members
-    path: /security/aws-security-group-integration/pod-access
-  - title: Enabling VPC members to access pods
-    path: /security/aws-security-group-integration/vpc-member-access
-  - title: Enabling access to AWS metadata
-    path: /security/aws-security-group-integration/metadata-access
-  - title: Managing the tiers associated with security group integration
-    path: /security/aws-security-group-integration/tier-management
-  - title: Host endpoints
-    path: /security/aws-security-group-integration/host-endpoints
-
-- title: Flow audit and DNS logs
+  - title: Kubernetes policy
+    section: 
+    - title: Get started with Kubernetes network policy
+      path: /security/kubernetes-network-policy
+    - title: Enable default deny for Kubernetes pods
+      path: /security/kubernetes-default-deny 
+    - title: Kubernetes policy, demo
+      path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
+    - title: Kubernetes policy, basic tutorial
+      path: /security/tutorials/kubernetes-policy-basic
+    - title: Kubernetes policy, advanced tutorial
+      path: /security/tutorials/kubernetes-policy-advanced  
+  - title: Calico policy
+    section:
+    - title: Get started with Calico network policy
+      path: /security/calico-network-policy
+    - title: Policy rules       
+      section:
+      - title: Use namespace in policy rules
+        path: /security/namespace-policy
+      - title: Use service accounts in policy rules
+        path: /security/service-accounts  
+      - title: Use external IPs or networks in policy rules
+        path: /security/external-ips-policy
+      - title: Use ICMP/ping in policy rules
+        path: /security/icmp-ping  
+    - title: Policy for hosts
+      section:   
+      - title: Protect hosts
+        path: /security/protect-hosts
+      - title: Protect hosts tutorial
+        path: /security/tutorials/protect-hosts
+      - title: Apply policy to host forwarded traffic
+        path: /security/host-forwarded-traffic
+    - title: Policy for services
+      section: 
+      - title: Apply policy to Kubernetes node ports
+        path: /security/kubernetes-node-ports
+      - title: Apply policy to services exposed externally as cluster IPs
+        path: /security/services-cluster-ips 
+    - title: Policy for Istio 
+      section:
+      - title: Enforce network policy using Istio
+        path: /security/enforce-policy-istio
+      - title: Use HTTP methods and paths in policy rules
+        path: /security/http-methods 
+      - title: Enforce network policy using Istio tutorial
+        path: /security/tutorials/app-layer-policy/enforce-policy-istio
+    - title: Policy for extreme traffic
+      section:
+      - title: Enable extreme high-connection workloads
+        path: /security/high-connection-workloads
+      - title: Defend against DoS attacks
+        path: /security/defend-dos-attack
+- title: Get started with Tigera Secure EE policy 
   section:
-  - title: Elasticsearch
+  - title: Create tiered policy
+    path: /security/tiered-policy
+  - title: Create staged policy
+    path: /security/staged-network-policies
+  - title: Preview policy impacts
+    path: /security/policy-impact-preview
+  - title: Tigera Secure EE policy tutorial
+    path: /security/simple-policy-cnx      
+  - title: Policy for AWS security groups
+    section:
+    - title: Overview
+      path: /security/aws-security-group-integration/
+    - title: Interconnect your VPC and cluster
+      path: /security/aws-security-group-integration/interconnection
+    - title: Enable pods to access VPC members
+      path: /security/aws-security-group-integration/pod-access
+    - title: Enable VPC members to access pods
+      path: /security/aws-security-group-integration/vpc-member-access
+    - title: Enable access to AWS metadata
+      path: /security/aws-security-group-integration/metadata-access
+    - title: Manage tiers associated with security group integration
+      path: /security/aws-security-group-integration/tier-management
+    - title: Host endpoints
+      path: /security/aws-security-group-integration/host-endpoints
+- title: Logs
+  section:
+  - title: Elasticsearch logs
     section:
     - title: Overview
       path: /security/logs/elastic/
@@ -94,25 +100,24 @@ toc:
       path: /security/logs/elastic/ee-audit
     - title: DNS logs
       path: /security/logs/elastic/dns
-    - title: Accessing logs
+    - title: Access logs
       path: /security/logs/elastic/view
     - title: Configure data retention
       path: /security/logs/retention
-    - title: Configuring Elasticsearch
+    - title: Configure Elasticsearch
       path: /security/logs/configure-elastic
-    - title: Archiving logs to S3
+    - title: Archive logs to S3
       path: /security/logs/elastic/s3-archive
-    - title: Archiving logs to syslog
+    - title: Archive logs to syslog
       path: /security/logs/elastic/syslog
-    - title: Filtering out flow logs
+    - title: Filter out flow logs
       path: /security/logs/elastic/filtering
-    - title: Filtering out DNS logs
+    - title: Filter out DNS logs
       path: /security/logs/elastic/filtering-dns
-    - title: Trace and Block External IP Addresses
+    - title: Trace and block external IP addresses
       path: /security/logs/elastic/ingress
-  - title: iptables
+  - title: iptables logs
     path: /security/logs/iptables
-
 - title: Threat detection and prevention
   section:
   - title: Alerts
@@ -121,73 +126,43 @@ toc:
     section:
     - title: Overview
       path: /security/threat-detection-and-prevention/anomaly-detection/
-    - title: Enabling anomaly detection
+    - title: Enable anomaly detection
       path: /security/threat-detection-and-prevention/anomaly-detection/enabling
-    - title: Viewing anomalies
+    - title: View anomalies
       path: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
-    - title: Job descriptions
+    - title: Anomaly detection job descriptions
       path: /security/threat-detection-and-prevention/anomaly-detection/job-descriptions
-    - title: Customizing
+    - title: Customize anomaly detection jobs
       path: /security/threat-detection-and-prevention/anomaly-detection/customizing
   - title: Trace and block suspicious IPs
     path: /security/threat-detection-and-prevention/suspicious-IPs
   - title: Trace and block suspicious domains
     path: /security/threat-detection-and-prevention/suspicious-domains
-
 - title: Compliance reports
   section:
-  - title: Inventory auditing
+  - title: Configure compliance reports
     path: /security/compliance-reports
-  - title: CIS benchmarks
-    path: /security/compliance-reports-cis
-  - title: Configure compliance reporting for managed cloud providers
-    path: /security/compliance-managed-cloud  
-
-- title: Securing Tigera Secure EE component communications
+  - title: Configure compliance reports for managed cloud providers
+    path: /security/compliance-managed-cloud 
+  - title: Configure CIS benchmark reports
+    path: /security/compliance-reports-cis 
+- title: Secure Tigera Secure EE component communications
   section:
   - title: Provide TLS certificates for the manager UI
     path: /security/comms/manager-tls
-
   - title: Provide TLS certificates for log storage
     path: /security/comms/log-storage-tls
-
   - title: Provide TLS certificates for Kibana
     path: /security/comms/kibana-tls
-
-  - title: Configuring encryption and authentication
+  - title: Configure encryption and authentication
     path: /security/comms/crypto-auth
-
   - title: Provide TLS certificates for the API server
     path: /security/comms/apiserver-tls
-
   - title: Provide TLS certificates for Typha and Node
     path: /security/comms/typha-node-tls
-
-  - title: Scheduling to well-known nodes
+  - title: Schedule components to well-known nodes
     path: /security/comms/reduce-nodes
-
-  - title: Securing Tigera Secure EE Prometheus endpoints
+  - title: Secure Tigera Secure EE Prometheus endpoints
     path: /security/comms/secure-metrics
-
-  - title: Securing BGP sessions
+  - title: Secure BGP sessions
     path: /security/comms/secure-bgp
-
-- title: Tutorials
-  section:
-  - title: Enforce network policy using Istio tutorial
-    path: /security/tutorials/app-layer-policy/enforce-policy-istio
-
-  - title: Protect host tutorial
-    path: /security/tutorials/protect-hosts
-
-  - title: Kubernetes policy, demo
-    path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
-
-  - title: Kubernetes policy, basic tutorial
-    path: /security/tutorials/kubernetes-policy-basic
-
-  - title: Kubernetes policy, advanced tutorial
-    path:  /security/tutorials/kubernetes-policy-advanced
-
-  - title: Tigera Secure EE policy tutorial
-    path: /security/simple-policy-cnx

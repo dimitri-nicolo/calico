@@ -1,5 +1,5 @@
 ---
-title:  Customizing
+title:  Customize anomaly detection jobs
 canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/customizing
 
 ---

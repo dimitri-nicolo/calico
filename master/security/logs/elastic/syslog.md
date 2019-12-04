@@ -1,5 +1,5 @@
 ---
-title: Archiving logs to syslog
+title: Archive logs to syslog
 ---
 
 ## Archiving logs to syslog

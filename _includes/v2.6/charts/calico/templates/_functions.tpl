@@ -65,16 +65,6 @@ resources:
 {{end}}
 {{- end -}}
 
-{{- define "calico.customBgpTemplates" -}}
-{{- if or (or (or .Values.bgp.birdConfigTemplate .Values.bgp.birdIpamConfigTemplate) .Values.bgp.bird6ConfigTemplate) .Values.bgp.bird6IpamConfigTemplate }}
-{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.birdConfigTemplate -}}
-{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.birdIpamConfigTemplate -}}
-{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.bird6ConfigTemplate -}}
-{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.bird6IpamConfigTemplate -}}
-true
-{{- end }}
-{{- end -}}
-
 {{- /* Used for docs site; don't encode values of the form <something in brackets> so we can 
        output templates we expect the end user to fill in. */ -}}
 {{- define "calico.maybeBase64Encode" -}}

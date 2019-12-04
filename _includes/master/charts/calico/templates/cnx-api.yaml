@@ -115,6 +115,35 @@ roleRef:
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-tier-getter
+rules:
+- apiGroups:
+  - projectcalico.org
+  resources:
+  - tiers
+  verbs:
+  - get
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-tier-getter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-tier-getter
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: system:kube-controller-manager
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: calico:system:auth-delegator
@@ -381,6 +410,9 @@ spec:
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
+{{ if .Values.controlPlaneNodeSelector }}
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       serviceAccountName: cnx-apiserver
       tolerations:
         - key: node-role.kubernetes.io/master
@@ -393,7 +425,7 @@ spec:
 {{- end }}
       containers:
       - name: cnx-apiserver
-        image: {{.Values.apiserver.image}}:{{.Values.apiserver.tag}}
+        image: {{ join ":" (list .Values.apiserver.image .Values.apiserver.tag) }}
 {{ tuple .Values.apiserver.resources | include "calico.resourceLimits" | indent 8 -}}
         args:
           - "--secure-port=5443"
@@ -455,7 +487,7 @@ spec:
           privileged: true
 {{- end }}
       - name: cnx-queryserver
-        image: {{.Values.queryserver.image}}:{{.Values.queryserver.tag}}
+        image: {{ join ":" (list .Values.queryserver.image .Values.queryserver.tag) }}
 {{ tuple .Values.queryserver.resources | include "calico.resourceLimits" | indent 8 -}}
         env:
           # Set queryserver logging to "info"

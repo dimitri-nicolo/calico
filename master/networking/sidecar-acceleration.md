@@ -1,5 +1,5 @@
 ---
-title: Accelerating Istio network performance
+title: Accelerate Istio network performance
 ---
 
 ### Big picture

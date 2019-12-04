@@ -90,7 +90,7 @@ _site build: bin/helm
 
 ## Clean enough that a new release build will be clean
 clean:
-	rm -rf _output _site .jekyll-metadata stderr.out filtered.out docs_test.created
+	rm -rf _output _site .jekyll-metadata stderr.out filtered.out docs_test.created bin
 
 ########################################################################################################################
 # Builds locally checked out code using local versions of libcalico, felix, and confd.

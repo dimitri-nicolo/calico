@@ -79,6 +79,10 @@ spec:
       labels:
         k8s-app: tigera-cloud-controllers
     spec:
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       serviceAccountName: tigera-cloud-controllers
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
@@ -92,7 +96,7 @@ spec:
 {{- end }}
       containers:
         - name: tigera-cloud-controllers
-          image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
+          image: {{ join ":" (list .Values.cloudControllers.image .Values.cloudControllers.tag) }}
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false

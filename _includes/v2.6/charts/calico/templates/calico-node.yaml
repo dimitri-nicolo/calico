@@ -56,7 +56,7 @@ spec:
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
+          image: {{ join ":" (list .Values.cni.image .Values.cni.tag) }}
           command: ["/install-cni.sh"]
           env:
             # Name of the CNI config file to create.
@@ -109,7 +109,7 @@ spec:
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: {{.Values.flexvol.image}}:{{.Values.flexvol.tag}}
+          image: {{ join ":" (list .Values.flexvol.image .Values.flexvol.tag) }}
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
@@ -118,7 +118,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{.Values.node.image}}:{{.Values.node.tag}}
+          image: {{ join ":" (list .Values.node.image .Values.node.tag) }}
 {{ tuple .Values.node.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
 {{- if eq .Values.datastore "etcd" }}
@@ -383,9 +383,12 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {{- end }}
-{{- if include "calico.customBgpTemplates" . }}
-            - mountPath: /etc/calico/confd/templates
-              name: bird-templates
+{{- if .Values.bgp }}
+  {{- range $key, $value := .Values.bgp }}
+            - name: bird-templates
+              mountPath: /etc/calico/confd/templates/{{ $key }}
+              subPath: {{ $key }}
+  {{- end }}
 {{- end }}
             - name: policysync
               mountPath: /var/run/nodeagent
@@ -448,7 +451,7 @@ spec:
 {{- else }}
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
 {{- end }}
-{{- if include "calico.customBgpTemplates" . }}
+{{- if .Values.bgp }}
         - name: bird-templates
           configMap:
             name: bgp-templates

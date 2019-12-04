@@ -141,10 +141,6 @@
    modify the `ConfigMap` named `tigera-cnx-manager-config` by setting the
    value of `tigera.cnx-manager.kibana-url`
 {% endif %}
-{% if include.elasticsearch != "external" and include.platform != "aks" %}
-   By default a NodePort is installed that serves Kibana on port 30601, so use
-   the address of a node (for example a master).
-{% endif %}
 
 {% if include.upgrade %}
 1. Uninstall {{site.prodname}} Manager from previous install.

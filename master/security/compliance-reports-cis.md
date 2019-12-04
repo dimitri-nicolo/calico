@@ -1,5 +1,5 @@
 ---
-title: CIS benchmark compliance reports for Kubernetes
+title: Configure CIS benchmark reports 
 ---
 
 ### Big picture

@@ -126,6 +126,14 @@ To run Calico in policy-only mode for all other networking methods, set:
 network: none
 ```
 
+**MTU**
+
+The default {{ site.prodname }} MTU is 1440. To change the MTU:
+
+```yaml
+mtu: 1500
+```
+
 **Default Pool CIDR**
 
 By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
@@ -272,8 +280,7 @@ To grant access to additional tiers, or create your own roles, see the RBAC docu
 ### Log in to the Manager UI
 
 ```
-kubectl port-forward -n calico-monitoring svc/cnx-manager 9443 & \
-  kubectl port-forward -n calico-monitoring svc/tigera-kibana 5601
+kubectl port-forward -n calico-monitoring svc/cnx-manager 9443
 ```
 
 Sign in by navigating to https://localhost:9443 and login.

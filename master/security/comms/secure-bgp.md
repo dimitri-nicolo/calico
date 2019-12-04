@@ -1,5 +1,5 @@
 ---
-title: Securing BGP sessions
+title: Secure BGP sessions
 canonical_url: 'https://docs.tigera.io/master/security/comms/secure-bgp'
 ---
 

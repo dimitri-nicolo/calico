@@ -1,5 +1,5 @@
 ---
-title: Enabling IPv6 support
+title: Enable IPv6 support
 ---
 
 ### About enabling IPv6

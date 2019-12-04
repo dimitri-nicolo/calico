@@ -33,6 +33,10 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       serviceAccountName: tigera-federation-controller
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
 {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
 {{- range $key, $value := .Values.imagePullSecrets }}
@@ -41,7 +45,7 @@ spec:
 {{- end }}
       containers:
         - name: tigera-federation-controller
-          image: {{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
+          image: {{ join ":" (list .Values.kubeControllers.image .Values.kubeControllers.tag) }}
 {{ tuple .Values.federation.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # Set log level to debug

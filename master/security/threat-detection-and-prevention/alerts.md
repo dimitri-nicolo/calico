@@ -1,5 +1,5 @@
 ---
-title: Alerts
+title: Configure alerts
 canonical_url: https://docs.tigera.io/master/security/threat-detection-and-prevention/alerts
 ---
 

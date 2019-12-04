@@ -1,5 +1,5 @@
 ---
-title: Scheduling to well-known nodes
+title: Schedule to well-known nodes
 canonical_url: https://docs.tigera.io/v2.3/usage/reduce-nodes
 ---
 
