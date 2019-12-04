@@ -1,4 +1,136 @@
 v2.6:
+- title: v2.6.1
+  helmRelease: 0
+  tigera-operator:
+    image: tigera/operator
+    version: release-v1.0
+    registry: quay.io
+  calico:
+    minor_version: v3.10
+  components:
+    cnx-manager:
+      image: tigera/cnx-manager
+      version: release-v2.6
+    voltron:
+      image: tigera/voltron
+      version: release-v2.6
+    cnx-apiserver:
+      image: tigera/cnx-apiserver
+      version: release-v2.6
+    cnx-queryserver:
+      image: tigera/cnx-queryserver
+      version: release-v2.6
+    cnx-kube-controllers:
+      image: tigera/kube-controllers
+      version: release-v2.6
+    calicoq:
+      image: tigera/calicoq
+      version: release-v2.6
+    typha:
+      image: tigera/typha
+      version: release-v2.6
+    calicoctl:
+      image: tigera/calicoctl
+      version: release-v2.6
+    cnx-node:
+      image: tigera/cnx-node
+      version: release-v2.6
+    dikastes:
+      image: tigera/dikastes
+      version: release-v2.6
+    fluentd:
+      image: tigera/fluentd
+      version: release-v2.6
+    es-proxy:
+      image: tigera/es-proxy
+      version: release-v2.6
+    eck-kibana:
+      version: 7.3.2
+    kibana:
+      image: tigera/kibana
+      version: release-v2.6
+    elasticsearch-operator:
+      registry: docker.elastic.co
+      image: eck/eck-operator
+      version: 0.9.0
+    elasticsearch:
+      registry: docker.elastic.co
+      image: elasticsearch/elasticsearch
+      version: 7.3.2
+    cloud-controllers:
+      image: tigera/cloud-controllers
+      version: release-v2.6
+    elastic-tsee-installer:
+      image: tigera/intrusion-detection-job-installer
+      version: release-v2.6
+    es-curator:
+      image: tigera/es-curator
+      version: release-v2.6
+    intrusion-detection-controller:
+      image: tigera/intrusion-detection-controller
+      version: release-v2.6
+    compliance-controller:
+      image: tigera/compliance-controller
+      version: release-v2.6
+    compliance-reporter:
+      image: tigera/compliance-reporter
+      version: release-v2.6
+    compliance-snapshotter:
+      image: tigera/compliance-snapshotter
+      version: release-v2.6
+    compliance-server:
+      image: tigera/compliance-server
+      version: release-v2.6
+    compliance-benchmarker:
+      image: tigera/compliance-benchmarker
+      version: release-v2.6
+    ingress-collector:
+      image: tigera/ingress-collector
+      version: release-v2.6
+    # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
+    # to the docs & manifest tooling not to default to the tigera registry.
+    calico/cni:
+      image: calico/cni
+      version: v3.10.0
+      registry: quay.io
+    prometheus-operator:
+      image: coreos/prometheus-operator
+      version: v0.34.0
+      registry: quay.io
+    prometheus:
+      image: prometheus/prometheus
+      version: v2.7.1
+      registry: quay.io
+    alertmanager:
+      image: prometheus/alertmanager
+      version: v0.16.1
+      registry: quay.io
+    prometheus-config-reloader:
+      image: coreos/prometheus-config-reloader
+      version: v0.34.0
+      registry: quay.io
+    configmap-reload:
+      image: coreos/configmap-reload
+      version: v0.0.1
+      registry: quay.io
+    flexvol:
+      image: calico/pod2daemon-flexvol
+      version: v3.10.0
+      registry: quay.io
+    busybox:
+      image: busybox
+      version: 1.26.2
+      registry: docker.io
+    cpHorizontalAutoscaler:
+      image: google-containers/cluster-proportional-autoscaler-amd64
+      version: 1.1.2-r2
+      registry: gcr.io
+    cpVerticalAutoscaler:
+      image: google-containers/cpvpa-amd64
+      version: v0.6.0
+      registry: gcr.io
+
+v2.6:
 - title: v2.6.0
   helmRelease: 0
   tigera-operator:
