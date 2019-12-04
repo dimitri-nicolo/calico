@@ -22,6 +22,10 @@ spec:
       labels:
         k8s-app: {{include "nodeName" . }}
       annotations:
+{{- if .Values.node.prometheusMetricsPort }}
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: {{ .Values.node.prometheusMetricsPort | quote }}
+{{- end }}
         # This, along with the CriticalAddonsOnly toleration below,
         # marks the pod as a critical add-on, ensuring it gets
         # priority scheduling and that its resources are reserved
@@ -277,12 +281,18 @@ spec:
             - name: FELIX_HEALTHENABLED
               value: "true"
             # Additional Felix configuration options
+{{- if .Values.node.prometheusMetricsPort }}
             # Enable Tigera Secure EE Prometheus denied packet reporting
             - name: FELIX_PROMETHEUSREPORTERENABLED
               value: "true"
             # Make Tigera Secure EE Prometheus metrics available on port 9081
             - name: FELIX_PROMETHEUSREPORTERPORT
-              value: "9081"
+              value: {{ .Values.node.prometheusMetricsPort | quote }}
+{{- else }}
+            # Enable Tigera Secure EE Prometheus denied packet reporting
+            - name: FELIX_PROMETHEUSREPORTERENABLED
+              value: "false"
+{{- end }}
             # Enable Tigera Secure EE Flow Log generation
             - name: FELIX_FLOWLOGSFILEENABLED
               value: "true"
