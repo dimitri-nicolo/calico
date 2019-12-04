@@ -119,6 +119,14 @@ spec:
     destination:
       # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
       ports: [9443]
+  - action: Allow
+    protocol: TCP
+    source: {}
+    # This policy is used for multicluster management to establish a tunnel from another cluster: narrow it down if
+    # only certain subnets should be allowed.
+    destination:
+      ports: [9449]
+
 ---
 
 # Allow internal communication to compliance-server from Manager.
@@ -420,4 +428,3 @@ spec:
       - "fe80::/10"
   # Pass to subsequent tiers or profiles for further refinement
   - action: Pass
-
