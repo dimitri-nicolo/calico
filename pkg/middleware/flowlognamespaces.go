@@ -5,21 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strconv"
-
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"net/http"
+	"strings"
 )
 
 const (
 	esflowIndexPrefix     = "tigera_secure_ee_flows"
 	sourceAggregationName = "source_namespaces"
 	destAggregationName   = "dest_namespaces"
-	actionAllow           = "allow"
-	actionDeny            = "deny"
-	actionUnknown         = "unknown"
 )
 
 type FlowLogNamespaceParams struct {
@@ -76,27 +72,20 @@ func FlowLogNamespaceHandler(esClient lmaelastic.Client, h http.Handler) http.Ha
 }
 
 func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParams, error) {
-	// Verify http method
+	// Validate http method
 	if req.Method != http.MethodGet {
 		return nil, errInvalidMethod
 	}
 
 	// extract params from request
 	url := req.URL.Query()
-	var limit int32
-	limitParam := url.Get("limit")
-	if limitParam == "" || limitParam == "0" {
-		limit = 1000
-	} else {
-		parsedLimit, err := strconv.Atoi(limitParam)
-		if err != nil || parsedLimit < 0 {
-			return nil, errParseRequest
-		}
-		limit = int32(parsedLimit)
+	limit, err := extractLimitParam(url)
+	if err != nil {
+		return nil, errParseRequest
 	}
-	actions := url["actions"]
-	cluster := url.Get("cluster")
-	prefix := url.Get("prefix")
+	actions := lowerCaseActions(url["actions"])
+	cluster := strings.ToLower(url.Get("cluster"))
+	prefix := strings.ToLower(url.Get("prefix"))
 	params := &FlowLogNamespaceParams{
 		Actions:     actions,
 		Limit:       limit,
@@ -111,17 +100,9 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	if params.Prefix != "" {
 		params.Prefix = fmt.Sprintf("%s.*", params.Prefix)
 	}
-	for _, action := range params.Actions {
-		switch action {
-		case actionAllow:
-			continue
-		case actionDeny:
-			continue
-		case actionUnknown:
-			continue
-		default:
-			return nil, errInvalidAction
-		}
+	valid := validateActions(params.Actions)
+	if !valid {
+		return nil, errInvalidAction
 	}
 
 	return params, nil
