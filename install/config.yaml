@@ -45,4 +45,4 @@ elasticsearch:
   - ["PUT", "_ml/anomaly_detectors/pod_outlier_ip_activity", "./data/pod-outlier-ip-activity-job.json"]
   - ["PUT", "_ml/datafeeds/datafeed-pod_outlier_ip_activity", "./data/pod-outlier-ip-activity-datafeed.json"]
 kibana:
-  - ["POST", "api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
+  - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
