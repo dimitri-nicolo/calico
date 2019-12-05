@@ -37,6 +37,7 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 - [Configure the Tigera Secure EE authentication method](#configure-the-tigera-secure-ee-authentication-method)
 - [Create a user and login using token-based authentication](#create-a-user-and-login-using-token-based-authentication)
 - [Create a user and login using OIDC authentication](#create-a-user-and-login-using-oidc-authentication)
+- [Create a user and login using OIDC authentication with prepopulated configuration](#create-a-user-and-login-using-oidc-authentication-with-prepopulated-configuration)
 - [Create a user and login using OAuth2 authentication](#create-a-user-and-login-using-oauth2-authentication)
 - [Create a user and login using basic authentication](#create-a-user-and-login-using-basic-authentication)
 
@@ -62,6 +63,8 @@ Provide your own values for `<oidc_auth_server>` and `<client_id>` and run:
 ```bash
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OIDC", "authority": "<oidc_auth_server>", "clientID": "<client_id>"}}}'
 ```
+
+If you are planning to use OIDC authentication with prepopulated configuration, keep `authority` value `<oidc_auth_server>` empty.
 
 **OAuth2 authentication**
 
@@ -115,6 +118,33 @@ Now that we have the token, we can proceed to login! Go to the {{site.prodname}}
 #### Create a user and login using OIDC authentication
 
 1. Consult your OIDC identity provider's documentation to manage users.
+1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
+
+#### Create a user and login using OIDC authentication with prepopulated configuration
+
+In cases where OIDC Identity Provider (IdP) doesn't allow cross-origin HTTP requests, OIDC configuration can be prepopulated to support OIDC authentication flow.
+
+1. Consult your OIDC identity provider's documentation to manage users.
+1. Make sure OIDC authority is set to empty value.
+1. Set up configuration under `tigera-operator` namespace, populating OIDC configurations (e.g. authorization and token endpoints, JWK keys etc.). For example:
+
+   ```
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: tigera-manager-oidc-config
+       namespace: tigera-operator
+       data:
+       openid-configuration: |
+         <well-known-openid-configuration>
+         ...
+         "jwks_uri": "/discovery/keys",
+         ...
+       keys: |
+         <jwks-uri-configuration>
+   ```
+
+   In above example, `<well-known-openid-configuration>` is the JSON response from IdP for request to _/.well-known/openid-configuration_. Notice however that the `jwks_uri` value in `<well-known-openid-configuration>` should be set to `"/discovery/keys"`. For `<jwks-uri-configuration>`, use the JSON response from IdP for JWKS URI.
 1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
 
 #### Create a user and login using OAuth2 authentication
