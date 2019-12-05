@@ -4,12 +4,10 @@ package middleware
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	authzv1 "k8s.io/api/authorization/v1"
 	"net/http"
 	"regexp"
-
-	log "github.com/sirupsen/logrus"
-
-	authzv1 "k8s.io/api/authorization/v1"
 )
 
 // The handler returned by this will add a ResourceAttribute to the context
@@ -78,15 +76,25 @@ func getResourceNameFromReq(req *http.Request) (string, error) {
 		return "", fmt.Errorf("No URL in request")
 	}
 
-	re := regexp.MustCompile(`/([_a-z]*)[.*].*/_search`)
+	// This regex matches any index leading up to "/_search" or anything up to "/"
+	re := regexp.MustCompile(`/([_a-z]*)[.*].*/_search|/([^/]*)$`)
 
 	match := re.FindStringSubmatch(req.URL.Path)
-	if len(match) != 2 {
+	if len(match) != 3 {
 		return "", fmt.Errorf("Invalid resource in path, '%s' had %d matches", req.URL.Path, len(match))
 	}
-	resource, ok := queryToResource(match[1])
+	if match[1] == "" && match[2] == "" {
+		return "", fmt.Errorf("No resource found in path")
+	}
+	var matchString string
+	if match[1] != "" {
+		matchString = match[1]
+	} else if match[2] != "" {
+		matchString = match[2]
+	}
+	resource, ok := queryToResource(matchString)
 	if !ok {
-		return "", fmt.Errorf("Invalid resource '%s' in path", match[1])
+		return "", fmt.Errorf("Invalid resource '%s' in path", matchString)
 	}
 	return resource, nil
 }
@@ -103,6 +111,9 @@ func queryToResource(query string) (string, bool) {
 		"tigera_secure_ee_audit_kube": "audit_kube",
 		"tigera_secure_ee_events":     "events",
 		"tigera_secure_ee_dns":        "dns",
+		"flowLogNames":                "flows",
+		"flowLogNamespaces":           "flows",
+		"flowLogs":                    "flows",
 	}
 	str, ok := queryResourceMap[query]
 	return str, ok
