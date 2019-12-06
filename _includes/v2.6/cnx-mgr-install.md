@@ -136,16 +136,6 @@
    update the `Service` section named `cnx-manager` and replace `type: NodePort` with `type: LoadBalancer`.
 {% endif %}
 
-{% if include.platform != "docker-ee" %}
-1. Edit the Kibana URL to point to your Kibana. Open the cnx.yaml file and
-   modify the `ConfigMap` named `tigera-cnx-manager-config` by setting the
-   value of `tigera.cnx-manager.kibana-url`
-{% endif %}
-{% if include.elasticsearch != "external" and include.platform != "aks" %}
-   By default a NodePort is installed that serves Kibana on port 30601, so use
-   the address of a node (for example a master).
-{% endif %}
-
 {% if include.upgrade %}
 1. Uninstall {{site.prodname}} Manager from previous install.
 
