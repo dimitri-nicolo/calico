@@ -101,6 +101,22 @@ spec:
         - name: compliance-server
           image: {{.Values.complianceServer.image}}:{{.Values.complianceServer.tag}}
 {{ tuple .Values.complianceServer.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
+          livenessProbe:
+            httpGet:
+              path: /compliance/version
+              port: 5443
+              scheme: HTTPS
+            periodSeconds: 10
+            initialDelaySeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /compliance/version
+              port: 5443
+              scheme: HTTPS
+            periodSeconds: 10
+            initialDelaySeconds: 5
+            failureThreshold: 5
           env:
             - name: LOG_LEVEL
               value: "warning"
