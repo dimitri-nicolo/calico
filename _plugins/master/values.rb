@@ -502,6 +502,8 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
+      seccompProfile: ""
+      appArmorProfile: ""
     
     # Configuration for setting up Calico CNI.
     cni:
@@ -513,6 +515,8 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: FOO
         #   value: bar
+      seccompProfile: ""
+      appArmorProfile: ""
     
     # Configuration for setting up Calico kube controllers
     kubeControllers:
@@ -531,6 +535,8 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
+      seccompProfile: ""
+      appArmorProfile: ""
     
     # Configuration for setting up Typha
     typha:
@@ -561,6 +567,8 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         # Change these if you generated certs with different common names on them
         typhaCommonName: calico-typha
         felixCommonName: calico-felix
+      seccompProfile: ""
+      appArmorProfile: ""
 
     # Configuration for the Calico aggregated API server.
     apiserver:
@@ -586,6 +594,8 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
+      seccompProfile: ""
+      appArmorProfile: ""
     
     # Configuration for the Calico query server.
     queryserver:
@@ -604,10 +614,14 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
+      seccompProfile: ""
+      appArmorProfile: ""
 
     calicoctl:
       image: #{imageRegistry}#{versions["calicoctl"].image}
       tag: #{versions["calicoctl"].version}
+      seccompProfile: ""
+      appArmorProfile: ""
 
     dikastes:
       image: #{imageRegistry}#{versions["dikastes"].image}
