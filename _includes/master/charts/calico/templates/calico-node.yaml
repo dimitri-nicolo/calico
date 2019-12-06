@@ -33,6 +33,8 @@ spec:
 {{- if .Values.bgp }}
         custom-bgp-configmap-hash: {{ tuple "custom-bgp-config.yaml" . | include "calico.hash" }}
 {{- end }}
+{{- tuple .Values.node "calico-node" | include "calico.sec_app_profile" | indent 8 }}
+{{- tuple .Values.cni "install-cni" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
