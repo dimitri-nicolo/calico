@@ -19,10 +19,14 @@ their operation either using the Kibana UI, or using the [Elasticsearch REST API
 walk through the process of enabling jobs using Kibana.  Refer to the
 [Elasticsearch machine learning documentation] for more information.
 
-1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager, or by visting
-   the Kibana URL provided by your Elasticsearch admin.
-1. If necessary, log into Kibana. Note that your Kibana credentials may not be the same as you use to access
-   {{site.prodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
+1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager.
+1. Note that your Kibana credentials may not be the same as you use to access {{site.prodname}}.
+   A default user `elastic` is created and stored in `tigera-secure-es-elastic-user` secret to be used during installation. You can obtain the password using the following command:
+
+      ```
+   kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
+      ```
+
 1. Click "Machine Learning" in the left-hand menu.
 
 From this view, you can see the overview of all the anomaly detection jobs installed. See
