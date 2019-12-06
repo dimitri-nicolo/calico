@@ -25,7 +25,7 @@ You can access Kibana by clicking the **Kibana** button in the {{site.prodname}}
 A default user `elastic` is created and stored in the `tigera-secure-es-elastic-user` secret during installation. You can obtain the password using the following command:
 
    ```
-kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
+kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o yaml |  awk '/elastic:/{print $2}' | base64 --decode
    ```
 
 ## Accessing logs from the Elasticsearch API
