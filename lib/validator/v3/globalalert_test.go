@@ -569,4 +569,26 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		false,
 	),
+
+	Entry("valid template",
+		&api.GlobalAlertTemplate{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "dns",
+			},
+		},
+		true,
+	),
+	Entry("invalid template",
+		&api.GlobalAlertTemplate{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+			},
+		},
+		false,
+	),
 )
