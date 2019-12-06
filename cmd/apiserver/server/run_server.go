@@ -17,10 +17,16 @@ limitations under the License.
 package server
 
 import (
+	"os"
+
 	"github.com/golang/glog"
+	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
 func RunServer(opts *CalicoServerOptions) error {
+	path := "/tmp/ready"
+	_ = os.Remove(path)
+
 	if opts.StopCh == nil {
 		/* the caller of RunServer should generate the stop channel
 		if there is a need to stop the API server */
@@ -53,6 +59,17 @@ func RunServer(opts *CalicoServerOptions) error {
 	go func() {
 		// do we need to do any post api installation setup? We should have set up the api already?
 		glog.Infoln("Running the API server")
+		server.GenericAPIServer.AddPostStartHook("tigera-apiserver-autoregistration",
+			func(context genericapiserver.PostStartHookContext) error {
+				f, err := os.Create(path)
+				if err != nil {
+					glog.Errorln(err)
+					return err
+				}
+				glog.Info("apiserver is ready.")
+				f.Close()
+				return nil
+			})
 		err = server.GenericAPIServer.PrepareRun().Run(allStop)
 	}()
 
