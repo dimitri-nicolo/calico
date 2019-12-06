@@ -103,3 +103,14 @@ true
 {{- $wtf := $context.Template.Name | replace $last $name -}}
 {{- include $wtf $context | sha256sum | quote -}}
 {{- end -}}
+
+{{- define "calico.sec_app_profile" -}}
+{{- $component := index . 0 -}}
+{{- $containerName := index . 1 -}}
+{{- if $component.seccompProfile }}
+container.seccomp.security.alpha.kubernetes.io/{{ $containerName }}: {{ $component.seccompProfile }}
+{{- end }}
+{{- if $component.appArmorProfile }}
+container.apparmor.security.beta.kubernetes.io/{{ $containerName }}: {{ $component.appArmorProfile }}
+{{- end }}
+{{- end -}}

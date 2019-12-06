@@ -129,6 +129,7 @@ spec:
         # and can be updated to trigger a rolling update if the ConfigMap is updated.
         calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
   {{- end }}
+{{- tuple .Values.typha "calico-typha" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       # For HA and to avoid port clashes, avoid scheduling multiple Typha instances on the same node.
       affinity:
