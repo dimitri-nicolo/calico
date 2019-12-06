@@ -70,7 +70,7 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	if err != nil {
 		return nil, errParseRequest
 	}
-	actions := lowerCaseActions(url["actions"])
+	actions := lowerCaseParams(url["actions"])
 	cluster := strings.ToLower(url.Get("cluster"))
 	prefix := strings.ToLower(url.Get("prefix"))
 	namespace := strings.ToLower(url.Get("namespace"))

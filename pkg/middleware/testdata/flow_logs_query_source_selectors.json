@@ -1,0 +1,39 @@
+{
+  "bool": {
+    "filter": {
+      "nested": {
+        "path": "source_labels",
+        "query": {
+          "bool": {
+            "filter": [
+              {
+                "term": {
+                  "source_labels.labels": "key1=test"
+                }
+              },
+              {
+                "terms": {
+                  "source_labels.labels": [
+                    "key2!=test",
+                    "key2!=test2"
+                  ]
+                }
+              },
+              {
+                "terms": {
+                  "source_labels.labels": [
+                    "key2!=test",
+                    "key2!=test2",
+                    "key3=test",
+                    "key3=test2",
+                    "key3=test3"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

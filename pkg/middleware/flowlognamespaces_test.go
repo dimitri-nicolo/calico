@@ -649,13 +649,8 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 	})
 })
 
-func newTestRequest(method string) (*http.Request, error) {
-	req, err := http.NewRequest(method, "", nil)
-	return req, err
-}
-
 func getNamespaceAggregationTermsMaps(params *FlowLogNamespaceParams) (map[string]interface{}, map[string]interface{},
-error) {
+	error) {
 	sourceAgg, destAgg := buildAggregations(params)
 	sourceAggInf, err := sourceAgg.Source()
 	if err != nil {
