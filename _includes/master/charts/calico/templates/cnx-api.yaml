@@ -407,6 +407,9 @@ spec:
       labels:
         apiserver: "true"
         k8s-app: cnx-apiserver
+      annotations:
+{{- tuple .Values.apiserver "cnx-apiserver" | include "calico.sec_app_profile" | indent 8 }}
+{{- tuple .Values.queryserver "cnx-queryserver" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
