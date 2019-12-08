@@ -29,6 +29,7 @@ import (
 	calicoclusterinformation "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/clusterinformation"
 	calicofelixconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/felixconfig"
 	calicogalert "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalalert"
+	calicogalerttemplate "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalalerttemplate"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
 	calicoglobalreport "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalreport"
@@ -268,6 +269,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions: gAlertRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	gAlertTemplateRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalalerttemplates"))
+	if err != nil {
+		return nil, err
+	}
+	gAlertTemplateOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   gAlertTemplateRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicogalert.EmptyObject(),
+			ScopeStrategy: calicogalert.NewStrategy(scheme),
+			NewListFunc:   calicogalert.NewList,
+			GetAttrsFunc:  calicogalert.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: gAlertTemplateRESTOptions,
 		},
 		p.StorageType,
 		authorizer,
@@ -539,6 +561,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	globalAlertsStorage, globalAlertsStatusStorage := calicogalert.NewREST(scheme, *gAlertOpts)
 	storage["globalalerts"] = globalAlertsStorage
 	storage["globalalerts/status"] = globalAlertsStatusStorage
+	storage["globalalerttemplates"] = calicogalerttemplate.NewREST(scheme, *gAlertTemplateOpts)
 
 	globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
 	storage["globalthreatfeeds"] = globalThreatFeedsStorage

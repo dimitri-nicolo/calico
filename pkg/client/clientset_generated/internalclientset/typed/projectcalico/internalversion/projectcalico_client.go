@@ -16,6 +16,7 @@ type ProjectcalicoInterface interface {
 	ClusterInformationsGetter
 	FelixConfigurationsGetter
 	GlobalAlertsGetter
+	GlobalAlertTemplatesGetter
 	GlobalNetworkPoliciesGetter
 	GlobalNetworkSetsGetter
 	GlobalReportsGetter
@@ -58,6 +59,10 @@ func (c *ProjectcalicoClient) FelixConfigurations() FelixConfigurationInterface 
 
 func (c *ProjectcalicoClient) GlobalAlerts() GlobalAlertInterface {
 	return newGlobalAlerts(c)
+}
+
+func (c *ProjectcalicoClient) GlobalAlertTemplates() GlobalAlertTemplateInterface {
+	return newGlobalAlertTemplates(c)
 }
 
 func (c *ProjectcalicoClient) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {

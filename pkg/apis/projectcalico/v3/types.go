@@ -118,7 +118,7 @@ type GlobalNetworkPolicy struct {
 type StagedGlobalNetworkPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items []StagedGlobalNetworkPolicy `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items           []StagedGlobalNetworkPolicy `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // +genclient
@@ -127,7 +127,7 @@ type StagedGlobalNetworkPolicyList struct {
 type StagedGlobalNetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Spec calico.StagedGlobalNetworkPolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec              calico.StagedGlobalNetworkPolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // +genclient:nonNamespaced
@@ -215,6 +215,28 @@ type GlobalAlert struct {
 
 	Spec   calico.GlobalAlertSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	Status calico.GlobalAlertStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// GlobalAlertTemplateList is a list of GlobalAlertTemplate objects.
+type GlobalAlertTemplateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []GlobalAlertTemplate `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type GlobalAlertTemplate struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.GlobalAlertSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // +genclient:nonNamespaced

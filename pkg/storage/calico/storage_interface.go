@@ -33,6 +33,8 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewLicenseKeyStorage(opts)
 	case "projectcalico.org/globalalerts":
 		return NewGlobalAlertStorage(opts)
+	case "projectcalico.org/globalalerttemplates":
+		return NewGlobalAlertTemplateStorage(opts)
 	case "projectcalico.org/globalthreatfeeds":
 		return NewGlobalThreatFeedStorage(opts)
 	case "projectcalico.org/hostendpoints":

@@ -34,6 +34,10 @@ func (c *FakeProjectcalicoV3) GlobalAlerts() v3.GlobalAlertInterface {
 	return &FakeGlobalAlerts{c}
 }
 
+func (c *FakeProjectcalicoV3) GlobalAlertTemplates() v3.GlobalAlertTemplateInterface {
+	return &FakeGlobalAlertTemplates{c}
+}
+
 func (c *FakeProjectcalicoV3) GlobalNetworkPolicies() v3.GlobalNetworkPolicyInterface {
 	return &FakeGlobalNetworkPolicies{c}
 }

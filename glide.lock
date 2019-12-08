@@ -1,5 +1,5 @@
-hash: ee109689d618886ff5c4c7ca38b13ce139d53ed6803257a3a0c401ed78dfdddb
-updated: 2019-11-15T18:11:40.388203327Z
+hash: a4ff35905c705ebe7c8d00c1b875a89162ad314920fe3ea93024858f21708872
+updated: 2019-12-06T10:23:26.817027-04:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -84,7 +84,7 @@ imports:
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
-  version: f87b1403479a348651dbf5f07f5cc6e5fcf07008
+  version: 71201497bace774495daed26a3874fd339e0b538
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -131,7 +131,7 @@ imports:
 - name: github.com/howeyc/gopass
   version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/huandu/xstrings
-  version: f02667b379e2fb5916c3cda2cf31e0eb885d79f8
+  version: 874a673206bf7a5c86d29876dfeaccca0922ab62
 - name: github.com/imdario/mergo
   version: 1afb36080aec31e0d1528973ebe6721b191b0369
 - name: github.com/inconshreveable/mousetrap
@@ -176,10 +176,12 @@ imports:
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
   - json
+- name: github.com/projectcalico/go-yaml
+  version: 955bc3e451ef0c9df8b9113bf2e341139cdafab2
 - name: github.com/projectcalico/go-yaml-wrapper
-  version: 090425220c545f6d179db17af395f5aac30b6926
+  version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: f77f93773a836c30f941a07bf528cfe08e4105cf
+  version: 7677f2efe0dc81530e79d82853a42159c9b8b0a2
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -256,6 +258,8 @@ imports:
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
   - codec
+- name: github.com/yalp/jsonpath
+  version: 5cc68e5049a040829faef3a44c00ec4332f6dec7
 - name: golang.org/x/crypto
   version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
@@ -309,7 +313,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 1c71899d35ca07586495ab5b33711a8b592faad7
+  version: 9cc4af7d6b2c2a2e47f9cfaa500cd669b42e449b
   subpackages:
   - import
 - name: google.golang.org/appengine

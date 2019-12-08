@@ -14,6 +14,8 @@ type FelixConfigurationExpansion interface{}
 
 type GlobalAlertExpansion interface{}
 
+type GlobalAlertTemplateExpansion interface{}
+
 type GlobalNetworkPolicyExpansion interface{}
 
 type GlobalNetworkSetExpansion interface{}

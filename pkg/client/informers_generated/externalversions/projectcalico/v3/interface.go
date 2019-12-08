@@ -20,6 +20,8 @@ type Interface interface {
 	FelixConfigurations() FelixConfigurationInformer
 	// GlobalAlerts returns a GlobalAlertInformer.
 	GlobalAlerts() GlobalAlertInformer
+	// GlobalAlertTemplates returns a GlobalAlertTemplateInformer.
+	GlobalAlertTemplates() GlobalAlertTemplateInformer
 	// GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.
 	GlobalNetworkPolicies() GlobalNetworkPolicyInformer
 	// GlobalNetworkSets returns a GlobalNetworkSetInformer.
@@ -90,6 +92,11 @@ func (v *version) FelixConfigurations() FelixConfigurationInformer {
 // GlobalAlerts returns a GlobalAlertInformer.
 func (v *version) GlobalAlerts() GlobalAlertInformer {
 	return &globalAlertInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// GlobalAlertTemplates returns a GlobalAlertTemplateInformer.
+func (v *version) GlobalAlertTemplates() GlobalAlertTemplateInformer {
+	return &globalAlertTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.

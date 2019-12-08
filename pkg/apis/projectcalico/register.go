@@ -52,6 +52,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&LicenseKeyList{},
 		&GlobalAlert{},
 		&GlobalAlertList{},
+		&GlobalAlertTemplate{},
+		&GlobalAlertTemplateList{},
 		&GlobalThreatFeed{},
 		&GlobalThreatFeedList{},
 		&HostEndpoint{},

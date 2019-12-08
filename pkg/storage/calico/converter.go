@@ -82,6 +82,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.GlobalAlert{}
 		GlobalAlertConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *libcalicoapi.GlobalAlertTemplate:
+		lcg := libcalicoObject.(*libcalicoapi.GlobalAlertTemplate)
+		aapi := &aapi.GlobalAlertTemplate{}
+		GlobalAlertTemplateConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	case *libcalicoapi.GlobalThreatFeed:
 		lcg := libcalicoObject.(*libcalicoapi.GlobalThreatFeed)
 		aapi := &aapi.GlobalThreatFeed{}

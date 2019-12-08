@@ -223,6 +223,29 @@ type GlobalAlert struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// GlobalAlertTemplateList is a list of Policy objects.
+type GlobalAlertTemplateList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []GlobalAlertTemplate
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+
+type GlobalAlertTemplate struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.GlobalAlertSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // GlobalThreatFeedList is a list of Policy objects.
 type GlobalThreatFeedList struct {
 	metav1.TypeMeta

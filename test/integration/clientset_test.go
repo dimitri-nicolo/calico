@@ -1102,6 +1102,137 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	return nil
 }
 
+// TestGlobalAlertTemplateClient exercises the GlobalAlertTemplate client.
+func TestGlobalAlertTemplateClient(t *testing.T) {
+	const name = "test-globalalert"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalAlertTemplate{}
+			})
+			defer shutdownServer()
+			if err := testGlobalAlertTemplateClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-globalalert test failed")
+	}
+}
+
+func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) error {
+	globalAlertClient := client.ProjectcalicoV3().GlobalAlertTemplates()
+	globalAlert := &v3.GlobalAlertTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.GlobalAlertSpec{
+			DataSet:     "dns",
+			Description: "test",
+			Severity:    100,
+		},
+	}
+
+	// start from scratch
+	globalAlerts, err := globalAlertClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalAlertTemplates (%s)", err)
+	}
+	if globalAlerts.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	globalAlertServer, err := globalAlertClient.Create(globalAlert)
+	if nil != err {
+		return fmt.Errorf("error creating the globalAlertTemplate '%v' (%v)", globalAlert, err)
+	}
+	if name != globalAlertServer.Name {
+		return fmt.Errorf("didn't get the same globalAlertTemplate back from the server \n%+v\n%+v", globalAlert, globalAlertServer)
+	}
+
+	globalAlerts, err = globalAlertClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalAlertTemplates (%s)", err)
+	}
+	if len(globalAlerts.Items) != 1 {
+		return fmt.Errorf("expected 1 globalAlertTemplate got %d", len(globalAlerts.Items))
+	}
+
+	globalAlertServer, err = globalAlertClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalAlertTemplate %s (%s)", name, err)
+	}
+	if name != globalAlertServer.Name &&
+		globalAlert.ResourceVersion == globalAlertServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalAlertTemplate back from the server \n%+v\n%+v", globalAlert, globalAlertServer)
+	}
+
+	globalAlertUpdate := globalAlertServer.DeepCopy()
+	globalAlertUpdate.Spec.Metric = "count"
+	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalAlertTemplate %s (%s)", name, err)
+	}
+	if globalAlertServer.Spec.Metric != globalAlertUpdate.Spec.Metric {
+		return errors.New("didn't update spec.content")
+	}
+
+	err = globalAlertClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalAlertTemplate should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().GlobalAlertTemplates().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching GlobalAlertTemplates (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two GlobalAlertTemplates
+	for i := 0; i < 2; i++ {
+		ga := &v3.GlobalAlertTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
+			Spec: calico.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "dns",
+			},
+		}
+		_, err = globalAlertClient.Create(ga)
+		if err != nil {
+			return fmt.Errorf("error creating the globalAlertTemplate '%v' (%v)", ga, err)
+		}
+	}
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
 // TestGlobalThreatFeedClient exercises the GlobalThreatFeed client.
 func TestGlobalThreatFeedClient(t *testing.T) {
 	const name = "test-globalthreatfeed"
