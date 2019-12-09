@@ -1,65 +1,3 @@
-{{- /* Make certs generated automatically last 100 years. Why? We're doing this automatically for customers
-       who haven't provided their own certificates, meaning they might be blissfully unaware that these certs
-       are even in use. If we put it at a "recommended" value like 1 year, there is a reasonable chance that
-       a year from when they install, they will not have reissued a new cert, and they will have an outage. That's
-       really bad. */ -}}
-{{- $apicert := genSelfSignedCert "cnx-api.kube-system.svc" (list ) (list "cnx-api.kube-system.svc") 36500 -}}
-
-{{- if eq .Values.datastore "kubernetes" }}
-# This manifest adds the additional Tigera Secure EE components to a cluster
-# that has already had the Calico part of Tigera Secure EE deployed.
-# - It refers to the calico-config ConfigMap from that file, so if you are
-#   not using the provided hosted Calico manifest you must update
-#   references to that resource in this file.
-# - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
-#   apiregistration section below to use your TLS certs for secure communication
-#   between the Tigera Secure EE API server and Kubernetes API server.
-{{- else if eq .Values.datastore "etcd" }}
-# This manifest adds the additional Tigera Secure EE components to a cluster
-# that has already had the Calico part of Tigera Secure EE deployed.
-# - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
-#   from that file, so if you are not using the provided hosted Calico
-#   manifest you must update references to those resources in this file.
-# - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
-#   apiregistration section below to use your TLS certs for secure communication
-#   between the Tigera Secure EE API server and Kubernetes API server.
-{{- end }}
-
-apiVersion: v1
-kind: Secret
-type: Opaque
-metadata:
-  name: cnx-apiserver-certs
-  namespace: kube-system
-data:
-{{- if include "calico.apiserver.tls" . }}
-  apiserver.crt: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.crt }}
-  apiserver.key: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.key }}
-{{- else }}
-  apiserver.crt: {{ $apicert.Cert | b64enc }}
-  apiserver.key: {{ $apicert.Key | b64enc }}
-{{- end }}
----
-
-apiVersion: apiregistration.k8s.io/v1beta1
-kind: APIService
-metadata:
-  name: v3.projectcalico.org
-spec:
-  group: projectcalico.org
-  versionPriority: 200
-  groupPriorityMinimum: 200
-  service:
-    name: cnx-api
-    namespace: kube-system
-  version: v3
-{{- if include "calico.apiserver.tls" . }}
-  caBundle: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.cabundle }}
-{{- else }}
-  caBundle: {{ $apicert.Cert | b64enc }}
-{{- end }}
----
-
 # This ClusterRole is used to control the RBAC mechanism for Calico tiered policy.
 # -  If the resources are set to ["networkpolicies","globalnetworkpolicies"], then RBAC for Calico policy has per-tier
 #    granularity defined using the "tier.networkpolicies" and "tier.globalnetworkpolicies" pseudo-resource types.
@@ -408,6 +346,7 @@ spec:
         apiserver: "true"
         k8s-app: cnx-apiserver
       annotations:
+        cnx-apiserver-cert-hash: {{ tuple "cnx-api-certs.yaml" . | include "calico.hash" }}
 {{- tuple .Values.apiserver "cnx-apiserver" | include "calico.sec_app_profile" | indent 8 }}
 {{- tuple .Values.queryserver "cnx-queryserver" | include "calico.sec_app_profile" | indent 8 }}
     spec:

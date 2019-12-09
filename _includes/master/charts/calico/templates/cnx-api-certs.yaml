@@ -1,0 +1,40 @@
+{{- /* Make certs generated automatically last 100 years. Why? We're doing this automatically for customers
+       who haven't provided their own certificates, meaning they might be blissfully unaware that these certs
+       are even in use. If we put it at a "recommended" value like 1 year, there is a reasonable chance that
+       a year from when they install, they will not have reissued a new cert, and they will have an outage. That's
+       really bad. */ -}}
+{{- $apicert := genSelfSignedCert "cnx-api.kube-system.svc" (list ) (list "cnx-api.kube-system.svc") 36500 -}}
+
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: cnx-apiserver-certs
+  namespace: kube-system
+data:
+{{- if include "calico.apiserver.tls" . }}
+  apiserver.crt: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.crt }}
+  apiserver.key: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.key }}
+{{- else }}
+  apiserver.crt: {{ $apicert.Cert | b64enc }}
+  apiserver.key: {{ $apicert.Key | b64enc }}
+{{- end }}
+---
+
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v3.projectcalico.org
+spec:
+  group: projectcalico.org
+  versionPriority: 200
+  groupPriorityMinimum: 200
+  service:
+    name: cnx-api
+    namespace: kube-system
+  version: v3
+{{- if include "calico.apiserver.tls" . }}
+  caBundle: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.cabundle }}
+{{- else }}
+  caBundle: {{ $apicert.Cert | b64enc }}
+{{- end }}

@@ -1,7 +1,17 @@
 ---
 layout: null
 ---
-{% helm --execute templates/cnx-api.yaml %}
+
+# This manifest adds the additional Tigera Secure EE components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
+# - It refers to the calico-config ConfigMap from that file, so if you are
+#   not using the provided hosted Calico manifest you must update
+#   references to that resource in this file.
+# - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
+#   apiregistration section below to use your TLS certs for secure communication
+#   between the Tigera Secure EE API server and Kubernetes API server.
+
+{% helm --execute templates/cnx-api.yaml --execute templates/cnx-api-certs.yaml %}
 datastore: kubernetes
 platform: gke
 {% endhelm %}
