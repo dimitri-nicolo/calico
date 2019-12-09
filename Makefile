@@ -4,6 +4,7 @@ GO_BUILD_VER=v0.28
 # libcalico-go still relies on vendoring
 GOMOD_VENDOR = true
 LOCAL_CHECKS = vendor goimports check-gen-files
+GIT_USE_SSH = true
 
 ###############################################################################
 # Download and include Makefile.common
@@ -20,12 +21,14 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
 include Makefile.common
 
 ###############################################################################
 
-K8S_VERSION      ?= v1.16.0
-BINDIR	   ?= bin
+K8S_VERSION	?= v1.16.3
+BINDIR		?= bin
 
 # Create a list of files upon which the generated file depends, skip the generated file itself
 UPGRADE_SRCS := $(filter-out ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go, \
@@ -48,7 +51,7 @@ clean:
 ###############################################################################
 # Build the vendor directory.
 vendor: mod-download
-	$(DOCKER_GO_BUILD) go mod vendor
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod vendor'
 
 GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 	   ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
@@ -57,7 +60,7 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 
 $(BINDIR)/openapi-gen: vendor
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+		sh -c '$(GIT_CONFIG_SSH) go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
@@ -66,7 +69,7 @@ gen-files:
 	$(MAKE) $(GENERATED_FILES)
 
 $(BINDIR)/deepcopy-gen: vendor
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: $(UPGRADE_SRCS) $(BINDIR)/deepcopy-gen
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
@@ -145,7 +148,7 @@ GINKGO_FOCUS?=.*
 .PHONY:ut
 ## Run the fast set of unit tests in a container.
 ut: vendor
-	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -skip "\[Datastore\]" -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 
 .PHONY:fv
@@ -153,7 +156,7 @@ ut: vendor
 fv: vendor run-etcd run-etcd-tls run-kubernetes-master run-coredns
 	$(DOCKER_RUN) --privileged --dns \
 		$(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' coredns) \
-		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 	$(MAKE) stop-etcd-tls
 
 ## Run etcd, with tls enabled, as a container (calico-etcd-tls)
