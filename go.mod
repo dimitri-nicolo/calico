@@ -1,6 +1,6 @@
 module github.com/projectcalico/libcalico-go
 
-go 1.12
+go 1.13
 
 replace k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20191029010004-132bc23c06b9
 
@@ -33,6 +33,7 @@ require (
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/json-iterator/go v1.1.8 // indirect
 	github.com/kelseyhightower/envconfig v0.0.0-20180517194557-dd1402a4d99d
 	github.com/leodido/go-urn v0.0.0-20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v0.0.0-20170829012221-11459a886d9c
@@ -49,28 +50,39 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.2.0
 	github.com/soheilhy/cmux v0.1.4 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/ugorji/go v0.0.0-20171019201919-bdcc60b419d1 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/bbolt v1.3.3 // indirect
-	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
-	golang.org/x/time v0.0.0-20161028155119-f51c12702a4d // indirect
-	google.golang.org/appengine v1.5.0 // indirect
+	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
+	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
+	google.golang.org/genproto v0.0.0-20191203220235-3fa9dbf08042 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
-	gopkg.in/go-playground/validator.v9 v9.30.2
-	gopkg.in/inf.v0 v0.9.0 // indirect
-	gopkg.in/tchap/go-patricia.v2 v2.3.0
+	gopkg.in/go-playground/validator.v9 v9.27.0
+	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/tchap/go-patricia.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.2.5 // indirect
-	k8s.io/api v0.0.0-20180628040859-072894a440bd
-	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
-	k8s.io/apiserver v0.0.0-20190324105220-f881eae9ec04
-	k8s.io/client-go v8.0.0+incompatible
-	k8s.io/code-generator v0.0.0-20190831074504-732c9ca86353
-	k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
+
+	// k8s.io/api v1.16.3 is at 16d7abae0d2a
+	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+
+	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
+	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+
+	// k8s.io/client-go 1.16.3 is at 6c5935290e33
+	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
+
+	// k8s.io/code-generator v1.16.3 is at 8e001e5d1894
+	k8s.io/code-generator v0.0.0-20191004115455-8e001e5d1894
+
+	// k8s.io/utils is not (tag) versioned
+	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
 )
 
 replace github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
