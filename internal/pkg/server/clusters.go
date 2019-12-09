@@ -18,6 +18,9 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"time"
+
+	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -38,11 +41,17 @@ type cluster struct {
 
 	sync.RWMutex
 
-	tunnel *tunnel.Tunnel
-	proxy  *httputil.ReverseProxy
+	tunnelManager tunnelmgr.Manager
+	proxy         *httputil.ReverseProxy
 
 	cert *x509.Certificate
 	key  crypto.Signer
+
+	// parameters for forwarding guardian requests to a default server
+	forwardingEnabled               bool
+	defaultForwardServerName        string
+	defaultForwardDialRetryAttempts int
+	defaultForwardDialRetryInterval time.Duration
 }
 
 type clusters struct {
@@ -55,6 +64,12 @@ type clusters struct {
 	renderManifest manifestRenderer
 
 	watchAdded bool
+
+	// parameters for forwarding guardian requests to a default server
+	forwardingEnabled               bool
+	defaultForwardServerName        string
+	defaultForwardDialRetryAttempts int
+	defaultForwardDialRetryInterval time.Duration
 }
 
 func returnJSON(w http.ResponseWriter, data interface{}) {
@@ -117,8 +132,13 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 	}
 
 	c := &cluster{
-		ManagedCluster: *mc,
-		cert:           cert,
+		ManagedCluster:                  *mc,
+		cert:                            cert,
+		forwardingEnabled:               cs.forwardingEnabled,
+		defaultForwardServerName:        cs.defaultForwardServerName,
+		defaultForwardDialRetryAttempts: cs.defaultForwardDialRetryAttempts,
+		defaultForwardDialRetryInterval: cs.defaultForwardDialRetryInterval,
+		tunnelManager:                   tunnelmgr.NewManager(),
 	}
 	if cs.keepKeys {
 		c.key = key
@@ -136,7 +156,12 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
 	log.Infof("Recovering cluster ID: %q", mc.ID)
 	c := &cluster{
-		ManagedCluster: *mc,
+		ManagedCluster:                  *mc,
+		forwardingEnabled:               cs.forwardingEnabled,
+		defaultForwardServerName:        cs.defaultForwardServerName,
+		defaultForwardDialRetryAttempts: cs.defaultForwardDialRetryAttempts,
+		defaultForwardDialRetryInterval: cs.defaultForwardDialRetryInterval,
+		tunnelManager:                   tunnelmgr.NewManager(),
 	}
 
 	cs.add(mc.ID, c)
@@ -481,33 +506,25 @@ func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<-
 }
 
 func (c *cluster) checkTunnelState() {
-	err := c.tunnel.WaitForError()
+	err := <-c.tunnelManager.ListenForErrors()
 
 	c.Lock()
 	defer c.Unlock()
 
 	c.proxy = nil
-	c.tunnel.Close()
-	c.tunnel = nil
+	if err := c.tunnelManager.CloseTunnel(); err != nil {
+		log.WithError(err).Error("an error occurred closing the tunnel")
+	}
+
 	log.Errorf("Cluster %s tunnel is broken (%s), deleted", c.ID, err)
 }
 
 func (c *cluster) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	c.RLock()
-	defer c.RUnlock()
-	return c.tunnel.Open()
+	return c.tunnelManager.Open()
 }
 
 func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, error) {
-	c.RLock()
-	conn, err := c.tunnel.Open()
-	c.RUnlock()
-
-	if err != nil {
-		return nil, errors.WithMessage(err, "c.tunnel.Open")
-	}
-
-	return tls.Client(conn, cfg), nil
+	return c.tunnelManager.OpenTLS(cfg)
 }
 
 func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -524,9 +541,12 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxy.ServeHTTP(w, r)
 }
 
-func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
+func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	// called with RLock held
-	c.tunnel = t
+	if err := c.tunnelManager.RunWithTunnel(t); err != nil {
+		return err
+	}
+
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
 		FlushInterval: -1,
@@ -538,16 +558,51 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
 		},
 	}
 
+	if c.forwardingEnabled {
+		go func() {
+			// This loop only stops trying to listen if the tunnel or manager was closed
+			for {
+				shouldStop := false
+				func() {
+					listener, err := c.tunnelManager.Listener()
+					if err != nil {
+						if err == tunnel.ErrTunnelClosed || err == tunnelmgr.ErrManagerClosed {
+							shouldStop = true
+							return
+						}
+						log.WithError(err).Error("failed to listen over the tunnel")
+					}
+					defer listener.Close()
+					if err = listenAndForward(
+						listener,
+						c.defaultForwardServerName,
+						c.defaultForwardDialRetryAttempts,
+						c.defaultForwardDialRetryInterval); err != nil {
+						log.WithError(err).Error("failed to listen over the tunnel")
+					}
+				}()
+
+				if shouldStop {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+
+		}()
+	}
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
 	go c.checkTunnelState()
+	return nil
 }
 
 func (c *cluster) stop() {
 	// close the tunnel to disconnect. Closing is thread save, but we need
 	// to hold the RLock to access the tunnel
 	c.RLock()
-	if c.tunnel != nil {
-		c.tunnel.Close()
+	if c.tunnelManager != nil {
+		if err := c.tunnelManager.Close(); err != nil {
+			log.WithError(err).Error("an error occurred closing the tunnelManager")
+		}
 	}
 	c.RUnlock()
 }

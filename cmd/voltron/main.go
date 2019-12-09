@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/tigera/voltron/internal/pkg/utils"
 
@@ -47,6 +48,12 @@ type config struct {
 	KibanaEndpoint               string `default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601" split_words:"true"`
 	KibanaBasePath               string `default:"/tigera-kibana" split_words:"true"`
 	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
+
+	// The DefaultForward parameters configure where connections from guardian should be forwarded to by default
+	ForwardingEnabled               bool          `default:"true" split_words:"true"`
+	DefaultForwardServer            string        `default:"tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
+	DefaultForwardDialRetryAttempts int           `default:"5" split_words:"true"`
+	DefaultForwardDialInterval      time.Duration `default:"2s" split_words:"true"`
 }
 
 func (cfg config) String() string {
@@ -105,7 +112,8 @@ func main() {
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
 			server.WithAuthentication(config),
-
+			server.WithForwardingEnabled(cfg.ForwardingEnabled),
+			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
 			server.WithAutoRegister())
 	}

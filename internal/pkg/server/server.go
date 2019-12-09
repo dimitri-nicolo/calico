@@ -15,6 +15,8 @@ import (
 	"net/textproto"
 	"time"
 
+	"github.com/tigera/voltron/pkg/tunnelmgr"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -101,7 +103,6 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
 	srv.clusters.generateCreds = srv.generateCreds
-
 	for _, o := range opts {
 		if err := o(srv); err != nil {
 			return nil, errors.WithMessage(err, "applying option failed")
@@ -288,13 +289,17 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				return
 			}
 
-			if c.tunnel != nil {
-				log.Infof("Openning a second tunnel ID %q rejected", clusterID)
-				t.Close()
-				return
-			}
+			if err := c.assignTunnel(t); err != nil {
+				if err == tunnelmgr.ErrTunnelSet {
+					log.Errorf("opening a second tunnel ID %s rejected", clusterID)
+				} else {
+					log.WithError(err).Errorf("failed to open the tunnel for cluster %s", clusterID)
+				}
 
-			c.assignTunnel(t)
+				if err := t.Close(); err != nil {
+					log.WithError(err).Errorf("failed closed tunnel after failing to assign it to cluster %s", clusterID)
+				}
+			}
 
 			log.Debugf("Accepted a new tunnel from %s", clusterID)
 		}()

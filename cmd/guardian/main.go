@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"sync"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -29,6 +32,14 @@ type config struct {
 	KeepAliveEnable   bool              `default:"true" split_words:"true"`
 	KeepAliveInterval int               `default:"100" split_words:"true"`
 	PProf             bool              `default:"false"`
+
+	TunnelDialRetryAttempts         int           `default:"20" split_words:"true"`
+	TunnelDialRetryInterval         time.Duration `default:"5s" split_words:"true"`
+	TunnelDialRecreateOnTunnelClose bool          `default:"true" split_words:"true"`
+
+	Listen     bool   `default:"true"`
+	ListenHost string `default:"" split_words:"true"`
+	ListenPort string `default:"8080" split_words:"true"`
 }
 
 func (cfg config) String() string {
@@ -96,6 +107,8 @@ func main() {
 		client.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		client.WithProxyTargets(tgts),
 		client.WithTunnelCreds(pemCert, pemKey, ca),
+		client.WithTunnelDialRetryAttempts(cfg.TunnelDialRetryAttempts),
+		client.WithTunnelDialRetryInterval(cfg.TunnelDialRetryInterval),
 	)
 
 	if err != nil {
@@ -109,7 +122,33 @@ func main() {
 		}
 	}()
 
-	if err := client.ServeTunnelHTTP(); err != nil {
-		log.Fatalf("Tunnel exited with error: %s", err)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := client.ServeTunnelHTTP(); err != nil {
+			log.WithError(err).Fatal("Serving the tunnel exited with an error")
+		}
+	}()
+
+	if cfg.Listen {
+		log.Infof("Listening on %s:%s for connections to proxy to voltron", cfg.ListenHost, cfg.ListenPort)
+
+		listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", cfg.ListenHost, cfg.ListenPort))
+		if err != nil {
+			log.WithError(err).Fatalf("Failed to listen on %s:%s", cfg.ListenHost, cfg.ListenPort)
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if err := client.AcceptAndProxy(listener); err != nil {
+				log.WithError(err).Error("AcceptAndProxy returned with an error")
+			}
+		}()
 	}
+
+	wg.Wait()
 }

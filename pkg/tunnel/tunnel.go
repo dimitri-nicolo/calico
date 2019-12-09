@@ -6,6 +6,7 @@ package tunnel
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -16,6 +17,47 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ErrTunnelClosed is used to notify a caller that an action can't proceed because the tunnel is closed
+var ErrTunnelClosed = fmt.Errorf("tunnel closed")
+
+// Dialer is an interface that supports dialing to create a *Tunnel
+type Dialer interface {
+	Dial() (*Tunnel, error)
+}
+
+type dialer struct {
+	dialerFun     DialerFunc
+	retryAttempts int
+	retryInterval time.Duration
+}
+
+// NewDialer creates a new Dialer.
+func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration) Dialer {
+	return &dialer{
+		dialerFun:     dialerFunc,
+		retryAttempts: retryAttempts,
+		retryInterval: retryInterval,
+	}
+}
+
+func (d *dialer) Dial() (*Tunnel, error) {
+	var err error
+	for i := 0; i < d.retryAttempts; i++ {
+		t, err := d.dialerFun()
+		if err != nil {
+			log.Debugf("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
+			time.Sleep(d.retryInterval)
+			continue
+		}
+		return t, nil
+	}
+
+	return nil, err
+}
+
+// DialerFunc is a function type used to create a tunnel
+type DialerFunc func() (*Tunnel, error)
+
 // Tunnel represents either side of the tunnel that allows waiting for,
 // accepting and initiating creation of new BytePipes.
 type Tunnel struct {
@@ -24,7 +66,7 @@ type Tunnel struct {
 
 	errOnce sync.Once
 	errCh   chan struct{}
-	err     error
+	LastErr error
 
 	keepAliveEnable   bool
 	keepAliveInterval time.Duration
@@ -34,7 +76,6 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 	t := &Tunnel{
 		stream: stream,
 		errCh:  make(chan struct{}),
-
 		// Defaults
 		keepAliveEnable:   true,
 		keepAliveInterval: 100 * time.Millisecond,
@@ -98,21 +139,55 @@ type hasIdentity interface {
 // Close closes this end of the tunnel and so all existing connections
 func (t *Tunnel) Close() error {
 	defer log.Debugf("Tunnel: Closed")
-	return t.mux.Close()
+	return convertYAMUXErr(t.mux.Close())
+}
+
+// IsClosed checks if the tunnel is closed. If it is true is returned, otherwise false is returned
+func (t *Tunnel) IsClosed() bool {
+	return t.mux.IsClosed()
 }
 
 // Accept waits for a new connection, returns net.Conn or an error
 func (t *Tunnel) Accept() (net.Conn, error) {
 	log.Debugf("Tunnel: Accepting connections")
 	defer log.Debugf("Tunnel: Accepted connection")
-	return t.mux.Accept()
+	conn, err := t.mux.Accept()
+	return conn, convertYAMUXErr(err)
+}
+
+// AcceptWithChannel takes a channel of ConnWithError, kicks of a go routine that starts accepting connection, and sends
+// any connections received to the given channel. The channel returned from calling this function is used to signal that
+// we're done accepting connections.
+//
+// If the tunnel hasn't been setup prior to calling this function it will panic.
+func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
+	a := acceptChan
+	done := make(chan bool)
+	go func() {
+		for {
+			conn, err := t.mux.Accept()
+			select {
+			case <-done:
+				return
+			default:
+			}
+			if err == nil {
+				a <- conn
+			} else {
+				a <- convertYAMUXErr(err)
+			}
+		}
+	}()
+
+	return done
 }
 
 // AcceptStream waits for a new connection, returns io.ReadWriteCloser or an error
 func (t *Tunnel) AcceptStream() (io.ReadWriteCloser, error) {
 	log.Debugf("Tunnel: Accepting stream")
 	defer log.Debugf("Tunnel: Accepted stream")
-	return t.mux.AcceptStream()
+	rc, err := t.mux.AcceptStream()
+	return rc, convertYAMUXErr(err)
 }
 
 // Addr returns the address of this tunnel sides endpoint.
@@ -132,6 +207,7 @@ func (t *Tunnel) Addr() net.Addr {
 // the the new connection is set up
 func (t *Tunnel) Open() (net.Conn, error) {
 	c, err := t.mux.Open()
+	err = convertYAMUXErr(err)
 	t.checkErr(err)
 	return c, err
 }
@@ -139,6 +215,7 @@ func (t *Tunnel) Open() (net.Conn, error) {
 // OpenStream returns, unlike NewConn, an io.ReadWriteCloser
 func (t *Tunnel) OpenStream() (io.ReadWriteCloser, error) {
 	s, err := t.mux.OpenStream()
+	err = convertYAMUXErr(err)
 	t.checkErr(err)
 	return s, err
 }
@@ -156,13 +233,18 @@ func (t *Tunnel) Identity() Identity {
 // why the tunnel exited
 func (t *Tunnel) WaitForError() error {
 	<-t.errCh
-	return t.err
+	return t.LastErr
+}
+
+// ErrChan returns the channel that's notified when an error occurs
+func (t *Tunnel) ErrChan() chan struct{} {
+	return t.errCh
 }
 
 func (t *Tunnel) checkErr(err error) {
 	if err != nil {
 		t.errOnce.Do(func() {
-			t.err = err
+			t.LastErr = err
 			close(t.errCh)
 		})
 	}
@@ -213,4 +295,14 @@ func DialTLS(target string, config *tls.Config, opts ...Option) (*Tunnel, error)
 	}
 
 	return NewClientTunnel(c, opts...)
+}
+
+// We don't want to / need to expose that we're using the yamux library
+func convertYAMUXErr(err error) error {
+	switch err {
+	case yamux.ErrSessionShutdown:
+		return ErrTunnelClosed
+	}
+
+	return err
 }

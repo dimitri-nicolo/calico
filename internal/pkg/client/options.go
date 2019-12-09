@@ -3,8 +3,11 @@
 package client
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"time"
+
+	"github.com/tigera/voltron/pkg/tunnel"
 
 	"github.com/pkg/errors"
 
@@ -38,8 +41,13 @@ func WithTunnelCreds(certPEM []byte, keyPEM []byte, ca *x509.CertPool) Option {
 		if certPEM == nil || keyPEM == nil {
 			return errors.Errorf("WithTunnelCreds: cert and key are required")
 		}
-		c.tunnelCertPEM = certPEM
-		c.tunnelKeyPEM = keyPEM
+
+		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		if err != nil {
+			return errors.Errorf("tls.X509KeyPair: %s", err.Error())
+		}
+
+		c.tunnelCert = &cert
 		c.tunnelRootCAs = ca
 		return nil
 	}
@@ -50,6 +58,30 @@ func WithKeepAliveSettings(enable bool, intervalMs int) Option {
 	return func(c *Client) error {
 		c.tunnelEnableKeepAlive = enable
 		c.tunnelKeepAliveInterval = time.Duration(intervalMs) * time.Millisecond
+		return nil
+	}
+}
+
+// WithTunnelDialer sets the tunnel dialer to the one specified, overwriting the default
+func WithTunnelDialer(tunnelDialer tunnel.Dialer) Option {
+	return func(c *Client) error {
+		c.tunnelDialer = tunnelDialer
+		return nil
+	}
+}
+
+// WithTunnelDialRetryAttempts sets number of times the the client should retry creating the tunnel if it fails
+func WithTunnelDialRetryAttempts(tunnelDialRetryAttempts int) Option {
+	return func(c *Client) error {
+		c.tunnelDialRetryAttempts = tunnelDialRetryAttempts
+		return nil
+	}
+}
+
+// WithTunnelDialRetryInterval sets the interval that the client should wait before retrying to create the tunnel
+func WithTunnelDialRetryInterval(tunnelDialRetryInterval time.Duration) Option {
+	return func(c *Client) error {
+		c.tunnelDialRetryInterval = tunnelDialRetryInterval
 		return nil
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/voltron/pkg/tunnelmgr"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/proxy"
@@ -20,27 +22,32 @@ type Client struct {
 	http      *http.Server
 	proxyMux  *http.ServeMux
 	targets   []proxy.Target
-	tunnel    *tunnel.Tunnel
 	closeOnce sync.Once
 
 	tunnelAddr    string
-	tunnelCertPEM []byte
-	tunnelKeyPEM  []byte
+	tunnelCert    *tls.Certificate
 	tunnelRootCAs *x509.CertPool
 
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
 
-	tunnelReady chan error
+	tunnelManager tunnelmgr.Manager
+	tunnelDialer  tunnel.Dialer
+
+	tunnelDialRetryAttempts int
+	tunnelDialRetryInterval time.Duration
 }
 
 // New returns a new Client
 func New(addr string, opts ...Option) (*Client, error) {
+	var err error
 	client := &Client{
 		http:                    new(http.Server),
-		tunnelReady:             make(chan error, 1),
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
+
+		tunnelDialRetryAttempts: 5,
+		tunnelDialRetryInterval: 2 * time.Second,
 	}
 
 	client.tunnelAddr = addr
@@ -50,6 +57,47 @@ func New(addr string, opts ...Option) (*Client, error) {
 		if err := o(client); err != nil {
 			return nil, errors.WithMessage(err, "applying option failed")
 		}
+	}
+
+	// set the dialer for the tunnel manager if one hasn't been specified
+	tunnelAddress := client.tunnelAddr
+	tunnelKeepAlive := client.tunnelEnableKeepAlive
+	tunnelKeepAliveInterval := client.tunnelKeepAliveInterval
+	if client.tunnelDialer == nil {
+		var dialerFunc tunnel.DialerFunc
+		if client.tunnelCert == nil {
+			log.Warnf("No tunnel creds, using unsecured tunnel")
+			dialerFunc = func() (*tunnel.Tunnel, error) {
+				return tunnel.Dial(
+					tunnelAddress,
+					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
+				)
+			}
+		} else {
+			tunnelCert := client.tunnelCert
+			tunnelRootCAs := client.tunnelRootCAs
+			dialerFunc = func() (*tunnel.Tunnel, error) {
+				return tunnel.DialTLS(
+					tunnelAddress,
+					&tls.Config{
+						Certificates: []tls.Certificate{*tunnelCert},
+						RootCAs:      tunnelRootCAs,
+						ServerName:   "voltron",
+					},
+					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
+				)
+			}
+		}
+		client.tunnelDialer = tunnel.NewDialer(
+			dialerFunc,
+			client.tunnelDialRetryAttempts,
+			client.tunnelDialRetryInterval,
+		)
+	}
+
+	client.tunnelManager = tunnelmgr.NewManager()
+	if err := client.tunnelManager.RunWithDialer(client.tunnelDialer); err != nil {
+		return nil, err
 	}
 
 	for _, target := range client.targets {
@@ -68,70 +116,48 @@ func New(addr string, opts ...Option) (*Client, error) {
 	return client, nil
 }
 
-// WaitForTunnel waits until a tunnel is established or until an error happens
-func (c *Client) WaitForTunnel() error {
-	return <-c.tunnelReady
-}
-
-// ServeTunnelHTTP starts serving HTTP requests through a tunnel
+// ServeTunnelHTTP starts serving HTTP requests through the tunnel
 func (c *Client) ServeTunnelHTTP() error {
-	var lis net.Listener
-
-	log.Infof("Dialing tunnel to %s ...", c.tunnelAddr)
-	err := func() error {
-		var err error
-
-		if c.tunnelCertPEM == nil || c.tunnelKeyPEM == nil {
-			log.Warnf("no tunnel creds, using unsecured tunnel")
-			c.tunnel, err = tunnel.Dial(
-				c.tunnelAddr,
-				tunnel.WithKeepAliveSettings(c.tunnelEnableKeepAlive, c.tunnelKeepAliveInterval),
-			)
-			if err != nil {
-				return err
-			}
-
-			lis = c.tunnel
-		} else {
-			cert, err := tls.X509KeyPair(c.tunnelCertPEM, c.tunnelKeyPEM)
-			if err != nil {
-				return errors.Errorf("tls.X509KeyPair: %s", err)
-			}
-
-			c.tunnel, err = tunnel.DialTLS(
-				c.tunnelAddr,
-				&tls.Config{
-					Certificates: []tls.Certificate{cert},
-					RootCAs:      c.tunnelRootCAs,
-					ServerName:   "voltron",
-				},
-				tunnel.WithKeepAliveSettings(c.tunnelEnableKeepAlive, c.tunnelKeepAliveInterval),
-			)
-			if err != nil {
-				return err
-			}
-
-			// we need to upgrade the tunnel to a TLS listener to support HTTP2
-			// on this side.
-			lis = tls.NewListener(c.tunnel, &tls.Config{
-				Certificates: []tls.Certificate{cert},
-				NextProtos:   []string{"h2"},
-			})
-			log.Infof("serving HTTP/2 enabled")
-		}
-
-		return nil
-	}()
-
-	c.tunnelReady <- err
-	close(c.tunnelReady)
+	listener, err := c.tunnelManager.Listener()
 	if err != nil {
-		log.Errorf("Failed to dial tunnel: %s", err)
 		return err
 	}
+	if c.tunnelCert != nil {
+		// we need to upgrade the tunnel to a TLS listener to support HTTP2
+		// on this side.
+		listener = tls.NewListener(listener, &tls.Config{
+			Certificates: []tls.Certificate{*c.tunnelCert},
+			NextProtos:   []string{"h2"},
+		})
+		log.Infof("serving HTTP/2 enabled")
+	}
 
-	log.Infof("Tunnel established, starting to server tunneled HTTP")
-	return c.http.Serve(lis)
+	log.Infof("starting to server tunneled HTTP")
+	return c.http.Serve(listener)
+}
+
+// AcceptAndProxy accepts connections on the given listener and sends them down the tunnel
+func (c *Client) AcceptAndProxy(listener net.Listener) error {
+	defer listener.Close()
+
+	for {
+		srcConn, err := listener.Accept()
+		if err != nil {
+			return err
+		}
+		dstConn, err := c.tunnelManager.Open()
+		if err != nil {
+			if err := srcConn.Close(); err != nil {
+				log.WithError(err).Error("failed to close source connection")
+			}
+
+			log.WithError(err).Error("failed to open connection to the tunnel")
+			return err
+		}
+
+		//TODO I think we want to throttle the connections
+		go proxy.ForwardConnection(srcConn, dstConn)
+	}
 }
 
 // Close stops the server.
@@ -139,8 +165,8 @@ func (c *Client) Close() error {
 	var retErr error
 
 	c.closeOnce.Do(func() {
-		if c.tunnel != nil {
-			if err := c.tunnel.Close(); err != nil {
+		if c.tunnelManager != nil {
+			if err := c.tunnelManager.Close(); err != nil {
 				retErr = err
 			}
 		}

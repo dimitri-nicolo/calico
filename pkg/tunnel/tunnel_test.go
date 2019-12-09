@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/voltron/pkg/state"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -390,5 +392,57 @@ var _ = Describe("TLS Stream", func() {
 			_, err := clnC.Write([]byte("blah"))
 			return err
 		}).ShouldNot(Succeed())
+	})
+})
+
+var _ = Describe("tunnel tests", func() {
+	Context("client side tunnel", func() {
+		Context("AcceptWithChannel", func() {
+			It("receives a connection when the server side opens the connection", func() {
+				cliConn, srvConn := net.Pipe()
+				tun, err := tunnel.NewClientTunnel(cliConn)
+				Expect(err).ToNot(HaveOccurred())
+
+				connResults := make(chan interface{})
+				done := tun.AcceptWithChannel(connResults)
+				defer close(done)
+
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					conn, err := state.InterfaceToConnOrError(<-connResults)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(conn).ToNot(BeNil())
+				}()
+
+				srvTunnel, err := tunnel.NewServerTunnel(srvConn)
+				_, err = srvTunnel.Open()
+				Expect(err).ToNot(HaveOccurred())
+
+				wg.Wait()
+			})
+			It("receives a ConnectionResult with an error when the server side connection is closed", func() {
+				cliConn, srvConn := net.Pipe()
+				tun, err := tunnel.NewClientTunnel(cliConn)
+				Expect(err).ToNot(HaveOccurred())
+
+				connResults := make(chan interface{})
+				done := tun.AcceptWithChannel(connResults)
+				defer close(done)
+
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					conn, err := state.InterfaceToConnOrError(<-connResults)
+					Expect(err).To(HaveOccurred())
+					Expect(conn).NotTo(HaveOccurred())
+				}()
+
+				Expect(srvConn.Close()).ToNot(HaveOccurred())
+				wg.Wait()
+			})
+		})
 	})
 })

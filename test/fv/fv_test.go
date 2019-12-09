@@ -251,17 +251,11 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			),
 		)
 		Expect(err).NotTo(HaveOccurred())
-
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
 			guardian.ServeTunnelHTTP()
 		}()
-	})
-
-	It("should wait for tunnel", func() {
-		err := guardian.WaitForTunnel()
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should start guardian2", func() {
@@ -281,17 +275,11 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			),
 		)
 		Expect(err).NotTo(HaveOccurred())
-
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
 			guardian2.ServeTunnelHTTP()
 		}()
-	})
-
-	It("should wait for tunnel", func() {
-		err := guardian2.WaitForTunnel()
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should be possible to reach the test server on http2", func() {
@@ -346,17 +334,11 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			),
 		)
 		Expect(err).NotTo(HaveOccurred())
-
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
 			guardian.ServeTunnelHTTP()
 		}()
-	})
-
-	It("should wait for tunnel to come up again", func() {
-		err := guardian.WaitForTunnel()
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should be possible to reach the test server again", func() {
