@@ -618,10 +618,12 @@ def gen_chart_specific_values_v2_6(versions, imageRegistry, chart, forDocs)
       appArmorProfile: ""
 
     calicoctl:
+      enabled: false
       image: #{imageRegistry}#{versions["calicoctl"].image}
       tag: #{versions["calicoctl"].version}
       seccompProfile: ""
       appArmorProfile: ""
+      binPath: /bin
 
     dikastes:
       image: #{imageRegistry}#{versions["dikastes"].image}
