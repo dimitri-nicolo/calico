@@ -194,6 +194,74 @@ const (
         "hits": []
     }
 }`
+	missingSourceAggregations = `{
+    "took": 604,
+    "timed_out": false,
+    "_shards": {
+        "total": 40,
+        "successful": 40,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 10000,
+            "relation": "gte"
+        },
+        "max_score": null,
+        "hits": []
+    },
+    "aggregations": {
+        "dest_namespaces": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+                {
+                    "key": "tigera-elasticsearch",
+                    "doc_count": 50232
+                },
+                {
+                    "key": "tigera-eck-operator",
+                    "doc_count": 2167
+                }
+            ]
+        }
+    }
+}`
+	missingDestAggregations = `{
+    "took": 604,
+    "timed_out": false,
+    "_shards": {
+        "total": 40,
+        "successful": 40,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 10000,
+            "relation": "gte"
+        },
+        "max_score": null,
+        "hits": []
+    },
+    "aggregations": {
+        "source_namespaces": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+                {
+                    "key": "tigera-eck-operator",
+                    "doc_count": 8671
+                },
+                {
+                    "key": "tigera-elasticsearch",
+                    "doc_count": 886
+                }
+            ]
+        }
+    }
+}`
 	malformedResponse = `{
     badlyFormedJson
 }`
@@ -205,7 +273,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 	Context("Test that the validateFlowLogNamespacesRequest function behaves as expected", func() {
 		It("should return an errInvalidMethod when passed a request with an http method other than GET", func() {
 			By("Creating a request with a POST method")
-			req, err := http.NewRequest(http.MethodPost, "", nil)
+			req, err := newTestRequest(http.MethodPost)
 			Expect(err).NotTo(HaveOccurred())
 
 			params, err := validateFlowLogNamespacesRequest(req)
@@ -213,7 +281,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(params).To(BeNil())
 
 			By("Creating a request with a DELETE method")
-			req, err = http.NewRequest(http.MethodDelete, "", nil)
+			req, err = newTestRequest(http.MethodDelete)
 			Expect(err).NotTo(HaveOccurred())
 
 			params, err = validateFlowLogNamespacesRequest(req)
@@ -221,9 +289,32 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with a bad limit parameter", func() {
-			By("Forming a request with a negative limit value")
-			req, err := http.NewRequest(http.MethodGet, "", nil)
+		It("should return a valid params object with the limit set to 1000 when passed an empty limit", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("limit", "")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamespacesRequest(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(params.Limit).To(BeNumerically("==", 1000))
+		})
+
+		It("should return a valid params object with the limit set to 1000 when passed a 0 limit", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("limit", "0")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamespacesRequest(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(params.Limit).To(BeNumerically("==", 1000))
+		})
+
+		It("should return an errParseRequest when passed a request with a negative limit parameter", func() {
+			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
 			q.Add("limit", "-100")
@@ -232,22 +323,59 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			params, err := validateFlowLogNamespacesRequest(req)
 			Expect(err).To(BeEquivalentTo(errParseRequest))
 			Expect(params).To(BeNil())
+		})
 
-			By("Forming a request with a word as the limit value")
-			req, err = http.NewRequest(http.MethodGet, "", nil)
+		It("should return an errParseRequest when passed a request with a word as the limit parameter", func() {
+			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
-			q = req.URL.Query()
+			q := req.URL.Query()
 			q.Add("limit", "ten")
 			req.URL.RawQuery = q.Encode()
 
-			params, err = validateFlowLogNamespacesRequest(req)
+			params, err := validateFlowLogNamespacesRequest(req)
+			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(params).To(BeNil())
+		})
+
+		It("should return an errParseRequest when passed a request with a floating number as the limit parameter", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("limit", "3.14")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamespacesRequest(req)
+			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(params).To(BeNil())
+		})
+
+		It("should return an errParseRequest when passed a request with a max int32 + 1 number as the limit parameter", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("limit", "2147483648")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamespacesRequest(req)
+			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(params).To(BeNil())
+		})
+
+		It("should return an errParseRequest when passed a request with a min int32 - 1 number as the limit parameter", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("limit", "-2147483648")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamespacesRequest(req)
 			Expect(err).To(BeEquivalentTo(errParseRequest))
 			Expect(params).To(BeNil())
 		})
 
 		It("should return an errInvalidAction when passed a request with an unacceptable actions parameter", func() {
 			By("Forming a request with an invalid actions value")
-			req, err := http.NewRequest(http.MethodGet, "", nil)
+			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
 			q.Add("actions", "alloow")
@@ -258,7 +386,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(params).To(BeNil())
 
 			By("Forming a request with a few valid actions and one invalid")
-			req, err = http.NewRequest(http.MethodGet, "", nil)
+			req, err = newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q = req.URL.Query()
 			q.Add("actions", "allow")
@@ -272,7 +400,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 		})
 
 		It("should return a valid FlowLogNamespaceParams object with the Actions from the request", func() {
-			req, err := http.NewRequest(http.MethodGet, "", nil)
+			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
 			q.Add("actions", "allow")
@@ -285,6 +413,22 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(params.Actions[0]).To(BeEquivalentTo("allow"))
 			Expect(params.Actions[1]).To(BeEquivalentTo("deny"))
 			Expect(params.Actions[2]).To(BeEquivalentTo("unknown"))
+		})
+
+		It("should return a valid FlowLogNamespaceParams object when passed upper case parameters", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("actions", "ALLOW")
+			q.Add("cluster", "CLUSTER")
+			q.Add("prefix", "TIGERA-")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamespacesRequest(req)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(params.Actions[0]).To(BeEquivalentTo("allow"))
+			Expect(params.ClusterName).To(BeEquivalentTo("cluster"))
+			Expect(params.Prefix).To(BeEquivalentTo("tigera-.*"))
 		})
 	})
 
@@ -339,6 +483,35 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			namespaces, err := getNamespacesFromElastic(params, esClient)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 10))
+			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-prometheus"))
+			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-compliance"))
+			Expect(namespaces[2].Name).To(BeEquivalentTo("tigera-fluentd"))
+			Expect(namespaces[3].Name).To(BeEquivalentTo("tigera-manager"))
+			Expect(namespaces[4].Name).To(BeEquivalentTo("tigera-eck-operator"))
+			Expect(namespaces[5].Name).To(BeEquivalentTo("tigera-intrusion-detection"))
+			Expect(namespaces[6].Name).To(BeEquivalentTo("tigera-kibana"))
+			Expect(namespaces[7].Name).To(BeEquivalentTo("tigera-elasticsearch"))
+			Expect(namespaces[8].Name).To(BeEquivalentTo("kube-system"))
+			Expect(namespaces[9].Name).To(BeEquivalentTo("tigera-system"))
+		})
+
+		It("should retrieve an array of namespace objects with no duplicates and only up to the limit", func() {
+			By("Creating a mock ES client with a mocked out search results containing duplicates")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{duplicatesResponse})
+
+			params := &FlowLogNamespaceParams{
+				Limit:       3,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "cluster",
+			}
+
+			namespaces, err := getNamespacesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(namespaces)).To(BeNumerically("==", 3))
+			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-prometheus"))
+			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-compliance"))
+			Expect(namespaces[2].Name).To(BeEquivalentTo("tigera-fluentd"))
 		})
 
 		It("should return an empty response when the search result contains no aggregations", func() {
@@ -355,6 +528,42 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			namespaces, err := getNamespacesFromElastic(params, esClient)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 0))
+		})
+
+		It("should return an array of namespace objects when the search result contains no source aggregations", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingSourceAggregations})
+
+			params := &FlowLogNamespaceParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "cluster",
+			}
+
+			namespaces, err := getNamespacesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(namespaces)).To(BeNumerically("==", 2))
+			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-elasticsearch"))
+			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-eck-operator"))
+		})
+
+		It("should return an array of namespace objects when the search result contains no dest aggregations", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingDestAggregations})
+
+			params := &FlowLogNamespaceParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "cluster",
+			}
+
+			namespaces, err := getNamespacesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(namespaces)).To(BeNumerically("==", 2))
+			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-eck-operator"))
+			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-elasticsearch"))
 		})
 
 		It("should return an error when the query fails", func() {
@@ -418,17 +627,8 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				Prefix:      "tigera.*",
 				ClusterName: "",
 			}
-
-			sourceAgg, destAgg := buildAggregations(params)
-			sourceAggInf, err := sourceAgg.Source()
+			sourceAggTermsMap, destAggTermsMap, err := getNamespaceAggregationTermsMaps(params)
 			Expect(err).To(Not(HaveOccurred()))
-			destAggInf, err := destAgg.Source()
-			Expect(err).To(Not(HaveOccurred()))
-			sourceAggMap := sourceAggInf.(map[string]interface{})
-			destAggMap := destAggInf.(map[string]interface{})
-			sourceAggTermsMap := sourceAggMap["terms"].(map[string]interface{})
-			destAggTermsMap := destAggMap["terms"].(map[string]interface{})
-
 			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 4))
 			Expect(len(destAggTermsMap)).To(BeNumerically("==", 4))
 		})
@@ -441,19 +641,33 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				Prefix:      "",
 				ClusterName: "",
 			}
-
-			sourceAgg, destAgg := buildAggregations(params)
-			sourceAggInf, err := sourceAgg.Source()
+			sourceAggTermsMap, destAggTermsMap, err := getNamespaceAggregationTermsMaps(params)
 			Expect(err).To(Not(HaveOccurred()))
-			destAggInf, err := destAgg.Source()
-			Expect(err).To(Not(HaveOccurred()))
-			sourceAggMap := sourceAggInf.(map[string]interface{})
-			destAggMap := destAggInf.(map[string]interface{})
-			sourceAggTermsMap := sourceAggMap["terms"].(map[string]interface{})
-			destAggTermsMap := destAggMap["terms"].(map[string]interface{})
-
 			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 3))
 			Expect(len(destAggTermsMap)).To(BeNumerically("==", 3))
 		})
 	})
 })
+
+func newTestRequest(method string) (*http.Request, error) {
+	req, err := http.NewRequest(method, "", nil)
+	return req, err
+}
+
+func getNamespaceAggregationTermsMaps(params *FlowLogNamespaceParams) (map[string]interface{}, map[string]interface{},
+error) {
+	sourceAgg, destAgg := buildAggregations(params)
+	sourceAggInf, err := sourceAgg.Source()
+	if err != nil {
+		return nil, nil, err
+	}
+	destAggInf, err := destAgg.Source()
+	if err != nil {
+		return nil, nil, err
+	}
+	sourceAggMap := sourceAggInf.(map[string]interface{})
+	destAggMap := destAggInf.(map[string]interface{})
+	sourceAggTermsMap := sourceAggMap["terms"].(map[string]interface{})
+	destAggTermsMap := destAggMap["terms"].(map[string]interface{})
+	return sourceAggTermsMap, destAggTermsMap, nil
+}
