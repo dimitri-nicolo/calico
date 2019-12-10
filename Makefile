@@ -524,9 +524,7 @@ bpf/sockmap/generated/redir.o: bpf/sockmap/redir.c $(BPF_INC_FILES) $(BPF_SOCKMA
 		       rm -f /go/src/$(PACKAGE_NAME)/bpf/sockmap/generated/redir.ll"
 
 .PHONY: packr
-packr: bpf/bpf-packr.go bpf/packrd/packed-packr.go
-
-bpf/bpf-packr.go bpf/packrd/packed-packr.go: bpf/xdp/generated/xdp.o bpf/sockmap/generated/sockops.o bpf/sockmap/generated/redir.o $(CLANG_BUILDER_STAMP)
+packr bpf/bpf-packr.go bpf/packrd/packed-packr.go: bpf/xdp/generated/xdp.o bpf/sockmap/generated/sockops.o bpf/sockmap/generated/redir.o $(CLANG_BUILDER_STAMP)
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
 		  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		      calico-build/bpf-clang \
@@ -704,8 +702,9 @@ golangci-lint: remote-deps $(GENERATED_FILES)
 
 .PHONY: check-packr
 check-packr: bpf/packrd/packed-packr.go
-	@if ! git diff --quiet bpf/packrd/packed-packr.go; then \
+	@if [ "$$(git diff --ignore-blank-lines bpf/packrd/packed-packr.go)" != "" ] ; then \
 		echo "bpf/xdp/filter.c changed but the generated compiled object wasn't checked in. Please run 'make packr' and commit the changes to bpf/packrd/packed-packr.go."; \
+		git diff bpf/packrd/packed-packr.go; \
 		false; \
 	fi
 
