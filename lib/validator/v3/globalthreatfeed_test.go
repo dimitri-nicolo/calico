@@ -427,6 +427,43 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		},
 		true,
 	),
+	Entry("disallow CSV format with both recordSize and disableRecordSizeValidation set",
+		api.ThreatFeedFormat{
+			CSV: &api.ThreatFeedFormatCSV{
+				FieldNum:                    new(uint),
+				RecordSize:                  1,
+				DisableRecordSizeValidation: true,
+			},
+		},
+		false,
+	),
+	Entry("allow CSV format with positive recordSize",
+		api.ThreatFeedFormat{
+			CSV: &api.ThreatFeedFormatCSV{
+				FieldNum:   new(uint),
+				RecordSize: 1,
+			},
+		},
+		true,
+	),
+	Entry("disallow CSV format with negative recordSize",
+		api.ThreatFeedFormat{
+			CSV: &api.ThreatFeedFormatCSV{
+				FieldNum:   new(uint),
+				RecordSize: -1,
+			},
+		},
+		false,
+	),
+	Entry("disallow CSV format with disableRecordSizeValidation set",
+		api.ThreatFeedFormat{
+			CSV: &api.ThreatFeedFormatCSV{
+				FieldNum:                    new(uint),
+				DisableRecordSizeValidation: true,
+			},
+		},
+		true,
+	),
 
 	// Headers
 	Entry("allow GlobalThreatFeed with HTTP Headers",

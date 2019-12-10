@@ -4078,11 +4078,6 @@ func (in *ThreatFeedFormatCSV) DeepCopyInto(out *ThreatFeedFormatCSV) {
 		*out = new(uint)
 		**out = **in
 	}
-	if in.FieldsPerRecord != nil {
-		in, out := &in.FieldsPerRecord, &out.FieldsPerRecord
-		*out = new(int)
-		**out = **in
-	}
 	return
 }
 

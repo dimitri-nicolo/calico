@@ -9313,14 +9313,20 @@ func schema_libcalico_go_lib_apis_v3_ThreatFeedFormatCSV(ref common.ReferenceCal
 							Format: "",
 						},
 					},
-					"fieldsPerRecord": {
+					"recordSize": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
 						},
 					},
+					"disableRecordSizeValidation": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 				},
-				Required: []string{"header", "columnDelimiter", "commentDelimiter", "fieldsPerRecord"},
+				Required: []string{"header", "columnDelimiter", "commentDelimiter", "recordSize", "disableRecordSizeValidation"},
 			},
 		},
 	}
