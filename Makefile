@@ -340,6 +340,8 @@ FELIX_BRANCH?=$(PIN_BRANCH)
 FELIX_REPO?=github.com/tigera/felix-private
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
+TYPHA_BRANCH?=$(PIN_BRANCH)
+TYPHA_REPO?=github.com/tigera/typha-private
 
 update-felix-pin: guard-ssh-forwarding-bug
 	$(call update_replace_pin,github.com/projectcalico/felix,$(FELIX_REPO),$(FELIX_BRANCH))
@@ -349,6 +351,9 @@ update-licensing-pin: guard-ssh-forwarding-bug
 
 update-libcalico-pin: guard-ssh-forwarding-bug
 	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
+
+update-typha-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/typha,$(TYPHA_REPO),$(TYPHA_BRANCH))
 
 git-status:
 	git status --porcelain
@@ -365,7 +370,7 @@ git-commit:
 git-push:
 	git push
 
-update-pins: update-felix-pin update-licensing-pin update-libcalico-pin
+update-pins: update-felix-pin update-typha-pin update-licensing-pin update-libcalico-pin
 
 commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
