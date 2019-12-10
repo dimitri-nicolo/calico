@@ -8431,14 +8431,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "",
 							},
 						},
-						"fieldsPerRecord": {
+						"recordSize": {
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"integer"},
 								Format: "int32",
 							},
 						},
+						"disableRecordSizeValidation": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
 					},
-					Required: []string{"header", "columnDelimiter", "commentDelimiter", "fieldsPerRecord"},
+					Required: []string{"header", "columnDelimiter", "commentDelimiter", "recordSize", "disableRecordSizeValidation"},
 				},
 			},
 			Dependencies: []string{},

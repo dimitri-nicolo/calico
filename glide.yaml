@@ -12,7 +12,7 @@ import:
   - mvcc/mvccpb
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
-  version: 7677f2efe0dc81530e79d82853a42159c9b8b0a2
+  version: 8c77660d06b7dea8c1874a49b6aaeb38c884a99c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
