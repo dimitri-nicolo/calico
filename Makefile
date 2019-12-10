@@ -191,10 +191,15 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
 TYPHA_BRANCH?=$(PIN_BRANCH)
 TYPHA_REPO?=github.com/tigera/typha-private
+
+update-libcalico-pin: guard-ssh-forwarding-bug
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
 update-licensing-pin: guard-ssh-forwarding-bug
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
@@ -217,7 +222,7 @@ git-commit:
 git-push:
 	git push
 
-update-pins: update-licensing-pin update-typha-pin
+update-pins: update-libcalico-pin update-licensing-pin update-typha-pin
 
 commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
