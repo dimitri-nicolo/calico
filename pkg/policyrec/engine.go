@@ -300,7 +300,12 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 		case v3.PolicyTypeEgress:
 			namespaceName := ""
 			if erpp.endpointNamespace == noNamespace {
-				newRule.Destination.NamespaceSelector = allNonNamespacedEndpointsSelector
+				// Only include the !all() selector if we want to actually select a Calico
+				// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
+				// out all selectors.
+				if !rule.selector.IsEmpty() {
+					newRule.Destination.NamespaceSelector = allNonNamespacedEndpointsSelector
+				}
 			} else if erpp.endpointNamespace != ere.endpointNamespace {
 				newRule.Destination.NamespaceSelector = allNamespacedEndpointsSelector
 				namespaceName = erpp.endpointNamespace
@@ -309,7 +314,12 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 		case v3.PolicyTypeIngress:
 			namespaceName := ""
 			if erpp.endpointNamespace == noNamespace {
-				newRule.Source.NamespaceSelector = allNonNamespacedEndpointsSelector
+				// Only include the !all() selector if we want to actually select a Calico
+				// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
+				// out all selectors.
+				if !rule.selector.IsEmpty() {
+					newRule.Source.NamespaceSelector = allNonNamespacedEndpointsSelector
+				}
 			} else if erpp.endpointNamespace != ere.endpointNamespace {
 				newRule.Source.NamespaceSelector = allNamespacedEndpointsSelector
 				namespaceName = erpp.endpointNamespace
@@ -386,4 +396,9 @@ func (sb selectorBuilder) Expression(namespace string) string {
 		expressionParts = append(expressionParts, fmt.Sprintf("%s == '%s'", v3.LabelNamespace, namespace))
 	}
 	return strings.Join(expressionParts, " && ")
+}
+
+// IsEmpty returns if there are no labels present in the label map.
+func (sb selectorBuilder) IsEmpty() bool {
+	return len(sb) == 0
 }

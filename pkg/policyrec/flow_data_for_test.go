@@ -329,8 +329,7 @@ var (
 					Action:   v3.Allow,
 					Protocol: &protoUDPNS,
 					Destination: v3.EntityRule{
-						NamespaceSelector: "!all()",
-						Ports:             []numorstring.Port{numorstring.SinglePort(port53)},
+						Ports: []numorstring.Port{numorstring.SinglePort(port53)},
 					},
 				},
 			},
