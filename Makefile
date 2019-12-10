@@ -26,10 +26,10 @@ ifdef LOCAL_BUILD
 PHONY: set-up-local-build
 LOCAL_BUILD_DEP:=set-up-local-build
 
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go-private:rw
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw
 
 $(LOCAL_BUILD_DEP):
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go-private
+	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 endif
 
 include Makefile.common
@@ -75,6 +75,8 @@ clean:
 ###############################################################################
 # Updating pins
 ###############################################################################
+LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+
 update-pins: replace-libcalico-pin
 
 ###############################################################################
