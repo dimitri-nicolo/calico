@@ -63,7 +63,10 @@ clean:
 ###############################################################################
 # Updating pins
 ###############################################################################
-update-pins: update-libcalico-pin update-typha-pin
+LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+TYPHA_REPO=github.com/tigera/typha-private
+
+update-pins: replace-libcalico-pin replace-typha-pin
 
 ###############################################################################
 # Building the binary
