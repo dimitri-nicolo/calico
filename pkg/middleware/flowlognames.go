@@ -24,7 +24,7 @@ type FlowLogNamesParams struct {
 	Prefix      string   `json:"prefix"`
 }
 
-func FlowLogNamesHandler(esClient lmaelastic.Client, h http.Handler) http.Handler {
+func FlowLogNamesHandler(esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamesRequest(req)

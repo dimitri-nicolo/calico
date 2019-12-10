@@ -36,7 +36,7 @@ var (
 	errGeneric       = errors.New("Something went wrong")
 )
 
-func FlowLogNamespaceHandler(esClient lmaelastic.Client, h http.Handler) http.Handler {
+func FlowLogNamespaceHandler(esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamespacesRequest(req)

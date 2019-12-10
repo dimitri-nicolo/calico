@@ -111,11 +111,13 @@ func Start(cfg *Config) error {
 					middleware.PolicyImpactHandler(k8sAuth, p,
 						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 		sm.Handle("/flowLogNamespaces",
-			middleware.FlowLogNamespaceHandler(esClient,
-				k8sAuth.KubernetesAuthnAuthz(proxy)))
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.FlowLogNamespaceHandler(esClient))))
 		sm.Handle("/flowLogNames",
-			middleware.FlowLogNamesHandler(esClient,
-				k8sAuth.KubernetesAuthnAuthz(proxy)))
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.FlowLogNamesHandler(esClient))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
