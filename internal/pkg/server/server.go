@@ -126,39 +126,20 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 
 	var tunOpts []tunnel.ServerOption
 
-	if srv.tunnelCert == nil || srv.tunnelKey == nil {
-		// if at least one piece is missing, use the default creds
-		certPEM, err := utils.LoadPEMFromFile(srv.certFile)
-		if err != nil {
-			return nil, errors.WithMessage(err, "cert")
-		}
-
-		keyPEM, err := utils.LoadPEMFromFile(srv.keyFile)
-		if err != nil {
-			return nil, errors.WithMessage(err, "key")
-		}
-
-		srv.tunnelCert, srv.tunnelKey, err = utils.LoadX509KeyPairFromPEM(certPEM, keyPEM)
-		if err != nil {
-			return nil, errors.WithMessage(err, "loading cert/key pair")
-		}
-	}
-
 	if srv.tunnelCert != nil {
 		tunOpts = append(tunOpts, tunnel.WithCreds(srv.tunnelCert, srv.tunnelKey))
-	}
-
-	var err error
-	srv.tunSrv, err = tunnel.NewServer(tunOpts...)
-	if err != nil {
-		return nil, errors.WithMessage(err, "tunnel server")
-	}
-	go srv.acceptTunnels(
-		tunnel.WithKeepAliveSettings(srv.tunnelEnableKeepAlive, srv.tunnelKeepAliveInterval),
-	)
-	srv.clusters.renderManifest, err = newRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
-	if err != nil {
-		return nil, errors.WithMessage(err, "Could not create a template to render manifests")
+		var err error
+		srv.tunSrv, err = tunnel.NewServer(tunOpts...)
+		if err != nil {
+			return nil, errors.WithMessage(err, "tunnel server")
+		}
+		go srv.acceptTunnels(
+			tunnel.WithKeepAliveSettings(srv.tunnelEnableKeepAlive, srv.tunnelKeepAliveInterval),
+		)
+		srv.clusters.renderManifest, err = newRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
+		if err != nil {
+			return nil, errors.WithMessage(err, "Could not create a template to render manifests")
+		}
 	}
 
 	return srv, nil
