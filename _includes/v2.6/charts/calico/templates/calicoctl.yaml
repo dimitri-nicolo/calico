@@ -1,4 +1,9 @@
 {{- if .Values.calicoctl.enabled }}
+
+{{ if ne .Values.datastore "kubernetes" }}
+  {{ fail "calicoctl install only supported with kubernetes datastore" }}
+{{ end }}
+
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -51,7 +56,18 @@ spec:
           command: ["/bin/sh"]
           args:
             - "-c"
-            - "cp /calicoctl /host/bindir/calicoctl"
+            - |
+                cp /calicoctl /host/bindir/calicoctl.bin
+
+                cat <<EOF>/host/bindir/calicoctl
+                export DATASTORE_TYPE=kubernetes
+                export KUBECONFIG=/etc/cni/net.d/calico-kubeconfig
+
+                exec {{ .Values.calicoctl.binPath }}/calicoctl.bin \$*
+                EOF
+
+                chmod +x /host/bindir/calicoctl
+
           volumeMounts:
             - mountPath: /host/bindir
               name: calicoctl-bin-dir
