@@ -429,9 +429,9 @@ spec:
             command:
             - cat
             - /tmp/ready
-        initialDelaySeconds: 5
-        periodSeconds: 10
-        failureThreshold: 5
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 5
 {{- if .Values.apiserver.runAsPrivileged }}
         securityContext:
           privileged: true
