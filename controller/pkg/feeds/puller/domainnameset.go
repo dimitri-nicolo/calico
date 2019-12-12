@@ -9,15 +9,14 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/controller"
-
-	log "github.com/sirupsen/logrus"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/idna"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -29,7 +28,10 @@ var (
 	idnaProfile = idna.New()
 )
 
-type dnSetNewlineDelimited struct{}
+type dnSetContent struct {
+	lock   sync.RWMutex
+	parser parser
+}
 
 type dnSetPersistence struct {
 	d db.DomainNameSet
@@ -40,34 +42,43 @@ type dnSetGNSHandler struct {
 	enabled bool
 }
 
-func (i dnSetNewlineDelimited) parse(r io.Reader, logContext *log.Entry) interface{} {
+func (d *dnSetContent) setFeed(f *calico.GlobalThreatFeed) {
+	d.lock.Lock()
+	d.parser = getParserForFormat(f.Spec.Pull.HTTP.Format)
+	d.lock.Unlock()
+}
+
+func (d *dnSetContent) snapshot(r io.Reader) (interface{}, error) {
+	d.lock.RLock()
+	parser := d.parser
+	d.lock.RUnlock()
+
 	var snapshot db.DomainNameSetSpec
 
 	// line handler
-	h := func(n int, line string) {
-		if len(line) == 0 {
+	h := func(n int, entry string) {
+		if len(entry) == 0 {
 			return
 		}
-		line = canonicalizeDNSName(line)
-		// We could check here whether the line represents a valid domain name, but we won't
+		entry = canonicalizeDNSName(entry)
+		// We could check here whether the entry represents a valid domain name, but we won't
 		// because although a properly configured DNS server will not successfully resolve an
 		// invalid name, that doesn't stop an attacker from actually querying for an invalid name.
 		// For example, the attacker could direct the query to a DNS server under their control and
 		// we want to be able to detect such an action.
-		snapshot = append(snapshot, line)
+		snapshot = append(snapshot, entry)
 	}
 
-	parseNewlineDelimited(r, h)
-
-	return snapshot
+	err := parser(r, h)
+	return snapshot, err
 }
 
-func (i dnSetPersistence) lastModified(ctx context.Context, name string) (time.Time, error) {
-	return i.d.GetDomainNameSetModified(ctx, name)
+func (p dnSetPersistence) lastModified(ctx context.Context, name string) (time.Time, error) {
+	return p.d.GetDomainNameSetModified(ctx, name)
 }
 
-func (i dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser) {
-	i.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, st)
+func (p dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), st statser.Statser) {
+	p.c.Add(ctx, name, snapshot.(db.DomainNameSetSpec), f, st)
 }
 
 func (d *dnSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction) {
@@ -100,7 +111,9 @@ func NewDomainNameSetHTTPPuller(
 	e controller.Controller,
 ) Puller {
 	d := dnSetPersistence{d: ddb, c: e}
-	c := dnSetNewlineDelimited{}
+	c := &dnSetContent{
+		parser: getParserForFormat(f.Spec.Pull.HTTP.Format),
+	}
 	g := &dnSetGNSHandler{}
 	if f.Spec.GlobalNetworkSet != nil {
 		g.enabled = true

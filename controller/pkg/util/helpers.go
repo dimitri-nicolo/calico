@@ -40,3 +40,8 @@ func BoolPtr(b bool) *bool {
 	bCopy := b
 	return &bCopy
 }
+
+func UintPtr(i uint) *uint {
+	iCopy := i
+	return &iCopy
+}

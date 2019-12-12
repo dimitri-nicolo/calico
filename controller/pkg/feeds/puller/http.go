@@ -54,7 +54,8 @@ type persistence interface {
 }
 
 type content interface {
-	parse(r io.Reader, logContext *log.Entry) interface{}
+	setFeed(f *calico.GlobalThreatFeed)
+	snapshot(r io.Reader) (interface{}, error)
 }
 
 type gnsHandler interface {
@@ -68,6 +69,7 @@ func (h *httpPuller) SetFeed(f *calico.GlobalThreatFeed) {
 	defer h.lock.Unlock()
 
 	needsSync := h.gnsHandler.setFeed(f)
+	h.content.setFeed(f)
 
 	h.feed = f.DeepCopy()
 	h.needsUpdate = true
@@ -301,7 +303,13 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 		_ = resp.Body.Close()
 	}()
 
-	snapshot := h.content.parse(resp.Body, log.WithField("feed", name))
+	snapshot, err := h.content.snapshot(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("failed to parse snapshot")
+		st.Error(statser.PullFailed, err)
+		return err
+	}
+
 	h.persistence.add(ctx, name, snapshot, h.syncFailFunction, st)
 	h.gnsHandler.handleSnapshot(ctx, snapshot, st, h.syncFailFunction)
 	st.ClearError(statser.PullFailed)

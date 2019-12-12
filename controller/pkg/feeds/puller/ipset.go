@@ -3,27 +3,29 @@
 package puller
 
 import (
-	"bufio"
 	"context"
 	"io"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 
 	log "github.com/sirupsen/logrus"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
-type ipSetNewlineDelimited struct{}
+var (
+	wrappedInBracketsRegexp = regexp.MustCompile(`^\[.*\]$`)
+)
 
 type ipSetPersistence struct {
 	d db.IPSet
@@ -38,65 +40,76 @@ type ipSetGNSHandler struct {
 	d             db.IPSet
 }
 
-func (i ipSetNewlineDelimited) parse(r io.Reader, logContext *log.Entry) interface{} {
-	var snapshot db.IPSetSpec
-
-	// line handler
-	h := func(n int, l string) {
-		if strings.Contains(l, "/") {
-			// filter invalid IP addresses, dropping warning
-			_, ipNet, err := net.ParseCIDR(l)
-			if err != nil {
-				logContext.WithError(err).WithFields(log.Fields{
-					"line_num": n,
-					"line":     l,
-				}).Warn("could not parse IP network")
-			} else {
-				snapshot = append(snapshot, ipNet.String())
-			}
-		} else {
-			ip := net.ParseIP(l)
-			if ip == nil {
-				log.WithFields(log.Fields{
-					"line_num": n,
-					"line":     l,
-				}).Warn("could not parse IP address")
-			} else {
-				// Elastic ip_range requires all addresses to be in CIDR notation
-				var ipStr string
-				if len(ip.To4()) == net.IPv4len {
-					ipStr = ip.String() + "/32"
-				} else {
-					ipStr = ip.String() + "/128"
-				}
-				snapshot = append(snapshot, ipStr)
-			}
-		}
-	}
-
-	parseNewlineDelimited(r, h)
-	return snapshot
+type ipSetContent struct {
+	lock   sync.RWMutex
+	name   string
+	parser parser
 }
 
-func parseNewlineDelimited(r io.Reader, lineHander func(n int, l string)) {
-	// Response format is one item per line.
-	s := bufio.NewScanner(r)
-	var n = 0
-	for s.Scan() {
-		n++
-		l := s.Text()
-		// filter comments
-		i := strings.Index(l, CommentPrefix)
-		if i >= 0 {
-			l = l[0:i]
+func (i *ipSetContent) setFeed(f *calico.GlobalThreatFeed) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	i.name = f.Name
+	i.parser = getParserForFormat(f.Spec.Pull.HTTP.Format)
+}
+
+func (i *ipSetContent) snapshot(r io.Reader) (interface{}, error) {
+	i.lock.RLock()
+	name := i.name
+	parser := i.parser
+	i.lock.RUnlock()
+
+	var snapshot db.IPSetSpec
+	var once sync.Once
+
+	// entry handler
+	h := func(n int, entry string) {
+		snapshot = append(snapshot, parseIP(entry, log.WithField("name", name), n, &once)...)
+	}
+
+	err := parser(r, h)
+	return snapshot, err
+}
+
+func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) db.IPSetSpec {
+	if wrappedInBracketsRegexp.MatchString(entry) {
+		entry = entry[1 : len(entry)-1]
+	}
+	if strings.Contains(entry, "/") {
+		// filter invalid IP addresses, dropping warning
+		_, ipNet, err := net.ParseCIDR(entry)
+		if err != nil {
+			once.Do(func() {
+				logContext.WithError(err).WithFields(log.Fields{
+					"entry_num": n,
+					"entry":     entry,
+				}).Warn("could not parse IP network")
+			})
+			return nil
+		} else {
+			return db.IPSetSpec{ipNet.String()}
 		}
-		// strip whitespace
-		l = strings.TrimSpace(l)
-		// filter blank lines
-		if len(l) == 0 {
-			continue
+	} else {
+		ip := net.ParseIP(entry)
+		if ip == nil {
+			once.Do(func() {
+				log.WithFields(log.Fields{
+					"entry_num": n,
+					"entry":     entry,
+				}).Warn("could not parse IP address")
+			})
+			return nil
+		} else {
+			// Elastic ip_range requires all addresses to be in CIDR notation
+			var ipStr string
+			if len(ip.To4()) == net.IPv4len {
+				ipStr = ip.String() + "/32"
+			} else {
+				ipStr = ip.String() + "/128"
+			}
+			return db.IPSetSpec{ipStr}
 		}
-		lineHander(n, l)
 	}
 }
 
@@ -174,7 +187,7 @@ func NewIPSetHTTPPuller(
 	elasticIPSet controller.Controller,
 ) Puller {
 	d := ipSetPersistence{d: ipSet, c: elasticIPSet}
-	c := ipSetNewlineDelimited{}
+	c := &ipSetContent{name: f.Name, parser: getParserForFormat(f.Spec.Pull.HTTP.Format)}
 	g := &ipSetGNSHandler{
 		name:          f.Name,
 		gnsController: gnsController,

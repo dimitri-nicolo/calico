@@ -156,7 +156,7 @@ func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -211,7 +211,7 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -270,7 +270,7 @@ func TestWatcher_startFeed_defaultcontent(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -481,7 +481,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -528,7 +528,7 @@ func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -588,7 +588,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -629,7 +629,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -694,7 +694,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -784,7 +784,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 	f2.Spec.Pull = &v32.Pull{
 		Period: "12h",
 		HTTP: &v32.HTTPPull{
-			Format:  "NewlineDelimited",
+			Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 			URL:     "http://mock.feed/v1",
 			Headers: []v32.HTTPHeader{},
 		},
@@ -869,7 +869,7 @@ func TestWatcher_updateFeed_IPSetToDomainNameSet(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -942,7 +942,7 @@ func TestWatcher_restartPuller_IPSet(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -994,7 +994,7 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -1050,7 +1050,7 @@ func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -1107,7 +1107,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -1164,7 +1164,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},
@@ -1220,7 +1220,7 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
+					Format:  v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:     "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{},
 				},

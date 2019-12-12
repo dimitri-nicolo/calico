@@ -41,7 +41,7 @@ var (
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format: "NewlineDelimited",
+					Format: v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:    "http://mock.feed/v1",
 					Headers: []v32.HTTPHeader{
 						{
@@ -119,7 +119,7 @@ var (
 			Pull: &v32.Pull{
 				Period: "12h",
 				HTTP: &v32.HTTPPull{
-					Format: "NewlineDelimited",
+					Format: v32.ThreatFeedFormat{NewlineDelimited: &v32.ThreatFeedFormatNewlineDelimited{}},
 					URL:    "http://mock.feed/v1",
 				},
 			},
