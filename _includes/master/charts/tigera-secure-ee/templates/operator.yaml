@@ -42,6 +42,7 @@ rules:
   - prometheuses
   - servicemonitors
   - prometheusrules
+  - podmonitors
   verbs:
   - "*"
 - apiGroups:
@@ -442,6 +443,7 @@ rules:
   - alertmanagers/finalizers
   - prometheuses/finalizers
   - servicemonitors/finalizers
+  - podmonitors/finalizers
   verbs:
   - "*"
 ---

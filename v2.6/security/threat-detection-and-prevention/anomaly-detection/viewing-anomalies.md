@@ -22,10 +22,13 @@ You can view unfiltered anomaly information either using the Kibana UI, or using
 This section briefly walks through the process of viewing anomalies using Kibana. Refer to the 
 [Elasticsearch machine learning documentation] for more information.
 
-1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager, or by visting
-   the Kibana URL provided by your Elasticsearch admin.
-1. If necessary, log into Kibana. Note that your Kibana credentials may not be the same as you use to access
-   {{site.prodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
+1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}}.
+1. Note that your Kibana credentials may not be the same as you use to access {{site.prodname}}.
+   A default user `elastic` is created and stored in the `tigera-secure-es-elastic-user` secret during installation. You can obtain the password using the following command:
+
+   ```
+   kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o yaml |  awk '/elastic:/{print $2}' | base64 --decode
+   ```
 1. Click "Machine Learning" in the left-hand menu.
 1. Click "Anomaly Explorer" in the top menu.
 
@@ -39,7 +42,7 @@ selector in the top right to select the time range to view.
 The values in the "influenced by" column identify which pods or namespaces are responsible for the anomalous
 behavior, and thus where you should concentrate your subsequent investigations.
 
-[managed using Kibana]: https://www.elastic.co/guide/en/kibana/6.4/xpack-ml.html
+[managed using Kibana]: https://www.elastic.co/guide/en/kibana/7.3/xpack-ml.html
 [sizing for machine learning with Elasticsearch]: https://www.elastic.co/blog/sizing-machine-learning-with-elasticsearch
 [Elasticsearch REST API]: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/ml-apis.html
 [Elasticsearch machine learning documentation]: https://www.elastic.co/guide/en/elastic-stack-overview/6.4/xpack-ml.html

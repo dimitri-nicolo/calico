@@ -1,4 +1,5 @@
 {{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
+{{- $kibanaBasePath := "tigera-kibana" }}
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
@@ -40,6 +41,7 @@ rules:
   - prometheuses
   - servicemonitors
   - prometheusrules
+  - podmonitors
   verbs:
   - "*"
 - apiGroups:
@@ -394,6 +396,10 @@ metadata:
 spec:
   version: {{.Values.kibana.version}}
   image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
+  config:
+    server:
+      basePath: {{ print "/" $kibanaBasePath }}
+      rewriteBasePath: true
   nodeCount: 1
   elasticsearchRef:
     name: tigera-elasticsearch
@@ -405,6 +411,13 @@ spec:
         - name: {{ $key }}
   {{- end }}
 {{- end }}
+      containers:
+        - name: kibana
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: {{ print "/" $kibanaBasePath "/login"}}
+              port: 5601
     metadata:
       namespace: calico-monitoring
       labels:
@@ -429,6 +442,7 @@ rules:
   - alertmanagers/finalizers
   - prometheuses/finalizers
   - servicemonitors/finalizers
+  - podmonitors/finalizers
   verbs:
   - "*"
 ---
