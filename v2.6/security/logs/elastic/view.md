@@ -23,8 +23,11 @@ and enter a query. An example of a flow log visualization for the query
 
 You can access Kibana by clicking the **Kibana** button in the {{site.prodname}} Manager.
 
-In quickstart, demonstration, and proof of concept clusters, you can access the Kibana instance on any node
-in your cluster on port 30601.
+A default user `elastic` is created and stored in the `tigera-secure-es-elastic-user` secret during installation. You can obtain the password using the following command:
+
+```
+kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o yaml |  awk '/elastic:/{print $2}' | base64 --decode
+```
 
 ## Accessing logs from the Elasticsearch API
 

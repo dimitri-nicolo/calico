@@ -280,8 +280,7 @@ To grant access to additional tiers, or create your own roles, see the RBAC docu
 ### Log in to the Manager UI
 
 ```
-kubectl port-forward -n calico-monitoring svc/cnx-manager 9443 & \
-  kubectl port-forward -n calico-monitoring svc/tigera-kibana 5601
+kubectl port-forward -n calico-monitoring svc/cnx-manager 9443
 ```
 
 Sign in by navigating to https://localhost:9443 and login.
