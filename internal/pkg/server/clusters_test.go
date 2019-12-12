@@ -22,7 +22,7 @@ var _ = Describe("Clusters", func() {
 
 	clusters := &clusters{
 		clusters: make(map[string]*cluster),
-		generateCreds: func(*jclust.Cluster) (*x509.Certificate, crypto.Signer, error) {
+		generateCreds: func(*jclust.ManagedCluster) (*x509.Certificate, crypto.Signer, error) {
 			return nil, nil, nil
 		},
 		renderManifest: func(wr io.Writer, cert *x509.Certificate, key crypto.Signer) error {
@@ -32,6 +32,8 @@ var _ = Describe("Clusters", func() {
 	}
 
 	var wg sync.WaitGroup
+	var clusterID = "resource-name"
+	var clusterName = "resource-name"
 
 	Describe("basic functionality", func() {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -45,12 +47,12 @@ var _ = Describe("Clusters", func() {
 		})
 
 		It("should be possible to add a cluster", func() {
-			k8sAPI.AddCluster("A", "A")
+			k8sAPI.AddCluster(clusterID, clusterName)
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
 
 		It("should be possible to delete a cluster", func() {
-			k8sAPI.DeleteCluster("A")
+			k8sAPI.DeleteCluster(clusterID)
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(0))
 		})
 
@@ -64,7 +66,7 @@ var _ = Describe("Clusters", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		It("should cluster added should be seen after watch restarts", func() {
 			Expect(len(clusters.List())).To(Equal(0))
-			k8sAPI.AddCluster("A", "A")
+			k8sAPI.AddCluster(clusterID, clusterName)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -83,7 +85,7 @@ var _ = Describe("Clusters", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		It("should delete a cluster deleted while watch was down", func() {
 			Expect(len(clusters.List())).To(Equal(1))
-			k8sAPI.DeleteCluster("A")
+			k8sAPI.DeleteCluster(clusterID)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()

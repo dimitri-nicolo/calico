@@ -2,8 +2,12 @@
 
 package clusters
 
-// Cluster contains metadata used to track a specific cluster
-type Cluster struct {
-	ID          string `json:"id"`
-	DisplayName string `json:"displayName"`
+// ManagedCluster contains metadata used to track a specific cluster
+type ManagedCluster struct {
+	// ID is intended to store the unique resource name for a ManagedCluster resource
+	// We have chosen to use the resource name instead of the UID for a resource
+	// because (1) we use the resource name to identify the cluster specific ElasticSearch
+	// indexes (2) to be consistent we want to use the same cluster identifier across
+	// all use cases (i.e. avoid creating overhead of mapping UID to resource name)
+	ID string `json:"id"`
 }

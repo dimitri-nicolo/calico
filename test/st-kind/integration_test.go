@@ -111,7 +111,7 @@ var _ = Describe("ST tests", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(data.Items)).To(Equal(1))
 			Expect(data.Items[0].Name).To(Equal("managed-cluster"))
-			uid = string(data.Items[0].UID)
+			uid = string(data.Items[0].Name)
 			Expect(uid).ToNot(BeNil())
 			fmt.Println("Uid of the new cluster: " + uid)
 		})
@@ -352,7 +352,7 @@ var _ = Describe("ST tests", func() {
 		Context("Deleting and verifying the outcomes ", func() {
 
 			It("should delete a cluster without errors", func() {
-				cluster, err := json.Marshal(&clusters.Cluster{ID: "ClusterA"})
+				cluster, err := json.Marshal(&clusters.ManagedCluster{ID: "cluster-a"})
 				Expect(err).NotTo(HaveOccurred())
 				req, err := http.NewRequest("DELETE", clustersEndpoint, bytes.NewBuffer(cluster))
 				Expect(err).ToNot(HaveOccurred())

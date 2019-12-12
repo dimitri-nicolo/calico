@@ -208,7 +208,7 @@ func (c *K8sFakeClient) AddBobIdentity() {
 }
 
 type cluster struct {
-	name string
+	id string
 }
 
 type managedClusters struct {
@@ -254,8 +254,9 @@ func (mc *managedClusters) Get(id string) *cluster {
 }
 
 func (mc *managedClusters) Add(id, name string) {
-	mc.cs[id] = &cluster{
-		name: name,
+	// We now use the resource name as the ID
+	mc.cs[name] = &cluster{
+		id: name,
 	}
 
 	mc.version++
@@ -284,7 +285,7 @@ func (mc *managedClusters) Update(id string) {
 			APIVersion: calicov3.GroupVersionCurrent,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mc.cs[id].name,
+			Name: mc.cs[id].id,
 			UID:  k8stypes.UID(id),
 		},
 	}
@@ -299,7 +300,7 @@ func (mc *managedClusters) Delete(id string) {
 			APIVersion: calicov3.GroupVersionCurrent,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mc.cs[id].name,
+			Name: mc.cs[id].id,
 			UID:  k8stypes.UID(id),
 		},
 	}
@@ -342,7 +343,7 @@ func (mc *managedClusters) listReactor(action k8stesting.Action) (
 				APIVersion: calicov3.GroupVersionCurrent,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: c.name,
+				Name: c.id,
 				UID:  k8stypes.UID(id),
 			},
 		})

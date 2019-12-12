@@ -201,9 +201,8 @@ func (s *Server) autoRegister(id string, ident tunnel.Identity) (*cluster, error
 	}
 
 	c := &cluster{
-		Cluster: jclust.Cluster{
-			ID:          id,
-			DisplayName: id,
+		ManagedCluster: jclust.ManagedCluster{
+			ID: id,
 		},
 		cert: cert,
 	}
@@ -322,6 +321,8 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Note, we expect the value passed in the request header field to be the resource
+	// name for a ManagedCluster resource (which will be human-friendly and unique)
 	clusterID := r.Header.Get(ClusterHeaderField)
 
 	c := s.clusters.get(clusterID)
@@ -371,7 +372,7 @@ func addImpersonationHeaders(r *http.Request, user *auth.User) {
 	log.Debugf("Adding impersonation headers")
 }
 
-func (s *Server) generateCreds(clusterInfo *jclust.Cluster) (*x509.Certificate, crypto.Signer, error) {
+func (s *Server) generateCreds(clusterInfo *jclust.ManagedCluster) (*x509.Certificate, crypto.Signer, error) {
 	if s.tunnelCert == nil || s.tunnelKey == nil {
 		return nil, nil, errors.Errorf("no credential to sign generated cert")
 	}

@@ -25,8 +25,8 @@ func (e *httpError) Error() string {
 // Returns an HTTP error representing when a selected cluster is not connected.
 // This means there is no established tunnel between Voltron and Guardian
 // (within the App cluster).
-func clusterNotConnectedError(clusterName string) *httpError {
-	msg := fmt.Sprintf("Selected cluster %s unreachable, no connection", clusterName)
+func clusterNotConnectedError(clusterID string) *httpError {
+	msg := fmt.Sprintf("Selected cluster %s unreachable, no connection", clusterID)
 	return &httpError{
 		Err:      errors.New(msg),
 		ErrMsg:   msg,

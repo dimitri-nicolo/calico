@@ -114,7 +114,7 @@ var _ = Describe("Integration Tests", func() {
 		})
 
 		It("Should add a cluster", func() {
-			cluster, err := json.Marshal(&clusters.Cluster{ID: "ClusterA", DisplayName: "A"})
+			cluster, err := json.Marshal(&clusters.ManagedCluster{ID: "ClusterA"})
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest("PUT", clustersEndpoint,
@@ -135,7 +135,7 @@ var _ = Describe("Integration Tests", func() {
 		})
 
 		It("Should delete ClusterA", func() {
-			cluster, err := json.Marshal(&clusters.Cluster{ID: "ClusterA"})
+			cluster, err := json.Marshal(&clusters.ManagedCluster{ID: "ClusterA"})
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest("DELETE", clustersEndpoint,
@@ -147,7 +147,7 @@ var _ = Describe("Integration Tests", func() {
 		})
 
 		It("Should fail to delete nonexistent cluster", func() {
-			cluster, err := json.Marshal(&clusters.Cluster{ID: "ClusterZ"})
+			cluster, err := json.Marshal(&clusters.ManagedCluster{ID: "ClusterZ"})
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest("DELETE", clustersEndpoint,
@@ -166,7 +166,7 @@ var _ = Describe("Integration Tests", func() {
 	})
 
 	It("Should add a new test cluster to Voltron", func() {
-		cluster, err := json.Marshal(&clusters.Cluster{ID: "TestCluster", DisplayName: "TestCluster"})
+		cluster, err := json.Marshal(&clusters.ManagedCluster{ID: "TestCluster"})
 		Expect(err).NotTo(HaveOccurred())
 
 		req, err := http.NewRequest("PUT", clustersEndpoint,

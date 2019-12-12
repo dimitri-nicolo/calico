@@ -37,6 +37,9 @@ var (
 	srvCert    *x509.Certificate
 	srvPrivKey *rsa.PrivateKey
 	rootCAs    *x509.CertPool
+
+	clusterA = "clusterA"
+	clusterB = "clusterB"
 )
 
 func init() {
@@ -100,7 +103,7 @@ var _ = Describe("Server", func() {
 
 	Context("when server is up", func() {
 		It("should get empty list", func() {
-			var list []clusters.Cluster
+			var list []clusters.ManagedCluster
 
 			Eventually(func() int {
 				var code int
@@ -111,12 +114,12 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to register a new cluster", func() {
-			k8sAPI.AddCluster("clusterA", "A")
+			k8sAPI.AddCluster(clusterA, clusterA)
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
 		It("should be able to get the clusters creds", func() {
-			cert, key, err := srv.ClusterCreds("clusterA")
+			cert, key, err := srv.ClusterCreds(clusterA)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cert != nil && key != nil).To(BeTrue())
 		})
@@ -125,12 +128,11 @@ var _ = Describe("Server", func() {
 			list, code := listClusters(lis.Addr().String())
 			Expect(code).To(Equal(200))
 			Expect(len(list)).To(Equal(1))
-			Expect(list[0].ID).To(Equal("clusterA"))
-			Expect(list[0].DisplayName).To(Equal("A"))
+			Expect(list[0].ID).To(Equal(clusterA))
 		})
 
 		It("should be able to register another cluster", func() {
-			k8sAPI.AddCluster("clusterB", "BB")
+			k8sAPI.AddCluster(clusterB, clusterB)
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -138,14 +140,12 @@ var _ = Describe("Server", func() {
 			list, code := listClusters(lis.Addr().String())
 			Expect(code).To(Equal(200))
 			Expect(len(list)).To(Equal(2))
-			Expect(list[0].ID).To(Equal("clusterA"))
-			Expect(list[0].DisplayName).To(Equal("A"))
-			Expect(list[1].ID).To(Equal("clusterB"))
-			Expect(list[1].DisplayName).To(Equal("BB"))
+			Expect(list[0].ID).To(Equal(clusterA))
+			Expect(list[1].ID).To(Equal(clusterB))
 		})
 
 		It("should be able to delete a cluster", func() {
-			k8sAPI.DeleteCluster("clusterB")
+			k8sAPI.DeleteCluster(clusterB)
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -153,7 +153,7 @@ var _ = Describe("Server", func() {
 			list, code := listClusters(lis.Addr().String())
 			Expect(code).To(Equal(200))
 			Expect(len(list)).To(Equal(1))
-			Expect(list[0].ID).To(Equal("clusterA"))
+			Expect(list[0].ID).To(Equal(clusterA))
 		})
 
 		It("Should not proxy anywhere - no header", func() {
@@ -276,7 +276,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		It("Should not proxy anywhere - multiple headers", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add(server.ClusterHeaderField, "clusterA")
+			req.Header.Add(server.ClusterHeaderField, clusterA)
 			req.Header.Add(server.ClusterHeaderField, "helloworld")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
@@ -284,9 +284,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("should not be able to proxy to a cluster without a tunnel", func() {
-			k8sAPI.AddCluster("clusterA", "A")
+			k8sAPI.AddCluster(clusterA, clusterA)
 			Expect(<-watchSync).NotTo(HaveOccurred())
-			clientHelloReq(lis.Addr().String(), "clusterA", 400)
+			clientHelloReq(lis.Addr().String(), clusterA, 400)
 		})
 
 		It("Should proxy to default if no header", func() {
@@ -302,7 +302,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		It("should be possible to open a tunnel", func() {
 			var err error
 
-			certPemA, keyPemA, err = srv.ClusterCreds("clusterA")
+			certPemA, keyPemA, err = srv.ClusterCreds(clusterA)
 			Expect(err).NotTo(HaveOccurred())
 
 			cert, err := tls.X509KeyPair(certPemA, keyPemA)
@@ -340,7 +340,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				req, err := http.NewRequest("GET",
 					"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
 				Expect(err).NotTo(HaveOccurred())
-				req.Header[server.ClusterHeaderField] = []string{"clusterA"}
+				req.Header[server.ClusterHeaderField] = []string{clusterA}
 				test.AddJaneToken(req)
 
 				var resp *http.Response
@@ -374,12 +374,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 			It("should fail to get creds if it does not exist yet", func() {
 				var err error
-				certPem, keyPem, err = srv.ClusterCreds("clusterB")
+				certPem, keyPem, err = srv.ClusterCreds(clusterB)
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should be able to register another cluster", func() {
-				k8sAPI.AddCluster("clusterB", "BB")
+				k8sAPI.AddCluster(clusterB, clusterB)
 				Expect(<-watchSync).NotTo(HaveOccurred())
 			})
 
@@ -388,7 +388,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 				It("should be possible to get creds for clusterB", func() {
 					var err error
-					certPem, keyPem, err = srv.ClusterCreds("clusterB")
+					certPem, keyPem, err = srv.ClusterCreds(clusterB)
 					Expect(err).NotTo(HaveOccurred())
 
 					cert, err := tls.X509KeyPair(certPem, keyPem)
@@ -415,7 +415,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					testSrv.Listener = tunB
 					testSrv.Start()
 
-					clientHelloReq(lis.Addr().String(), "clusterB", 502 /* non-TLS srv -> err */)
+					clientHelloReq(lis.Addr().String(), clusterB, 502 /* non-TLS srv -> err */)
 				})
 
 				It("should be possible to open a second tunnel from clusterB", func() {
@@ -431,7 +431,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				It("should be possible to delete the cluster", func() {
-					k8sAPI.DeleteCluster("clusterB")
+					k8sAPI.DeleteCluster(clusterB)
 					Expect(<-watchSync).NotTo(HaveOccurred())
 				})
 
@@ -453,7 +453,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				It("should be able to register clusterB again", func() {
-					k8sAPI.AddCluster("clusterB", "B again")
+					k8sAPI.AddCluster(clusterB, clusterB)
 					Expect(<-watchSync).NotTo(HaveOccurred())
 				})
 
@@ -571,7 +571,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("should delete clusterA", func() {
-			k8sAPI.DeleteCluster("clusterA")
+			k8sAPI.DeleteCluster(clusterA)
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -694,7 +694,7 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("Should add cluster A", func() {
-		k8sAPI.AddCluster("clusterA", "ClusterA")
+		k8sAPI.AddCluster(clusterA, clusterA)
 		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
@@ -702,7 +702,7 @@ var _ = Describe("Server authenticates requests", func() {
 	binC := make(chan struct{}, 1)
 
 	It("Should open a tunnel for cluster A", func() {
-		certPem, keyPem, _ := srv.ClusterCreds("clusterA")
+		certPem, keyPem, _ := srv.ClusterCreds(clusterA)
 		cert, _ := tls.X509KeyPair(certPem, keyPem)
 
 		cfg := &tls.Config{
@@ -775,7 +775,7 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("should be able to delete a cluster - test race SAAS-226", func() {
-		k8sAPI.DeleteCluster("clusterA")
+		k8sAPI.DeleteCluster(clusterA)
 		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
@@ -792,7 +792,7 @@ func requestToClusterA(address string) *http.Request {
 	defer GinkgoRecover()
 	req, err := http.NewRequest("GET",
 		"https://"+address+"/some/path", strings.NewReader("HELLO"))
-	req.Header[server.ClusterHeaderField] = []string{"clusterA"}
+	req.Header[server.ClusterHeaderField] = []string{clusterA}
 	Expect(err).NotTo(HaveOccurred())
 	return req
 }
@@ -808,7 +808,7 @@ func configureHTTPSClient() *http.Client {
 	}
 }
 
-func listClusters(server string) ([]clusters.Cluster, int) {
+func listClusters(server string) ([]clusters.ManagedCluster, int) {
 	resp, err := http.Get("http://" + server + "/voltron/api/clusters")
 	Expect(err).NotTo(HaveOccurred())
 
@@ -816,7 +816,7 @@ func listClusters(server string) ([]clusters.Cluster, int) {
 		return nil, resp.StatusCode
 	}
 
-	var list []clusters.Cluster
+	var list []clusters.ManagedCluster
 
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&list)

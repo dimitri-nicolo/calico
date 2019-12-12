@@ -34,7 +34,7 @@ import (
 const AppYaml = "application/vnd.yaml"
 
 type cluster struct {
-	jclust.Cluster
+	jclust.ManagedCluster
 
 	sync.RWMutex
 
@@ -48,7 +48,7 @@ type cluster struct {
 type clusters struct {
 	sync.RWMutex
 	clusters      map[string]*cluster
-	generateCreds func(*jclust.Cluster) (*x509.Certificate, crypto.Signer, error)
+	generateCreds func(*jclust.ManagedCluster) (*x509.Certificate, crypto.Signer, error)
 
 	// keep the generated keys, only for testing and debugging
 	keepKeys       bool
@@ -81,50 +81,50 @@ func (cs *clusters) add(id string, c *cluster) error {
 	return nil
 }
 
-// List all clusters in sorted order by DisplayName field
-func (cs *clusters) List() []jclust.Cluster {
+// List all clusters in sorted order by ID field (which is the resource name)
+func (cs *clusters) List() []jclust.ManagedCluster {
 	cs.RLock()
 	defer cs.RUnlock()
 
-	clusterList := make([]jclust.Cluster, 0, len(cs.clusters))
+	clusterList := make([]jclust.ManagedCluster, 0, len(cs.clusters))
 	for _, c := range cs.clusters {
 		// Only include non-sensitive fields
 
 		c.RLock()
-		clusterList = append(clusterList, c.Cluster)
+		clusterList = append(clusterList, c.ManagedCluster)
 		c.RUnlock()
 	}
 
 	sort.Slice(clusterList, func(i, j int) bool {
-		return clusterList[i].DisplayName < clusterList[j].DisplayName
+		return clusterList[i].ID < clusterList[j].ID
 	})
 
 	log.Debugf("Listing current %d clusters.", len(clusterList))
 	for _, cluster := range clusterList {
-		log.Debugf("DisplayName = %s", cluster.DisplayName)
+		log.Debugf("ID = %s", cluster.ID)
 	}
 	return clusterList
 }
 
-func (cs *clusters) addNew(jc *jclust.Cluster) (*bytes.Buffer, error) {
-	log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
+func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
+	log.Infof("Adding cluster ID: %q", mc.ID)
 
 	resp := new(bytes.Buffer)
 
-	cert, key, err := cs.generateCreds(jc)
+	cert, key, err := cs.generateCreds(mc)
 	if err != nil {
 		return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
 	}
 
 	c := &cluster{
-		Cluster: *jc,
-		cert:    cert,
+		ManagedCluster: *mc,
+		cert:           cert,
 	}
 	if cs.keepKeys {
 		c.key = key
 	}
 
-	cs.add(jc.ID, c)
+	cs.add(mc.ID, c)
 	err = cs.renderManifest(resp, cert, key)
 	if err != nil {
 		return nil, errors.WithMessage(err, "could not renderer manifest")
@@ -133,57 +133,57 @@ func (cs *clusters) addNew(jc *jclust.Cluster) (*bytes.Buffer, error) {
 	return resp, nil
 }
 
-func (cs *clusters) addRecovered(jc *jclust.Cluster) error {
-	log.Infof("Recovering cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
+func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
+	log.Infof("Recovering cluster ID: %q", mc.ID)
 	c := &cluster{
-		Cluster: *jc,
+		ManagedCluster: *mc,
 	}
 
-	cs.add(jc.ID, c)
+	cs.add(mc.ID, c)
 
 	return nil
 }
 
-func (cs *clusters) update(jc *jclust.Cluster) (*bytes.Buffer, error) {
+func (cs *clusters) update(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 	cs.Lock()
 	defer cs.Unlock()
-	return cs.updateLocked(jc, false)
+	return cs.updateLocked(mc, false)
 }
 
-func (cs *clusters) updateLocked(jc *jclust.Cluster, recovery bool) (*bytes.Buffer, error) {
-	if c, ok := cs.clusters[jc.ID]; ok {
+func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) (*bytes.Buffer, error) {
+	if c, ok := cs.clusters[mc.ID]; ok {
 		c.Lock()
-		log.Infof("Updating cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
-		c.Cluster = *jc
-		log.Infof("New cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
+		log.Infof("Updating cluster ID: %q", c.ID)
+		c.ManagedCluster = *mc
+		log.Infof("New cluster ID: %q", c.ID)
 		c.Unlock()
 		return nil, nil
 	}
 
 	if recovery {
-		return nil, cs.addRecovered(jc)
+		return nil, cs.addRecovered(mc)
 	}
 
-	return cs.addNew(jc)
+	return cs.addNew(mc)
 }
 
-func (cs *clusters) remove(jc *jclust.Cluster) error {
+func (cs *clusters) remove(mc *jclust.ManagedCluster) error {
 	cs.Lock()
 
-	c, ok := cs.clusters[jc.ID]
+	c, ok := cs.clusters[mc.ID]
 	if !ok {
 		cs.Unlock()
-		msg := fmt.Sprintf("Cluster id %q does not exist", jc.ID)
+		msg := fmt.Sprintf("Cluster id %q does not exist", mc.ID)
 		log.Debugf(msg)
 		return errors.Errorf(msg)
 	}
 
 	// remove from the map so nobody can get it, but whoever uses it can
 	// keep doing so
-	delete(cs.clusters, jc.ID)
+	delete(cs.clusters, mc.ID)
 	cs.Unlock()
 	c.stop()
-	log.Infof("Cluster id %q removed", jc.ID)
+	log.Infof("Cluster id %q removed", mc.ID)
 
 	return nil
 }
@@ -198,14 +198,14 @@ func (cs *clusters) updateClusterREST(w http.ResponseWriter, r *http.Request) {
 	// no validations... for now
 	decoder := json.NewDecoder(r.Body)
 
-	jc := new(jclust.Cluster)
-	err := decoder.Decode(jc)
+	mc := new(jclust.ManagedCluster)
+	err := decoder.Decode(mc)
 	if err != nil {
 		http.Error(w, "Invalid JSON body", 400)
 		return
 	}
 
-	resp, err := cs.update(jc)
+	resp, err := cs.update(mc)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -225,13 +225,13 @@ func (cs *clusters) deleteClusterREST(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 
-	jc := new(jclust.Cluster)
-	if err := decoder.Decode(jc); err != nil {
+	mc := new(jclust.ManagedCluster)
+	if err := decoder.Decode(mc); err != nil {
 		http.Error(w, "Invalid JSON body", 400)
 		return
 	}
 
-	err := cs.remove(jc)
+	err := cs.remove(mc)
 	if err != nil {
 		http.Error(w, err.Error(), 404)
 		return
@@ -318,12 +318,11 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 
 	// New cluster used to generate manifest
 	metadataObj := data["metadata"].(map[string]interface{})
-	jc := jclust.Cluster{
-		ID:          metadataObj["uid"].(string),
-		DisplayName: metadataObj["name"].(string),
+	mc := jclust.ManagedCluster{
+		ID: metadataObj["name"].(string),
 	}
 
-	renderedManifest, err := cs.update(&jc)
+	renderedManifest, err := cs.update(&mc)
 	if err != nil {
 		log.Errorf("managedClusterHandler: Manifest generation failed %s", err.Error())
 		http.Error(w, "managedCluster was created, but installation manifest could not be generated", 500)
@@ -378,18 +377,17 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
 				return errors.Errorf("watcher stopped unexpectedly")
 			}
 
-			mc, ok := r.Object.(*apiv3.ManagedCluster)
+			mcResource, ok := r.Object.(*apiv3.ManagedCluster)
 			if !ok {
 				log.Debugf("Unexpected object type %T", r.Object)
 				continue
 			}
 
-			jc := &jclust.Cluster{
-				ID:          string(mc.ObjectMeta.UID),
-				DisplayName: mc.ObjectMeta.Name,
+			mc := &jclust.ManagedCluster{
+				ID: mcResource.ObjectMeta.Name,
 			}
 
-			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, jc.DisplayName)
+			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
 
 			var err error
 
@@ -400,9 +398,9 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
 				}
 				fallthrough
 			case watch.Modified:
-				_, err = cs.update(jc)
+				_, err = cs.update(mc)
 			case watch.Deleted:
-				err = cs.remove(jc)
+				err = cs.remove(mc)
 			default:
 				err = errors.Errorf("Watch event %s unsupported", r.Type)
 			}
@@ -433,17 +431,16 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, k8s K8sInterface) (string
 	defer cs.Unlock()
 
 	for _, mc := range list.Items {
-		id := string(mc.ObjectMeta.UID)
+		id := mc.ObjectMeta.Name
 
-		jc := &jclust.Cluster{
-			ID:          id,
-			DisplayName: mc.ObjectMeta.Name,
+		mc := &jclust.ManagedCluster{
+			ID: id,
 		}
 
 		known[id] = struct{}{}
 
-		log.Debugf("Sync K8s watch for cluster : %s", jc.DisplayName)
-		_, err = cs.updateLocked(jc, true)
+		log.Debugf("Sync K8s watch for cluster : %s", mc.ID)
+		_, err = cs.updateLocked(mc, true)
 		if err != nil {
 			log.Errorf("ManagedClusters listing failed: %s", err)
 		}
@@ -519,8 +516,8 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.RUnlock()
 
 	if proxy == nil {
-		log.Debugf("Cannot proxy to cluster %s, no tunnel", c.DisplayName)
-		writeHTTPError(w, clusterNotConnectedError(c.DisplayName))
+		log.Debugf("Cannot proxy to cluster %s, no tunnel", c.ID)
+		writeHTTPError(w, clusterNotConnectedError(c.ID))
 		return
 	}
 
