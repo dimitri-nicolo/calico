@@ -115,6 +115,7 @@ Now that we have the token, we can proceed to login! Go to the {{site.prodname}}
 
 #### Create a user and login using OIDC authentication
 
+1. Ensure that you have configured the required [kube-apiserver flags](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuring-the-api-server) for OIDC authentication.
 1. Consult your OIDC identity provider's documentation to manage users.
 1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
 
