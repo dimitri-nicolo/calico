@@ -134,15 +134,15 @@ In cases where OIDC Identity Provider (IdP) doesn't allow cross-origin HTTP requ
    kind: ConfigMap
    metadata:
      name: tigera-manager-oidc-config
-       namespace: tigera-operator
-       data:
-       openid-configuration: |
-         <well-known-openid-configuration>
-         ...
-         "jwks_uri": "/discovery/keys",
-         ...
-       keys: |
-         <jwks-uri-configuration>
+     namespace: tigera-operator
+   data:
+     openid-configuration: |
+       <well-known-openid-configuration>
+       ...
+       "jwks_uri": "/discovery/keys",
+       ...
+     keys: |
+       <jwks-uri-configuration>
    ```
 
    In above example, `<well-known-openid-configuration>` is the JSON response from IdP for request to _/.well-known/openid-configuration_. Notice however that the `jwks_uri` value in `<well-known-openid-configuration>` should be set to `"/discovery/keys"`. For `<jwks-uri-configuration>`, use the JSON response from IdP for JWKS URI.
