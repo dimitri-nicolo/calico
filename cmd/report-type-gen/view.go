@@ -16,9 +16,10 @@ import (
 )
 
 var viewCmd = &cobra.Command{
-	Use:   "view",
-	Short: "View a sample render.",
-	Long:  "View a sample rendering of Global Report Type output templates",
+	Use:   "view report-type template-name",
+	Short: "View a sample render",
+	Long: `
+View a sample render given report-type(e.g. inventory, cis-benchmark) and template-name (e.g. endpoints)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		runViewCmd(args)
 	},
@@ -29,15 +30,9 @@ func runViewCmd(args []string) {
 	// Extract report type and template name.
 	reportType, templateName := args[0], args[1]
 
-	// Always start with local "default" directory, unless specified.
-	dirs := defaultDirs
-	if len(args) > 2 {
-		dirs = args[2:]
-	}
-
 	// Get list of yaml files inside the 1st level of given directories.
-	for _, dir := range dirs {
-		if err := traverseDir(path.Join(dir, manifestsDir), true, ".yaml", func(f string) error {
+	for _, dir := range inDirs {
+		if err := traverseDir(dir, true, ".yaml", func(f string) error {
 			clog := log.WithField("file", f)
 			if strings.Split(path.Base(f), ".yaml")[0] != reportType {
 				clog.Debug("No match, passing")

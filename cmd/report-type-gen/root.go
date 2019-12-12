@@ -15,22 +15,38 @@
 package main
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "complictl",
-	Short: "Compliance is complicated, so use complictl.",
-	Long:  "Provides an administrative interface with Tigera's Compliance Reporting feature.",
-}
+var (
+	rootCmd = &cobra.Command{
+		Use:   "report-type-gen",
+		Short: "Maintains compliance report-type manifests",
+		Long: `
+A simple utilty that reads basic report-type structure and components in the specified directory to generate directly usable manifests.
+Generated manifests are stored in the 'manifest/' directory in the current location.`,
+	}
+
+	inDirs []string
+	outDir string
+)
 
 func init() {
 	rootCmd.AddCommand(genCmd)
+	genCmd.Flags().StringArrayVarP(&inDirs, "input", "i", []string{"default"}, "input directories containing basic report-type structure. (default: default/)")
+	genCmd.Flags().StringVarP(&outDir, "output", "o", "manifests", "output directory containing generated manifests. (default: manifests/)")
+
 	rootCmd.AddCommand(viewCmd)
+	viewCmd.Flags().StringArrayVarP(&inDirs, "input", "i", []string{"default/manifests"}, "input directories containing usable report-type manifests. (default: default/manifests)")
 }
 
 func Execute() {
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.ErrorLevel)
+
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}

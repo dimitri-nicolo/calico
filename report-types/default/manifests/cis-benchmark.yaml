@@ -9,22 +9,22 @@ spec:
   downloadTemplates:
   - name: all-tests.csv
     template: |
-      nodeName,testIndex,status,scored
+      nodeName,testIndex,testDescription,status,scored,remediation
       {{ range $i, $node := .CISBenchmark -}}
       {{- range $j, $section := $node.Results -}}
       {{- range $k, $result := $section.Results -}}
-      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.Status }},{{ $result.Scored }}
+      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
       {{ end }}
       {{- end }}
       {{- end }}
   - name: failed-tests.csv
     template: |
-      nodeName,testIndex,status,scored
+      nodeName,testIndex,testDescription,status,scored,remediation
       {{ range $i, $node := .CISBenchmark }}
       {{- range $j, $section := $node.Results }}
       {{- range $k, $result := $section.Results }}
       {{- if eq $result.Status "FAIL" }}
-      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.Status }},{{ $result.Scored }}
+      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
       {{ end }}
       {{- end }}
       {{- end }}

@@ -8,10 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const manifestsDir = "manifests"
-
-var defaultDirs = []string{"default"}
-
 func traverseDir(dir string, skipSubDir bool, substr string, forEach func(string) error) error {
 	clog := log.WithField("dir", dir)
 	clog.Debug("Traversing")

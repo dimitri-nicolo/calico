@@ -33,21 +33,15 @@ var genCmd = &cobra.Command{
 	Use:     "generate",
 	Aliases: []string{"gen"},
 	Short:   "Generate manifests",
-	Long:    "Generate the full Global Report Type manifests by defining your report output as go-templates",
+	Long:    "Generate the full Global Report Type manifests using go-template definitions.",
 	Run: func(cmd *cobra.Command, args []string) {
 		runGenCmd(args)
 	},
 }
 
 func runGenCmd(args []string) {
-	// Always start with local "default" directory, unless specified.
-	dirs := defaultDirs
-	if len(args) >= 1 {
-		dirs = args[0:]
-	}
-
 	// Get list of yaml files inside the 1st level of given directories.
-	for _, dir := range dirs {
+	for _, dir := range inDirs {
 		if err := traverseDir(dir, true, ".yaml", func(f string) error {
 			clog := log.WithField("file", f)
 			clog.Info("Processing file")
@@ -89,7 +83,7 @@ func runGenCmd(args []string) {
 				clog.WithError(err).Error("Failed to marshal resulting report type: skipping...")
 				return nil
 			}
-			manifestFullPath := path.Join(path.Dir(f), manifestsDir, path.Base(f))
+			manifestFullPath := path.Join(path.Dir(f), outDir, path.Base(f))
 			if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
 				log.WithError(err).Error("Failed to write report type to file: skipping...")
 			}
