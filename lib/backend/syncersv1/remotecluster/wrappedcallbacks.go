@@ -373,40 +373,57 @@ func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model
 	}
 }
 
+// deleteRCC processes a remote cluster deletion. The internal lock is held by the caller.
 func (a *wrappedCallbacks) deleteRCC(key model.ResourceKey) {
 	// This will only be called when the remote cluster was previously valid and included in the syncer.
 	remote := a.remotes[key]
 
-	log.Infof("Cancel remote context for %s", key)
-	remote.cancel()
-	if remote.syncer != nil {
+	// Grab the syncer and client.
+	syncer := remote.syncer
+	client := remote.client
+
+	// Never hold our lock when stopping the syncer (since that'll deadlock with the syncer callbacks).
+	a.lock.Unlock()
+
+	if syncer != nil {
 		// Stop the watcher and generate a delete event for each item in the watch cache
 		log.Infof("Stop syncer for %s", key)
-		remote.syncer.Stop()
+		syncer.Stop()
 	}
 
-	if remote.client != nil {
-		// Stop the client.
+	if client != nil {
+		// Close the client.
 		log.Infof("Close client for %s", key)
-		if err := remote.client.Close(); err != nil {
+		if err := client.Close(); err != nil {
 			log.Warnf("Hit error closing client. Ignoring. %v", err)
 		}
 	}
 
-	// Finish the remote (before deleting it)
-	a.finishRemote(key, true)
+	// Grab the lock again to finish off the processing.
+	a.lock.Lock()
 
-	// Delete the remote from the list of remotes.
-	delete(a.remotes, key)
+	// We released the lock, so we'd better check that the remote is still valid before continuing with the finish
+	// processing.
+	remote, ok := a.remotes[key]
+	if ok {
+		log.Infof("Cancel remote context for %s", key)
+		remote.cancel()
 
-	// Send a delete for the remote cluster status. We do this after all other deletion processing to ensure
-	// no other events for this remote cluster occur after this deletion event.
-	a.callbacks.OnUpdates([]api.Update{{
-		KVPair: model.KVPair{
-			Key: model.RemoteClusterStatusKey{Name: key.Name},
-		},
-		UpdateType: api.UpdateTypeKVDeleted,
-	}})
+		// Finish the remote (before deleting it)
+		a.finishRemote(key, true)
+
+		// Delete the remote from the list of remotes.
+		delete(a.remotes, key)
+
+		// Send a delete for the remote cluster status. We do this after all other deletion processing to ensure
+		// no other events for this remote cluster occur after this deletion event.
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: key.Name},
+			},
+			UpdateType: api.UpdateTypeKVDeleted,
+		}})
+	}
 }
 
 func (a *wrappedCallbacks) finishRemote(key model.Key, alreadyLocked bool) {

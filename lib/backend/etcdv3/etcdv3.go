@@ -37,7 +37,7 @@ import (
 
 var (
 	clientTimeout    = 10 * time.Second
-	keepaliveTime    = 30 * time.Second
+	keepaliveTime    = 10 * time.Second
 	keepaliveTimeout = 10 * time.Second
 )
 
