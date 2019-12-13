@@ -3,7 +3,19 @@ package middleware
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
 	"net/http"
+)
+
+const (
+	invalidPreview = `{
+   verb":"create",
+   "networkPolicy:{
+      "spec":{
+         "Tier":test
+      }
+   }
+}`
 )
 
 var (
@@ -235,6 +247,51 @@ var _ = Describe("Test flowlog request validation functions", func() {
 			Expect(convertedTypes[3]).To(BeEquivalentTo("hep"))
 		})
 	})
+
+	Context("Test that the validatePolicyPreview function behaves as expected", func() {
+		It("should return true when passed a PolicyPreview with the verb create", func() {
+			policyPreview := PolicyPreview{Verb: "create"}
+			valid := validatePolicyPreview(policyPreview)
+			Expect(valid).To(BeTrue())
+		})
+
+		It("should return true when passed a PolicyPreview with the verb update", func() {
+			policyPreview := PolicyPreview{Verb: "update"}
+			valid := validatePolicyPreview(policyPreview)
+			Expect(valid).To(BeTrue())
+		})
+
+		It("should return true when passed a PolicyPreview with the verb delete", func() {
+			policyPreview := PolicyPreview{Verb: "delete"}
+			valid := validatePolicyPreview(policyPreview)
+			Expect(valid).To(BeTrue())
+		})
+
+		It("should return false when passed a PolicyPreview with the verb read", func() {
+			policyPreview := PolicyPreview{Verb: "read"}
+			valid := validatePolicyPreview(policyPreview)
+			Expect(valid).To(BeFalse())
+		})
+	})
+
+	Context("Test that the getPolicyPreview function behaves as expected", func() {
+		It("should return a PolicyPreview object when passed a valid preview string", func() {
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			Expect(err).To(Not(HaveOccurred()))
+			policyPreview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(policyPreview.Verb).To(BeEquivalentTo("delete"))
+			Expect(policyPreview.NetworkPolicy.Name).To(BeEquivalentTo("calico-node-alertmanager-mesh"))
+			Expect(policyPreview.NetworkPolicy.Namespace).To(BeEquivalentTo("tigera-prometheus"))
+		})
+
+		It("should return an error when passed an invalid preview string", func() {
+			policyPreview, err := getPolicyPreview(invalidPreview)
+			Expect(err).To(HaveOccurred())
+			Expect(policyPreview).To(BeNil())
+		})
+	})
+
 })
 
 func newTestRequestWithParam(method string, key string, value string) (*http.Request, error) {

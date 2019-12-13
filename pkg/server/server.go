@@ -109,7 +109,7 @@ func Start(cfg *Config) error {
 		sm.Handle("/flowLogs",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(esClient))))
+					middleware.FlowLogsHandler(esClient, p))))
 	case ServiceUserMode:
 		sm.Handle("/recommend",
 			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
@@ -133,7 +133,7 @@ func Start(cfg *Config) error {
 		sm.Handle("/flowLogs",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(esClient))))
+					middleware.FlowLogsHandler(esClient, p))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:

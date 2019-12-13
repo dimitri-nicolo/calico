@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic/v7"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
+	pippkg "github.com/tigera/es-proxy/pkg/pip"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"net/http"
 	"strings"
@@ -24,6 +26,7 @@ type FlowLogsParams struct {
 	Actions              []string        `json:"actions"`
 	Namespace            string          `json:"namespace"`
 	SourceDestNamePrefix string          `json:"srcDstNamePrefix"`
+	PolicyPreview        *PolicyPreview  `json:"policyPreview"`
 }
 
 type LabelSelector struct {
@@ -32,11 +35,16 @@ type LabelSelector struct {
 	Values   []string `json:"values"`
 }
 
+type PolicyPreview struct {
+	Verb          string                     `json:"verb"`
+	NetworkPolicy libcalicoapi.NetworkPolicy `json:"networkPolicy"`
+}
+
 const esflowIndexPrefix = "tigera_secure_ee_flows"
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(esClient lmaelastic.Client) http.Handler {
+func FlowLogsHandler(esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -53,11 +61,13 @@ func FlowLogsHandler(esClient lmaelastic.Client) http.Handler {
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			case errInvalidLabelSelector:
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+			case errInvalidPolicyPreview:
+				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			}
 			return
 		}
 
-		response, err := getFLowLogsFromElastic(params, esClient)
+		response, err := getFLowLogsFromElastic(params, esClient, pip)
 		if err != nil {
 			log.WithError(err).Info("Error getting search results from elastic")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
@@ -113,7 +123,11 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	actions := lowerCaseParams(url["actions"])
 	namespace := strings.ToLower(url.Get("namespace"))
 	srcDstNamePrefix := strings.ToLower(url.Get("srcDstNamePrefix"))
-
+	policyPreview, err := getPolicyPreview(url.Get("policyPreview"))
+	if err != nil {
+		log.WithError(err).Info("Error extracting policyPreview")
+		return nil, errParseRequest
+	}
 	params := &FlowLogsParams{
 		ClusterName:          cluster,
 		Limit:                limit,
@@ -126,6 +140,7 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		Actions:              actions,
 		Namespace:            namespace,
 		SourceDestNamePrefix: srcDstNamePrefix,
+		PolicyPreview:        policyPreview,
 	}
 
 	if params.ClusterName == "" {
@@ -152,6 +167,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	actionsValid := validateActions(params.Actions)
 	if !actionsValid {
 		return nil, errInvalidAction
+	}
+	if params.PolicyPreview != nil {
+		policyPreviewValid := validatePolicyPreview(*policyPreview)
+		if !policyPreviewValid {
+			return nil, errInvalidPolicyPreview
+		}
 	}
 
 	return params, nil
@@ -253,21 +274,41 @@ func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, terms
 	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
 }
 
-// retrieves a query generated from the parameters and perform the search operation
-func getFLowLogsFromElastic(params *FlowLogsParams, esClient lmaelastic.Client) (*elastic.SearchResult, error) {
+// if a policy preview is provided use pip to perform the ES query and return flows with the policy applied
+// otherwise just perform a regular ES query and return the results
+func getFLowLogsFromElastic(params *FlowLogsParams, esClient lmaelastic.Client, pip pippkg.PIP) (interface{}, error) {
 	query := buildFlowLogsQuery(params)
 	index := getClusterFlowIndex(params.ClusterName)
 
-	searchQuery := esClient.Backend().Search().
-		Index(index).
-		Query(query).
-		Size(int(params.Limit))
-	searchResult, err := esClient.Do(context.Background(), searchQuery)
-	if err != nil {
-		return nil, err
-	}
+	if params.PolicyPreview == nil {
+		searchQuery := esClient.Backend().Search().
+			Index(index).
+			Query(query).
+			Size(int(params.Limit))
+		searchResult, err := esClient.Do(context.Background(), searchQuery)
+		if err != nil {
+			return nil, err
+		}
+		return searchResult, nil
+	} else {
+		policyChange := pippkg.ResourceChange{
+			Action:   params.PolicyPreview.Verb,
+			Resource: &params.PolicyPreview.NetworkPolicy,
+		}
 
-	return searchResult, nil
+		pipParams := &pippkg.PolicyImpactParams{
+			Query:           query,
+			DocumentIndex:   index,
+			ResourceActions: []pippkg.ResourceChange{policyChange},
+			Limit:           params.Limit,
+		}
+
+		pipResults, err := pip.GetFlows(context.TODO(), pipParams)
+		if err != nil {
+			return nil, err
+		}
+		return pipResults, nil
+	}
 }
 
 func getClusterFlowIndex(cluster string) string {

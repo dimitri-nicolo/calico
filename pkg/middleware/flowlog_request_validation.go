@@ -18,8 +18,11 @@ const (
 	flowTypeNetworkSet      = "networkset"
 	flowTypeWep             = "wep"
 	flowTypeHep             = "hep"
-	operatorEquals         = "="
-	operatorNotEquals      = "!="
+	operatorEquals          = "="
+	operatorNotEquals       = "!="
+	policyPreviewVerbCreate = "create"
+	policyPreviewVerbUpdate = "update"
+	policyPreviewVerbDelete = "delete"
 )
 
 var (
@@ -29,6 +32,7 @@ var (
 	errInvalidFlowType      = errors.New("Invalid flow type specified")
 	errInvalidLabelSelector = errors.New("Invalid label selector specified")
 	errGeneric              = errors.New("Something went wrong")
+	errInvalidPolicyPreview = errors.New("Invalid policy preview specified")
 )
 
 func extractLimitParam(url url.Values) (int32, error) {
@@ -150,4 +154,33 @@ func parseAndValidateTime(timeString string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return parsedTime, nil
+}
+
+func getPolicyPreview(preview string) (*PolicyPreview, error) {
+	if preview == "" {
+		return nil, nil
+	}
+	var policyPreview PolicyPreview
+	err := json.Unmarshal([]byte(preview), &policyPreview)
+	if err != nil {
+		return nil, err
+	}
+	return &policyPreview, nil
+}
+
+func validatePolicyPreview(policyPreview PolicyPreview) bool {
+	if policyPreview.Verb == "" || &policyPreview.NetworkPolicy == nil {
+		return false
+	}
+	switch policyPreview.Verb {
+	case policyPreviewVerbCreate:
+		break
+	case policyPreviewVerbUpdate:
+		break
+	case policyPreviewVerbDelete:
+		break
+	default:
+		return false
+	}
+	return true
 }
