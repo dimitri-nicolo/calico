@@ -22,3 +22,6 @@ vendor/
 *-license.yaml
 
 .go-pkg-cache
+
+report/*
+Makefile.common*
