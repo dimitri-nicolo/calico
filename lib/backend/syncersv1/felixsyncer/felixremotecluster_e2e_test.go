@@ -181,15 +181,15 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 		// An invalid etcd endpoint takes the configured dial timeout to fail (10s), so let's wait for at least 15s
 		// for the test.
-		//		Entry("invalid etcd endpoint", "bad-etcdv3-1",
-		//			apiv3.RemoteClusterConfigurationSpec{
-		//				DatastoreType: "etcdv3",
-		//				EtcdConfig: apiv3.EtcdConfig{
-		//					EtcdEndpoints: "http://foobarbaz:1000",
-		//				},
-		//			},
-		//			"dial tcp: lookup foobarbaz on", 15*time.Second,
-		//		),
+		Entry("invalid etcd endpoint", "bad-etcdv3-1",
+			apiv3.RemoteClusterConfigurationSpec{
+				DatastoreType: "etcdv3",
+				EtcdConfig: apiv3.EtcdConfig{
+					EtcdEndpoints: "http://foobarbaz:1000",
+				},
+			},
+			"dial tcp: lookup foobarbaz on", 15*time.Second,
+		),
 
 		Entry("invalid etcd cert files", "bad-etcdv3-2",
 			apiv3.RemoteClusterConfigurationSpec{
@@ -388,129 +388,129 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 		),
 	)
 
-	//	Describe("Deleting a RemoteClusterConfiguration before connection fails", func() {
-	//		It("should get delete event without getting a connection failure event", func() {
-	//			// Create a RemoteClusterConfiguration with a bad etcd endpoint - this takes a little while to timeout
-	//			// which gives us time to delete the RemoteClusterConfiguration before we actually get the connection
-	//			// failure notification.
-	//			By("Creating the RemoteClusterConfiguration")
-	//			rcc, outError := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
-	//				ObjectMeta: metav1.ObjectMeta{Name: "etcd-timeout"},
-	//				Spec: apiv3.RemoteClusterConfigurationSpec{
-	//					DatastoreType: "etcdv3",
-	//					EtcdConfig: apiv3.EtcdConfig{
-	//						EtcdEndpoints: "http://foobarbaz:1000",
-	//					},
-	//				},
-	//			}, options.SetOptions{})
-	//			Expect(outError).NotTo(HaveOccurred())
-	//
-	//			By("Creating and starting a syncer")
-	//			syncTester = testutils.NewSyncerTester()
-	//			syncer = felixsyncer.New(be, config.Spec, syncTester)
-	//			syncer.Start()
-	//
-	//			By("Checking status is updated to resync in progress")
-	//			syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-	//			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-	//
-	//			By("Checking we received the event messages for the remote cluster")
-	//			// We should receive Connecting event first.
-	//			expectedEvents := []api.Update{
-	//				{
-	//					KVPair: model.KVPair{
-	//						Key: model.RemoteClusterStatusKey{Name: "etcd-timeout"},
-	//						Value: &model.RemoteClusterStatus{
-	//							Status: model.RemoteClusterConnecting,
-	//						},
-	//					},
-	//					UpdateType: api.UpdateTypeKVNew,
-	//				},
-	//			}
-	//			if config.Spec.DatastoreType == apiconfig.Kubernetes {
-	//				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
-	//				// those events too.
-	//				for _, r := range defaultKubernetesResource {
-	//					expectedEvents = append(expectedEvents, api.Update{
-	//						KVPair:     r,
-	//						UpdateType: api.UpdateTypeKVNew,
-	//					})
-	//				}
-	//
-	//				// Add an expected event for the node object.
-	//				expectedEvents = append(expectedEvents, api.Update{
-	//					UpdateType: api.UpdateTypeKVNew,
-	//					KVPair: model.KVPair{
-	//						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-	//						Value: &apiv3.Node{
-	//							Spec: apiv3.NodeSpec{
-	//								OrchRefs: []apiv3.OrchRef{
-	//									{
-	//										NodeName:     "127.0.0.1",
-	//										Orchestrator: "k8s",
-	//									},
-	//								},
-	//							},
-	//						},
-	//					},
-	//				})
-	//
-	//				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-	//					expectedEvents = append(expectedEvents, api.Update{
-	//						KVPair: model.KVPair{
-	//							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-	//							Value: &model.ProfileRules{
-	//								InboundRules:  nil,
-	//								OutboundRules: nil,
-	//							},
-	//						},
-	//						UpdateType: api.UpdateTypeKVNew,
-	//					})
-	//				}
-	//			}
-	//
-	//			// Sanitize the actual events received to remove revision info and compare against those expected.
-	//			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-	//				u := *callersUpdate
-	//				u.Revision = ""
-	//				u.TTL = 0
-	//
-	//				// We only support a single `model.Resource` over the syncer right now. The Node object
-	//				// that comes from the Felix syncer. We don't care about anything more than the spec.
-	//				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-	//					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-	//					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-	//
-	//					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-	//					// happen, so just ignore them. It's a race condition and not one that we want to cause
-	//					// a failure.
-	//					if u.UpdateType == api.UpdateTypeKVUpdated {
-	//						return nil
-	//					}
-	//				}
-	//
-	//				return &u
-	//			})
-	//
-	//			By("Deleting the RemoteClusterConfiguration")
-	//			_, err = c.RemoteClusterConfigurations().Delete(ctx, "etcd-timeout", options.DeleteOptions{ResourceVersion: rcc.ResourceVersion})
-	//			Expect(err).NotTo(HaveOccurred())
-	//
-	//			By("Expecting the syncer to move quickly to in-sync")
-	//			syncTester.ExpectStatusUpdate(api.InSync)
-	//
-	//			By("Checking we received the delete event messages for the remote cluster")
-	//			expectedEvents = []api.Update{
-	//				{
-	//					KVPair: model.KVPair{
-	//						Key: model.RemoteClusterStatusKey{Name: "etcd-timeout"},
-	//					},
-	//					UpdateType: api.UpdateTypeKVDeleted,
-	//				},
-	//			}
-	//			syncTester.ExpectUpdates(expectedEvents, false)
-	//		})
-	//	})
+	Describe("Deleting a RemoteClusterConfiguration before connection fails", func() {
+		It("should get delete event without getting a connection failure event", func() {
+			// Create a RemoteClusterConfiguration with a bad etcd endpoint - this takes a little while to timeout
+			// which gives us time to delete the RemoteClusterConfiguration before we actually get the connection
+			// failure notification.
+			By("Creating the RemoteClusterConfiguration")
+			rcc, outError := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "etcd-timeout"},
+				Spec: apiv3.RemoteClusterConfigurationSpec{
+					DatastoreType: "etcdv3",
+					EtcdConfig: apiv3.EtcdConfig{
+						EtcdEndpoints: "http://foobarbaz:1000",
+					},
+				},
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating and starting a syncer")
+			syncTester = testutils.NewSyncerTester()
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
+			syncer.Start()
+
+			By("Checking status is updated to resync in progress")
+			syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+
+			By("Checking we received the event messages for the remote cluster")
+			// We should receive Connecting event first.
+			expectedEvents := []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "etcd-timeout"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnecting,
+						},
+					},
+					UpdateType: api.UpdateTypeKVNew,
+				},
+			}
+			if config.Spec.DatastoreType == apiconfig.Kubernetes {
+				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
+				// those events too.
+				for _, r := range defaultKubernetesResource {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
+
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+			}
+
+			// Sanitize the actual events received to remove revision info and compare against those expected.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
+				u := *callersUpdate
+				u.Revision = ""
+				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+
+					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
+					// happen, so just ignore them. It's a race condition and not one that we want to cause
+					// a failure.
+					if u.UpdateType == api.UpdateTypeKVUpdated {
+						return nil
+					}
+				}
+
+				return &u
+			})
+
+			By("Deleting the RemoteClusterConfiguration")
+			_, err = c.RemoteClusterConfigurations().Delete(ctx, "etcd-timeout", options.DeleteOptions{ResourceVersion: rcc.ResourceVersion})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Expecting the syncer to move quickly to in-sync")
+			syncTester.ExpectStatusUpdate(api.InSync)
+
+			By("Checking we received the delete event messages for the remote cluster")
+			expectedEvents = []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "etcd-timeout"},
+					},
+					UpdateType: api.UpdateTypeKVDeleted,
+				},
+			}
+			syncTester.ExpectUpdates(expectedEvents, false)
+		})
+	})
 })
 
 // To test successful Remote Cluster connections, we use a local k8s cluster with a remote etcd cluster.
