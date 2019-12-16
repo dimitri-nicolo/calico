@@ -280,6 +280,7 @@ github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef h1:Di9BaA9ap
 github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef/go.mod h1:1Ra2BftSa7Go38Gbq1q0bfmBFSSgUv+Cdc3SY8IL/C0=
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee h1:yVWsNSlAuYoJ0CznHsYRPiFgsotoj07k00k5rQvGlHM=
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee/go.mod h1:UgC0aTQ2KMDxlX3lU/stndk7DMUBJqzN40yFiILHgxc=
+github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54 h1:Jt2Pic9dxgJisekm8q2WV9FaWxUJhhRfwHSP640drww=
 github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54/go.mod h1:UgC0aTQ2KMDxlX3lU/stndk7DMUBJqzN40yFiILHgxc=
 github.com/projectcalico/logrus v1.0.4-calico h1:bHJ2KLGTFzoWpRISe13CO7HVxxrKunDjyUz/wFiBY8c=
 github.com/projectcalico/logrus v1.0.4-calico/go.mod h1:DfgrchabbtEO9wjOz5lVae+XRvjFKKWEA9GTMme6A8g=
@@ -341,6 +342,7 @@ github.com/tigera/felix-private v0.0.0-20191018144106-d54219bf19b7 h1:dcAtq9yxwH
 github.com/tigera/felix-private v0.0.0-20191018144106-d54219bf19b7/go.mod h1:HRWE/+LRrXdJbo5VblcwHjQfOIK0ie7wccDUxlZppNo=
 github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca h1:9laas6D2ksBhG59qHozzboKtj+dpipNJ2LD3DyRA3rA=
 github.com/tigera/felix-private v0.0.0-20191029225535-3f90fdd6c6ca/go.mod h1:YIyjMYFBzmo3w4R+WnJTjhSkzt0vtjpVZGxoaaER2Bk=
+github.com/tigera/felix-private v0.0.0-20191210160027-ba40fb621c8b h1:KTl9Sa0XhIhUKp3uYeOwgdOMYh456SB+PYcHEyJRT4o=
 github.com/tigera/felix-private v0.0.0-20191210160027-ba40fb621c8b/go.mod h1:AMJ6U6wRQOah6oLRU6cCb2ZOdZZP036F0rJu1gtOBFQ=
 github.com/tigera/libcalico-go-private v0.0.0-20190919092259-cdf8bc64068e h1:pnTdymgdbzH5lMfp8xNZ3OltBaV42Sc3K5i6UfjV6Dw=
 github.com/tigera/libcalico-go-private v0.0.0-20190919092259-cdf8bc64068e/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
@@ -352,6 +354,7 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538 h1:r
 github.com/tigera/libcalico-go-private v1.7.2-0.20191018001505-a11e66b78538/go.mod h1:4aaAz2JQh5J33RWU5ZUZhTQ09HukGZ/HK8QmJkS5EZs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d h1:/GlBiu7ZNKSPqsuqBod9SQVVrKMHVg1wHOx/NNt7NOI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191029214447-cf245bbeba6d/go.mod h1:Wv8okOjae86NpPkLSyGDvg1RyqPcb3y++Ff/47qSjo4=
+github.com/tigera/libcalico-go-private v1.7.2-0.20191210134219-8c77660d06b7 h1:j17LvtPLftFxYL5LCwCHzTDSPohRp7YsCQe2+BfW8GU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20191210134219-8c77660d06b7/go.mod h1:f2OMbfiw95DX5FJFYhg5rCDPxUEm1jmdSzZfnCine9Y=
 github.com/tigera/licensing v0.0.0-20190625224811-8231bc094478 h1:CqhMniPh0p9/G1p+DWdd9FuCPXkB+1ElifrqlHWKog8=
 github.com/tigera/licensing v0.0.0-20190625224811-8231bc094478/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
@@ -382,6 +385,7 @@ github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 h1:n630V+sEHbl2O
 github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7/go.mod h1:ZjcWmFBXmLKZu9Nxj3WKYEafiSqer2rnvPr0en9UNpI=
 github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc/go.mod h1:bopw91TMyo8J3tvftk8xmU2kPmlrt4nScJQZU2hE5EM=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 h1:6fRhSjgLCkTD3JnJxvaJ4Sj+TYblw757bqYgZaOq5ZY=
 github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0/go.mod h1:/LWChgwKmvncFJFHJ7Gvn9wZArjbV5/FppcK2fKk/tI=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
@@ -502,6 +506,7 @@ gopkg.in/go-playground/assert.v1 v1.2.1/go.mod h1:9RXL0bg/zibRAgZUYszZSwO/z8Y/a8
 gopkg.in/go-playground/validator.v9 v9.27.0/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
 gopkg.in/go-playground/validator.v9 v9.28.0 h1:6pzvnzx1RWaaQiAmv6e1DvCFULRaz5cKoP5j1VcrLsc=
 gopkg.in/go-playground/validator.v9 v9.28.0/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
+gopkg.in/go-playground/validator.v9 v9.30.2 h1:icxYLlYflpazIV3ufMoNB9h9SYMQ37DZ8CTwkU4pnOs=
 gopkg.in/go-playground/validator.v9 v9.30.2/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
 gopkg.in/inf.v0 v0.9.0 h1:3zYtXIO92bvsdS3ggAdA8Gb4Azj0YU+TVY1uGYNFA8o=
 gopkg.in/inf.v0 v0.9.0/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
@@ -515,6 +520,7 @@ gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3/go.mod h1:l0
 gopkg.in/resty.v1 v1.12.0/go.mod h1:mDo4pnntr5jdWRML875a/NmxYqAlA73dVijT2AXvQQo=
 gopkg.in/square/go-jose.v2 v2.0.0-20180411045311-89060dee6a84 h1:ELQJ5WuT+ydETLCpWvAuw8iGBQRGoJq+A3RAbbAcZUY=
 gopkg.in/square/go-jose.v2 v2.0.0-20180411045311-89060dee6a84/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
+gopkg.in/tchap/go-patricia.v2 v2.3.0 h1:91+P1/cDHK4WDP7gGDSbFM7a0p/Vr9K91a+m3rwFbNk=
 gopkg.in/tchap/go-patricia.v2 v2.3.0/go.mod h1:GjlIhdM7u6RWBtv58iEuqTR4NOShCtHo2EeySnNeNfs=
 gopkg.in/tomb.v1 v1.0.0-20140529071818-c131134a1947/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
@@ -525,6 +531,7 @@ gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7/go.mod h1:JAlM8MvJe8wmxCU4Bl
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.5 h1:ymVxjfMaHvXD8RqPRmzHHsB3VvucivSkIAvJFDI5O3c=
 gopkg.in/yaml.v2 v2.2.5/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
