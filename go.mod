@@ -8,7 +8,6 @@ replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200124222406-29678b628196
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200124233200-fcf21602b6c6
 	github.com/tigera/calico-k8sapiserver => github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
-
 	k8s.io/api => k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb

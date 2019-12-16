@@ -53,6 +53,10 @@ const (
 	EventResourceModified
 	EventResourceDeleted
 	EventInScope
+
+	// ----- Valid for policies -----
+	EventNodeAssigned
+	EventNodeRemoved
 )
 
 const (
@@ -78,6 +82,8 @@ const (
 	CacheEntryOtherNamespaceExposedIngress = CacheEntryFlags(EventOtherNamespaceExposedIngress)
 	CacheEntryOtherNamespaceExposedEgress  = CacheEntryFlags(EventOtherNamespaceExposedEgress)
 	CacheEntryEnvoyEnabled                 = CacheEntryFlags(EventEnvoyEnabled)
+	CacheEntryNodeAssigned                 = CacheEntryFlags(EventNodeAssigned)
+	CacheEntryNodeRemoved                  = CacheEntryFlags(EventNodeRemoved)
 )
 
 const (
@@ -94,7 +100,9 @@ const (
 		CacheEntryInternetExposedIngress |
 		CacheEntryInternetExposedEgress |
 		CacheEntryOtherNamespaceExposedIngress |
-		CacheEntryOtherNamespaceExposedEgress
+		CacheEntryOtherNamespaceExposedEgress |
+		CacheEntryNodeAssigned |
+		CacheEntryNodeRemoved
 
 	CacheEntryFlagsNetworkSets = CacheEntryInternetExposed
 )
