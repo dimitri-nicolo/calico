@@ -500,7 +500,28 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			syncTester.ExpectStatusUpdate(api.InSync)
 
 			By("Checking we received the delete event messages for the remote cluster")
-			expectedEvents = []api.Update{
+			expectedDeleteEvents := []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key:   model.RemoteClusterStatusKey{Name: "etcd-timeout"},
+						Value: &model.RemoteClusterStatus{Status: 1, Error: "context canceled"},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+				{
+					KVPair: model.KVPair{
+						Key:   model.RemoteClusterStatusKey{Name: "etcd-timeout"},
+						Value: &model.RemoteClusterStatus{Status: 1, Error: "context canceled"},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+				{
+					KVPair: model.KVPair{
+						Key:   model.RemoteClusterStatusKey{Name: "etcd-timeout"},
+						Value: &model.RemoteClusterStatus{Status: 1, Error: "context canceled"},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
 				{
 					KVPair: model.KVPair{
 						Key: model.RemoteClusterStatusKey{Name: "etcd-timeout"},
@@ -508,7 +529,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					UpdateType: api.UpdateTypeKVDeleted,
 				},
 			}
-			syncTester.ExpectUpdates(expectedEvents, false)
+			syncTester.ExpectUpdates(expectedDeleteEvents, true)
 		})
 	})
 })
