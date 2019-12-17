@@ -18,19 +18,19 @@ The high-level steps to a functioning cluster with access to the user interface 
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-calico-enterprise-ee-core)
+- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-calico-enterprise-core)
 
 {% endif %}
 
-- [Install {{ site.prodname }} Core](#install-calico-enterprise-ee-core)
+- [Install {{ site.prodname }} Core](#install-calico-enterprise-core)
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }}](#create-valuesyaml-for-calico-enterprise-ee)
+- [Create values.yaml for {{ site.prodname }}](#create-valuesyaml-for-calico-enterprise)
 
 {% endif %}
 
-- [Install {{ site.prodname }}](#install-calico-enterprise-ee)
+- [Install {{ site.prodname }}](#install-calico-enterprise)
 
 - [Grant access to user interface](#grant-access-to-user-interface)
 
@@ -39,8 +39,8 @@ The high-level steps to a functioning cluster with access to the user interface 
 ### Acquire the Helm charts
 
 ```
-curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-ee-core-{% include chart_version_name %}.tgz
-curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-ee-{% include chart_version_name %}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-core-{% include chart_version_name %}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-{% include chart_version_name %}.tgz
 ```
 
 {%- if include.method == "full" %}
@@ -143,13 +143,13 @@ initialPool:
 
 {%- if include.method == "full" %}
    ```
-   helm install ./calico-enterprise-ee-core-{% include chart_version_name %}.tgz \
+   helm install ./calico-enterprise-core-{% include chart_version_name %}.tgz \
      -f values.yaml \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 {% else %}
    ```
-   helm install ./calico-enterprise-ee-core-{% include chart_version_name %}.tgz \
+   helm install ./calico-enterprise-core-{% include chart_version_name %}.tgz \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 {% endif %}
@@ -257,15 +257,15 @@ manager:
    Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
 
    ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/calico-enterprise-ee/operator-crds.yaml
+   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml
    ```
 
-   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/calico-enterprise-ee/operator-crds.yaml)
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
 
-1. Install the calico-enterprise-ee helm chart with custom resource provisioning disabled:
+1. Install the calico-enterprise helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./calico-enterprise-ee-{% include chart_version_name %}.tgz \
+   helm install ./calico-enterprise-{% include chart_version_name %}.tgz \
      --namespace calico-monitoring \
      --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json

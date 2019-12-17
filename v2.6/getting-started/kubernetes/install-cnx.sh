@@ -966,7 +966,7 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
-  downloadManifest "${DOCS_LOCATION}/${VERSION}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise-ee/operator-crds.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml"
 
 
   # Irrespective of datastore type, for federation we'll need to create a federation secret since the manifests assume

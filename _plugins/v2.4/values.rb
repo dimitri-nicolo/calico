@@ -38,7 +38,7 @@ end
 
 
 def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
-  if chart == "calico-enterprise-ee"
+  if chart == "calico-enterprise"
     versionsYml = <<~EOF
     runElasticsearchOperatorClusterAdmin: false
     createCustomResources: true

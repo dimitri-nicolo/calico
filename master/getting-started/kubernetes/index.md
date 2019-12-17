@@ -15,9 +15,9 @@ You can use this quickstart to quickly and easily try {{side.prodname}} features
 
 - [Host requirements](#host-requirements)
 - [Install Kubernetes](#install-kubernetes)
-- [Install {{site.prodname}}](#install-calico-enterprise-ee)
-- [Install the {{site.prodname}} license](#install-the-calico-enterprise-ee-license)
-- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-ee-with-network-policy)
+- [Install {{site.prodname}}](#install-calico-enterprise)
+- [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
+- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
 
 #### Host requirements
 

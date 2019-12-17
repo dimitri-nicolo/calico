@@ -35,7 +35,7 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 
 ### How to
 
-- [Configure the Calico Enterprise authentication method](#configure-the-calico-enterprise-ee-authentication-method)
+- [Configure the Calico Enterprise authentication method](#configure-the-calico-enterprise-authentication-method)
 - [Create a user and login using token-based authentication](#create-a-user-and-login-using-token-based-authentication)
 - [Create a user and login using OIDC authentication](#create-a-user-and-login-using-oidc-authentication)
 - [Create a user and login using OIDC authentication with prepopulated configuration](#create-a-user-and-login-using-oidc-authentication-with-prepopulated-configuration)

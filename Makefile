@@ -265,7 +265,7 @@ endif
 		-v $$(pwd)/bin/helm:/usr/local/bin/helm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/calico-enterprise-ee $(GINKGO_ARGS)
+		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/calico-enterprise $(GINKGO_ARGS)
 
 ###############################################################################
 # Docs automation
@@ -505,7 +505,7 @@ bin/helm:
 ###############################################################################
 # Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml: values.yaml/calico-enterprise-ee-core values.yaml/calico-enterprise-ee
+values.yaml: values.yaml/calico-enterprise-core values.yaml/calico-enterprise
 values.yaml/%:
 ifndef RELEASE_STREAM
 	# Default the version to master if not set
@@ -541,7 +541,7 @@ chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
 appVersion=$(CALICO_VER)-$(GIT_HASH)
 endif
 
-charts: values.yaml chart/calico-enterprise-ee-core chart/calico-enterprise-ee
+charts: values.yaml chart/calico-enterprise-core chart/calico-enterprise
 chart/%:
 ifndef RELEASE_STREAM
 	$(error Must set RELEASE_STREAM to build charts)

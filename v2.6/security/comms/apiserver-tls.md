@@ -45,4 +45,4 @@ kubectl create secret generic tigera-apiserver-certs -n tigera-operator --from-f
 
 ### Above and beyond
 
-Additional documentation is available for securing [{{site.prodname}} manager connections](/{{page.version}}/security/comms/crypto-auth#connections-from-calico-enterprise-ee-components-to-kube-apiserver-kubernetes-and-openshift).
+Additional documentation is available for securing [{{site.prodname}} manager connections](/{{page.version}}/security/comms/crypto-auth#connections-from-calico-enterprise-components-to-kube-apiserver-kubernetes-and-openshift).

@@ -15,7 +15,7 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
     docsOverrides["core.typha.tls.felixCrt"] = "<replace with base64-encoded Felix certificate>"
     docsOverrides["core.typha.tls.felixKey"] = "<replace with base64-encoded Felix private key>"
   end
-  if chart == "calico-enterprise-ee"
+  if chart == "calico-enterprise"
     versionsYml = <<~EOF
     runElasticsearchOperatorClusterAdmin: false
     createCustomResources: true

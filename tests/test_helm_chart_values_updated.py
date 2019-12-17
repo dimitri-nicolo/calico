@@ -79,7 +79,7 @@ def test_core_chart_values_updated():
 
     # load the values.yaml file
     tar = tarfile.open(CORE_TGZ_FILE)
-    values = tar.extractfile('calico-enterprise-ee-core/values.yaml').read()
+    values = tar.extractfile('calico-enterprise-core/values.yaml').read()
     core_values = yaml.safe_load(values)
 
     # compare expected/actual imageNames:tag in the chart values.yaml
@@ -115,7 +115,7 @@ def test_ee_chart_values_updated():
 
     # load the values.yaml file
     tar = tarfile.open(EE_TGZ_FILE)
-    values = tar.extractfile('calico-enterprise-ee/values.yaml').read()
+    values = tar.extractfile('calico-enterprise/values.yaml').read()
     core_values = yaml.safe_load(values)
 
     # Load all the image definitions and mappings from <repo-root>/_config.yaml

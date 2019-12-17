@@ -33,4 +33,4 @@ If the {{site.prodname}} Manager UI is already running then updating the secret 
 
 ### Above and beyond
 
-Additional documentation is available for securing [{{site.prodname}} manager connections](/{{page.version}}/security/comms/crypto-auth#calico-enterprise-ee-manager-connections).
+Additional documentation is available for securing [{{site.prodname}} manager connections](/{{page.version}}/security/comms/crypto-auth#calico-enterprise-manager-connections).

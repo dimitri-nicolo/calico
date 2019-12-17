@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise-ee --execute templates/elastic-storage.yaml %}
+{% helm calico-enterprise --execute templates/elastic-storage.yaml %}
 # TODO: fix bug where an empty helm includer doesn't render the manifest?
 foo: bar
 {% endhelm %}

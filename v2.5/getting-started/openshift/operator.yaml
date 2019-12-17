@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise-ee --namespace calico-monitoring --execute templates/operator.yaml %}
+{% helm calico-enterprise --namespace calico-monitoring --execute templates/operator.yaml %}
 prometheus:
   createFinalizers: true
 createCustomResources: false
