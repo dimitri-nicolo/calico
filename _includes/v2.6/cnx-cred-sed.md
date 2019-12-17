@@ -4,7 +4,7 @@
    ```bash
    REGISTRY=my-registry.com \
    sed -i -e "s?{{page.registry}}?$REGISTRY?g" {{include.yaml}}.yaml {% if include.yaml == "monitor-calico" %}\
-   sed -i -e "s?docker.elastic.co?$REGISTRY/upmcenterprises?$REGISTRY?g" {{include.yaml}}.yaml{% endif %}
+   sed -i -e "s?docker.elastic.co?$REGISTRY?g" {{include.yaml}}.yaml{% endif %}
    ```
 
    > **Tip**: If you're hosting your own private registry, you may need to include

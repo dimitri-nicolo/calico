@@ -3,6 +3,10 @@ title: Enabling integration with AWS security groups (optional)
 canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/aws-sg-integration
 ---
 
+
+> Note: AWS security group integration is currently only supported when using the manual and helm installation paths.
+{: .alert .alert-info}
+
 AWS security group integration for {{site.prodname}} allows you to combine AWS security groups with network policy to enforce granular access control between Kubernetes pods and AWS VPC resources. See the [AWS security group integration overview](/{{page.version}}/security/aws-security-group-integration/) for more details on how to configure security groups in your VPC.
 
 ### Requirements
@@ -90,7 +94,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
        ```
 
     * Verify the Amazon VPC Networking and CNI plugin is being used by confirming that
-       an `aws-node` pod exists for each node:
+       an `aws-node` pod exists on each node:
        ```bash
        kubectl get pod -n kube-system -l k8s-app=aws-node -o wide
        ```

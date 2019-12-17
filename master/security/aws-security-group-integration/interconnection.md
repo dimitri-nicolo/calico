@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 
 ## About pod and VPC connections
 
-By default, every pod in your Kubernetes cluster belongs the `TIGERA_DEFAULT_SECURITY_GROUP` this gives each pod the same access as the node on which it runs.
+By default, every pod in your Kubernetes cluster belongs to the `TIGERA_DEFAULT_SECURITY_GROUP` this gives each pod the same access as the node on which it runs.
 
 To override the default security group(s) for a particular pod, you can specify one
 or more new security groups using an annotation. Once you annotate a pod, {{site.prodname}}

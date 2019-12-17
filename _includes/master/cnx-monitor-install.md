@@ -73,7 +73,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    > [view the manifest in a new tab]({{site.url}}/{{page.version}}/manifests/cnx-policy.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the `operator.yaml` manifest.
+1. Download the `operator.yaml` and `operator-crds.yaml` manifests.
 
 {% if include.platform == "docker-ee" %}
    ```bash
@@ -91,6 +91,8 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    ```
 {% else %}
    ```bash
+   curl --compressed -o operator-crds.yaml \
+   {{site.url}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
    curl --compressed -O \
    {{docpath}}{{secure}}/operator.yaml
    ```
@@ -103,22 +105,23 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
     ```bash
     REGISTRY=my-registry.com \
     sed -i -e "s?quay.io?$REGISTRY?g" operator.yaml {% if include.elasticsearch == "operator" %}\
-    sed -i -e "s?upmcenterprises?$REGISTRY/upmcenterprises?g" operator.yaml{% endif %}
+    sed -i -e "s?docker.elastic.co?$REGISTRY?g" operator.yaml{% endif %}
     ```
 
     > **Tip**: If you're hosting your own private registry, you may need to include
     > a port number. For example, `my-registry.com:5000`.
     {: .alert .alert-success}
 
-1. Apply the manifest.
+1. Apply manifests.
 
    ```bash
+   {{cli}} apply -f operator-crds.yaml
    {{cli}} apply -f operator.yaml
    ```
 
 {% if include.elasticsearch == "operator" %}
 1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com`,
-   `prometheusrules.monitoring.coreos.com` and `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
+   `prometheusrules.monitoring.coreos.com`, `kibanas.kibana.k8s.elastic.co` and `elasticsearches.elasticsearch.k8s.elastic.co` custom resource definitions to be created. Check by running:
 {% else %}
 1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `prometheusrules.monitoring.coreos.com`
    and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
