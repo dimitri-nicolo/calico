@@ -8,6 +8,7 @@ If any pod attempts to connect to the honeypod (other than healthchecks) we gene
 **Pros**
 * Easy to setup
 * No application exposed
+
 **Cons**
 * Lack of information about the attack and attacker
 

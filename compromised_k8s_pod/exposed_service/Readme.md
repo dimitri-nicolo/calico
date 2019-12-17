@@ -7,6 +7,7 @@ If anyone talks to it (other than healthchecks) we create an alert.
 
 **Pros**
 * Easy to setup (Dockerized already)
+
 **Cons** 
 * Only provide generic response
 * Cannot determine if request is malicious
