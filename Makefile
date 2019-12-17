@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/libcalico-go
-GO_BUILD_VER=v0.28
+GO_BUILD_VER=v0.30
 
 # libcalico-go still relies on vendoring
 GOMOD_VENDOR = true
