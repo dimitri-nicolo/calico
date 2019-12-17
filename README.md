@@ -7,8 +7,8 @@ Honeypod may be used to detect resources enumeration, privilege escalation, data
 * Pod:  “tigera-internal-\*”, where \* is the type number
 * Namespace: “tigera-internal”
 * Exposed services: 
-** (Vulnerable) “tigera-dashboard-internal-debug”
-** (Unreachable) “tigera-dashboard-internal-service”
+  * (Vulnerable) “tigera-dashboard-internal-debug”
+  * (Unreachable) “tigera-dashboard-internal-service”
 * Global Network Policies: “tigera-internal-\*”
 * Tier: “tigera-internal”
 * Clusterolebinding: tigera-internal-binding
