@@ -118,6 +118,10 @@ func Start(cfg *Config) error {
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.FlowLogNamesHandler(esClient))))
+		sm.Handle("/flowLogs",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.FlowLogsHandler(esClient))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:

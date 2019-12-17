@@ -1,0 +1,72 @@
+{
+  "took": 605,
+  "hits": {
+    "total": {
+      "value": 1,
+      "relation": "eq"
+    },
+    "max_score": 0,
+    "hits": [
+      {
+        "_score": 0,
+        "_index": "tigera_secure_ee_flows.cluster.20191204",
+        "_type": "_doc",
+        "_id": "Y552z24BCJYmuA0kSFuo",
+        "_seq_no": null,
+        "_primary_term": null,
+        "_source": {
+          "start_time": 1575438358,
+          "end_time": 1575438660,
+          "source_ip": null,
+          "source_name": "-",
+          "source_name_aggr": "prometheus-calico-node-prometheus-*",
+          "source_namespace": "tigera-prometheus",
+          "source_port": null,
+          "source_type": "wep",
+          "source_labels": {
+            "labels": [
+              "controller-revision-hash=prometheus-calico-node-prometheus-6475f895c7",
+              "prometheus=calico-node-prometheus",
+              "statefulset.kubernetes.io/pod-name=prometheus-calico-node-prometheus-0",
+              "app=prometheus"
+            ]
+          },
+          "dest_ip": null,
+          "dest_name": "-",
+          "dest_name_aggr": "pvt",
+          "dest_namespace": "-",
+          "dest_port": 9081,
+          "dest_type": "net",
+          "dest_labels": {
+            "labels": []
+          },
+          "proto": "tcp",
+          "action": "allow",
+          "reporter": "src",
+          "policies": {
+            "all_policies": [
+              "0|__PROFILE__|__PROFILE__.kns.tigera-prometheus|allow"
+            ]
+          },
+          "bytes_in": 139754,
+          "bytes_out": 41412,
+          "num_flows": 2,
+          "num_flows_started": 0,
+          "num_flows_completed": 0,
+          "packets_in": 119,
+          "packets_out": 238,
+          "http_requests_allowed_in": 0,
+          "http_requests_denied_in": 0,
+          "original_source_ips": null,
+          "num_original_source_ips": 0,
+          "host": "fluentd-node-v6vwt"
+        }
+      }
+    ]
+  },
+  "_shards": {
+    "total": 40,
+    "successful": 40,
+    "failed": 0
+  }
+}

@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
@@ -13,7 +12,6 @@ import (
 )
 
 const (
-	esflowIndexPrefix     = "tigera_secure_ee_flows"
 	sourceAggregationName = "source_namespaces"
 	destAggregationName   = "dest_namespaces"
 )
@@ -28,13 +26,6 @@ type FlowLogNamespaceParams struct {
 type Namespace struct {
 	Name string `json:"name"`
 }
-
-var (
-	errInvalidMethod = errors.New("Invalid http method")
-	errParseRequest  = errors.New("Error parsing request parameters")
-	errInvalidAction = errors.New("Invalid action specified")
-	errGeneric       = errors.New("Something went wrong")
-)
 
 func FlowLogNamespaceHandler(esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -83,7 +74,7 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	if err != nil {
 		return nil, errParseRequest
 	}
-	actions := lowerCaseActions(url["actions"])
+	actions := lowerCaseParams(url["actions"])
 	cluster := strings.ToLower(url.Get("cluster"))
 	prefix := strings.ToLower(url.Get("prefix"))
 	params := &FlowLogNamespaceParams{
@@ -190,8 +181,4 @@ func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelasti
 	}
 
 	return namespaces, nil
-}
-
-func getClusterFlowIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s.*", esflowIndexPrefix, cluster)
 }
