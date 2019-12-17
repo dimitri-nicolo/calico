@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: compromised-app
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: compromised-app
+  template:
+    metadata:
+      labels:
+        app: compromised-app
+    spec:
+      containers:
+        - name: compromised-app
+          image: compromised-app:latest
+          command: ["/bin/sh"] 
+          args: ["-c", "apt update && apt install -y nmap net-tools dnsutils"]
+
+          ports:
+            - containerPort: 80

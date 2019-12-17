@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-1 
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-1
+    spec:
+      containers:
+      - name: tigera-internal-1
+        image: alpine:latest
+        command: ["/bin/sh"]
+        args: ["-c", "while true;do sleep 5; done"]
+

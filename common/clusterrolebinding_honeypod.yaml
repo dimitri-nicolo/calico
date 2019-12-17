@@ -1,0 +1,12 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tigera-internal-binding
+subjects:
+  - kind: Group
+    name: system:authenticated
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-internal-role
+  apiGroup: rbac.authorization.k8s.io

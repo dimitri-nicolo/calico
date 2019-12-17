@@ -1,0 +1,11 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert
+spec:
+  description: "Honeypod accessed by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: "dest_namespace='tigera-internal'"
+  aggregateBy: [source_namespace, source_name_aggr]
+

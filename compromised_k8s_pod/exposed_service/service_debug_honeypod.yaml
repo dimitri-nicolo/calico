@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-debug
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-debug
+spec:
+  ports:
+    - port: 8888
+      protocol: TCP
+  selector:
+    app: tigera-internal-2
+
