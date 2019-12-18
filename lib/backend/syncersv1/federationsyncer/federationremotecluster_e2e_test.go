@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package federationsyncer_test
 
@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -20,7 +22,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/federationsyncer"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Our test framework has an etcd and a k8s datastore running.  For simplicity, we'll test with the following:

@@ -24,8 +24,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 
-	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 // Create a new SyncerUpdateProcessor to sync NetworkPolicy data in v1 format for

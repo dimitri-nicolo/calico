@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package main
 
 import (
@@ -9,12 +11,13 @@ import (
 	"runtime"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
-	log "github.com/sirupsen/logrus"
 )
 
 func main() {

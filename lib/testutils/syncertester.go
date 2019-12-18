@@ -181,11 +181,6 @@ func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus, timeout ...tim
 	st.lock.Unlock()
 	Expect(current).To(BeTrue())
 
-	// We've verified the status, so reset the statusChanged flag.
-	st.lock.Lock()
-	st.statusChanged = false
-	st.lock.Unlock()
-
 	// If you hit a panic here, it's because you must have called this again with the
 	// same status.
 	st.statusBlocker.Done()

@@ -8,9 +8,10 @@ import (
 	"reflect"
 	"strings"
 
+	validator "gopkg.in/go-playground/validator.v9"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
-	validator "gopkg.in/go-playground/validator.v9"
 )
 
 func validateGlobalAlertSpec(structLevel validator.StructLevel) {

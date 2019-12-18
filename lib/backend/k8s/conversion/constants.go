@@ -27,7 +27,7 @@ const (
 	// and quickly.
 	AnnotationPodIP = "cni.projectcalico.org/podIP"
 	// AnnotationPodIPs is similar for the plural PodIPs field.
-	AnnotationPodIPs = "cni.projectcalico.org/podIPs"
+	AnnotationPodIPs         = "cni.projectcalico.org/podIPs"
 	AnnotationSecurityGroups = "aws.tigera.io/security-groups"
 	SecurityGroupLabelPrefix = "sg.aws.tigera.io"
 )
