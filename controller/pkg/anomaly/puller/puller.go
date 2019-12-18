@@ -5,6 +5,7 @@ package puller
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"text/template"
@@ -33,10 +34,18 @@ const (
 	TemplateError   = "error processing template: %v"
 )
 
-var sem *semaphore.Weighted
+var (
+	sem         *semaphore.Weighted
+	clusterName string
+)
 
 func init() {
 	sem = semaphore.NewWeighted(maxConcurrency)
+
+	clusterName = os.Getenv("CLUSTER_NAME")
+	if clusterName == "" {
+		clusterName = "cluster"
+	}
 }
 
 type Puller interface {
@@ -128,7 +137,7 @@ func (p *puller) pull(ctx context.Context, st statser.Statser) error {
 }
 
 func (p *puller) fetch(ctx context.Context) ([]elastic.RecordSpec, error) {
-	return p.xPack.GetRecords(ctx, p.name, &elastic.GetRecordsOptions{
+	return p.xPack.GetRecords(ctx, fmt.Sprintf("%s.%s", clusterName, p.name), &elastic.GetRecordsOptions{
 		RecordScore:    MinAnomalyScore,
 		ExcludeInterim: true,
 		Start:          &elastic.Time{time.Now().Add(-LookbackPeriod)},

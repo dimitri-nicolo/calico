@@ -1,6 +1,6 @@
 {
-  "job_id": "pod_outlier_ip_activity",
-  "job_type": "anomaly_detector",
+  "job_id": "$CLUSTER_NAME.pod_outlier_ip_activity",
+  "job_type": "$CLUSTER_NAME.anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
     "beacon"
@@ -34,5 +34,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "pod_outlier_ip_activity"
+  "results_index_name": "pod_outlier_ip_activity.$CLUSTER_NAME"
 }

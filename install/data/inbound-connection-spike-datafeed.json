@@ -1,9 +1,9 @@
 {
-  "datafeed_id": "datafeed-inbound_connection_spike",
-  "job_id": "inbound_connection_spike",
+  "datafeed_id": "$CLUSTER_NAME.datafeed-inbound_connection_spike",
+  "job_id": "$CLUSTER_NAME.inbound_connection_spike",
   "query_delay": "5m",
   "indices": [
-    "tigera_secure_ee_flows*"
+    "tigera_secure_ee_flows.$CLUSTER_NAME.*"
   ],
   "query": {
     "match_all": {

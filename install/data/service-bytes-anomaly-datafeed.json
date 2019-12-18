@@ -1,9 +1,9 @@
 {
-  "datafeed_id": "datafeed-service_bytes_anomaly",
-  "job_id": "service_bytes_anomaly",
+  "datafeed_id": "$CLUSTER_NAME.datafeed-service_bytes_anomaly",
+  "job_id": "$CLUSTER_NAME.service_bytes_anomaly",
   "query_delay": "5m",
   "indices": [
-    "tigera_secure_ee_flows*"
+    "tigera_secure_ee_flows.$CLUSTER_NAME.*",
   ],
   "query": {
     "match_all": {

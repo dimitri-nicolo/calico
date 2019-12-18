@@ -1,6 +1,6 @@
 {
-  "job_id": "port_scan_pods",
-  "job_type": "anomaly_detector",
+  "job_id": "$CLUSTER_NAME.port_scan_pods",
+  "job_type": "$CLUSTER_NAME.anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
     "recon"
@@ -43,5 +43,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "port_scan_pods"
+  "results_index_name": "port_scan_pods.$CLUSTER_NAME"
 }

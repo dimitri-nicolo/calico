@@ -1,6 +1,6 @@
 {
-  "job_id": "ip_sweep_external",
-  "job_type": "anomaly_detector",
+  "job_id": "$CLUSTER_NAME.ip_sweep_external",
+  "job_type": "$CLUSTER_NAME.anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
     "recon"
@@ -33,5 +33,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "ip_sweep_external"
+  "results_index_name": "ip_sweep_external.$CLUSTER_NAME"
 }

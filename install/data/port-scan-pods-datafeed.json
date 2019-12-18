@@ -1,9 +1,9 @@
 {
-  "datafeed_id": "datafeed-port_scan_pods",
-  "job_id": "port_scan_pods",
+  "datafeed_id": "$CLUSTER_NAME.datafeed-port_scan_pods",
+  "job_id": "$CLUSTER_NAME.port_scan_pods",
   "query_delay": "5m",
   "indices": [
-    "tigera_secure_ee_flows*"
+    "tigera_secure_ee_flows.$CLUSTER_NAME.*"
   ],
   "query": {
     "bool": {

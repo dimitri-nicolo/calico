@@ -1,9 +1,9 @@
 {
-  "datafeed_id": "datafeed-pod_outlier_ip_activity",
-  "job_id": "pod_outlier_ip_activity",
+  "datafeed_id": "$CLUSTER_NAME.datafeed-pod_outlier_ip_activity",
+  "job_id": "$CLUSTER_NAME.pod_outlier_ip_activity",
   "query_delay": "5m",
   "indices": [
-    "tigera_secure_ee_flows*"
+    "tigera_secure_ee_flows.$CLUSTER_NAME.*"
   ],
   "query": {
     "bool": {

@@ -1,5 +1,5 @@
 {
-  "job_id": "service_bytes_anomaly",
+  "job_id": "$CLUSTER_NAME.service_bytes_anomaly",
   "job_type": "anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
@@ -58,5 +58,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "service_bytes_anomaly"
+  "results_index_name": "service_bytes_anomaly.$CLUSTER_NAME"
 }
