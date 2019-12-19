@@ -62,7 +62,7 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams) (*Flow
 	var before []*pelastic.CompositeAggregationBucket
 	var after []*pelastic.CompositeAggregationBucket
 	startTime := time.Now()
-	buckets, errs := p.SearchAndProcessFlowLogs(ctxWithTimeout, q, nil, calc, params.Limit)
+	buckets, errs := p.SearchAndProcessFlowLogs(ctxWithTimeout, q, nil, calc, params.Limit, params.ImpactedOnly)
 	for bucket := range buckets {
 		before = append(before, bucket.Before...)
 		after = append(after, bucket.After...)

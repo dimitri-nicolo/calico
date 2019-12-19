@@ -158,7 +158,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000)
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false)
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
