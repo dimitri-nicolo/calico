@@ -26,6 +26,9 @@ existing metrics.
 | `felix_calc_graph_updates_processed` | Number of datastore updates processed by the calculation graph. |
 | `felix_cluster_num_host_endpoints` | Total number of host endpoints cluster-wide. |
 | `felix_cluster_num_hosts` | Total number of {{site.prodname}} hosts in the cluster. |
+| `felix_cluster_num_policies` | Total number of policies in the cluster. |
+| `felix_cluster_num_profiles` | Total number of profiles in the cluster. |
+| `felix_cluster_num_tiers` | Total number of {{site.prodname}} tiers in the cluster. |
 | `felix_cluster_num_workload_endpoints` | Total number of workload endpoints cluster-wide. |
 | `felix_exec_time_micros` | Summary of time taken to fork/exec child processes |
 | `felix_int_dataplane_addr_msg_batch_size` | Number of interface address messages processed in each batch. Higher values indicate we're doing more batching to try to keep up. |
@@ -34,6 +37,8 @@ existing metrics.
 | `felix_int_dataplane_iface_msg_batch_size` | Number of interface state messages processed in each batch. Higher values indicate we're doing more batching to try to keep up. |
 | `felix_int_dataplane_messages` | Number dataplane messages by type. |
 | `felix_int_dataplane_msg_batch_size` | Number of messages processed in each batch. Higher values indicate we're doing more batching to try to keep up. |
+| `felix_ipsec_bindings_total` | Total number of ipsec bindings. |
+| `felix_ipsec_errors` | Number of ipsec command failures. |
 | `felix_ipset_calls` | Number of ipset commands executed. |
 | `felix_ipset_errors` | Number of ipset command failures. |
 | `felix_ipset_lines_executed` | Number of ipset operations executed. |
@@ -41,11 +46,17 @@ existing metrics.
 | `felix_ipsets_total` | Total number of active IP sets. |
 | `felix_iptables_chains` | Number of active iptables chains. |
 | `felix_iptables_lines_executed` | Number of iptables rule updates executed. |
+| `felix_iptables_lock_acquire_secs` | Time taken to acquire the iptables lock. |
+| `felix_iptables_lock_retries` | Number of times the iptables lock was already held and felix had to retry to acquire it. |
 | `felix_iptables_restore_calls` | Number of iptables-restore calls. |
 | `felix_iptables_restore_errors` | Number of iptables-restore errors. |
 | `felix_iptables_rules` | Number of active iptables rules. |
 | `felix_iptables_save_calls` | Number of iptables-save calls. |
 | `felix_iptables_save_errors` | Number of iptables-save errors. |
+| `felix_log_errors` | Number of errors encountered while logging. |
+| `felix_logs_dropped` | Number of logs dropped because the output stream was blocked. |
+| `felix_reporter_log_errors` | Number of errors encountered while logging in the Syslog. |
+| `felix_reporter_logs_dropped` | Number of logs dropped because the output was blocked in the the Syslog reporter. |
 | `felix_resync_state` | Current datastore state. |
 | `felix_resyncs_started` | Number of times Felix has started resyncing with the datastore. |
 | `felix_route_table_list_seconds` | Time taken to list all the interfaces during a resync. |
@@ -84,16 +95,18 @@ include:
 | ------------- | --------------- |
 | `go_gc_duration_seconds` | A summary of the GC invocation durations. |
 | `go_goroutines` | Number of goroutines that currently exist. |
+| `go_info` | Go version. |
 | `go_memstats_alloc_bytes` | Number of bytes allocated and still in use. |
 | `go_memstats_alloc_bytes_total` | Total number of bytes allocated, even if freed. |
 | `go_memstats_buck_hash_sys_bytes` | Number of bytes used by the profiling bucket hash table. |
 | `go_memstats_frees_total` | Total number of frees. |
+| `go_memstats_gc_cpu_fraction` | The fraction of this program’s available CPU time used by the GC since the program started. |
 | `go_memstats_gc_sys_bytes` | Number of bytes used for garbage collection system metadata. |
 | `go_memstats_heap_alloc_bytes` | Number of heap bytes allocated and still in use. |
 | `go_memstats_heap_idle_bytes` | Number of heap bytes waiting to be used. |
 | `go_memstats_heap_inuse_bytes` | Number of heap bytes that are in use. |
 | `go_memstats_heap_objects` | Number of allocated objects. |
-| `go_memstats_heap_released_bytes_total` | Total number of heap bytes released to OS. |
+| `go_memstats_heap_released_bytes` | Number of heap bytes released to OS. |
 | `go_memstats_heap_sys_bytes` | Number of heap bytes obtained from system. |
 | `go_memstats_last_gc_time_seconds` | Number of seconds since 1970 of last garbage collection. |
 | `go_memstats_lookups_total` | Total number of pointer lookups. |
@@ -107,9 +120,11 @@ include:
 | `go_memstats_stack_inuse_bytes` | Number of bytes in use by the stack allocator. |
 | `go_memstats_stack_sys_bytes` | Number of bytes obtained from system for stack allocator. |
 | `go_memstats_sys_bytes` | Number of bytes obtained by system. Sum of all system allocations. |
+| `go_threads` | Number of OS threads created. |
 | `process_cpu_seconds_total` | Total user and system CPU time spent in seconds. |
 | `process_max_fds` | Maximum number of open file descriptors. |
 | `process_open_fds` | Number of open file descriptors. |
 | `process_resident_memory_bytes` | Resident memory size in bytes. |
 | `process_start_time_seconds` | Start time of the process since unix epoch in seconds. |
 | `process_virtual_memory_bytes` | Virtual memory size in bytes. |
+| `process_virtual_memory_max_bytes` | Maximum amount of virtual memory available in bytes. |
