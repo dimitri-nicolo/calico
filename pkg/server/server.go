@@ -98,6 +98,18 @@ func Start(cfg *Config) error {
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.PolicyImpactHandler(k8sAuth, p, proxy))))
+		sm.Handle("/flowLogNamespaces",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.FlowLogNamespaceHandler(esClient))))
+		sm.Handle("/flowLogNames",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.FlowLogNamesHandler(esClient))))
+		sm.Handle("/flowLogs",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.FlowLogsHandler(esClient))))
 	case ServiceUserMode:
 		sm.Handle("/recommend",
 			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
