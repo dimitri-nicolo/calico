@@ -60,6 +60,9 @@ We've provided info below on how to gather the above info in common Kubernetes e
    CONTROL_PLANE_SG=$(aws ec2 describe-security-groups --filters Name=tag:aws:cloudformation:logical-id,Values=ControlPlaneSecurityGroup Name=vpc-id,Values=${VPC_ID} --query "SecurityGroups[0].GroupId" --output text)
    ```
 
+  > Note: Commands above only applies to EKS cluster with unmanaged nodegroups i.e. [eksctl without --managed](https://eksctl.io/usage/eks-managed-nodegroups/) option.
+  {: .alert .alert-info}
+
 - **kops cluster**
 
    The following commands gather the necessary information of a particular kops cluster with name `$CLUSTER_NAME`:
