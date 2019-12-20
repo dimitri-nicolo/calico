@@ -1,5 +1,5 @@
 ---
-title: Deploying Calico Enterprise on GCE
+title: Deploying Tigera Secure EE on GCE
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/gce
 ---
 

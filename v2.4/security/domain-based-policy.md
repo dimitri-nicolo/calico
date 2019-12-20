@@ -40,7 +40,7 @@ exact match; for example, **google.com** is treated as distinct from
 **www.google.com**.
 
 > **Note:** Kubernetes labels provide a similar convenience for
-> services within the cluster. Calico Enterprise does not support using
+> services within the cluster. Tigera Secure EE does not support using
 > domain names for services within the cluster. Use Kubernetes labels
 > for services within the cluster.
 {: .alert .alert-info}

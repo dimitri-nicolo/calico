@@ -1,0 +1,129 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-reporter
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: tigera-compliance-reporter
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreporttypes
+    - globalreports
+  verbs:
+    - get
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-compliance-reporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-compliance-reporter
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-reporter
+  namespace: calico-monitoring
+
+---
+
+apiVersion: v1
+kind: PodTemplate
+metadata:
+  name: tigera.io.report
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-reporter
+template:
+  metadata:
+    namespace: calico-monitoring
+    labels:
+      k8s-app: compliance-reporter
+  spec:
+    nodeSelector:
+      beta.kubernetes.io/os: linux
+    serviceAccountName: tigera-compliance-reporter
+    tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+{{- if .Values.imagePullSecrets }}
+    imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+      - name: {{ $key }}
+{{- end }}
+{{- end }}
+    containers:
+    - name: reporter
+      image: {{.Values.complianceReporter.image}}:{{.Values.complianceReporter.tag}}
+{{ tuple .Values.complianceReporter.resources | include "tigera-secure-ee.resourceLimits" | indent 6 -}}
+      env:
+      - name: LOG_LEVEL
+        value: "warning"
+      - name: ELASTIC_INDEX_SUFFIX
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.cluster-name
+      - name: ELASTIC_SCHEME
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.scheme
+            optional: true
+      - name: ELASTIC_HOST
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.host
+      - name: ELASTIC_PORT
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.port
+            optional: true
+      - name: ELASTIC_USER
+        valueFrom:
+          secretKeyRef:
+            name: elastic-compliance-user
+            key: reporter.username
+            optional: true
+      - name: ELASTIC_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: elastic-compliance-user
+            key: reporter.password
+            optional: true
+      - name: ELASTIC_SSL_VERIFY
+        value: "true"
+      - name: ELASTIC_CA
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.ca.path
+            optional: true
+{{- if .Values.complianceReporter.env }}
+{{ toYaml .Values.complianceReporter.env | indent 6 }}
+{{- end }}
+      volumeMounts:
+      - name: elastic-ca-cert-volume
+        mountPath: /etc/ssl/elastic/
+      livenessProbe:
+        httpGet:
+          path: /liveness
+          port: 9099
+    volumes:
+    - name: elastic-ca-cert-volume
+      secret:
+        optional: true
+        items:
+        - key: tigera.elasticsearch.ca
+          path: ca.pem
+        secretName: tigera-es-config

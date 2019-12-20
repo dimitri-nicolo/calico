@@ -1,8 +1,8 @@
 ---
-title: Installing Calico Enterprise using Helm
+title: Installing Tigera Secure EE using Helm
 ---
 
-This article describes how to install and configure Calico Enterprise using Helm. After completing the steps you will have a functioning Calico Enterprise cluster.
+This article describes how to install and configure Tigera Secure EE using Helm. After completing the steps you will have a functioning Tigera Secure EE cluster.
 
 ## Before you begin
 
@@ -15,18 +15,18 @@ Ensure that you have the following:
 The high-level steps to a functioning cluster with access to the user interface are:
 
 - [Step 1: Acquire the helm charts](#step-1-acquire-the-helm-charts)
-- [Step 2: Create values.yaml for {{ site.prodname }} Core](#step-2-create-valuesyaml-for-calico-enterprise-core)
-- [Step 3: Install {{ site.prodname }} Core](#step-3-install-calico-enterprise-core)
-- [Step 4: Create values.yaml for {{ site.prodname }}](#step-4-create-valuesyaml-for-calico-enterprise)
-- [Step 5: Install {{ site.prodname }}](#step-5-install-calico-enterprise)
+- [Step 2: Create values.yaml for {{ site.prodname }} Core](#step-2-create-valuesyaml-for-tigera-secure-ee-core)
+- [Step 3: Install {{ site.prodname }} Core](#step-3-install-tigera-secure-ee-core)
+- [Step 4: Create values.yaml for {{ site.prodname }}](#step-4-create-valuesyaml-for-tigera-secure-ee)
+- [Step 5: Install {{ site.prodname }}](#step-5-install-tigera-secure-ee)
 - [Step 6: Grant access to user interface](#step-6-grant-access-to-user-interface)
 - [Step 7: Log in to the Manager UI](#step-7-log-in-to-the-manager-ui)
 
 ## Step 1: Acquire the Helm charts
 
 ```
-curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-core-{% include chart_version_name %}.tgz
-curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-{% include chart_version_name %}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-{% include chart_version_name %}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% include chart_version_name %}.tgz
 ```
 
 ## Step 2: Create values.yaml for {{ site.prodname }} Core
@@ -95,7 +95,7 @@ initialPool:
 1. Install the chart, passing in the `values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
    ```
-   helm install ./calico-enterprise-core-{% include chart_version_name %}.tgz \
+   helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
      -f values.yaml \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
@@ -191,31 +191,31 @@ manager:
    Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
 
    ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml
+   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
    ```
 
-   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
 
-1. Install the calico-enterprise helm chart with custom resource provisioning disabled:
+1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./calico-enterprise-{% include chart_version_name %}.tgz \
+   helm install ./tigera-secure-ee-{% include chart_version_name %}.tgz \
      --namespace calico-monitoring \
      --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
-   >Note: This version of the Calico Enterprise Helm chart **must** be installed with `--namespace calico-monitoring`.
+   >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
    >Note: If you have not chosen to use a preexisting elasticsearch cluster, some pods may crashloop several times until the elasticsearch pods converge.
 
 ## Step 6: Grant access to user interface
 
-Grant users permission to access the Calico Enterprise Manager in your cluster. Run one of the following commands, replacing <USER> with the name of the user you wish to grant access.
+Grant users permission to access the Tigera Secure EE Manager in your cluster. Run one of the following commands, replacing <USER> with the name of the user you wish to grant access.
 
 **User manager**
 
-The `tigera-ui-user` role grants permission to use the Calico Enterprise Manager UI, view flow logs, audit logs, and network statistics, and access the default policy tier.
+The `tigera-ui-user` role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and access the default policy tier.
 
 ```
 kubectl create clusterrolebinding <USER>-tigera \
@@ -225,7 +225,7 @@ kubectl create clusterrolebinding <USER>-tigera \
 
 **Network Admin**
 
-The `network-admin` role grants permission to use the Calico Enterprise Manager UI, view flow logs, audit logs, and network statistics, and administer all network policies and tiers.
+The `network-admin` role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and administer all network policies and tiers.
 
 ```
 kubectl create clusterrolebinding <USER>-network-admin \

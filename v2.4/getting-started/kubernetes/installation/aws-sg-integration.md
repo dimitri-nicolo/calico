@@ -15,7 +15,7 @@ Your Kubernetes cluster must meet the following specifications:
   [Amazon VPC Networking]({{site.url}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
   (You must be using the [AWS CNI Plugin](https://github.com/aws/amazon-vpc-cni-k8s).)
 - You have already installed
-  [Calico Enterprise for policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-calico-enterprise-for-policy-only)
+  [Tigera Secure EE for policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
   on your cluster. The AWS security group integration requires the Kubernetes API datastore.
 - You have not created any
   [host endpoints]({{site.url}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)

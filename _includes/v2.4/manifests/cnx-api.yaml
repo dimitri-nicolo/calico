@@ -1,25 +1,25 @@
 {{- if eq .Values.datastore "kubernetes" }}
-# This manifest adds the additional Calico Enterprise components to a cluster
-# that has already had the Calico part of Calico Enterprise deployed.
+# This manifest adds the additional Tigera Secure EE components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
 #   not using the provided hosted Calico manifest you must update
 #   references to that resource in this file.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the Calico Enterprise API server and Kubernetes API server.
+#   between the Tigera Secure EE API server and Kubernetes API server.
 {{- else if eq .Values.datastore "etcd" }}
-# This manifest adds the additional Calico Enterprise components to a cluster
-# that has already had the Calico part of Calico Enterprise deployed.
+# This manifest adds the additional Tigera Secure EE components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
 #   from that file, so if you are not using the provided hosted Calico
 #   manifest you must update references to those resources in this file.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the Calico Enterprise API server and Kubernetes API server.
+#   between the Tigera Secure EE API server and Kubernetes API server.
 {{- end }}
 
 {{- if ne .Values.platform "eks" }}
-# Optionally update this ConfigMap to enable TLS with certificate verification when Calico Enterprise API
+# Optionally update this ConfigMap to enable TLS with certificate verification when Tigera Secure EE API
 # server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
@@ -226,7 +226,7 @@ spec:
 
 ---
 
-# Audit policy for the Calico Enterprise API Server.
+# Audit policy for the Tigera Secure EE API Server.
 apiVersion: v1
 kind: ConfigMap
 metadata:
