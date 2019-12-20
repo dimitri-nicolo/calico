@@ -148,8 +148,9 @@ func (p *pip) SearchAndProcessFlowLogs(
 	query *elastic.CompositeAggregationQuery,
 	startAfterKey elastic.CompositeAggregationKey,
 	calc policycalc.PolicyCalculator,
+	limit int32,
 ) (<-chan ProcessedFlows, <-chan error) {
-	results := make(chan ProcessedFlows, UINumAggregatedFlows)
+	results := make(chan ProcessedFlows, limit)
 	errs := make(chan error, 1)
 
 	// Modify the original query to include all of the required data.
@@ -220,7 +221,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 				sent += len(cacheBefore)
 			}
 
-			if sent >= UINumAggregatedFlows {
+			if sent >= int(limit) {
 				// We reached or exceeded the maximum number of aggregated flows.
 				return true
 			}

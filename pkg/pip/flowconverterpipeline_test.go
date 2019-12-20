@@ -306,7 +306,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{})
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000)
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -423,7 +423,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{})
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000)
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {
@@ -564,7 +564,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always deny after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysDenyCalculator{})
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysDenyCalculator{}, 1000)
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {

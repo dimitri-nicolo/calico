@@ -5,9 +5,13 @@ import (
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-
+	listMock "github.com/tigera/compliance/pkg/list/mock"
+	"github.com/tigera/es-proxy/pkg/pip"
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"io/ioutil"
+	"os"
+
 	"net/http"
 	"time"
 )
@@ -82,6 +86,14 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params).To(BeNil())
 		})
 
+		It("should return an errParseRequest when passed a request an badly formatted policyPreview param", func() {
+			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", invalidPreview)
+			Expect(err).NotTo(HaveOccurred())
+			params, err := validateFlowLogsRequest(req)
+			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(params).To(BeNil())
+		})
+
 		It("should return an errInvalidFlowType when passed a request with an invalid srcType param", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "srcType", invalidFlowTypes)
 			Expect(err).NotTo(HaveOccurred())
@@ -122,10 +134,22 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params).To(BeNil())
 		})
 
+		It("should return errInvalidPolicyPreview when passed a request with a policyPreview that has an invalid verb", func() {
+			validPreviewBadVerb, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_bad_verb.json")
+			Expect(err).To(Not(HaveOccurred()))
+			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", string(validPreviewBadVerb))
+			Expect(err).NotTo(HaveOccurred())
+			params, err := validateFlowLogsRequest(req)
+			Expect(err).To(BeEquivalentTo(errInvalidPolicyPreview))
+			Expect(params).To(BeNil())
+		})
+
 		It("should return a valid FlowLogsParams object", func() {
 			req, err := http.NewRequest(http.MethodGet, "", nil)
 			Expect(err).NotTo(HaveOccurred())
 			startTimeObject, endTimeObject, err := getTestStartAndEndTime()
+			Expect(err).To(Not(HaveOccurred()))
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			q := req.URL.Query()
 			q.Add("cluster", "cluster2")
@@ -144,6 +168,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			q.Add("actions", "unknown")
 			q.Add("namespace", "tigera-elasticsearch")
 			q.Add("srcDstNamePrefix", "coredns")
+			q.Add("policyPreview", string(validPreview))
 			req.URL.RawQuery = q.Encode()
 			params, err := validateFlowLogsRequest(req)
 			Expect(err).NotTo(HaveOccurred())
@@ -171,6 +196,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params.Actions[1]).To(BeEquivalentTo("unknown"))
 			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
 			Expect(params.SourceDestNamePrefix).To(BeEquivalentTo("coredns"))
+			Expect(params.PolicyPreview.NetworkPolicy.Name).To(BeEquivalentTo("calico-node-alertmanager-mesh"))
+			Expect(params.PolicyPreview.NetworkPolicy.Namespace).To(BeEquivalentTo("tigera-prometheus"))
 		})
 	})
 
@@ -279,9 +306,13 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(flowLogsResponseJSON)})
 			params := &FlowLogsParams{}
 
-			searchResults, err := getFLowLogsFromElastic(params, esClient)
+			searchResults, err := getFLowLogsFromElastic(params, esClient, nil)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&elastic.SearchResult{}))
+			convertedResults := searchResults.(*elastic.SearchResult)
+			Expect(convertedResults.Hits.Hits[0].Index).To(BeEquivalentTo("tigera_secure_ee_flows.cluster.20191204"))
+			Expect(convertedResults.Hits.Hits[0].Id).To(BeEquivalentTo("Y552z24BCJYmuA0kSFuo"))
+			Expect(convertedResults.Hits.Hits[0].Type).To(BeEquivalentTo("_doc"))
 		})
 
 		It("should fail to retrieve a search results object and return an error", func() {
@@ -289,7 +320,113 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{malformedFlowsResponse})
 			params := &FlowLogsParams{}
 
-			searchResults, err := getFLowLogsFromElastic(params, esClient)
+			searchResults, err := getFLowLogsFromElastic(params, esClient, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(searchResults).To(BeNil())
+		})
+
+		It("should retrieve a FlowLogResults object", func() {
+			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
+			Expect(err).To(Not(HaveOccurred()))
+			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response.json")
+			Expect(err).To(Not(HaveOccurred()))
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			Expect(err).To(Not(HaveOccurred()))
+			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_aggregations.json")
+			Expect(err).To(Not(HaveOccurred()))
+			preview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+
+			listSrc := listMock.NewSource()
+			listSrc.Initialize(time.Now())
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
+			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
+			params := &FlowLogsParams{
+				PolicyPreview: preview,
+			}
+
+			searchResults, err := getFLowLogsFromElastic(params, esClient, pipClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
+			convertedResults := searchResults.(*pip.FlowLogResults)
+			// the took field won't always match the expected response since it is timer based so overwrite it here
+			convertedResults.Took = 3
+			searchData, err := json.Marshal(convertedResults)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchData).To(MatchJSON(aggResponse))
+		})
+
+		It("should retrieve a FlowLogResults object with only 1 bucket in each section due to a limit", func() {
+			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
+			Expect(err).To(Not(HaveOccurred()))
+			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			Expect(err).To(Not(HaveOccurred()))
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			Expect(err).To(Not(HaveOccurred()))
+			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_pip_1_aggregation.json")
+			Expect(err).To(Not(HaveOccurred()))
+			preview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+
+			listSrc := listMock.NewSource()
+			listSrc.Initialize(time.Now())
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
+			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
+			params := &FlowLogsParams{
+				PolicyPreview: preview,
+				Limit:         1,
+			}
+
+			searchResults, err := getFLowLogsFromElastic(params, esClient, pipClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
+			convertedResults := searchResults.(*pip.FlowLogResults)
+			// the took field won't always match the expected response since it is timer based so overwrite it here
+			convertedResults.Took = 3
+			searchData, err := json.Marshal(convertedResults)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchData).To(MatchJSON(aggResponse))
+		})
+
+		It("should retrieve a FlowLogResults object with 2 buckets in each section due to a limit", func() {
+			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
+			Expect(err).To(Not(HaveOccurred()))
+			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			Expect(err).To(Not(HaveOccurred()))
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			Expect(err).To(Not(HaveOccurred()))
+			preview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+
+			listSrc := listMock.NewSource()
+			listSrc.Initialize(time.Now())
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
+			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
+			params := &FlowLogsParams{
+				PolicyPreview: preview,
+				Limit:         2,
+			}
+
+			searchResults, err := getFLowLogsFromElastic(params, esClient, pipClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
+			convertedResults := searchResults.(*pip.FlowLogResults)
+			// Since bucket ordering can be different just check for the length
+			flogBuckets := convertedResults.Aggregations["flog_buckets"].(map[string]interface{})
+			buckets := flogBuckets["buckets"].([]map[string]interface{})
+			Expect(len(buckets)).To(BeNumerically("==", 2))
+		})
+
+		It("should fail to retrieve a FlowLogResults object and return an error", func() {
+			listSrc := listMock.NewSource()
+			listSrc.Initialize(time.Now())
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{""})
+			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
+			params := &FlowLogsParams{
+				PolicyPreview: &PolicyPreview{},
+			}
+
+			searchResults, err := getFLowLogsFromElastic(params, esClient, pipClient)
 			Expect(err).To(HaveOccurred())
 			Expect(searchResults).To(BeNil())
 		})
