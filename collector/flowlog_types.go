@@ -93,6 +93,22 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	return f, nil
 }
 
+func newFlowMetaWithNoDestPortsAggregation(mu MetricUpdate) (FlowMeta, error) {
+	f, err := newFlowMeta(mu)
+	if err != nil {
+		return FlowMeta{}, err
+	}
+
+	f.Tuple.src = [16]byte{}
+	f.Tuple.l4Src = unsetIntField
+	f.Tuple.l4Dst = unsetIntField
+	f.Tuple.dst = [16]byte{}
+	f.SrcMeta.Name = flowLogFieldNotIncluded
+	f.DstMeta.Name = flowLogFieldNotIncluded
+
+	return f, nil
+}
+
 func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind) (FlowMeta, error) {
 	switch kind {
 	case FlowDefault:
@@ -101,6 +117,8 @@ func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind) (FlowMeta, error) {
 		return newFlowMetaWithSourcePortAggregation(mu)
 	case FlowPrefixName:
 		return newFlowMetaWithPrefixNameAggregation(mu)
+	case FlowNoDestPorts:
+		return newFlowMetaWithNoDestPortsAggregation(mu)
 	}
 
 	return FlowMeta{}, fmt.Errorf("aggregation kind %v not recognized", kind)

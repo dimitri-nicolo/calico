@@ -410,6 +410,89 @@ var _ = Describe("Flow log types tests", func() {
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+
+			By("aggregating with no destination ports")
+			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowNoDestPorts)
+			Expect(err).To(BeNil())
+			expectedFlowMeta = FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: -1, // Source ports gets disregarded.
+					l4Dst: -1, // Destination ports gets disregarded.
+				},
+				SrcMeta: EndpointMetadata{
+					Type:           "wep",
+					Namespace:      "kube-system",
+					Name:           "-",
+					AggregatedName: "iperf-4235-*", // Keeping just the Generate Name
+				},
+				DstMeta: EndpointMetadata{
+					Type:           "wep",
+					Namespace:      "default",
+					Name:           "-",
+					AggregatedName: "nginx-412354-*",
+				},
+				Action:   "allow",
+				Reporter: "dst",
+			}
+			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+
+			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, FlowNoDestPorts)
+			Expect(err).To(BeNil())
+			expectedFlowMeta = FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: -1,
+					l4Dst: -1,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:           "net",
+					Namespace:      "-",
+					Name:           "-",
+					AggregatedName: "pvt",
+				},
+				DstMeta: EndpointMetadata{
+					Type:           "wep",
+					Namespace:      "default",
+					Name:           "-",
+					AggregatedName: "nginx-412354-*",
+				},
+				Action:   "allow",
+				Reporter: "dst",
+			}
+			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+
+			flowMeta, err = NewFlowMeta(muWithoutDstEndpointMeta, FlowNoDestPorts)
+			Expect(err).To(BeNil())
+			expectedFlowMeta = FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: -1,
+					l4Dst: -1,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:           "wep",
+					Namespace:      "kube-system",
+					Name:           "-",
+					AggregatedName: "iperf-4235-*",
+				},
+				DstMeta: EndpointMetadata{
+					Type:           "net",
+					Namespace:      "-",
+					Name:           "-",
+					AggregatedName: "pub",
+				},
+				Action:   "allow",
+				Reporter: "dst",
+			}
+			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+
 		})
 	})
 	Context("FlowExtraRef from MetricUpdate", func() {

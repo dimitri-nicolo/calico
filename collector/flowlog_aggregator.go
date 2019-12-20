@@ -22,6 +22,8 @@ const (
 	FlowSourcePort
 	// FlowPrefixName accumulates tuples with everything same but the prefix name
 	FlowPrefixName
+	// FlowNoDestPorts accumulates tuples with everything same but the prefix name, source ports and destination ports
+	FlowNoDestPorts
 )
 
 const (

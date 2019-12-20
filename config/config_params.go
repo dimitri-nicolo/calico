@@ -259,8 +259,8 @@ type Config struct {
 	FlowLogsFileDirectory                 string `config:"string;/var/log/calico/flowlogs"`
 	FlowLogsFileMaxFiles                  int    `config:"int;5"`
 	FlowLogsFileMaxFileSizeMB             int    `config:"int;100"`
-	FlowLogsFileAggregationKindForAllowed int    `config:"int(0:2);2"`
-	FlowLogsFileAggregationKindForDenied  int    `config:"int(0:2);1"`
+	FlowLogsFileAggregationKindForAllowed int    `config:"int(0:3);2"`
+	FlowLogsFileAggregationKindForDenied  int    `config:"int(0:3);1"`
 	FlowLogsFileIncludeLabels             bool   `config:"bool;false"`
 	FlowLogsFileIncludePolicies           bool   `config:"bool;false"`
 	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
