@@ -417,6 +417,35 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(len(buckets)).To(BeNumerically("==", 2))
 		})
 
+		It("should retrieve a FlowLogResults object with no flows because none were impacted", func() {
+			err := os.Setenv("TIGERA_PIP_MAX_CALCULATION_TIME", "100s")
+			Expect(err).To(Not(HaveOccurred()))
+			esResponse, err := ioutil.ReadFile("testdata/flow_logs_aggr_response_2.json")
+			Expect(err).To(Not(HaveOccurred()))
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
+			Expect(err).To(Not(HaveOccurred()))
+			preview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+			preview.ImpactedOnly = true
+
+			listSrc := listMock.NewSource()
+			listSrc.Initialize(time.Now())
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
+			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
+			params := &FlowLogsParams{
+				PolicyPreview: preview,
+			}
+
+			searchResults, err := getFLowLogsFromElastic(params, esClient, pipClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
+			convertedResults := searchResults.(*pip.FlowLogResults)
+			convertedResults.Took = 3
+			flogBuckets := convertedResults.Aggregations["flog_buckets"].(map[string]interface{})
+			buckets := flogBuckets["buckets"].([]map[string]interface{})
+			Expect(len(buckets)).To(BeNumerically("==", 0))
+		})
+
 		It("should fail to retrieve a FlowLogResults object and return an error", func() {
 			listSrc := listMock.NewSource()
 			listSrc.Initialize(time.Now())

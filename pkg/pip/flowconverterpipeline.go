@@ -149,8 +149,9 @@ func (p *pip) SearchAndProcessFlowLogs(
 	startAfterKey elastic.CompositeAggregationKey,
 	calc policycalc.PolicyCalculator,
 	limit int32,
+	impactedOnly bool,
 ) (<-chan ProcessedFlows, <-chan error) {
-	results := make(chan ProcessedFlows, limit)
+	results := make(chan ProcessedFlows, UINumAggregatedFlows)
 	errs := make(chan error, 1)
 
 	// Modify the original query to include all of the required data.
@@ -211,6 +212,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 				Before: cacheBefore.SortAndCopy(),
 				After:  cacheAfter.SortAndCopy(),
 			}
+
 			select {
 			case <-ctx.Done():
 				errs <- ctx.Err()
@@ -271,8 +273,16 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// we modify the rawBucket in the aggregateRawFlowBucket call to update the policies - we want the
 				// before information to remain as originally queried when we aggregate if the policies
 				// were not re-calculated.
-				aggregateRawFlowBucket(lastRawKey, rawBucket, before, &cacheBefore)
-				aggregateRawFlowBucket(lastRawKey, rawBucket, after, &cacheAfter)
+				if impactedOnly {
+					// only aggregate flows if they were impacted and if the cache is not over the limit
+					if cacheImpacted && len(cacheBefore) < int(limit) {
+						aggregateRawFlowBucket(lastRawKey, rawBucket, before, &cacheBefore)
+						aggregateRawFlowBucket(lastRawKey, rawBucket, after, &cacheAfter)
+					}
+				} else {
+					aggregateRawFlowBucket(lastRawKey, rawBucket, before, &cacheBefore)
+					aggregateRawFlowBucket(lastRawKey, rawBucket, after, &cacheAfter)
+				}
 			}
 		}
 

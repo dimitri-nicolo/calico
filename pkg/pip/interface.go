@@ -23,6 +23,7 @@ type PIP interface {
 		startAfterKey pelastic.CompositeAggregationKey,
 		calc policycalc.PolicyCalculator,
 		limit int32,
+		impactedOnly bool,
 	) (<-chan ProcessedFlows, <-chan error)
 }
 
@@ -33,4 +34,5 @@ type PolicyImpactParams struct {
 	Query           elastic.Query    `json:"-"`
 	DocumentIndex   string           `json:"-"`
 	Limit           int32            `json:"-"`
+	ImpactedOnly    bool             `json:"-"`
 }

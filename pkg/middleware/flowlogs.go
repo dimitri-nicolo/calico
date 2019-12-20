@@ -38,6 +38,7 @@ type LabelSelector struct {
 type PolicyPreview struct {
 	Verb          string                     `json:"verb"`
 	NetworkPolicy libcalicoapi.NetworkPolicy `json:"networkPolicy"`
+	ImpactedOnly  bool                       `json:"impactedOnly"`
 }
 
 const esflowIndexPrefix = "tigera_secure_ee_flows"
@@ -301,6 +302,7 @@ func getFLowLogsFromElastic(params *FlowLogsParams, esClient lmaelastic.Client, 
 			DocumentIndex:   index,
 			ResourceActions: []pippkg.ResourceChange{policyChange},
 			Limit:           params.Limit,
+			ImpactedOnly:    params.PolicyPreview.ImpactedOnly,
 		}
 
 		pipResults, err := pip.GetFlows(context.TODO(), pipParams)
