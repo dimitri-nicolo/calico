@@ -198,8 +198,8 @@ var _ = Describe("Integration Tests", func() {
 		out, err := exec.Command("ls", "/tmp/").Output()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(string(out)).To(ContainSubstring("guardian.crt"))
-		Expect(string(out)).To(ContainSubstring("guardian.key"))
+		Expect(string(out)).To(ContainSubstring("managed-cluster.crt"))
+		Expect(string(out)).To(ContainSubstring("managed-cluster.key"))
 	})
 
 	It("should set guardian environment variables", func() {

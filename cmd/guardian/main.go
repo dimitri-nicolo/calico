@@ -60,9 +60,9 @@ func main() {
 		}()
 	}
 
-	cert := fmt.Sprintf("%s/guardian.crt", cfg.CertPath)
-	key := fmt.Sprintf("%s/guardian.key", cfg.CertPath)
-	serverCrt := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
+	cert := fmt.Sprintf("%s/managed-cluster.crt", cfg.CertPath)
+	key := fmt.Sprintf("%s/managed-cluster.key", cfg.CertPath)
+	serverCrt := fmt.Sprintf("%s/management-cluster.crt", cfg.CertPath)
 	log.Infof("Voltron Address: %s", cfg.VoltronURL)
 
 	pemCert, err := ioutil.ReadFile(cert)
