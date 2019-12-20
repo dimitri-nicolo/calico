@@ -145,3 +145,21 @@ func WithWatchAdded() Option {
 		return nil
 	}
 }
+
+// WithForwardingEnabled sets if we should allow forwarding to another server
+func WithForwardingEnabled(forwardingEnabled bool) Option {
+	return func(s *Server) error {
+		s.clusters.forwardingEnabled = forwardingEnabled
+		return nil
+	}
+}
+
+// WithDefaultForwardServer sets the server that requests from guardian should be sent to by default
+func WithDefaultForwardServer(serverName string, dialRetryAttempts int, dialRetryInterval time.Duration) Option {
+	return func(s *Server) error {
+		s.clusters.defaultForwardServerName = serverName
+		s.clusters.defaultForwardDialRetryAttempts = dialRetryAttempts
+		s.clusters.defaultForwardDialRetryInterval = dialRetryInterval
+		return nil
+	}
+}

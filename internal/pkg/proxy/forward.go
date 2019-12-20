@@ -1,0 +1,53 @@
+package proxy
+
+import (
+	"io"
+	"net"
+	"sync"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// ForwardConnection sends all coming from the srcConn to the dstConn, and all data coming from dstConn to srcConn. Both
+// srcConn and dstConn are closed when this function returns
+func ForwardConnection(srcConn net.Conn, dstCon net.Conn) {
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	go forwardConnection(srcConn, dstCon, &wg)
+	go forwardConnection(dstCon, srcConn, &wg)
+
+	wg.Wait()
+}
+
+// forwardConnection forwards data from srcConn to dstConn. This function attempts to close both srcConn and dstConn, and
+// ignores all "use of closed network connection" errors, as these errors are benign.
+func forwardConnection(srcConn net.Conn, dstCon net.Conn, wg *sync.WaitGroup) {
+	defer func() {
+		if err := srcConn.Close(); err != nil && !isUseOfClosedNetworkErr(err) {
+			log.WithError(err).Error("failed to close src connection")
+		}
+	}()
+	defer func() {
+		if err := dstCon.Close(); err != nil && !isUseOfClosedNetworkErr(err) {
+			log.WithError(err).Error("failed to close dst connection")
+		}
+	}()
+	defer wg.Done()
+
+	if _, err := io.Copy(dstCon, srcConn); err != nil && !isUseOfClosedNetworkErr(err) {
+		log.WithError(err).Error("failed to forward data")
+	}
+}
+
+func isUseOfClosedNetworkErr(err error) bool {
+	switch err.(type) {
+	case *net.OpError:
+		opErr := err.(*net.OpError)
+		if opErr.Err.Error() == "use of closed network connection" {
+			return true
+		}
+	}
+
+	return false
+}
