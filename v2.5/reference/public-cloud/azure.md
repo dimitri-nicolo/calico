@@ -1,5 +1,5 @@
 ---
-title: Deploying Calico Enterprise on Azure
+title: Deploying Tigera Secure EE on Azure
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/azure
 ---
 

@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise secure-es --namespace calico-monitoring --execute templates/operator.yaml %}
+{% helm tigera-secure-ee secure-es --namespace calico-monitoring --execute templates/operator.yaml %}
 createCustomResources: false
 {% endhelm %}

@@ -15,7 +15,7 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
     docsOverrides["core.typha.tls.felixCrt"] = "<replace with base64-encoded Felix certificate>"
     docsOverrides["core.typha.tls.felixKey"] = "<replace with base64-encoded Felix private key>"
   end
-  if chart == "calico-enterprise"
+  if chart == "tigera-secure-ee"
     versionsYml = <<~EOF
     runElasticsearchOperatorClusterAdmin: false
     createCustomResources: true
@@ -265,9 +265,9 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
       tag: #{versions["prometheus"]}
       scrapeTargets:
         # Node settings grant control over the Prometheus instance tasked with
-        # scraping Calico Enterprise node.
+        # scraping Tigera Secure EE node.
         node:
-          # Configuration for the service which fronts the Prometheus instance scraping Calico Enterprise node.
+          # Configuration for the service which fronts the Prometheus instance scraping Tigera Secure EE node.
           service:
             type: NodePort
             nodePort:

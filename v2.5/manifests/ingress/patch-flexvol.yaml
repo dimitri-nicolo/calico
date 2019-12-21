@@ -12,13 +12,13 @@ spec:
       containers:
         - name: calico-node
           env:
-            # Enable Calico Enterprise Flow Log generation
+            # Enable Tigera Secure EE Flow Log generation
             - name: FELIX_FLOWLOGSFILEENABLED
               value: "true"
-            # Include endpoint labels in Calico Enterprise Flow Log
+            # Include endpoint labels in Tigera Secure EE Flow Log
             - name: FELIX_FLOWLOGSFILEINCLUDELABELS
               value: "true"
-            # Include policies in Calico Enterprise Flow Log
+            # Include policies in Tigera Secure EE Flow Log
             - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
               value: "true"
             # Enable processing network sets in EE Flow Logs

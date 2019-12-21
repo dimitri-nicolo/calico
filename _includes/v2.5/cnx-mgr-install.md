@@ -105,7 +105,7 @@
 
 {% else %}
 
-1. Generate TLS certificates for the Calico Enterprise Manager to use. The following example creates a self-signed certificate using OpenSSL, but you may generate them using any X.509-compatible tool or obtain them from your organization’s Certificate Authority.
+1. Generate TLS certificates for the Tigera Secure EE Manager to use. The following example creates a self-signed certificate using OpenSSL, but you may generate them using any X.509-compatible tool or obtain them from your organization’s Certificate Authority.
 
    ```
    openssl req -x509 -newkey rsa:4096 \

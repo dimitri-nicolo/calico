@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise --execute templates/manager.yaml %}
+{% helm tigera-secure-ee --execute templates/manager.yaml %}
 datastore: kubernetes
 platform: gke
 manager:

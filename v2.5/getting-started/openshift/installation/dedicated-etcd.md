@@ -1,5 +1,5 @@
 ---
-title: Installing Calico Enterprise on OpenShift with a dedicated etcd cluster
+title: Installing Tigera Secure EE on OpenShift with a dedicated etcd cluster
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation/dedicated-etcd
 ---
 

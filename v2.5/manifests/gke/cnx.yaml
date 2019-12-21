@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise --execute templates/manager.yaml --execute templates/compliance/compliance-server.yaml --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml --execute templates/compliance/compliance-reporter.yaml --execute templates/compliance/compliance-report-types.yaml --execute templates/compliance/compliance-benchmarker.yaml %}
+{% helm tigera-secure-ee --execute templates/manager.yaml --execute templates/compliance/compliance-server.yaml --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml --execute templates/compliance/compliance-reporter.yaml --execute templates/compliance/compliance-report-types.yaml --execute templates/compliance/compliance-benchmarker.yaml %}
 platform: gke
 manager:
   auth:
