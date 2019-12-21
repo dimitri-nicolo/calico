@@ -75,7 +75,7 @@ endif
 
 EXTRA_DOCKER_ARGS += -e GO111MODULE=on -v $(GOMOD_CACHE):/go/pkg/mod:rw
 
-GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/";
+GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 define get_remote_version
     $(shell git ls-remote https://$(1) $(2) 2>/dev/null | cut -f 1)
@@ -88,6 +88,7 @@ define update_pin
 
     $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
         if [[ ! -z "$(new_ver)" ]]; then \
+            $(GIT_CONFIG_SSH); \
             go get $(1)@$(new_ver); \
             go mod download; \
         else \
@@ -103,7 +104,7 @@ define update_replace_pin
 
     $(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
         if [ ! -z "$(new_ver)" ]; then \
-            $(GIT_CONFIG_SSH) \
+            $(GIT_CONFIG_SSH); \
             go mod edit -replace $(1)=$(2)@$(new_ver); \
             go mod download; \
         else \
@@ -159,7 +160,7 @@ ifdef SSH_AUTH_SOCK
 endif
 
 DOCKER_RUN := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
-				docker run --rm \
+                docker run --rm \
                          --net=host \
                          $(EXTRA_DOCKER_ARGS) \
                          -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
@@ -293,7 +294,7 @@ endif
 	$(MAKE) felixbackend
 	# Create the binary
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) \
+	   sh -c '$(GIT_CONFIG_SSH) && \
 	   GOPRIVATE="github.com/tigera" cd /go/src/github.com/tigera/calicoq && \
 	   go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
 
