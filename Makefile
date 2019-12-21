@@ -182,7 +182,8 @@ install-git-hooks:
 	./install-git-hooks
 
 vendor: go.mod go.sum
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod vendor -v
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+	   sh -c '$(GIT_CONFIG_SSH) && go mod vendor -v'
 
 foss-checks: vendor
 	@echo Running $@...
