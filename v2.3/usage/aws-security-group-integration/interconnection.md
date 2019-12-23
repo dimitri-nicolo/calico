@@ -9,7 +9,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 By default, every pod in your Kubernetes cluster belongs the `TIGERA_DEFAULT_SECURITY_GROUP` this gives each pod the same access as the node on which it runs.
 
 To override the default security group(s) for a particular pod, you can specify one
-or more new security groups using an annotation. Once you annotate a pod, {{site.prodname}}
+or more new security groups using an annotation. Once you annotate a pod, {{site.tseeprodname}}
 uses the security group(s) in the annotation instead of the default security group(s).
 
 Adding this annotation does not remove the pod from the default pod security group.
@@ -25,7 +25,7 @@ Add VPC members that interoperate with your Kubernetes
 cluster to the `tigera-trust-host-enforcement` security group.
 
 
-> **Note**: {{site.prodname}} adds __EC2__ and __RDS__ instances to the tigera-trust-host-enforcement
+> **Note**: {{site.tseeprodname}} adds __EC2__ and __RDS__ instances to the tigera-trust-host-enforcement
 security group automatically.
 {: .alert .alert-info}
 
@@ -46,7 +46,7 @@ To manage pod to pod communication use regular network policies.
 
 
 
-> **Important** {{site.prodname}} creates and uses three security groups internally:
+> **Important** {{site.tseeprodname}} creates and uses three security groups internally:
 >
 > - _tigera-trust-host-enforcement_
 > - _tigera-has-host-enforcement_

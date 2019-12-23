@@ -40,7 +40,7 @@ each `{{site.nodecontainer}}` component.
 
 ### Bird/Bird6
 
-Bird and Bird6 are used for distributing IPv4 and IPv6 routes between {{site.prodname}}
+Bird and Bird6 are used for distributing IPv4 and IPv6 routes between {{site.tseeprodname}}
 enabled hosts.  The logs are output in the `bird` and `bird6` sub-directories
 of the `{{site.nodecontainer}}` logging directory.
 
@@ -66,7 +66,7 @@ $ calicoctl replace -f bgp.yaml
 
 ### Felix
 
-Felix is the primary {{site.prodname}} agent that runs on each machine that hosts
+Felix is the primary {{site.tseeprodname}} agent that runs on each machine that hosts
 endpoints.  Felix is responsible for the programming of iptables rules on the
 host.  The logs are output in the `felix` sub-directory of the `{{site.nodecontainer}}`
 logging directory.
@@ -77,7 +77,7 @@ $ calicoctl get felixconfig -o yaml > felix.yaml
 
 # Modify logSeverityScreen to none, debug, info, etc.
 #   Global change: set name to "default"
-#   Node-specific change: set name to the node name, e.g. "{{site.prodname}}-Node-1"
+#   Node-specific change: set name to the node name, e.g. "{{site.tseeprodname}}-Node-1"
 $ vim felix.yaml
 
 # Replace the current felixconfig settings

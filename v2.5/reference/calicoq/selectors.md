@@ -6,10 +6,10 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/selectors
 The queries that you can make with `calicoq` all involve computing the matches
 between endpoints and policies or profiles, via selectors.
 
-Selectors can be used in the following three contexts in {{site.prodname}}
+Selectors can be used in the following three contexts in {{site.tseeprodname}}
 security policy definitions:
 
-- A selector can be used in the definition of each {{site.prodname}} Policy object,
+- A selector can be used in the definition of each {{site.tseeprodname}} Policy object,
   to specify the endpoints (pods) that that Policy applies to (`spec.selector`).
 
 - A selector can be used in each ingress Rule, to specify that the Rule only
@@ -21,7 +21,7 @@ security policy definitions:
   (`destination.selector`), or packets to all endpoints except a particular set
   (`destination.notSelector`).
 
-Note: the use of selectors in {{site.prodname}} policy is described in detail by
+Note: the use of selectors in {{site.tseeprodname}} policy is described in detail by
 [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and
 [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy).
 

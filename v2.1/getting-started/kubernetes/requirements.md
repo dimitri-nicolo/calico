@@ -9,29 +9,29 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/requiremen
 
 #### Supported versions
 
-We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
+We test {{site.tseeprodname}} {{page.version}} against the following Kubernetes versions.
 - 1.8
 - 1.9
 - 1.10
 
-Other versions are likely to work, but we do not actively test {{site.prodname}}
+Other versions are likely to work, but we do not actively test {{site.tseeprodname}}
 {{page.version}} against them.
 
 #### CNI plug-in enabled
 
-{{site.prodname}} is installed as a CNI plugin. The kubelet must be configured
+{{site.tseeprodname}} is installed as a CNI plugin. The kubelet must be configured
 to use CNI networking by passing the `--network-plugin=cni` argument. (On
 kubeadm, this is the default.)
 
 #### Other network providers
 
-{{site.prodname}} must be the only network provider in each cluster. We do
+{{site.tseeprodname}} must be the only network provider in each cluster. We do
 not currently support migrating a cluster with another network provider to
-use {{site.prodname}} networking.
+use {{site.tseeprodname}} networking.
 
 #### Supported kube-proxy modes
 
-{{site.prodname}} supports the following kube-proxy modes:
+{{site.tseeprodname}} supports the following kube-proxy modes:
 - `iptables` (default)
 
 #### IP pool configuration

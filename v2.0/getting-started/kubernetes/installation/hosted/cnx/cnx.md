@@ -161,7 +161,7 @@ with the following changes
    and append the base64 encoded certificate file contents.
 1. Uncomment the lines associated with `volumeMounts` and `volumes` named `apiserver-certs`.
 
-## Configure the {{site.prodname}} Manager
+## Configure the {{site.tseeprodname}} Manager
 
 The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen
@@ -174,7 +174,7 @@ are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authenticat
 1. Update the `tigera.cnx-manager.kubernetes-api` field
    in the `tigera-cnx-manager-config` ConfigMap.  It must be a URL which
    the web client can use to reach the Kubernetes API server.  Note that it
-   must be reachable from any system which is going to access the {{site.prodname}}
+   must be reachable from any system which is going to access the {{site.tseeprodname}}
    Manager web application (not just inside the cluster).
 
 1. Consider updating the NodePort that exposes the web application.  Note
@@ -237,14 +237,14 @@ To view the JSON output printed, examine the logs of the webhook pod.
 
 ## Enabling Typha
 
-{{site.prodname}}'s Typha component helps {{site.prodname}} deployments that use the Kubernetes API
+{{site.tseeprodname}}'s Typha component helps {{site.tseeprodname}} deployments that use the Kubernetes API
 datastore scale to high numbers of nodes without over-taxing the Kubernetes API server. 
-It sits between Felix ({{site.prodname}}'s per-host agent) and the API server, as fan-out proxy. 
+It sits between Felix ({{site.tseeprodname}}'s per-host agent) and the API server, as fan-out proxy. 
 
 > **Important**: Typha runs as a host-networked pod and it opens a port on the host for Felix 
 > to connect to.  If your cluster runs in an untrusted environment, you **must** take steps to secure that
 > port so that only your Kubernetes nodes can access it.  You may wish to add a `nodeSelector` to the 
-> manifest to control where Typha runs (for example on the master) and then use {{site.prodname}} host protection
+> manifest to control where Typha runs (for example on the master) and then use {{site.tseeprodname}} host protection
 > to secure those hosts.
 {: .alert .alert-danger}
 
@@ -252,7 +252,7 @@ We recommend enabling Typha if you have more than 50 Kubernetes nodes in your cl
 load on the API server and Felix's CPU usage increases substantially as the number of nodes is increased.
 In our testing, beyond 100 nodes, both Felix and the API server use an unacceptable amount of CPU.
 
-To enable Typha in either the {{site.prodname}} networking manifest or the policy only manifest:
+To enable Typha in either the {{site.tseeprodname}} networking manifest or the policy only manifest:
 
 1. [Download the private, CNX-specific `typha` image](/{{page.version}}/getting-started/#images).
 

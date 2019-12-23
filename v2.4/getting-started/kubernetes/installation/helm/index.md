@@ -245,5 +245,5 @@ Sign in by navigating to https://localhost:9443 and login.
 
 ## Next steps
 
-Consult the {{site.prodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
+Consult the {{site.tseeprodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
 demonstrates the main features.

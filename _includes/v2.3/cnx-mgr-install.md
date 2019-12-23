@@ -4,13 +4,13 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
+## <a name="install-cnx-mgr"></a>Installing the {{site.tseeprodname}} Manager and API Server
 
 {% if include.init == "systemd" %}
 
 1. Load the following manifest to Kubernetes to deploy dummy pods that
    will be used for Prometheus targeting. You should ensure that this manifest
-   deploys one pod on each host running {{site.prodname}} that you wish to
+   deploys one pod on each host running {{site.tseeprodname}} that you wish to
    monitor, adjusting the annotations and tolerations as needed.
 
    ```yaml
@@ -96,7 +96,7 @@
 
 {% elsif include.platform == "eks" %}
 
-1. Download the EKS {{site.prodname}} manifest and save the file
+1. Download the EKS {{site.tseeprodname}} manifest and save the file
    as cnx.yaml. That is how we will refer to it in later steps.
 
    ```bash
@@ -116,7 +116,7 @@
 
 {% elsif include.init == "openshift" %}
 
-1. Download the {{site.prodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
+1. Download the {{site.tseeprodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
 
    ```bash
    curl --compressed -o cnx.yaml \
@@ -125,10 +125,10 @@
 
 {% endif %}
 
-   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
+   > **Note**: If you are upgrading from {{site.tseeprodname}} v2.2 or earlier you will need to make some modifications prior
    > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for 
    > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the 
-   > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+   > [Configuring {{site.tseeprodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
    > for more details.
    {: .alert .alert-info}
 
@@ -229,10 +229,10 @@
 
      > **Note**: Web browsers will warn end users about self-signed certificates.
      > To stop the warnings by using valid certificates
-     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.prodnamedash}}-manager-connections).
+     > instead, refer to [{{site.tseeprodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.tseeprodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
-1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
+1. Apply the manifest to install the {{site.tseeprodname}} Manager and the {{site.tseeprodname}} API server.
 
    ```bash
    {{cli}} apply -f cnx.yaml
@@ -240,7 +240,7 @@
 
 {% if include.init == "openshift" %}
 
-1. Allow the {{site.prodname}} Manager to run as root:
+1. Allow the {{site.tseeprodname}} Manager to run as root:
 
    ```bash
    oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
@@ -256,8 +256,8 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
-1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
-   to access the {{site.prodname}} Manager.
+1. Apply the following manifest to set network policy that allows users and the {{site.tseeprodname}} API server
+   to access the {{site.tseeprodname}} Manager.
 
    ```bash
    {{cli}} apply -f \
@@ -270,9 +270,9 @@
 
 {% if include.platform == "eks" %}
 
-## Create credentials for signing into {{site.prodname}} manager
+## Create credentials for signing into {{site.tseeprodname}} manager
 
-To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
+To log into {{site.tseeprodname}} Manager running in EKS, you'll need a token for a user
 with appropriate permissions on the cluster.
 
 1. The easiest way to create such a token is to create a service account, assign it permissions
@@ -285,15 +285,15 @@ with appropriate permissions on the cluster.
    kubectl get secret -n kube-system -o jsonpath='{.data.token}' $(kubectl -n kube-system get secret | grep $TIGERA_UI_USER | awk '{print $1}') | base64 --decode
    ```
 
-   Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
+   Save the token - you'll use it to log in to {{site.tseeprodname}} Manager.  Next we'll assign permissions to do so
    to it.  Use the value of `$TIGERA_UI_USER` as `<USER>` in the following step.
 
 {% endif %}
 
-1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
+1. Grant permission to access the {{site.tseeprodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `<USER>` with the name of the user you wish to grant access.
 
-   The ClusterRole `tigera-ui-user` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `tigera-ui-user` grants permission to use the {{site.tseeprodname}} Manager UI, view flow 
    logs, audit logs, and network statistics, and access the default policy tier.
 
    ```
@@ -306,7 +306,7 @@ with appropriate permissions on the cluster.
 {%- endif %}
    ```
 
-   The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `network-admin` grants permission to use the {{site.tseeprodname}} Manager UI, view flow 
    logs, audit logs, and network statistics, and administer all network policies and tiers.
 
    ```

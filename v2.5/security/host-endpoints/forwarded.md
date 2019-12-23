@@ -24,7 +24,7 @@ no Ingress policies with `applyOnForward: true` that apply to that host endpoint
 allowed.  If there are `applyOnForward: true` policies that select the host endpoint and direction,
 but no rules in the policies allow the traffic, the traffic is denied.
 
-This is different from how {{site.prodname}} treats traffic to or from a local process:
+This is different from how {{site.tseeprodname}} treats traffic to or from a local process:
 if a host endpoint is configured and there are no policies that select the host endpoint in
 the traffic direction, or no rules that allow the traffic, the traffic is denied.
 
@@ -51,7 +51,7 @@ EOF
 ```
 > **Note**: This policy has no `order` field specified which causes it to default
 > to the highest value. Because higher order values have the lowest order of precedence,
-> {{site.prodname}} will apply this policy after all other policies. Refer to the
+> {{site.tseeprodname}} will apply this policy after all other policies. Refer to the
 > [policy spec]({{site.url}}/{{page.version}}/reference/resources/networkpolicy#spec) for
 > more discussion.
 {: .alert .alert-info}

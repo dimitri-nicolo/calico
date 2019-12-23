@@ -95,4 +95,4 @@ Policy "namespace1/policy1" applies to these endpoints:
    more detail about the related `calico eval` command.
 -  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
    [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-   for more information about the {{site.prodname}} selector-based policy model.
+   for more information about the {{site.tseeprodname}} selector-based policy model.

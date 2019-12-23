@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/
 
 
 When a host endpoint is added, if there is no security policy for that
-endpoint, {{site.prodname}} will default to denying traffic to/from that endpoint,
+endpoint, {{site.tseeprodname}} will default to denying traffic to/from that endpoint,
 except for traffic that is allowed by the [failsafe rules](failsafe).
 
 While the [failsafe rules](failsafe) provide protection against removing all
@@ -18,7 +18,7 @@ connectivity to a host:
     required; for example, your network may rely on allowing ICMP,
     or DHCP.
 
-Therefore, we recommend creating a failsafe {{site.prodname}} security policy that
+Therefore, we recommend creating a failsafe {{site.tseeprodname}} security policy that
 is tailored to your environment. The example command below shows one
 example of how you might do that; the command uses `calicoctl` to create a single
 policy resource, which:
@@ -81,7 +81,7 @@ Once you have such a policy in place, you may want to disable the
 > label `endpoint_type = management` and then use selector
 > `endpoint_type == "management"`
 >
-> If you are using {{site.prodname}} for networking workloads, you should add
+> If you are using {{site.tseeprodname}} for networking workloads, you should add
 > inbound and outbound rules to allow BGP:  add an ingress and egress rule
 > to allow TCP traffic to destination port 179.
 {: .alert .alert-info}

@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/profile
 A profile resource (`Profile`) represents a set of rules which are applied
 to the individual endpoints to which this profile has been assigned.
 
-Each {{site.prodname}} endpoint or host endpoint can be assigned to zero or more profiles.
+Each {{site.tseeprodname}} endpoint or host endpoint can be assigned to zero or more profiles.
 
 Also see the [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) which provide an alternate way to select what policy is applied to an endpoint.
 
@@ -83,7 +83,7 @@ spec:
 
 ### Application layer policy
 
-Application layer policy is an optional feature of {{site.prodname}} and
+Application layer policy is an optional feature of {{site.tseeprodname}} and
 [must be enabled]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
@@ -101,4 +101,4 @@ in order to use the following match criteria.
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
 | etcdv3                | Yes           | Yes    | Yes      |
-| Kubernetes API server | No            | No     | Yes      | {{site.prodname}} profiles are pre-assigned for each Namespace and Service Account.
+| Kubernetes API server | No            | No     | Yes      | {{site.tseeprodname}} profiles are pre-assigned for each Namespace and Service Account.

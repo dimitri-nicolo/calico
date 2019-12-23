@@ -3,7 +3,7 @@ title: Configuring MTU
 canonical_url: https://docs.tigera.io/v2.3/usage/configuration/mtu
 ---
 
-Depending on the environment {{site.prodname}} is being deployed into it may be
+Depending on the environment {{site.tseeprodname}} is being deployed into it may be
 helpful or even necessary to configure the MTU of the veth (or TAP) that is
 attached to each workload and the tunnel devices if IP-in-IP is enabled.
 
@@ -17,7 +17,7 @@ packet.
 
 #### Common MTU sizes
 
-| Network MTU | {{site.prodname}} MTU | {{site.prodname}} MTU with IP-in-IP | {{site.prodname}} MTU with VXLAN (IPv4) |
+| Network MTU | {{site.tseeprodname}} MTU | {{site.tseeprodname}} MTU with IP-in-IP | {{site.tseeprodname}} MTU with VXLAN (IPv4) |
 |-------------|------------|--------------------------|------------------------------|
 | 1500 | 1500 | 1480 | 1450 |
 | 9000 | 9000 | 8980 | 8950 |
@@ -35,7 +35,7 @@ is 1440 to match the value needed in GCE.
 
 When using flannel for networking, the MTU for the network interfaces
 should match the MTU of the flannel interface.  In the above table the 4th
-column "{{site.prodname}} MTU with VXLAN" is the expected MTU when using flannel
+column "{{site.tseeprodname}} MTU with VXLAN" is the expected MTU when using flannel
 configured with VXLAN.
 
 ### Setting MTU for workload network interfaces
@@ -47,7 +47,7 @@ Containerizer integration use libnetwork.
 CNI, which is used by Kubernetes and the Mesos Unified Containerizer, supports
 configuring the MTU through the CNI configuration file.
 
-The user will also want to configure {{site.prodname}}'s IP-in-IP interface MTU when
+The user will also want to configure {{site.tseeprodname}}'s IP-in-IP interface MTU when
 IP-in-IP is enabled on the cluster. Refer to the MTU table at the top of the page
 to choose the value that matches your environment.
 
@@ -94,7 +94,7 @@ field of the calico-config ConfigMap and is set to `1440` by default.
 
 ### Setting the tunnel MTU with calicoctl
 
-To set the IP-in-IP MTU value for all {{site.prodname}} nodes in your cluster, use the
+To set the IP-in-IP MTU value for all {{site.tseeprodname}} nodes in your cluster, use the
 following command to set the global config value.
 
 ```
@@ -116,5 +116,5 @@ $ calicoctl replace -f felix.yaml
 ## Configuring MTU in Kubernetes self-hosted manifests
 
 When using self-hosted manifests with Kubernetes, the MTU should be set by
-updating the {{site.prodname}} manifest, applying the manifest with those changes, and
+updating the {{site.tseeprodname}} manifest, applying the manifest with those changes, and
 then restarting each of the `{{site.noderunning}}` pods.

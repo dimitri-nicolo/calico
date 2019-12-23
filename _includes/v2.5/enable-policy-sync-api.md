@@ -6,7 +6,7 @@
 
 **Prerequisites**:
 
- - [{{site.prodname}} installed](/{{page.version}}/getting-started/kubernetes/installation/)
+ - [{{site.tseeprodname}} installed](/{{page.version}}/getting-started/kubernetes/installation/)
 
 {{feature}} requires the Policy Sync API to be enabled on Felix. To do this cluster-wide, modify the `default`
 FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`.

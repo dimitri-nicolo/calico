@@ -37,7 +37,7 @@ data:
   typha_service_name: "none"
 {%- endif %}
 {%- if include.network == "calico" %}
-  # Configure the {{site.prodname}} backend to use.
+  # Configure the {{site.tseeprodname}} backend to use.
   calico_backend: "bird"
 
   # Configure the MTU to use

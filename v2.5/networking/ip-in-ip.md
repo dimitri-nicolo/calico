@@ -9,11 +9,11 @@ enable IP-in-IP encapsulation of the inter-workload traffic.
 
 This is often the case for public-cloud environments where you have limited control
 over the network, and in particular you have no option to set up BGP peering between
-your {{site.prodname}} nodes and the network routers.
+your {{site.tseeprodname}} nodes and the network routers.
 
-{{site.prodname}} can be configured to use IP-in-IP encapsulation by enabling the IPIP option
+{{site.tseeprodname}} can be configured to use IP-in-IP encapsulation by enabling the IPIP option
 on the [IP pool resource]({{site.url}}/{{page.version}}/reference/resources/ippool).
-When enabled, {{site.prodname}} will use IP-in-IP encapsulation when routing packets *to*
+When enabled, {{site.tseeprodname}} will use IP-in-IP encapsulation when routing packets *to*
 workload IPs falling in the IP pool range.
 
 An optional `ipipMode` field toggles when IP-in-IP is used, see following sections for
@@ -21,8 +21,8 @@ details.
 
 ### Configuring IP-in-IP for all inter-workload traffic
 
-With the IP-in-IP `ipipMode` set to `Always`, {{site.prodname}} will route using IP-in-IP for
-all traffic originating from a {{site.prodname}} enabled host to all {{site.prodname}} networked containers
+With the IP-in-IP `ipipMode` set to `Always`, {{site.tseeprodname}} will route using IP-in-IP for
+all traffic originating from a {{site.tseeprodname}} enabled host to all {{site.tseeprodname}} networked containers
 and VMs within the IP Pool.
 
 The following `calicoctl` command will create or modify an IPv4 pool with

@@ -5,12 +5,12 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## Overview
 
-This guide covers installing {{site.prodname}} to secure application connectivity across multi-cloud and legacy environments, with
+This guide covers installing {{site.tseeprodname}} to secure application connectivity across multi-cloud and legacy environments, with
 policy and compliance capabilities for a Docker UCP Kubernetes deployment. The basic steps required are
 
 - Install Docker Enterprise Engine and Docker Universal Control Plane (UCP) in your cluster
-- Gather Docker UCP artifacts to modify/update {{site.prodname}} manifests
-- Install {{site.prodname}}
+- Gather Docker UCP artifacts to modify/update {{site.tseeprodname}} manifests
+- Install {{site.tseeprodname}}
 
 ## Before you begin
 
@@ -19,7 +19,7 @@ For a test environment, a minimum of 3 nodes is required. For a production envir
 
 - Refer to [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.
 
-- Ensure that your Docker Enterprise cluster also meets the {{site.prodname}} [system requirements](../requirements).
+- Ensure that your Docker Enterprise cluster also meets the {{site.tseeprodname}} [system requirements](../requirements).
 
 - Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
@@ -57,14 +57,14 @@ Instructions for installing the client bundle can be found at [Docker Universal 
 
 Once installed, you can verify kubectl functionality with a command such as `kubectl get nodes`.
 
-## Installing {{site.prodname}}
-In this step, you will obtain the etcd information from the UCP client bundle to modify the {{site.prodname}} networking manifest for etcd. The UCP client bundle files
-you'll need to update the {{site.prodname}} etcd manifest are:
+## Installing {{site.tseeprodname}}
+In this step, you will obtain the etcd information from the UCP client bundle to modify the {{site.tseeprodname}} networking manifest for etcd. The UCP client bundle files
+you'll need to update the {{site.tseeprodname}} etcd manifest are:
 - ca.pem
 - cert.pem
 - key.pem
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -111,7 +111,7 @@ sed -i "s?# etcd-ca: null?etcd-ca: ${BASE64_ETCD_CA}?" calico.yaml
 sed -i "s?\"mtu\": __CNI_MTU__,?\"mtu\": __CNI_MTU__,\n          \"nodename_file_optional\": true,?" calico.yaml
 ```
 
-Once you have updated the {{site.prodname}} etcd manifest file, apply the manifest with the following cmd:
+Once you have updated the {{site.tseeprodname}} etcd manifest file, apply the manifest with the following cmd:
 
 ```bash
 kubectl apply -f calico.yaml
@@ -129,31 +129,31 @@ serviceaccount/calico-node created
 ```
 
 ## Validate the Cluster Services
-After applying the {{site.prodname}} etcd manifest, the pods on the UCP Kubernetes cluster should all be healthy and
+After applying the {{site.tseeprodname}} etcd manifest, the pods on the UCP Kubernetes cluster should all be healthy and
 running. Verify the containers are running with the following cmd
 
 ```bash
 kubectl get pods --all-namespaces
 ```
 
-## <a name="install-api-server"></a>Installing the {{site.prodname}} API Server
-1. Download the {{site.prodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
+## <a name="install-api-server"></a>Installing the {{site.tseeprodname}} API Server
+1. Download the {{site.tseeprodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
 
     ```bash
     curl --compressed -o cnx-api.yaml \
     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml
     ```
 
-    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
+    > **Note**: If you are upgrading from {{site.tseeprodname}} v2.2 or earlier you will need to make some modifications prior
     > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
     > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-    > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+    > [Configuring {{site.tseeprodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
     > for more details.
     {: .alert .alert-info}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
 
-1. Apply the manifest to install the {{site.prodname}} API server.
+1. Apply the manifest to install the {{site.tseeprodname}} API server.
 
    ```bash
    kubectl apply -f cnx-api.yaml
@@ -170,21 +170,21 @@ kubectl get pods --all-namespaces
 {% include {{page.version}}/apply-license.md cli="kubectl" %}
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
 
-1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr)
+1. Continue to [Installing the {{site.tseeprodname}} Manager](#install-cnx-mgr)
 
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
+## <a name="install-cnx-mgr"></a>Installing the {{site.tseeprodname}} Manager
 
-1. Download the {{site.prodname}} etcd manifest and save the file as cnx.yaml. That is how we will refer to it in later steps.
+1. Download the {{site.tseeprodname}} etcd manifest and save the file as cnx.yaml. That is how we will refer to it in later steps.
 
     ```bash
     curl --compressed -O \
     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml
     ```
 
-    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
+    > **Note**: If you are upgrading from {{site.tseeprodname}} v2.2 or earlier you will need to make some modifications prior
     > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
     > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-    > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+    > [Configuring {{site.tseeprodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
     > for more details.
     {: .alert .alert-info}
 
@@ -193,7 +193,7 @@ kubectl get pods --all-namespaces
 1. Update the `cnx-manager` service section and replace `nodePort: 30003` with `nodePort: 33333`
 
 1. Update the `tigera.cnx-manager.kibana-url` value to the URL and port of your Kibana instance. If you are using the
-   {{site.prodname}} bundled Kibana, you must change the default port from `30601` to `33601` This port needs to match
+   {{site.tseeprodname}} bundled Kibana, you must change the default port from `30601` to `33601` This port needs to match
    the `tigera-kibana` service `nodePort` in the monitor-calico.yaml manifest as well.
 
    > **Note**: Docker Enterprise requires non-reserved port ranges to be above 32000.
@@ -233,10 +233,10 @@ kubectl get pods --all-namespaces
 
      > **Note**: Web browsers will warn end users about self-signed certificates.
      > To stop the warnings by using valid certificates
-     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
+     > instead, refer to [{{site.tseeprodname}} Manager connections]({{site.url}}/{{page.version}}/security/comms/crypto-auth#{{site.tseeprodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
-1. Apply the manifest to install the {{site.prodname}} Manager.
+1. Apply the manifest to install the {{site.tseeprodname}} Manager.
 
    ```bash
    kubectl apply -f cnx.yaml
@@ -250,14 +250,14 @@ kubectl get pods --all-namespaces
 
    Wait until each pod has the `STATUS` of `Running`.
 
-1. Continue to [Accessing the {{site.prodname}} UI](#accessing-cnx-mgr)
+1. Continue to [Accessing the {{site.tseeprodname}} UI](#accessing-cnx-mgr)
 
-## <a name="accessing-cnx-mgr"></a>Accessing the {{site.prodname}} UI
-Authentication to {{site.prodname}} UI is performed via tokens for Docker Enterprise. The authentication method was specified
-in the cnx.yaml file in the previous [Installing {{site.prodname}} Manager](#install-cnx-mgr) section to use a `Token`.
+## <a name="accessing-cnx-mgr"></a>Accessing the {{site.tseeprodname}} UI
+Authentication to {{site.tseeprodname}} UI is performed via tokens for Docker Enterprise. The authentication method was specified
+in the cnx.yaml file in the previous [Installing {{site.tseeprodname}} Manager](#install-cnx-mgr) section to use a `Token`.
 In this section, we will create the `ServiceAccount` which will create a token to use.
 
-In order to access the {{site.prodname}} UI an account and a role needs to be setup in Kubernetes.
+In order to access the {{site.tseeprodname}} UI an account and a role needs to be setup in Kubernetes.
 Create a `ServiceAccount` account named `cnx-user` and provision it with a `ClusterRoleBinding` with `cluster-admin`
 permissions.
 
@@ -306,16 +306,16 @@ $(kubectl -n calico-monitoring get serviceaccount cnx-user -o jsonpath='{.secret
 -o jsonpath='{.data.token}' |base64 --decode
 ```
 
-1. Continue to [Log into the {{site.prodname}} UI](#login-cnx-mgr)
+1. Continue to [Log into the {{site.tseeprodname}} UI](#login-cnx-mgr)
 
-## <a name="login-cnx-mgr"></a>Log into the {{site.prodname}} UI
-Open a browser to `https://<docker node>:33333` and use the token retreived above for the {{site.prodname}} Token value. If the node
+## <a name="login-cnx-mgr"></a>Log into the {{site.tseeprodname}} UI
+Open a browser to `https://<docker node>:33333` and use the token retreived above for the {{site.tseeprodname}} Token value. If the node
 is not accessible a ssh tunnel may need to be created. For example:
 
    ```bash
    ssh <jumpbox> -L 127.0.0.1:33333:<docker node>:33333
    ```
 
-> **Note**: The {{site.prodname}} UI port was modified in the cnx.yaml manifest by changing the specified `nodePort: 33333`
+> **Note**: The {{site.tseeprodname}} UI port was modified in the cnx.yaml manifest by changing the specified `nodePort: 33333`
 value.
 {: .alert .alert-info}

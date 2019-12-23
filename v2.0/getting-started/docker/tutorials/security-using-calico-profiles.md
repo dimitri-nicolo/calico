@@ -5,11 +5,11 @@ no_canonical: true
 
 ## Background
 
-With {{site.prodname}} as a Docker network plugin, {{site.prodname}} uses an identically named
+With {{site.tseeprodname}} as a Docker network plugin, {{site.tseeprodname}} uses an identically named
 [profile]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile)
 to represent each Docker network.  This profile is applied to each container
-in that network and the profile is used by {{site.prodname}} to configure access policy
-for that container.  The {{site.prodname}} network plugin will automatically create the
+in that network and the profile is used by {{site.tseeprodname}} to configure access policy
+for that container.  The {{site.tseeprodname}} network plugin will automatically create the
 associated profile if it does not exist when the container is attached to the
 network.  By default, the profile contains rules that allow full egress traffic
 but allow ingress traffic only from containers within the same network and no
@@ -19,7 +19,7 @@ advance, or editing, the profile associated with the Docker network.
 ## Tutorial
 
 To run through the worked example in this tutorial you will need to set up two hosts
-with {{site.prodname}} installed.
+with {{site.tseeprodname}} installed.
 
 Follow the
 [Manual setup]({{site.baseurl}}/{{page.version}}/getting-started/docker/installation/manual)
@@ -38,7 +38,7 @@ To create the networks, run the following commands on one of the hosts:
     docker network create --driver calico --ipam-driver calico-ipam net2
     docker network create --driver calico --ipam-driver calico-ipam net3
 
-> **Note**: To allocate from a specific {{site.prodname}} IP Pool, the 
+> **Note**: To allocate from a specific {{site.tseeprodname}} IP Pool, the 
 > `--subnet a.b.c.d/xx` command can be passed to `docker network create`. 
 > For more details see below.
 {: .alert .alert-info}
@@ -107,4 +107,4 @@ To see the list of networks, use:
 ## Further Reading
 
 For details on configuring more advanced policy, see
-[Security using {{site.prodname}} Profiles and Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles-and-policy).
+[Security using {{site.tseeprodname}} Profiles and Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles-and-policy).

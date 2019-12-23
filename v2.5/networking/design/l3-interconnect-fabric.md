@@ -4,26 +4,26 @@ canonical_url: 'https://docs.tigera.io/v2.4/networking/design/l3-interconnect-fa
 ---
 
 
-{{site.prodname}} provides an end-to-end IP network that interconnects the
+{{site.tseeprodname}} provides an end-to-end IP network that interconnects the
 endpoints [^1] in a scale-out or cloud environment. To do that, it needs
 an *interconnect fabric* to provide the physical networking layer on
-which {{site.prodname}} operates [^2].
+which {{site.tseeprodname}} operates [^2].
 
-While {{site.prodname}} is designed to work with any underlying interconnect fabric
+While {{site.tseeprodname}} is designed to work with any underlying interconnect fabric
 that can support IP traffic, the fabric that has the least
 considerations attached to its implementation is an Ethernet fabric as
 discussed in our earlier [technical note]({{site.baseurl}}/{{page.version}}/networking/design/l2-interconnect-fabric).
 
 In most cases, the Ethernet fabric is the appropriate choice, but there
 are infrastructures where L3 (an IP fabric) has already been deployed,
-or will be deployed, and it makes sense for {{site.prodname}} to operate in those
+or will be deployed, and it makes sense for {{site.tseeprodname}} to operate in those
 environments.
 
-However, since {{site.prodname}} is, itself, a routed infrastructure, there are
+However, since {{site.tseeprodname}} is, itself, a routed infrastructure, there are
 more engineering, architecture, and operations considerations that have
-to be weighed when running {{site.prodname}} with an IP routed interconnection
+to be weighed when running {{site.tseeprodname}} with an IP routed interconnection
 fabric. We will briefly outline those in the rest of this post. That
-said, {{site.prodname}} operates equally well with Ethernet or IP interconnect
+said, {{site.tseeprodname}} operates equally well with Ethernet or IP interconnect
 fabrics.
 
 ## In this post
@@ -34,21 +34,21 @@ fabrics.
 
 ## Background
 
-### Basic {{site.prodname}} architecture overview
+### Basic {{site.tseeprodname}} architecture overview
 
-A description of the {{site.prodname}} architecture can be found in our
+A description of the {{site.tseeprodname}} architecture can be found in our
 [architectural overview]({{site.url}}/{{page.version}}/reference/architecture).
 However, a brief discussion of the routing and data paths is useful for
 the discussion.
 
-In a {{site.prodname}} network, each compute server acts as a router for all of the
+In a {{site.tseeprodname}} network, each compute server acts as a router for all of the
 endpoints that are hosted on that compute server. We call that function
 a vRouter. The data path is provided by the Linux kernel, the control
-plane by a BGP protocol server, and management plane by {{site.prodname}}'s
+plane by a BGP protocol server, and management plane by {{site.tseeprodname}}'s
 on-server agent, *Felix*.
 
 Each endpoint can only communicate through its local vRouter, and the
-first and last *hop* in any {{site.prodname}} packet flow is an IP router hop
+first and last *hop* in any {{site.tseeprodname}} packet flow is an IP router hop
 through a vRouter. Each vRouter announces all of the endpoints it is
 attached to to all the other vRouters and other routers on the
 infrastructure fabric, using BGP, usually with BGP route reflectors to
@@ -57,7 +57,7 @@ BGP?](https://www.projectcalico.org/why-bgp/) blog post.
 
 Access control lists (ACLs) enforce security (and other) policy as
 directed by whatever cloud orchestrator is in use. There are other
-components in the {{site.prodname}} architecture, but they are irrelevant to the
+components in the {{site.tseeprodname}} architecture, but they are irrelevant to the
 interconnect network fabric discussion.
 
 ### Overview of current common IP scale-out fabric architectures
@@ -65,7 +65,7 @@ interconnect network fabric discussion.
 There are two approaches to building an IP fabric for a scale-out
 infrastructure. However, all of them, to date, have assumed that the
 edge router in the infrastructure is the top of rack (TOR) switch. In
-the {{site.prodname}} model, that function is pushed to the compute server itself.
+the {{site.tseeprodname}} model, that function is pushed to the compute server itself.
 
 Furthermore, in most current virtualized environments, the actual
 endpoint is not addressed by the fabric. If it is a VM, it is usually
@@ -86,9 +86,9 @@ in use, we would be happy to host a guest technical note.
     post](https://www.projectcalico.org/why-bgp/) for discussion of this
     topic), the Project Calico team does not believe that using an IGP
     to distribute endpoint reachability information will adequately
-    scale in a {{site.prodname}} environment. However, it is possible to use a
+    scale in a {{site.tseeprodname}} environment. However, it is possible to use a
     combination of IGP and BGP in the interconnect fabric, where an IGP
-    communicates the path to the *next-hop* router (in {{site.prodname}}, this is
+    communicates the path to the *next-hop* router (in {{site.tseeprodname}}, this is
     often the destination compute server) and BGP is used to distribute
     the actual next-hop for a given endpoint. This is a valid model,
     and, in fact is the most common approach in a widely distributed IP
@@ -100,7 +100,7 @@ in use, we would be happy to host a guest technical note.
     this model, the IP network is "tight enough" or has a small enough
     diameter that BGP can be used to distribute endpoint routes, and the
     paths to the next-hops for those routes is known to all of the
-    routers in the network (in a {{site.prodname}} network this includes the
+    routers in the network (in a {{site.tseeprodname}} network this includes the
     compute servers). This is the network model that this note
     will address.
 
@@ -128,7 +128,7 @@ The two methods are:
 
 Each of these models can either have an Ethernet or IP spine. In the
 case of an Ethernet spine, each spine switch provides an isolated
-Ethernet connection *plane* as in the {{site.prodname}} Ethernet interconnect
+Ethernet connection *plane* as in the {{site.tseeprodname}} Ethernet interconnect
 fabric model and each TOR switch is connected to each spine switch.
 
 Another model is where each spine switch is a unique AS, and each TOR
@@ -138,17 +138,17 @@ use ECMP to load-balance traffic between all available spine switches.
 ### Some BGP network design considerations
 
 Contrary to popular opinion, BGP is actually a fairly simple protocol.
-For example, the BGP configuration on a {{site.prodname}} compute server is
+For example, the BGP configuration on a {{site.tseeprodname}} compute server is
 approximately sixty lines long, not counting comments. The perceived
 complexity is due to the things that you can *do* with BGP. Many uses of
 BGP involve complex policy rules, where the behavior of BGP can be
 modified to meet technical (or business, financial, political, *etc.*)
-requirements. A default {{site.prodname}} network does not venture into those
+requirements. A default {{site.tseeprodname}} network does not venture into those
 areas, [^4] and therefore is fairly straight forward.
 
 That said, there are a few design rules for BGP that need to be kept in
 mind when designing an IP fabric that will interconnect nodes in a
-{{site.prodname}} network. These BGP design requirements *can* be worked around, if
+{{site.tseeprodname}} network. These BGP design requirements *can* be worked around, if
 necessary, but doing so takes the designer out of the standard BGP
 *envelope* and should only be done by an implementer who is *very*
 comfortable with advanced BGP design.
@@ -177,7 +177,7 @@ Route reflection
 
 Endpoints
 
-:   In a {{site.prodname}} network, each endpoint is a route. Hardware networking
+:   In a {{site.tseeprodname}} network, each endpoint is a route. Hardware networking
     platforms are constrained by the number of routes they can learn.
     This is usually in range of 10,000's or 100,000's of routes. Route
     aggregation can help, but that is usually dependent on the
@@ -227,7 +227,7 @@ scalable in many circumstances).
 Within the rack, the configuration is the same for both variants, and is
 somewhat different than the configuration north of the ToR.
 
-Every router within the rack, which, in the case of {{site.prodname}} is every
+Every router within the rack, which, in the case of {{site.tseeprodname}} is every
 compute server, shares the same AS as the ToR that they are connected
 to. That connection is in the form of an Ethernet switching layer. Each
 router in the rack must be directly connected to enable the AS to remain
@@ -259,8 +259,8 @@ routes internal to the rack.
 This model takes the concept of an AS per rack to its logical
 conclusion. In the earlier referenced [IETF RFC 7938](https://tools.ietf.org/search/rfc7938)
 the assumption in the overall model is that the ToR is first tier
-aggregating and routing element. In {{site.prodname}}, the ToR, if it is an L3
-router, is actually the second tier. Remember, in {{site.prodname}}, the compute
+aggregating and routing element. In {{site.tseeprodname}}, the ToR, if it is an L3
+router, is actually the second tier. Remember, in {{site.tseeprodname}}, the compute
 server is always the first/last router for an endpoint, and is also the
 first/last point of aggregation.
 
@@ -289,10 +289,10 @@ as the ToR switches are all independent autonomous systems. To make this
 work at scale, the use of four byte AS numbers as discussed in
 [RFC 4893](http://www.faqs.org/rfcs/rfc4893.html "RFC 4893"). Without
 using four byte AS numbering, the total number of ToRs and compute
-servers in a {{site.prodname}} fabric would be limited to the approximately five
+servers in a {{site.tseeprodname}} fabric would be limited to the approximately five
 thousand available private AS [^5] numbers. If four byte AS numbers are
 used, there are approximately ninety-two million private AS numbers
-available. This should be sufficient for any given {{site.prodname}} fabric.
+available. This should be sufficient for any given {{site.tseeprodname}} fabric.
 
 The other difference in this model *vs.* the AS per rack model, is that
 there are no route reflectors used, as all BGP peerings are eBGP. In
@@ -320,7 +320,7 @@ The following diagram will show the AS relationships in this model.
 
 ![]({{site.url}}/images/l3-fabric-downward-default.png)
 
-In the diagram above, we are showing that all {{site.prodname}} nodes share the same
+In the diagram above, we are showing that all {{site.tseeprodname}} nodes share the same
 AS number, as do all ToR switches. However, those ASs are different
 (*A1* is not the same network as *A2*, even though the both share the
 same AS number *A* ).
@@ -331,16 +331,16 @@ real benefit comes in the offloading of the routing tables in the ToR
 switches.
 
 In this model, each router announces all of its routes to its upstream
-peer (the {{site.prodname}} routers to their ToR, the ToRs to the spine switches).
+peer (the {{site.tseeprodname}} routers to their ToR, the ToRs to the spine switches).
 However, in return, the upstream router only announces a default route.
-In this case, a given {{site.prodname}} router only has routes for the endpoints
+In this case, a given {{site.tseeprodname}} router only has routes for the endpoints
 that are locally hosted on it, as well as the default from the ToR.
-Since the ToR is the only route for the {{site.prodname}} network the rest of the
+Since the ToR is the only route for the {{site.tseeprodname}} network the rest of the
 network, this matches reality. The same happens between the ToR switches
 and the spine. This means that the ToR only has to install the routes
-that are for endpoints that are hosted on its downstream {{site.prodname}} nodes.
-Even if we were to host 200 endpoints per {{site.prodname}} node, and stuff 80
-{{site.prodname}} nodes in each rack, that would still limit the routing table on
+that are for endpoints that are hosted on its downstream {{site.tseeprodname}} nodes.
+Even if we were to host 200 endpoints per {{site.tseeprodname}} node, and stuff 80
+{{site.tseeprodname}} nodes in each rack, that would still limit the routing table on
 the ToR to a maximum of 16,000 entries (well within the capabilities of
 even the most modest of switches).
 
@@ -353,13 +353,13 @@ destined for an invalid destination (the destination IP does not exist)
 will be forwarded to the spine switches before they are dropped.
 
 It should also be noted that the spine switches do need to carry all of
-the {{site.prodname}} network routes, just as they do in the routed spines in the
+the {{site.tseeprodname}} network routes, just as they do in the routed spines in the
 previous examples. In short, this model imposes no more load on the
 spines than they already would have, and substantially reduces the
 amount of routing table space used on the ToR switches. It also reduces
-the number of routes in the {{site.prodname}} nodes, but, as we have discussed
+the number of routes in the {{site.tseeprodname}} nodes, but, as we have discussed
 before, that is not a concern in most deployments as the amount of
-memory consumed by a full routing table in {{site.prodname}} is a fraction of the
+memory consumed by a full routing table in {{site.tseeprodname}} is a fraction of the
 total memory available on a modern compute server.
 
 ## Recommendation
@@ -373,10 +373,10 @@ team recommends the [Downward Default](#the-downward-default-model) model.
 
 If there are concerns about both the spine and ToR switch route table
 capacity, or there is a desire to run a very simple L2 fabric to connect
-the {{site.prodname}} nodes, then the user should consider the Ethernet fabric as
+the {{site.tseeprodname}} nodes, then the user should consider the Ethernet fabric as
 detailed in [this post]({{site.url}}/{{page.version}}/networking/design/l2-interconnect-fabric).
 
-If a {{site.prodname}} user is interested in the AS per compute server, the Project
+If a {{site.tseeprodname}} user is interested in the AS per compute server, the Project
 Calico team would be very interested in discussing the deployment of
 that model.
 
@@ -396,9 +396,9 @@ with a next hop address that it is not directly adjacent to. In those
 cases, an IGP, such as OSPF or IS-IS, is used by the routers within a
 given AS to determine the path to the BGP next hop route.
 
-There may be {{site.prodname}} architectures where there are similar models where
+There may be {{site.tseeprodname}} architectures where there are similar models where
 the routers within a given AS are not directly adjacent. In those
-models, the use of an IGP in {{site.prodname}} may be warranted. The configuration
+models, the use of an IGP in {{site.tseeprodname}} may be warranted. The configuration
 of those protocols are, however, beyond the scope of this technical
 note.
 
@@ -450,15 +450,15 @@ peer will not know how to reach the next hop route, and then will
 substitute its own address in the next hop field. This is often referred
 to as *next hop self*.
 
-In the {{site.prodname}} [Ethernet fabric]({{site.url}}/{{page.version}}/networking/design/l2-interconnect-fabric)
-model, all of the compute servers (the routers in a {{site.prodname}} network) are
+In the {{site.tseeprodname}} [Ethernet fabric]({{site.url}}/{{page.version}}/networking/design/l2-interconnect-fabric)
+model, all of the compute servers (the routers in a {{site.tseeprodname}} network) are
 directly connected over one or more Ethernet network(s) and therefore
-are directly reachable. In this case, a router in the {{site.prodname}} network
-does not need to set *next hop self* within the {{site.prodname}} fabric.
+are directly reachable. In this case, a router in the {{site.tseeprodname}} network
+does not need to set *next hop self* within the {{site.tseeprodname}} fabric.
 
 The models we present in this technical note insure that all routes that
-may traverse a non-{{site.prodname}} router are eBGP routes, and therefore *next
-hop self* is automatically set correctly. If a deployment of {{site.prodname}} in
+may traverse a non-{{site.tseeprodname}} router are eBGP routes, and therefore *next
+hop self* is automatically set correctly. If a deployment of {{site.tseeprodname}} in
 an IP interconnect fabric does not satisfy that constraint, then *next
 hop self* must be appropriately configured.
 
@@ -474,7 +474,7 @@ existing routers. Not only is this a problem at configuration time, it
 means that each router is maintaining 100 protocol adjacencies, which
 can start being a drain on constrained resources in a router. While this
 might be *interesting* at 100 routers, it becomes an impossible task
-with 1000's or 10,000's of routers (the potential size of a {{site.prodname}}
+with 1000's or 10,000's of routers (the potential size of a {{site.tseeprodname}}
 network).
 
 Conveniently, large scale/Internet scale networks solved this problem
@@ -484,7 +484,7 @@ technique supported by almost all BGP routers today. In a large network,
 a number of route reflectors [^9] are evenly distributed and each iBGP
 router is *peered* with one or more route reflectors (usually 2 or 3).
 Each route reflector can handle 10's or 100's of route reflector clients
-(in {{site.prodname}}'s case, the compute server), depending on the route reflector
+(in {{site.tseeprodname}}'s case, the compute server), depending on the route reflector
 being used. Those route reflectors are, in turn, peered with each other.
 This means that there are an order of magnitude less route reflectors
 that need to be completely meshed, and each route reflector client is
@@ -496,17 +496,17 @@ the scope of this document.
 
 #### Endpoints
 
-The final consideration is the number of endpoints in a {{site.prodname}} network.
+The final consideration is the number of endpoints in a {{site.tseeprodname}} network.
 In the [Ethernet fabric]({{site.url}}/{{page.version}}/networking/design/l2-interconnect-fabric)
 case the number of endpoints is not constrained by the interconnect
 fabric, as the interconnect fabric does not *see* the actual endpoints,
 it only *sees* the actual vRouters, or compute servers. This is not the
 case in an IP fabric, however. IP networks forward by using the
-destination IP address in the packet, which, in {{site.prodname}}'s case, is the
+destination IP address in the packet, which, in {{site.tseeprodname}}'s case, is the
 destination endpoint. That means that the IP fabric nodes (ToR switches
 and/or spine switches, for example) must know the routes to each
 endpoint in the network. They learn this by participating as route
-reflector clients in the BGP mesh, just as the {{site.prodname}} vRouter/compute
+reflector clients in the BGP mesh, just as the {{site.tseeprodname}} vRouter/compute
 server does.
 
 However, unlike a compute server which has a relatively unconstrained
@@ -514,17 +514,17 @@ amount of memory, a physical switch is either memory constrained, or
 quite expensive. This means that the physical switch has a limit on how
 many *routes* it can handle. The current industry standard for modern
 commodity switches is in the range of 128,000 routes. This means that,
-without other routing *tricks*, such as aggregation, a {{site.prodname}}
+without other routing *tricks*, such as aggregation, a {{site.tseeprodname}}
 installation that uses an IP fabric will be limited to the routing table
 size of its constituent network hardware, with a reasonable upper limit
 today of 128,000 endpoints.
 
-[^1]: In {{site.prodname}}'s terminology, an endpoint is an IP address and
+[^1]: In {{site.tseeprodname}}'s terminology, an endpoint is an IP address and
     interface. It could refer to a VM, a container, or even a process
     bound to an IP address running on a bare metal server.
 
 [^2]: This interconnect fabric provides the connectivity between the
-    {{site.prodname}} (v)Router (in almost all cases, the compute servers) nodes,
+    {{site.tseeprodname}} (v)Router (in almost all cases, the compute servers) nodes,
     as well as any other elements in the fabric (*e.g.* bare metal
     servers, border routers, and appliances).
 
@@ -532,7 +532,7 @@ today of 128,000 endpoints.
     us know. The Project Calico team could either arrange a discussion,
     or if there was enough interest, publish a follow-up tech note.
 
-[^4]: However those tools are available if a given {{site.prodname}} instance needs
+[^4]: However those tools are available if a given {{site.tseeprodname}} instance needs
     to utilize those policy constructs.
 
 [^5]: The two byte AS space reserves approximately the last five

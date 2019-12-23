@@ -6,7 +6,7 @@ calico-kube-controllers.yaml acccepts the following include flags:
 | variant_name     | Calico, Canal   |
 
 {% endcomment -%}
-# This manifest deploys the {{site.prodname}} Kubernetes controllers.
+# This manifest deploys the {{site.tseeprodname}} Kubernetes controllers.
 # See https://github.com/projectcalico/kube-controllers
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -47,7 +47,7 @@ spec:
         - name: calico-kube-controllers
           image: {{page.registry}}{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
           env:
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the {{site.tseeprodname}} etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:

@@ -4,7 +4,7 @@ no_canonical: true
 ---
 
 These instructions allow you to set up a CoreOS Container Linux cluster ready to network Docker containers with
-{{site.prodname}} networking using Vagrant.
+{{site.tseeprodname}} networking using Vagrant.
 
 ## 1. Streamlined setup of the VMs
 
@@ -72,7 +72,7 @@ The Vagrant machines already have `calicoctl` installed. Use it to launch `{{sit
     sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run --node-image={{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
 
 Append the `--use-docker-networking-container-labels` flag to the `calicoctl node run` command if you're combining
-[Docker Labels and {{site.prodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
+[Docker Labels and {{site.tseeprodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
 
 Check that the `{{site.noderunning}}` container is running on this host:
 
@@ -87,7 +87,7 @@ You should see output like this on each node
 ## Next Steps
 
 Now that you have a basic two node CoreOS Container Linux cluster setup, see
-[Security using {{site.prodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles)
+[Security using {{site.tseeprodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles)
 for a simple security walkthrough.
 
 [virtualbox]: https://www.virtualbox.org/

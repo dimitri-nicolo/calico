@@ -2,7 +2,7 @@
 title: Job descriptions
 ---
 
-The following anomaly detection jobs are included in {{site.prodname}}
+The following anomaly detection jobs are included in {{site.tseeprodname}}
 
 ### Inbound connection spike
 **Job ID**: `inbound_connection_spike`

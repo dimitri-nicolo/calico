@@ -10,15 +10,15 @@
 
 For production clusters, you must use your own Elasticsearch cluster. We bundle an Elasticsearch
 operator for quickstart and demonstration purposes, but it is not suitable for production.
-This page page describes how to complete a production install of {{site.prodname}} and connect
-your {{site.prodname}} cluster to an Elasticsearch cluster.
+This page page describes how to complete a production install of {{site.tseeprodname}} and connect
+your {{site.tseeprodname}} cluster to an Elasticsearch cluster.
 
-{{site.prodname}} Manager users will be authenticated against {{name}} by logging in through
+{{site.tseeprodname}} Manager users will be authenticated against {{name}} by logging in through
 a [supported method]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
-{{name}} RBAC is then used to authorize queries from {{site.prodname}} Manager to Elasticsearch.
+{{name}} RBAC is then used to authorize queries from {{site.tseeprodname}} Manager to Elasticsearch.
 From Elasticsearch's perspective all queries will come from the `tigera-ee-manager` user.
 
-Because there's an authenticating proxy inside {{site.prodname}}, any {{name}} user
+Because there's an authenticating proxy inside {{site.tseeprodname}}, any {{name}} user
 given permission to access `services/calico-monitoring/elasticsearch-tigera-elasticsearch/proxy`
 will be able to send queries to Elasticsearch as the `tigera-ee-manager` user.
 
@@ -76,7 +76,7 @@ They may also be useful as a reference for defining alternative security configu
    }
    ```
 
-1. {{site.prodname}} Manager role for querying Elasticsearch (`tigera-ee-manager`)
+1. {{site.tseeprodname}} Manager role for querying Elasticsearch (`tigera-ee-manager`)
 
    ```json
    {
@@ -92,7 +92,7 @@ They may also be useful as a reference for defining alternative security configu
    }
    ```
 
-1. {{site.prodname}} role for installing machine learning jobs, Watcher jobs, and Kibana dashboards (`tigera-ee-installer`)
+1. {{site.tseeprodname}} role for installing machine learning jobs, Watcher jobs, and Kibana dashboards (`tigera-ee-installer`)
 
    ```json
    {
@@ -113,7 +113,7 @@ They may also be useful as a reference for defining alternative security configu
    }
    ```
 
-1. {{site.prodname}} Curator role for deleting indices older than retention period in Elasticsearch (`tigera-ee-curator`)
+1. {{site.tseeprodname}} Curator role for deleting indices older than retention period in Elasticsearch (`tigera-ee-curator`)
 
    ```json
    {
@@ -129,7 +129,7 @@ They may also be useful as a reference for defining alternative security configu
    }
    ```
 
-1. {{site.prodname}} intrusion detection controller role for processing threat feeds, flow logs and security events. (`tigera-ee-intrusion-detection`)
+1. {{site.tseeprodname}} intrusion detection controller role for processing threat feeds, flow logs and security events. (`tigera-ee-intrusion-detection`)
 
    ```json
    {
@@ -149,7 +149,7 @@ They may also be useful as a reference for defining alternative security configu
    }
    ```
 
-1. {{site.prodname}} compliance report and dashboard for assessing the compliance posture of the cluster.
+1. {{site.tseeprodname}} compliance report and dashboard for assessing the compliance posture of the cluster.
 
     1. Compliance benchmarker role for storing benchmark results  (`tigera-ee-compliance-benchmarker`)
 

@@ -3,25 +3,25 @@ title: Enabling IPVS in Kubernetes
 canonical_url: 'https://docs.tigera.io/v2.3/usage/enabling-ipvs'
 ---
 
-{{site.prodname}} has support for `kube-proxy`'s `ipvs` proxy mode.
-{{site.prodname}} `ipvs` support is activated automatically if {{site.prodname}}
+{{site.tseeprodname}} has support for `kube-proxy`'s `ipvs` proxy mode.
+{{site.tseeprodname}} `ipvs` support is activated automatically if {{site.tseeprodname}}
 detects that `kube-proxy` is running in that mode.
 
 `ipvs` mode provides greater scale and performance vs `iptables` mode.
 However, it comes with some limitations.  In IPVS mode:
 
-- {{site.prodname}} requires [additional `iptables` packet mark bits](../reference/felix/configuration#ipvs-bits)
+- {{site.tseeprodname}} requires [additional `iptables` packet mark bits](../reference/felix/configuration#ipvs-bits)
   in order to track packets as they pass through IPVS.
-- {{site.prodname}} needs to be [configured](../reference/felix/configuration#ipvs-portranges)
+- {{site.tseeprodname}} needs to be [configured](../reference/felix/configuration#ipvs-portranges)
   with the port range that is assigned to Kubernetes NodePorts.  If services
-  do use NodePorts outside {{site.prodname}}'s expected range,
-  {{site.prodname}} will treat traffic to those ports as host traffic instead
+  do use NodePorts outside {{site.tseeprodname}}'s expected range,
+  {{site.tseeprodname}} will treat traffic to those ports as host traffic instead
   of pod traffic.
-- {{site.prodname}} does not support Kubernetes services that make use of a
+- {{site.tseeprodname}} does not support Kubernetes services that make use of a
   locally-assigned `ExternalIP` for Kubernetes v1.10. This is due to a kube-proxy issue
   and has been fixed in Kubernetes v1.11.
 
- {{site.prodname}} will detect if you change `kube-proxy`'s proxy mode after
- {{site.prodname}} has been deployed. Any Kubernetes `ipvs`-specific configuration
+ {{site.tseeprodname}} will detect if you change `kube-proxy`'s proxy mode after
+ {{site.tseeprodname}} has been deployed. Any Kubernetes `ipvs`-specific configuration
  needs to be [configured](../reference/felix/configuration#ipvs-portranges)
  before changing the `kube-proxy` proxy mode to `ipvs`.

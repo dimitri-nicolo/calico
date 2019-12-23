@@ -3,18 +3,18 @@ title: Configuring Tigera Secure EE RBAC for tiered policies
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/rbac-tiered-policies
 ---
 
-The {{site.prodname}} API server adds the ability to manage tiered
+The {{site.tseeprodname}} API server adds the ability to manage tiered
 policies as Kubernetes resources. This allows administrators to manage
-access to {{site.prodname}} resources using Kubernetes RBAC
+access to {{site.tseeprodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
-If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
-pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23)
+If you are upgrading from a pre-v2.3 release of {{site.tseeprodname}}, or you want to maintain the
+pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.tseeprodname}}](/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23)
 guide.
 
 ### Policy and tier RBAC
 
-In {{site.prodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
+In {{site.tseeprodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
 are associated with a specific tier. Access control for these resources can
 be configured using standard Kubernetes `Role` and `ClusterRole` resource types, and may be
 configured differently for each tier.
@@ -28,8 +28,8 @@ NetworkPolicy resources, you must give them the 'get' permission on the tier(s) 
 manage policies in. They must also have permission for the action (not necessarily 'get') on the
 appropriate policy resources within the required tiers.
 
-For all users of the {{site.prodname}} UI, 'watch' and 'list' permissions are required
-for tiers. The {{site.prodname}} UI will only display tiers for which the user has 'get'
+For all users of the {{site.tseeprodname}} UI, 'watch' and 'list' permissions are required
+for tiers. The {{site.tseeprodname}} UI will only display tiers for which the user has 'get'
 permission for.
 
 For example, to 'create' a network policy in the default tier, a user must have
@@ -45,7 +45,7 @@ not be given any write permissions on tiers.
 Policies created by the underlying orchestration integration such as Kubernetes
 are placed in the `default` tier.
 
-{{site.prodname}} `NetworkPolicy` resources that are derived from the Kubernetes `NetworkPolicy` resources
+{{site.tseeprodname}} `NetworkPolicy` resources that are derived from the Kubernetes `NetworkPolicy` resources
 will have a prefix `knp.` added to the name. These are not directly configurable through `kubectl`
 although you may use it to view the derived resources. Modification of these resources is handled through
 the actual Kubernetes resources, and RBAC configuration for managing these resources is specified using the
@@ -75,7 +75,7 @@ a user using the UI.
 > **Note**: This is different from the pre-v2.3 RBAC configuration which used the real resource Calico kinds of
 > `networkpolicies` and `globalnetworkpolicies`, and did not allow the wildcard format (`<tiername>.*`) for the
 > policy names. The wildcard format is only supported for the pseudo-resource types and is interpreted by the
-> {{site.prodname}} Aggregated API Server. It is the wildcard name format that allows per-tier granularity of the
+> {{site.tseeprodname}} Aggregated API Server. It is the wildcard name format that allows per-tier granularity of the
 > policy RBAC configuration.
 {: .alert .alert-info}
 
@@ -85,7 +85,7 @@ For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/cal
 resource and adding a Global/NetworkPolicy to that tier, refer to the
 [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx/).
 
-### Permissions required for {{site.prodname}} UI
+### Permissions required for {{site.tseeprodname}} UI
 
 All of the RBAC examples below require the user to be specified (by replacing the
 text `<USER>`).  Consult the Kubernetes documentation for more information on
@@ -94,7 +94,7 @@ and [how to use the RBAC resources](https://kubernetes.io/docs/reference/access-
 
 #### Admin users
 
-The quickest way to test the {{site.prodname}} UI is by using an admin user, who
+The quickest way to test the {{site.tseeprodname}} UI is by using an admin user, who
 will have full access to the UI (as well as everything else in the cluster).
 
 ```bash
@@ -308,7 +308,7 @@ roleRef:
 
 The following ClusterRole can be used to provide 'get' access to the net-sec
 tier. This has the effect of making the net-sec tier visible in the
-{{site.prodname}} UI. Additional RBAC permissions are required in order to modify
+{{site.tseeprodname}} UI. Additional RBAC permissions are required in order to modify
 or view policies within the net-sec tier.
 
 ```yaml

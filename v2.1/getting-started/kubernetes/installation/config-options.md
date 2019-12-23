@@ -3,7 +3,7 @@ title: Customizing the manifests
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/config-options
 ---
 
-Each manifest contains all the necessary resources for installing {{site.prodname}}
+Each manifest contains all the necessary resources for installing {{site.tseeprodname}}
 on each node in your Kubernetes cluster.
 
 It installs the following Kubernetes resources:
@@ -11,7 +11,7 @@ It installs the following Kubernetes resources:
 - The `calico-config` ConfigMap, which contains parameters for configuring
   the install.
 - Installs the `{{site.nodecontainer}}` container on each host using a DaemonSet.
-- Installs the {{site.prodname}} CNI binaries and network config on each host using
+- Installs the {{site.tseeprodname}} CNI binaries and network config on each host using
   a DaemonSet.
 - Runs `calico/kube-controllers` as a deployment.
 - The `calico-etcd-secrets` secret, which optionally allows for providing etcd
@@ -19,12 +19,12 @@ It installs the following Kubernetes resources:
 
 ## Configuration options
 
-The `ConfigMap` in `calico.yaml` provides a way to configure a {{site.prodname}}
+The `ConfigMap` in `calico.yaml` provides a way to configure a {{site.tseeprodname}}
 self-hosted installation. It exposes the following configuration parameters.
 
 ### Configuring the pod IP range
 
-{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool).
+{{site.tseeprodname}} IPAM assigns IP addresses from [IP pools]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool).
 
 To change the default IP range used for pods, modify the `CALICO_IPV4POOL_CIDR`
 section of the `calico.yaml` manifest.  For more information, see
@@ -72,7 +72,7 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
 
 ### Authorization options
 
-{{site.prodname}}'s manifests assign its components one of two service accounts.
+{{site.tseeprodname}}'s manifests assign its components one of two service accounts.
 Depending on your cluster's authorization mode, you'll want to back these
 service accounts with the necessary permissions.
 

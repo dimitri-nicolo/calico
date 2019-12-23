@@ -14,7 +14,7 @@ are the pod IPs rather than the service IPs. The conservation of the pod IP in t
 policy to be applied between the clusters.
 
 The Federated Services Controller accesses service and endpoints data in the remote clusters directly through the
-Kubernetes API. This means that if the remote cluster is using etcd for the {{site.prodname}} datastore, it is necessary to configure
+Kubernetes API. This means that if the remote cluster is using etcd for the {{site.tseeprodname}} datastore, it is necessary to configure
 both etcd access details and Kubernetes API datastore access details in the same Remote Cluster Configuration resource. See
 [Configuring access to remote clusters](./configure-rcc) for more details.
 
@@ -28,7 +28,7 @@ The following configuration options are valid through the annotations:
 
 | Annotation | Description |
 | --- | --- |
-| `federation.tigera.io/serviceSelector` | {::nomarkdown}<p>This option is used to specify which services are used in the federated service. This field must be specified for the service to be federated. If the value is incorrectly specified, the service will not be federated and endpoint data will be removed from the service. Warning logs will be output in the controller indicating any issues processing this value.</p><p>The format is a standard {{site.prodname}} selector (i.e. the same as {{site.prodname}} policy resources) and selects services based on their labels.</p><p>Only services in the same namespace as the federated service will be included. This implies namespace names across clusters are linked (this is a basic premise of Federated Endpoint Identity).</p>{:/} |
+| `federation.tigera.io/serviceSelector` | {::nomarkdown}<p>This option is used to specify which services are used in the federated service. This field must be specified for the service to be federated. If the value is incorrectly specified, the service will not be federated and endpoint data will be removed from the service. Warning logs will be output in the controller indicating any issues processing this value.</p><p>The format is a standard {{site.tseeprodname}} selector (i.e. the same as {{site.tseeprodname}} policy resources) and selects services based on their labels.</p><p>Only services in the same namespace as the federated service will be included. This implies namespace names across clusters are linked (this is a basic premise of Federated Endpoint Identity).</p>{:/} |
 
 The Federated Services Controller uses the serviceSelector annotation to select the backing services in the same
 namespace whose labels match the specified selector. Services are selected from the local and remote clusters.
@@ -88,17 +88,17 @@ As an operator, the expected flow of configuration would be as follows:
       configured in the service spec.
 1. On a cluster that needs to access the federated set of Pods that are running the application `my-app`, create a
    service on that cluster leaving the spec selector blank and setting the `federation.tigera.io/serviceSelector`
-   annotation to be a {{site.prodname}} selector which selects the previously configured services using the chosen label match
+   annotation to be a {{site.tseeprodname}} selector which selects the previously configured services using the chosen label match
    (e.g. `run == "my-app"`).
-    - {{site.prodname}} Federated Services Controller will manage this service, populating the service endpoints from
+    - {{site.tseeprodname}} Federated Services Controller will manage this service, populating the service endpoints from
       all of the services that match the service selector configured in the annotation.
 1. Any application can access the federated service using the local DNS name for that service.
 
 > **Reminder**:
 > -  The spec selector field in the service is used by Kubernetes to select *pods* in the local cluster. This is a
 >    Kubernetes style selector.
-> -  The spec selector field in the annotation is used by {{site.prodname}} Federated Services Controller to select
->    *services* across the federated set of clusters. This is a {{site.prodname}} style selector.
+> -  The spec selector field in the annotation is used by {{site.tseeprodname}} Federated Services Controller to select
+>    *services* across the federated set of clusters. This is a {{site.tseeprodname}} style selector.
 {: .alert .alert-success}
 
 ## Example

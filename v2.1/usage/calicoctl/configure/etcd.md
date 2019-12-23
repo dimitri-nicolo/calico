@@ -87,7 +87,7 @@ issue then try again.
 
 ### Next steps
 
-Now you are ready to read and configure most aspects of {{site.prodname}}.  You can
+Now you are ready to read and configure most aspects of {{site.tseeprodname}}.  You can
 find the full list of commands in the
 [Command Reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/).
 

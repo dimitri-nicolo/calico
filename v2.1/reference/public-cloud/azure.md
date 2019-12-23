@@ -3,20 +3,20 @@ title: Deploying Tigera Secure EE on Azure
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/azure
 ---
 
-## About {{site.prodname}} on Azure
+## About {{site.tseeprodname}} on Azure
 
-While Azure does not support {{site.prodname}} networking, you can use
-{{site.prodname}} policy with one of the following networking options.
+While Azure does not support {{site.tseeprodname}} networking, you can use
+{{site.tseeprodname}} policy with one of the following networking options.
 
 - **Azure user-defined routes**: This option provides networking without overlays.
-  Disable {{site.prodname}} networking by setting `CALICO_NETWORKING_BACKEND` to `none`
+  Disable {{site.tseeprodname}} networking by setting `CALICO_NETWORKING_BACKEND` to `none`
   in `{{site.nodecontainer}}`. (Also called "policy-only mode".) Refer to
-  [Configuring {{site.nodecontainer}}](../node/configuration) and [Azure user-defined routes](#azure-user-defined-routes) for more information. If you're on Kubernetes, refer to [Installing {{site.prodname}} for policy (advanced)](../../getting-started/kubernetes/installation/other) for
+  [Configuring {{site.nodecontainer}}](../node/configuration) and [Azure user-defined routes](#azure-user-defined-routes) for more information. If you're on Kubernetes, refer to [Installing {{site.tseeprodname}} for policy (advanced)](../../getting-started/kubernetes/installation/other) for
   a sample manifest.
 
-- **Azure CNI IPAM plug-in**: Configure {{site.prodname}} to use the
+- **Azure CNI IPAM plug-in**: Configure {{site.tseeprodname}} to use the
   [Azure CNI plug-in](https://github.com/Azure/azure-container-networking/blob/master/docs/cni.md)
-  instead of the {{site.prodname}} CNI plug-in.
+  instead of the {{site.tseeprodname}} CNI plug-in.
 
 
 ## Azure user-defined routes
@@ -37,7 +37,7 @@ On Kubernetes, also complete the following.
 - Include the name of your routing table in the configuration file of your
   Kubernetes Azure cloud provider.
 
-## Why doesn't Azure support {{site.prodname}} networking?
+## Why doesn't Azure support {{site.tseeprodname}} networking?
 
 Azure does not allow traffic with unknown source IPs.
 

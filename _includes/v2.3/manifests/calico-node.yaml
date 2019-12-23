@@ -26,7 +26,7 @@ calico-node.yaml acccepts the following include flags:
 {%- endcapture -%}
 # This manifest installs the {{site.nodecontainer}} container
 {%-  if include.network != "ecs" %}
-# as well as the {{site.prodname}} CNI plugins and network config
+# as well as the {{site.tseeprodname}} CNI plugins and network config
 {% endif %}
 # on each master and worker node in a Kubernetes cluster.
 {%- if include.platform == "gke" %}
@@ -147,7 +147,7 @@ spec:
         - name: cnx-pull-secret
       initContainers:
 {%-  if include.network != "ecs" %}
-        # This container installs the {{site.prodname}} CNI binaries
+        # This container installs the {{site.tseeprodname}} CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
           image: {{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
@@ -163,7 +163,7 @@ spec:
                   name: {{include.variant_name | downcase}}-config
                   key: cni_network_config
 {%- if include.datastore == "etcd" %}
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the {{site.tseeprodname}} etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -234,7 +234,7 @@ spec:
           image: {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
           env:
 {%- if include.datastore == "etcd" %}
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the {{site.tseeprodname}} etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:

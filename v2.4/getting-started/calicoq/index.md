@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/calicoq/
 ## About installing calicoq
 
 You can run `calicoq` on any host with network access to the
-{{site.prodname}} datastore as either a binary or a container.
+{{site.tseeprodname}} datastore as either a binary or a container.
 For step-by-step instructions, refer to the section that
 corresponds to your desired deployment.
 

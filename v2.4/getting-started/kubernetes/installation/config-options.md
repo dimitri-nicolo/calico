@@ -5,28 +5,28 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## About customizing manifests
 
-We provide a number of manifests to make deployment of {{site.prodname}} easy. You can optionally
+We provide a number of manifests to make deployment of {{site.tseeprodname}} easy. You can optionally
 modify the manifests before applying them. Or you can modify the manifest and reapply it to change
 settings as needed.
 
 Refer to the section that corresponds to the manifest you wish to modify for more details.
 
-- [Customizing {{site.prodname}} manifests](#customizing-{{site.prodnamedash}}-manifests)
+- [Customizing {{site.tseeprodname}} manifests](#customizing-{{site.tseeprodnamedash}}-manifests)
 
 - [Customizing application layer policy manifests](#customizing-application-layer-policy-manifests)
 
 
-## Customizing {{site.prodname}} manifests
+## Customizing {{site.tseeprodname}} manifests
 
-### About customizing {{site.prodname}} manifests
+### About customizing {{site.tseeprodname}} manifests
 
-Each manifest contains all the necessary resources for installing {{site.prodname}}
+Each manifest contains all the necessary resources for installing {{site.tseeprodname}}
 on each node in your Kubernetes cluster.
 
 It installs the following Kubernetes resources:
 
 - Installs the `{{site.nodecontainer}}` container on each host using a DaemonSet.
-- Installs the {{site.prodname}} CNI binaries and network config on each host using
+- Installs the {{site.tseeprodname}} CNI binaries and network config on each host using
   a DaemonSet.
 - Runs `{{site.imageNames["kubeControllers"]}}` as a deployment.
 - The `calico-etcd-secrets` secret, which optionally allows for providing etcd
@@ -38,7 +38,7 @@ The sections that follow discuss the configurable parameters in greater depth.
 
 ### Configuring the pod IP range
 
-{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool).
+{{site.tseeprodname}} IPAM assigns IP addresses from [IP pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool).
 
 To change the default IP range used for pods, modify the `CALICO_IPV4POOL_CIDR`
 section of the `calico.yaml` manifest.  For more information, see
@@ -76,7 +76,7 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
 
 1. Download the {{page.version}} manifest that corresponds to your installation method.
 
-   **{{site.prodname}} for policy and networking**
+   **{{site.tseeprodname}} for policy and networking**
    ```bash
    curl \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
@@ -126,20 +126,20 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
 
 1. Apply the manifest.
 
-   **{{site.prodname}} for policy and networking**
+   **{{site.tseeprodname}} for policy and networking**
    ```bash
    kubectl apply -f calico.yaml
    ```
 
 ### Authorization options
 
-{{site.prodname}}'s manifests assign its components one of two service accounts.
+{{site.tseeprodname}}'s manifests assign its components one of two service accounts.
 Depending on your cluster's authorization mode, you'll want to back these
 service accounts with the necessary permissions.
 
 ### Configuring service advertisement
 
-{{site.prodname}} supports [advertising Kubernetes services over
+{{site.tseeprodname}} supports [advertising Kubernetes services over
 BGP](../../../networking/service-advertisement),
 so that service cluster IPs are routable from outside the cluster.  To
 enable this, add a `CALICO_ADVERTISE_CLUSTER_IPS` variable setting to
@@ -198,7 +198,7 @@ allow application layer policy to operate.
 The standard Istio manifests for the sidecar injector include a ConfigMap that
 contains the template used when adding pods to the cluster. The template adds an
 init container and the Envoy sidecar.  Application layer policy requires
-an additional lightweight sidecar called Dikastes which receives {{site.prodname}} policy
+an additional lightweight sidecar called Dikastes which receives {{site.tseeprodname}} policy
 from Felix and applies it to incoming connections and requests.
 
 If you haven't already done so, download an
@@ -243,5 +243,5 @@ Felix.  Once created, a Unix domain socket is an in-memory communications
 channel. The volumes are not used for any kind of stateful storage on disk.
 
 Refer to the
-[{{site.prodname}} ConfigMap manifest](/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
+[{{site.tseeprodname}} ConfigMap manifest](/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
 example with the above changes.

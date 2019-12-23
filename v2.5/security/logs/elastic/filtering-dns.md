@@ -3,7 +3,7 @@ title: Filtering out DNS logs
 canonical_url: https://docs.tigera.io/master/security/logs/elastic/filtering-dns
 ---
 
-{{site.prodname}} supports filtering out DNS logs based on user provided
+{{site.tseeprodname}} supports filtering out DNS logs based on user provided
 configuration.  This functionality is intended to be used to suppress logs
 of low significance.
 

@@ -22,7 +22,7 @@ of the following reasons.
 
 ### Purpose of this page
 
-Provide guidance on how to remove a host that is part of a {{site.prodname}} cluster
+Provide guidance on how to remove a host that is part of a {{site.tseeprodname}} cluster
 and clean up the associated [Node resource][Node resource reference]
 information.
 

@@ -2,30 +2,30 @@
 title: Upgrading CNX in Kubernetes
 ---
 
-This document covers upgrading an open source Calico cluster to {{site.prodname}}.
+This document covers upgrading an open source Calico cluster to {{site.tseeprodname}}.
 
 The upgrade procedure is supported for Calico v3.0.x.
 
-## Upgrading an open source Calico cluster to {{site.prodname}}
+## Upgrading an open source Calico cluster to {{site.tseeprodname}}
 
 1. [Upgrade the open source Calico cluster](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/)
-1. [Add {{site.prodname}}](#adding-cnx).
+1. [Add {{site.tseeprodname}}](#adding-cnx).
 
-## Adding {{site.prodname}}
-This section covers taking an existing Kubernetes system with Calico and adding {{site.prodname}}.
+## Adding {{site.tseeprodname}}
+This section covers taking an existing Kubernetes system with Calico and adding {{site.tseeprodname}}.
 
 #### Prerequisites
 This procedure assumes the following:
 
 * Your system is running the latest 3.0.x release of Calico. If not, follow the [instructions to upgrade](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/) it to the latest 3.0.x release
-* You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
+* You have obtained the {{site.tseeprodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
 * You have the Calico manifest that was used to install your system available. This is the manifest which includes the `calico/node` DaemonSet.
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
 #### Prepare for the Upgrade
  Edit your **calico** manifest:
-   - change the calico/node `image:` key to point at the {{site.prodname}} `tigera/cnx-node` image in your private registry.
-   - if you're using Typha, change the calico/typha `image:` key to point at the {{site.prodname}} `tigera/typha` image in your private registry.
+   - change the calico/node `image:` key to point at the {{site.tseeprodname}} `tigera/cnx-node` image in your private registry.
+   - if you're using Typha, change the calico/typha `image:` key to point at the {{site.tseeprodname}} `tigera/typha` image in your private registry.
    - add the following to the `env:` section of the `calico-node` Daemonset:
 
      ```
@@ -71,9 +71,9 @@ Edit your **rbac-kdd** manifest if you used one:
     kubectl -n kube-system rollout status ds/calico-node
     ```
 
-1. Download the {{site.prodname}} manifest
+1. Download the {{site.tseeprodname}} manifest
 ([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml) or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
-defining the {{site.prodname}} Manager API server and {{site.prodname}}
+defining the {{site.tseeprodname}} Manager API server and {{site.tseeprodname}}
 Manager web application resources.
 
 1. Rename the file cnx.yaml - this is what subsequent instructions will refer to

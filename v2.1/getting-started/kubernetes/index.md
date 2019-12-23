@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/
 
 ### Overview
 
-This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
+This quickstart gets you a single-host Kubernetes cluster with {{site.tseeprodname}}
 in approximately 10 minutes. You can use this cluster for testing and development.
 
 To deploy a cluster suitable for production, refer to [Installation](/{{page.version}}/getting-started/kubernetes/installation/).
@@ -30,9 +30,9 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
   - [`<customer-name>-license.yaml` containing your license key](/{{page.version}}/getting-started/#obtain-a-license-key)
 <br><br>
 
-- Ensure that {{site.prodname}} can manage `cali` and `tunl` interfaces on the host.
+- Ensure that {{site.tseeprodname}} can manage `cali` and `tunl` interfaces on the host.
   If NetworkManager is present on the host, refer to
-  [Preventing NetworkManager from controlling {{site.prodname}} interfaces](../../usage/troubleshooting/#prevent-networkmanager-from-controlling-{{site.prodnamedash}}-interfaces).
+  [Preventing NetworkManager from controlling {{site.tseeprodname}} interfaces](../../usage/troubleshooting/#prevent-networkmanager-from-controlling-{{site.tseeprodnamedash}}-interfaces).
 
 - [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
@@ -95,7 +95,7 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 
    > **Note**: Your browser will warn you of an insecure connection due to
    > the self-signed certificate. Click past this warning to access the
-   > {{site.prodname}} Manager.
+   > {{site.tseeprodname}} Manager.
    {: .alert .alert-info}
 
 1. Type the saved username and password into the  **Login** and **Password**
@@ -103,12 +103,12 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    Then click **Sign In**.
 
 Congratulations! You now have a single-host Kubernetes cluster
-equipped with {{site.prodname}}.
+equipped with {{site.tseeprodname}}.
 
 ### Next steps
 **[Experiment with OIDC authentication strategy](/{{page.version}}/reference/cnx/authentication)**
 
-**[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
+**[Experiment with non-admin users and the {{site.tseeprodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
 
 **[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 

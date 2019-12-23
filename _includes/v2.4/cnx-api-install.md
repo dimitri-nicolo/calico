@@ -4,13 +4,13 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-## Installing the {{site.prodname}} API Server
+## Installing the {{site.tseeprodname}} API Server
 
 {% if include.init == "systemd" %}
 
 1. Load the following manifest to Kubernetes to deploy dummy pods that
    will be used for Prometheus targeting. You should ensure that this manifest
-   deploys one pod on each host running {{site.prodname}} that you wish to
+   deploys one pod on each host running {{site.tseeprodname}} that you wish to
    monitor, adjusting the annotations and tolerations as needed.
 
    ```yaml
@@ -96,7 +96,7 @@
 
 {% elsif include.platform == "eks" %}
 
-1. Download the EKS {{site.prodname}} manifest and save the file
+1. Download the EKS {{site.tseeprodname}} manifest and save the file
    as cnx-api.yaml. That is how we will refer to it in later steps.
 
    ```bash
@@ -116,7 +116,7 @@
 
 {% elsif include.init == "openshift" %}
 
-1. Download the {{site.prodname}} manifest.
+1. Download the {{site.tseeprodname}} manifest.
 
    ```bash
    curl --compressed -O {{site.url}}/{{page.version}}/getting-started/openshift/cnx-api.yaml
@@ -125,7 +125,7 @@
 {% endif %}
 
 {% if include.upgrade %}
-   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need 
+   > **Note**: If you are upgrading from {{site.tseeprodname}} v2.2 or earlier you will need 
    > to [upgrade to version 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee) before following
    > these intructions.
    {: .alert .alert-info}
@@ -133,7 +133,7 @@
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
 
-1. Apply the manifest to install the {{site.prodname}} API server.
+1. Apply the manifest to install the {{site.tseeprodname}} API server.
 
    ```bash
    {{cli}} apply -f cnx-api.yaml

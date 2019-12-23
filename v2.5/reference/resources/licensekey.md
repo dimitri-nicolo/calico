@@ -3,9 +3,9 @@ title: License key
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/licensekey
 ---
 
-A License Key resource (`LicenseKey`) represents a user's license to use {{site.prodname}}. Keys are
+A License Key resource (`LicenseKey`) represents a user's license to use {{site.tseeprodname}}. Keys are
 provided by Tigera support, and must be applied to the cluster to enable
-{{site.prodname}} features.
+{{site.tseeprodname}} features.
 
 This resource is not supported in `kubectl`.
 
@@ -13,11 +13,11 @@ This resource is not supported in `kubectl`.
 
 #### Applying or updating a license key
 
-When you add {{site.prodname}} to an existing Kubernetes cluster or create a
+When you add {{site.tseeprodname}} to an existing Kubernetes cluster or create a
 new OpenShift cluster, you must apply your license key to complete the installation
-and gain access to the full set of {{site.prodname}} features.
+and gain access to the full set of {{site.tseeprodname}} features.
 
-When your license key expires, you must update it to continue using {{site.prodname}}.
+When your license key expires, you must update it to continue using {{site.tseeprodname}}.
 
 To apply or update a license key use the following command, replacing `<customer-name>`
 with the customer name in the file sent to you by Tigera.

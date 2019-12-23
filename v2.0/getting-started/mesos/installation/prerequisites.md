@@ -5,7 +5,7 @@ no_canonical: true
 
 #### 1. etcd
 
-{{site.prodname}} uses etcd as its datastore. Ensure you have an instance of etcd running,
+{{site.tseeprodname}} uses etcd as its datastore. Ensure you have an instance of etcd running,
 and that it is accessible from all agents in your cluster.
 
 In order to maximize availability, use [etcd's clustering guide](https://coreos.com/os/docs/latest/cluster-architectures.html)
@@ -32,13 +32,13 @@ $ curl http://$ETCD_IP:$ETCD_PORT/version
 
 #### 2. Docker Configured with Cluster Store
 
-Under the covers, {{site.prodname}} networks Docker tasks for Mesos with its Docker CNM
+Under the covers, {{site.tseeprodname}} networks Docker tasks for Mesos with its Docker CNM
 plugin. Multihost Networking in Docker requires that each Agent's Docker daemon
 be configured with a cluster store.
 
 Though Docker's configured cluster-store does not have to be the same as
-{{site.prodname}}'s, for simplicity, users can configure Docker to use the same datastore
-as {{site.prodname}} by setting the following flag when starting the docker daemon:
+{{site.tseeprodname}}'s, for simplicity, users can configure Docker to use the same datastore
+as {{site.tseeprodname}} by setting the following flag when starting the docker daemon:
 
 ```shell
 --cluster-store=etcd://$ETCD_IP:$ETCD_PORT
@@ -76,7 +76,7 @@ $ systemctl restart mesos-slave.service
 
 #### 4. CNI Isolator Enabled for Mesos Agents
 
-If you are planning to use {{site.prodname}} with the Unified containerizer,
+If you are planning to use {{site.tseeprodname}} with the Unified containerizer,
 [enable the CNI Isolator on each agent](http://mesos.apache.org/documentation/latest/cni/#usage)
 
 > **Note**: You may skip this step if you do not plan on using the 

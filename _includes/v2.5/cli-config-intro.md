@@ -1,4 +1,4 @@
-Many `{{ include.cli }}` commands require access to the {{site.prodname}} datastore. In most
+Many `{{ include.cli }}` commands require access to the {{site.tseeprodname}} datastore. In most
 circumstances, `{{ include.cli }}` cannot achieve this connection by default. You can provide
 `{{ include.cli }}` with the information it needs using either of the following.
 
@@ -34,9 +34,9 @@ and examples.
 {: .alert .alert-info}
 
 {% if include.cli == "calicoq" %}
-#### {{site.prodname}} Federation
+#### {{site.tseeprodname}} Federation
 
-If you are using [{{site.prodname}} Federation](/{{page.version}}/networking/federation/index) and you wish to view the
+If you are using [{{site.tseeprodname}} Federation](/{{page.version}}/networking/federation/index) and you wish to view the
 remote cluster endpoints using `{{ include.cli }}` then it is also necessary to include any files (kubeconfigs,
 certificates and keys) that are referenced in the Remote Cluster Configuration resources in the same location as
 specified in these resources. For example, suppose you have a Remote Cluster Configuration resource that references a
@@ -49,10 +49,10 @@ an error for that cluster.
 > into the container at the correct location within the container.
 {: .alert .alert-info}
 
-#### {{site.prodname}} AWS Security Group Integration
+#### {{site.tseeprodname}} AWS Security Group Integration
 
 If you are using
-[{{site.prodname}} AWS Security Group Integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration)
+[{{site.tseeprodname}} AWS Security Group Integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration)
 some additional environment variables need to be provided to `{{include.cli}}`
 to ensure endpoints have the proper labels when they are evaluated.
 

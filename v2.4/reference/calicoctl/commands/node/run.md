@@ -125,7 +125,7 @@ Description:
 
 ### Kubernetes as the datastore
 
-When {{site.prodname}} is configured to use the Kubernetes API as the datastore, BGP routing is *currently*
+When {{site.tseeprodname}} is configured to use the Kubernetes API as the datastore, BGP routing is *currently*
 not supported.  Many of the command line options related to BGP routing will
 have no effect.  These include:
 -  `--ip`, `--ip6`, `--ip-autodetection-method`, `--ip6-autodetection-method`
@@ -366,4 +366,4 @@ terminating `,` character does not need to be specified for those cases.
 -  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)
 -  [Resources]({{site.url}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
--  [Policy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [Policy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.tseeprodname}} selector-based policy model

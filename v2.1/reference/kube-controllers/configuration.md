@@ -3,7 +3,7 @@ title: Configuring the Calico Kubernetes controllers
 canonical_url: https://docs.tigera.io/v2.3/reference/kube-controllers/configuration
 ---
 
-The {{site.prodname}} Kubernetes controllers are primarily configured through environment variables. When running
+The {{site.tseeprodname}} Kubernetes controllers are primarily configured through environment variables. When running
 the controllers as a Kubernetes pod, this is accomplished through the pod manifest `env`
 section.
 
@@ -11,16 +11,16 @@ section.
 
 The `calico/kube-controllers` container includes the following controllers:
 
-1. policy controller: watches network policies and programs {{site.prodname}} policies.
-1. profile controller: watches namespaces and programs {{site.prodname}} profiles.
-1. workloadendpoint controller: watches for changes to pod labels and updates {{site.prodname}} workload endpoints.
-1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}.
+1. policy controller: watches network policies and programs {{site.tseeprodname}} policies.
+1. profile controller: watches namespaces and programs {{site.tseeprodname}} profiles.
+1. workloadendpoint controller: watches for changes to pod labels and updates {{site.tseeprodname}} workload endpoints.
+1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.tseeprodname}}.
 
 By default, the following controllers are enabled: profile, policy, workloadendpoint
 
 ### Configuring etcd access
 
-The {{site.prodname}} Kubernetes controllers support the following environment variables to configure etcd access:
+The {{site.tseeprodname}} Kubernetes controllers support the following environment variables to configure etcd access:
 
 | Environment   | Description | Schema |
 | ------------- | ----------- | ------ |
@@ -45,7 +45,7 @@ configure API access if needed.
 
 ### Other configuration
 
-The following environment variables can be used to configure the {{site.prodname}} Kubernetes controllers.
+The following environment variables can be used to configure the {{site.tseeprodname}} Kubernetes controllers.
 
 | Environment   | Description | Schema |
 | ------------- | ----------- | ------ |
@@ -62,7 +62,7 @@ The following environment variables can be used to configure the {{site.prodname
 
 The node controller automatically cleans up configuration for nodes that no longer exist.
 
-The node controller is not enabled by default. However, the {{site.prodname}} Kubernetes manifests do enable this controller.
+The node controller is not enabled by default. However, the {{site.tseeprodname}} Kubernetes manifests do enable this controller.
 
 To enable the node controller, perform the following two steps.
 
@@ -77,20 +77,20 @@ To enable the node controller, perform the following two steps.
 
 ### Policy controller
 
-The policy controller syncs Kubernetes network policies to the {{site.prodname}} data store.
+The policy controller syncs Kubernetes network policies to the {{site.tseeprodname}} data store.
 
 The policy controller is enabled by default.
 
 
 ### Workload endpoint controller
 
-The workload endpoint controller automatically syncs Kubernetes pod label changes to the {{site.prodname}} data store by updating
+The workload endpoint controller automatically syncs Kubernetes pod label changes to the {{site.tseeprodname}} data store by updating
 the corresponding workload endpoints appropriately.
 
 The workload endpoint controller is enabled by default.
 
 ### Profile controller
 
-The profile controller syncs Kubernetes namespace label changes to the {{site.prodname}} data store.
+The profile controller syncs Kubernetes namespace label changes to the {{site.tseeprodname}} data store.
 
 The profile controller is enabled by default.

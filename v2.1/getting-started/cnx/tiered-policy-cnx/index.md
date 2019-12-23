@@ -10,7 +10,7 @@ Some use cases for using tiers and tiered policies are:
 
   - Allow privileged users to define a security policy that takes precedence over
     other users.
-  - Translating hierarchies of physical firewalls directly into {{site.prodname}} policy.
+  - Translating hierarchies of physical firewalls directly into {{site.tseeprodname}} policy.
   - Group policies together under a tier.
 
 Specifically, the example presented here will discuss some aspects of the
@@ -18,11 +18,11 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [{{site.prodname}}](../../kubernetes/installation/)
+- A Kubernetes cluster configured with [{{site.tseeprodname}}](../../kubernetes/installation/)
 - [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) to work properly with your cluster
 - [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 
-> **Note**: Commands using calicoctl can be replaced with kubectl if the {{site.prodname}} Manager and {{site.prodname}} API server are installed.
+> **Note**: Commands using calicoctl can be replaced with kubectl if the {{site.tseeprodname}} Manager and {{site.tseeprodname}} API server are installed.
 {: .alert .alert-info}
 
 ### Create Namespace and Enable Isolation
@@ -114,7 +114,7 @@ wget: download timed out
 
 ### Examine the Policy Resource
 
-Let's first look at existing policies and tiers that are created when {{site.prodname}}
+Let's first look at existing policies and tiers that are created when {{site.tseeprodname}}
 is deployed. All policies that are created so far will end up in a `default` tier
 called `default`. You can view existing policies by running:
 

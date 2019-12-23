@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## Overview
 
-You can use {{site.prodname}} just for policy enforcement and achieve networking
+You can use {{site.tseeprodname}} just for policy enforcement and achieve networking
 with another solution, such as:
 
 - [Amazon Web Services (AWS) VPC CNI plugin](../../../reference/public-cloud/aws#using-aws-networking)
@@ -15,7 +15,7 @@ with another solution, such as:
 
 ## Before you begin
 
-- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
+- Ensure that you have a Kubernetes cluster that meets the {{site.tseeprodname}}
   [system requirements](../requirements) and can [network](#overview). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
@@ -24,7 +24,7 @@ with another solution, such as:
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} for policy only
 
 ### About installing for policy only
 
@@ -39,10 +39,10 @@ configuration.
 - [With federation](#install-ee-fed)
 
 > **Important**: At this time, we include steps for Kubernetes API datastore only. Should you wish
-> to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
+> to install {{site.tseeprodname}} for policy only using the etcd datastore type, contact Tigera support.
 {: .alert .alert-danger}
 
-### <a name="install-ee-nofed"></a>Installing {{site.prodname}} for policy only without federation, 50 nodes or less
+### <a name="install-ee-nofed"></a>Installing {{site.tseeprodname}} for policy only without federation, 50 nodes or less
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
@@ -53,7 +53,7 @@ configuration.
    {: .alert .alert-success}
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -63,7 +63,7 @@ configuration.
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
+1. Download the {{site.tseeprodname}} policy-only manifest for the Kubernetes API datastore that matches your
    networking method.
 
    - **AWS VPC CNI plugin**
@@ -90,7 +90,7 @@ configuration.
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+### <a name="install-ee-typha-nofed"></a>Installing {{site.tseeprodname}} for policy only without federation, more than 50 nodes
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
@@ -101,7 +101,7 @@ configuration.
    {: .alert .alert-success}
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -111,7 +111,7 @@ configuration.
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
+1. Download the {{site.tseeprodname}} policy-only manifest for the Kubernetes API datastore that matches your
    networking method.
 
    - **AWS VPC CNI plugin**
@@ -161,9 +161,9 @@ configuration.
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-### <a name="install-ee-fed"></a>Installing {{site.prodname}} for policy only with federation
+### <a name="install-ee-fed"></a>Installing {{site.tseeprodname}} for policy only with federation
 
-The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
+The following procedure describes how to install {{site.tseeprodname}} on a single cluster that uses the
 Kubernetes API datastore.
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../usage/federation/kubeconfig)
@@ -196,7 +196,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    {: .alert .alert-success}
 
 1. If the local cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -206,7 +206,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
+1. Download the {{site.tseeprodname}} policy-only manifest for the Kubernetes API datastore that matches your
    networking method.
 
    - **AWS VPC CNI plugin**
@@ -260,7 +260,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
 
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
+1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.tseeprodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
    operator continue to the next step instead.
 

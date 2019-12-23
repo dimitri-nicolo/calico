@@ -15,18 +15,18 @@ If not, follow the {% unless old_vers contains site.data.versions[page.version].
 [Calico upgrade documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/getting-started/kubernetes/upgrade/upgrade) before continuing.
 {% endunless %}
 
-## Upgrading Calico to {{site.prodname}}
+## Upgrading Calico to {{site.tseeprodname}}
 
 If you used the manifests provided on the [Calico documentation site](https://docs.projectcalico.org/) 
-to install Calico, complete the {{site.prodname}} installation procedure that 
+to install Calico, complete the {{site.tseeprodname}} installation procedure that 
 corresponds to your Calico installation method.
 
-- [Installing {{site.prodname}} for policy and networking](installation/calico)
+- [Installing {{site.tseeprodname}} for policy and networking](installation/calico)
 
-- [Installing {{site.prodname}} for policy](installation/other)
+- [Installing {{site.tseeprodname}} for policy](installation/other)
 
 If you modified the manifests or used the 
 [Integration Guide](https://docs.projectcalico.org/latest/getting-started/kubernetes/installation/integration) 
 to install Calico, contact Tigera support for assistance with your upgrade 
-to {{site.prodname}}.
+to {{site.tseeprodname}}.
 

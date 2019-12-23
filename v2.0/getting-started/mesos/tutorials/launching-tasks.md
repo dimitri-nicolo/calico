@@ -3,14 +3,14 @@ title: Launching Tasks
 no_canonical: true
 ---
 
-The following information describes how to launch {{site.prodname}} networked tasks in Mesos
+The following information describes how to launch {{site.tseeprodname}} networked tasks in Mesos
 using sample Marathon application definitions.
 
 ### Unified Containerizer
 
-Launch a Unified Containerizer task onto a {{site.prodname}} network by setting
- `networkName` to the name of your {{site.prodname}} network. Its value should match the `"name"`
- field of the `calico.conf` you configured when [Installing {{site.prodname}} for Mesos](../installation/integration)
+Launch a Unified Containerizer task onto a {{site.tseeprodname}} network by setting
+ `networkName` to the name of your {{site.tseeprodname}} network. Its value should match the `"name"`
+ field of the `calico.conf` you configured when [Installing {{site.tseeprodname}} for Mesos](../installation/integration)
 
 ```json
 {
@@ -25,7 +25,7 @@ Launch a Unified Containerizer task onto a {{site.prodname}} network by setting
 > **Note**: Replace `/usr/sbin/ip` with the correct path to your IP binary.
 {: .alert .alert-info}
 
-The task's stdout output should show a {{site.prodname}} IP from the default {{site.prodname}} pool of `192.168.0.0/16`.
+The task's stdout output should show a {{site.tseeprodname}} IP from the default {{site.tseeprodname}} pool of `192.168.0.0/16`.
 
 ### Docker Containerizer
 
@@ -36,7 +36,7 @@ docker network create --driver=calico --ipam-driver=calico-ipam calico-nginx
 ```
 
 Then in your marathon application definition,
-set `network` to `USER`, and set `networkName` to the name of your {{site.prodname}} network:
+set `network` to `USER`, and set `networkName` to the name of your {{site.tseeprodname}} network:
 
 ```json
 {
@@ -62,11 +62,11 @@ for port-mapped applications).
 
 For the Health Check to succeed, the following conditions must be met:
 
-1. The host running Marathon will need routes to {{site.prodname}} tasks. If you are running
-Marathon as a Mesos task, and have already installed {{site.prodname}} on each Agent,
+1. The host running Marathon will need routes to {{site.tseeprodname}} tasks. If you are running
+Marathon as a Mesos task, and have already installed {{site.tseeprodname}} on each Agent,
 you have met this requirement.
 
-2. {{site.prodname}} Networking Policy should permit the health check from Marathon to the
+2. {{site.tseeprodname}} Networking Policy should permit the health check from Marathon to the
 target application.
 
 The following sample application launches a nginx webserver with healtchecks:
@@ -92,7 +92,7 @@ The following sample application launches a nginx webserver with healtchecks:
 }
 ```
 
-The following {{site.prodname}} Profile yaml will allow the health check from an instance
+The following {{site.tseeprodname}} Profile yaml will allow the health check from an instance
 of Marathon running at 172.24.197.101:
 
 ```yaml

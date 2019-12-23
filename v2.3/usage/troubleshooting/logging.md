@@ -40,7 +40,7 @@ each `{{site.nodecontainer}}` component.
 
 ### Bird/Bird6
 
-Bird and Bird6 are used for distributing IPv4 and IPv6 routes between {{site.prodname}}
+Bird and Bird6 are used for distributing IPv4 and IPv6 routes between {{site.tseeprodname}}
 enabled hosts.  The logs are output in the `bird` and `bird6` sub-directories
 of the `{{site.nodecontainer}}` logging directory.
 
@@ -76,7 +76,7 @@ for details on how to modify the logging level. For example:
 
 ### Felix
 
-Felix is the primary {{site.prodname}} agent that runs on each machine that hosts
+Felix is the primary {{site.tseeprodname}} agent that runs on each machine that hosts
 endpoints.  Felix is responsible for the programming of iptables rules on the
 host.  The logs are output in the `felix` sub-directory of the `{{site.nodecontainer}}`
 logging directory.
@@ -94,7 +94,7 @@ logging directory.
    ```
 
    > **Tip**: For a global change set the name to "default".
-   > For a node-specific change set the name to the node name, e.g., "{{site.prodname}}-Node-1".
+   > For a node-specific change set the name to the node name, e.g., "{{site.tseeprodname}}-Node-1".
    {: .alert .alert-success}
 
 1. Replace the current felixconfig settings.

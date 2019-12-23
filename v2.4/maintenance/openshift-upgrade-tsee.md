@@ -5,15 +5,15 @@ canonical_url: https://docs.tigera.io/v2.4/maintenance/openshift-upgrade-tsee
 
 ## Prerequisite
 
-Ensure that your Kubernetes cluster is already running version 2.3 of {{site.prodname}}. Upgrade from earlier versions to {{page.version}} is not supported.
+Ensure that your Kubernetes cluster is already running version 2.3 of {{site.tseeprodname}}. Upgrade from earlier versions to {{page.version}} is not supported.
 
-If your cluster has a Calico installation, follow the [Upgrading an OpenShift cluster with Calico to {{site.prodname}} guide](/{{page.version}}/getting-started/openshift/upgrade-ee)
+If your cluster has a Calico installation, follow the [Upgrading an OpenShift cluster with Calico to {{site.tseeprodname}} guide](/{{page.version}}/getting-started/openshift/upgrade-ee)
 instead.
 
-## Upgrading to {{page.version}} {{site.prodname}}
+## Upgrading to {{page.version}} {{site.tseeprodname}}
 
 If you used the manifests provided on the [Tigera documentation site](https://docs.tigera.io/)
-to install {{site.prodname}}, re-install using the instructions below. To avoid unneccessary service impact, ensure you modify the various
+to install {{site.tseeprodname}}, re-install using the instructions below. To avoid unneccessary service impact, ensure you modify the various
 manifests to include any changes that were previously made for your current deployment *prior* to applying the new
 manifests.
 

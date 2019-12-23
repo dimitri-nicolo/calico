@@ -8,12 +8,12 @@ select a specific IP address when creating a container.  In order to use
 this feature, Docker requires that you specify the `--subnet` parameter when running
 `docker network create`.
 
-{{site.prodname}} requires that the passed `--subnet` value be the same CIDR as an existing
-{{site.prodname}} IP pool.  
+{{site.tseeprodname}} requires that the passed `--subnet` value be the same CIDR as an existing
+{{site.tseeprodname}} IP pool.  
 
 ## Example
 
-#### 1. Create a {{site.prodname}} IP pool
+#### 1. Create a {{site.tseeprodname}} IP pool
 
 ```
 cat << EOF | calicoctl create -f -

@@ -3,7 +3,7 @@ title: Using your own Elasticsearch cluster
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/byo-elasticsearch
 ---
 
-This page describes how to use a separate Elasticsearch cluster for {{site.prodname}} logs.
+This page describes how to use a separate Elasticsearch cluster for {{site.tseeprodname}} logs.
 It may be useful if you have an existing cluster you want to use, or if you want to provision
 it yourself instead of using the bundled [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator).
 
@@ -29,7 +29,7 @@ it yourself instead of using the bundled [Elasticsearch operator](https://github
 
 ### Create a service to point to your cluster
 
-{{site.prodname}} components access Elasticsearch via a service.
+{{site.tseeprodname}} components access Elasticsearch via a service.
 
 Create the following service, and add your Elasticsearch cluster (or its client nodes
 or load balancers as appropriate for your architecture) to that service.

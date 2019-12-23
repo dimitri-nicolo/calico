@@ -12,4 +12,4 @@
 - `ipt_set`
 - `ipt_rpfilter`
 - `ipt_REJECT`
-- `ipip` (if using {{site.prodname}} networking)
+- `ipip` (if using {{site.tseeprodname}} networking)

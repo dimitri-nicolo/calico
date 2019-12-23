@@ -3,9 +3,9 @@ title: Configuring BIRD as a BGP Route Reflector
 canonical_url: https://docs.tigera.io/v2.3/usage/routereflector
 ---
 
-For many {{site.prodname}} deployments, the use of a route reflector is not required.
+For many {{site.tseeprodname}} deployments, the use of a route reflector is not required.
 However, for large scale deployments a full mesh of BGP peerings between each
-of your {{site.prodname}} nodes may become untenable.  In this case, route reflectors
+of your {{site.tseeprodname}} nodes may become untenable.  In this case, route reflectors
 allow you to remove the full mesh and scale up the size of the cluster.
 
 These instructions will take you through installing BIRD as a BGP route
@@ -14,7 +14,7 @@ route reflector.  The instructions are valid for both Ubuntu and Red Hat
 Enterprise Linux (RHEL).
 
 For a container-based deployment, using the `{{site.nodecontainer}}` container, check
-out the [{{site.prodname}} BIRD route reflector container](calico-routereflector).
+out the [{{site.tseeprodname}} BIRD route reflector container](calico-routereflector).
 
 ## Prerequisites
 

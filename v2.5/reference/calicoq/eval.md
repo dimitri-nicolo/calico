@@ -56,6 +56,6 @@ Endpoints matching selector role=='endfront':
 
 -  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and
    [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy)
-   for more information about the {{site.prodname}} policy model.
+   for more information about the {{site.tseeprodname}} policy model.
 -  [calicoq and selectors]({{site.url}}/{{page.version}}/reference/calicoq/selectors) for
-   a recap on how selectors are used in {{site.prodname}} policy.
+   a recap on how selectors are used in {{site.tseeprodname}} policy.

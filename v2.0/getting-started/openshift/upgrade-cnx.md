@@ -2,18 +2,18 @@
 title: Upgrading to CNX in OpenShift
 ---
 
-This document covers upgrading an open source Calico cluster to {{site.prodname}}.
+This document covers upgrading an open source Calico cluster to {{site.tseeprodname}}.
 
 The upgrade procedure is supported for Calico v3.0.x.
 
-## Upgrading an open source Calico cluster to {{site.prodname}}
+## Upgrading an open source Calico cluster to {{site.tseeprodname}}
 
 #### Prerequisites
 
 This procedure assumes the following:
 
 - Your system is running the latest 3.0.x release of Calico.
-- You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
+- You have obtained the {{site.tseeprodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
 
 #### Upgrade
 

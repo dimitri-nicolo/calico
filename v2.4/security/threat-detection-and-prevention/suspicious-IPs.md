@@ -4,15 +4,15 @@ title: Trace and block suspicious IPs
 
 ### Big Picture 
 
-Add threat intelligence feeds to {{site.prodname}} to trace network flows of suspicious IP addresses, and optionally block traffic to suspicious IPs. 
+Add threat intelligence feeds to {{site.tseeprodname}} to trace network flows of suspicious IP addresses, and optionally block traffic to suspicious IPs. 
 
 ### Value
 
-{{site.prodname}} integrates with threat intelligence feeds so you can detect when your Kubernetes clusters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.  
+{{site.tseeprodname}} integrates with threat intelligence feeds so you can detect when your Kubernetes clusters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.  
 
 ### Features
 
-This how-to article uses the following {{site.prodname}} features:
+This how-to article uses the following {{site.tseeprodname}} features:
 
 - A global threat feed resource to add threat intelligence feeds for tracking and analysis in the UI
 - A global network policy to block suspicious IPs
@@ -21,11 +21,11 @@ This how-to article uses the following {{site.prodname}} features:
 
 #### Pull or push threat feeds?
 
-{{site.prodname}} supports both push and pull methods for updating threat feeds. Pull method supports fully automated threat feed updates driven by {{site.prodname}} without user intervention. Push method can be used for manually updating a threat feed. The push method is useful for threat feeds that Tigera cannot pull updates from (for example, if they are not available over HTTP/HTTPS), or if you prefer to manually update threat feeds based on your own schedule. 
+{{site.tseeprodname}} supports both push and pull methods for updating threat feeds. Pull method supports fully automated threat feed updates driven by {{site.tseeprodname}} without user intervention. Push method can be used for manually updating a threat feed. The push method is useful for threat feeds that Tigera cannot pull updates from (for example, if they are not available over HTTP/HTTPS), or if you prefer to manually update threat feeds based on your own schedule. 
 
 #### Suspicious IPs: test before you block
 
-There are many different types of threat intelligence feeds (community-curated, company-paid, and internally-developed) that you can choose to monitor in {{site.prodname}}. We recommend that you assess the threat feed contents for false positives before blocking based on the feed. If you decide to block, test a subset of your workloads before rolling to production to ensure legitimate application traffic is not blocked.
+There are many different types of threat intelligence feeds (community-curated, company-paid, and internally-developed) that you can choose to monitor in {{site.tseeprodname}}. We recommend that you assess the threat feed contents for false positives before blocking based on the feed. If you decide to block, test a subset of your workloads before rolling to production to ensure legitimate application traffic is not blocked.
 
 ### Before you begin...
 
@@ -37,7 +37,7 @@ We recommend that you turn down the aggregation of flow logs sent to Elasticsear
 
 ### How to
 
-This section describes how to pull or push threat feeds to {{site.prodname}}, and block traffic to a cluster for a suspicious IP.
+This section describes how to pull or push threat feeds to {{site.tseeprodname}}, and block traffic to a cluster for a suspicious IP.
 
 - [Pull threat feed updates](#pull-threat-feed-updates)
 - [Push threat feed updates](#push-threat-feed-updates)
@@ -45,7 +45,7 @@ This section describes how to pull or push threat feeds to {{site.prodname}}, an
 
 #### Pull threat feed updates 
 
-To add threat feeds to {{site.prodname}} for automatic updates (default is once a day), the threat feed(s) must be available using HTTP(S), and return a newline-separated list of IP addresses or prefixes in CIDR notation. 
+To add threat feeds to {{site.tseeprodname}} for automatic updates (default is once a day), the threat feed(s) must be available using HTTP(S), and return a newline-separated list of IP addresses or prefixes in CIDR notation. 
 
 1. Create the GlobalThreatFeed YAML and save it to file.  
    The simplest example of this looks like the following. Replace the **name** and the **URL** with your feed.
@@ -67,7 +67,7 @@ To add threat feeds to {{site.prodname}} for automatic updates (default is once 
    kubectl apply -f <your_threatfeed_filename>
    ```
 
-3. In {{site.prodname}} Manager, go to the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
+3. In {{site.tseeprodname}} Manager, go to the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
 
 #### Push threat feed updates
 
@@ -100,11 +100,11 @@ Use the push method if your threat feeds that are not in newline-delimited forma
 
    See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
 
-4. In {{site.prodname}} Manager, go the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
+4. In {{site.tseeprodname}} Manager, go the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
 
 #### Block traffic to a cluster
 
-Create a new/edit existing threat feed to include the globalNetworkSet stanza, setting the labels you want to use to represent the blacklisted IPs. This stanza instructs {{site.prodname}} to search for flows to and from the listed IP addresses, and maintain a GlobalNetworkSet containing the IP addresses.
+Create a new/edit existing threat feed to include the globalNetworkSet stanza, setting the labels you want to use to represent the blacklisted IPs. This stanza instructs {{site.tseeprodname}} to search for flows to and from the listed IP addresses, and maintain a GlobalNetworkSet containing the IP addresses.
 
 <pre>
 apiVersion: projectcalico.org/v3
@@ -183,11 +183,11 @@ If you haven’t already adjusted your [aggregation flows](#before-you-begin), w
    
 #### Check search results
 
-Open {{site.prodname}} Manager, and navigate to the “Anomaly Detection” page. If any of your pods have been communicating with the IP addresses in the FEODO tracker feed, you will see the results listed on this page. It is normal to not see any events listed on this page.
+Open {{site.tseeprodname}} Manager, and navigate to the “Anomaly Detection” page. If any of your pods have been communicating with the IP addresses in the FEODO tracker feed, you will see the results listed on this page. It is normal to not see any events listed on this page.
 
 #### Block pods from contacting IPs
 
-If you have high confidence in the IP addresses listed as malicious in a threat feed, you can take stronger action than just searching for connections after the fact. For example, the FEODO tracker lists IP addresses used by command and control servers for botnets. We can configure {{site.prodname}} to block all egress traffic to addresses on this list.
+If you have high confidence in the IP addresses listed as malicious in a threat feed, you can take stronger action than just searching for connections after the fact. For example, the FEODO tracker lists IP addresses used by command and control servers for botnets. We can configure {{site.tseeprodname}} to block all egress traffic to addresses on this list.
 
 It is strongly recommended that you assess the contents of a threat feed for false positives before using it as a blocklist, and that you apply it to a test subset of your workloads before rolling out application or cluster-wide. Failure to do so could cause legitimate application traffic to be blocked and could lead to an outage in your application.
 

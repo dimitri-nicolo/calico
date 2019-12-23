@@ -336,7 +336,7 @@ spec:
     interval: 5s
 ```
 
-To update {{site.prodname}} Prometheus' scrape interval to 10 seconds modify the manifest
+To update {{site.tseeprodname}} Prometheus' scrape interval to 10 seconds modify the manifest
 to this:
 
 ```yaml

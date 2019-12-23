@@ -4,21 +4,21 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 ---
 
 
-{{site.prodname}} installs the `default` and `allow-cnx` tiers as part of the
+{{site.tseeprodname}} installs the `default` and `allow-cnx` tiers as part of the
 base set of tiers. Enabling the
 [AWS security group integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration)
 introduces three additional tiers: `sg-remote`, `sg-local`, and `metadata`.
 
 | Tier        | Order  | Installed with ...         |
 |-------------|--------|----------------------------|
-| `default`   | n/a    | {{site.prodname}}          |
-| `allow-cnx` | 100    | {{site.prodname}}          |
+| `default`   | n/a    | {{site.tseeprodname}}          |
+| `allow-cnx` | 100    | {{site.tseeprodname}}          |
 | `sg-remote` | 105    | AWS SG integration feature |
 | `sg-local`  | 106    | AWS SG integration feature |
 | `metadata`  | 107    | AWS SG integration feature |
 
 The tiers above and the network policies in them should not be
-modified since they are essential for proper functioning of {{site.prodname}}.
+modified since they are essential for proper functioning of {{site.tseeprodname}}.
 In addition, we recommend installing customer-specific tiers _after_ the above
 tiers, i.e. with order > 107.
 
@@ -27,9 +27,9 @@ network policies, the best practice is to restrict non-admin users' ability to
 view and modify the above tiers.
 Although [RBAC for tiered policies](/{{page.version}}/reference/cnx/rbac-tiered-policies)
 does not allow you to hide specific tiers from non-admin users, it is possible
-to display only a subset of tiers in the {{site.prodname}} UI.
+to display only a subset of tiers in the {{site.tseeprodname}} UI.
 
-For an example of how to display only a subset of tiers in the {{site.prodname}} UI, see
+For an example of how to display only a subset of tiers in the {{site.tseeprodname}} UI, see
 [displaying only the net-sec tier](/{{page.version}}/reference/cnx/rbac-tiered-policies#displaying-only-the-net-sec-tier).
 
 For an example of how to display tiers and associated network policies, but

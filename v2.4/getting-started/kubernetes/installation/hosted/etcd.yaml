@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-# This manifest installs the {{site.prodname}} etcd on the kubeadm master.  This uses a DaemonSet
+# This manifest installs the {{site.tseeprodname}} etcd on the kubeadm master.  This uses a DaemonSet
 # to force it to run on the master even when the master isn't schedulable, and uses
 # nodeSelector to ensure it only runs on the master.
 apiVersion: extensions/v1beta1
@@ -24,7 +24,7 @@ spec:
     spec:
       tolerations:
         # This taint is set by all kubelets running `--cloud-provider=external`
-        # so we should tolerate it to schedule the {{site.prodname}} pods
+        # so we should tolerate it to schedule the {{site.tseeprodname}} pods
         - key: node.cloudprovider.kubernetes.io/uninitialized
           value: "true"
           effect: NoSchedule
@@ -66,7 +66,7 @@ spec:
 
 ---
 
-# This manifest installs the Service which gets traffic to the {{site.prodname}}
+# This manifest installs the Service which gets traffic to the {{site.tseeprodname}}
 # etcd.
 apiVersion: v1
 kind: Service

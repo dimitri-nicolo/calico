@@ -3,7 +3,7 @@ title: Configuring MTU
 canonical_url: https://docs.tigera.io/v2.3/usage/configuration/mtu
 ---
 
-Depending on the environment {{site.prodname}} is being deployed into it may be
+Depending on the environment {{site.tseeprodname}} is being deployed into it may be
 helpful or even necessary to configure the MTU of the veth (or TAP) that is
 attached to each workload and the tunnel devices if IP-in-IP is enabled.
 
@@ -17,7 +17,7 @@ packet.
 
 #### Common MTU sizes
 
-| Network MTU | {{site.prodname}} MTU | {{site.prodname}} MTU with IP-in-IP | {{site.prodname}} MTU with VXLAN (IPv4) |
+| Network MTU | {{site.tseeprodname}} MTU | {{site.tseeprodname}} MTU with IP-in-IP | {{site.tseeprodname}} MTU with VXLAN (IPv4) |
 |-------------|------------|--------------------------|------------------------------|
 | 1500 | 1500 | 1480 | 1450 |
 | 9000 | 9000 | 8980 | 8950 |
@@ -35,7 +35,7 @@ is 1440 to match the value needed in GCE.
 
 When using flannel for networking, the MTU for the network interfaces
 should match the MTU of the flannel interface.  In the above table the 4th
-column "{{site.prodname}} MTU with VXLAN" is the expected MTU when using flannel
+column "{{site.tseeprodname}} MTU with VXLAN" is the expected MTU when using flannel
 configured with VXLAN.
 
 ## MTU Configuration
@@ -47,7 +47,7 @@ Containerizer integration use libnetwork.
 CNI, which is used by Kubernetes and the Mesos Unified Containerizer, supports
 configuring the MTU through the CNI configuration file.
 
-The user will also want to configure {{site.prodname}}'s IP-in-IP interface MTU when
+The user will also want to configure {{site.tseeprodname}}'s IP-in-IP interface MTU when
 IP-in-IP is enabled on the cluster. Refer to the MTU table at the top of the page
 to choose the value that matches your environment.
 
@@ -72,7 +72,7 @@ MTU is set in the by the `"mtu": <MTU size>` field of the CNI configuration. Exa
 ```
 
 > **Note**: If using Kubernetes self-hosted manifests, you should modify the
-`veth_mtu` value in the {{site.prodname}} ConfigMap instead, and leave `"mtu"` here
+`veth_mtu` value in the {{site.tseeprodname}} ConfigMap instead, and leave `"mtu"` here
 set to `__CNI_MTU__`. See below for more details.
 {: .alert .alert-info}
 
@@ -85,7 +85,7 @@ by default. On restart of the `{{site.nodecontainer}}` pods, any references to
 configuration file (aka conflist) at the directory specified by Kubernetes
 (currently defaults to `/etc/cni/net.d/`).
 
-Restarting the `{{site.nodecontainer}}` pods will also update any {{site.prodname}}
+Restarting the `{{site.nodecontainer}}` pods will also update any {{site.tseeprodname}}
 tunnel network interfaces on that node. From this point forward, any pods
 started will also have the updated MTU value.
 
@@ -99,7 +99,7 @@ the `veth_mtu` field of the calico-config ConfigMap, which is set to `1440` by d
 
 ### Setting tunnel MTU with calicoctl
 
-To set the IP-in-IP MTU value for all {{site.prodname}} nodes in your cluster, use the
+To set the IP-in-IP MTU value for all {{site.tseeprodname}} nodes in your cluster, use the
 following command to retrieve the current Felix settings.
 
 ```bash

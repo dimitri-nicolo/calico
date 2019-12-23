@@ -6,9 +6,9 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 ## About the manifests
 
 The **[cnx-api-etcd.yaml](1.7/cnx-api-etcd.yaml)** and **[cnx-api-kdd.yaml](1.7/cnx-api-kdd.yaml)** manifests do the following:
-  - Installs the {{site.prodname}} API server, and configures the APIService to tell
+  - Installs the {{site.tseeprodname}} API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
-  - Installs the {{site.prodname}} Manager web server, and configures it with the location
+  - Installs the {{site.tseeprodname}} Manager web server, and configures it with the location
     of the Kubernetes API, login methods and SSL certificates.
 
 The **[operator.yaml](1.7/operator.yaml)** manifest does the following:
@@ -52,7 +52,7 @@ There are a number of ports defined via _Services_. Ensure that they are updated
 to match your environment and also update any _NetworkPolicy_ that
 have the same ports.
 
-For example, if you want the {{site.prodname}} Manager to listen on a port other than
+For example, if you want the {{site.tseeprodname}} Manager to listen on a port other than
 30003 or you plan to set up a load balancer in front of it, edit the
 `Service` object named `cnx-manager` as required. In this paticular case, there are no 
 network policies to update for this service.
@@ -100,7 +100,7 @@ spec:
             memory: 100Mi
 ```
 
-## Configure the {{site.prodname}} Manager
+## Configure the {{site.tseeprodname}} Manager
 
 The **[cnx.yaml](1.7/cnx.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen

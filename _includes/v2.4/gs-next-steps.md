@@ -1,9 +1,9 @@
 ## Next steps
 
-Consult the {{site.prodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
+Consult the {{site.tseeprodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
 demonstrates the main features.
 
-For more detailed documentation on {{site.prodname}} features, see here:
+For more detailed documentation on {{site.tseeprodname}} features, see here:
 - [Install calicoq](/{{page.version}}/getting-started/calicoq/)
 - [Denied Packet Notifications](/{{page.version}}/security/metrics/metrics)
 - [Configuring Felix](/{{page.version}}/reference/felix/configuration)

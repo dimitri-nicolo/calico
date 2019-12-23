@@ -10,7 +10,7 @@ You will need to install calicoctl and configure it to connect to your etcd data
 -  [Configure calicoctl to connect to etcd](../../calicoctl/configure/).
 
 Then you can use any of the following methods to install and run Felix, on each bare metal
-host where you want {{site.prodname}} host protection.
+host where you want {{site.tseeprodname}} host protection.
 
 - [Container](container): On hosts equipped with Docker, you can run `{{site.nodecontainer}}`,
   which includes Felix and all of its dependencies.

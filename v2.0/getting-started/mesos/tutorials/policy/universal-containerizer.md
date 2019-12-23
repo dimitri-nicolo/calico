@@ -3,7 +3,7 @@ title: Network Policy (Universal Containerizer)
 no_canonical: true
 ---
 
-This document will demonstrate how to manipulate policy for {{site.prodname}} using
+This document will demonstrate how to manipulate policy for {{site.tseeprodname}} using
 [Policies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy). Specifically, we will:
 
 - Set labels on our workload at launch
@@ -22,7 +22,7 @@ Then, we will launch basic curl task which will repeatedly curl the webserver.
 ## Setting Labels
 
 When launching tasks, assign arbitrary `labels` in the task's `ipAddress` field.
-These labels will be passed to {{site.prodname}}'s CNI plugin which will store them in the
+These labels will be passed to {{site.tseeprodname}}'s CNI plugin which will store them in the
 Labels field of the corresponding
 [workload endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint#definitions).
 
@@ -68,7 +68,7 @@ as the Default Profile will allow this connection.
 
 ## Configuring the Default Profile
 
-{{site.prodname}} configures a base profile that applies to any container
+{{site.tseeprodname}} configures a base profile that applies to any container
 _that does not match a policy_. This profile **allows all containers to communicate
 with one another**. Therefore, the logs for the client should show repeatedly
 successful connections. Connections made from
@@ -105,7 +105,7 @@ Checking the task's log should show that these connections are no longer success
 ## Configuring Policy
 
 Now that the default profile is isolating our tasks, we will open up the necessary
-connections using {{site.prodname}} Policies.
+connections using {{site.tseeprodname}} Policies.
 
 Policy resources are defined globally, and include a set of ingress and egress
 rules and actions, where each rule can filter packets based on a variety

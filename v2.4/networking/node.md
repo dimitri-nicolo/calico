@@ -3,14 +3,14 @@ title: Configuring a node IP address and subnet
 canonical_url: 'https://docs.tigera.io/v2.3/usage/configuration/node'
 ---
 
-By default, {{site.prodname}} automatically detects each node's IP address and subnet.  In most cases,
-this auto-detection is enough and you will not need to change the value picked by {{site.prodname}}.
+By default, {{site.tseeprodname}} automatically detects each node's IP address and subnet.  In most cases,
+this auto-detection is enough and you will not need to change the value picked by {{site.tseeprodname}}.
 However, there are some scenarios where the default autodetection may not choose the right
 address.  For example:
 
 -  Your host has multiple external interfaces.
 -  Your host may have multiple IP addresses assigned to each interface.
--  You want to change the subnet configuration of each Node to use {{site.prodname}}'s
+-  You want to change the subnet configuration of each Node to use {{site.tseeprodname}}'s
    [CrossSubnet IPIP]({{site.url}}/{{page.version}}/networking/ip-in-ip) feature.
 -  You have changed the IP of your host.
 

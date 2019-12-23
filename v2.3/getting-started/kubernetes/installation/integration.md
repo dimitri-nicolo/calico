@@ -3,38 +3,38 @@ title: Integration Guide
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/integration
 ---
 
-This document explains the components necessary to install {{site.prodname}} on
+This document explains the components necessary to install {{site.tseeprodname}} on
 Kubernetes for integrating with custom configuration management.
 
-The manifests we provide in [Installing {{site.prodname}} for policy and networking](calico),
-and [Installing {{site.prodname}} for policy](other) will perform these steps automatically
+The manifests we provide in [Installing {{site.tseeprodname}} for policy and networking](calico),
+and [Installing {{site.tseeprodname}} for policy](other) will perform these steps automatically
 for you and are *strongly* recommended for most users. These instructions should only
 be followed by users who have a specific need that cannot be met by using manifests.
 
 
 ## Before you begin
 
-- Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
+- Ensure that your cluster meets the {{site.tseeprodname}} [system requirements](../requirements).
 
 - Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
-## About the {{site.prodname}} components
+## About the {{site.tseeprodname}} components
 
-There are three components of a {{site.prodname}} / Kubernetes integration.
+There are three components of a {{site.tseeprodname}} / Kubernetes integration.
 
-- The {{site.prodname}} per-node Docker container `{{site.nodecontainer}}`.
+- The {{site.tseeprodname}} per-node Docker container `{{site.nodecontainer}}`.
 - The [cni-plugin](https://github.com/projectcalico/cni-plugin) network plugin binaries. This is the combination of two binary executables and a configuration file.
-- The {{site.prodname}} Kubernetes controllers, which run in a single-instance pod.  These components monitor the Kubernetes API to keep {{site.prodname}} in sync.
+- The {{site.tseeprodname}} Kubernetes controllers, which run in a single-instance pod.  These components monitor the Kubernetes API to keep {{site.tseeprodname}} in sync.
 
 The `{{site.nodecontainer}}` docker container must be run on the Kubernetes master and each
-Kubernetes node in your cluster.  It contains the BGP agent necessary for {{site.prodname}} routing to occur,
+Kubernetes node in your cluster.  It contains the BGP agent necessary for {{site.tseeprodname}} routing to occur,
 and the Felix agent which programs network policy rules.
 
 The `cni-plugin` plugin integrates directly with the Kubernetes `kubelet` process
-on each node to discover which pods have been created, and adds them to {{site.prodname}} networking.
+on each node to discover which pods have been created, and adds them to {{site.tseeprodname}} networking.
 
-The `{{site.imageNames["kubeControllers"]}}` container runs as a pod on top of Kubernetes and keeps {{site.prodname}}
+The `{{site.imageNames["kubeControllers"]}}` container runs as a pod on top of Kubernetes and keeps {{site.tseeprodname}}
 in-sync with Kubernetes.
 
 ## Installing {{site.nodecontainer}}
@@ -42,7 +42,7 @@ in-sync with Kubernetes.
 ### Run {{site.nodecontainer}} and configure the node.
 
 The Kubernetes master and each Kubernetes node require the `{{site.nodecontainer}}` container.
-Each node must also be recorded in the {{site.prodname}} datastore.
+Each node must also be recorded in the {{site.tseeprodname}} datastore.
 
 The `{{site.nodecontainer}}` container can be run directly through Docker, or it can be
 done using the `calicoctl` utility.
@@ -106,15 +106,15 @@ Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 
 ### Configuring {{site.nodecontainer}} for metrics collection
 
-Enable metrics in {{site.prodname}} by updating the global `FelixConfiguration` resource (`default`).
+Enable metrics in {{site.tseeprodname}} by updating the global `FelixConfiguration` resource (`default`).
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
-## Installing the {{site.prodname}} CNI plugins
+## Installing the {{site.tseeprodname}} CNI plugins
 
 The Kubernetes `kubelet` should be configured to use the `calico` and `calico-ipam` plugins.
 
-### Install the {{site.prodname}} plugins
+### Install the {{site.tseeprodname}} plugins
 
 Download the binaries and make sure they're executable.
 
@@ -132,7 +132,7 @@ chmod +x /opt/cni/bin/calico /opt/cni/bin/calico-ipam
 ```
 {% endif %}
 
-The {{site.prodname}} CNI plugins require a standard CNI config file.  The `policy` section is only required when
+The {{site.tseeprodname}} CNI plugins require a standard CNI config file.  The `policy` section is only required when
 running the `{{site.imageNames["kubeControllers"]}}` container .
 
 ```bash
@@ -160,7 +160,7 @@ EOF
 Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 Replace `</PATH/TO/KUBECONFIG>` with your kubeconfig file. See [Kubernetes kubeconfig](http://kubernetes.io/docs/user-guide/kubeconfig-file/) for more information about kubeconfig.
 
-For more information on configuring the {{site.prodname}} CNI plugins, see the [configuration guide]({{site.baseurl}}/{{page.version}}/reference/cni-plugin/configuration)
+For more information on configuring the {{site.tseeprodname}} CNI plugins, see the [configuration guide]({{site.baseurl}}/{{page.version}}/reference/cni-plugin/configuration)
 
 ### Install standard CNI loopback plugin
 
@@ -174,9 +174,9 @@ tar -zxvf cni-plugins-amd64-v0.7.1.tgz
 sudo cp loopback /opt/cni/bin/
 ```
 
-## Installing the {{site.prodname}} Kubernetes controllers
+## Installing the {{site.tseeprodname}} Kubernetes controllers
 
-The `{{site.imageNames["kubeControllers"]}}` container keeps {{site.prodname}}'s datastore in-sync with Kubernetes.
+The `{{site.imageNames["kubeControllers"]}}` container keeps {{site.tseeprodname}}'s datastore in-sync with Kubernetes.
 It runs as a single pod managed by a Deployment.
 
 > **Note**: The `{{site.imageNames["kubeControllers"]}}` container is required even if policy is not in use.
@@ -184,7 +184,7 @@ It runs as a single pod managed by a Deployment.
 
 To install the controllers:
 
-- Download the [{{site.prodname}} Kubernetes controllers manifest](calico-kube-controllers.yaml).
+- Download the [{{site.tseeprodname}} Kubernetes controllers manifest](calico-kube-controllers.yaml).
 - Modify `<ETCD_ENDPOINTS>` to point to your etcd cluster.
 - Install it using `kubectl`.
 
@@ -211,23 +211,23 @@ see the [configuration guide]({{site.baseur}}/{{page.version}}/reference/kube-co
 
 ## Role-based access control (RBAC)
 
-When installing {{site.prodname}} on Kubernetes clusters with RBAC enabled, it is necessary to provide {{site.prodname}} access to some Kubernetes
-APIs.  To do this, subjects and roles must be configured in the Kubernetes API and {{site.prodname}} components must be provided with the appropriate
+When installing {{site.tseeprodname}} on Kubernetes clusters with RBAC enabled, it is necessary to provide {{site.tseeprodname}} access to some Kubernetes
+APIs.  To do this, subjects and roles must be configured in the Kubernetes API and {{site.tseeprodname}} components must be provided with the appropriate
 tokens or certificates to present which identify it as the configured API user.
 
 Detailed instructions for configuring Kubernetes RBAC are outside the scope of this document.  For more information,
 please see the [upstream Kubernetes documentation](https://kubernetes.io/docs/admin/authorization/rbac/) on the topic.
 
-The permissions required by the {{site.prodname}} components vary by datastore type and networking provider.
+The permissions required by the {{site.tseeprodname}} components vary by datastore type and networking provider.
 Apply the manifest appropriate to your cluster configuration.
 
-- **Kubernetes API datastore with {{site.prodname}} networking**:
+- **Kubernetes API datastore with {{site.tseeprodname}} networking**:
 
    ```
    kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-kdd-calico.yaml
    ```
 
-- **etcd datastore with {{site.prodname}} networking**:
+- **etcd datastore with {{site.tseeprodname}} networking**:
 
    ```
    kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-etcd-calico.yaml
@@ -237,7 +237,7 @@ Apply the manifest appropriate to your cluster configuration.
 
 {% include {{page.version}}/cnx-mgr-install.md init="systemd" %}
 
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
+1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.tseeprodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
    operator continue to the next step instead.
 

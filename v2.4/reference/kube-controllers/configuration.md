@@ -3,7 +3,7 @@ title: Configuring the Tigera Secure EE Kubernetes controllers
 canonical_url: https://docs.tigera.io/v2.3/reference/kube-controllers/configuration
 ---
 
-The {{site.prodname}} Kubernetes controllers are deployed in a Kubernetes cluster. The different controllers monitor the Kubernetes API
+The {{site.tseeprodname}} Kubernetes controllers are deployed in a Kubernetes cluster. The different controllers monitor the Kubernetes API
 and perform actions based on cluster state.
 
 The controllers are primarily configured through environment variables. When running
@@ -14,22 +14,22 @@ section.
 
 The `{{site.imageNames["kubeControllers"]}}` container includes the following controllers:
 
-1. policy controller: watches network policies and programs {{site.prodname}} policies.
-1. namespace controller: watches namespaces and programs {{site.prodname}} profiles.
-1. serviceaccount controller: watches service accounts and programs {{site.prodname}} profiles.
-1. workloadendpoint controller: watches for changes to pod labels and updates {{site.prodname}} workload endpoints.
-1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}.
+1. policy controller: watches network policies and programs {{site.tseeprodname}} policies.
+1. namespace controller: watches namespaces and programs {{site.tseeprodname}} profiles.
+1. serviceaccount controller: watches service accounts and programs {{site.tseeprodname}} profiles.
+1. workloadendpoint controller: watches for changes to pod labels and updates {{site.tseeprodname}} workload endpoints.
+1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.tseeprodname}}.
 1. federation controller: watches Kubernetes services and endpoints locally and across all remote clusters, and programs
    Kubernetes endpoints for any locally configured service that specifies a service federation selector annotation.
 
-The {{site.prodname}} Kubernetes manifests run these controllers in two different deployments:
+The {{site.tseeprodname}} Kubernetes manifests run these controllers in two different deployments:
 1. calico-kube-controllers
    - This runs the policy, namespace, serviceaccount, workloadendpoint, and node controllers within the same pod
 1. tigera-federation-controller
    - This runs the federation controller only
-   - This is only included in the manifests that enable {{site.prodname}} federation
+   - This is only included in the manifests that enable {{site.tseeprodname}} federation
 
-The {{site.prodname}} Kubernetes manifests run these controllers within a single pod in the `calico-kube-controllers` deployment.
+The {{site.tseeprodname}} Kubernetes manifests run these controllers within a single pod in the `calico-kube-controllers` deployment.
 
 ### Configuring datastore access
 
@@ -37,7 +37,7 @@ The datastore type can be configured via the `DATASTORE_TYPE` environment variab
 
 #### etcdv3
 
-The {{site.prodname}} Kubernetes controllers support the following environment variables to configure etcd access:
+The {{site.tseeprodname}} Kubernetes controllers support the following environment variables to configure etcd access:
 
 | Environment         | Description | Schema |
 | ------------------- | ----------- | ------ |
@@ -64,7 +64,7 @@ configure API access if needed.
 
 ### Other configuration
 
-The following environment variables can be used to configure the {{site.prodname}} Kubernetes controllers.
+The following environment variables can be used to configure the {{site.tseeprodname}} Kubernetes controllers.
 
 | Environment   | Description | Schema | Default |
 | ------------- | ----------- | ------ | -------
@@ -82,7 +82,7 @@ The node controller automatically cleans up configuration for nodes that no long
 access to the Kubernetes API to monitor `Node` events.
 
 The node controller is not enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
-However, the {{site.prodname}} Kubernetes manifests explicitly specify the `ENABLED_CONTROLLERS` and enable this controller
+However, the {{site.tseeprodname}} Kubernetes manifests explicitly specify the `ENABLED_CONTROLLERS` and enable this controller
 within the calico-kube-controllers deployment.
 
 This controller is valid when using either the `etcdv3` or `kubernetes` datastore types.
@@ -101,9 +101,9 @@ To enable the node controller when using `etcdv3`, perform the following two ste
    ```
 
 Set `SYNC_NODE_LABELS` to true (enabled by default) to ensure that labels on
-Kubernetes node resources remain in-sync with labels on the corresponding {{site.prodname}}
+Kubernetes node resources remain in-sync with labels on the corresponding {{site.tseeprodname}}
 node resource. If both node resources specify a label with different values,
-the Kubernetes node resource takes precedence. Labels on the {{site.prodname}}
+the Kubernetes node resource takes precedence. Labels on the {{site.tseeprodname}}
 resource that don't exist in the Kubernetes node will remain as is.
 
 #### kubernetes
@@ -113,50 +113,50 @@ in the environment for kube-controllers to `node`. For example: `ENABLED_CONTROL
 
 ### Policy controller
 
-The policy controller syncs Kubernetes network policies to the {{site.prodname}} datastore. The controller must have read
+The policy controller syncs Kubernetes network policies to the {{site.tseeprodname}} datastore. The controller must have read
 access to the Kubernetes API to monitor `NetworkPolicy` events.
 
 The policy controller is enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
-This controller is only valid when using etcd as the {{site.prodname}} datastore.
+This controller is only valid when using etcd as the {{site.tseeprodname}} datastore.
 
 ### Workload endpoint controller
 
-The workload endpoint controller automatically syncs Kubernetes pod label changes to the {{site.prodname}} datastore by updating
+The workload endpoint controller automatically syncs Kubernetes pod label changes to the {{site.tseeprodname}} datastore by updating
 the corresponding workload endpoints appropriately. The controller must have read
 access to the Kubernetes API to monitor `Pod` events.
 
 The workload endpoint controller is enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
-This controller is only valid when using etcd as the {{site.prodname}} datastore.
+This controller is only valid when using etcd as the {{site.tseeprodname}} datastore.
 
 ### Namespace controller
 
-The namespace controller syncs Kubernetes namespace label changes to the {{site.prodname}} datastore. The controller must have read
+The namespace controller syncs Kubernetes namespace label changes to the {{site.tseeprodname}} datastore. The controller must have read
 access to the Kubernetes API to monitor `Namespace` events.
 
 The namespace controller is enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
-This controller is only valid when using etcd as the {{site.prodname}} datastore.
+This controller is only valid when using etcd as the {{site.tseeprodname}} datastore.
 
 ### Service account controller
 
-The service account controller syncs Kubernetes service account changes to the {{site.prodname}} datastore.
+The service account controller syncs Kubernetes service account changes to the {{site.tseeprodname}} datastore.
 The controller must have read access to the Kubernetes API to monitor `ServiceAccount` events.
 
 The service account controller is enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
-This controller is only valid when using etcd as the {{site.prodname}} datastore.
+This controller is only valid when using etcd as the {{site.tseeprodname}} datastore.
 
 ### Federation controller
 
-The federation controller syncs Kubernetes federated endpoint changes to the {{site.prodname}} datastore.
+The federation controller syncs Kubernetes federated endpoint changes to the {{site.tseeprodname}} datastore.
 The controller must have read access to the Kubernetes API to monitor `Service` and `Endpoints` events, and must
 also have write access to update `Endpoints`.
 
 The federation controller is disabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
-This controller is valid for all {{site.prodname}} datastore types. For more details refer to the
+This controller is valid for all {{site.tseeprodname}} datastore types. For more details refer to the
 [Configuring federated services](/{{page.version}}/networking/federation/services-controller) usage guide.
 
 [in-cluster-config]: https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod

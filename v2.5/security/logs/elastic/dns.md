@@ -3,7 +3,7 @@ title: DNS logs
 canonical_url: https://docs.tigera.io/master/security/logs/elastic/dns
 ---
 
-{{site.prodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.url}}/{{page.version}}/security/domain-based-policy#trusted-dns-servers). The following table
+{{site.tseeprodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.url}}/{{page.version}}/security/domain-based-policy#trusted-dns-servers). The following table
 details the key/value pairs in the JSON blob, including their
 [Elasticsearch datatype](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html).
 This information should assist you in constructing queries.
@@ -77,7 +77,7 @@ Please note that, to try this and the following examples in your own cluster:
    the date of the data that you want to search
    through](../configure-elastic#customizing-the-index-names-when-sharing-elasticsearch-clusters).
 
--  You will need to run curl from a host or pod that is allowed by {{site.prodname}} policy to
+-  You will need to run curl from a host or pod that is allowed by {{site.tseeprodname}} policy to
    connect to the Elasticsearch API service.  In our non-production demo setup
    (`monitor-calico.yaml`), the fluentd pods have such access, so you can use `kubectl get po -n
    calico-monitoring` to find the name of a fluentd pod and then `kubectl exec <fluentd pod name> -n

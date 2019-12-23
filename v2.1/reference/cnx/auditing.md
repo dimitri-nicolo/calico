@@ -3,7 +3,7 @@ title: Tigera Secure EE Resource Auditing with Kubernetes
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/ee-audit
 ---
 
-This document describes how to set up audit logging for {{site.prodname}}
+This document describes how to set up audit logging for {{site.tseeprodname}}
 resources. See [OpenShift Audit Logging](openshift-auditing){:target="_blank"} if you are running OpenShift.
 
 Kubernetes provides a rich set of auditing features to audit log resources access
@@ -20,7 +20,7 @@ later one being the audit policy configuration.
 
 ## Sample auditing policy
 
-The sample auditing policy provided below will log the following {{site.prodname}} resources:
+The sample auditing policy provided below will log the following {{site.tseeprodname}} resources:
 
 - `GlobalNetworkPolicy`
 - `NetworkPolicy`
@@ -74,5 +74,5 @@ Use either of the following options to log audit events.
 - [OpenShift Audit Logging](openshift-auditing)
 - [Policy Audit Mode](policy-auditing)
 - [Policy Violation Alerting](policy-violations)
-- [{{site.prodname}} Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on the {{site.prodname}} resource types.
+- [{{site.tseeprodname}} Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on the {{site.tseeprodname}} resource types.
 - [Kubernetes documentation on Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for details on configuring auditing.

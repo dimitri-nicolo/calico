@@ -37,7 +37,7 @@
 
 {% if include.yaml == "calico" %}
 
-1. Use the following commands to pull the required {{site.prodname}} images.
+1. Use the following commands to pull the required {{site.tseeprodname}} images.
 
    ```bash
    docker pull docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
@@ -157,7 +157,7 @@
    ```
    {: #load-docker-push-cmds}
 
-   > **Important**: Do not push the private {{site.prodname}} images to a public registry.
+   > **Important**: Do not push the private {{site.tseeprodname}} images to a public registry.
    {: .alert .alert-danger}
 
 {% else %}
@@ -227,7 +227,7 @@
 {% include {{page.version}}/cnx-cred-sed.md yaml=include.yaml %}
 
 {% if include.yaml == "calicoq" %}
-1. The manifest will need to be modified if you are using {{site.prodname}} federation and need to mount in secrets to
+1. The manifest will need to be modified if you are using {{site.tseeprodname}} federation and need to mount in secrets to
    access the remote cluster datastores. Follow the instructions in the manifest to enable this feature.
 {% endif %}
 

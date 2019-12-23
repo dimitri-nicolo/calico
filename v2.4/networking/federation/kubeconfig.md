@@ -3,7 +3,7 @@ title: Creating kubeconfig files
 canonical_url: https://docs.tigera.io/v2.3/usage/federation/kubeconfig
 ---
 
-Before installing {{site.prodname}}, you must complete the following steps on each cluster in the federation.
+Before installing {{site.tseeprodname}}, you must complete the following steps on each cluster in the federation.
 
 1. Access the cluster using a `kubeconfig` with administrative privileges.
 

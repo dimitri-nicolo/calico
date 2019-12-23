@@ -5,7 +5,7 @@ canonical_url: ""
 
 ## About IP address assignment
 
-{{site.prodname}} can be configured to use specific IP pools for different
+{{site.tseeprodname}} can be configured to use specific IP pools for different
 topological areas. For example, you may want workloads in a particular rack,
 zone, or region to receive addresses from the same IP pool. This may be
 desirable either to reduce the number of routes required in the network or to
@@ -36,7 +36,7 @@ assignment based on a certain rack affinity.
 
 ## Prerequisites
 
-This feature requires {{site.prodname}} for networking in etcd mode.
+This feature requires {{site.tseeprodname}} for networking in etcd mode.
 
 ### Example: Kubernetes
 
@@ -64,7 +64,7 @@ get started.
 
 
 By installing {{ site.prodname }} without setting the default IP pool to match,
-running `calicoctl get ippool -o wide` shows that {{site.prodname}} created its
+running `calicoctl get ippool -o wide` shows that {{site.tseeprodname}} created its
 default IP pool of `192.168.0.0/16`:
 
 ```
@@ -161,7 +161,7 @@ EOF
    each workload falls within the respective IP pool that selects the rack that
    they run on.
 
-> **Note**: {{site.prodname}} IPAM will not reassign IP addresses to workloads
+> **Note**: {{site.tseeprodname}} IPAM will not reassign IP addresses to workloads
 > that are already running. To update running workloads with IP addresses from
 > a newly configured IP pool, they must be recreated. We recommend doing this
 > before going into production or during a maintenance window.

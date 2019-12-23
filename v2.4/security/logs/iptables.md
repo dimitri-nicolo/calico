@@ -12,16 +12,16 @@ Collection, rotation and other management of these logs is provided by your sysl
 
 ## Policy audit mode
 
-{{site.prodname}} adds a Felix option `DropActionOverride` that configures how the
+{{site.tseeprodname}} adds a Felix option `DropActionOverride` that configures how the
 `deny` `action` in a [Rule](/{{page.version}}/reference/calicoctl/resources/networkpolicy#Rule) is interpreted.
 It can add logs for denied packets, or even allow the traffic through.
 
 See the
-[Felix configuration reference](/{{page.version}}/reference/felix/configuration#{{site.prodnamedash}}-specific-configuration) for
+[Felix configuration reference](/{{page.version}}/reference/felix/configuration#{{site.tseeprodnamedash}}-specific-configuration) for
 information on how to configure this option.
 
 `DropActionOverride` controls what happens to each packet that is denied by
-the current {{site.prodname}} policy, i.e., by the ordered combination of all the
+the current {{site.tseeprodname}} policy, i.e., by the ordered combination of all the
 configured policies and profiles that apply to that packet.  It may be
 set to one of the following values:
 

@@ -2,7 +2,7 @@
 title: Connecting to a dedicated etcd cluster (optional)
 ---
 
-{{site.prodname}}'s OpenShift-ansible integration supports connection to a custom etcd which
+{{site.tseeprodname}}'s OpenShift-ansible integration supports connection to a custom etcd which
 a user has already set up.
 
 **Requirements:**
@@ -50,4 +50,4 @@ node1
 etcd1
 ```
 
-You are now ready to execute the ansible provision which will install {{site.prodname}}.
+You are now ready to execute the ansible provision which will install {{site.tseeprodname}}.

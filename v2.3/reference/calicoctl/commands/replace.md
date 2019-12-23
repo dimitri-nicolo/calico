@@ -9,7 +9,7 @@ Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{pa
 for a full list of calicoctl commands.
 
 > **Note**: The available actions for a specific resource type may be
-> limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API).
+> limited based on the datastore used for {{site.tseeprodname}} (etcdv3 / Kubernetes API).
 > Please refer to the
 > [Resources section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/)
 > for details about each resource type.
@@ -124,6 +124,6 @@ Description:
 
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.tseeprodname}} selector-based policy model
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
+   the {{site.tseeprodname}} datastore.

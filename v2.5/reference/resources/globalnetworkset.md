@@ -4,29 +4,29 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globaln
 ---
 
 A global network set resource (GlobalNetworkSet) represents an arbitrary set of IP subnetworks/CIDRs,
-allowing it to be matched by {{site.prodname}} policy.  Network sets are useful for applying policy to traffic
-coming from (or going to) external, non-{{site.prodname}}, networks.
+allowing it to be matched by {{site.tseeprodname}} policy.  Network sets are useful for applying policy to traffic
+coming from (or going to) external, non-{{site.tseeprodname}}, networks.
 
 GlobalNetworkSets can also include domain names, whose effect is to allow egress traffic to those
 domain names, when the GlobalNetworkSet is matched by the destination selector of an egress rule
 with action Allow.  Domain names have no effect in ingress rules, or in a rule whose action is not
 Allow.
 
-> **Note**: {{site.prodname}} implements policy for domain names by learning the
+> **Note**: {{site.tseeprodname}} implements policy for domain names by learning the
 > corresponding IPs from DNS, then programming rules to allow those IPs.  This means that
 > if multiple domain names A, B and C all map to the same IP, and there is domain-based
 > policy to allow A, traffic to B and C will be allowed as well.
 {: .alert .alert-info}
 
-The metadata for each network set includes a set of labels.  When {{site.prodname}} is calculating the set of
+The metadata for each network set includes a set of labels.  When {{site.tseeprodname}} is calculating the set of
 IPs that should match a source/destination selector within a
 [global network policy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy) rule, it includes
 the CIDRs from any network sets that match the selector.
 
-> **Important**: Since {{site.prodname}} matches packets based on their source/destination IP addresses,
-> {{site.prodname}} rules may not behave as expected if there is NAT between the {{site.prodname}}-enabled node and the
+> **Important**: Since {{site.tseeprodname}} matches packets based on their source/destination IP addresses,
+> {{site.tseeprodname}} rules may not behave as expected if there is NAT between the {{site.tseeprodname}}-enabled node and the
 > networks listed in a network set.  For example, in Kubernetes, incoming traffic via a service IP is
-> typically SNATed by the kube-proxy before reaching the destination host so {{site.prodname}}'s workload
+> typically SNATed by the kube-proxy before reaching the destination host so {{site.tseeprodname}}'s workload
 > policy will see the kube-proxy's host's IP as the source instead of the real source.
 {: .alert .alert-danger}
 

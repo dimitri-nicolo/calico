@@ -3,7 +3,7 @@ title: Custom BGP Configuration
 canonical_url: https://docs.tigera.io/v2.3/usage/custom-bgp-config
 ---
 
-In {{site.prodname}}, BGP is handled by [BIRD](https://github.com/projectcalico/bird).
+In {{site.tseeprodname}}, BGP is handled by [BIRD](https://github.com/projectcalico/bird).
 The BIRD configurations are templated out through [confd](https://github.com/kelseyhightower/confd).
 In some cases, you may want to modify the BIRD configuration in order to achieve
 features such as:
@@ -36,7 +36,7 @@ kubectl create configmap bgp-templates -n kube-system --from-file=<path to direc
 ```
 
 Once the configmap has been created, we need to create the appropriate volume mounts to make
-the templates available in the {{site.prodname}} node containers.
+the templates available in the {{site.tseeprodname}} node containers.
 
 Edit your `calico.yaml` file to add in the following for the `{{site.nodecontainer}}` container:
 

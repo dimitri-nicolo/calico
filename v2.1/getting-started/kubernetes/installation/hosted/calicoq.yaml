@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-# {{site.prodname}} Version {{site.data.versions[page.version].first.title}}
+# {{site.tseeprodname}} Version {{site.data.versions[page.version].first.title}}
 # {{site.baseurl}}/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
 #   {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}

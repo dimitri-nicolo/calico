@@ -3,7 +3,7 @@ title: Installing Calico for Docker
 no_canonical: true
 ---
 
-{{site.prodname}} runs as a Docker container on each host. The `calicoctl` command line tool can be used to launch the `{{site.nodecontainer}}` container.
+{{site.tseeprodname}} runs as a Docker container on each host. The `calicoctl` command line tool can be used to launch the `{{site.nodecontainer}}` container.
 
 ## Before you begin 
 
@@ -41,11 +41,11 @@ with the following command:
 
 ## Using "docker run"
 
-For more control over the {{site.prodname}} startup process, and to simplify binding
+For more control over the {{site.tseeprodname}} startup process, and to simplify binding
 startup to an init system, `calicoctl` can print the command it uses
 to launch `{{site.nodecontainer}}`.
 
-To print the command `calicoctl node run` uses to launch {{site.prodname}} on this host,
+To print the command `calicoctl node run` uses to launch {{site.tseeprodname}} on this host,
 run the command with the `--init-system` and `--dry-run` flags:
 
 ```
@@ -60,7 +60,7 @@ docker stop {{site.noderunning}}
 
 ```
 
-Pair the printed command with your favorite init system to ensure {{site.prodname}} is
+Pair the printed command with your favorite init system to ensure {{site.tseeprodname}} is
 always running on each host.
 
 See [additional information on binding to an init system
@@ -68,5 +68,5 @@ See [additional information on binding to an init system
 
 ## Next Steps
 
-With `{{site.noderunning}}` running, you are ready to start using {{site.prodname}} by following
-[Security using {{site.prodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles).
+With `{{site.noderunning}}` running, you are ready to start using {{site.tseeprodname}} by following
+[Security using {{site.tseeprodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles).

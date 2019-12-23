@@ -15,7 +15,7 @@ After enabling IPv6:
 ### Limitations
 
 - Currently Kubernetes supports only one IP stack version at a time. This
-  means that if you configure Kubernetes for IPv6 then {{site.prodname}}
+  means that if you configure Kubernetes for IPv6 then {{site.tseeprodname}}
   should be configured to assign only IPv6 addresses.
 - The steps and setup here have not been tested against an existing IPv4
   cluster and are intended only for new clusters.
@@ -28,7 +28,7 @@ After enabling IPv6:
   the other hosts.
 - Each host must have the sysctl setting `net.ipv6.conf.all.forwarding`
   setting it to `1`.  This ensures both Kubernetes service traffic
-  and {{site.prodname}} traffic is forwarded appropriately.
+  and {{site.tseeprodname}} traffic is forwarded appropriately.
 - Each host must have a default IPv6 route.
 
 #### Kubernetes components prerequisites
@@ -50,7 +50,7 @@ To enable IPv6, set the following flags.
 | ---- | ------------- |
 | `--master` | Should be set with the IPv6 address where the kube-apiserver can be accessed. |
 | `--node-cidr-mask-size` | If the `--allocate-node-cidrs` flag is set then it is necessary to set this flag, they are necessary when using host-local IPAM. If using calico-ipam is is easier to remove both flags as they are not needed. |
-| `--cluster-cidr` | Should be set to match the {{site.prodname}} IPv6 IPPool. |
+| `--cluster-cidr` | Should be set to match the {{site.tseeprodname}} IPv6 IPPool. |
 
 ##### kube-scheduler
 
@@ -72,14 +72,14 @@ To enable IPv6, set the following flags.
 | ---- | ------------- |
 | `--bind-address` | Should be set to the appropriate IPv6 address or `::` for all IPv6 addresses on the host. |
 | `--master` | Should be set with the IPv6 address where the kube-apiserver can be accessed. |
-| `--cluster-cidr` | Should be set to match the {{site.prodname}} IPv6 IPPool. |
+| `--cluster-cidr` | Should be set to match the {{site.tseeprodname}} IPv6 IPPool. |
 
-### Enabling IPv6 support in {{site.prodname}}
+### Enabling IPv6 support in {{site.tseeprodname}}
 
-To enable IPv6 support when installing {{site.prodname}} follow the
+To enable IPv6 support when installing {{site.tseeprodname}} follow the
 steps below.
 
-1. Download the {{site.prodname}} manifest you wish to update for IPv6
+1. Download the {{site.tseeprodname}} manifest you wish to update for IPv6
    deployment and save it as `calico.yaml`.
 1. If the ipam section in the `cni_network_config` in the `calico.yaml` file
    has `"type": "calico-ipam"` then it should be modified to

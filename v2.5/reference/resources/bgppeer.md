@@ -4,11 +4,11 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/bgppeer
 ---
 
 A BGP peer resource (`BGPPeer`) represents a remote BGP peer with
-which the node(s) in a {{site.prodname}} cluster will peer.
-Configuring BGP peers allows you to peer a {{site.prodname}} network
+which the node(s) in a {{site.tseeprodname}} cluster will peer.
+Configuring BGP peers allows you to peer a {{site.tseeprodname}} network
 with your datacenter fabric (e.g. ToR). For more
-information on cluster layouts, see {{site.prodname}}'s documentation on
-[{{site.prodname}} over IP fabrics]({{site.url}}/{{page.version}}/networking/design/l3-interconnect-fabric).
+information on cluster layouts, see {{site.tseeprodname}}'s documentation on
+[{{site.tseeprodname}} over IP fabrics]({{site.url}}/{{page.version}}/networking/design/l3-interconnect-fabric).
 
 For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:

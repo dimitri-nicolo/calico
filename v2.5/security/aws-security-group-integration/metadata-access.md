@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 
 ### About pod access to AWS metadata
 
-By default, {{site.prodname}} blocks pods from accessing the AWS metadata endpoint on their node. Access to the
+By default, {{site.tseeprodname}} blocks pods from accessing the AWS metadata endpoint on their node. Access to the
 [AWS metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
 endpoint allows a pod to obtain
 [instance and user metadata](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html#instancedata-data-categories)

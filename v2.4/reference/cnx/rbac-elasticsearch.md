@@ -2,14 +2,14 @@
 title: Configuring Tigera Secure EE RBAC for Elasticsearch
 ---
 
-The {{site.prodname}} allows administrators the ability to manage access to Elasticsearch indices from the UI.
+The {{site.tseeprodname}} allows administrators the ability to manage access to Elasticsearch indices from the UI.
 This effectively allows administrators to manage a user's UI access to flow logs, audit logs, and intrusion detection events. If a user
 does not have access to a specific Elasticsearch index, then when they navigate to a page that uses Elasticsearch queries on that index,
 the page will not display any data from that index.
 
 ### Elasticsearch indexes and RBAC
 
-In {{site.prodname}}, resources are associated with the Kubernetes API group `lma.tigera.io`.
+In {{site.tseeprodname}}, resources are associated with the Kubernetes API group `lma.tigera.io`.
 
 | Elasticsearch Index          | Kubernetes RBAC resource name | Description                                                                                                                     |
 |------------------------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|

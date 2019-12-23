@@ -3,7 +3,7 @@ title: Vagrant Deployed Mesos Cluster with Calico
 no_canonical: true
 ---
 This guide will show you how to use Vagrant to launch a Mesos Cluster
-with {{site.prodname}} installed and ready to network Docker Containerizer tasks.
+with {{site.tseeprodname}} installed and ready to network Docker Containerizer tasks.
 
 ## 1. Install Dependencies
 This guide requires a host machine with:
@@ -60,7 +60,7 @@ For Windows, see <https://github.com/nickryand/vagrant-multi-putty>.
 ## 5. Next Steps
 
 With your cluster deployed, you can follow the
-[tutorials on using {{site.prodname}} with Mesos]({{site.baseurl}}/{{page.version}}/getting-started/mesos#tutorials).
+[tutorials on using {{site.tseeprodname}} with Mesos]({{site.baseurl}}/{{page.version}}/getting-started/mesos#tutorials).
 
 [virtualbox]: https://www.virtualbox.org/
 [vagrant]: https://www.vagrantup.com/

@@ -8,7 +8,7 @@ title: Using your own Elasticsearch for logs
 
 ### Set up namespace
 
-1. Create the `calico-monitoring` namespace to store configuration and set up other {{site.prodname}} components
+1. Create the `calico-monitoring` namespace to store configuration and set up other {{site.tseeprodname}} components
 
    ```
    kubectl create -f - <<EOF

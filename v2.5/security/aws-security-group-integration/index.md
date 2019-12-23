@@ -5,12 +5,12 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 
 
 
-{{site.prodname}} integrates AWS security groups and network policy,
+{{site.tseeprodname}} integrates AWS security groups and network policy,
 enforcing granular access control between Kubernetes pods and AWS VPC resources.
 
 If you have
 [enabled the AWS Security Group integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration),
-{{site.prodname}} allows you to control communications between
+{{site.tseeprodname}} allows you to control communications between
 [VPC members and pods](/{{page.version}}/security/aws-security-group-integration/vpc-member-access) and between
 [pods and VPC members](/{{page.version}}/security/aws-security-group-integration/pod-access).
 
@@ -29,7 +29,7 @@ and [EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Instances.html)
 instances.
 
 
- If enabled, {{site.prodname}} checks the rules of the pod’s security groups first to see if a connection should be blocked.
+ If enabled, {{site.tseeprodname}} checks the rules of the pod’s security groups first to see if a connection should be blocked.
  If the connection is not blocked by the security group rules, the traffic is processed by the Calico
  and Kubernetes network policy.
 

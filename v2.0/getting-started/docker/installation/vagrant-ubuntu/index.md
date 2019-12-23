@@ -4,7 +4,7 @@ no_canonical: true
 ---
 
 These instructions allow you to set up an Ubuntu cluster ready to network Docker containers with
-{{site.prodname}} using Vagrant.
+{{site.tseeprodname}} using Vagrant.
 
 ## 1. Streamlined setup of the VMs
 
@@ -21,7 +21,7 @@ These instructions allow you to set up an Ubuntu cluster ready to network Docker
 
 ### 1.3 Startup and SSH
 
-For {{site.prodname}} as a Docker network plugin
+For {{site.tseeprodname}} as a Docker network plugin
 
     vagrant up
 
@@ -59,7 +59,7 @@ And finally check that Docker is running on both hosts by running
 
     docker ps
 
-## 2. Install {{site.prodname}}
+## 2. Install {{site.tseeprodname}}
 
 With your VMs running, and connectivity between them established,
 it is time to launch `{{site.nodecontainer}}`.
@@ -69,7 +69,7 @@ The Vagrant machines already have `calicoctl` installed. Use it to launch `{{sit
     sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run --node-image={{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
 
 Append the `--use-docker-networking-container-labels` flag to the `calicoctl node run` command if you're combining
-[Docker Labels and {{site.prodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
+[Docker Labels and {{site.tseeprodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
 
 Check that the `{{site.nodecontainer}}` container is running on this host:
 
@@ -84,7 +84,7 @@ You should see output like this on each node
 ## Next Steps
 
 Now that you have a basic two node Ubuntu cluster setup, see
-[Security using {{site.prodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles)
+[Security using {{site.tseeprodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles)
 
 [libnetwork]: https://github.com/docker/libnetwork
 [experimental-channel]: https://github.com/docker/docker/tree/master/experimental

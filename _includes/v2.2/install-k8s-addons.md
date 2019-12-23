@@ -1,13 +1,13 @@
-### Install {{site.prodname}}
-{{site.prodname}} can be installed on Kubernetes using Kubernetes resources (DaemonSets, etc).
+### Install {{site.tseeprodname}}
+{{site.tseeprodname}} can be installed on Kubernetes using Kubernetes resources (DaemonSets, etc).
 
-The {{site.prodname}} self-hosted installation consists of three objects in the `kube-system` Namespace:
+The {{site.tseeprodname}} self-hosted installation consists of three objects in the `kube-system` Namespace:
 
-- A `ConfigMap` which contains the {{site.prodname}} configuration.
+- A `ConfigMap` which contains the {{site.tseeprodname}} configuration.
 - A `DaemonSet` which installs the `{{site.nodecontainer}}` pod and CNI plugin.
 - A `ReplicaSet` which installs the `calico/kube-policy-controller` pod.
 
-Install the {{site.prodname}} manifest:
+Install the {{site.tseeprodname}} manifest:
 
 ```shell
 kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml

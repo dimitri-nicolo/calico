@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.4/getting-started/bare-metal/installati
 ## Running under Docker
 If you want to run `{{site.nodecontainer}}` under Docker, you can use `calicoctl node run` command. It automatically pre-initializes the etcd database (which the other installation methods do not). See the
 [`calicoctl node run`]({{site.url}}/{{page.version}}/reference/calicoctl/commands/node/run)
-guide for details. This container packages up the core {{site.prodname}} components to provide both {{site.prodname}}
+guide for details. This container packages up the core {{site.tseeprodname}} components to provide both {{site.tseeprodname}}
 networking and network policy.
 
 ```bash

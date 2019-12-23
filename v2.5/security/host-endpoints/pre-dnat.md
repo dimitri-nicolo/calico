@@ -6,7 +6,7 @@ canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/pr
 
 Policy for host endpoints can be marked as `preDNAT`.  This means that rules in
 that policy should be applied before any DNAT (Destination Network Address
-Translation), which is useful if it is more convenient to specify {{site.prodname}} policy
+Translation), which is useful if it is more convenient to specify {{site.tseeprodname}} policy
 in terms of a packet's original destination IP address and port, than in terms
 of that packet's destination IP address and port after it has been DNAT'd.
 
@@ -18,9 +18,9 @@ number on that pod (which is usually different from the NodePort).
 
 As NodePorts are the externally advertised way of connecting to services (and a
 NodePort uniquely identifies a service, whereas an internal port number may
-not), it makes sense to express {{site.prodname}} policy to expose or secure particular
+not), it makes sense to express {{site.tseeprodname}} policy to expose or secure particular
 Services in terms of the corresponding NodePorts.  But that is only possible if
-the {{site.prodname}} policy is applied before DNAT changes the NodePort to something
+the {{site.tseeprodname}} policy is applied before DNAT changes the NodePort to something
 else. Hence this kind of policy needs `preDNAT` set to `true`.
 
 In addition to being applied before any DNAT, the enforcement of pre-DNAT

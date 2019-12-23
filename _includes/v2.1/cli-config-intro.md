@@ -1,4 +1,4 @@
-Many `{{ include.cli }}` commands require access to the {{site.prodname}} datastore. In most
+Many `{{ include.cli }}` commands require access to the {{site.tseeprodname}} datastore. In most
 circumstances, `{{ include.cli }}` cannot achieve this connection by default. You can provide
 `{{ include.cli }}` with the information it needs using either of the following.
 

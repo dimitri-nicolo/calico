@@ -18,7 +18,7 @@ parent [Rule](#rule)'s `action` must be `Allow`, and `nets` and `selector` must 
 
 {% include {{page.version}}/domain-names.md %}
 
-> **Note**: {{site.prodname}} implements policy for domain names by learning the
+> **Note**: {{site.tseeprodname}} implements policy for domain names by learning the
 > corresponding IPs from DNS, then programming rules to allow those IPs.  This means that
 > if multiple domain names A, B and C all map to the same IP, and there is domain-based
 > policy to allow A, traffic to B and C will be allowed as well.

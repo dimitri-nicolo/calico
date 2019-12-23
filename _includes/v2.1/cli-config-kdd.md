@@ -12,7 +12,7 @@
 
 
 > **Important**: The `kubeconfig` file specifies the user whose privileges are used. We recommend
-> giving only trusted administrator the permission to modify {{site.prodname}}
+> giving only trusted administrator the permission to modify {{site.tseeprodname}}
 > Custom Resource Definitions.
 {: .alert .alert-danger}
 

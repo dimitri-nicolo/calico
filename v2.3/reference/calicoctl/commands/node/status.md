@@ -28,7 +28,7 @@ Description:
 
 ### Examples
 
-Check the status of a {{site.prodname}} instance.
+Check the status of a {{site.tseeprodname}} instance.
 ```
 sudo calicoctl node status
 ```

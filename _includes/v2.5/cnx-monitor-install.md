@@ -21,11 +21,11 @@
 
 ### Enable Metrics
 
-Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+Below, we'll cover how to enable metrics in {{site.tseeprodname}} and how to launch Prometheus using Prometheus-Operator.
 
 **Prerequisite**: `calicoctl` [installed](/{{page.version}}/getting-started/calicoctl/install) and [configured](/{{page.version}}/getting-started/calicoctl/configure/). We recommend [installing](/{{page.version}}/getting-started/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
-Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
+Enable metrics in {{site.tseeprodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
@@ -56,7 +56,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    {: .alert .alert-danger}
 {% endunless %}
 
-1. Download the flow logs patch for {{site.prodname}} node.
+1. Download the flow logs patch for {{site.tseeprodname}} node.
 
    ```
    curl --compressed -O {{docpath}}/patch-flow-logs.yaml
@@ -71,7 +71,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% else %}
 {% unless include.elasticsearch == "external" %}
 
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
+1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.tseeprodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
    operator continue to the next step instead.
 
@@ -81,7 +81,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% endunless %}
 {% endif %}
 
-1. Apply the following manifest to set network policy that allows access to the {{site.prodname}} API server.
+1. Apply the following manifest to set network policy that allows access to the {{site.tseeprodname}} API server.
 
    ```bash
    {{cli}} apply -f \
@@ -171,8 +171,8 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
 {% if include.elasticsearch != "operator" %}
 1. Update the `tigera-es-config` configmap with information on how to reach the BYO Elasticsearch cluster.
-   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
-   Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through.
+   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.tseeprodname}} should access Elasticsearch through.
+   Replace `<kibana-host>` with the hostname (or IP) {{site.tseeprodname}} should access Kibana through.
    ```
    sed -i -e "s?__ELASTICSEARCH_HOST__?<elasticsearch-host>?g" monitor-calico.yaml
    sed -i -e "s?__KIBANA_HOST__?<kibana-host>?g" monitor-calico.yaml
@@ -193,7 +193,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% endif %}
 
 {% if include.upgrade %}
-1. Delete the install Job from previous {{site.prodname}} install, if it exists (Kubernetes Jobs cannot be modified, they must be deleted and re-created).
+1. Delete the install Job from previous {{site.tseeprodname}} install, if it exists (Kubernetes Jobs cannot be modified, they must be deleted and re-created).
    ```bash
    {{cli}} delete -n calico-monitoring job elastic-tsee-installer
    ```

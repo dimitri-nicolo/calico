@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/intrusion-detection/enabling
 
 ## Flow Log Aggregation
 
-By default, {{site.prodname}} aggregates flow logs so that flows to and from
+By default, {{site.tseeprodname}} aggregates flow logs so that flows to and from
 pods in the same replica set are summarized if the flows are accepted (denied
 flows are not aggregated this way by default).  However, some of the [intrusion
 detection jobs][jobs] look for pods that are behaving anomalously with respect to
@@ -16,15 +16,15 @@ set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConf
 
 ## Enabling intrusion detection jobs
 
-Intrusion detection jobs are included as part of standard {{site.prodname}} installation. You can control
+Intrusion detection jobs are included as part of standard {{site.tseeprodname}} installation. You can control
 their operation either using the Kibana UI, or using the [Elasticsearch REST API].  This section will briefly 
 walk through the process of enabling jobs using Kibana.  Refer to the 
 [Elasticsearch machine learning documentation] for more information.
 
-1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager, or by visting
+1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.tseeprodname}} Manager, or by visting
    the Kibana URL provided by your Elasticsearch admin.
 1. If necessary, log into Kibana. Note that your Kibana credentials may not be the same as you use to access
-   {{site.prodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
+   {{site.tseeprodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
 1. Click "Machine Learning" in the left-hand menu.
 
 From this view, you can see the overview of all the intrusion detection jobs installed. See 
