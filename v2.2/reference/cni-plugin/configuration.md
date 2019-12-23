@@ -1,5 +1,5 @@
 ---
-title: Configuring the Calico Enterprise CNI plugins
+title: Configuring the Tigera Secure EE CNI plugins
 canonical_url: https://docs.tigera.io/v2.3/reference/cni-plugin/configuration
 ---
 

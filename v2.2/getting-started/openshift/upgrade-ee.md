@@ -1,5 +1,5 @@
 ---
-title: Upgrading an OpenShift cluster with Calico to Calico Enterprise
+title: Upgrading an OpenShift cluster with Calico to Tigera Secure EE
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/upgrade-ee
 ---
 

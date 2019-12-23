@@ -1,5 +1,5 @@
 ---
-title: Calico Enterprise Architecture
+title: Tigera Secure EE Architecture
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/
 ---
 

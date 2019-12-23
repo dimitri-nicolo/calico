@@ -1,5 +1,5 @@
 ---
-title: Calico Enterprise key and path prefixes in etcd v3
+title: Tigera Secure EE key and path prefixes in etcd v3
 canonical_url: https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/calico-etcdv3-paths
 ---
 

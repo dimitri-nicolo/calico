@@ -1,5 +1,5 @@
 ---
-title: Installing Calico Enterprise on host endpoints
+title: Installing Tigera Secure EE on host endpoints
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/
 ---
 

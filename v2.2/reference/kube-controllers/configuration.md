@@ -1,5 +1,5 @@
 ---
-title: Configuring the Calico Enterprise Kubernetes controllers
+title: Configuring the Tigera Secure EE Kubernetes controllers
 canonical_url: https://docs.tigera.io/v2.3/reference/kube-controllers/configuration
 ---
 
