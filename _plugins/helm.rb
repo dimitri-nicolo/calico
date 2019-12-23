@@ -23,6 +23,10 @@ module Jekyll
         @chart = "calico-enterprise"
         extra_args.slice! "calico-enterprise"
       end
+      if extra_args.start_with?("tigera-secure-ee")
+        @chart = "tigera-secure-ee"
+        extra_args.slice! "tigera-secure-ee"
+      end
       if extra_args.start_with?("tigera-operator")
         @chart = "tigera-operator"
         extra_args.slice! "tigera-operator"
