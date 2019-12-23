@@ -1,6 +1,6 @@
 ---
 subtitle: 'At scale, and no, we''re not joking'
-title: Calico Enterprise over an Ethernet interconnect fabric
+title: Tigera Secure EE over an Ethernet interconnect fabric
 canonical_url: https://docs.tigera.io/v2.3/reference/private-cloud/l2-interconnect-fabric
 ---
 

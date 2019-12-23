@@ -1,5 +1,5 @@
 ---
-title: Quickstart for Calico Enterprise on Kubernetes
+title: Quickstart for Tigera Secure EE on Kubernetes
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/
 ---
 

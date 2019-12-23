@@ -1,5 +1,5 @@
 ---
-title: Using etcd RBAC to segment Kubernetes and Calico Enterprise
+title: Using etcd RBAC to segment Kubernetes and Tigera Secure EE
 canonical_url: https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/kubernetes
 ---
 
