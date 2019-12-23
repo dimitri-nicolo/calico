@@ -62,7 +62,7 @@ toc:
         path: /security/high-connection-workloads
       - title: Defend against DoS attacks
         path: /security/defend-dos-attack
-- title: Get started with Tigera Secure EE policy 
+- title: Get started with Calico Enterprise policy 
   section:
   - title: Create tiered policy
     path: /security/tiered-policy
@@ -70,7 +70,7 @@ toc:
     path: /security/staged-network-policies
   - title: Preview policy impacts
     path: /security/policy-impact-preview
-  - title: Tigera Secure EE policy tutorial
+  - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx      
   - title: Policy for AWS security groups
     section:

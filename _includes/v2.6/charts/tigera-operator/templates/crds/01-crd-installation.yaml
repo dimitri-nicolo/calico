@@ -97,7 +97,7 @@ spec:
               type: string
             registry:
               description: Registry is the default Docker registry used for component
-                Docker images. If specified, all Calico and Tigera Secure images will
+                Docker images. If specified, all Calico and Calico Enterprise images will
                 be pulled from this registry.
               type: string
             variant:
@@ -109,7 +109,7 @@ spec:
               type: string
           type: object
         status:
-          description: Most recently observed state for the Calico or Tigera Secure
+          description: Most recently observed state for the Calico or Calico Enterprise
             EE installation.
           properties:
             variant:

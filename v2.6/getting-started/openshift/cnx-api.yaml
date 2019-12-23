@@ -2,14 +2,14 @@
 layout: null
 ---
 
-# This manifest adds the additional Tigera Secure EE components to a cluster
-# that has already had the Calico part of Tigera Secure EE deployed.
+# This manifest adds the additional Calico Enterprise components to a cluster
+# that has already had the Calico part of Calico Enterprise deployed.
 # - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
 #   from that file, so if you are not using the provided hosted Calico
 #   manifest you must update references to those resources in this file.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the Tigera Secure EE API server and Kubernetes API server.
+#   between the Calico Enterprise API server and Kubernetes API server.
 
 {% helm --execute templates/cnx-api.yaml --execute templates/cnx-api-certs.yaml %}
 datastore: etcd
