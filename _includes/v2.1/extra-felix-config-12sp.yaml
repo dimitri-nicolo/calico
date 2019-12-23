@@ -1,7 +1,7 @@
             # Additional Felix configuration options
-            # Enable Calico Enterprise Prometheus denied packet reporting
+            # Enable Tigera Secure EE Prometheus denied packet reporting
             - name: FELIX_PROMETHEUSREPORTERENABLED
               value: "true"
-            # Make Calico Enterprise Prometheus metrics available on port 9081
+            # Make Tigera Secure EE Prometheus metrics available on port 9081
             - name: FELIX_PROMETHEUSREPORTERPORT
               value: "9081"

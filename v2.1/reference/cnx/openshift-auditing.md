@@ -1,5 +1,5 @@
 ---
-title: Calico Enterprise Resource Auditing in OpenShift
+title: Tigera Secure EE Resource Auditing in OpenShift
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/ee-audit
 ---
 

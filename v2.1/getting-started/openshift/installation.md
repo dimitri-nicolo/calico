@@ -1,5 +1,5 @@
 ---
-title: Installing Calico Enterprise on OpenShift
+title: Installing Tigera Secure EE on OpenShift
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation
 ---
 

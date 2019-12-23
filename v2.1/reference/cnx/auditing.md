@@ -1,5 +1,5 @@
 ---
-title: Calico Enterprise Resource Auditing with Kubernetes
+title: Tigera Secure EE Resource Auditing with Kubernetes
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/ee-audit
 ---
 
