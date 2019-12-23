@@ -74,10 +74,14 @@ def release():
     helm_values_updated.write(helm_values)
     helm_values_updated.close()
 
-    # replace _includes/v2.5/charts/calico-enterprise-core/templates/NOTES.txt default version
-    helm_notes = open('_includes/%s/charts/calico-enterprise-core/templates/NOTES.txt' % new_version).read()
+    # replace _includes/v2.5/charts/tigera-secure-ee-core/templates/NOTES.txt default version
+    # determine the proper chart name depending on the version (v2.6+ is calico-enterprise vs tigera-secure-ee)
+    chart_name = "tigera-secure-ee"
+    if new_version >= "v2.6.0":
+        chart_name = "calico-enterprise"
+    helm_notes = open('_includes/%s/charts/%s-core/templates/NOTES.txt' % (new_version, chart_name)).read()
     helm_notes = re.sub('docs.tigera.io/master', 'docs.tigera.io/%s' % new_version, helm_notes)
-    helm_notes_updated = open('_includes/%s/charts/calico-enterprise-core/templates/NOTES.txt' % new_version, 'w')
+    helm_notes_updated = open('_includes/%s/charts/%s-core/templates/NOTES.txt' % (new_version, chart_name), 'w')
     helm_notes_updated.write(helm_notes)
     helm_notes_updated.close()
 
