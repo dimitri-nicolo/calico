@@ -1,0 +1,463 @@
+{{- $elasticMode := include "calico-enterprise.elasticsearch.mode" . }}
+{{- $kibanaBasePath := "tigera-kibana" }}
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: calico-monitoring
+spec:
+  podSelector:
+    matchLabels: {}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-prometheus-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-prometheus-operator
+subjects:
+- kind: ServiceAccount
+  name: calico-prometheus-operator
+  namespace: calico-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: calico-prometheus-operator
+  namespace: calico-monitoring
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - "*"
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - alertmanagers
+  - prometheuses
+  - servicemonitors
+  - prometheusrules
+  - podmonitors
+  verbs:
+  - "*"
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "delete"]
+- apiGroups: [""]
+  resources:
+  - services
+  - endpoints
+  verbs: ["get", "create", "update"]
+- apiGroups: [""]
+  resources:
+  - nodes
+  - namespaces
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-prometheus-operator
+  namespace: calico-monitoring
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-prometheus-operator
+  namespace: calico-monitoring
+  labels:
+    operator: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      operator: prometheus
+  template:
+    metadata:
+      labels:
+        operator: prometheus
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
+        #node.role: infrastructure
+      serviceAccountName: calico-prometheus-operator
+      containers:
+      - name: calico-prometheus-operator
+        image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
+        args:
+          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+          - --config-reloader-image={{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
+          - --config-reloader-memory=25Mi
+          - --namespaces={{ .Release.Namespace }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: {{.Values.prometheusOperator.memoryLimit | default "100Mi"}}
+
+{{- if eq $elasticMode "operator" }}
+---
+
+# Service account for the elasticsearch cluster
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: elastic-operator
+  namespace: calico-monitoring
+
+---
+{{- if and (not .Values.runElasticsearchOperatorClusterAdmin) (eq $elasticMode "operator") }}
+
+# Permissions for the elasticsearch operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: elastic-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - endpoints
+  - events
+  - persistentvolumeclaims
+  - secrets
+  - services
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - elasticsearch.k8s.elastic.co
+  resources:
+  - elasticsearches
+  - elasticsearches/status
+  - elasticsearches/finalizers
+  - enterpriselicenses
+  - enterpriselicenses/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - kibana.k8s.elastic.co
+  resources:
+  - kibanas
+  - kibanas/status
+  - kibanas/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - apm.k8s.elastic.co
+  resources:
+  - apmservers
+  - apmservers/status
+  - apmservers/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - associations.k8s.elastic.co
+  resources:
+  - apmserverelasticsearchassociations
+  - apmserverelasticsearchassociations/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+
+---
+{{- end }}
+
+# Assign the elastic operator role to the serviceaccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: elastic-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+{{- if .Values.runElasticsearchOperatorClusterAdmin }}
+  name: cluster-admin
+{{- else }}
+  name: elastic-operator
+{{- end }}
+subjects:
+- kind: ServiceAccount
+  name: elastic-operator
+  namespace: calico-monitoring
+
+---
+# This empty secret is mounted by the elastic-operator, which inserts certs
+# such as 'ca-cert.pem', 'ca-key.pem', 'cert.pem', 'key.pem'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-server-secret
+  namespace: calico-monitoring
+
+---
+
+# Elasticsearch operator
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elastic-operator
+  namespace: calico-monitoring
+  labels:
+    control-plane: elastic-operator
+    k8s-app: elastic-operator
+spec:
+  selector:
+    matchLabels:
+      control-plane: elastic-operator
+      k8s-app: elastic-operator
+  serviceName: elastic-operator
+  template:
+    metadata:
+      labels:
+        control-plane: elastic-operator
+        k8s-app: elastic-operator
+    spec:
+      serviceAccountName: elastic-operator
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      containers:
+      - image: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
+        name: manager
+        args: ["manager", "--operator-roles", "all", "--enable-debug-logs=false"]
+        env:
+          - name: OPERATOR_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: WEBHOOK_SECRET
+            value: webhook-server-secret
+          - name: WEBHOOK_PODS_LABEL
+            value: elastic-operator
+          - name: OPERATOR_IMAGE
+            value: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
+        resources:
+          limits:
+            cpu: 1
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+        ports:
+        - containerPort: 9876
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /tmp/cert
+          name: cert
+          readOnly: true
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-secret
+
+---
+
+# Set up the elasticsearch cluster parameters
+apiVersion: elasticsearch.k8s.elastic.co/v1alpha1
+kind: Elasticsearch
+metadata:
+  name: tigera-elasticsearch
+  namespace: calico-monitoring
+spec:
+  version: {{.Values.elasticsearch.tag}}
+  http:
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - dns: tigera-elasticsearch-es-http.calico-monitoring.svc.{{.Values.elasticsearch.tls.selfSignedCertificate.dns}}
+  nodes:
+  - nodeCount: {{.Values.elasticsearch.nodeCount}}
+    config:
+      node.master: true
+      node.data: true
+      node.ingest: true
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data # note: elasticsearch-data must be the name of the Elasticsearch volume
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{.Values.elasticsearch.persistentVolume.capacity}}
+        storageClassName: tigera-elasticsearch
+
+---
+
+# Configure Kibana
+apiVersion: kibana.k8s.elastic.co/v1alpha1
+kind: Kibana
+metadata:
+  name: tigera-kibana
+  namespace: calico-monitoring
+  labels:
+    k8s-app: tigera-kibana
+spec:
+  version: {{.Values.kibana.version}}
+  image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
+  config:
+    server:
+      basePath: {{ print "/" $kibanaBasePath }}
+      rewriteBasePath: true
+  nodeCount: 1
+  elasticsearchRef:
+    name: tigera-elasticsearch
+  podTemplate:
+{{- if .Values.imagePullSecrets }}
+    spec:
+      imagePullSecrets:
+  {{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+  {{- end }}
+{{- end }}
+      containers:
+        - name: kibana
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: {{ print "/" $kibanaBasePath "/login"}}
+              port: 5601
+    metadata:
+      namespace: calico-monitoring
+      labels:
+        name: tigera-kibana
+        k8s-app: tigera-kibana
+{{- end }}
+
+{{- if .Values.prometheus.createFinalizers }}
+
+# This manifest includes some additional resources required to
+# deploy Prometheus Operator with Openshift.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: calico-prometheus-operator-finalizers
+  namespace: calico-monitoring
+rules:
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - alertmanagers/finalizers
+  - prometheuses/finalizers
+  - servicemonitors/finalizers
+  - podmonitors/finalizers
+  verbs:
+  - "*"
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-prometheus-operator-finalizers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-prometheus-operator-finalizers
+subjects:
+- kind: ServiceAccount
+  name: calico-prometheus-operator
+  namespace: calico-monitoring
+
+{{- end }}

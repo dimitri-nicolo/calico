@@ -1,0 +1,218 @@
+{{- $elasticMode := include "calico-enterprise.elasticsearch.mode" . }}
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: calico-monitoring
+  name: tigera-compliance-controller
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "list", "get", "delete"]
+- apiGroups: [""]
+  resources: ["podtemplates"]
+  verbs: ["get"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-compliance-controller
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreports
+  verbs:
+    - list
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreports/status
+  verbs:
+    - update
+    - list
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreports/finalizers
+  verbs:
+    - update
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tigera-compliance-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-compliance-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-compliance-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-controller
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-controller
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: compliance-controller
+  template:
+    metadata:
+      name: compliance-controller
+      namespace: calico-monitoring
+      labels:
+        k8s-app: compliance-controller
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: tigera-compliance-controller
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: compliance-controller
+          image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
+{{ tuple .Values.complianceController.resources | include "calico-enterprise.resourceLimits" | indent 10 -}}
+          env:
+            - name: LOG_LEVEL
+              value: "info"
+            # This environment is used to configure how many failed jobs are maintained before the controller starts
+            # deleting them. Persisting failed jobs gives the operator an opportunity to examine the associated pod
+            # logs to determine the cause of the failure. Only one job is created by the controller for each scheduled
+            # report.
+            - name: TIGERA_COMPLIANCE_MAX_FAILED_JOBS_HISTORY
+              value: "3"
+            # This environment is used to configure how many times a job to generate a specific scheduled report will
+            # retry in the event of a failure.
+            - name: TIGERA_COMPLIANCE_MAX_JOB_RETRIES
+              value: "6"
+            # This environment is used to set the delay between the end time of the report and the start time
+            # of the job used to generate the report. This does not affect the actual times that the report
+            # covers. Defaults to 30m.
+            # - name: TIGERA_COMPLIANCE_JOB_START_DELAY
+            #   value: "30m"
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
+                  optional: true
+{{- if eq $elasticMode "operator" }}
+{{- if .Values.elasticsearch.compliance.controller.password }}
+            - name: ELASTIC_USER
+              value: {{ .Values.elasticsearch.compliance.controller.username | quote }}
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: controller.password
+                  optional: true
+{{- else }}
+            - name: ELASTIC_USER
+              value: "elastic"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-elasticsearch-es-elastic-user
+                  key: elastic
+                  optional: true
+{{- end }}
+{{- else }}
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: controller.username
+                  optional: true
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: controller.password
+                  optional: true
+{{- end}}
+            - name: ELASTIC_SSL_VERIFY
+              value: "true"
+            - name: ELASTIC_CA
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.ca.path
+                  optional: true
+{{- if .Values.complianceController.env }}
+{{ toYaml .Values.complianceController.env | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/ssl/elastic/
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
+      volumes:
+        - name: elastic-ca-cert-volume
+          secret:
+            optional: true
+            defaultMode: 420
+{{- if eq $elasticMode "operator" }}
+            items:
+              - key: tls.crt
+                path: ca.pem
+            secretName: tigera-elasticsearch-es-http-certs-public
+{{- else }}
+            items:
+              - key: tigera.elasticsearch.ca
+                path: ca.pem
+            secretName: tigera-es-config
+{{- end}}
