@@ -1,23 +1,19 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: compromised-app
+  name: attacker-app
 
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: compromised-app
+      app: attacker-app
   template:
     metadata:
       labels:
-        app: compromised-app
+        app: attacker-app
     spec:
       containers:
-        - name: compromised-app
-          image: compromised-app:latest
-          command: ["/bin/sh"] 
-          args: ["-c", "apt update && apt install -y nmap net-tools dnsutils"]
-
-          ports:
-            - containerPort: 80
+        - name: attacker-app
+          image: gcr.io/tigera-security-research/attacker-pod:1.0.0
+---

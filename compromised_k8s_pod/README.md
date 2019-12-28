@@ -10,10 +10,15 @@ This scenario covers the situation where the attacker is able to compromise a Po
 * Access Host Mounted or connected resources
 * [Privileged] Access underlying filesystem (Node)
 
-**Honeypod:**
+**Honeypod Detections:**
 * IP Enumuration
+  * We can place a honeypod without exposing any services such that only neigboring pods can access the honeypod
 * Exposed Service (Simulated)
-* Vulnerable Service
+  * We expose an inetsim HTTP service to the cluster such that it can be found via ClusterIP or DNS lookup
+* Exposed Service (Nginx)
+  * We expose an Nginx HTTP service to the cluster such that it can be found via ClusterIP or DNS lookup
+* Vulnerable Service (Mysql)
+  * We expose an empty Mysql service to the cluster such that it can be found via ClusterIP or DNS lookup
 
 **Other Mitigations:**
 * Proper Namespacing, RBAC

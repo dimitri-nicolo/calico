@@ -18,4 +18,15 @@ spec:
         image: alpine:latest
         command: ["/bin/sh"]
         args: ["-c", "while true;do sleep 5; done"]
-
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-1
+spec:
+  description: "[Honeypod] Possible IP Enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---

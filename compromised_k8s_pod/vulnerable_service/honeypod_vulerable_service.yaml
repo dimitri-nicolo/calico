@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-4
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-4
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-4
+    spec:
+      containers:
+      - name: tigera-internal-4
+        image: mysql
+        ports:
+        - containerPort: 3306
+        env:
+        #- name: MYSQL_RANDOM_ROOT_PASSWORD
+        #- name: MYSQL_ROOT_PASSWORD 
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD 
+          value: 'yes'
+        args: ["--default-authentication-plugin=mysql_native_password"]
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-internal-backend
+  namespace: tigera-internal
+  labels:
+    app: tigera-internal-backend
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: tigera-internal-4
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-4
+spec:
+  description: "[Honeypod] Vulnerable Service (FTP) accessed by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---

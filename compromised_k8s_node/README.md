@@ -13,10 +13,11 @@ This scenario covers the situation where the attacker is able to compromise a No
 * [Root] Access all containers data
 * [Root] Basically Game Over
 
-**Honeypod:**
+**Honeypod Detection:**
 * IP Enumuration
+  * We can place a honeypod with a network policy such that only the running Node can access the honeypod
 
-**Mitigations:**
+**Other Mitigations:**
 * Firewall and Network Policy between K8s
 * Barebone OS running K8s
 * Unique certificate SSH access, rotated often
