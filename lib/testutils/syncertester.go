@@ -165,9 +165,9 @@ func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus, timeout ...tim
 		return st.status
 	}
 	if len(timeout) == 0 {
-		Eventually(cs, 6*time.Second, time.Millisecond).Should(Equal(status))
+		Eventually(cs, 6*time.Second, time.Second).Should(Equal(status))
 	} else {
-		Eventually(cs, timeout[0], time.Millisecond).Should(Equal(status))
+		Eventually(cs, timeout[0], time.Second).Should(Equal(status))
 	}
 	Consistently(cs).Should(Equal(status))
 
