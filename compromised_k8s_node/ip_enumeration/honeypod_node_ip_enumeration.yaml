@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-5 
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-5
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: tigera-internal-5
+    spec:
+      containers:
+      - name: tigera-internal-5
+        image: alpine:latest
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: tigera-internal-5
+spec:
+  tier: tigera-internal
+  order: 0
+  selector: app == "tigera-internal-5"
+  namespaceSelector: ''
+  serviceAccountSelector: ''
+  ingress:
+    - action: Deny
+      source: {}
+      destination: {}
+  doNotTrack: false
+  applyOnForward: false
+  preDNAT: false
+  types:
+    - Ingress
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-5
+spec:
+  description: "[Honeypod] Possible Node IP Enumeration by ${source_namespace}/${source_name_aggr}"
+  #description: "Honeypod"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-5"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---

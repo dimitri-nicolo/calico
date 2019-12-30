@@ -1,0 +1,243 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tigera-internal
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: tigera-internal
+  name: tigera-internal-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tigera-internal-binding
+subjects:
+  - kind: Group
+    name: system:authenticated
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-internal-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-2
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-2
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-2
+    spec:
+      containers:
+      - name: tigera-internal-dashboard
+        image: 0x4d4c/inetsim
+        ports:
+        - containerPort: 8888
+        - containerPort: 443
+        env:
+        - name: INETSIM_START_SERVICES
+          value: "http"
+        - name: INETSIM_HTTP_BIND_PORT
+          value: "8888"
+        - name: INETSIM_HTTP_VERSION
+          value: "Apache HTTP Server"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-debug
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-debug
+spec:
+  ports:
+    - port: 8888
+      protocol: TCP
+  selector:
+    app: tigera-internal-2
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-service
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-service
+spec:
+  ports:
+    - port: 443 
+      protocol: TCP
+  selector:
+    app: tigera-internal-2
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-2
+spec:
+  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-2"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-3
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-3
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-3
+    spec:
+      containers:
+      - name: tigera-internal-dashboard
+        image: gcr.io/tigera-security-research/tigera-internal-dashboard:1.0.0
+        ports:
+        - containerPort: 8888
+        - containerPort: 443
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-debug
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-debug
+spec:
+  ports:
+    - port: 8888
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: tigera-internal-3
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-service
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-service
+spec:
+  ports:
+    - port: 443 
+      protocol: TCP
+  selector:
+    app: tigera-internal-3
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-3
+spec:
+  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr} via port 8888"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-1 
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-1
+    spec:
+      containers:
+      - name: tigera-internal-1
+        image: alpine:latest
+        command: ["/bin/sh"]
+        args: ["-c", "while true;do sleep 5; done"]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-1
+spec:
+  description: "[Honeypod] Possible IP Enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-4
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-4
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-4
+    spec:
+      containers:
+      - name: tigera-internal-4
+        image: mysql
+        ports:
+        - containerPort: 3306
+        env:
+        #- name: MYSQL_RANDOM_ROOT_PASSWORD
+        #- name: MYSQL_ROOT_PASSWORD 
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD 
+          value: 'yes'
+        args: ["--default-authentication-plugin=mysql_native_password"]
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-internal-backend
+  namespace: tigera-internal
+  labels:
+    app: tigera-internal-backend
+spec:
+  ports:
+    - port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    app: tigera-internal-4
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-4
+spec:
+  description: "[Honeypod] Vulnerable Service (FTP) accessed by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---

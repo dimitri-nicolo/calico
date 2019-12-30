@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-internal-3
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-3
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-3
+    spec:
+      containers:
+      - name: tigera-internal-dashboard
+        image: gcr.io/tigera-security-research/tigera-internal-dashboard:1.0.0
+        ports:
+        - containerPort: 8888
+        - containerPort: 443
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-debug
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-debug
+spec:
+  ports:
+    - port: 8888
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: tigera-internal-3
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: tigera-dashboard-internal-service
+  namespace: tigera-internal 
+  labels:
+    app: tigera-dashboard-internal-service
+spec:
+  ports:
+    - port: 443 
+      protocol: TCP
+  selector:
+    app: tigera-internal-3
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-3
+spec:
+  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr} via port 8888"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---

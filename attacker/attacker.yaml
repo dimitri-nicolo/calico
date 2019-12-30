@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: attacker-app
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attacker-app
+  template:
+    metadata:
+      labels:
+        app: attacker-app
+    spec:
+      containers:
+        - name: attacker-app
+          image: gcr.io/tigera-security-research/attacker-pod:1.0.0
+---
