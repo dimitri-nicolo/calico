@@ -15,7 +15,7 @@ class RESTClient:
         self.verify = verify
         if not base_url[-1] == "/":
             self.base_url += "/"
-        self.session = requests.Session() 
+        self.session = requests.Session()
         if username is not None:
             self.session.auth = (username, password)
         if ca_cert is not None:
@@ -27,7 +27,7 @@ class RESTClient:
     def exec(self, method, path, filename):
         if filename is not "":
             with open(filename) as data:
-                response = self.session.request(method, self.base_url + path, data=os.path.expandvars(data), headers=self.headers, verify=self.verify)
+                response = self.session.request(method, self.base_url + path, data=os.path.expandvars(data.read()), headers=self.headers, verify=self.verify)
         else:
             response = self.session.request(method, self.base_url + path, headers=self.headers, verify=self.verify)
 
