@@ -15,10 +15,10 @@ Ensure that you have the following:
 The high-level steps to a functioning cluster with access to the user interface are:
 
 - [Step 1: Acquire the helm charts](#step-1-acquire-the-helm-charts)
-- [Step 2: Create values.yaml for {{ site.prodname }} Core](#step-2-create-valuesyaml-for-tigera-secure-ee-core)
-- [Step 3: Install {{ site.prodname }} Core](#step-3-install-tigera-secure-ee-core)
-- [Step 4: Create values.yaml for {{ site.prodname }}](#step-4-create-valuesyaml-for-tigera-secure-ee)
-- [Step 5: Install {{ site.prodname }}](#step-5-install-tigera-secure-ee)
+- [Step 2: Create values.yaml for {{ site.tseeprodname }} Core](#step-2-create-valuesyaml-for-tigera-secure-ee-core)
+- [Step 3: Install {{ site.tseeprodname }} Core](#step-3-install-tigera-secure-ee-core)
+- [Step 4: Create values.yaml for {{ site.tseeprodname }}](#step-4-create-valuesyaml-for-tigera-secure-ee)
+- [Step 5: Install {{ site.tseeprodname }}](#step-5-install-tigera-secure-ee)
 - [Step 6: Grant access to user interface](#step-6-grant-access-to-user-interface)
 - [Step 7: Log in to the Manager UI](#step-7-log-in-to-the-manager-ui)
 
@@ -29,7 +29,7 @@ curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-cor
 curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% include chart_version_name %}.tgz
 ```
 
-## Step 2: Create values.yaml for {{ site.prodname }} Core
+## Step 2: Create values.yaml for {{ site.tseeprodname }} Core
 
 In this step, you create a values.yaml file with your configuration values to build a running cluster.
 
@@ -63,7 +63,7 @@ Set the following flags to specify TLS certs to use when connecting to etcd:
 
 **AWS VPC CNI plugin**
 
-By default, {{ site.prodname }} uses Calico networking. To run {{ site.prodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin, set:
+By default, {{ site.tseeprodname }} uses Calico networking. To run {{ site.tseeprodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin, set:
 
 ```
 network: ecs
@@ -77,7 +77,7 @@ network: none
 
 **Default Pool CIDR**
 
-By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
+By default, {{ site.tseeprodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
 
 ```yaml
 initialPool:
@@ -90,7 +90,7 @@ initialPool:
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
 {: .alert .alert-info}
 
-## Step 3: Install {{ site.prodname }} Core
+## Step 3: Install {{ site.tseeprodname }} Core
 
 1. Install the chart, passing in the `values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
@@ -106,27 +106,27 @@ initialPool:
    kubectl rollout status -n kube-system deployment/cnx-apiserver
    ```
 
-3. Install your {{ site.prodname }} license:
+3. Install your {{ site.tseeprodname }} license:
 
    ```
    kubectl apply -f ./license.yaml
    ```
 
-4. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
+4. Apply the following manifest to set network policy that secures access to {{ site.tseeprodname }}:
 
    ```
    kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
-Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
+Now that the **{{ site.tseeprodname }} Core** chart is installed, please move on to the next step to install the **{{ site.tseeprodname }}** chart.
 
-## Step 4: Create values.yaml for {{ site.prodname }}
+## Step 4: Create values.yaml for {{ site.tseeprodname }}
 
-Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
+Before we install, we must build a helm values file to configure {{ site.tseeprodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
 
 ### Connect to Elasticsearch & Kibana
 
-By default, {{ site.prodname }} launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster with kibana for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch & kibana, define the address in your yaml:
+By default, {{ site.tseeprodname }} launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster with kibana for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch & kibana, define the address in your yaml:
 
 ```yaml
 elasticsearch:
@@ -184,7 +184,7 @@ manager:
     clientID: "cnx-manager"
 ```
 
-## Step 5: Install {{ site.prodname }}
+## Step 5: Install {{ site.tseeprodname }}
 
 0. Pre-install the CRDs.
 

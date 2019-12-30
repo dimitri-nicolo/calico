@@ -18,19 +18,19 @@ The high-level steps to a functioning cluster with access to the user interface 
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-tigera-secure-ee-core)
+- [Create values.yaml for {{ site.tseeprodname }} Core](#create-valuesyaml-for-tigera-secure-ee-core)
 
 {% endif %}
 
-- [Install {{ site.prodname }} Core](#install-tigera-secure-ee-core)
+- [Install {{ site.tseeprodname }} Core](#install-tigera-secure-ee-core)
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }}](#create-valuesyaml-for-tigera-secure-ee)
+- [Create values.yaml for {{ site.tseeprodname }}](#create-valuesyaml-for-tigera-secure-ee)
 
 {% endif %}
 
-- [Install {{ site.prodname }}](#install-tigera-secure-ee)
+- [Install {{ site.tseeprodname }}](#install-tigera-secure-ee)
 
 - [Grant access to user interface](#grant-access-to-user-interface)
 
@@ -45,7 +45,7 @@ curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% 
 
 {%- if include.method == "full" %}
 
-### Create values.yaml for {{ site.prodname }} Core
+### Create values.yaml for {{ site.tseeprodname }} Core
 
 In this step, you create a values.yaml file with your configuration values to build a running cluster.
 
@@ -77,7 +77,7 @@ Set the following flags to specify TLS certs to use when connecting to etcd:
 
 #### Network settings
 
-By default, {{ site.prodname }} runs with Calico networking.
+By default, {{ site.tseeprodname }} runs with Calico networking.
 
 ```yaml
 network: calico
@@ -106,7 +106,7 @@ network: ecs
 
 **AWS VPC CNI plugin**
 
-To run {{ site.prodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin outside of EKS, omit the `platform` flag:
+To run {{ site.tseeprodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin outside of EKS, omit the `platform` flag:
 
 ```
 network: ecs
@@ -122,7 +122,7 @@ network: none
 
 **Default Pool CIDR**
 
-By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
+By default, {{ site.tseeprodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
 
 ```yaml
 initialPool:
@@ -137,7 +137,7 @@ initialPool:
 
 {% endif %}
 
-### Install {{ site.prodname }} Core
+### Install {{ site.tseeprodname }} Core
 
 1. Install the chart, passing in the `values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
@@ -160,29 +160,29 @@ initialPool:
    kubectl rollout status -n kube-system deployment/cnx-apiserver
    ```
 
-3. Install your {{ site.prodname }} license:
+3. Install your {{ site.tseeprodname }} license:
 
    ```
    kubectl apply -f ./license.yaml
    ```
 
-4. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
+4. Apply the following manifest to set network policy that secures access to {{ site.tseeprodname }}:
 
    ```
    kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
-Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
+Now that the **{{ site.tseeprodname }} Core** chart is installed, please move on to the next step to install the **{{ site.tseeprodname }}** chart.
 
 {%- if include.method == "full" %}
 
-### Create values.yaml for {{ site.prodname }}
+### Create values.yaml for {{ site.tseeprodname }}
 
-Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
+Before we install, we must build a helm values file to configure {{ site.tseeprodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
 
 #### Connect to Elasticsearch & Kibana
 
-By default, {{ site.prodname }} launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster with kibana for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch & kibana, define the address in your yaml:
+By default, {{ site.tseeprodname }} launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster with kibana for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch & kibana, define the address in your yaml:
 
 ```yaml
 elasticsearch:
@@ -250,7 +250,7 @@ manager:
 
 {% endif %}
 
-### Install {{ site.prodname }}
+### Install {{ site.tseeprodname }}
 
 0. Pre-install the CRDs.
 
