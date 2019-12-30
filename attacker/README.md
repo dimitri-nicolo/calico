@@ -5,7 +5,7 @@ The Attacker Pod is used to test the functionality of the Honeypod. This is done
 
 **Installation**
 * Navigate to build dir
-* Run 'docker build -t attacker-pod .'
+* Run `docker build -t attacker-pod .`
 * Tag image 'docker tag attacker-pod gcr.io/tigera-security-research/attacker-pod:1.0.0'
 * Push image 'docker push gcr.io/tigera-security-research/attacker-pod:1.0.0'
 * Apply image to k8s 'kubectl apply -f attacker.yaml'

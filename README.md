@@ -17,11 +17,11 @@ Honeypod may be used to detect resources enumeration, privilege escalation, data
 
 ## Demo Installation (only compromised pod scenarios)
 0. Ensure Calico Enterprise version 2.6+ is installed
-1. Kubectl apply -f honeypod\_sample\_setup.yaml
+1. `kubectl apply -f honeypod\_sample\_setup.yaml`
 
 ## Installation
 0. Ensure Calico Enterprise version 2.6+ is installed
-1. Kubectl apply -f common/common.yaml
+1. `kubectl apply -f common/common.yaml`
 2. Navigate to relevant scenarios folder and apply the YAMLs (Modify naming if needed)
 
 ## Testing
