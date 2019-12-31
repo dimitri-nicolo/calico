@@ -153,14 +153,11 @@ If you do not include a `pull` stanza, you must configure your system to [push](
 
 Pull updates from the threat feed by doing an HTTP GET against the given URL.
 
-| Field   | Description                                               | Accepted Values  | Schema                    | Default          |
-|---------|-----------------------------------------------------------|------------------|---------------------------|------------------|
-| format  | Format of the data the threat feed returns                | NewlineDelimited | string                    | NewlineDelimited |
-| url     | The URL to query                                          |                  | string                    |                  |
-| headers | List of additional HTTP Headers to include on the request |                  | [HTTPHeader](#httpheader) |                  |
-
-The `format` must be set to `NewlineDelimited` or omitted.  The threat feed must return a list of
-newline-delimited entries. It may also include comments prefixed by `#`.
+| Field   | Description                                               | Accepted Values | Schema                    |
+|---------|-----------------------------------------------------------|-----------------|---------------------------|
+| format  | Format of the data the threat feed returns                |                 | [Format](#format)         |
+| url     | The URL to query                                          |                 | string                    |
+| headers | List of additional HTTP Headers to include on the request |                 | [HTTPHeader](#httpheader) |
 
 IPSet threat feeds must contain IP addresses or IP prefixes. For example:
 
@@ -181,6 +178,47 @@ hackers.r.us
 
 Internationalized domain names (IDNA) may be encoded either as Unicode in UTF-8 format, or as
 ASCII-Compatible Encoding (ACE) according to [RFC 5890][idna].
+
+#### Format
+
+Several different feed formats are supported. The default,
+`newlineDelimited`, expects a text file containing entries separated by
+newline characters. It may also include comments prefixed by `#`.
+`json` uses a [jsonpath] to extract the desired information from a
+JSON document. `csv` extracts one column from CSV-formatted data.
+
+| Field            | Description                 | Schema        |
+|------------------|-----------------------------|---------------|
+| newlineDelimited | Newline-delimited text file | Empty object  |
+| json             | JSON object                 | [JSON](#json) |
+| csv              | CSV file                    | [CSV](#csv)   |
+
+##### JSON
+
+| Field | Description                  | Schema |
+|-------|------------------------------|--------|
+| path | [jsonpath] to extract values. | string |
+
+Values can be extracted from the document using any [jsonpath]
+expression, subject to the limitations mentioned below, that evaluates
+to a list of strings. For example: `$.` is valid for `["a", "b", "c"]`,
+and `$.a` is valid for `{"a": ["b", "c"]}`.
+
+> **LIMITATIONS**: No support for subexpressions and filters. Strings in
+brackets must use double quotes. It cannot operate on JSON decoded
+struct fields.
+
+##### CSV
+
+| Field                       | Description                                                               | Schema |
+|-----------------------------|---------------------------------------------------------------------------|--------|
+| fieldNum                    | Number of column containing values. Mutually exclusive with `fieldName`.  | int    |
+| fieldName                   | Name of column containing values, requires `header: true`.                | string |
+| header                      | Whether or not the document contains a header row.                        | bool   |
+| columnDelimiter             | An alternative delimiter character, such as `|`.                          | string |
+| commentDelimiter            | Lines beginning with this character are skipped. `#` is common.           | string |
+| recordSize                  | The number of columns expected in the document. Auto detected if omitted. | int    |
+| disableRecordSizeValidation | Disable row size checking. Mutually exclusive with `recordSize`.          | bool   |
 
 #### HTTPHeader
 
@@ -217,3 +255,4 @@ KeyRef tells {{site.prodname}} where to get the value for a header.  The referen
 [elastic-document-apis]: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/docs-update.html
 [parse-duration]: https://golang.org/pkg/time/#ParseDuration
 [idna]: https://tools.ietf.org/html/rfc5890
+[jsonpath]: https://goessner.net/articles/JsonPath/
