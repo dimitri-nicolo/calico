@@ -46,4 +46,4 @@ elasticsearch:
   - ["PUT", "_ml/datafeeds/$CLUSTER_NAME.datafeed-pod_outlier_ip_activity", "./data/pod-outlier-ip-activity-datafeed.json"]
 kibana:
   - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
-  - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/tor-vpn-dashboard.json:"]
+  - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/tor-vpn-dashboard.json"]
