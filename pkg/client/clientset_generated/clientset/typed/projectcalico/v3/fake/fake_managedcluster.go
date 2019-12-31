@@ -80,6 +80,17 @@ func (c *FakeManagedClusters) Update(managedCluster *v3.ManagedCluster) (result 
 	return obj.(*v3.ManagedCluster), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeManagedClusters) UpdateStatus(managedCluster *v3.ManagedCluster) (*v3.ManagedCluster, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(managedclustersResource, "status", managedCluster), &v3.ManagedCluster{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v3.ManagedCluster), err
+}
+
 // Delete takes name of the managedCluster and deletes it. Returns an error if one occurs.
 func (c *FakeManagedClusters) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

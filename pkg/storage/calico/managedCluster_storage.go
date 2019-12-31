@@ -77,6 +77,7 @@ func (gc ManagedClusterConverter) convertToLibcalico(aapiObj runtime.Object) res
 	lcgManagedCluster.TypeMeta = aapiManagedCluster.TypeMeta
 	lcgManagedCluster.ObjectMeta = aapiManagedCluster.ObjectMeta
 	lcgManagedCluster.Spec = aapiManagedCluster.Spec
+	lcgManagedCluster.Status = aapiManagedCluster.Status
 	return lcgManagedCluster
 }
 
@@ -84,6 +85,7 @@ func (gc ManagedClusterConverter) convertToAAPI(libcalicoObject resourceObject, 
 	lcgManagedCluster := libcalicoObject.(*libcalicoapi.ManagedCluster)
 	aapiManagedCluster := aapiObj.(*aapi.ManagedCluster)
 	aapiManagedCluster.Spec = lcgManagedCluster.Spec
+	aapiManagedCluster.Status = lcgManagedCluster.Status
 	aapiManagedCluster.TypeMeta = lcgManagedCluster.TypeMeta
 	aapiManagedCluster.ObjectMeta = lcgManagedCluster.ObjectMeta
 }

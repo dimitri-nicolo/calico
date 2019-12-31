@@ -6,10 +6,11 @@ import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 )
 
@@ -28,8 +29,28 @@ func NewList() runtime.Object {
 	return &calico.ManagedClusterList{}
 }
 
+// StatusREST implements the REST endpoint for changing the status of a deployment
+type StatusREST struct {
+	store *genericregistry.Store
+}
+
+func (r *StatusREST) New() runtime.Object {
+	return &calico.ManagedCluster{}
+}
+
+// Get retrieves the object from the storage. It is required to support Patch.
+func (r *StatusREST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	return r.store.Get(ctx, name, options)
+}
+
+// Update alters the status subset of an object.
+func (r *StatusREST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (runtime.Object, bool, error) {
+	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation)
+}
+
+
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
+func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -40,7 +61,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		if err != nil {
 			return "", err
 		}
-		return registry.NoNamespaceKeyFunc(
+		return genericregistry.NoNamespaceKeyFunc(
 			genericapirequest.NewContext(),
 			prefix,
 			accessor.GetName(),
@@ -75,5 +96,8 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store}
+	statusStore := *store
+	statusStore.UpdateStrategy = NewStatusStrategy(strategy)
+
+	return &REST{store}, &StatusREST{&statusStore}
 }

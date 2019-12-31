@@ -481,12 +481,13 @@ type ManagedClusterList struct {
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// +kubebuilder:subresource:status
 type ManagedCluster struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
 	Spec calico.ManagedClusterSpec
+	Status calico.ManagedClusterStatus
 }
 
 // +genclient:nonNamespaced

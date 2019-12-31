@@ -581,7 +581,10 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["remoteclusterconfigurations"] = calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts)
 	storage["felixconfigurations"] = calicofelixconfig.NewREST(scheme, *felixConfigOpts)
 
-	storage["managedclusters"] = calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
+	managedClusterStorage, managedClusterStatusStorage := calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
+	storage["managedclusters"] = managedClusterStorage
+	storage["managedclusters/status"] = managedClusterStatusStorage
+
 
 	storage["clusterinformations"] = calicoclusterinformation.NewREST(scheme, *clusterInformationOpts)
 

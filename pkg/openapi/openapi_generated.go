@@ -6393,11 +6393,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec"),
 							},
 						},
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Status of the ManagedCluster",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus"),
+							},
+						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterList": {
 			Schema: spec.Schema{
@@ -6455,6 +6461,64 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"conditions": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"conditions"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Condition contains various status information",
+					Properties: map[string]spec.Schema{
+						"message": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"reason": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+					},
+					Required: []string{"message", "reason", "status", "type"},
 				},
 			},
 			Dependencies: []string{},
@@ -9908,11 +9972,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec"),
 							},
 						},
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus"),
+							},
+						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.ManagedClusterList": {
 			Schema: spec.Schema{

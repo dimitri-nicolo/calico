@@ -23,6 +23,7 @@ type ManagedClustersGetter interface {
 type ManagedClusterInterface interface {
 	Create(*projectcalico.ManagedCluster) (*projectcalico.ManagedCluster, error)
 	Update(*projectcalico.ManagedCluster) (*projectcalico.ManagedCluster, error)
+	UpdateStatus(*projectcalico.ManagedCluster) (*projectcalico.ManagedCluster, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*projectcalico.ManagedCluster, error)
@@ -93,6 +94,21 @@ func (c *managedClusters) Update(managedCluster *projectcalico.ManagedCluster) (
 	err = c.client.Put().
 		Resource("managedclusters").
 		Name(managedCluster.Name).
+		Body(managedCluster).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *managedClusters) UpdateStatus(managedCluster *projectcalico.ManagedCluster) (result *projectcalico.ManagedCluster, err error) {
+	result = &projectcalico.ManagedCluster{}
+	err = c.client.Put().
+		Resource("managedclusters").
+		Name(managedCluster.Name).
+		SubResource("status").
 		Body(managedCluster).
 		Do().
 		Into(result)

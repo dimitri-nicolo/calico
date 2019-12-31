@@ -141,7 +141,7 @@ func (v *version) LicenseKeys() LicenseKeyInformer {
 
 // ManagedClusters returns a ManagedClusterInformer.
 func (v *version) ManagedClusters() ManagedClusterInformer {
-	return &managedClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+	return &managedClusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // NetworkPolicies returns a NetworkPolicyInformer.

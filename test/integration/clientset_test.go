@@ -2324,6 +2324,14 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	// ------------------------------------------------------------------------------------------
 	managedClusterUpdate := managedClusterServer.DeepCopy()
 	managedClusterUpdate.Spec.InstallationManifest = "manifest v2"
+	managedClusterUpdate.Status.Conditions = []calico.ManagedClusterStatusCondition{
+		{
+			Message: "Connected to Managed Cluster",
+			Reason:  "ConnectionSuccessful",
+			Status:  "False",
+			Type:    "ManagedClusterConnectedStatusType",
+		},
+	}
 	managedClusterServer, err = managedClusterClient.Update(managedClusterUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating managedCluster %s (%s)", name, err)
@@ -2331,7 +2339,6 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	if managedClusterServer.Spec.InstallationManifest != managedClusterUpdate.Spec.InstallationManifest {
 		return errors.New("didn't update spec.installationManifest")
 	}
-
 	// ------------------------------------------------------------------------------------------
 	err = managedClusterClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {

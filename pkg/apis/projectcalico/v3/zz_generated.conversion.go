@@ -742,6 +742,7 @@ func Convert_projectcalico_LicenseKeyList_To_v3_LicenseKeyList(in *projectcalico
 func autoConvert_v3_ManagedCluster_To_projectcalico_ManagedCluster(in *ManagedCluster, out *projectcalico.ManagedCluster, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 
@@ -753,6 +754,7 @@ func Convert_v3_ManagedCluster_To_projectcalico_ManagedCluster(in *ManagedCluste
 func autoConvert_projectcalico_ManagedCluster_To_v3_ManagedCluster(in *projectcalico.ManagedCluster, out *ManagedCluster, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 

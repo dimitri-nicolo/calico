@@ -23,6 +23,7 @@ type ManagedClustersGetter interface {
 type ManagedClusterInterface interface {
 	Create(*v3.ManagedCluster) (*v3.ManagedCluster, error)
 	Update(*v3.ManagedCluster) (*v3.ManagedCluster, error)
+	UpdateStatus(*v3.ManagedCluster) (*v3.ManagedCluster, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v3.ManagedCluster, error)
@@ -93,6 +94,21 @@ func (c *managedClusters) Update(managedCluster *v3.ManagedCluster) (result *v3.
 	err = c.client.Put().
 		Resource("managedclusters").
 		Name(managedCluster.Name).
+		Body(managedCluster).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *managedClusters) UpdateStatus(managedCluster *v3.ManagedCluster) (result *v3.ManagedCluster, err error) {
+	result = &v3.ManagedCluster{}
+	err = c.client.Put().
+		Resource("managedclusters").
+		Name(managedCluster.Name).
+		SubResource("status").
 		Body(managedCluster).
 		Do().
 		Into(result)
