@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package felixsyncer_test
 
@@ -188,7 +188,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					EtcdEndpoints: "http://foobarbaz:1000",
 				},
 			},
-			"dial tcp: lookup foobarbaz on", 15*time.Second,
+			"context deadline exceeded", 15*time.Second,
 		),
 
 		Entry("invalid etcd cert files", "bad-etcdv3-2",
@@ -503,33 +503,12 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			expectedDeleteEvents := []api.Update{
 				{
 					KVPair: model.KVPair{
-						Key:   model.RemoteClusterStatusKey{Name: "etcd-timeout"},
-						Value: &model.RemoteClusterStatus{Status: 1, Error: "context canceled"},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
-				},
-				{
-					KVPair: model.KVPair{
-						Key:   model.RemoteClusterStatusKey{Name: "etcd-timeout"},
-						Value: &model.RemoteClusterStatus{Status: 1, Error: "context canceled"},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
-				},
-				{
-					KVPair: model.KVPair{
-						Key:   model.RemoteClusterStatusKey{Name: "etcd-timeout"},
-						Value: &model.RemoteClusterStatus{Status: 1, Error: "context canceled"},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
-				},
-				{
-					KVPair: model.KVPair{
 						Key: model.RemoteClusterStatusKey{Name: "etcd-timeout"},
 					},
 					UpdateType: api.UpdateTypeKVDeleted,
 				},
 			}
-			syncTester.ExpectUpdates(expectedDeleteEvents, true)
+			syncTester.ExpectUpdates(expectedDeleteEvents, false)
 		})
 	})
 })

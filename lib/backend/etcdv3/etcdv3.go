@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/coreos/etcd/pkg/srv"
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -106,9 +107,11 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 
 	// Build the etcdv3 config.
 	cfg := clientv3.Config{
-		Endpoints:            etcdLocation,
-		TLS:                  tls,
-		DialTimeout:          clientTimeout,
+		Endpoints:   etcdLocation,
+		TLS:         tls,
+		DialTimeout: clientTimeout,
+		DialOptions: []grpc.DialOption{grpc.WithBlock()},
+
 		DialKeepAliveTime:    keepaliveTime,
 		DialKeepAliveTimeout: keepaliveTimeout,
 	}
