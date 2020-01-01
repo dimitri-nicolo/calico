@@ -24,7 +24,6 @@ import (
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/apiserver/pkg/storage"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -43,7 +42,7 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
+func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -60,15 +59,18 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 			accessor.GetName(),
 		)
 	}
-	storageInterface, dFunc := opts.GetStorage(
-		&calico.LicenseKey{},
+	storageInterface, dFunc, err := opts.GetStorage(
 		prefix,
 		keyFunc,
 		strategy,
+		func() runtime.Object { return &calico.LicenseKey{} },
 		func() runtime.Object { return &calico.LicenseKeyList{} },
 		GetAttrs,
-		storage.NoTriggerPublisher,
+		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	store := &genericregistry.Store{
 		NewFunc:     func() runtime.Object { return &calico.LicenseKey{} },
 		NewListFunc: func() runtime.Object { return &calico.LicenseKeyList{} },
@@ -89,5 +91,5 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store}
+	return &REST{store}, nil
 }

@@ -4,8 +4,6 @@ package apiserver
 
 import (
 	calicorest "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/rest"
-	"k8s.io/apimachinery/pkg/apimachinery/announced"
-	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,19 +13,15 @@ import (
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 var (
-	groupFactoryRegistry = make(announced.APIGroupFactoryRegistry)
-	registry             = registered.NewOrDie("")
-	Scheme               = runtime.NewScheme()
-	Codecs               = serializer.NewCodecFactory(Scheme)
+	Scheme = runtime.NewScheme()
+	Codecs = serializer.NewCodecFactory(Scheme)
 )
 
 func init() {
-	install.Install(groupFactoryRegistry, registry, Scheme)
+	install.Install(Scheme)
 
 	// we need to add the options to empty v1
 	// TODO fix the server code to avoid this
@@ -83,9 +77,9 @@ func (cfg *Config) Complete() CompletedConfig {
 	return CompletedConfig{&c}
 }
 
-// New returns a new instance of WardleServer from the given config.
+// New returns a new instance of ProjectCalicoServer from the given config.
 func (c completedConfig) New() (*ProjectCalicoServer, error) {
-	genericServer, err := c.GenericConfig.New("calico-k8sapiserver", genericapiserver.EmptyDelegate)
+	genericServer, err := c.GenericConfig.New("calico-k8sapiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +88,9 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 		GenericAPIServer: genericServer,
 	}
 
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(projectcalico.GroupName, registry, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.GroupMeta.GroupVersion = v3.SchemeGroupVersion
+	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(projectcalico.GroupName, Scheme, metav1.ParameterCodec, Codecs)
+	//apiGroupInfo.OptionsExternalVersion = &schema.GroupVersion{Version: "v3"}
+
 	// TODO: Make the storage type configurable
 	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}
 	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer)

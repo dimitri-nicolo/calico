@@ -10,8 +10,9 @@ import (
 
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/etcd"
+	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -23,7 +24,7 @@ import (
 )
 
 // NewNetworkPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
-func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
+func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
 	c := createClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
@@ -73,7 +74,7 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		return c.NetworkPolicies().Watch(ctx, olo)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
-	return &resourceStore{
+	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         APIObjectVersioner{&etcd.APIObjectVersioner{}},
@@ -90,7 +91,8 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		watch:             watchFn,
 		resourceName:      "NetworkPolicy",
 		converter:         NetworkPolicyConverter{},
-	}, func() {}
+	}, Codec: opts.RESTOptions.StorageConfig.Codec}
+	return dryRunnableStorage, func() {}
 }
 
 type NetworkPolicyConverter struct {

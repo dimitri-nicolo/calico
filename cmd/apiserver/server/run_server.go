@@ -19,8 +19,8 @@ package server
 import (
 	"os"
 
-	"github.com/golang/glog"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/klog"
 )
 
 func RunServer(opts *CalicoServerOptions) error {
@@ -38,7 +38,7 @@ func RunServer(opts *CalicoServerOptions) error {
 		return err
 	}
 
-	glog.V(4).Infoln("Completing API server configuration")
+	klog.V(4).Infoln("Completing API server configuration")
 	server, err := config.Complete().New()
 	if err != nil {
 		return err
@@ -46,27 +46,27 @@ func RunServer(opts *CalicoServerOptions) error {
 
 	allStop := make(chan struct{})
 	go func() {
-		glog.Infoln("Starting watch extension")
+		klog.Infoln("Starting watch extension")
 		changed, err := WatchExtensionAuth(server.GenericAPIServer.LoopbackClientConfig, allStop)
 		if err != nil {
-			glog.Errorln("Unable to watch the extension auth ConfigMap: ", err)
+			klog.Errorln("Unable to watch the extension auth ConfigMap: ", err)
 		}
 		if changed {
-			glog.Infoln("Detected change in extension-apiserver-authentication ConfigMap, exiting so apiserver can be restarted")
+			klog.Infoln("Detected change in extension-apiserver-authentication ConfigMap, exiting so apiserver can be restarted")
 		}
 	}()
 
 	go func() {
 		// do we need to do any post api installation setup? We should have set up the api already?
-		glog.Infoln("Running the API server")
+		klog.Infoln("Running the API server")
 		server.GenericAPIServer.AddPostStartHook("tigera-apiserver-autoregistration",
 			func(context genericapiserver.PostStartHookContext) error {
 				f, err := os.Create(path)
 				if err != nil {
-					glog.Errorln(err)
+					klog.Errorln(err)
 					return err
 				}
-				glog.Info("apiserver is ready.")
+				klog.Info("apiserver is ready.")
 				f.Close()
 				return nil
 			})

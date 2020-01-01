@@ -79,8 +79,22 @@ func TestEtcdHealthCheckerSuccess(t *testing.T) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	c := &http.Client{Transport: tr}
-	resp, err := c.Get(clientconfig.Host + "/healthz")
-	if nil != err || http.StatusOK != resp.StatusCode {
+	var success bool
+	var resp *http.Response
+	var err error
+	retryInterval := 500 * time.Millisecond
+	for i := 0; i < 5; i++ {
+		resp, err = c.Get(clientconfig.Host + "/healthz")
+		if nil != err || http.StatusOK != resp.StatusCode {
+			success = false
+			time.Sleep(retryInterval)
+		} else {
+			success = true
+			break
+		}
+	}
+
+	if !success {
 		t.Fatal("health check endpoint should not have failed")
 	}
 
@@ -2423,11 +2437,11 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 	}
 
 	// Confirm it's not possible to create a clusterInformation obj with name other than "default"
-	validClusterInfo := &v3.ClusterInformation{ObjectMeta: metav1.ObjectMeta{Name: "test-clusterinformation"}}
+	invalidClusterInfo := &v3.ClusterInformation{ObjectMeta: metav1.ObjectMeta{Name: "test-clusterinformation"}}
 
-	_, err = clusterInformationClient.Create(validClusterInfo)
+	_, err = clusterInformationClient.Create(invalidClusterInfo)
 	if err == nil {
-		return fmt.Errorf("expected error creating validClusterInfo with name other than \"default\"")
+		return fmt.Errorf("expected error creating invalidClusterInfo with name other than \"default\"")
 	}
 
 	return nil

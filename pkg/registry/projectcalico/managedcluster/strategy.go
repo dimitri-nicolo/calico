@@ -3,6 +3,7 @@
 package managedcluster
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -10,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -36,19 +36,19 @@ func (apiServerStrategy) NamespaceScoped() bool {
 
 // PrepareForCreate clears the Status
 // TODO: This is where we will generate the manifest for Guardian (https://tigera.atlassian.net/browse/SAAS-168)
-func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	managedCluster := obj.(*calico.ManagedCluster)
 	managedCluster.Status = v3.ManagedClusterStatus{}
 }
 
 // TODO: This is where we will copy the Status from old to obj when we add Status (https://tigera.atlassian.net/browse/SAAS-182)
-func (apiServerStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newManagedCluster := obj.(*calico.ManagedCluster)
 	oldManagedCluster := old.(*calico.ManagedCluster)
 	newManagedCluster.Status = oldManagedCluster.Status
 }
 
-func (apiServerStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (apiServerStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	return field.ErrorList{}
 }
 
@@ -63,7 +63,7 @@ func (apiServerStrategy) AllowUnconditionalUpdate() bool {
 func (apiServerStrategy) Canonicalize(obj runtime.Object) {
 }
 
-func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (apiServerStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return ValidateManagedClusterUpdate(obj.(*calico.ManagedCluster), old.(*calico.ManagedCluster))
 }
 
@@ -75,7 +75,7 @@ func NewStatusStrategy(strategy apiServerStrategy) apiServerStatusStrategy {
 	return apiServerStatusStrategy{strategy}
 }
 
-func (apiServerStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newManagedCluster := obj.(*calico.ManagedCluster)
 	oldManagedCluster := old.(*calico.ManagedCluster)
 	newManagedCluster.Spec = oldManagedCluster.Spec
@@ -83,16 +83,16 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, o
 }
 
 // ValidateUpdate is the default update validation for an end user updating status
-func (apiServerStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (apiServerStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return ValidateManagedClusterUpdate(obj.(*calico.ManagedCluster), old.(*calico.ManagedCluster))
 }
 
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	apiserver, ok := obj.(*calico.ManagedCluster)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object (type %v) is not a Managed Cluster", reflect.TypeOf(obj))
+		return nil, nil, fmt.Errorf("given object (type %v) is not a Managed Cluster", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), ManagedClusterToSelectableFields(apiserver), apiserver.Initializers != nil, nil
+	return labels.Set(apiserver.ObjectMeta.Labels), ManagedClusterToSelectableFields(apiserver), nil
 }
 
 // MatchManagedCluster is the filter used by the generic etcd backend to watch events

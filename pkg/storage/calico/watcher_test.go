@@ -82,9 +82,9 @@ func testWatch(t *testing.T, list bool) {
 		pred: storage.SelectionPredicate{
 			Label: labels.Everything(),
 			Field: fields.ParseSelectorOrDie("metadata.name=default.bar"),
-			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, error) {
 				policy := obj.(*calico.NetworkPolicy)
-				return nil, fields.Set{"metadata.name": policy.Name}, policy.Initializers != nil, nil
+				return nil, fields.Set{"metadata.name": policy.Name}, nil
 			},
 		},
 		/*TODO: Fix these two cases case. Currently flapping. Needs test cleanup.

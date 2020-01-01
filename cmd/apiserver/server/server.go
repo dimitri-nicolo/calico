@@ -26,8 +26,8 @@ import (
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
-	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"k8s.io/klog"
 )
 
 const defaultEtcdPathPrefix = ""
@@ -48,7 +48,8 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 
 	stopCh := make(chan struct{})
 
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion),
+		genericoptions.NewProcessInfo("tigera-apiserver", "tigera-system"))
 	opts := &CalicoServerOptions{
 		RecommendedOptions: ro,
 		StopCh:             stopCh,
@@ -60,7 +61,7 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 			close(stopCh)
 		})
 		if err := h.Run(func() error { return RunServer(opts) }); err != nil {
-			glog.Fatalf("error running server (%s)", err)
+			klog.Fatalf("error running server (%s)", err)
 			return
 		}
 	}

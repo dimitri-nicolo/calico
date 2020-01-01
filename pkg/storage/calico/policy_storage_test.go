@@ -9,16 +9,16 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/golang/glog"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	apitesting "k8s.io/apimachinery/pkg/api/testing"
+	apitesting "k8s.io/apimachinery/pkg/api/apitesting"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/klog"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -197,7 +197,7 @@ func TestNetworkPolicyUnconditionalDelete(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicy{} // reset
-		err := store.Delete(ctx, tt.key, out, nil)
+		err := store.Delete(ctx, tt.key, out, nil, nil)
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
 				t.Errorf("#%d: expecting not found error, but get: %s", i, err)
@@ -232,7 +232,7 @@ func TestNetworkPolicyConditionalDelete(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicy{}
-		err := store.Delete(ctx, key, out, tt.precondition)
+		err := store.Delete(ctx, key, out, tt.precondition, nil)
 		if tt.expectInvalidObjErr {
 			if err == nil || !storage.IsInvalidObj(err) {
 				t.Errorf("#%d: expecting invalid UID error, but get: %s", i, err)
@@ -257,7 +257,7 @@ func TestNetworkPolicyDeleteDisallowK8sPrefix(t *testing.T) {
 
 	key := fmt.Sprintf("projectcalico.org/networkpolicies/%s/%s", ns, name)
 	out := &calico.NetworkPolicy{}
-	err := store.Delete(ctx, key, out, nil)
+	err := store.Delete(ctx, key, out, nil, nil)
 	if err == nil {
 		t.Fatalf("Expected deleting a k8s network policy to error")
 	}
@@ -286,9 +286,9 @@ func TestNetworkPolicyGetToList(t *testing.T) {
 		pred: storage.SelectionPredicate{
 			Label: labels.Everything(),
 			Field: fields.ParseSelectorOrDie("metadata.name!=" + storedObj.Name),
-			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, error) {
 				policy := obj.(*calico.NetworkPolicy)
-				return nil, fields.Set{"metadata.name": policy.Name}, policy.Initializers != nil, nil
+				return nil, fields.Set{"metadata.name": policy.Name}, nil
 			},
 		},
 		expectedOut: nil,
@@ -557,9 +557,9 @@ func TestNetworkPolicyList(t *testing.T) {
 		pred: storage.SelectionPredicate{
 			Label: labels.Everything(),
 			Field: fields.ParseSelectorOrDie("metadata.name!=" + preset[0].storedObj.Name),
-			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, error) {
 				policy := obj.(*calico.NetworkPolicy)
-				return nil, fields.Set{"metadata.name": policy.Name}, policy.Initializers != nil, nil
+				return nil, fields.Set{"metadata.name": policy.Name}, nil
 			},
 		},
 		expectedOut: nil,
@@ -592,18 +592,18 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 	codec := apitesting.TestCodec(codecs, calicov3.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
-		glog.Errorf("Failed to load client config: %q", err)
+		klog.Errorf("Failed to load client config: %q", err)
 		os.Exit(1)
 	}
 	cfg.Spec.DatastoreType = "etcdv3"
 	cfg.Spec.EtcdEndpoints = "http://localhost:2379"
 	c, err := clientv3.New(*cfg)
 	if err != nil {
-		glog.Errorf("Failed creating client: %q", err)
+		klog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
 	}
 
-	glog.Infof("Client: %v", c)
+	klog.Infof("Client: %v", c)
 	opts := Options{
 		RESTOptions: generic.RESTOptions{
 			StorageConfig: &storagebackend.Config{
@@ -615,7 +615,7 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 	gnpStore, _ := NewGlobalNetworkPolicyStorage(opts)
 	ctx := context.Background()
 
-	return ctx, store.(*resourceStore), gnpStore.(*resourceStore)
+	return ctx, store.Storage.(*resourceStore), gnpStore.Storage.(*resourceStore)
 }
 
 func testCleanup(t *testing.T, ctx context.Context, store, gnpStore *resourceStore) {

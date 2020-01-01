@@ -5,25 +5,13 @@ package install
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/apimachinery/announced"
-	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // Install registers the API group and adds types to a scheme
-func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *registered.APIRegistrationManager, scheme *runtime.Scheme) {
-	if err := announced.NewGroupMetaFactory(
-		&announced.GroupMetaFactoryArgs{
-			GroupName:                  projectcalico.GroupName,
-			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet", "LicenseKey", "GlobalAlert", "GlobalAlertTemplate", "GlobalThreatFeed", "HostEndpoint", "GlobalReport", "GlobalReportType", "IPPool", "BGPConfiguration", "BGPPeer", "Profile", "RemoteClusterConfiguration", "FelixConfiguration", "ManagedCluster", "ClusterInformation", "StagedGlobalNetworkPolicy"),
-			VersionPreferenceOrder:     []string{v3.SchemeGroupVersion.Version},
-			AddInternalObjectsToScheme: projectcalico.AddToScheme,
-		},
-		announced.VersionToSchemeFunc{
-			v3.SchemeGroupVersion.Version: v3.AddToScheme,
-		},
-	).Announce(groupFactoryRegistry).RegisterAndEnable(registry, scheme); err != nil {
-		panic(err)
-	}
+func Install(scheme *runtime.Scheme) {
+	utilruntime.Must(projectcalico.AddToScheme(scheme))
+	utilruntime.Must(v3.AddToScheme(scheme))
+	utilruntime.Must(scheme.SetVersionPriority(v3.SchemeGroupVersion))
 }

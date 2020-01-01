@@ -8,9 +8,9 @@ import (
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/etcd"
+	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -20,7 +20,7 @@ import (
 )
 
 // NewHostEndpointStorage creates a new libcalico-based storage.Interface implementation for HostEndpoints
-func NewHostEndpointStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
+func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
 	c := createClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
@@ -49,7 +49,7 @@ func NewHostEndpointStorage(opts Options) (storage.Interface, factory.DestroyFun
 		return c.HostEndpoints().Watch(ctx, olo)
 	}
 
-	return &resourceStore{
+	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
@@ -66,7 +66,8 @@ func NewHostEndpointStorage(opts Options) (storage.Interface, factory.DestroyFun
 		watch:             watchFn,
 		resourceName:      "HostEndpoint",
 		converter:         HostEndpointConverter{},
-	}, func() {}
+	}, Codec: opts.RESTOptions.StorageConfig.Codec}
+	return dryRunnableStorage, func() {}
 }
 
 type HostEndpointConverter struct {

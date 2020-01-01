@@ -2,24 +2,24 @@
 package authorizer
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8sauth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
 type TierAuthorizer interface {
 	// AuthorizeTierOperation checks whether the request is for a tiered policy, and if so checks
 	// whether the user us authorized to perform the operation. Returns a Forbidden error  if the
 	// operation is not authorized.
-	AuthorizeTierOperation(ctx genericapirequest.Context, policyName string, tierName string) error
+	AuthorizeTierOperation(ctx context.Context, policyName string, tierName string) error
 }
 
 type authorizer struct {
@@ -34,18 +34,18 @@ func NewTierAuthorizer(a k8sauth.Authorizer) TierAuthorizer {
 
 // AuthorizeTierOperation implements the TierAuthorizer interface.
 func (a *authorizer) AuthorizeTierOperation(
-	ctx genericapirequest.Context,
+	ctx context.Context,
 	policyName string,
 	tierName string,
 ) error {
 	if a.Authorizer == nil {
-		glog.V(4).Info("No authorizer - allow operation")
+		klog.V(4).Info("No authorizer - allow operation")
 		return nil
 	}
 
 	attrs, err := filters.GetAuthorizerAttributes(ctx)
 	if err != nil {
-		glog.Errorf("Unable to extract authorizer attributes: %s", err)
+		klog.Errorf("Unable to extract authorizer attributes: %s", err)
 		return err
 	}
 
@@ -55,13 +55,13 @@ func (a *authorizer) AuthorizeTierOperation(
 	if !isTieredPolicy(attrs) {
 		// This is not a tiered policy resource request, so exit. RBAC control will be entirely
 		// handled by the default processing.
-		glog.V(4).Info("Operation is not for Calico tiered policy - defer to standard RBAC only")
+		klog.V(4).Info("Operation is not for Calico tiered policy - defer to standard RBAC only")
 		return nil
 	}
 
 	// Perform tier authorization.
 	if err := a.authorizeTieredPolicy(attrs, policyName, tierName); err != nil {
-		glog.V(4).Infof("Operation on Calico tiered policy is forbidden: %v", err)
+		klog.V(4).Infof("Operation on Calico tiered policy is forbidden: %v", err)
 		return err
 	}
 
@@ -79,7 +79,7 @@ func isTieredPolicy(attr k8sauth.Attributes) bool {
 		return true
 	}
 
-	glog.V(4).Infof("Is not Calico policy type: %s", attr.GetResource())
+	klog.V(4).Infof("Is not Calico policy type: %s", attr.GetResource())
 	return false
 }
 
@@ -111,7 +111,7 @@ func (a *authorizer) authorizeTieredPolicy(attributes k8sauth.Attributes, policy
 			Path:            "/apis/projectcalico.org/v3/tiers/" + tierName,
 		}
 
-		glog.V(4).Infof("Checking authorization using tier resource type (user can get tier)")
+		klog.V(4).Infof("Checking authorization using tier resource type (user can get tier)")
 		logAuthorizerAttributes(attrs)
 		decisionGetTier, _, _ = a.Authorizer.Authorize(attrs)
 	}()
@@ -144,7 +144,7 @@ func (a *authorizer) authorizeTieredPolicy(attributes k8sauth.Attributes, policy
 			Path:            path,
 		}
 
-		glog.V(4).Infof("Checking authorization using tier scoped resource type (policy name match)")
+		klog.V(4).Infof("Checking authorization using tier scoped resource type (policy name match)")
 		logAuthorizerAttributes(attrs)
 		decisionPolicy, _, _ = a.Authorizer.Authorize(attrs)
 	}()
@@ -165,7 +165,7 @@ func (a *authorizer) authorizeTieredPolicy(attributes k8sauth.Attributes, policy
 			Path:            path,
 		}
 
-		glog.V(4).Infof("Checking authorization using tier scoped resource type (tier name match)")
+		klog.V(4).Infof("Checking authorization using tier scoped resource type (tier name match)")
 		logAuthorizerAttributes(attrs)
 		decisionTierWildcard, _, _ = a.Authorizer.Authorize(attrs)
 	}()
@@ -177,7 +177,7 @@ func (a *authorizer) authorizeTieredPolicy(attributes k8sauth.Attributes, policy
 	// then allow the request.
 	if decisionGetTier == k8sauth.DecisionAllow &&
 		(decisionPolicy == k8sauth.DecisionAllow || decisionTierWildcard == k8sauth.DecisionAllow) {
-		glog.Infof("Operation allowed")
+		klog.Infof("Operation allowed")
 		return nil
 	}
 
@@ -218,15 +218,15 @@ func forbiddenMessage(attributes k8sauth.Attributes, tierName string, decisionGe
 
 // logAuthorizerAttributes logs out the auth attributes.
 func logAuthorizerAttributes(requestAttributes k8sauth.Attributes) {
-	if glog.V(4) {
-		glog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
-		glog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
-		glog.Infof("Authorizer Name: %s", requestAttributes.GetName())
-		glog.Infof("Authorizer Namespace: %s", requestAttributes.GetNamespace())
-		glog.Infof("Authorizer Resource: %s", requestAttributes.GetResource())
-		glog.Infof("Authorizer Subresource: %s", requestAttributes.GetSubresource())
-		glog.Infof("Authorizer User: %s", requestAttributes.GetUser())
-		glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
-		glog.Infof("Authorizer Path: %s", requestAttributes.GetPath())
+	if klog.V(4) {
+		klog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
+		klog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
+		klog.Infof("Authorizer Name: %s", requestAttributes.GetName())
+		klog.Infof("Authorizer Namespace: %s", requestAttributes.GetNamespace())
+		klog.Infof("Authorizer Resource: %s", requestAttributes.GetResource())
+		klog.Infof("Authorizer Subresource: %s", requestAttributes.GetSubresource())
+		klog.Infof("Authorizer User: %s", requestAttributes.GetUser())
+		klog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
+		klog.Infof("Authorizer Path: %s", requestAttributes.GetPath())
 	}
 }

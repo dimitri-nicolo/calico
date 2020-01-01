@@ -21,12 +21,14 @@ import (
 	"net"
 	"strings"
 
+	"k8s.io/klog"
+
 	"github.com/go-openapi/spec"
-	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 	"github.com/tigera/calico-k8sapiserver/pkg/openapi"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 )
@@ -62,7 +64,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
-	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, apiserver.Scheme)
+	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, k8sopenapi.NewDefinitionNamer(apiserver.Scheme))
 	if serverConfig.OpenAPIConfig.Info == nil {
 		serverConfig.OpenAPIConfig.Info = &spec.Info{}
 	}
@@ -76,7 +78,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 	if err := o.RecommendedOptions.Etcd.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
-	if err := o.RecommendedOptions.SecureServing.ApplyTo(&serverConfig.Config); err != nil {
+	if err := o.RecommendedOptions.SecureServing.ApplyTo(&serverConfig.SecureServing, &serverConfig.LoopbackClientConfig); err != nil {
 		return nil, err
 	}
 	if !o.DisableAuth {
@@ -87,10 +89,12 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 			return nil, err
 		}
 	} else {
+		
 		// always warn when auth is disabled, since this should only be used for testing
-		glog.Infof("Authentication and authorization disabled for testing purposes")
+		klog.Infof("Authentication and authorization disabled for testing purposes")
 	}
-	if err := o.RecommendedOptions.Audit.ApplyTo(&serverConfig.Config); err != nil {
+
+	if err := o.RecommendedOptions.Audit.ApplyTo(&serverConfig.Config, nil, nil, o.RecommendedOptions.ProcessInfo, nil); err != nil {
 		return nil, err
 	}
 	if err := o.RecommendedOptions.Features.ApplyTo(&serverConfig.Config); err != nil {

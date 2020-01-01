@@ -17,6 +17,8 @@ limitations under the License.
 package networkpolicy
 
 import (
+	"context"
+
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/authorizer"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
@@ -31,7 +33,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/apiserver/pkg/storage"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -54,7 +55,7 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
+func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -67,15 +68,18 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		}
 		return registry.NamespaceKeyFunc(genericapirequest.WithNamespace(genericapirequest.NewContext(), accessor.GetNamespace()), prefix, accessor.GetName())
 	}
-	storageInterface, dFunc := opts.GetStorage(
-		&calico.NetworkPolicy{},
+	storageInterface, dFunc, err := opts.GetStorage(
 		prefix,
 		keyFunc,
 		strategy,
+		func() runtime.Object { return &calico.NetworkPolicy{} },
 		func() runtime.Object { return &calico.NetworkPolicyList{} },
 		GetAttrs,
-		storage.NoTriggerPublisher,
+		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	store := &genericregistry.Store{
 		NewFunc:     func() runtime.Object { return &calico.NetworkPolicy{} },
 		NewListFunc: func() runtime.Object { return &calico.NetworkPolicyList{} },
@@ -96,10 +100,10 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store, authorizer.NewTierAuthorizer(opts.Authorizer)}
+	return &REST{store, authorizer.NewTierAuthorizer(opts.Authorizer)}, nil
 }
 
-func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
 	tierName, err := util.GetTierNameFromSelector(options)
 	if err != nil {
 		return nil, err
@@ -112,7 +116,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 	return r.Store.List(ctx, options)
 }
 
-func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, val rest.ValidateObjectFunc, includeUninitialized bool) (runtime.Object, error) {
+func (r *REST) Create(ctx context.Context, obj runtime.Object, val rest.ValidateObjectFunc, createOpt *metav1.CreateOptions) (runtime.Object, error) {
 	policy := obj.(*calico.NetworkPolicy)
 	// Is Tier prepended. If not prepend default?
 	tierName, _ := util.GetTierPolicy(policy.Name)
@@ -121,21 +125,22 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, val res
 		return nil, err
 	}
 
-	return r.Store.Create(ctx, obj, val, includeUninitialized)
+	return r.Store.Create(ctx, obj, val, createOpt)
 }
 
-func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo, val rest.ValidateObjectFunc, valUp rest.ValidateObjectUpdateFunc) (runtime.Object, bool, error) {
+func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc,
+	updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
 	tierName, _ := util.GetTierPolicy(name)
 	err := r.authorizer.AuthorizeTierOperation(ctx, name, tierName)
 	if err != nil {
 		return nil, false, err
 	}
 
-	return r.Store.Update(ctx, name, objInfo, val, valUp)
+	return r.Store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
 }
 
 // Get retrieves the item from storage.
-func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+func (r *REST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	tierName, _ := util.GetTierPolicy(name)
 	err := r.authorizer.AuthorizeTierOperation(ctx, name, tierName)
 	if err != nil {
@@ -145,17 +150,17 @@ func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.G
 	return r.Store.Get(ctx, name, options)
 }
 
-func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
+func (r *REST) Delete(ctx context.Context, name string, deleteValidation rest.ValidateObjectFunc, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
 	tierName, _ := util.GetTierPolicy(name)
 	err := r.authorizer.AuthorizeTierOperation(ctx, name, tierName)
 	if err != nil {
 		return nil, false, err
 	}
 
-	return r.Store.Delete(ctx, name, options)
+	return r.Store.Delete(ctx, name, deleteValidation, options)
 }
 
-func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	tierName, err := util.GetTierNameFromSelector(options)
 	if err != nil {
 		return nil, err

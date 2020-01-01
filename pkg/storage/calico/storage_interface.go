@@ -3,14 +3,14 @@
 package calico
 
 import (
-	"github.com/golang/glog"
-	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+	"k8s.io/klog"
 )
 
 // NewStorage creates a new libcalico-based storage.Interface implementation
-func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
-	glog.V(4).Infoln("Constructing Calico Storage")
+func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
+	klog.V(4).Infoln("Constructing Calico Storage")
 
 	switch opts.RESTOptions.ResourcePrefix {
 	case "projectcalico.org/networkpolicies":
@@ -60,7 +60,7 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	case "projectcalico.org/clusterinformations":
 		return NewClusterInformationStorage(opts)
 	default:
-		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
-		return nil, nil
+		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
+		return registry.DryRunnableStorage{}, nil
 	}
 }

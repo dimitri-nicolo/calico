@@ -20,9 +20,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/golang/glog"
 	"github.com/tigera/calico-k8sapiserver/cmd/apiserver/server"
-	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/component-base/logs"
+	"k8s.io/klog"
 )
 
 func main() {
@@ -35,19 +35,19 @@ func main() {
 
 	err := server.Version()
 	if err != nil {
-		glog.Errorf("Error printing version info.")
+		klog.Errorf("Error printing version info.")
 		logs.FlushLogs()
 	}
 
 	cmd, err := server.NewCommandStartCalicoServer(os.Stdout)
 	if err != nil {
-		glog.Errorf("Error creating server: %v", err)
+		klog.Errorf("Error creating server: %v", err)
 		logs.FlushLogs()
 		os.Exit(1)
 	}
 
 	if err := cmd.Execute(); err != nil {
-		glog.Errorf("server exited unexpectedly (%s)", err)
+		klog.Errorf("server exited unexpectedly (%s)", err)
 		logs.FlushLogs()
 		os.Exit(1)
 	}
