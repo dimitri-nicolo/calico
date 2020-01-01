@@ -63,6 +63,8 @@ type Interface interface {
 	LicenseKey() LicenseKeyInterface
 	// GlobalAlerts returns an interface for managing the alert resources.
 	GlobalAlerts() GlobalAlertInterface
+	// GlobalAlertTemplates returns an interface for managing the alert template resources.
+	GlobalAlertTemplates() GlobalAlertTemplateInterface
 	// GlobalThreatFeeds returns an interface for managing the Threat feed resources.
 	GlobalThreatFeeds() GlobalThreatFeedInterface
 	// GlobalReportTypes returns an interface for managing the report types resources.

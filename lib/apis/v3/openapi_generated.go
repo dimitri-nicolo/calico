@@ -118,6 +118,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertList":                   schema_libcalico_go_lib_apis_v3_GlobalAlertList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec":                   schema_libcalico_go_lib_apis_v3_GlobalAlertSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertStatus":                 schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate":               schema_libcalico_go_lib_apis_v3_GlobalAlertTemplate(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateList":           schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy":               schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicyList":           schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec":           schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicySpec(ref),
@@ -162,6 +164,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster":                    schema_libcalico_go_lib_apis_v3_ManagedCluster(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterList":                schema_libcalico_go_lib_apis_v3_ManagedClusterList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec":                schema_libcalico_go_lib_apis_v3_ManagedClusterSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus":              schema_libcalico_go_lib_apis_v3_ManagedClusterStatus(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition":     schema_libcalico_go_lib_apis_v3_ManagedClusterStatusCondition(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch":               schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy":                     schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList":                 schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref),
@@ -5171,6 +5175,93 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref common.ReferenceCallb
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the GlobalAlert.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GlobalAlertList contains a list of GlobalAlert resources.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7020,11 +7111,17 @@ func schema_libcalico_go_lib_apis_v3_ManagedCluster(ref common.ReferenceCallback
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status of the ManagedCluster",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -7090,6 +7187,71 @@ func schema_libcalico_go_lib_apis_v3_ManagedClusterSpec(ref common.ReferenceCall
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ManagedClusterStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"conditions"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ManagedClusterStatusCondition(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Condition contains various status information",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"message": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"reason": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"message", "reason", "status", "type"},
 			},
 		},
 	}
@@ -9224,14 +9386,20 @@ func schema_libcalico_go_lib_apis_v3_ThreatFeedFormatCSV(ref common.ReferenceCal
 							Format: "",
 						},
 					},
-					"fieldsPerRecord": {
+					"recordSize": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
 						},
 					},
+					"disableRecordSizeValidation": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
 				},
-				Required: []string{"header", "columnDelimiter", "commentDelimiter", "fieldsPerRecord"},
+				Required: []string{"header", "columnDelimiter", "commentDelimiter", "recordSize", "disableRecordSizeValidation"},
 			},
 		},
 	}

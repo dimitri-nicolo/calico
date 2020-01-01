@@ -167,6 +167,11 @@ func init() {
 		reflect.TypeOf(apiv3.GlobalAlert{}),
 	)
 	registerResourceInfo(
+		apiv3.KindGlobalAlertTemplate,
+		"globalalerttemplates",
+		reflect.TypeOf(apiv3.GlobalAlertTemplate{}),
+	)
+	registerResourceInfo(
 		apiv3.KindGlobalThreatFeed,
 		"globalthreatfeeds",
 		reflect.TypeOf(apiv3.GlobalThreatFeed{}),

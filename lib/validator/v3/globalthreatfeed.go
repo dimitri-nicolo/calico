@@ -148,6 +148,16 @@ func validateFeedFormatCSV(structLevel validator.StructLevel) {
 			}
 		}
 	}
+
+	if c.DisableRecordSizeValidation && c.RecordSize > 0 {
+		structLevel.ReportError(
+			reflect.ValueOf(c.CommentDelimiter),
+			"RecordSize",
+			"",
+			reason("disableRecordSizeValidation and recordSize are mutually exclusive"),
+			"",
+		)
+	}
 }
 
 func validDelim(r rune) bool {
