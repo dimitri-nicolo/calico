@@ -6,9 +6,9 @@ Have a bare or empty pod on our tigera-internal(honeypod) namespace. By not havi
 If any pod attempts to connect to the honeypod (other than healthchecks) we generate an alert.
 
 ## Alerts:
-* [Honeypod] Pod Subnet IP Enumeration by $\{source\_namespace\}\/$\{source\_name\_aggr\}
+* `[Honeypod] Pod Subnet IP Enumeration by ${source_namespace}/${source_name_aggr}`
   * Detection of a Pod possibly running a IP scan on its subnet and reaching the Honeypod
-* [Honeypod] Pod Subnet Port Scan by $\{source\_namespace\}\/$\{source\_name\_aggr\}
+* `[Honeypod] Pod Subnet Port Scan by ${source_namespace}/${source_name_aggr}`
   * Detection of a Pod possibly running a port scan on the Honeypod
 
 **Pros**
