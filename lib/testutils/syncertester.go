@@ -165,9 +165,9 @@ func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus, timeout ...tim
 		return st.status
 	}
 	if len(timeout) == 0 {
-		Eventually(cs, 6*time.Second, time.Millisecond).Should(Equal(status))
+		Eventually(cs, 6*time.Second, time.Second).Should(Equal(status))
 	} else {
-		Eventually(cs, timeout[0], time.Millisecond).Should(Equal(status))
+		Eventually(cs, timeout[0], time.Second).Should(Equal(status))
 	}
 	Consistently(cs).Should(Equal(status))
 
@@ -180,11 +180,6 @@ func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus, timeout ...tim
 	st.statusChanged = false
 	st.lock.Unlock()
 	Expect(current).To(BeTrue())
-
-	// We've verified the status, so reset the statusChanged flag.
-	st.lock.Lock()
-	st.statusChanged = false
-	st.lock.Unlock()
 
 	// If you hit a panic here, it's because you must have called this again with the
 	// same status.

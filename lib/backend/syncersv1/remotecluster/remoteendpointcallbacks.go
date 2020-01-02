@@ -1,10 +1,11 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package remotecluster
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
 )
 
 // The callbacks used by the remote endpoint watchers

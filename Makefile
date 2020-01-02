@@ -1,56 +1,34 @@
-# Shortcut targets
-default: test
+PACKAGE_NAME=github.com/projectcalico/libcalico-go
+GO_BUILD_VER=v0.30
 
-## Build binary
-all: test
+# libcalico-go still relies on vendoring
+GOMOD_VENDOR = true
+LOCAL_CHECKS = vendor goimports check-gen-files
+GIT_USE_SSH = true
 
-## Run the tests
-test: vendor ut fv
+###############################################################################
+# Download and include Makefile.common
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
-# Define some constants
-#######################
-K8S_VERSION      ?= v1.16.0
-ETCD_VERSION     ?= v3.3.7
-COREDNS_VERSION  ?= 1.5.2
-GO_BUILD_VER     ?= v0.24
-CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
-PACKAGE_NAME     ?= github.com/projectcalico/libcalico-go
-LOCAL_USER_ID    ?= $(shell id -u $$USER)
-BINDIR	   ?= bin
-TOP_SRC_DIR       = lib
-MY_UID	   := $(shell id -u)
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
-# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
-ifneq ($(GOPATH),)
-	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
-	# is the default one used by go modules.
-	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
-else
-	# If gopath is empty, default to $(HOME)/go.
-	GOMOD_CACHE = $(HOME)/go/pkg/mod
-endif
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
+include Makefile.common
 
-EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/* -v $(GOMOD_CACHE):/go/pkg/mod:rw
-GIT_CONFIG_SSH	  ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-GINKGO_ARGS		:= -mod=vendor
+###############################################################################
 
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
-	docker run --rm \
-		--net=host \
-		$(EXTRA_DOCKER_ARGS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-e GOCACHE=/go-cache \
-		-e GOPATH=/go \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-		-w /go/src/$(PACKAGE_NAME)
-
-DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
+K8S_VERSION	?= v1.16.3
+BINDIR		?= bin
 
 # Create a list of files upon which the generated file depends, skip the generated file itself
 UPGRADE_SRCS := $(filter-out ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go, \
@@ -72,8 +50,8 @@ clean:
 # Building the binary
 ###############################################################################
 # Build the vendor directory.
-vendor: go.mod go.sum
-	$(DOCKER_GO_BUILD) go mod vendor
+vendor: mod-download
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod vendor'
 
 GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 	   ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
@@ -82,7 +60,7 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 
 $(BINDIR)/openapi-gen: vendor
 	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+		sh -c '$(GIT_CONFIG_SSH) go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
@@ -91,7 +69,7 @@ gen-files:
 	$(MAKE) $(GENERATED_FILES)
 
 $(BINDIR)/deepcopy-gen: vendor
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH); go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build -mod=vendor -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: $(UPGRADE_SRCS) $(BINDIR)/deepcopy-gen
 	$(DOCKER_GO_BUILD) sh -c '$(BINDIR)/deepcopy-gen \
@@ -139,8 +117,8 @@ $(BINDIR)/deepcopy-gen: vendor
 ###############################################################################
 # Static checks
 ###############################################################################
-.PHONY: static-checks
-static-checks: check-format check-gen-files golangci-lint
+# TODO: re-enable all linters
+LINT_ARGS += --disable gosimple,unused,structcheck,errcheck,deadcode,varcheck,ineffassign,staticcheck,govet
 
 .PHONY: check-gen-files
 check-gen-files: $(GENERATED_FILES)
@@ -156,24 +134,6 @@ check-format: vendor
 	  echo "All files in ./lib are goimported"; \
 	fi
 
-LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
-golangci-lint:
-	@echo "linting is currently disabled"
-	#$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); GO111MODULE=off golangci-lint run $(LINT_ARGS)'
-
-.PHONY: goimports go-fmt format-code
-# Format the code using goimports.  Depends on the vendor directory because goimports needs
-# to be able to resolve the imports.
-goimports go-fmt format-code fix: vendor
-	$(DOCKER_GO_BUILD) goimports -w lib
-
-# Always install the git hooks to prevent publishing closed source code to a non-private repo.
-hooks_installed:=$(shell ./install-git-hooks)
-
-.PHONY: install-git-hooks
-install-git-hooks:
-	./install-git-hooks
-
 ###############################################################################
 # Tests
 ###############################################################################
@@ -188,7 +148,7 @@ GINKGO_FOCUS?=.*
 .PHONY:ut
 ## Run the fast set of unit tests in a container.
 ut: vendor
-	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
+	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -skip "\[Datastore\]" -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 
 .PHONY:fv
@@ -196,7 +156,7 @@ ut: vendor
 fv: vendor run-etcd run-etcd-tls run-kubernetes-master run-coredns
 	$(DOCKER_RUN) --privileged --dns \
 		$(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' coredns) \
-		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 	$(MAKE) stop-etcd-tls
 
 ## Run etcd, with tls enabled, as a container (calico-etcd-tls)
@@ -247,7 +207,7 @@ run-kubernetes-master: stop-kubernetes-master
 			--logtostderr=true
 
 	# Wait until the apiserver is accepting requests.
-	while ! docker exec st-apiserver kubectl get crds; do echo "Waiting for apiserver to come up..."; sleep 3; done
+	while ! docker exec st-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
 
 	# And run the controller manager.
 	docker run \
@@ -317,31 +277,12 @@ run-coredns: stop-coredns
 stop-coredns:
 	-docker rm -f coredns
 
+st:
+	@echo "No STs available"
+
 ###############################################################################
 # CI
 ###############################################################################
-.PHONY: mod-download
-mod-download:
-	-$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod download'
-
 .PHONY: ci
-ci: clean mod-download static-checks test
-
-.PHONY: help
-## Display this help text
-help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
-	$(info Available targets)
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {				      \
-		nb = sub( /^## /, "", helpMsg );				\
-		if(nb == 0) {						   \
-			helpMsg = $$0;					      \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );		   \
-		}							       \
-		if (nb)							 \
-			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}								   \
-	{ helpMsg = $$0 }'						  \
-	width=23							    \
-	$(MAKEFILE_LIST)
-	@echo
-	@echo 'To run a specific test suite, use: make test WHAT="<DIR containing test-suite>"'
+## Run what CI runs
+ci: clean static-checks test

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/coreos/etcd/pkg/srv"
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -106,9 +107,11 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 
 	// Build the etcdv3 config.
 	cfg := clientv3.Config{
-		Endpoints:            etcdLocation,
-		TLS:                  tls,
-		DialTimeout:          clientTimeout,
+		Endpoints:   etcdLocation,
+		TLS:         tls,
+		DialTimeout: clientTimeout,
+		DialOptions: []grpc.DialOption{grpc.WithBlock()},
+
 		DialKeepAliveTime:    keepaliveTime,
 		DialKeepAliveTimeout: keepaliveTimeout,
 	}
@@ -183,7 +186,7 @@ func (c *etcdV3Client) Create(ctx context.Context, d *model.KVPair) (*model.KVPa
 
 // Update an entry in the datastore.  If the entry does not exist, this will return
 // an ErrorResourceDoesNotExist error.  The ResourceVersion must be specified, and if
-// incorrect will return a ErrorResourceUpdateConflict error and the current entry.
+// incorrect will return an ErrorResourceUpdateConflict error and the current entry.
 func (c *etcdV3Client) Update(ctx context.Context, d *model.KVPair) (*model.KVPair, error) {
 	logCxt := log.WithFields(log.Fields{"model-etcdKey": d.Key, "value": d.Value, "ttl": d.TTL, "rev": d.Revision})
 	logCxt.Debug("Processing Update request")
@@ -219,7 +222,7 @@ func (c *etcdV3Client) Update(ctx context.Context, d *model.KVPair) (*model.KVPa
 		return nil, cerrors.ErrorDatastoreError{Err: err}
 	}
 
-	// Etcd V3 does not return a error when compare condition fails we must verify the
+	// Etcd V3 does not return an error when compare condition fails we must verify the
 	// response Succeeded field instead.  If the compare did not succeed then check for
 	// a successful get to return either an UpdateConflict or a ResourceDoesNotExist error.
 	if !txnResp.Succeeded {

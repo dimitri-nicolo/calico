@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package remotecluster
 
@@ -99,8 +99,9 @@ func (a *wrappedCallbacks) OnStatusUpdated(status api.SyncStatus) {
 		a.allRCCsAreSynced = true
 
 		go func(activeUnsyncedRemotes *sync.WaitGroup) {
+			log.Info("--> Waiting for remote datastores...")
 			activeUnsyncedRemotes.Wait()
-			log.Info("Remote datastores are synced.")
+			log.Info("--> Remote datastores are synced.")
 			a.callbacks.OnStatusUpdated(status)
 		}(&a.activeUnsyncedRemotes)
 	}
@@ -286,7 +287,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 		if err := backendClient.Close(); err != nil {
 			log.Warnf("Hit error closing client. Ignoring. %v", err)
 		}
-		a.finishRemote(key, true)
+		a.finishRemote(key)
 	default:
 		log.Infof("Creating syncer for %s", key)
 
@@ -342,7 +343,7 @@ func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Key
 			UpdateType: api.UpdateTypeKVUpdated,
 		}})
 	}
-	a.finishRemote(key, true)
+	a.finishRemote(key)
 }
 
 // handleConnectionFailed processes a connection failure by flagging that we should not block on this remote, and
@@ -351,7 +352,7 @@ func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Key
 func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model.Key, name string, err error) bool {
 	a.lock.Lock()
 	defer a.lock.Unlock()
-	a.finishRemote(key, true)
+	a.finishRemote(key)
 	select {
 	case <-ctx.Done():
 		log.Infof("Remote cluster deleted, no need to send connection failed event: %s", key)
@@ -410,7 +411,7 @@ func (a *wrappedCallbacks) deleteRCC(key model.ResourceKey) {
 		remote.cancel()
 
 		// Finish the remote (before deleting it)
-		a.finishRemote(key, true)
+		a.finishRemote(key)
 
 		// Delete the remote from the list of remotes.
 		delete(a.remotes, key)
@@ -426,15 +427,10 @@ func (a *wrappedCallbacks) deleteRCC(key model.ResourceKey) {
 	}
 }
 
-func (a *wrappedCallbacks) finishRemote(key model.Key, alreadyLocked bool) {
-	log.Infof("Finish processing for remote cluster: %s", key)
-
-	if !alreadyLocked {
-		a.lock.Lock()
-		defer a.lock.Unlock()
-	}
-	// Mark that the remote should no longer block insync messages
+// finishRemote signals that the remote should no longer block insync messages
+func (a *wrappedCallbacks) finishRemote(key model.Key) {
 	if a.remotes[key] != nil && a.remotes[key].shouldBlockInsync {
+		log.Infof("--> Finish processing for remote cluster: %s", key)
 		a.remotes[key].shouldBlockInsync = false
 		a.activeUnsyncedRemotes.Done()
 	}

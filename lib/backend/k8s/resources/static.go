@@ -1,9 +1,12 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package resources
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // This file contains helpers for creating hard-coded resources used in the Kuberenetes backend.

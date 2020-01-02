@@ -19,8 +19,9 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 const (
