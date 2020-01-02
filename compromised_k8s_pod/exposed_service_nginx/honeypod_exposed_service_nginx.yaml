@@ -54,9 +54,9 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-3
 spec:
-  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr} via port 8888"
+  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr} on port ${dest_port}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3"'
-  aggregateBy: [source_namespace, source_name_aggr]
+  aggregateBy: [source_namespace, source_name_aggr, dest_port]
 ---

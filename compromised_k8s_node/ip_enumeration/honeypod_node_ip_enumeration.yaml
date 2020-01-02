@@ -40,12 +40,13 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: honeypod-alert-5
+  name: honeypod-alert-5-1
 spec:
-  description: "[Honeypod] Possible Node IP Enumeration by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Node IP Enumeration"
   #description: "Honeypod"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-5"'
   aggregateBy: [source_namespace, source_name_aggr]
 ---
+
