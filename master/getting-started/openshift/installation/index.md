@@ -89,6 +89,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheusrule.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheus.yaml -o manifests/01-crd-prometheus.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-servicemonitor.yaml -o manifests/01-crd-servicemonitor.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-tigerastatus.yaml -o manifests/01-crd-tigerastatus.yaml
+curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-managementclusterconnection.yaml -o manifests/01-crd-managementclusterconnection.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/00-namespace-tigera-operator.yaml -o manifests/00-namespace-tigera-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml -o manifests/02-rolebinding-tigera-operator.yaml
 curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml -o manifests/02-role-tigera-operator.yaml
