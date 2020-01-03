@@ -67,14 +67,7 @@ PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 #### temp changes from common Makefile #####
 BUILD_OS ?= $(shell uname -s | tr A-Z a-z)
 
-ifneq ($(GOPATH),)
-    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
-else
-    # If gopath is empty, default to $(HOME)/go.
-    GOMOD_CACHE = $(HOME)/go/pkg/mod
-endif
-
-EXTRA_DOCKER_ARGS += -e GO111MODULE=on -v $(GOMOD_CACHE):/go/pkg/mod:rw
+EXTRA_DOCKER_ARGS += -e GO111MODULE=on
 
 GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 ##### temp changes from common Makefile #####
@@ -133,7 +126,7 @@ ifdef SSH_AUTH_SOCK
 endif
 
 
-DOCKER_RUN := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
+DOCKER_RUN := mkdir -p .go-pkg-cache bin && \
                   docker run --rm \
                       --net=host \
                       $(EXTRA_DOCKER_ARGS) \
@@ -148,7 +141,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
                       -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
                       -w /go/src/$(PACKAGE_NAME)
 
-DOCKER_RUN_RO := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
+DOCKER_RUN_RO := mkdir -p .go-pkg-cache bin && \
                   docker run --rm \
                       --net=host \
                       $(EXTRA_DOCKER_ARGS) \
@@ -395,9 +388,9 @@ update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
 .PHONY: static-checks
 static-checks: guard-ssh-forwarding-bug
 	$(DOCKER_RUN) -v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/deps \
-		-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/fv \
-	   	$(CALICO_BUILD) \
-	   	golangci-lint run --max-issues-per-linter 0 --max-same-issues 0 --timeout 5m --skip-dirs "deps$\" --disable govet
+	    -v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/fv \
+	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	    golangci-lint run --max-issues-per-linter 0 --max-same-issues 0 --timeout 5m --skip-dirs "deps$\" --disable govet'
 
 .PHONY: fix
 ## Fix static checks
@@ -423,16 +416,16 @@ ut: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN_RO) \
 	    $(LOCAL_BUILD_MOUNTS) \
-	    $(CALICO_BUILD) \
-	    sh -c "ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
+	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) && \
+	    ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
 fv: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN_RO) \
 	    $(LOCAL_BUILD_MOUNTS) \
-	    $(CALICO_BUILD) \
-	    sh -c "ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
+	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) && \
+	    ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 ###############################################################################
 # CI
