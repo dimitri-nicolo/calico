@@ -1,6 +1,6 @@
 module github.com/projectcalico/typha
 
-go 1.13
+go 1.12
 
 require (
 	github.com/Workiva/go-datastructures v1.0.50
@@ -26,6 +26,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => ../libcalico-go
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200102171614-37ba08c32fe9
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

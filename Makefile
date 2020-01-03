@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/typha
-GO_BUILD_VER=v0.28
+GO_BUILD_VER=v0.31
 
 GIT_USE_SSH = true
 
