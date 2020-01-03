@@ -129,7 +129,7 @@ spec:
 
 ---
 
-# Allow internal communication to compliance-server from Manager.
+# Allow internal communication to compliance-server from Manager and Guardian (multicluster management only).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -147,6 +147,13 @@ spec:
     source:
       selector: k8s-app == 'tigera-manager'
       namespaceSelector: name == 'tigera-manager'
+    destination:
+      ports: [5443]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-guardian'
+      namespaceSelector: name == 'tigera-guardian'
     destination:
       ports: [5443]
 
