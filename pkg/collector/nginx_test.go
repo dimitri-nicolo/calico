@@ -18,14 +18,6 @@ var (
 	testLogNoSections       = "log info stuff fake ip"
 	testLogWrongFields      = "log info stuff - tigera_secure_ee_ingress: {\"test\": 1}"
 	testLogIpFields         = "tigera_secure_ee_ingress: {\"source_ip\": \"1.1.1.1\", \"destination_ip\": \"2.2.2.2\", \"source_port\": 80, \"destination_port\": 443, \"protocol\": \"tcp\", \"x-forwarded-for\": \"3.3.3.3\", \"x-real-ip\": \"4.4.4.4\"} log info stuff - fake ip"
-
-	expectedLog = IngressLog{
-		SrcIp:    "1.1.1.1",
-		DstIp:    "2.2.2.2",
-		SrcPort:  int32(80),
-		DstPort:  int32(443),
-		Protocol: "tcp",
-	}
 )
 
 var _ = Describe("NGINX Ingress Log Collector ParseRawLogs test", func() {

@@ -35,6 +35,13 @@ func NewNginxCollector(cfg *config.Config) IngressCollector {
 	}
 }
 
+func stop(t *tail.Tail) {
+	err := t.Stop()
+	if err != nil {
+		return
+	}
+}
+
 func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 	// Tail the file
 	// Currently this reads from the end of the tail file to prevent
@@ -46,7 +53,7 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 			Whence: nc.config.TailWhence,
 		},
 	})
-	defer t.Stop()
+	defer stop(t)
 	if err != nil {
 		// TODO: Figure out proper error handling
 		log.Warnf("Failed to tail ingress logs: %v", err)

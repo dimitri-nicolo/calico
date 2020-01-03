@@ -38,15 +38,6 @@ ifeq ($(ARCH),x86_64)
         override ARCH=amd64
 endif
 
-# Build mounts for running in "local build" mode. Mount in libcalico, but null out
-# the vendor directory. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-LOCAL_BUILD_MOUNTS ?=
-ifeq ($(LOCAL_BUILD),true)
-LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro
-endif
-
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
 # however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
@@ -68,13 +59,25 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.30
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#### temp changes from common Makefile #####
+BUILD_OS ?= $(shell uname -s | tr A-Z a-z)
+
+ifneq ($(GOPATH),)
+    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+    # If gopath is empty, default to $(HOME)/go.
+    GOMOD_CACHE = $(HOME)/go/pkg/mod
+endif
+
+EXTRA_DOCKER_ARGS += -e GO111MODULE=on -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+##### temp changes from common Makefile #####
 
 
 # Get version from git - used for releases.
@@ -130,14 +133,36 @@ ifdef SSH_AUTH_SOCK
 endif
 
 
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
-              docker run --rm \
-                         --net=host \
-                         $(EXTRA_DOCKER_ARGS) \
-                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                         -w /go/src/$(PACKAGE_NAME) 
+DOCKER_RUN := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
+                  docker run --rm \
+                      --net=host \
+                      $(EXTRA_DOCKER_ARGS) \
+                      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                      -e GOCACHE=/go-cache \
+                      -e GOPATH=/go \
+                      -e OS=$(BUILD_OS) \
+                      -e GOOS=$(BUILD_OS) \
+                      -e GOARCH=$(ARCH) \
+                      -e GOFLAGS=$(GOFLAGS) \
+                      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+                      -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+                      -w /go/src/$(PACKAGE_NAME)
+
+DOCKER_RUN_RO := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
+                  docker run --rm \
+                      --net=host \
+                      $(EXTRA_DOCKER_ARGS) \
+                      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                      -e GOCACHE=/go-cache \
+                      -e GOPATH=/go \
+                      -e OS=$(BUILD_OS) \
+                      -e GOOS=$(BUILD_OS) \
+                      -e GOARCH=$(ARCH) \
+                      -e GOFLAGS=$(GOFLAGS) \
+                      -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
+                      -v $(CURDIR)/report:/go/src/$(PACKAGE_NAME)/report:rw \
+                      -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+                      -w /go/src/$(PACKAGE_NAME)
 
  # Pre-configured docker run command that runs as this user with the repo
  # checked out to /code, uses the --rm flag to avoid leaving the container
@@ -146,7 +171,7 @@ DOCKER_RUN_RM:=docker run --rm \
                $(EXTRA_DOCKER_ARGS) \
                --user $(LOCAL_USER_ID):$(MY_GID) -v $(CURDIR):/code
 
-ENVOY_API=vendor/github.com/envoyproxy/data-plane-api
+ENVOY_API=deps/github.com/envoyproxy/data-plane-api
 EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
 ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
 V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
@@ -160,8 +185,7 @@ hooks_installed:=$(shell ./install-git-hooks)
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
 	rm -rf report/
-	# Only one pb.go file exists outside the vendor dir
-	rm -rf bin vendor proto/felixbackend.pb.go
+	rm -rf bin proto/felixbackend.pb.go
 	-docker rmi $(BUILD_IMAGE):latest-$(ARCH)
 	-docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
@@ -179,43 +203,19 @@ build-all: $(addprefix bin/ingress-collector-,$(VALIDARCHES))
 ## Build the binary for the current architecture and platform
 build: bin/ingress-collector-$(ARCH)
 
-## Create the vendor directory
-vendor: glide.yaml
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-
-	# To build without Docker just run "glide install -strip-vendor"
-	docker run --rm -i \
-      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-      -v $(HOME)/.glide:/home/user/.glide:rw \
-      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-      -w /go/src/$(PACKAGE_NAME) \
-      $(EXTRA_DOCKER_ARGS) \
-      $(CALICO_BUILD) glide install -strip-vendor
-
-
 bin/ingress-collector-amd64: ARCH=amd64
 bin/ingress-collector-arm64: ARCH=arm64
 bin/ingress-collector-ppc64le: ARCH=ppc64le
 bin/ingress-collector-s390x: ARCH=s390x
-bin/ingress-collector-%: vendor proto $(SRC_FILES)
+bin/ingress-collector-%: proto $(SRC_FILES)
 ifndef VERSION
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LD_FLAGS))
 endif
-	mkdir -p bin
-	-mkdir -p .go-pkg-cache
-	docker run --rm -ti \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	  $(LOCAL_BUILD_MOUNTS) \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e GOCACHE=/go-cache \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(EXTRA_DOCKER_ARGS) \
-	  $(CALICO_BUILD) go build $(LDFLAGS) -v -o bin/ingress-collector-$(ARCH) ./cmd/ingress-collector
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build $(LDFLAGS) -v -o bin/ingress-collector-$(ARCH) \
+	   	./cmd/ingress-collector'
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -225,14 +225,31 @@ endif
 # When importing, we must use gogo versions of google/protobuf and
 # google/rpc (aka googleapis).
 PROTOC_IMPORTS =  -I $(ENVOY_API) \
-                  -I vendor/github.com/gogo/protobuf/protobuf \
-                  -I vendor/github.com/gogo/protobuf \
-                  -I vendor/github.com/lyft/protoc-gen-validate\
-                  -I vendor/github.com/gogo/googleapis\
+                  -I deps/github.com/gogo/protobuf/protobuf \
+                  -I deps/github.com/gogo/protobuf \
+                  -I deps/github.com/lyft/protoc-gen-validate\
+                  -I deps/github.com/gogo/googleapis\
                   -I proto\
                   -I ./
 # Also remap the output modules to gogo versions of google/protobuf and google/rpc
 PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc
+
+### Not used ATM
+### This will be usable if we decide to use the latest protobuf dependencies.
+ENVOYPROXY_GIT_URI:=github.com/envoyproxy/data-plane-api
+PROTOC_GEN_VALIDATE_GIT_URI:=github.com/lyft/protoc-gen-validate
+GOOGLEAPIS_GIT_URI:=github.com/gogo/googleapis
+PROTOBUF_GIT_URI:=github.com/gogo/protobuf
+UDPA_GIT_URI:=github.com/cncf/udpa
+
+proto-download:
+	mkdir -p deps
+	-git clone https://$(ENVOYPROXY_GIT_URI).git deps/$(ENVOYPROXY_GIT_URI)
+	-git clone https://$(PROTOC_GEN_VALIDATE_GIT_URI).git deps/$(PROTOC_GEN_VALIDATE_GIT_URI)
+	-git clone https://$(GOOGLEAPIS_GIT_URI).git deps/$(GOOGLEAPIS_GIT_URI)
+	-git clone https://$(PROTOBUF_GIT_URI).git deps/$(PROTOBUF_GIT_URI)
+	-git clone https://$(UDPA_GIT_URI).git deps/$(UDPA_GIT_URI)
+###
 
 proto: $(EXT_AUTH)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go
 
@@ -257,7 +274,7 @@ $(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
 	              $(HTTP_STATUS).proto \
 	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
-$(EXT_AUTH)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(EXT_AUTH)attribute_context.proto: vendor
+$(EXT_AUTH)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(EXT_AUTH)attribute_context.proto:
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
 	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
@@ -334,14 +351,12 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
-
-
 ###############################################################################
 # Managing the upstream library pins
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin 
+update-pins: update-libcalico-pin
 
 ## deprecated target alias
 update-libcalico: update-pins
@@ -355,22 +370,9 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-###############################################################################
-## libcalico
-
-## Set the default LIBCALICO source for this project 
-LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
-LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
-
-## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
-## default LIBCALICO branch to the same branch name as the current checked out repo
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -379,42 +381,34 @@ guard-git-libcalico:
 		exit 1; \
 	fi;
 
-## Update libary pin in glide.yaml
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+
 update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
-		REPO="$(LIBCALICO_REPO)" \
-		VERSION="$(LIBCALICO_VERSION)" \
-		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
-		BRANCH="$(LIBCALICO_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
 ###############################################################################
 # Static checks
 ###############################################################################
 ## Perform static checks on the code.
 .PHONY: static-checks
-static-checks: guard-ssh-forwarding-bug vendor 
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) gometalinter --deadline=300s --disable-all --enable=goimports --vendor ./...
+static-checks: guard-ssh-forwarding-bug
+	$(DOCKER_RUN) -v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/deps \
+		-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/fv \
+	   	$(CALICO_BUILD) \
+	   	golangci-lint run --max-issues-per-linter 0 --max-same-issues 0 --timeout 5m --skip-dirs "deps$\" --disable govet
 
 .PHONY: fix
 ## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
 
-foss-checks: vendor
+foss-checks:
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	$(DOCKER_RUN_RO) \
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
 	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
@@ -425,22 +419,20 @@ GINKGO_FOCUS?=.*
 
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: proto
+ut: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
-	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		$(LOCAL_BUILD_MOUNTS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /bin/bash -c "ginkgo -r --skipPackage vendor --skipPackage fv -focus='$(GINKGO_FOCUS)'	$(GINKGO_ARGS) $(WHAT)"
+	$(DOCKER_RUN_RO) \
+	    $(LOCAL_BUILD_MOUNTS) \
+	    $(CALICO_BUILD) \
+	    sh -c "ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
-fv: proto
+fv: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
-	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		$(LOCAL_BUILD_MOUNTS) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /bin/bash -c "ginkgo fv -r  --skipPackage vendor -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
+	$(DOCKER_RUN_RO) \
+	    $(LOCAL_BUILD_MOUNTS) \
+	    $(CALICO_BUILD) \
+	    sh -c "ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 ###############################################################################
 # CI

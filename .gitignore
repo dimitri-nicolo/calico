@@ -1,3 +1,5 @@
 vendor/
 proto/*.pb.go
 .go-pkg-cache/
+bin/
+report/

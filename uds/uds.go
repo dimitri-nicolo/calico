@@ -15,20 +15,24 @@
 package uds
 
 import (
+	"context"
 	"net"
-	"time"
 
 	"google.golang.org/grpc"
 )
 
-func GetDialer(proto string) func(string, time.Duration) (net.Conn, error) {
-	return func(target string, timeout time.Duration) (net.Conn, error) {
-		return net.DialTimeout(proto, target, timeout)
+func GetDialer(proto string) func(context.Context, string) (net.Conn, error) {
+	return func(ctx context.Context, target string) (net.Conn, error) {
+		conn, err := (&net.Dialer{}).DialContext(ctx, proto, target)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
 	}
 }
 
 func GetDialOptions() []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithDialer(GetDialer("unix"))}
+		grpc.WithContextDialer(GetDialer("unix"))}
 }
