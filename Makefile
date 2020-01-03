@@ -402,7 +402,7 @@ foss-checks:
 	$(DOCKER_RUN_RO) \
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && /usr/local/bin/fossa'
 
 ###############################################################################
 # UTs
