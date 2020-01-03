@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise --execute templates/crds.yaml %}
+{% helm tigera-secure-ee --execute templates/crds.yaml %}
 # TODO: fix bug where an empty helm includer doesn't render the manifest?
 foo: bar
 {% endhelm %}

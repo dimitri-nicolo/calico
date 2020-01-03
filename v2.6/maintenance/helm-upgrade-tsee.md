@@ -40,13 +40,13 @@ steps to upgrade.
    Your output should look like the following:
    ```bash
    NAME                    REVISION        UPDATED                         STATUS          CHART                  APP VERSION     NAMESPACE
-   coiled-bat              1               Fri Jul 19 13:44:37 2019        DEPLOYED        calico-enterprise-core-                 default
-   fashionable-anteater    1               Fri Jul 19 14:28:50 2019        DEPLOYED        calico-enterprise-
+   coiled-bat              1               Fri Jul 19 13:44:37 2019        DEPLOYED        tigera-secure-ee-core-                 default
+   fashionable-anteater    1               Fri Jul 19 14:28:50 2019        DEPLOYED        tigera-secure-ee-
    ```
 
-1. Run the Helm upgrade command for `calico-enterprise-core`
+1. Run the Helm upgrade command for `tigera-secure-ee-core`
    ```bash
-   helm upgrade <helm installation name for calico-enterprise-core> calico-enterprise-core-{% include chart_version_name %}.tgz
+   helm upgrade <helm installation name for tigera-secure-ee-core> tigera-secure-ee-core-{% include chart_version_name %}.tgz
    ```
 1. Pre-install the CRDs.
 
@@ -58,7 +58,7 @@ steps to upgrade.
 
    >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
 
-1. Run the Helm upgrade command for `calico-enterprise`
+1. Run the Helm upgrade command for `tigera-secure-ee`
    ```bash
-   helm upgrade <helm installation name for calico-enterprise> calico-enterprise-{% include chart_version_name %}.tgz
+   helm upgrade <helm installation name for tigera-secure-ee> tigera-secure-ee-{% include chart_version_name %}.tgz
    ```

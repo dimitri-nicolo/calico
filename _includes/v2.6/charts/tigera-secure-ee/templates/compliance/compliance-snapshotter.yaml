@@ -1,8 +1,8 @@
-{{- $elasticMode := include "calico-enterprise.elasticsearch.mode" . }}
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: tigera-compliance-server
+  name: tigera-compliance-snapshotter
   namespace: calico-monitoring
 
 ---
@@ -10,84 +10,80 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: tigera-compliance-server
+  name: tigera-compliance-snapshotter
 rules:
-- apiGroups: ["projectcalico.org"]
-  resources:
-    - globalreporttypes
-    - globalreports
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups: ["authentication.k8s.io"]
-  resources:
-    - tokenreviews
-  verbs:
-    - create
-- apiGroups: ["authorization.k8s.io"]
-  resources:
-    - subjectaccessreviews
-  verbs:
-    - create
+  - apiGroups: ["extensions","networking.k8s.io",""]
+    resources:
+      - networkpolicies
+      - nodes
+      - namespaces
+      - pods
+      - serviceaccounts
+      - endpoints
+      - services
+    verbs:
+      - get
+      - list
+  - apiGroups: ["projectcalico.org"]
+    resources:
+      - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
+      - networkpolicies
+      - stagednetworkpolicies
+      - stagedkubernetesnetworkpolicies
+      - tier.globalnetworkpolicies
+      - tier.stagedglobalnetworkpolicies
+      - tier.networkpolicies
+      - tier.stagednetworkpolicies
+      - tiers
+      - hostendpoints
+      - globalnetworksets
+      - networksets
+    verbs:
+      - get
+      - list
 
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: tigera-compliance-server
+  name: tigera-compliance-snapshotter
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: tigera-compliance-server
+  name: tigera-compliance-snapshotter
 subjects:
 - kind: ServiceAccount
-  name: tigera-compliance-server
+  name: tigera-compliance-snapshotter
   namespace: calico-monitoring
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: compliance
-  namespace: calico-monitoring
-spec:
-  ports:
-  - name: compliance-api
-    port: 443
-    protocol: TCP
-    targetPort: 5443
-  selector:
-    k8s-app: compliance-server
 
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: compliance-server
+  name: compliance-snapshotter
   namespace: calico-monitoring
   labels:
-    k8s-app: compliance-server
+    k8s-app: compliance-snapshotter
 spec:
   replicas: 1
   strategy:
      type: Recreate
   selector:
     matchLabels:
-      k8s-app: compliance-server
+      k8s-app: compliance-snapshotter
   template:
     metadata:
-      name: compliance-server
+      name: compliance-snapshotter
       namespace: calico-monitoring
       labels:
-        k8s-app: compliance-server
+        k8s-app: compliance-snapshotter
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
-      serviceAccountName: tigera-compliance-server
+      serviceAccountName: tigera-compliance-snapshotter
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
@@ -98,28 +94,14 @@ spec:
 {{- end }}
 {{- end }}
       containers:
-        - name: compliance-server
-          image: {{.Values.complianceServer.image}}:{{.Values.complianceServer.tag}}
-{{ tuple .Values.complianceServer.resources | include "calico-enterprise.resourceLimits" | indent 10 -}}
-          livenessProbe:
-            httpGet:
-              path: /compliance/version
-              port: 5443
-              scheme: HTTPS
-            periodSeconds: 10
-            initialDelaySeconds: 5
-            failureThreshold: 5
-          readinessProbe:
-            httpGet:
-              path: /compliance/version
-              port: 5443
-              scheme: HTTPS
-            periodSeconds: 10
-            initialDelaySeconds: 5
-            failureThreshold: 5
+        - name: compliance-snapshotter
+          image: {{.Values.complianceSnapshotter.image}}:{{ .Values.complianceSnapshotter.tag }}
+{{ tuple .Values.complianceSnapshotter.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
-              value: "warning"
+              value: "info"
+            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR
+              value: "0"
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
                 configMapKeyRef:
@@ -136,14 +118,14 @@ spec:
                   name: tigera-es-config
                   key: tigera.elasticsearch.port
 {{- if eq $elasticMode "operator" }}
-{{- if .Values.elasticsearch.compliance.server.password }}
+{{- if .Values.elasticsearch.compliance.snapshotter.password }}
             - name: ELASTIC_USER
-              value: {{ .Values.elasticsearch.compliance.server.username | quote }}
+              value: {{ .Values.elasticsearch.compliance.snapshotter.username | quote }}
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: server.password
+                  key: snapshotter.password
                   optional: true
 {{- else }}
             - name: ELASTIC_USER
@@ -154,19 +136,19 @@ spec:
                   name: tigera-elasticsearch-es-elastic-user
                   key: elastic
                   optional: true
-{{- end }}
+{{- end}}
 {{- else }}
             - name: ELASTIC_USER
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: server.username
+                  key: snapshotter.username
                   optional: true
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: server.password
+                  key: snapshotter.password
                   optional: true
 {{- end}}
             - name: ELASTIC_SSL_VERIFY
@@ -177,25 +159,29 @@ spec:
                   name: tigera-es-config
                   key: tigera.elasticsearch.ca.path
                   optional: true
-{{- if .Values.complianceServer.env }}
-{{ toYaml .Values.complianceServer.env | indent 12 }}
+{{- if .Values.complianceSnapshotter.env }}
+{{ toYaml .Values.complianceSnapshotter.env | indent 12 }}
 {{- end }}
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/ssl/elastic/
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
       volumes:
         - name: elastic-ca-cert-volume
           secret:
             optional: true
-{{- if eq $elasticMode "operator" }}
             defaultMode: 420
+{{- if eq $elasticMode "operator" }}
             items:
               - key: tls.crt
                 path: ca.pem
             secretName: tigera-elasticsearch-es-http-certs-public
 {{- else }}
             items:
-              - key: tigera.elasticsearch.ca
-                path: ca.pem
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
             secretName: tigera-es-config
 {{- end}}

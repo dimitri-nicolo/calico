@@ -39,8 +39,8 @@ The high-level steps to a functioning cluster with access to the user interface 
 ### Acquire the Helm charts
 
 ```
-curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-core-{% include chart_version_name %}.tgz
-curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/calico-enterprise-{% include chart_version_name %}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-{% include chart_version_name %}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% include chart_version_name %}.tgz
 ```
 
 {%- if include.method == "full" %}
@@ -157,13 +157,13 @@ initialPool:
 
 {%- if include.method == "full" %}
    ```
-   helm install ./calico-enterprise-core-{% include chart_version_name %}.tgz \
+   helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
      -f values.yaml \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 {% else %}
    ```
-   helm install ./calico-enterprise-core-{% include chart_version_name %}.tgz \
+   helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 {% endif %}
@@ -238,10 +238,10 @@ manager:
 
    >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
 
-1. Install the calico-enterprise helm chart with custom resource provisioning disabled:
+1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./calico-enterprise-{% include chart_version_name %}.tgz \
+   helm install ./tigera-secure-ee-{% include chart_version_name %}.tgz \
      --namespace calico-monitoring \
      --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json

@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-{% helm calico-enterprise secure-es --execute templates/monitor-calico.yaml %}
+{% helm tigera-secure-ee secure-es --execute templates/monitor-calico.yaml %}
 createCustomResources: false
 {% endhelm %}
