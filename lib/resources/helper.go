@@ -29,6 +29,10 @@ const (
 	grpVersionProjectcalico = "projectcalico.org/v3"
 	grpVersionK8sNetworking = "networking.k8s.io/v1"
 	grpVersionExtensions    = "extensions/v1beta1"
+	isNamespaced = true
+	isNotNamespaced = false
+	isTieredPolicy = true
+	isNotTieredPolicy = false
 )
 
 var (
@@ -59,7 +63,10 @@ type ResourceHelper interface {
 	NewResourceList() ResourceList
 	Deprecated() []metav1.TypeMeta
 	Plural() string
+	RbacPlural() string
 	GetAuditEventsSelection() *apiv3.AuditEventsSelection
+	IsNamespaced() bool
+	IsTieredPolicy() bool
 }
 
 // GetTypeMeta extracts the group version kind from the resource unless
@@ -129,6 +136,8 @@ type resourceHelper struct {
 	resourceList ResourceList
 	deprecated   []metav1.TypeMeta
 	plural       string
+	isNamespaced bool
+	isTieredPolicy bool
 }
 
 func (h *resourceHelper) TypeMeta() metav1.TypeMeta {
@@ -161,6 +170,13 @@ func (h *resourceHelper) Plural() string {
 	return h.plural
 }
 
+func (h *resourceHelper) RbacPlural() string {
+	if h.isTieredPolicy {
+		return "tier." + h.plural
+	}
+	return h.plural
+}
+
 func (h *resourceHelper) getAuditResources() []apiv3.AuditResource {
 	a := []apiv3.AuditResource{{
 		Resource:   h.plural,
@@ -175,6 +191,14 @@ func (h *resourceHelper) getAuditResources() []apiv3.AuditResource {
 		})
 	}
 	return a
+}
+
+func (h *resourceHelper) IsNamespaced() bool {
+	return h.isNamespaced
+}
+
+func (h *resourceHelper) IsTieredPolicy() bool {
+	return h.isTieredPolicy
 }
 
 //TODO(rlb): We are now using the AAPIS interface in preference to the Calico API directly. This means there is a
@@ -192,6 +216,8 @@ var (
 			&corev1.PodList{},
 			[]metav1.TypeMeta{},
 			"pods",
+			isNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeK8sNamespaces,
@@ -199,6 +225,8 @@ var (
 			&corev1.NamespaceList{},
 			[]metav1.TypeMeta{},
 			"namespaces",
+			isNotNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeK8sServiceAccounts,
@@ -206,6 +234,8 @@ var (
 			&corev1.ServiceAccountList{},
 			[]metav1.TypeMeta{},
 			"serviceaccounts",
+			isNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeK8sEndpoints,
@@ -213,6 +243,8 @@ var (
 			&corev1.EndpointsList{},
 			[]metav1.TypeMeta{},
 			"endpoints",
+			isNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeK8sNetworkPolicies,
@@ -220,6 +252,8 @@ var (
 			&networkingv1.NetworkPolicyList{},
 			[]metav1.TypeMeta{TypeK8sNetworkPoliciesExtensions},
 			"networkpolicies",
+			isNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeCalicoTiers,
@@ -227,6 +261,8 @@ var (
 			&apiv3.TierList{},
 			[]metav1.TypeMeta{},
 			"tiers",
+			isNotNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeCalicoHostEndpoints,
@@ -234,6 +270,8 @@ var (
 			&apiv3.HostEndpointList{},
 			[]metav1.TypeMeta{},
 			"hostendpoints",
+			isNotNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeCalicoGlobalNetworkSets,
@@ -241,6 +279,8 @@ var (
 			&apiv3.GlobalNetworkSetList{},
 			[]metav1.TypeMeta{},
 			"globalnetworksets",
+			isNotNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeCalicoNetworkSets,
@@ -248,6 +288,8 @@ var (
 			&apiv3.NetworkSetList{},
 			[]metav1.TypeMeta{},
 			"networksets",
+			isNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeCalicoNetworkPolicies,
@@ -255,6 +297,8 @@ var (
 			&apiv3.NetworkPolicyList{},
 			[]metav1.TypeMeta{},
 			"networkpolicies",
+			isNamespaced,
+			isTieredPolicy,
 		},
 		{
 			TypeCalicoGlobalNetworkPolicies,
@@ -262,6 +306,8 @@ var (
 			&apiv3.GlobalNetworkPolicyList{},
 			[]metav1.TypeMeta{},
 			"globalnetworkpolicies",
+			isNotNamespaced,
+			isTieredPolicy,
 		},
 		{
 			TypeCalicoStagedNetworkPolicies,
@@ -269,6 +315,8 @@ var (
 			&apiv3.StagedNetworkPolicyList{},
 			[]metav1.TypeMeta{},
 			"stagednetworkpolicies",
+			isNamespaced,
+			isTieredPolicy,
 		},
 		{
 			TypeCalicoStagedKubernetesNetworkPolicies,
@@ -276,6 +324,8 @@ var (
 			&apiv3.StagedKubernetesNetworkPolicyList{},
 			[]metav1.TypeMeta{},
 			"stagedkubernetesnetworkpolicies",
+			isNamespaced,
+			isNotTieredPolicy,
 		},
 		{
 			TypeCalicoStagedGlobalNetworkPolicies,
@@ -283,6 +333,8 @@ var (
 			&apiv3.StagedGlobalNetworkPolicyList{},
 			[]metav1.TypeMeta{},
 			"stagedglobalnetworkpolicies",
+			isNotNamespaced,
+			isTieredPolicy,
 		},
 	}
 )
