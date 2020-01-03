@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/kelseyhightower/confd
-GO_BUILD_VER=v0.28
+GO_BUILD_VER=v0.32
 
 GIT_USE_SSH = true
 
