@@ -7,7 +7,7 @@ require (
 	github.com/Masterminds/semver v0.0.0-20180807142431-c84ddcca87bf // indirect
 	github.com/Masterminds/sprig v2.19.0+incompatible
 	github.com/alecthomas/participle v0.3.0
-	github.com/coreos/etcd v3.3.18+incompatible
+	github.com/coreos/etcd v3.3.18+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
@@ -50,7 +50,7 @@ require (
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/genproto v0.0.0-20191203220235-3fa9dbf08042 // indirect
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.23.1 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect

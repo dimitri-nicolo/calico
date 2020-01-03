@@ -191,6 +191,16 @@ func validateGlobalAlertMetric(structLevel validator.StructLevel) {
 			"",
 		)
 	}
+
+	if s.Metric != "" && s.Condition == "" {
+		structLevel.ReportError(
+			reflect.ValueOf(s.Metric),
+			"Metric",
+			"",
+			reason(fmt.Sprintf("metric %s without condition", s.Metric)),
+			"",
+		)
+	}
 }
 
 func extractVariablesFromDescriptionTemplate(s string) ([]string, error) {
