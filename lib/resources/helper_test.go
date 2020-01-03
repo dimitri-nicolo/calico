@@ -42,6 +42,9 @@ var _ = Describe("types", func() {
 		list := rh.NewResourceList()
 		_, ok = list.(*corev1.PodList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.RbacPlural()).To(Equal("pods"))
+		Expect(rh.IsNamespaced()).To(BeTrue())
+		Expect(rh.IsTieredPolicy()).To(BeFalse())
 
 		// Namespace
 		By("creating a Namespace instance using NewResource")
@@ -53,6 +56,9 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*corev1.NamespaceList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.RbacPlural()).To(Equal("namespaces"))
+		Expect(rh.IsNamespaced()).To(BeFalse())
+		Expect(rh.IsTieredPolicy()).To(BeFalse())
 
 		// Service Account
 		By("creating a Service Account instance using NewResource")
@@ -119,6 +125,9 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*apiv3.NetworkPolicyList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.RbacPlural()).To(Equal("tier.networkpolicies"))
+		Expect(rh.IsNamespaced()).To(BeTrue())
+		Expect(rh.IsTieredPolicy()).To(BeTrue())
 
 		// Global Network Policies
 		By("creating a Global Network Policies instance using NewResource")
@@ -130,6 +139,9 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*apiv3.GlobalNetworkPolicyList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.RbacPlural()).To(Equal("tier.globalnetworkpolicies"))
+		Expect(rh.IsNamespaced()).To(BeFalse())
+		Expect(rh.IsTieredPolicy()).To(BeTrue())
 
 		// Unknown type
 		By("Trying to create unknown resource types")
