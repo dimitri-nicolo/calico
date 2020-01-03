@@ -384,6 +384,10 @@ func (b *mockDatastore) Backend() bapi.Client {
 	panic("not implemented")
 }
 
+func (b *mockDatastore) GlobalAlertTemplates() clientv3.GlobalAlertTemplateInterface {
+	panic("not implemented")
+}
+
 func (b *mockDatastore) getNumInitCalls() int {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()

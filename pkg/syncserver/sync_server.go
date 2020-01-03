@@ -290,6 +290,8 @@ func (s *Server) serve(cxt context.Context) {
 		}
 		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}, MaxVersion: tls.VersionTLS12}
 		tlsConfig.Rand = rand.Reader
+		// go 1.13 defaults to TLS13, which causes some test issues. Set it to TLS12 for now.
+		tlsConfig.MaxVersion = tls.VersionTLS12
 
 		// Arrange for server to verify the clients' certificates.
 		logCxt.Info("Will verify client certificates")

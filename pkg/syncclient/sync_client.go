@@ -203,6 +203,7 @@ func (s *SyncerClient) connect(cxt context.Context) error {
 			log.WithError(err).Error("Failed to load certificate and key")
 			return err
 		}
+		// go 1.13 defaults to TLS13, which causes some test issues. Set it to TLS12 for now.
 		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}, MaxVersion: tls.VersionTLS12}
 
 		// Set InsecureSkipVerify true, because when it's false crypto/tls insists on
