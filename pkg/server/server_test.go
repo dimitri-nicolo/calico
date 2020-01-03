@@ -189,6 +189,8 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 	//extract the files into the files structure
 	var files = make(map[string][]byte)
 	for _, f := range zr.File {
+		// expect the file modified hour to be with in last one minute threshold
+		Expect(time.Now()).Should(BeTemporally("~", f.FileHeader.Modified, time.Minute))
 		freader, err := f.Open()
 		Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer
