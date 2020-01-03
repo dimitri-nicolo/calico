@@ -3,7 +3,7 @@ v2.6:
   helmRelease: 0
   tigera-operator:
     image: tigera/operator
-    version: v1.0.2
+    version: v1.0.3
     registry: quay.io
   calico:
     minor_version: v3.10
