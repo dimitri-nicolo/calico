@@ -1,5 +1,5 @@
 bigheader: "Reference"
-abstract: "Reference Information for Calico Enterprise"
+abstract: "Reference Information for Tigera Secure EE"
 path: /reference
 order: 3
 toc:
@@ -115,19 +115,19 @@ toc:
   section:
   - title: Configuration
     path: /reference/dikastes/configuration
-- title: Calico Enterprise CNI Plugins
+- title: Tigera Secure EE CNI Plugins
   path: /reference/cni-plugin/configuration
-- title: Calico Enterprise Kubernetes Controllers
+- title: Tigera Secure EE Kubernetes Controllers
   path: /reference/kube-controllers/configuration
-- title: Calico Enterprise Manager
+- title: Tigera Secure EE Manager
   section:
     - title: Configuring user authentication
       path: /reference/cnx/authentication
-    - title: Configuring Calico Enterprise RBAC
+    - title: Configuring Tigera Secure EE RBAC
       path: /reference/cnx/rbac-tiered-policies
     - title: Editing policies
       path: /reference/cnx/policy-editor
-    - title: Deploying Calico Enterprise Manager
+    - title: Deploying Tigera Secure EE Manager
       path: /reference/cnx/recommendations
 - title: Configuration on public clouds
   section:
@@ -139,9 +139,9 @@ toc:
       path: /reference/public-cloud/gce
 - title: Network design
   section:
-    - title: Calico Enterprise Over Ethernet Fabrics
+    - title: Tigera Secure EE Over Ethernet Fabrics
       path: /reference/private-cloud/l2-interconnect-fabric
-    - title: Calico Enterprise Over IP Fabrics
+    - title: Tigera Secure EE Over IP Fabrics
       path: /reference/private-cloud/l3-interconnect-fabric
 - title: Architecture
   section:
@@ -166,7 +166,7 @@ toc:
         path: /reference/advanced/etcd-rbac/kubernetes
       - title: Advanced Kubernetes
         path: /reference/advanced/etcd-rbac/kubernetes-advanced
-      - title: etcd paths for Calico Enterprise components
+      - title: etcd paths for Tigera Secure EE components
         path: /reference/advanced/etcd-rbac/calico-etcdv3-paths
 - title: REST API Reference
   path: /reference/cnx/apidocs

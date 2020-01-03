@@ -1,9 +1,9 @@
 bigheader: "Getting Started"
-abstract: "All you need to know to get started with Calico Enterprise"
+abstract: "All you need to know to get started with Tigera Secure EE"
 path: /getting-started
 order: 1
 toc:
-- title: Getting Started with Calico Enterprise
+- title: Getting Started with Tigera Secure EE
   path: /getting-started/
 
 - title: Kubernetes
@@ -16,9 +16,9 @@ toc:
     section:
     - title: Introduction
       path: /getting-started/kubernetes/installation/
-    - title: Installing Calico Enterprise for policy and networking
+    - title: Installing Tigera Secure EE for policy and networking
       path: /getting-started/kubernetes/installation/calico
-    - title: Installing Calico Enterprise for policy only
+    - title: Installing Tigera Secure EE for policy only
       path: /getting-started/kubernetes/installation/other
     - title: Enabling application layer policy (optional)
       path: /getting-started/kubernetes/installation/app-layer-policy
@@ -26,19 +26,19 @@ toc:
       path: /getting-started/kubernetes/installation/aws-sg-integration
     - title: Customizing the Calico manifests (advanced)
       path: /getting-started/kubernetes/installation/config-options
-    - title: Customizing the Calico Enterprise manifests (advanced)
+    - title: Customizing the Tigera Secure EE manifests (advanced)
       path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Integration guide (advanced)
       path: /getting-started/kubernetes/installation/integration
     - title: Using your own Elasticsearch for logs
       path: /getting-started/kubernetes/installation/byo-elasticsearch
-    - title: Installing Calico Enterprise on Docker Enterprise
+    - title: Installing Tigera Secure EE on Docker Enterprise
       path: /getting-started/kubernetes/installation/docker-ee
-    - title: Installing Calico Enterprise on Amazon EKS
+    - title: Installing Tigera Secure EE on Amazon EKS
       path: /getting-started/kubernetes/installation/eks
   - title: Tutorials
     section:
-    - title: Calico Enterprise for Kubernetes Demo
+    - title: Tigera Secure EE for Kubernetes Demo
       path: /getting-started/cnx/simple-policy-cnx/
     - title: Simple Policy Demo
       path: /getting-started/kubernetes/tutorials/simple-policy
@@ -52,9 +52,9 @@ toc:
       path: /getting-started/kubernetes/tutorials/app-layer-policy
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
-  - title: Upgrade Calico Enterprise from an earlier release
+  - title: Upgrade Tigera Secure EE from an earlier release
     path: /getting-started/kubernetes/upgrade/upgrade-tsee
-  - title: Upgrade from Calico to Calico Enterprise
+  - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
 - title: OpenShift
@@ -63,13 +63,13 @@ toc:
     path: /getting-started/openshift/requirements
   - title: Installation
     section:
-    - title: Installing Calico Enterprise
+    - title: Installing Tigera Secure EE
       path: /getting-started/openshift/installation/
     - title: Connecting to a dedicated etcd cluster (optional)
       path: /getting-started/openshift/installation/dedicated-etcd
     - title: Using your own Elasticsearch for logs
       path: /getting-started/openshift/installation/byo-elasticsearch
-  - title: Upgrade to Calico Enterprise
+  - title: Upgrade to Tigera Secure EE
     path: /getting-started/openshift/upgrade-ee
 
 - title: Host Protection

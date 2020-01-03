@@ -42,13 +42,13 @@ toc:
     path: /security/host-endpoints/tutorial
   - title: Connection tracking
     path: /security/host-endpoints/conntrack
-- title: Securing Calico Enterprise component communications
+- title: Securing Tigera Secure EE component communications
   section:
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
   - title: Scheduling to well-known nodes
     path: /security/comms/reduce-nodes
-  - title: Securing Calico Enterprise Prometheus endpoints
+  - title: Securing Tigera Secure EE Prometheus endpoints
     path: /security/comms/secure-metrics
 - title: AWS security group integration
   section:
@@ -114,5 +114,5 @@ toc:
       path: /security/threat-detection-and-prevention/anomaly-detection/customizing
   - title: Trace and block suspicious IPs
     path: /security/threat-detection-and-prevention/suspicious-IPs 
-- title: Calico Enterprise compliance reports
+- title: Tigera Secure EE compliance reports
   path: /security/compliance-reports
