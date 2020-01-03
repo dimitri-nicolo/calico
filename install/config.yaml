@@ -47,3 +47,4 @@ elasticsearch:
 kibana:
   - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
   - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/tor-vpn-dashboard.json"]
+  - ["POST", "tigera-kibana/api/saved_objects/_bulk_create", "./data/honeypod-dashboard.json"]
