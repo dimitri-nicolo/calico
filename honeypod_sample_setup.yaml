@@ -29,70 +29,48 @@ roleRef:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tigera-internal-2
+  name: tigera-internal-1 
   namespace: tigera-internal
 spec:
   selector:
     matchLabels:
-      app: tigera-internal-2
+      app: tigera-internal-1
   replicas: 1
   template:
     metadata:
       labels:
-        app: tigera-internal-2
+        app: tigera-internal-1
     spec:
       containers:
-      - name: tigera-internal-dashboard
-        image: 0x4d4c/inetsim
-        ports:
-        - containerPort: 8888
-        - containerPort: 443
-        env:
-        - name: INETSIM_START_SERVICES
-          value: "http"
-        - name: INETSIM_HTTP_BIND_PORT
-          value: "8888"
-        - name: INETSIM_HTTP_VERSION
-          value: "Apache HTTP Server"
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: tigera-dashboard-internal-debug
-  namespace: tigera-internal 
-  labels:
-    app: tigera-dashboard-internal-debug
-spec:
-  ports:
-    - port: 8888
-      protocol: TCP
-  selector:
-    app: tigera-internal-2
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: tigera-dashboard-internal-service
-  namespace: tigera-internal 
-  labels:
-    app: tigera-dashboard-internal-service
-spec:
-  ports:
-    - port: 443 
-      protocol: TCP
-  selector:
-    app: tigera-internal-2
+      - name: tigera-internal-1
+        image: alpine:latest
+        command: ["/bin/sh"]
+        args: ["-c", "while true;do sleep 5; done"]
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: honeypod-alert-2
+  name: honeypod-alert-1-1
 spec:
-  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Pod Subnet IP Enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-2"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
   aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-1-2
+spec:
+  description: "[Honeypod] Pod Subnet Port Scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+  metric: count
+  condition: gte
+  threshold: 4
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -150,43 +128,11 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-3
 spec:
-  description: "[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr} via port 8888"
+  description: "[Honeypod] Fake Debug Service accessed by ${source_namespace}/${source_name_aggr} on port ${dest_port}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3"'
-  aggregateBy: [source_namespace, source_name_aggr]
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: tigera-internal-1 
-  namespace: tigera-internal
-spec:
-  selector:
-    matchLabels:
-      app: tigera-internal-1
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: tigera-internal-1
-    spec:
-      containers:
-      - name: tigera-internal-1
-        image: alpine:latest
-        command: ["/bin/sh"]
-        args: ["-c", "while true;do sleep 5; done"]
----
-apiVersion: projectcalico.org/v3
-kind: GlobalAlert
-metadata:
-  name: honeypod-alert-1
-spec:
-  description: "[Honeypod] Possible IP Enumeration by ${source_namespace}/${source_name_aggr}"
-  severity: 100
-  dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
-  aggregateBy: [source_namespace, source_name_aggr]
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="80"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_port]
 ---
 apiVersion: apps/v1
 kind: Deployment
