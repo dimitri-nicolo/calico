@@ -1,30 +1,40 @@
 module github.com/kelseyhightower/confd
 
-go 1.13
+go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/semver v1.2.2 // indirect
+	github.com/emicklei/go-restful v2.11.1+incompatible // indirect
+	github.com/go-openapi/spec v0.19.4 // indirect
 	github.com/go-playground/universal-translator v0.16.1-0.20170327191703-71201497bace // indirect
+	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
-	github.com/kelseyhightower/envconfig v1.3.1-0.20180517194557-dd1402a4d99d // indirect
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kelseyhightower/memkv v0.1.1
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.0
-	github.com/projectcalico/confd v3.2.0+incompatible // indirect
-	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
+	github.com/onsi/gomega v1.7.1
+	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v2.7.0-0.dev.0.20191114203016-3c126d3f9ffe+incompatible // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	k8s.io/api v0.0.0-20180628040859-072894a440bd
-	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
-	k8s.io/client-go v8.0.0+incompatible
+	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
+	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
+	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056 // indirect
+	google.golang.org/appengine v1.6.5 // indirect
+
+	// k8s.io/api v1.16.3 is at 16d7abae0d2a
+	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+
+	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
+	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+
+	// k8s.io/client-go 1.16.3 is at 6c5935290e33
+	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191210134219-8c77660d06b7
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20191126220741-8e155f657512
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200103165626-2c83fde7c5ce
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200103192452-b04ab2140c53
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
