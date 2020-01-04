@@ -1,6 +1,8 @@
 PACKAGE_NAME=github.com/projectcalico/calicoctl
 GO_BUILD_VER=v0.32
 
+GIT_USE_SSH = true
+
 ###############################################################################
 # Download and include Makefile.common
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -63,7 +65,14 @@ endif
 ###############################################################################
 # Updating pins
 ###############################################################################
-update-pins: replace-libcalico-pin
+LICENSING_BRANCH=$(PIN_BRANCH)
+LICENSING_REPO=github.com/tigera/licensing
+LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+
+update-licensing-pin:
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
+
+update-pins:  update-licensing-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary
