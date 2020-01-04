@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ func runDiags(logDir string) error {
 	cmds := []diagCmd{
 		{"", "date", "date"},
 		{"", "hostname", "hostname"},
-		{"Dumping netstat", "netstat --all --numeric", "netstat"},
+		{"Dumping netstat", "netstat -a -n", "netstat"},
 		{"Dumping routes (IPv4)", "ip -4 route", "ipv4_route"},
 		{"Dumping routes (IPv6)", "ip -6 route", "ipv6_route"},
 		{"Dumping interface info (IPv4)", "ip -4 addr", "ipv4_addr"},

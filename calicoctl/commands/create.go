@@ -117,7 +117,7 @@ Description:
 			fmt.Printf("Successfully created %d resource(s)\n", results.numHandled)
 		}
 	} else {
-		if results.numHandled-len(results.resErrs) > 0 {
+		if results.numHandled - len(results.resErrs) > 0 {
 			fmt.Printf("Partial success: ")
 			if results.singleKind != "" {
 				fmt.Printf("created the first %d out of %d '%s' resources:\n",
