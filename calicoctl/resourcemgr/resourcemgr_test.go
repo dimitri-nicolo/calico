@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,9 +20,10 @@ import (
 	"os"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

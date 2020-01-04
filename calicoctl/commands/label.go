@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	docopt "github.com/docopt/docopt-go"
+
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 
@@ -27,11 +28,11 @@ import (
 
 func Label(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl label (<KIND> <NAME> 
+  calicoctl label (<KIND> <NAME>
   	              ( <key>=<value> [--overwrite] |
   	                <key> --remove )
                   [--config=<CONFIG>] [--namespace=<NS>])
-                  
+
 
 
 
@@ -90,7 +91,7 @@ Description:
 
   When labeling a resource on an existing key:
   - gets an error if option --overwrite is not provided.
-  - value of the key updates to specified value if option --overwrite is provided. 
+  - value of the key updates to specified value if option --overwrite is provided.
   `
 
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
