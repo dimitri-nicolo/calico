@@ -218,7 +218,7 @@ ut: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64
 ## Run the tests in a container. Useful for CI, Mac dev.
 fv: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64
 	$(MAKE) run-etcd-host
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
 	$(MAKE) stop-etcd
 
 ###############################################################################
