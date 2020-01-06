@@ -114,6 +114,7 @@ type GlobalNetworkPolicy struct {
 
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // StagedGlobalNetworkPolicyList is a list of Policy objects.
 type StagedGlobalNetworkPolicyList struct {
 	metav1.TypeMeta
@@ -124,6 +125,7 @@ type StagedGlobalNetworkPolicyList struct {
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type StagedGlobalNetworkPolicy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
@@ -486,7 +488,7 @@ type ManagedCluster struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.ManagedClusterSpec
+	Spec   calico.ManagedClusterSpec
 	Status calico.ManagedClusterStatus
 }
 
