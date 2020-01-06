@@ -8,3 +8,4 @@ vendor
 cscope.*
 .go-pkg-cache/
 .lint-cache/
+hack/lib/*
