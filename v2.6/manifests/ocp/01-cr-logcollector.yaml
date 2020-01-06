@@ -2,4 +2,4 @@
 apiVersion: operator.tigera.io/v1
 kind: LogCollector
 metadata:
-  name: calico-enterprise
+  name: tigera-secure

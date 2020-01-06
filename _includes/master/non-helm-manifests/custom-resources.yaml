@@ -29,7 +29,7 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: Manager
 metadata:
-  name: tigera-secure-ee
+  name: tigera-secure
 spec:
   # Authentication configuration for accessing the Tigera manager.
   # Default is to use token-based authentication.
@@ -43,7 +43,7 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: APIServer
 metadata:
-  name: tigera-secure-ee
+  name: tigera-secure
 
 ---
 
@@ -52,7 +52,7 @@ metadata:
 apiVersion: operator.tigera.io/v1
 kind: Compliance
 metadata:
-  name: tigera-secure-ee
+  name: tigera-secure
 
 ---
 
@@ -61,7 +61,7 @@ metadata:
 apiVersion: operator.tigera.io/v1
 kind: IntrusionDetection
 metadata:
-  name: tigera-secure-ee
+  name: tigera-secure
 
 ---
 
@@ -70,7 +70,7 @@ metadata:
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: tigera-secure-ee
+  name: tigera-secure
 spec:
   nodes:
     count: 1
@@ -82,7 +82,7 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: LogCollector
 metadata:
-  name: tigera-secure-ee
+  name: tigera-secure
 
 ---
 

@@ -30,7 +30,7 @@ Create or update the **LogStorage** resource by adding or updating the `retentio
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: calico-enterprise
+  name: tigera-secure
   spec:
     retention:
       auditReports: 91
