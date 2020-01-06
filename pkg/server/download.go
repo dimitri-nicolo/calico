@@ -232,6 +232,7 @@ func (d *downloadContent) zipContent() ([]byte, error) {
 		fh := zip.FileHeader{
 			Method: zip.Deflate,
 			Name:   generateFileName(d, f.outputFormat),
+			Modified: time.Now(),
 		}
 
 		//create the next header
