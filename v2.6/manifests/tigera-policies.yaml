@@ -221,7 +221,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'calico-enterprise'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
   types:
   - Ingress
   ingress:
@@ -242,7 +242,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'calico-enterprise'
+      selector: k8s-app == 'tigera-secure'
       namespaceSelector: name == 'tigera-kibana'
     destination:
       ports: [9200]
@@ -333,14 +333,14 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'calico-enterprise'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
   types:
   - Ingress
   ingress:
   - action: Allow
     protocol: TCP
     source:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'calico-enterprise'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
     destination:
       ports: [9300]
 
@@ -354,7 +354,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'calico-enterprise'
+  selector: k8s-app == 'tigera-secure'
   types:
   - Ingress
   ingress:
