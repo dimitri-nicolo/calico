@@ -166,7 +166,7 @@ func (v *version) RemoteClusterConfigurations() RemoteClusterConfigurationInform
 
 // StagedGlobalNetworkPolicies returns a StagedGlobalNetworkPolicyInformer.
 func (v *version) StagedGlobalNetworkPolicies() StagedGlobalNetworkPolicyInformer {
-	return &stagedGlobalNetworkPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &stagedGlobalNetworkPolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // StagedKubernetesNetworkPolicies returns a StagedKubernetesNetworkPolicyInformer.
