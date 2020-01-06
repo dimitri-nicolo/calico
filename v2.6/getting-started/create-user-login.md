@@ -46,7 +46,7 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 
 #### Configure the Calico Enterprise authentication method
 
-The {{site.prodname}} authentication method can be configured through the [Manager API resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager) named `calico-enterprise`.
+The {{site.prodname}} authentication method can be configured through the [Manager API resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager) named `tigera-secure`.
 If the authentication type is not specified, the default authentication method is `Token`.
 
 Run one of the following commands to configure authentication for {{site.prodname}}.
@@ -54,7 +54,7 @@ Run one of the following commands to configure authentication for {{site.prodnam
 **Token authentication (default)**
 
 ```bash
-kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "Token"}}}'
+kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Token"}}}'
 ```
 
 **OIDC authentication**
@@ -62,7 +62,7 @@ kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"typ
 Provide your own values for `<oidc_auth_server>` and `<client_id>` and run:
 
 ```bash
-kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "OIDC", "authority": "<oidc_auth_server>", "clientID": "<client_id>"}}}'
+kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OIDC", "authority": "<oidc_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
 If you are planning to use OIDC authentication with prepopulated configuration, keep `authority` value `<oidc_auth_server>` empty.
@@ -72,13 +72,13 @@ If you are planning to use OIDC authentication with prepopulated configuration, 
 Provide your own values for `<oauth2_auth_server>` and `<client_id>` and run:
 
 ```bash
-kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
+kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
 **Basic authentication (for testing only)**
 
 ```bash
-kubectl patch manager calico-enterprise --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
+kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
 ```
 
 #### Create a user and login using token-based authentication

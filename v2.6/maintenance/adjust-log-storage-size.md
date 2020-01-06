@@ -52,7 +52,7 @@ In the following example, {{site.prodname}} is configured to install two log sto
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: calico-enterprise
+  name: tigera-secure
 spec:
   nodes:
     count: 2
@@ -66,7 +66,7 @@ In the following example, {{site.prodname}} is configured to install two replica
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: calico-enterprise
+  name: tigera-secure
 Spec:
   nodes:
     count: 3
@@ -82,7 +82,7 @@ In the following example, {{site.prodname}} is configured to install nodes that 
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: calico-enterprise
+  name: tigera-secure
 spec:
   nodes:
     resourceRequirements:
@@ -98,7 +98,7 @@ In the following example, {{site.prodname}} is configured to install nodes with 
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: calico-enterprise
+  name: tigera-secure
 spec:
   nodes:
     resourceRequirements:

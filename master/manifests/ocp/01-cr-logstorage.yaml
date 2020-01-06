@@ -1,7 +1,7 @@
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: calico-enterprise
+  name: tigera-secure
 spec:
   nodes:
     count: 1
