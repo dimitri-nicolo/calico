@@ -3,7 +3,7 @@ title: Simple Policy Demo
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/simple-policy
 ---
 
-This guide provides a simple way to try out Kubernetes NetworkPolicy with {{site.prodname}}.  It requires a Kubernetes cluster configured with {{site.prodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.
+This guide provides a simple way to try out Kubernetes NetworkPolicy with {{site.tseeprodname}}.  It requires a Kubernetes cluster configured with {{site.tseeprodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.
 
 You can quickly and easily deploy such a cluster by following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/)
 
@@ -60,7 +60,7 @@ We'll use Kubernetes `Deployment` objects to easily create pods in the namespace
 
 ### Enable isolation
 
-Let's turn on isolation in our `policy-demo` namespace.  {{site.prodname}} will then prevent connections to pods in this namespace.
+Let's turn on isolation in our `policy-demo` namespace.  {{site.tseeprodname}} will then prevent connections to pods in this namespace.
 
 Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` namespace.
 
@@ -208,7 +208,7 @@ You can clean up the demo by deleting the demo namespace.
 kubectl delete ns policy-demo
 ```
 
-This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.prodname}} can secure your Kubernetes cluster.  For more
+This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.tseeprodname}} can secure your Kubernetes cluster.  For more
 information on network policy in Kubernetes, see the [Kubernetes user-guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
 For a slightly more detailed demonstration of policy, check out the [stars demo](stars-policy).

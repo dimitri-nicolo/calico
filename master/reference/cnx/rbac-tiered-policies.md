@@ -1,5 +1,5 @@
 ---
-title: Configuring Tigera Secure EE RBAC for tiered policies
+title: Configuring Calico Enterprise RBAC for tiered policies
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/rbac-tiered-policies
 ---
 
@@ -13,7 +13,7 @@ pre-v2.3 RBAC behavior, [upgrade to 2.3](/v2.3/getting-started/kubernetes/upgrad
 following the instructions for handling RBAC. Then, continue to
 [upgrade to this release](/{{page.version}}/maintenance/kubernetes-upgrade-tsee).
 
-For RBAC related to elasticsearch, please refer to [Configuring Tigera Secure EE RBAC for Elasticsearch](/{{page.version}}/reference/cnx/rbac-elasticsearch).
+For RBAC related to elasticsearch, please refer to [Configuring Calico Enterprise RBAC for Elasticsearch](/{{page.version}}/reference/cnx/rbac-elasticsearch).
 
 ### Policy and tier RBAC
 

@@ -5,26 +5,26 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade/up
 
 ## Prerequisite
 
-Ensure that your Kubernetes cluster is already running an earlier version of {{site.prodname}}.
+Ensure that your Kubernetes cluster is already running an earlier version of {{site.tseeprodname}}.
 
-If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide](./upgrade-to-tsee) 
+If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.tseeprodname}} guide](./upgrade-to-tsee) 
 instead.
 
-## Upgrading to {{page.version}} {{site.prodname}}
+## Upgrading to {{page.version}} {{site.tseeprodname}}
 
 If you used the manifests provided on the [Tigera documentation site](https://docs.tigera.io/) 
-to install {{site.prodname}}, re-install using the {{page.version}} {{site.prodname}} instructions
+to install {{site.tseeprodname}}, re-install using the {{page.version}} {{site.tseeprodname}} instructions
 and manifests for your specific installation type. To avoid unneccessary service impact, ensure you modify the various 
 manifests to include any changes that were previously made for your current deployment *prior* to applying the new 
 manifests.
 
-If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you previously modified your manifests to use the
+If you are upgrading from a pre-v2.3 release of {{site.tseeprodname}}, or you previously modified your manifests to use the
 pre-v2.3 RBAC behavior, follow the additional instructions below to ensure RBAC behavior for tiered policy is as expected.
 
-### <a name="upgrading-pre23"></a>Upgrading from a pre-v2.3 {{site.prodname}} release
+### <a name="upgrading-pre23"></a>Upgrading from a pre-v2.3 {{site.tseeprodname}} release
 
-The RBAC configuration model has changed between the v2.2 and v2.3 releases of {{site.prodname}}.
-When upgrading from a pre-v2.3 release of {{site.prodname}} it is necessary to perform an action to either
+The RBAC configuration model has changed between the v2.2 and v2.3 releases of {{site.tseeprodname}}.
+When upgrading from a pre-v2.3 release of {{site.tseeprodname}} it is necessary to perform an action to either
 maintain pre-v2.3 RBAC behavior for Calico tiered policy, or to migrate to the new RBAC behavior.
  
 Pre-v2.3 RBAC behavior was as follows:
@@ -49,7 +49,7 @@ Prior to upgrading, follow one of the sections below to ensure minimal service i
 
 #### <a name="v23-rbac"></a>Maintaining the pre-v2.3 behavior
 
-##### During the upgrade to {{site.prodname}} {{page.version}}
+##### During the upgrade to {{site.tseeprodname}} {{page.version}}
 
 If you are following the documented installation instructions, download the `cnx.yaml`, and before applying it modify 
 `ClusterRole "ee-calico-tiered-policy-passthru"` to specify the resource kinds `tier.networkpolicies` and 
@@ -75,7 +75,7 @@ kinds `networkpolicies` and `globalnetworkpolicies`.
 If you are upgrading from pre-v2.3 and you wish to start using the new per-tier granularity RBAC for Calico policy,
 perform the following migration steps:
 
-##### Before upgrading to {{site.prodname}} {{page.version}}
+##### Before upgrading to {{site.tseeprodname}} {{page.version}}
 
 Modify any `Role` and `ClusterRole` that refer to Calico policy resource types. Update the resources to include the 
 real Calico resource type (`networkpolicies` and `globalnetworkpolicies`) *and* the associated pseudo-resource types 
@@ -111,7 +111,7 @@ rules:
 
 When upgrading, ensure the cnx.yaml manifest has the {{page.version}} default settings for the `ClusterRole "ee-calico-tiered-policy-passthru"`.
 This resource should have the `resources` set to include only the real resource kinds `networkpolicies` and `globalnetworkpolicies`.
-These are the settings in the standard {{page.version}} {{site.prodname}} manifests, and so provided you have not previously modified them
+These are the settings in the standard {{page.version}} {{site.tseeprodname}} manifests, and so provided you have not previously modified them
 no changes should be required.
 
 ##### Post upgrade

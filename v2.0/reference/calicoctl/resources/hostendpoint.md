@@ -3,12 +3,12 @@ title: Host Endpoint Resource (HostEndpoint)
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/hostendpoint
 ---
 
-A host endpoint resource (`HostEndpoint`) represents an interface attached to a host that is running {{site.prodname}}.
+A host endpoint resource (`HostEndpoint`) represents an interface attached to a host that is running {{site.tseeprodname}}.
 
-Each host endpoint may include a set of labels and list of profiles that {{site.prodname}}
+Each host endpoint may include a set of labels and list of profiles that {{site.tseeprodname}}
 will use to apply
 [policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
-to the interface.  If no profiles or labels are applied, {{site.prodname}} will not apply
+to the interface.  If no profiles or labels are applied, {{site.tseeprodname}} will not apply
 any policy.
 
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following

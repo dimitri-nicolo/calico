@@ -5,7 +5,7 @@ no_canonical: true
 
 ### About configuring calicoctl
 
-Many `calicoctl` commands require access to the {{site.prodname}} datastore. In most
+Many `calicoctl` commands require access to the {{site.tseeprodname}} datastore. In most
 circumstances, `calicoctl` cannot achieve this connection by default. You can provide
 `calicoctl` with the information it needs using either of the following.
 

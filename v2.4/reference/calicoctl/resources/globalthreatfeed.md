@@ -5,7 +5,7 @@ title: Global Threat Feed Resource (GlobalThreatFeed)
 A global threat feed resource (GlobalThreatFeed) represents a feed of threat intelligence used for
 security purposes.
 
-At present, {{site.prodname}} supports threat feeds that give a set of IP addresses
+At present, {{site.tseeprodname}} supports threat feeds that give a set of IP addresses
 or IP prefixes, and automatically monitors flow logs for members of the set. These threat feeds
 have their content type set to IPSet.  IPSet threat feeds can also be configured to be synchronized to a
 [global network set](./globalnetworkset), allowing you to use them as a dynamically-updating 
@@ -53,7 +53,7 @@ spec:
 ```
 
 ### Push or Pull
-You can configure {{site.prodname}} to pull updates from your threat feed using a [`pull`](#pull) stanza in 
+You can configure {{site.tseeprodname}} to pull updates from your threat feed using a [`pull`](#pull) stanza in 
 the global threat feed spec.
 
 Alternately, you can have your threat feed push updates directly.  Leave out the `pull` stanza, and configure
@@ -173,7 +173,7 @@ example:
 
 #### KeyRef
 
-KeyRef tells {{site.prodname}} where to get the value for a header.  The referenced Kubernetes object
+KeyRef tells {{site.tseeprodname}} where to get the value for a header.  The referenced Kubernetes object
 (either a config map or a secret) must be in the `calico-monitoring` namespace.
 
 | Field    | Description                                               | Accepted Values | Schema | Default |

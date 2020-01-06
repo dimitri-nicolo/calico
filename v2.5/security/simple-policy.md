@@ -3,7 +3,7 @@ title: Simple policy tutorial
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/simple-policy'
 ---
 
-This guide provides a simple way to try out Kubernetes `NetworkPolicy` with {{site.prodname}}.  It requires a Kubernetes cluster configured with {{site.prodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.
+This guide provides a simple way to try out Kubernetes `NetworkPolicy` with {{site.tseeprodname}}.  It requires a Kubernetes cluster configured with {{site.tseeprodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.
 
 You can quickly and easily deploy such a cluster by following one of the [installation guides]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation).
 
@@ -60,7 +60,7 @@ We'll use Kubernetes `Deployment` objects to easily create pods in the namespace
 
 ### Enable isolation
 
-Let's turn on isolation in our `policy-demo` namespace.  {{site.prodname}} will then prevent connections to pods in this namespace.
+Let's turn on isolation in our `policy-demo` namespace.  {{site.tseeprodname}} will then prevent connections to pods in this namespace.
 
 Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` namespace.
 

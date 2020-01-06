@@ -1,6 +1,6 @@
 ## Elasticsearch requirements
 
-For quickstart and demonstration purposes, {{site.prodname}} bundles an
+For quickstart and demonstration purposes, {{site.tseeprodname}} bundles an
 [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator) that deploys an Elasticsearch cluster
 and a Kibana instance that meets the following requirements.
 

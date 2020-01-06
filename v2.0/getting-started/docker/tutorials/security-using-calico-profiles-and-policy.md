@@ -5,11 +5,11 @@ no_canonical: true
 
 ## Background
 
-With {{site.prodname}} as a Docker network plugin, {{site.prodname}} uses an identically named
+With {{site.tseeprodname}} as a Docker network plugin, {{site.tseeprodname}} uses an identically named
 [profile]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile)
 to represent each Docker network.  This profile is applied to each container
-in that network and the profile is used by {{site.prodname}} to configure access policy
-for that container.  The {{site.prodname}} network plugin will automatically create the 
+in that network and the profile is used by {{site.tseeprodname}} to configure access policy
+for that container.  The {{site.tseeprodname}} network plugin will automatically create the 
 associated profile if it does not exist when the container is attached to the network.  
 By default, the profile contains rules that allow full egress traffic but allow ingress 
 traffic only from containers within the same network and no other source.  Custom policy 
@@ -24,19 +24,19 @@ There are two ways in which the policy that defines the Docker network can be mo
    the network.
 
 2. Assign labels to the profile, and define global selector based policy.  The
-   ({{site.prodname}}-specific) labels are assigned to containers in the associated Docker network.
+   ({{site.tseeprodname}}-specific) labels are assigned to containers in the associated Docker network.
    The globally defined policy uses selectors to determine which subset of the policy
    is applied to each container based on their labels.  This approach provides a powerful
    way to group together all of your network policy, makes it easy to reuse policy in
    different networks, and makes it easier to define policy that extends across
-   different orchestration systems that use {{site.prodname}}.
+   different orchestration systems that use {{site.tseeprodname}}.
 
-## Managing {{site.prodname}} policy for a network
+## Managing {{site.tseeprodname}} policy for a network
 
 This section provides a worked examples applying policy using the two approaches
 described above.
 
-In both cases we create a {{site.prodname}}-Docker network and use the `calicoctl` tool to
+In both cases we create a {{site.tseeprodname}}-Docker network and use the `calicoctl` tool to
 achieve the required isolation.
 
 For the worked examples let's assume that we want to provide the following
@@ -58,7 +58,7 @@ of the two network profiles to provide the required isolation.
 
 #### a.1 Create the Docker networks
 
-On any host in your {{site.prodname}} / Docker network, run the following commands:
+On any host in your {{site.tseeprodname}} / Docker network, run the following commands:
 
 ```
 docker network create --driver calico --ipam-driver calico-ipam database
@@ -127,9 +127,9 @@ The above profiles provide the required isolation between the frontend and datab
 containers.  This works as follows:
 
 -  Containers in the "database" Docker network are assigned the "database"
-   {{site.prodname}} profile.
+   {{site.tseeprodname}} profile.
 -  Containers in the "frontend" Docker network are assigned the "frontend"
-   {{site.prodname}} profile.
+   {{site.tseeprodname}} profile.
 -  Each container in the "database" network inherits the label `role = database`
    from its profile.
 -  Each container in the "frontend" network inherits the label `role = frontend`
@@ -165,7 +165,7 @@ labels applied by the profile.
 
 #### b.1 Create the Docker networks
 
-On any host in your {{site.prodname}} / Docker network, run the following commands:
+On any host in your {{site.tseeprodname}} / Docker network, run the following commands:
 
 ```
 docker network create --driver calico --ipam-driver calico-ipam database
@@ -263,9 +263,9 @@ The above policies provide the same isolation as the previous example.
 This works as follows:
 
 -  Containers in the "database" Docker network are assigned the "database"
-   {{site.prodname}} profile.
+   {{site.tseeprodname}} profile.
 -  Containers in the "frontend" Docker network are assigned the "frontend"
-   {{site.prodname}} profile.
+   {{site.tseeprodname}} profile.
 -  Each container in the "database" network inherits the label `role = database`
    from its profile.
 -  Each container in the "frontend" network inherits the label `role = frontend`
@@ -290,7 +290,7 @@ documentation.
 ## Multiple networks
 
 Whilst the Docker API supports the ability to attach a container to multiple
-networks, it is not possible to use this feature of Docker when using {{site.prodname}}.
+networks, it is not possible to use this feature of Docker when using {{site.tseeprodname}}.
 
 However, using the selector-based approach for defining network policy it is
 possible to achieve the same effect of overlapping networks but with a far
@@ -327,4 +327,4 @@ label.
 ## Further Reading
 
 For details on configuring advanced policy using container labels, see
-[Security using Docker Labels and {{site.prodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
+[Security using Docker Labels and {{site.tseeprodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).

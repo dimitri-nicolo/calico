@@ -3,7 +3,7 @@ title: Configuring Elasticsearch
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/configure-elastic
 ---
 
-{{site.prodname}} uses ElasticSearch to store and manage certain logs.
+{{site.tseeprodname}} uses ElasticSearch to store and manage certain logs.
 
 ## RBAC for access to Elasticsearch stored logs
 
@@ -30,7 +30,7 @@ The index names used are:
 - `tigera_secure_ee_audit_kube.<cluster name>.<date>`
 
 Edit the cluster name by following this procedure.  The two values must match for
-   {{site.prodname}} Manager to be able to read the correct logs from Elasticsearch.
+   {{site.tseeprodname}} Manager to be able to read the correct logs from Elasticsearch.
 
 1. Edit the `tigera.cnx-manager.cluster-name` field in the `tigera-cnx-manager-config` ConfigMap.
    This ConfigMap can be found in `cnx-[etcd|kdd].yaml`.
@@ -40,7 +40,7 @@ Edit the cluster name by following this procedure.  The two values must match fo
 
 ## Configuring retention periods for Elasticsearch logs
 
-{{site.prodname}} includes a [Curator](https://www.elastic.co/guide/en/elasticsearch/client/curator/current/about.html)
+{{site.tseeprodname}} includes a [Curator](https://www.elastic.co/guide/en/elasticsearch/client/curator/current/about.html)
 deployment that deletes old indices.  By default flow logs are removed after 7 days,
 audit logs after 366 days, snapshots after 366 days, and compliance reports
 after 366 days.
@@ -60,7 +60,7 @@ in the [ElasticSearch operator documentation](https://github.com/upmc-enterprise
 ## Managing storage for operator created clusters
 
 The operator created cluster stores its data in volumes created through
-a Kubernetes `StorageClass`.  Three options are bundled with {{site.prodname}} -
+a Kubernetes `StorageClass`.  Three options are bundled with {{site.tseeprodname}} -
 in manifests called `elastic-storage*.yaml`.  The installation options cover
 how to get these manifests - a few notes on each option follow.
 

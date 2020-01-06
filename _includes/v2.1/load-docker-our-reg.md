@@ -51,7 +51,7 @@
    ```
    
 {% if include.yaml == "calico" %}
-1. Continue to [Installing {{site.prodname}}](#install-cnx).
+1. Continue to [Installing {{site.tseeprodname}}](#install-cnx).
 {% endif %}
 
 {% if include.yaml != "calico" %}

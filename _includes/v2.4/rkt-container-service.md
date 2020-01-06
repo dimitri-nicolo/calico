@@ -1,4 +1,4 @@
-Each {{site.prodname}}-rkt enabled node requires the `{{site.nodecontainer}}` container to be running.
+Each {{site.tseeprodname}}-rkt enabled node requires the `{{site.nodecontainer}}` container to be running.
 
 The `{{site.nodecontainer}}` container can be run directly through rkt and needs to be run as
 as a fly stage-1 container.

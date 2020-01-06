@@ -3,7 +3,7 @@ title: Using calicoctl in Kubernetes
 canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/tutorials/using-calicoctl
 ---
 
-`calicoctl` allows you to create, read, update, and delete {{site.prodname}} objects
+`calicoctl` allows you to create, read, update, and delete {{site.tseeprodname}} objects
 from the command line. [Installing `calicoctl` as a binary](/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-binary-on-a-single-host)
 will provide you with maximum functionality, including access to the
 `node` commands.

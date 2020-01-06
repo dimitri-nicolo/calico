@@ -11,7 +11,7 @@ Configuration resource to the local cluster.
 For example, let's imagine that you want to federate three clusters named `cluster-a`, `cluster-b`,
 and `cluster-c`.
 
-After installing {{site.prodname}} on each of the clusters:
+After installing {{site.tseeprodname}} on each of the clusters:
 
 - Add two Remote Cluster Configuration resources to `cluster-a`: one for `cluster-b` and another
   for `cluster-c`.
@@ -30,7 +30,7 @@ In addition to adding the necessary Remote Cluster Configuration resources, you 
 ### Prerequisite
 
 Before you can add a Remote Cluster Configuration resource to a cluster, you must
-install {{site.prodname}} on the cluster, following the procedure appropriate to the
+install {{site.tseeprodname}} on the cluster, following the procedure appropriate to the
 cluster's datastore type.
 - [etcd](../../getting-started/kubernetes/installation/calico#installing-with-federation-using-etcd)
 - [Kubernetes API datastore](../../getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
@@ -49,7 +49,7 @@ type for instructions.
 
 ### Adding a Remote Cluster Configuration resource with the etcd datastore
 
-If the remote cluster uses etcd as the {{site.prodname}} datastore, set the `datastoreType` in the Remote Cluster Configuration
+If the remote cluster uses etcd as the {{site.tseeprodname}} datastore, set the `datastoreType` in the Remote Cluster Configuration
 resource to `etcdv3` and populate the `etcd*` fields. You must also fill in either the `kubeconfig` or the `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
@@ -73,7 +73,7 @@ spec:
 
 ### Remote Cluster Configuration resource with the Kubernetes API datastore
 
-If the remote cluster uses the Kubernetes API datastore for {{site.prodname}} data,
+If the remote cluster uses the Kubernetes API datastore for {{site.tseeprodname}} data,
 set the `datastoreType` in the Remote Cluster Configuration resource
 to `kubernetes` and populate the `kubeconfig` or `k8s*` fields.
 

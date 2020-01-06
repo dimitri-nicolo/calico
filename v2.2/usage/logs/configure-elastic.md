@@ -3,7 +3,7 @@ title: Configuring Elasticsearch
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/configure-elastic
 ---
 
-{{site.prodname}} uses ElasticSearch to store and manage certain logs.
+{{site.tseeprodname}} uses ElasticSearch to store and manage certain logs.
 
 ## RBAC for access to Elasticsearch stored logs
 
@@ -28,7 +28,7 @@ in the [ElasticSearch operator documentation](https://github.com/upmc-enterprise
 ## Managing storage for operator created clusters
 
 The operator created cluster stores its data in volumes created through
-a Kubernetes `StorageClass`.  Three options are bundled with {{site.prodname}} -
+a Kubernetes `StorageClass`.  Three options are bundled with {{site.tseeprodname}} -
 in manifests called `elastic-storage*.yaml`.  The installation options cover
 how to get these manifests - a few notes on each option follow.
 

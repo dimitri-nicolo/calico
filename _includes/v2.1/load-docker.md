@@ -34,7 +34,7 @@
 
 {% if include.yaml == "calico" %}
 
-1. Use the following commands to pull the {{site.prodname}} images from the Tigera
+1. Use the following commands to pull the {{site.tseeprodname}} images from the Tigera
    registry and to pull the Prometheus images.
 
    ```bash
@@ -86,7 +86,7 @@
    docker push <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    ```
 
-   > **Important**: Do not push the private {{site.prodname}} images to a public registry.
+   > **Important**: Do not push the private {{site.tseeprodname}} images to a public registry.
    {: .alert .alert-danger}
 
 {% else %}
@@ -120,7 +120,7 @@
 1. Push the credentials of your private repository up to Kubernetes as a [secret](https://kubernetes.io/docs/concepts/containers/images/#creating-a-secret-with-a-docker-config)
 named `cnx-pull-secret` in the `kube-system` namespace.
 
-1. Continue to [Installing {{site.prodname}}](#install-cnx).
+1. Continue to [Installing {{site.tseeprodname}}](#install-cnx).
 
 {% endif %}
 

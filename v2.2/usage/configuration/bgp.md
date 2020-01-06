@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/configuration/bgp
 
 This document describes the commands available in `calicoctl` for managing BGP.  It
 is intended primarily for users who are running on private cloud
-and would like to peer {{site.prodname}} with their underlying infrastructure.
+and would like to peer {{site.tseeprodname}} with their underlying infrastructure.
 
 This document covers configuration of:
 
@@ -19,57 +19,57 @@ This document covers configuration of:
 **Autonomous system (AS) number**
 
 The global default node AS number is the AS number used by the BGP agent on a
-{{site.prodname}} node when it has not been explicitly specified.  Setting this value
-simplifies configuration when your network topology allows all of your {{site.prodname}}
+{{site.tseeprodname}} node when it has not been explicitly specified.  Setting this value
+simplifies configuration when your network topology allows all of your {{site.tseeprodname}}
 nodes to use the same AS number.
 
 **Node-to-node mesh**
 
 The full node-to-node mesh option provides a mechanism to automatically
-configure peering between all {{site.prodname}} nodes.  When enabled, each {{site.prodname}} node
-automatically sets up a BGP peering with every other {{site.prodname}} node in the
+configure peering between all {{site.tseeprodname}} nodes.  When enabled, each {{site.tseeprodname}} node
+automatically sets up a BGP peering with every other {{site.tseeprodname}} node in the
 network.  By default this is enabled.
 
 The full node-to-node mesh provides a simple mechanism for auto-configuring
 the BGP network in small scale deployments (say 50 nodes—although this limit
-is not set in stone and {{site.prodname}} has been deployed with over 100 nodes in a full
+is not set in stone and {{site.tseeprodname}} has been deployed with over 100 nodes in a full
 mesh topology).
 
 For large-scale deployments, or for deployments where you require a more specific
 BGP topology (e.g., peering with ToR switches) the full node-to-node mesh should be
-disabled and explicit BGP peers configured for your {{site.prodname}} nodes.  A BGP peer may
-be configured in your {{site.prodname}} network as a global BGP peer or a per-node BGP peer.
+disabled and explicit BGP peers configured for your {{site.tseeprodname}} nodes.  A BGP peer may
+be configured in your {{site.tseeprodname}} network as a global BGP peer or a per-node BGP peer.
 
 **Global BGP peers**
 
-A global BGP peer is a BGP agent that peers with every {{site.prodname}} node in the
+A global BGP peer is a BGP agent that peers with every {{site.tseeprodname}} node in the
 network.  A typical use case for a global peer might be a mid-scale
-deployment where all of the {{site.prodname}} nodes are on the same L2 network and are
+deployment where all of the {{site.tseeprodname}} nodes are on the same L2 network and are
 each peering with the same route reflector (or set of route reflectors).
 
 **Per-node BGP peers**
 
 At scale, different network topologies come in to play.  For example, in the
 [AS per Rack model]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l3-interconnect-fabric#the-as-per-rack-model)
-discussed in the reference material, each {{site.prodname}} node peers with
+discussed in the reference material, each {{site.tseeprodname}} node peers with
 a route reflector in the Top of Rack (ToR) switch.  In this case the BGP
 peerings are configured on a per-node basis (i.e., these are node-specific
-peers).  In the AS-per-rack model, each {{site.prodname}} node in a rack will be
+peers).  In the AS-per-rack model, each {{site.tseeprodname}} node in a rack will be
 configured with a node-specific peering to the ToR route reflector.
 
 ### Configuring the default node AS number
 
-When creating a {{site.prodname}} node, you can optionally specify an AS number to use for
+When creating a {{site.tseeprodname}} node, you can optionally specify an AS number to use for
 the node.  If no AS number if specified, the node will use the global default
 value.
 
 See [Example](#example) to set the global default AS number.
 to set the global default AS number. If no value is configured, the default AS number is 64512.
 
-If all of your {{site.prodname}} nodes are within the same AS, but you require a
+If all of your {{site.tseeprodname}} nodes are within the same AS, but you require a
 different AS number to be used (e.g because you are peering with a border
 router), changing the default AS number to the value you require eliminates
-the need to explicitly set it on a per {{site.prodname}} node basis.  For more
+the need to explicitly set it on a per {{site.tseeprodname}} node basis.  For more
 complicated topologies where you are explicitly setting the AS number on each
 node, the default value will not be used and therefore using this command is
 not necessary.
@@ -82,7 +82,7 @@ not necessary.
 
 ### Disabling the full node-to-node BGP mesh
 
-If you are explicitly configuring the BGP topology for your {{site.prodname}} network,
+If you are explicitly configuring the BGP topology for your {{site.tseeprodname}} network,
 you may wish to disable the full node-to-node mesh. See
 [Example](#example)
 for instructions to change the `nodeToNodeMeshEnabled` global BGP setting.
@@ -151,15 +151,15 @@ the following steps.
 ### Configuring a global BGP peer
 
 If your network topology includes BGP speakers that will be peered with *every*
-{{site.prodname}} node in your deployment, you can use the `calicoctl` resource management
-commands to set up the peering on your {{site.prodname}} nodes.  We refer to these types
-of peer as global peers because they are configured in {{site.prodname}} once (globally)
-and {{site.prodname}} will peer every {{site.prodname}} node with these peers.
+{{site.tseeprodname}} node in your deployment, you can use the `calicoctl` resource management
+commands to set up the peering on your {{site.tseeprodname}} nodes.  We refer to these types
+of peer as global peers because they are configured in {{site.tseeprodname}} once (globally)
+and {{site.tseeprodname}} will peer every {{site.tseeprodname}} node with these peers.
 
 Two situations where global BGP peer configuration is useful are (1) when adding
 a border router that is peering into a full node-to-node mesh, or (2) configuring
-a {{site.prodname}} network that uses one or two route reflectors to provide moderate
-scale-out capabilities.  In the latter case, each {{site.prodname}} node would peer to
+a {{site.tseeprodname}} network that uses one or two route reflectors to provide moderate
+scale-out capabilities.  In the latter case, each {{site.tseeprodname}} node would peer to
 each of the route reflectors and the full node-to-node mesh would be
 disabled.
 
@@ -202,9 +202,9 @@ calicoctl delete bgppeer bgppeer-global-3040
 
 ### Configuring a node-specific BGP peer
 
-If your network topology requires specific peerings for each {{site.prodname}} node, you
+If your network topology requires specific peerings for each {{site.tseeprodname}} node, you
 can use the `calicoctl` resource management commands to set up the peers
-specific to a {{site.prodname}} node.  We refer to these as node-specific peers.
+specific to a {{site.tseeprodname}} node.  We refer to these as node-specific peers.
 
 Configuring node-specific peers is necessary when the BGP topology is more
 complicated and requires different peerings on different nodes.  For example,
@@ -217,7 +217,7 @@ described in the reference material.
 #### Example
 
 To add a BGP peer at IP address aa:bb::ff with AS number 64514,
-peering with {{site.prodname}} node "node1", run the following command on any node:
+peering with {{site.tseeprodname}} node "node1", run the following command on any node:
 
 ```
 cat << EOF | calicoctl create -f -
@@ -266,7 +266,7 @@ incorrect connectivity between your workloads.
 
 #### Example
 
-To check the status of the peerings on {{site.prodname}} node `"node1"`, SSH into
+To check the status of the peerings on {{site.tseeprodname}} node `"node1"`, SSH into
 `"node1"` and run the following command.
 
 ```

@@ -62,7 +62,7 @@ toc:
         path: /security/high-connection-workloads
       - title: Defend against DoS attacks
         path: /security/defend-dos-attack
-- title: Get started with Tigera Secure EE policy 
+- title: Get started with Calico Enterprise policy 
   section:
   - title: Create tiered policy
     path: /security/tiered-policy
@@ -70,7 +70,7 @@ toc:
     path: /security/staged-network-policies
   - title: Preview policy impacts
     path: /security/policy-impact-preview
-  - title: Tigera Secure EE policy tutorial
+  - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx      
   - title: Policy for AWS security groups
     section:
@@ -146,7 +146,7 @@ toc:
     path: /security/compliance-managed-cloud 
   - title: Configure CIS benchmark reports
     path: /security/compliance-reports-cis 
-- title: Secure Tigera Secure EE component communications
+- title: Secure Calico Enterprise component communications
   section:
   - title: Provide TLS certificates for the manager UI
     path: /security/comms/manager-tls
@@ -162,7 +162,7 @@ toc:
     path: /security/comms/typha-node-tls
   - title: Schedule components to well-known nodes
     path: /security/comms/reduce-nodes
-  - title: Secure Tigera Secure EE Prometheus endpoints
+  - title: Secure Calico Enterprise Prometheus endpoints
     path: /security/comms/secure-metrics
   - title: Secure BGP sessions
     path: /security/comms/secure-bgp

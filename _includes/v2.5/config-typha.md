@@ -57,7 +57,7 @@
    ```
    > **Note**: The above example certificates are valid for 10 years. You are encouraged to choose a shorter
    > window of validity (365 days is typical), but note that you *must* rotate the certificates before they expire
-   > or {{site.prodname}} will no longer function.
+   > or {{site.tseeprodname}} will no longer function.
    {: .alert .alert-info}
 
 1. Copy the certificates into the `calico.yaml` file. You will find five places in `calico.yaml` with text in angle

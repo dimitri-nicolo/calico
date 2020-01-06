@@ -24,7 +24,7 @@ no Ingress policies with `applyOnForward: true` that apply to that host endpoint
 allowed.  If there are `applyOnForward: true` policies that select the host endpoint and direction,
 but no rules in the policies allow the traffic, the traffic is denied.
 
-This is different from how {{site.prodname}} treats traffic to or from a local process:
+This is different from how {{site.tseeprodname}} treats traffic to or from a local process:
 if a host endpoint is configured and there are no policies that select the host endpoint in
 the traffic direction, or no rules that allow the traffic, the traffic is denied.
 
@@ -35,7 +35,7 @@ endpoint policy allows the traffic, but workload endpoint policy denies it, the 
 Traffic that ingresses one host endpoint, is forwarded, and egresses host endpoint must
 pass ingress policy on the first host endpoint and egress policy on the second host endpoint.
 
-> **Note**: {{site.prodname}}'s handling of host endpoint policy has changed, since before
+> **Note**: {{site.tseeprodname}}'s handling of host endpoint policy has changed, since before
 > Calico v3.0, in two ways:
 > - It will not apply at all to forwarded traffic, by default. If you have an existing
 > policy and you want it to apply to forwarded traffic, you need to add `applyOnForward: true` to the policy.
@@ -63,7 +63,7 @@ EOF
 ```
 > **Note**: This policy has no `order` field specified which causes it to default
 > to the highest value. Because higher order values have the lowest order of precedence,
-> {{site.prodname}} will apply this policy after all other policies. Refer to the
+> {{site.tseeprodname}} will apply this policy after all other policies. Refer to the
 > [policy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#spec) for
 > more discussion.
 {: .alert .alert-info}

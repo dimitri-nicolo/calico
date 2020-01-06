@@ -5,18 +5,18 @@ no_canonical: true
 
 ## Background
 
-With {{site.prodname}} as a Docker network plugin, {{site.prodname}} can be configured to extract the
-labels on a container and apply them to the workload endpoint for use with {{site.prodname}}
+With {{site.tseeprodname}} as a Docker network plugin, {{site.tseeprodname}} can be configured to extract the
+labels on a container and apply them to the workload endpoint for use with {{site.tseeprodname}}
 [policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy).
-By default, {{site.prodname}} blocks all traffic unless it has been explicitly allowed
+By default, {{site.tseeprodname}} blocks all traffic unless it has been explicitly allowed
 through configuration of the globally
 defined policy which uses selectors to determine which subset of the policy is
 applied to each container based on their labels.  This approach provides a
 powerful way to group together all of your network Policy, makes it easy to
 reuse policy in different networks, and makes it easier to define policy that
-extends across different orchestration systems that use {{site.prodname}}.
+extends across different orchestration systems that use {{site.tseeprodname}}.
 
-When {{site.prodname}} is configured to use container labels, profiles are not created and 
+When {{site.tseeprodname}} is configured to use container labels, profiles are not created and 
 have no impact on any container traffic.
 
 ## Enabling Docker Networking Container Labels Policy
@@ -26,12 +26,12 @@ To enable labels to be used in Policy selectors the flag
 `{{site.nodecontainer}}` with the `calicoctl node run` command.  All `{{site.nodecontainer}}` instances
 should be started with the flag to avoid a mix of labels and profiles.
 
-## Managing {{site.prodname}} policy for a network
+## Managing {{site.tseeprodname}} policy for a network
 
 This section provides an example applying policy using the approach described
 above once container labels are enabled.
 
-We create a {{site.prodname}}-Docker network and use the `calicoctl` tool to set policies
+We create a {{site.tseeprodname}}-Docker network and use the `calicoctl` tool to set policies
 that achieve the required isolation and allowances.
 
 For the example let's assume that we want to provide the following isolation
@@ -51,7 +51,7 @@ extracted from the Docker containers.
 
 #### 1. Create the Docker network
 
-On any host in your {{site.prodname}} / Docker network, run the following command:
+On any host in your {{site.tseeprodname}} / Docker network, run the following command:
 
 ```
 docker network create --driver calico --ipam-driver calico-ipam net1
@@ -153,9 +153,9 @@ documentation.
 ## Multiple networks
 
 While some network providers tend to use multiple networks to enforce
-isolation, {{site.prodname}} instead opts to put all containers in the same,
+isolation, {{site.tseeprodname}} instead opts to put all containers in the same,
 flat network, where they are separated by default, and then connect them using
-{{site.prodname}} policy.  For this reason, {{site.prodname}} does not support 
+{{site.tseeprodname}} policy.  For this reason, {{site.tseeprodname}} does not support 
 attaching a container to multiple docker networks.
 
 Extending the previous example, suppose we introduce another label that is

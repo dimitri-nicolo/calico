@@ -404,8 +404,8 @@ spec:
   elasticsearchRef:
     name: tigera-elasticsearch
   podTemplate:
-{{- if .Values.imagePullSecrets }}
     spec:
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
   {{- range $key, $value := .Values.imagePullSecrets }}
         - name: {{ $key }}

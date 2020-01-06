@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/syslog
 
 ## Archiving logs to syslog
 
-{{site.prodname}} supports archiving flow and audit logs to syslog.  This provides
+{{site.tseeprodname}} supports archiving flow and audit logs to syslog.  This provides
 a reliable option for maintaining your compliance data long term.  If you wish to use
 this feature, follow the instructions below to configure it.
 

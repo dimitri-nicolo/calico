@@ -16,7 +16,7 @@ Domain names can include a wildcard (`*`), making it easier to manage large numb
 
 ### Features
 
-This how-to guide uses the following {{site.prodname}} features:
+This how-to guide uses the following {{site.tseeprodname}} features:
 
 - **GlobalNetworkPolicy** with exact or wildcard domain names
 - **NetworkPolicy** with exact or wildcard domain names
@@ -26,7 +26,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Allowed egress domains
 
-Using domain names in policy rules is limited to only egress allow rules. {{site.prodname}} allows connections only to IP addresses returned from DNS lookups to trusted DNS servers. The supported DNS types are: A, AAAA, and CNAME records. The domain name must be an exact match; for example, **google.com** is treated as distinct from **www.google.com**.
+Using domain names in policy rules is limited to only egress allow rules. {{site.tseeprodname}} allows connections only to IP addresses returned from DNS lookups to trusted DNS servers. The supported DNS types are: A, AAAA, and CNAME records. The domain name must be an exact match; for example, **google.com** is treated as distinct from **www.google.com**.
 
 > **Note:** Kubernetes labels provide a similar convenience for
 > services within the cluster. Tigera Secure EE does not support using
@@ -40,10 +40,10 @@ Using domain names in policy rules is limited to only egress allow rules. {{site
 
 #### Trusted DNS servers
 
-{{site.prodname}} trusts DNS information only from its list of DNS trusted servers. Using trusted DNS servers to back domain names in
+{{site.tseeprodname}} trusts DNS information only from its list of DNS trusted servers. Using trusted DNS servers to back domain names in
 policy, prevents malicious workload from using IPs returned by a fake DNS server to hijack domain names in policy rules.
 
-By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). These out-of-the-box defaults work with
+By default, {{site.tseeprodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). These out-of-the-box defaults work with
 standard Kubernetes installs, so normally you won’t change them.
 
 ### How to

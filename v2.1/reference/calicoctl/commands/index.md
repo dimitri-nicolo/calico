@@ -3,7 +3,7 @@ title: Command Reference
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/
 ---
 
-The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network
+The command line tool, `calicoctl`, makes it easy to manage {{site.tseeprodname}} network
 and security policy.
 
 This section is a command line reference for calicoctl, organized based on

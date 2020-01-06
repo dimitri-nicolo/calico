@@ -5,8 +5,8 @@ canonical_url: 'https://docs.tigera.io/v2.3/usage/service-advertisement'
 
 ## About advertising Kubernetes services over BGP
 
-{{site.prodname}} supports advertising Kubernetes service cluster IPs over BGP, just as it advertises pod IPs.
-This means that, if your {{site.prodname}} deployment is configured to peer with BGP routers
+{{site.tseeprodname}} supports advertising Kubernetes service cluster IPs over BGP, just as it advertises pod IPs.
+This means that, if your {{site.tseeprodname}} deployment is configured to peer with BGP routers
 outside the cluster, those routers - plus any further upstream places that those routers propagate to - will be able
 to send traffic to a Kubernetes service cluster IP, and that traffic will be routed to one of the
 available endpoints for that service.
@@ -41,7 +41,7 @@ kubectl patch ds -n kube-system calico-node --patch \
 
 ## Behavior
 
-{{site.prodname}} implements [external traffic policy][external-traffic-policy] for Kubernetes services
+{{site.tseeprodname}} implements [external traffic policy][external-traffic-policy] for Kubernetes services
 using normal BGP route processing and ECMP routing.
 
 -  traffic to the cluster IP for a service with `externalTrafficPolicy: Local` will be load-balanced across the
@@ -49,7 +49,7 @@ using normal BGP route processing and ECMP routing.
 
 -  traffic to the cluster IP for other services will be load-balanced across all the nodes in the cluster.
 
-In order to implement this behavior, {{site.prodname}} does the following.
+In order to implement this behavior, {{site.tseeprodname}} does the following.
 
 -  the service cluster IP CIDR (for example, 10.96.0.0/12) is advertised from
    every node in the cluster

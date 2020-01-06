@@ -7,7 +7,7 @@ Federated endpoint identity allows local policy rules to reference the labels on
 
 Federated endpoint identity does not cause the network policies to be federated, just the labels on remote endpoints are fetched from remote clusters. The policies from a remote cluster won't apply to the endpoints on the local cluster, but the policies on the local cluster can reference the labels on the endpoints on remote clusters. Traffic on the local cluster that uses the IP addresses of the remote endpoints will have policy enforced on it using the local policy rules and the labels from the remote endpoints.
 
-The endpoints from remote clusters appear in the output of the calicoq tool. They do not appear in either the the {{site.prodname}} manager or the calicoctl command lines tools.
+The endpoints from remote clusters appear in the output of the calicoq tool. They do not appear in either the the {{site.tseeprodname}} manager or the calicoctl command lines tools.
 
 The configuration of this feature uses the [RemoteClusterConfiguration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration) resource. The resources represent a remote cluster that the local cluster should retrieve endpoint information from. The local cluster can talk to multiple remote clusters and they can run either the `etcdv3` and `kubernetes` datastores.
 

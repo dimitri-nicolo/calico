@@ -22,7 +22,7 @@
    -n calico-monitoring
    ```
 
-1. Set up secret with username and password for {{site.prodname}} intrusion detection controller to authenticate with Elasticsearch.
+1. Set up secret with username and password for {{site.tseeprodname}} intrusion detection controller to authenticate with Elasticsearch.
    Replace `<intrusion-detection-password>` with the password.
    ```
    {{cli}} create secret generic elastic-ee-intrusion-detection \
@@ -32,7 +32,7 @@
    ```
 
 
-1. Set up secret with username and passwords for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
+1. Set up secret with username and passwords for {{site.tseeprodname}} compliance report and dashboard to authenticate with Elasticsearch.
    Replace `<compliance-benchmarker-elasticsearch-password>`, `<compliance-controller-elasticsearch-password>`, `<compliance-reporter-elasticsearch-password>`,
    `<compliance-snapshotter-elasticsearch-password>` and `<compliance-server-elasticsearch-password>` with the appropriate passwords.
    ```
@@ -50,7 +50,7 @@
    -n calico-monitoring
    ```
 
-1. Set up secret with username and password for the {{site.prodname}} job installer to authenticate with Elasticsearch.
+1. Set up secret with username and password for the {{site.tseeprodname}} job installer to authenticate with Elasticsearch.
    Replace `<installer-password>` with the password.
    ```
    {{cli}} create secret generic elastic-ee-installer \

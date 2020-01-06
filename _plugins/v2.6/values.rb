@@ -269,9 +269,9 @@ def gen_chart_specific_values_v2_6(versions, imageRegistry, chart, forDocs)
       tag: #{versions["prometheus"].version}
       scrapeTargets:
         # Node settings grant control over the Prometheus instance tasked with
-        # scraping Tigera Secure EE node.
+        # scraping Calico Enterprise node.
         node:
-          # Configuration for the service which fronts the Prometheus instance scraping Tigera Secure EE node.
+          # Configuration for the service which fronts the Prometheus instance scraping Calico Enterprise node.
           service:
             type: NodePort
             nodePort:

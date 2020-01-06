@@ -1,4 +1,4 @@
-# This section includes base Tigera Secure installation configuration.
+# This section includes base Tigera Secure EE installation configuration.
 # For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation
 apiVersion: operator.tigera.io/v1
 kind: Installation
@@ -29,7 +29,7 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: Manager
 metadata:
-  name: tigera-secure
+  name: tigera-secure-ee
 spec:
   # Authentication configuration for accessing the Tigera manager.
   # Default is to use token-based authentication.
@@ -38,30 +38,30 @@ spec:
 
 ---
 
-# This section installs and configures the Tigera Secure API server.
+# This section installs and configures the Tigera Secure EE API server.
 # For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.APIServer
 apiVersion: operator.tigera.io/v1
 kind: APIServer
 metadata:
-  name: tigera-secure
+  name: tigera-secure-ee
 
 ---
 
-# This section installs and configures Tigera Secure compliance functionality.
+# This section installs and configures Tigera Secure EE compliance functionality.
 # For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Compliance
 apiVersion: operator.tigera.io/v1
 kind: Compliance
 metadata:
-  name: tigera-secure
+  name: tigera-secure-ee
 
 ---
 
-# This section installs and configures Tigera Secure intrusion detection functionality.
+# This section installs and configures Tigera Secure EE intrusion detection functionality.
 # For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.IntrusionDetection
 apiVersion: operator.tigera.io/v1
 kind: IntrusionDetection
 metadata:
-  name: tigera-secure
+  name: tigera-secure-ee
 
 ---
 
@@ -70,7 +70,7 @@ metadata:
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
-  name: tigera-secure
+  name: tigera-secure-ee
 spec:
   nodes:
     count: 1
@@ -82,11 +82,11 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: LogCollector
 metadata:
-  name: tigera-secure
+  name: tigera-secure-ee
 
 ---
 
-# This section configures the Tigera Secure Prometheus deployment.
+# This section configures the Tigera Secure EE Prometheus deployment.
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:

@@ -5,9 +5,9 @@ no_canonical: true
 
 ## About installing calicoctl
 
-`calicoctl` allows you to create, read, update, and delete {{site.prodname}} objects
+`calicoctl` allows you to create, read, update, and delete {{site.tseeprodname}} objects
 from the command line. You can run it on any host with network access to the
-{{site.prodname}} datastore in either of the following formats.
+{{site.tseeprodname}} datastore in either of the following formats.
 
 - [Binary](#installing-calicoctl-as-a-binary): provides full functionality, including
 `node` commands for instances of `{{site.nodecontainer}}` on the same host.

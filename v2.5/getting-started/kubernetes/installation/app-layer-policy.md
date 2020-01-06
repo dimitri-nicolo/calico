@@ -5,19 +5,19 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## About enabling application layer policy
 
-Application layer policy for {{site.prodname}} allows you to write policies that
+Application layer policy for {{site.tseeprodname}} allows you to write policies that
 enforce against application layer attributes like HTTP methods or paths as well as
 against cryptographically secure identities.
 
 Support for application layer policy is not enabled by default in
-{{site.prodname}} installs, since it requires extra CPU and memory resources to
+{{site.tseeprodname}} installs, since it requires extra CPU and memory resources to
 operate.
 
 ## Enabling application layer policy
 
 {% include {{page.version}}/enable-policy-sync-api.md %}
 
-In addition, the {{site.prodname}} Manager needs to have application layer policy support enabled:
+In addition, the {{site.tseeprodname}} Manager needs to have application layer policy support enabled:
 
 ```bash
 kubectl patch configmap tigera-cnx-manager-config -n calico-monitoring -p '{"data":{"tigera.cnx-manager.alp-support":"true"}}'
@@ -45,7 +45,7 @@ kubectl apply -f install/kubernetes/istio-demo-auth.yaml
 
 The sidecar injector automatically modifies pods as they are created to work
 with Istio. This step modifies the injector configuration to add Dikastes, a
-{{site.prodname}} component, as sidecar containers.
+{{site.tseeprodname}} component, as sidecar containers.
 
 1. Follow the [Automatic sidecar injection instructions](https://archive.istio.io/v1.1/docs/setup/kubernetes/additional-setup/sidecar-injection/#automatic-sidecar-injection)
    to install the sidecar injector and enable it in your chosen namespace(s).
@@ -65,9 +65,9 @@ pre-defined `ConfigMaps` for Istio versions 1.0.6, 1.0.7, and 1.1.0 through 1.1.
 understand the changes we have made, see
 [Customizing the manifests](config-options).
 
-## Adding {{site.prodname}} authorization services to the mesh
+## Adding {{site.tseeprodname}} authorization services to the mesh
 
-Apply the following manifest to configure Istio to query {{site.prodname}} for application layer policy authorization decisions
+Apply the following manifest to configure Istio to query {{site.tseeprodname}} for application layer policy authorization decisions
 
 ```bash
 kubectl apply -f {{site.url}}/{{page.version}}/manifests/alp/istio-app-layer-policy.yaml
@@ -81,7 +81,7 @@ kubectl apply -f {{site.url}}/{{page.version}}/manifests/alp/istio-app-layer-pol
 
 Application layer policy is only enforced on pods that are started with the
 Envoy and Dikastes sidecars.  Pods that do not have these sidecars will
-only enforce standard {{site.prodname}} network policy.
+only enforce standard {{site.tseeprodname}} network policy.
 
 You can control this on a per-namespace basis.  To enable Istio and application
 layer policy in a namespace, add the label `istio-injection=enabled`.

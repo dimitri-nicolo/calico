@@ -18,19 +18,19 @@ The high-level steps to a functioning cluster with access to the user interface 
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-tigera-secure-ee-core)
+- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-calico-enterprise-core)
 
 {% endif %}
 
-- [Install {{ site.prodname }} Core](#install-tigera-secure-ee-core)
+- [Install {{ site.prodname }} Core](#install-calico-enterprise-core)
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }}](#create-valuesyaml-for-tigera-secure-ee)
+- [Create values.yaml for {{ site.prodname }}](#create-valuesyaml-for-calico-enterprise)
 
 {% endif %}
 
-- [Install {{ site.prodname }}](#install-tigera-secure-ee)
+- [Install {{ site.prodname }}](#install-calico-enterprise)
 
 - [Grant access to user interface](#grant-access-to-user-interface)
 
@@ -233,10 +233,10 @@ manager:
    Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
 
    ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+   kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml
    ```
 
-   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
 
 1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 

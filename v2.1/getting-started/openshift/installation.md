@@ -3,18 +3,18 @@ title: Installing Tigera Secure EE on OpenShift
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation
 ---
 
-Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
+Installation of {{site.tseeprodname}} in OpenShift is integrated in openshift-ansible.
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
 ## Before you begin
 
-- Ensure that you meet the {{site.prodname}} [system requirements](requirements).
+- Ensure that you meet the {{site.tseeprodname}} [system requirements](requirements).
 
 - Ensure that you have the [private registry credentials](../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../getting-started/#obtain-a-license-key).
 
-## Pulling the private {{site.prodname}} images
+## Pulling the private {{site.tseeprodname}} images
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
@@ -22,7 +22,7 @@ The information below explains the variables which must be set during the standa
 
 Before we begin, apply the following two patches to your OpenShift install:
 
-1. Add `"nodename_file_optional": true` to {{site.prodname}}'s CNI config:
+1. Add `"nodename_file_optional": true` to {{site.tseeprodname}}'s CNI config:
 
    ```
    sed -i 's/"name": "calico",$/"name": "calico",\n  "nodename_file_optional": true,/g' /usr/share/ansible/openshift-ansible/roles/calico/templates/10-calico.conf.j2
@@ -49,7 +49,7 @@ Before we begin, apply the following two patches to your OpenShift install:
    echo "- role: container_runtime" >> /usr/share/ansible/openshift-ansible/roles/calico/meta/main.yml
    ```
 
-To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
+To install {{site.tseeprodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
 
   - `os_sdn_network_plugin_name=cni`
@@ -86,12 +86,12 @@ node1
 etcd1
 ```
 
-You are now ready to execute the ansible provision which will install {{site.prodname}}. Note that by default,
-{{site.prodname}} will connect to the same etcd that OpenShift uses, and in order to do so, will distribute etcd's
-certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
-such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
+You are now ready to execute the ansible provision which will install {{site.tseeprodname}}. Note that by default,
+{{site.tseeprodname}} will connect to the same etcd that OpenShift uses, and in order to do so, will distribute etcd's
+certs to each node. If you would prefer {{site.tseeprodname}} not connect to the same etcd as OpenShift, you may modify the install
+such that {{site.tseeprodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
-Once execution is complete, apply the OpenShift patches for {{site.prodname}}'s kube-controllers:
+Once execution is complete, apply the OpenShift patches for {{site.tseeprodname}}'s kube-controllers:
 
 ```
 oc apply -f kube-controllers-patch.yaml
@@ -135,7 +135,7 @@ sudo systemctl restart origin-node
 
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
-## Installing {{site.prodname}} Manager
+## Installing {{site.tseeprodname}} Manager
 
 1. Create a Kubernetes secret from your etcd certificates. Example command:
 
@@ -146,7 +146,7 @@ sudo systemctl restart origin-node
    --from-file=etcd-key=/etc/origin/calico/calico.etcd-client.key
    ```
 
-   >{{site.prodname}} APIServer and Manager require etcd connection information and
+   >{{site.tseeprodname}} APIServer and Manager require etcd connection information and
    >certificates to be stored in Kubernetes objects.
    >The following preparation steps will upload this data.
    {: .alert .alert-info}
@@ -159,7 +159,7 @@ sudo systemctl restart origin-node
 
 1. To make the following commands easier to copy and paste, set two environment variables
    called `ETCD_ENDPOINTS` and `CNX_MANAGER_ADDR` containing the addresses of your etcd
-   cluster and {{site.prodname}} Manager web interface, respectively. An example follows.
+   cluster and {{site.tseeprodname}} Manager web interface, respectively. An example follows.
 
    ```bash
    ETCD_ENDPOINTS=10.90.89.100:2379,10.90.89.101:2379 \
@@ -188,13 +188,13 @@ sudo systemctl restart origin-node
 
 ## Installing Policy Violation Alerting
 
-Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+Below, we'll cover how to enable metrics in {{site.tseeprodname}} and how to launch Prometheus using Prometheus-Operator.
 
 ### Enable Metrics
 
 **Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
-Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
+Enable metrics in {{site.tseeprodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
@@ -268,8 +268,8 @@ See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more 
 
 ### Policy query with calicoq
 
-Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
-a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate requests to etcd.
+Once {{site.tseeprodname}} is installed in OpenShift, each node is automatically configured with
+a `calicoctl.cfg` (owned by the root user) which is used by {{site.tseeprodname}} to locate and authenticate requests to etcd.
 
 We recommend installing `calicoq` as a container in OpenShift. Refer to [Installing calicoq as a container on a single host](../../usage/calicoq/#installing-calicoq-as-a-container-on-a-single-host) for instructions.
 

@@ -3,7 +3,7 @@ title: CNX System Requirements
 canonical_url: https://docs.tigera.io/v2.3/reference/requirements
 ---
 
-Depending on the {{site.prodname}} functionality you are using, there are some requirements your system needs to meet in order for {{site.prodname}} to work properly.
+Depending on the {{site.tseeprodname}} functionality you are using, there are some requirements your system needs to meet in order for {{site.tseeprodname}} to work properly.
 `{{site.nodecontainer}}` container image ships with the following `ip6tables`, `ipset`, `iputils`, `iproute2`, `conntrack-tools`.
 
 ## Minumum Linux kernel versions
@@ -12,7 +12,7 @@ IPv4 only: `2.6.32`
 
 IPv6: `3.10`
 
-## Requirements for {{site.prodname}} Policy:
+## Requirements for {{site.tseeprodname}} Policy:
 
 ### iproute2
 
@@ -106,7 +106,7 @@ This is included in kernel version `2.6.18` and above.
 
 `ipt_REJECT`: Kernel module to reject packets.
 
-## Requirements for {{site.prodname}} Networking:
+## Requirements for {{site.tseeprodname}} Networking:
 
 ### IP-in-IP Tunneling
 

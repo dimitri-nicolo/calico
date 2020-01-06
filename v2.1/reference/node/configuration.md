@@ -11,9 +11,9 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | Environment   | Description | Schema |
 | ------------- | ----------- | ------ |
 | NODENAME | A unique identifier for this host.  See [node name determination](#node-name-determination) for more details. | lowercase string |
-| NO_DEFAULT_POOLS | Prevents  {{site.prodname}} from creating a default pool if one does not exist. [Default: `false`] | boolean |
+| NO_DEFAULT_POOLS | Prevents  {{site.tseeprodname}} from creating a default pool if one does not exist. [Default: `false`] | boolean |
 | IP | The IPv4 address to assign this host. When specified, the address is saved in the [node resource configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node) for this host, overriding any previously configured value. When omitted, if an address **has** been saved in the node resource, then that value will be used. When omitted, if an address **has not** yet been configured in the node resource, the node will auto-detect an IPv4 address and configure the node resource with that address. This autodetection can be forced (even if a value has already been set in the node resource) by setting IP to "autodetect". Doing so will overwrite any value configured in the node resource. | IPv4 |
-| IP6 | The IPv6 address for {{site.prodname}} will bind to. When specified, the address is saved in the  [node resource configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node) for this host, overriding any previously configured value. When omitted, if an address has not yet been configured in the node resource, IPv6 routing is not enabled. When omitted, if an IPv6 address has been previously configured in the node resource, IPv6 is enabled using the already configured address. | IPv6 |
+| IP6 | The IPv6 address for {{site.tseeprodname}} will bind to. When specified, the address is saved in the  [node resource configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node) for this host, overriding any previously configured value. When omitted, if an address has not yet been configured in the node resource, IPv6 routing is not enabled. When omitted, if an IPv6 address has been previously configured in the node resource, IPv6 is enabled using the already configured address. | IPv6 |
 | IP_AUTODETECTION_METHOD | The method to use to autodetect the IPv4 address for this host. This is only used when the IPv4 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
 | IP6_AUTODETECTION_METHOD | The method to use to autodetect the IPv6 address for this host. This is only used when the IPv6 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
 | DISABLE_NODE_IP_CHECK | Skips checks for duplicate Node IPs. This can reduce the load on the cluster when a large number of Nodes are restarting. [Default: `false`] | boolean |
@@ -41,7 +41,7 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 
 In addition to the above, `{{site.nodecontainer}}` also supports [the standard Felix configuration environment variables](../felix/configuration).
 
-> **Note**: When {{site.prodname}} is configured to use the Kubernetes API as the datastore, the environments
+> **Note**: When {{site.tseeprodname}} is configured to use the Kubernetes API as the datastore, the environments
 > used for BGP configuration are ignored—this includes selection of the node AS number (AS)
 > and all of the IP selection options (IP, IP6, IP_AUTODETECTION_METHOD, IP6_AUTODETECTION_METHOD).
 >
@@ -74,7 +74,7 @@ is then restarted, it will use the cached value of "host-a" read from the file o
 
 ### IP Autodetection methods
 
-When {{site.prodname}} is used for routing, each node must be configured with the IPv4
+When {{site.tseeprodname}} is used for routing, each node must be configured with the IPv4
 address (and IPv6 address if using IPv6) that would be used to route between
 nodes. To eliminate node specific IP address configuration, the `{{site.nodecontainer}}`
 container can be configured to autodetect these IP addresses. In many systems,

@@ -8,7 +8,7 @@ Read the [calicoctl command line interface user reference]({{site.url}}/{{page.v
 for a full list of calicoctl commands.
 
 > **Note**: The available actions for a specific resource type may be
-> limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API).
+> limited based on the datastore used for {{site.tseeprodname}} (etcdv3 / Kubernetes API).
 > Please refer to the
 > [Resources section]({{site.url}}/{{page.version}}/reference/resources/)
 > for details about each resource type.

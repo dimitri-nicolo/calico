@@ -3,11 +3,11 @@ title: calicoq endpoint
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/endpoint
 ---
 
-`calicoq endpoint <substring>` shows you the {{site.prodname}} policies and profiles that
+`calicoq endpoint <substring>` shows you the {{site.tseeprodname}} policies and profiles that
 relate to endpoints whose full ID includes `<substring>`.  It displays, for
 each endpoint:
 
-- the policies and profiles that apply to that endpoint (that {{site.prodname}} uses to
+- the policies and profiles that apply to that endpoint (that {{site.tseeprodname}} uses to
   police traffic that is arriving at or departing from that endpoint), in the
   order that they apply
 
@@ -79,7 +79,7 @@ Workload endpoint k8s/namespace1.ns1wep3/eth0
 {: .no-select-button}
 
 Here is an example of a workload to which both normal and untracked policy
-applies.  The untracked policy is listed first because {{site.prodname}} enforces
+applies.  The untracked policy is listed first because {{site.tseeprodname}} enforces
 untracked policies before normal ones.
 
 ```
@@ -106,6 +106,6 @@ Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
 
 -  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
    [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-   for more information about the {{site.prodname}} policy model.
+   for more information about the {{site.tseeprodname}} policy model.
 -  [Untracked policy]({{site.url}}/{{page.version}}/security/host-endpoints/) for
    more information about untracked policy.

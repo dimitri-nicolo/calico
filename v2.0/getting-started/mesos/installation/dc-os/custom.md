@@ -3,16 +3,16 @@ title: Customizing the Calico Universe Framework
 no_canonical: true
 ---
 
-The {{site.prodname}} Universe Framework includes customization options which support
+The {{site.tseeprodname}} Universe Framework includes customization options which support
 more stable deployments when users
 
 #### Custom etcd
 
-By default, {{site.prodname}} will run etcd in proxy mode on every agent, forwarding requests
+By default, {{site.tseeprodname}} will run etcd in proxy mode on every agent, forwarding requests
 to `http://localhost:2379` to the running etcd cluster launched by the Universe,
 accessible via an SRV entry.
 
-The {{site.prodname}} Universe framework alternatively can be configured to directly connect
+The {{site.tseeprodname}} Universe framework alternatively can be configured to directly connect
 to an etcd instance launched outside of the Universe, removing
 the need for etcd-proxy:
 
@@ -29,7 +29,7 @@ the need for etcd-proxy:
    --listen-client-urls "http://m1.dcos:2379,http://127.0.0.1:2379" \
    ```
 
-2. Launch the {{site.prodname}} Universe Framework with the following configuration:
+2. Launch the {{site.tseeprodname}} Universe Framework with the following configuration:
 
    ```json
    {
@@ -67,7 +67,7 @@ can perform the docker cluster-store configuration manually.
    docker info | grep -i "cluster store"
    ```
 
-3. When launching the {{site.prodname}} Universe Framework, disable the Docker Cluster-Store configuration step:
+3. When launching the {{site.tseeprodname}} Universe Framework, disable the Docker Cluster-Store configuration step:
 
    ```json
    {
@@ -77,21 +77,21 @@ can perform the docker cluster-store configuration manually.
    }
    ```
 
-#### Install the {{site.prodname}} CNI Plugins
+#### Install the {{site.tseeprodname}} CNI Plugins
 
 Installation of CNI plugins requires a restart of the Mesos-Agent process.
 Users who want to minimize impact on cluster availability during installation
-can install the {{site.prodname}} plugin manually by performing the following steps
+can install the {{site.tseeprodname}} plugin manually by performing the following steps
 on each agent:
 
-1. Download {{site.prodname}}'s CNI plugin binaries:
+1. Download {{site.tseeprodname}}'s CNI plugin binaries:
 
    ```shell
    curl -L -o /opt/mesosphere/active/cni/calico  {{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}
    curl -L -o /opt/mesosphere/active/cni/calico-ipam {{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}
    ```
 
-2. Create a standard {{site.prodname}} CNI network configuration:
+2. Create a standard {{site.tseeprodname}} CNI network configuration:
 
    ```shell
    cat <<EOF > /opt/mesosphere/etc/dcos/network/cni/calico.conf
@@ -106,7 +106,7 @@ on each agent:
    }
    ```
 
-3. When launching the {{site.prodname}} Universe Framework, disable the CNI plugin installation step:
+3. When launching the {{site.tseeprodname}} Universe Framework, disable the CNI plugin installation step:
 
    ```json
    {

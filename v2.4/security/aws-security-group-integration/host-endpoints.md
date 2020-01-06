@@ -14,7 +14,7 @@ cloud-controller manages host endpoints, additional host endpoints are not suppo
 {: .alert .alert-danger}
 
 > **Note**:
-> By default {{site.prodname}} configures RBAC to prevent creation or modification of host
+> By default {{site.tseeprodname}} configures RBAC to prevent creation or modification of host
 > endpoints.  We strongly recommend you do not modify these settings.
 {: .alert .alert-info}
 

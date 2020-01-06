@@ -5,7 +5,7 @@ title: Installing CNX for OpenShift
 1. Load the `cnx-apiserver`, `cnx-node`, and `cnx-manager` binaries into your
    private Docker registry.
 
-   See [Obtaining {{site.prodname}}][obtaining-cnx] for more information
+   See [Obtaining {{site.tseeprodname}}][obtaining-cnx] for more information
    on how to acquire these images.
 
 1. Ensure your Docker daemon on all OpenShift nodes and masters is authenticated to pull images from that registry.
@@ -55,7 +55,7 @@ title: Installing CNX for OpenShift
    --from-file=etcd-key=/etc/origin/calico/calico.etcd-client.key
    ```
 
-   >{{site.prodname}} APIServer and Manager require etcd connection information and
+   >{{site.tseeprodname}} APIServer and Manager require etcd connection information and
    >certificates to be stored in kubernetes objects.
    >The following preparation steps will upload this data.
    >
@@ -63,7 +63,7 @@ title: Installing CNX for OpenShift
    >on your master node, which will show what `calicoctl` is currently using to connect to etcd.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} configmap: [calico-config.yaml](calico-config.yaml)
+1. Download the {{site.tseeprodname}} configmap: [calico-config.yaml](calico-config.yaml)
 
 1. Update the CNX configmap with the path to your private Docker registry.
    Substitute `$ETCD_ENDPOINTS` with the address of your etcd cluster.
@@ -74,7 +74,7 @@ title: Installing CNX for OpenShift
 
        kubectl apply -f ./calico-config.yaml
 
-1. Download the {{site.prodname}} manifest:
+1. Download the {{site.tseeprodname}} manifest:
 
    - [cnx-etcd.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml)
 
@@ -97,7 +97,7 @@ title: Installing CNX for OpenShift
    You might want to reconfigure the service that gets traffic to the CNX Manager
    web server as well.
 
-   {{site.prodname}} for OpenShift requires SSL certs to connect to etcd, so be sure to uncomment
+   {{site.tseeprodname}} for OpenShift requires SSL certs to connect to etcd, so be sure to uncomment
    all secrets connected to `calico-secrets`.
 
 1. Generate TLS credentials - i.e. a web server certificate and key - for the
@@ -145,11 +145,11 @@ If you are unsure, a simple way to generate this token is to log into the OpenSh
 
 - For information on customizing the CNX install manifest, see [Customizing the CNX Manager Manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx)
 
-- [Using {{site.prodname}} for OpenShift](usage)
+- [Using {{site.tseeprodname}} for OpenShift](usage)
 
 ### Next Steps
 
-See [Using {{site.prodname}} for OpenShift](usage).
+See [Using {{site.tseeprodname}} for OpenShift](usage).
 
 [obtaining-cnx]: {{site.baseurl}}/{{page.version}}/getting-started/
 [ocp-advanced-install]: https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements

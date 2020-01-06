@@ -3,14 +3,14 @@ title: calicoq
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/
 ---
 
-`calicoq` is the {{site.prodname}} policy query utility.  It is a command line tool that
-makes it easy to check your {{site.prodname}} security policies.
+`calicoq` is the {{site.tseeprodname}} policy query utility.  It is a command line tool that
+makes it easy to check your {{site.tseeprodname}} security policies.
 See [Installing calicoq]({{site.baseurl}}/{{page.version}}/usage/calicoq/) for
 how to download and install `calicoq`.
 
 ## Datastore configuration
 
-`calicoq` works by querying the {{site.prodname}} datastore and needs configuration so that
+`calicoq` works by querying the {{site.tseeprodname}} datastore and needs configuration so that
 it knows what type of datastore you are using - either etcdv2 or the Kubernetes
 API - and where that is.  For this configuration calicoq uses exactly the same
 setup as `calicoctl`, which means that:
@@ -32,7 +32,7 @@ commands to allow you to confirm that your security policies are configured
 as intended.
 
 - The [endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint)
-  command shows you the {{site.prodname}} policies and profiles that relate to specified
+  command shows you the {{site.tseeprodname}} policies and profiles that relate to specified
   endpoints.
 - The [eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) command
   displays the endpoints that a selector selects.

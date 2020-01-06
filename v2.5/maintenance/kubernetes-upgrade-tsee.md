@@ -5,17 +5,17 @@ canonical_url: https://docs.tigera.io/v2.4/maintenance/kubernetes-upgrade-tsee
 
 ## Prerequisite
 
-Ensure that your Kubernetes cluster is already running version 2.4 of {{site.prodname}}. If your cluster is on a version
+Ensure that your Kubernetes cluster is already running version 2.4 of {{site.tseeprodname}}. If your cluster is on a version
 earlier than 2.4, [first upgrade to 2.4](/v2.4/maintenance/kubernetes-upgrade-tsee), then follow these instructions
 to upgrade to {{page.version}}.
 
-If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide]({{site.url}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
+If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.tseeprodname}} guide]({{site.url}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
 instead.
 
-## Upgrading to {{page.version}} {{site.prodname}}
+## Upgrading to {{page.version}} {{site.tseeprodname}}
 
 If you used the manifests provided on the [Tigera documentation site](https://docs.tigera.io/)
-to install {{site.prodname}}, re-install using the instructions below. To avoid unneccessary service impact, ensure you modify the various
+to install {{site.tseeprodname}}, re-install using the instructions below. To avoid unneccessary service impact, ensure you modify the various
 manifests to include any changes that were previously made for your current deployment *prior* to applying the new
 manifests.
 

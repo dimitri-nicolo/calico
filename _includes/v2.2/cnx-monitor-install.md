@@ -15,7 +15,7 @@
 
 {% if include.orch == "openshift" %}
 
-1. Download the flow logs patch for {{site.prodname}} node.
+1. Download the flow logs patch for {{site.tseeprodname}} node.
 
    ```
    curl --compressed -O {{docpath}}/patch-flow-logs.yaml
@@ -280,7 +280,7 @@
    sed -i -e "s?giantswarm?$REGISTRY/giantswarm?g" kibana-dashboards.yaml
    ```
 
-1. Create a `ConfigMap` and start a job that will install the {{site.prodname}} Kibana indexes, views, and dashboards
+1. Create a `ConfigMap` and start a job that will install the {{site.tseeprodname}} Kibana indexes, views, and dashboards
    when the Kibana service endpoints come up.
 
    ```bash

@@ -11,7 +11,7 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | Environment   | Description | Schema |
 | ------------- | ----------- | ------ |
 | NODENAME | A unique identifier for this host.  See [node name determination](#node-name-determination) for more details. | lowercase string |
-| NO_DEFAULT_POOLS | Prevents  {{site.prodname}} from creating a default pool if one does not exist. [Default: `false`] | boolean |
+| NO_DEFAULT_POOLS | Prevents  {{site.tseeprodname}} from creating a default pool if one does not exist. [Default: `false`] | boolean |
 | IP | The IPv4 address to assign this host or detection behavior at startup. Refer to [IP setting](#ip-setting) for the details of the behavior possible with this field. | IPv4 |
 | IP6 | The IPv6 address to assign this host or detection behavior at startup. Refer to [IP setting](#ip-setting) for the details of the behavior possible with this field. | IPv6 |
 | IP_AUTODETECTION_METHOD | The method to use to autodetect the IPv4 address for this host. This is only used when the IPv4 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
@@ -44,7 +44,7 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 
 In addition to the above, `{{site.nodecontainer}}` also supports [the standard Felix configuration environment variables](../felix/configuration).
 
-> **Note**: When {{site.prodname}} is configured to use the Kubernetes API as the datastore, the environments
+> **Note**: When {{site.tseeprodname}} is configured to use the Kubernetes API as the datastore, the environments
 > used for BGP configuration are ignored—this includes selection of the node AS number (AS)
 > and all of the IP selection options (IP, IP6, IP_AUTODETECTION_METHOD, IP6_AUTODETECTION_METHOD).
 >
@@ -102,7 +102,7 @@ variables, they are:
 
 ### IP autodetection methods
 
-When {{site.prodname}} is used for routing, each node must be configured with an IPv4
+When {{site.tseeprodname}} is used for routing, each node must be configured with an IPv4
 address and/or an IPv6 address that will be used to route between
 nodes. To eliminate node specific IP address configuration, the `{{site.nodecontainer}}`
 container can be configured to autodetect these IP addresses. In many systems,

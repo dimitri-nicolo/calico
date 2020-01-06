@@ -4,14 +4,14 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/obj
 ---
 
 
-For each host endpoint that you want {{site.prodname}} to secure, you'll need to
+For each host endpoint that you want {{site.tseeprodname}} to secure, you'll need to
 create a host endpoint object in etcd.  Use the `calicoctl create` command
 to create a host endpoint resource (`HostEndpoint`).
 
 There are two ways to specify the interface that a host endpoint should
 refer to. You can either specify the name of the interface or its
 expected IP address. In either case, you'll also need to know the name given to
-the {{site.prodname}} node running on the host that owns the interface; in most cases this
+the {{site.tseeprodname}} node running on the host that owns the interface; in most cases this
 will be the same as the hostname of the host.
 
 For example, to secure the interface named `eth0` with IP 10.0.0.1 on
@@ -57,7 +57,7 @@ key/value pairs that can be used in selector expressions.
 
 <!-- TODO(smc) data-model: Link to new data model docs. -->
 
-> **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the
+> **Important**: When rendering security rules on other hosts, {{site.tseeprodname}} uses the
 > `expectedIPs` field to resolve label selectors
 > to IP addresses. If the `expectedIPs` field is omitted
 > then security rules that use labels will fail to match
@@ -87,7 +87,7 @@ After you create host endpoint objects, Felix will start policing
 traffic to/from that interface. If you have no policy or profiles in
 place, then you should see traffic being dropped on the interface.
 
-> **Note**: By default, {{site.prodname}} has a failsafe in place that whitelists certain
+> **Note**: By default, {{site.tseeprodname}} has a failsafe in place that whitelists certain
 > traffic such as ssh. See below for more details on
 > disabling/configuring the failsafe rules.
 {: .alert .alert-info}

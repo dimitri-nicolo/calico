@@ -4,7 +4,7 @@ canonical_url: 'https://docs.tigera.io/v2.3/usage/routereflector'
 ---
 
 BGP route reflectors are useful in large scale deployments, to reduce the number of BGP
-connections that are needed for correct and complete route propagation.  {{site.prodname}}
+connections that are needed for correct and complete route propagation.  {{site.tseeprodname}}
 includes optional route reflector function in the {{site.nodecontainer}} image, which is
 enabled by provisioning the `spec.bgp.routeReflectorClusterID` field of the relevant [node
 resource]({{site.url}}/{{page.version}}/reference/resources/node).
@@ -22,15 +22,15 @@ in-cluster case.
 > onto the standalone route reflector nodes.
 {: .alert .alert-info}
 
-Of course there are many other ways to set up and run a non-{{site.prodname}} route reflector
-outside the cluster.  You then need to [configure some or all of the {{site.prodname}} nodes
+Of course there are many other ways to set up and run a non-{{site.tseeprodname}} route reflector
+outside the cluster.  You then need to [configure some or all of the {{site.tseeprodname}} nodes
 to peer with that route reflector]({{site.url}}/{{page.version}}/networking/bgp).
 
-In addition the non-{{site.prodname}} route reflector may need configuration to accept
-peerings from the {{site.prodname}} nodes, but in general that is outside the scope of this
+In addition the non-{{site.tseeprodname}} route reflector may need configuration to accept
+peerings from the {{site.tseeprodname}} nodes, but in general that is outside the scope of this
 documentation.  For example, if you installed [BIRD](https://bird.network.cz/) to be your
 route reflector, you would need to configure BGP peerings like the following for each
-{{site.prodname}} node that you expect to connect to it.
+{{site.tseeprodname}} node that you expect to connect to it.
 
     protocol bgp <node_shortname> {
       description "<node_ip>";

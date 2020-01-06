@@ -3,24 +3,24 @@ title: Installing Tigera Secure EE on OpenShift
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation
 ---
 
-Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
+Installation of {{site.tseeprodname}} in OpenShift is integrated in openshift-ansible.
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.com/container-platform/3.11/install/configuring_inventory_file.html#configuring-cluster-variables).
 
 ## Before you begin
 
-- Ensure that you meet the {{site.prodname}} [system requirements](requirements).
+- Ensure that you meet the {{site.tseeprodname}} [system requirements](requirements).
 
 - Ensure that you have the [private registry credentials](../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} and OpenShift
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} and OpenShift
 
 ### Edit inventory file
 
-To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
+To install {{site.tseeprodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
 
   - `os_sdn_network_plugin_name=cni`
@@ -61,12 +61,12 @@ etcd1
 ### Update Ansible provisioning script
 
 > Note that the current Ansible installation scripts for OpenShift v3.10 may require some additional changes when installing
-> {{site.prodname}} networking. These changes may not have not yet made it into the version of the packaged installer and so these additional
+> {{site.tseeprodname}} networking. These changes may not have not yet made it into the version of the packaged installer and so these additional
 > steps will allow you to check and update the packaged installation scripts if necessary. When these changes are in the upstream
 > packages, these steps can be ignored.
 {: .alert .alert-info}
 
-To check if your Ansible scripts include the required {{site.prodname}} changes, run the following.
+To check if your Ansible scripts include the required {{site.tseeprodname}} changes, run the following.
 
 ```bash
 grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico_master/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
@@ -80,10 +80,10 @@ If the above command responds with `needs updates`, contact your Tigera sales re
 
 ### Execute Ansible provisioning script
 
-You are now ready to execute the Ansible provision which will install {{site.prodname}}. Note that by default,
-{{site.prodname}} will connect to the same etcd that OpenShift uses and distribute etcd's
-certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
-such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
+You are now ready to execute the Ansible provision which will install {{site.tseeprodname}}. Note that by default,
+{{site.tseeprodname}} will connect to the same etcd that OpenShift uses and distribute etcd's
+certs to each node. If you would prefer {{site.tseeprodname}} not connect to the same etcd as OpenShift, you may modify the install
+such that {{site.tseeprodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
@@ -96,7 +96,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
    ```
 
 1. To make the following commands easier to copy and paste, set an environment variable called
-   `CNX_MANAGER_ADDR` containing the address of your {{site.prodname}} Manager web interface.
+   `CNX_MANAGER_ADDR` containing the address of your {{site.tseeprodname}} Manager web interface.
    An example follows.
 
    ```bash
@@ -118,11 +118,11 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
 ### Enable Metrics
 
-Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+Below, we'll cover how to enable metrics in {{site.tseeprodname}} and how to launch Prometheus using Prometheus-Operator.
 
 **Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
-Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
+Enable metrics in {{site.tseeprodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 

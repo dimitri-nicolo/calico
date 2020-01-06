@@ -40,7 +40,7 @@ kubectl drain mynode.internal.projectcalico.org --ignore-daemonsets
 ```
 sudo hostnamectl set-hostname <desired-hostname>
 ```
-1. Delete the bad node configuration from {{site.prodname}}.
+1. Delete the bad node configuration from {{site.tseeprodname}}.
 ```
 calicoctl delete node <name-of-bad-node>
 ```
@@ -54,7 +54,7 @@ kubectl uncordon mynode.internal.projectcalico.org
 ```
 
 To prevent this problem from occurring, we recommend always mounting the `/var/lib/calico` directory into the `{{site.nodecontainer}}`
-container when installing {{site.prodname}}. This allows all components to detect and use the same node name. See
+container when installing {{site.tseeprodname}}. This allows all components to detect and use the same node name. See
 [node name determination](../../reference/node/configuration#node-name-determination) for more information.
 
 ### Check BGP peer status
@@ -85,13 +85,13 @@ If you do not see this, please check the following.
 
 - Make sure your network allows the requisite BGP traffic on TCP port 179.
 
-### Prevent NetworkManager from controlling {{site.prodname}} interfaces
+### Prevent NetworkManager from controlling {{site.tseeprodname}} interfaces
 
 NetworkManager manipulates the routing table for interfaces in the default network
-namespace where {{site.prodname}} veth pairs are anchored for connections to containers.
-This can interfere with the {{site.prodname}} agent's ability to route correctly.
+namespace where {{site.tseeprodname}} veth pairs are anchored for connections to containers.
+This can interfere with the {{site.tseeprodname}} agent's ability to route correctly.
 
-The procedure for configuring NetworkManager to ignore {{site.prodname}} interfaces
+The procedure for configuring NetworkManager to ignore {{site.tseeprodname}} interfaces
 varies by Linux distribution. The following steps work best on Ubuntu systems.
 
 1. Create the following configuration file at `/etc/NetworkManager/conf.d/calico.conf`.
@@ -108,7 +108,7 @@ varies by Linux distribution. The following steps work best on Ubuntu systems.
    sudo service network-manager start
    ```
 
-1. Install {{site.prodname}}.
+1. Install {{site.tseeprodname}}.
 
 1. Check the interfaces that NetworkManager ignores.
 
@@ -119,9 +119,9 @@ varies by Linux distribution. The following steps work best on Ubuntu systems.
    It should return output indicating that the `cali` and `tunl` interfaces
    are `unmanaged`.
 
-   If this does not to prevent NetworkManager from interfering with {{site.prodname}}
+   If this does not to prevent NetworkManager from interfering with {{site.tseeprodname}}
    networking, try disabling NetworkManager. If disabling NetworkManager does not
-   stop it from interfering with {{site.prodname}} networking, you may need to remove
+   stop it from interfering with {{site.tseeprodname}} networking, you may need to remove
    NetworkManager. This will require manual network configuration.
 
 

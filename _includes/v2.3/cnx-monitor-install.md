@@ -15,7 +15,7 @@
 
 {% if include.orch == "openshift" %}
 
-1. Download the flow logs patch for {{site.prodname}} node.
+1. Download the flow logs patch for {{site.tseeprodname}} node.
 
    ```
    curl --compressed -O {{docpath}}/patch-flow-logs.yaml
@@ -293,8 +293,8 @@
 
 {% if include.platform != "docker-ee" %}
 {% if include.orch == "openshift" %}
-1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
-   You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
+1. By default, {{site.tseeprodname}} Manager is made accessible via a NodePort listening on port 30003.
+   You can edit the `cnx.yaml` manifest if you want to change how {{site.tseeprodname}} Manager is
    exposed.  You may need to create an OpenShift route or Ingress if the NodePort is not accessible.
 
    Ensure that the Route is created with tls termination set to passthrough. Also, ensure that the host
@@ -302,8 +302,8 @@
    hostname as specified in the route.
 
 {% else %}
-1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
-   You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
+1. By default, {{site.tseeprodname}} Manager is made accessible via a NodePort listening on port 30003.
+   You can edit the `cnx.yaml` manifest if you want to change how {{site.tseeprodname}} Manager is
    exposed.  You may need to create an ssh tunnel if the node is not accessible - for example:
 
    ```bash
@@ -315,5 +315,5 @@
 {% endif %}
 
 {% if include.platform == "eks" %}
-   Log in to {{site.prodname}} Manager using the token you created earlier in the process.
+   Log in to {{site.tseeprodname}} Manager using the token you created earlier in the process.
 {% endif %}

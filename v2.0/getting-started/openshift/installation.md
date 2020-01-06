@@ -3,13 +3,13 @@ title: Installing CNX on OpenShift
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation
 ---
 
-Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible v3.6.
+Installation of {{site.tseeprodname}} in OpenShift is integrated in openshift-ansible v3.6.
 The information below explains the variables which must be set during
 during the standard [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
 ## Shared etcd
 
-To enable an installation of {{site.prodname}} that shares the etcd
+To enable an installation of {{site.tseeprodname}} that shares the etcd
 instance used by the apiserver, set the following `OSEv3:vars` in your
 inventory file:
 
@@ -44,7 +44,7 @@ etcd1
 
 ## Bring-your-own etcd
 
-{{site.prodname}}'s OpenShift-ansible integration supports connection to a custom etcd which
+{{site.tseeprodname}}'s OpenShift-ansible integration supports connection to a custom etcd which
 a user has already set up.
 
 **Requirements:**

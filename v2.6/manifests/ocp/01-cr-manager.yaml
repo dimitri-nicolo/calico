@@ -2,7 +2,7 @@
 apiVersion: operator.tigera.io/v1
 kind: Manager
 metadata:
-  name: tigera-secure
+  name: calico-enterprise
 spec:
   # Authentication configuration for accessing the Tigera manager.
   # Default is to use token-based authentication.

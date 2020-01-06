@@ -1,5 +1,5 @@
 ---
-title: Getting started with Tigera Secure EE
+title: Getting started with Calico Enterprise
 redirect_from: latest/getting-started/index
 canonical_url: https://docs.tigera.io/v2.3/getting-started/
 ---

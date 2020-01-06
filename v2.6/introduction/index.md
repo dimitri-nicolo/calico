@@ -1,5 +1,5 @@
 ---
-title: About Tigera Secure Enterprise Edition (EE)
+title: About Calico Enterprise (EE)
 redirect_from: latest/introduction/index
 canonical_url: https://docs.tigera.io/v2.3/introduction/
 description: Home

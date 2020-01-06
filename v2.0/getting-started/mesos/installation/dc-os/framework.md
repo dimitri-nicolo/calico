@@ -3,7 +3,7 @@ title: Calico DC/OS Installation Guide
 no_canonical: true
 ---
 
-The following guide walks through installing {{site.prodname}} for DC/OS using the Universe
+The following guide walks through installing {{site.tseeprodname}} for DC/OS using the Universe
 package repository.
 
 #### Installing etcd
@@ -14,35 +14,35 @@ To get started, first install etcd from Universe:
 
 #### Installing Calico
 
-Then install {{site.prodname}} from Universe.
+Then install {{site.tseeprodname}} from Universe.
 
-![Installing {{site.prodname}} from Universe]({{site.baseurl}}/images/dcos-install-calico.gif)
+![Installing {{site.tseeprodname}} from Universe]({{site.baseurl}}/images/dcos-install-calico.gif)
 
-It will take a few minutes for {{site.prodname}} to finish
+It will take a few minutes for {{site.tseeprodname}} to finish
 installing on your cluster. You can check the status of the installation by
-visiting {{site.prodname}}'s web status interface:
+visiting {{site.tseeprodname}}'s web status interface:
 
  - Go to the **Services** tab
  - Select "calico-install-framework" in the list of running services
-   (note that it may take a few minutes for {{site.prodname}}
+   (note that it may take a few minutes for {{site.tseeprodname}}
     to appear).
- - Once the {{site.prodname}} service is `Healthy`,
+ - Once the {{site.tseeprodname}} service is `Healthy`,
    Select the "calico-install-framework" task.
- - Click the Endpoint URL to open the {{site.prodname}} status page in a new tab.
+ - Click the Endpoint URL to open the {{site.tseeprodname}} status page in a new tab.
 
 ![sample demonstrating how to locate the framework service page]({{site.baseurl}}/images/dcos-calico-status.gif)
 
 ## Further Reading
 
-This concludes the installation of {{site.prodname}} for DC/OS! Before you start
-launching IP-per-container applications with {{site.prodname}} policy,
+This concludes the installation of {{site.tseeprodname}} for DC/OS! Before you start
+launching IP-per-container applications with {{site.tseeprodname}} policy,
 review the following information which may apply to your deployment.
 
 #### AWS
 
 DC/OS users on Amazon Web Services should view
-[{{site.prodname}}'s AWS reference]({{site.baseurl}}/{{page.version}}/reference/public-cloud/aws)
-for information on how to configure AWS networking for use with {{site.prodname}}.
+[{{site.tseeprodname}}'s AWS reference]({{site.baseurl}}/{{page.version}}/reference/public-cloud/aws)
+for information on how to configure AWS networking for use with {{site.tseeprodname}}.
 
 #### Note on Cluster Impact
 
@@ -53,7 +53,7 @@ in the cluster in order to work around two limitations in DC/OS 1.8:
 2. [DC/OS does not configure Docker with a Cluster-Store](https://dcosjira.atlassian.net/browse/DCOS-155)
 a requirement for Multi-host docker networking.
 
-Because of these two limitations, {{site.prodname}}-DC/OS will restart each agent process
+Because of these two limitations, {{site.tseeprodname}}-DC/OS will restart each agent process
 and restart each docker daemon. Learn how to handle this installation steps manually
 and prevent cluster availability impact by viewing the [Custom Install Guide](custom).
 

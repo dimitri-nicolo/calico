@@ -113,4 +113,4 @@ Policy "namespace1/policy1" applies to these endpoints:
    more detail about the related `calico eval` command.
 -  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and
    [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy)
-   for more information about the {{site.prodname}} selector-based policy model.
+   for more information about the {{site.tseeprodname}} selector-based policy model.

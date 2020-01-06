@@ -42,7 +42,7 @@ spec:
 |-------------|-----------------------------|-------------------|--------|------------|
 | logSeverityScreen | Global log level | Debug, Info, Warning, Error, Fatal | string | `Info` |
 | nodeToNodeMeshEnabled | Full BGP node-to-node mesh. Only valid on the global `default` BGPConfiguration. | true, false  | string | true |
-| asNumber | The default local AS Number that {{site.prodname}} should use when speaking with BGP peers. Only valid on the global `default` BGPConfiguration; to set a per-node override, use the `bgp` field on the [Node resource](./node). | A valid AS Number, may be specified in dotted notation. | integer/string | 64512 |
+| asNumber | The default local AS Number that {{site.tseeprodname}} should use when speaking with BGP peers. Only valid on the global `default` BGPConfiguration; to set a per-node override, use the `bgp` field on the [Node resource](./node). | A valid AS Number, may be specified in dotted notation. | integer/string | 64512 |
 | extensions | Additional mapping of keys and values. Used for setting values in custom BGP configurations. | valid strings for both keys and values | map | |
 
 ### Supported operations

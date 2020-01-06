@@ -15,9 +15,9 @@ Provide guidance on how to change from one IP pool CIDR to another on a running 
 
 ## Prerequisites
 
-**{{site.prodname}} IPAM**
+**{{site.tseeprodname}} IPAM**
 
-This guide only applies if you are using {{site.prodname}} IPAM.
+This guide only applies if you are using {{site.tseeprodname}} IPAM.
 
 **Orchestrator support**
 
@@ -60,7 +60,7 @@ The basic process is as follows:
 In this example, we created a cluster with kubeadm.  We wanted the pods to use IPs in the range
 `10.0.0.0/16` so we set `--pod-network-cidr=10.0.0.0/16` when running `kubeadm init`.  However, we
 installed {{ site.prodname }} without setting the default IP pool to match. Running `calicoctl get ippool -o wide` shows
-{{site.prodname}} created its default IP pool of `192.168.0.0/16`:
+{{site.tseeprodname}} created its default IP pool of `192.168.0.0/16`:
 
 ```
 NAME                  CIDR             NAT    IPIPMODE   VXLANMODE   DISABLED

@@ -1,6 +1,6 @@
 {% if include.init == "systemd" or include.init == "kubernetes" %}
 
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
+## <a name="install-cnx-mgr"></a>Installing the {{site.tseeprodname}} Manager and API Server
 
 {% endif %}
 
@@ -8,7 +8,7 @@
 
 1. Load the following manifest to Kubernetes to deploy dummy pods that
    will be used for Prometheus targeting. You should ensure that this manifest
-   deploys one pod on each host running {{site.prodname}} that you wish to
+   deploys one pod on each host running {{site.tseeprodname}} that you wish to
    monitor, adjusting the annotations and tolerations as needed.
 
    ```
@@ -94,7 +94,7 @@
 
 {% else %}
 
-1. Download the {{site.prodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
+1. Download the {{site.tseeprodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
 
    ```bash
    curl --compressed -o cnx.yaml \
@@ -152,7 +152,7 @@
 
 {% endif %}
 
-1. If you want the {{site.prodname}} Manager to listen on a port other than
+1. If you want the {{site.tseeprodname}} Manager to listen on a port other than
    30003 or you plan to set up a load balancer in front of it, edit the
    `Service` object named `cnx-manager` as needed.  
 
@@ -180,10 +180,10 @@
 
    > **Note**: Web browsers will warn end users about the self-signed certificate
    > used in the above command. To stop the warnings by using valid certificates
-   > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#cnx-manager-connections).
+   > instead, refer to [{{site.tseeprodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#cnx-manager-connections).
    {: .alert .alert-info}
 
-1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
+1. Apply the manifest to install {{site.tseeprodname}} Manager and the {{site.tseeprodname}} API server.
 
 {% if include.init == "openshift" %}
 
@@ -201,7 +201,7 @@
 
 {% if include.init == "openshift" %}
 
-1. Allow the {{site.prodname}} Manager to run as root:
+1. Allow the {{site.tseeprodname}} Manager to run as root:
 
        oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
 
@@ -215,7 +215,7 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
-1. Apply the following manifest to set network policy that permits requests to {{site.prodname}}.
+1. Apply the following manifest to set network policy that permits requests to {{site.tseeprodname}}.
 
    ```
    kubectl apply -f \

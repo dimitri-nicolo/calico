@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## Before you begin
 
-- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
+- Ensure that you have a Kubernetes cluster that meets the {{site.tseeprodname}}
   [system requirements](../requirements). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
@@ -14,7 +14,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy and networking
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} for policy and networking
 
 ### Selecting your cluster configuration
 
@@ -30,15 +30,15 @@ and your datastore type. Refer to the section that matches your configuration.
    - [etcd datastore](#installing-with-federation-using-etcd)
    - [Kubernetes API datastore](#installing-with-federation-using-kubernetes-api-datastore)
 
-> **Note**: {{site.prodname}} networking with the Kubernetes API datastore
-> is beta because it does not yet support {{site.prodname}} IPAM. It uses
+> **Note**: {{site.tseeprodname}} networking with the Kubernetes API datastore
+> is beta because it does not yet support {{site.tseeprodname}} IPAM. It uses
 > `host-local` IPAM with Kubernetes pod CIDR assignments instead.
 {: .alert .alert-info}
 
 ### Installing without federation, using etcd
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -47,7 +47,7 @@ and your datastore type. Refer to the section that matches your configuration.
    > **Note**: You can also [view the manifest in your browser](rbac.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -82,7 +82,7 @@ and your datastore type. Refer to the section that matches your configuration.
    {: .alert .alert-success}
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -92,7 +92,7 @@ and your datastore type. Refer to the section that matches your configuration.
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
+1. Download the {{site.tseeprodname}} networking manifest for the Kubernetes API datastore.
 
    ```bash
    curl \
@@ -120,7 +120,7 @@ and your datastore type. Refer to the section that matches your configuration.
    {: .alert .alert-success}
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -130,7 +130,7 @@ and your datastore type. Refer to the section that matches your configuration.
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
+1. Download the {{site.tseeprodname}} networking manifest for the Kubernetes API datastore.
 
    ```bash
    curl \
@@ -174,7 +174,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
 ### Installing with federation, using etcd
 
-The following procedure describes how to install {{site.prodname}} on a single cluster that uses an
+The following procedure describes how to install {{site.tseeprodname}} on a single cluster that uses an
 etcd datastore (the [local cluster](../../../usage/federation/index#terminology)).
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../usage/federation/kubeconfig)
@@ -198,7 +198,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    ```
 
 1. If the local cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires on the local cluster.
+   configure the roles and bindings that {{site.tseeprodname}} requires on the local cluster.
 
    ```
    kubectl apply -f \
@@ -209,7 +209,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    > [view the manifest in your browser](rbac-etcd-typha.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -261,7 +261,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 ### Installing with federation, using Kubernetes API datastore
 
-The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
+The following procedure describes how to install {{site.tseeprodname}} on a single cluster that uses the
 Kubernetes API datastore (the [local cluster](../../../usage/federation/index#terminology)).
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../usage/federation/kubeconfig)
@@ -295,7 +295,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    {: .alert .alert-success}
 
 1. If the local cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -306,7 +306,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
+1. Download the {{site.tseeprodname}} networking manifest for the Kubernetes API datastore.
 
    ```bash
    curl \

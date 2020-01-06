@@ -3,13 +3,13 @@ title: Integration Guide
 no_canonical: true
 ---
 
-This guide explains how to integrate {{site.prodname}} networking and policy on an existing
+This guide explains how to integrate {{site.tseeprodname}} networking and policy on an existing
 Mesos cluster. These instructions should be followed on each **Agent**.
 
 Ensure you've met the [prerequisites](prerequisites) before continuing, namely that
 you have etcd running.
 
-{{site.prodname}} runs as a Docker container on each host. The `calicoctl` command line tool can be used to launch the `{{site.nodecontainer}}` container.
+{{site.tseeprodname}} runs as a Docker container on each host. The `calicoctl` command line tool can be used to launch the `{{site.nodecontainer}}` container.
 
 1. Download the calicoctl binary:
 
@@ -43,7 +43,7 @@ you have etcd running.
    sudo calicoctl node status
    ```
 
-1. Download the {{site.prodname}} CNI plugin to the
+1. Download the {{site.tseeprodname}} CNI plugin to the
    [`$NETWORK_CNI_PLUGINS_DIR` you configured for Mesos](prerequisites).
    You may skip this step if you do not plan on using the Unified Containerizer.
 
@@ -56,7 +56,7 @@ you have etcd running.
    chmod +x $NETWORK_CNI_PLUGINS_DIR/calico-ipam
    ```
 
-1. Create a {{site.prodname}} CNI configuration in the [`$NETWORK_CNI_CONF_DIR` you configured for Mesos](prerequisites), replacing `http://master.mesos:2379` with
+1. Create a {{site.tseeprodname}} CNI configuration in the [`$NETWORK_CNI_CONF_DIR` you configured for Mesos](prerequisites), replacing `http://master.mesos:2379` with
    etcd's address:
 
    ```shell
@@ -77,5 +77,5 @@ you have etcd running.
 
 ## Next Steps
 
-With {{site.prodname}} installed, you're now ready to launch {{site.prodname}}-networked tasks.
-View the [guides on using {{site.prodname}} with Mesos]({{site.baseurl}}/{{page.version}}/getting-started/mesos#tutorials)
+With {{site.tseeprodname}} installed, you're now ready to launch {{site.tseeprodname}}-networked tasks.
+View the [guides on using {{site.tseeprodname}} with Mesos]({{site.baseurl}}/{{page.version}}/getting-started/mesos#tutorials)

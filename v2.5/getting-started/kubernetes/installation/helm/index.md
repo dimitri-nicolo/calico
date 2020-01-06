@@ -8,5 +8,5 @@ This article describes how to install and configure Tigera Secure EE using Helm.
 
 ## Next steps
 
-Consult the {{site.prodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
+Consult the {{site.tseeprodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
 demonstrates the main features.

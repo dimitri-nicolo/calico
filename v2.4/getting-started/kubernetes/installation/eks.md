@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## Overview
 
-This guide covers installing {{site.prodname}} for policy enforcement on Amazon EKS.
+This guide covers installing {{site.tseeprodname}} for policy enforcement on Amazon EKS.
 
 ## Before you begin
 
@@ -19,15 +19,15 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 {% include {{page.version}}/pull-secret.md %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} for policy only
 
 > **Important**: At this time, we include steps for Kubernetes API datastore only. Should you wish
-> to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
+> to install {{site.tseeprodname}} for policy only using the etcd datastore type, contact Tigera support.
 {: .alert .alert-danger}
 
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+### <a name="install-ee-typha-nofed"></a>Installing {{site.tseeprodname}} for policy only without federation, more than 50 nodes
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore with AWS VPC CNI plugin.
+1. Download the {{site.tseeprodname}} policy-only manifest for the Kubernetes API datastore with AWS VPC CNI plugin.
 
    ```bash
    curl \
@@ -67,7 +67,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
+1. Continue to [Installing the {{site.tseeprodname}} API Server](#installing-the-{{site.tseeprodnamedash}}-api-server)
 
 {% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" platform="eks" %}
 
@@ -77,7 +77,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="eks" %}
 
-1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+1. Continue to [Installing the {{site.tseeprodname}} Manager](#installing-the-{{site.tseeprodnamedash}}-manager)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
 

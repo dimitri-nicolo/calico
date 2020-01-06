@@ -64,7 +64,7 @@ spec:
 
 ---
 
-# Tier containing policies to allow access to Tigera Secure EE.
+# Tier containing policies to allow access to Calico Enterprise.
 apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
@@ -74,7 +74,7 @@ spec:
 
 ---
 
-# Allow the Kubernetes API Server access to Tigera Secure EE API Server.
+# Allow the Kubernetes API Server access to Calico Enterprise API Server.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -90,14 +90,14 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      # This policy allows Tigera Secure EE API Server access from anywhere: replace it with
+      # This policy allows Calico Enterprise API Server access from anywhere: replace it with
       # the addresses of your Kubernetes API Servers if those are static.
       nets: ["0.0.0.0/0"]
     destination:
-      # The ports Tigera Secure EE API Server and Tigera Secure EE Query Server are configured to listen on.
+      # The ports Calico Enterprise API Server and Calico Enterprise Query Server are configured to listen on.
       ports: [443, 5443, 8080, 10443]
 ---
-# Allow users to access Tigera Secure EE Manager.
+# Allow users to access Calico Enterprise Manager.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -113,11 +113,11 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      # This policy allows access to Tigera Secure EE Manager from anywhere: narrow it down if
+      # This policy allows access to Calico Enterprise Manager from anywhere: narrow it down if
       # only certain subnets should be allowed.
       nets: ["0.0.0.0/0"]
     destination:
-      # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
+      # By default, Calico Enterprise Manager is accessed over https. Update this if needed.
       ports: [9443]
 ---
 
@@ -221,7 +221,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'calico-enterprise'
   types:
   - Ingress
   ingress:
@@ -242,7 +242,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'tigera-secure'
+      selector: k8s-app == 'calico-enterprise'
       namespaceSelector: name == 'tigera-kibana'
     destination:
       ports: [9200]
@@ -333,14 +333,14 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'calico-enterprise'
   types:
   - Ingress
   ingress:
   - action: Allow
     protocol: TCP
     source:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'calico-enterprise'
     destination:
       ports: [9300]
 
@@ -354,7 +354,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'tigera-secure'
+  selector: k8s-app == 'calico-enterprise'
   types:
   - Ingress
   ingress:

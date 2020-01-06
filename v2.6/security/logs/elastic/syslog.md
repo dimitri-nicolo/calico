@@ -15,7 +15,7 @@ In order to copy the flow, audit, and dns logs to syslog, the following configur
 
 1. Update the
    [LogCollector](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
-   resource named `tigera-secure` to include
+   resource named `calico-enterprise` to include
    a [Syslog section](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec)
    with your syslog information.
    Example:
@@ -23,7 +23,7 @@ In order to copy the flow, audit, and dns logs to syslog, the following configur
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
-     name: tigera-secure
+     name: calico-enterprise
    spec:
      additionalStores:
        syslog:
@@ -35,7 +35,7 @@ In order to copy the flow, audit, and dns logs to syslog, the following configur
    This can be done during installation by editing the custom-resources.yaml
    before applying it or after installation by editing the resource with the command:
    ```
-   kubectl edit logcollector tigera-secure
+   kubectl edit logcollector calico-enterprise
    ```
 
 ### Configuring syslog archiving (non-Operator)

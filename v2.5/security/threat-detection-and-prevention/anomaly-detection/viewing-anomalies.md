@@ -21,10 +21,10 @@ You can view unfiltered anomaly information either using the Kibana UI, or using
 This section briefly walks through the process of viewing anomalies using Kibana. Refer to the 
 [Elasticsearch machine learning documentation] for more information.
 
-1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager, or by visting
+1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.tseeprodname}} Manager, or by visting
    the Kibana URL provided by your Elasticsearch admin.
 1. If necessary, log into Kibana. Note that your Kibana credentials may not be the same as you use to access
-   {{site.prodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
+   {{site.tseeprodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
 1. Click "Machine Learning" in the left-hand menu.
 1. Click "Anomaly Explorer" in the top menu.
 

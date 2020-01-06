@@ -3,16 +3,16 @@ title: RBAC on tiered Policies
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/rbac-tiered-policies
 ---
 
-The {{site.prodname}} API server adds the ability to manage tiered
+The {{site.tseeprodname}} API server adds the ability to manage tiered
 policies as Kubernetes resources. This allows administrators to manage
-access to {{site.prodname}} resources using Kubernetes RBAC
+access to {{site.tseeprodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
 ### Policy and tier RBAC
 
-In {{site.prodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
+In {{site.tseeprodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
 are associated with a specific tier. In addition to the permissions associated
-with the policy resources themselves, {{site.prodname}} also gives you the
+with the policy resources themselves, {{site.tseeprodname}} also gives you the
 ability to set permissions based on the tier the policies are in.
 
 To allow a non-admin user to perform any operations on [Global]NetworkPolicies,
@@ -39,7 +39,7 @@ For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/cal
 resource and adding a Global/NetworkPolicy to that tier, refer to the
 [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx/).
 
-### Permissions required for {{site.prodname}} UI
+### Permissions required for {{site.tseeprodname}} UI
 
 All of the RBAC examples below require the user to be specified (by replacing the
 text `<USER>`).  Consult the Kubernetes documentation for more information on
@@ -48,7 +48,7 @@ and [how to use the RBAC resources](https://kubernetes.io/docs/reference/access-
 
 #### Admin users
 
-The quickest way to test the {{site.prodname}} UI is by using an admin user, who
+The quickest way to test the {{site.tseeprodname}} UI is by using an admin user, who
 will have full access to the UI (as well as everything else in the cluster).
 
 ```
@@ -60,7 +60,7 @@ kubectl create clusterrolebinding permissive-binding \
 #### Non-admin users
 
 We provide an example manifest to give a non-admin user permission to use the
-{{site.prodname}} UI and manage policiies in the default tier and default
+{{site.tseeprodname}} UI and manage policiies in the default tier and default
 namespace.
 
 1. Download the [`min-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-rbac.yaml).

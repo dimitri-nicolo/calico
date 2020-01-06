@@ -9,9 +9,9 @@
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
 {% endif %}
 
-## Installing the {{site.prodname}} Manager
+## Installing the {{site.tseeprodname}} Manager
 
-1. Download the {{site.prodname}} manifest.
+1. Download the {{site.tseeprodname}} manifest.
 
    ```bash
    curl --compressed -O \
@@ -115,7 +115,7 @@
 
      > **Note**: Web browsers will warn end users about self-signed certificates.
      > To stop the warnings by using valid certificates
-     > instead, refer to [{{site.prodname}} Manager connections]({{site.baseurl}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
+     > instead, refer to [{{site.tseeprodname}} Manager connections]({{site.baseurl}}/{{page.version}}/security/comms/crypto-auth#{{site.tseeprodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
 {% if include.platform != "docker-ee" %}
@@ -129,7 +129,7 @@
 {% endif %}
 
 {% if include.upgrade %}
-1. Uninstall {{site.prodname}} Manager from previous install.
+1. Uninstall {{site.tseeprodname}} Manager from previous install.
 
    ```bash
    {{cli}} delete -n kube-system service cnx-manager
@@ -139,7 +139,7 @@
    {{cli}} delete -n kube-system serviceaccount cnx-manager
    ```
 
-1. Prior to {{site.prodname}} v2.4.0, {{site.prodname}} Manager users were granted access
+1. Prior to {{site.tseeprodname}} v2.4.0, {{site.tseeprodname}} Manager users were granted access
    to Elasticsearch by a ClusterRole RBAC rule that allowed access to the appropriate
    Kubernetes services proxy resource:
 
@@ -155,7 +155,7 @@
      verbs: ["get"]
    ```
 
-   To ensure that {{site.prodname}} Manager users have the same level of access to
+   To ensure that {{site.tseeprodname}} Manager users have the same level of access to
    Elasticsearch indices, ClusterRoles that grant access to Elasticsearch in the
    manner show above should be modified to give access to all resource names under
    of type `index` in the `lma.tigera.io` group.
@@ -178,7 +178,7 @@
    additional step is required for Elasticsearch access.
 {% endif %}
 
-1. Apply the manifest to install the {{site.prodname}} Manager.
+1. Apply the manifest to install the {{site.tseeprodname}} Manager.
 
    ```bash
    {{cli}} apply -f cnx.yaml
@@ -194,7 +194,7 @@
 
 {% if include.platform == "eks" %}
 
-1. To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
+1. To log into {{site.tseeprodname}} Manager running in EKS, you'll need a token for a user
    with appropriate permissions on the cluster.
 
    The easiest way to create such a token is to create a service account, assign it permissions
@@ -209,7 +209,7 @@
    kubectl get secret -n $NAMESPACE -o jsonpath='{.data.token}' $(kubectl -n $NAMESPACE get secret | grep $USER | awk '{print $1}') | base64 --decode
    ```
 
-   Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
+   Save the token - you'll use it to log in to {{site.tseeprodname}} Manager.  Next we'll assign permissions to do so
    to it.  Use the value of `$USER` as `<USER>` and `$NAMESPACE` as `<NAMESPACE>` in the following step.
 
 {% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
@@ -219,8 +219,8 @@
 
 
 {% if include.platform != "docker-ee" %}
-1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
-   You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
+1. By default, {{site.tseeprodname}} Manager is made accessible via a NodePort listening on port 30003.
+   You can edit the `cnx.yaml` manifest if you want to change how {{site.tseeprodname}} Manager is
    exposed.
 
 {% if include.orch == "openshift" %}
@@ -229,7 +229,7 @@
    specified in the route is resolvable from within the cluster, and to update oauth-client.yaml with the
    hostname as specified in the route.
 
-   Sign in by navigating to `https://<{{site.prodname}} Manager hostname specified in openshift route or ingress>` and login.
+   Sign in by navigating to `https://<{{site.tseeprodname}} Manager hostname specified in openshift route or ingress>` and login.
 {% else %}
    You may need to create an ssh tunnel if the node is not accessible - for example:
 
@@ -242,5 +242,5 @@
 {% endif %}
 
 {% if include.platform == "eks" %}
-   Log in to {{site.prodname}} Manager using the token you created earlier in the process.
+   Log in to {{site.tseeprodname}} Manager using the token you created earlier in the process.
 {% endif %}

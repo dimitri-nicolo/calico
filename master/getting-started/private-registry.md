@@ -10,7 +10,7 @@ Move Tigera container images to a private registry and configure {{ site.prodnam
 
 ### Value
 
-Install Tigera Secure in clusters where pulling from third party private repos is not an option, such as airgapped clusters, or clusters with bandwidth constraints or security constraints.
+Install Calico Enterprise in clusters where pulling from third party private repos is not an option, such as airgapped clusters, or clusters with bandwidth constraints or security constraints.
 
 ### Concepts
 

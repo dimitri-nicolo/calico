@@ -4,9 +4,9 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/workloa
 ---
 
 A workload endpoint resource (`WorkloadEndpoint`) represents an interface
-connecting a {{site.prodname}} networked container or VM to its host.
+connecting a {{site.tseeprodname}} networked container or VM to its host.
 
-Each endpoint may specify a set of labels and list of profiles that {{site.prodname}} will use
+Each endpoint may specify a set of labels and list of profiles that {{site.tseeprodname}} will use
 to apply policy to the interface.
 
 A workload endpoint is a namespaced resource, that means a
@@ -23,7 +23,7 @@ This resource is not supported in `kubectl`.
 
 > **Note**: While `calicoctl` allows the user to fully manage Workload Endpoint resources,
 > the lifecycle of these resources is generally handled by an orchestrator-specific
-> plugin such as the {{site.prodname}} CNI plugin. In general, we recommend that you only
+> plugin such as the {{site.tseeprodname}} CNI plugin. In general, we recommend that you only
 > use `calicoctl` to view this resource type.
 {: .alert .alert-info}
 

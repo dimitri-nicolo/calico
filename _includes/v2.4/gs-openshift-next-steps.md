@@ -1,7 +1,7 @@
 ### Policy query with calicoq
 
-Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
-a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate requests to etcd.
+Once {{site.tseeprodname}} is installed in OpenShift, each node is automatically configured with
+a `calicoctl.cfg` (owned by the root user) which is used by {{site.tseeprodname}} to locate and authenticate requests to etcd.
 
 We recommend installing `calicoq` as a container in OpenShift. Refer to [Installing calicoq as a container on a single host](/{{page.version}}/getting-started/calicoq/#installing-calicoq-as-a-container-on-a-single-host) for instructions.
 

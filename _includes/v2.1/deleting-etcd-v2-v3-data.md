@@ -21,13 +21,13 @@ This procedure requires etcdctl v3. The etcdctl tool is installed along with etc
    etcdctl --endpoint=<etcdv2-hostname:port> ls /calico --recursive
    ```
    
-1. Issue the following command to delete the {{site.prodname}} keys.
+1. Issue the following command to delete the {{site.tseeprodname}} keys.
    
    ```
    etcdctl --endpoint=<etcdv2-hostname:port> rm /calico/ --recursive 
    ```
    
-1. Issue the following command to confirm that the {{site.prodname}} keys were deleted.
+1. Issue the following command to confirm that the {{site.tseeprodname}} keys were deleted.
    
    ```
    etcdctl --endpoint=<etcdv2-hostname:port> ls /calico --recursive
@@ -35,7 +35,7 @@ This procedure requires etcdctl v3. The etcdctl tool is installed along with etc
    
    It should return `Error: 100: Key not found (/calico) [1186]`.
    
-1. Congratulations! You've cleaned {{site.prodname}}'s etcdv2 datastore of {{site.prodname}}
+1. Congratulations! You've cleaned {{site.tseeprodname}}'s etcdv2 datastore of {{site.tseeprodname}}
    data. 
 
 ## Deleting Calico data from etcdv3 after a partial migration
@@ -62,7 +62,7 @@ This procedure requires etcdctl v3. The etcdctl tool is installed along with etc
    ETCDCTL_API=3 etcdctl --endpoints=<etcdv3-hostname:port> get /calico/ --prefix --keys-only
    ```
    
-1. Issue the following command to delete the {{site.prodname}} keys.
+1. Issue the following command to delete the {{site.tseeprodname}} keys.
    
    ```
    ETCDCTL_API=3 etcdctl --endpoints=<etcdv3-hostname:port> del /calico/ --prefix 
@@ -70,7 +70,7 @@ This procedure requires etcdctl v3. The etcdctl tool is installed along with etc
    
    It returns the number of keys it deleted.
    
-1. Issue the following command to confirm that the {{site.prodname}} keys were deleted.
+1. Issue the following command to confirm that the {{site.tseeprodname}} keys were deleted.
    
    ```
    ETCDCTL_API=3 etcdctl --endpoints=<etcdv3-hostname:port> get /calico/ --prefix --keys-only
@@ -78,7 +78,7 @@ This procedure requires etcdctl v3. The etcdctl tool is installed along with etc
    
    It should return nothing.
    
-1. Congratulations! You've cleaned {{site.prodname}}'s etcdv3 datastore of {{site.prodname}}
+1. Congratulations! You've cleaned {{site.tseeprodname}}'s etcdv3 datastore of {{site.tseeprodname}}
    data. 
    
 ### Next steps

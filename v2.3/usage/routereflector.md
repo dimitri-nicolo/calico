@@ -4,12 +4,12 @@ canonical_url: 'https://docs.tigera.io/v2.3/usage/routereflector'
 ---
 
 BGP route reflectors are useful in large scale deployments, to reduce the number of BGP
-connections that are needed for correct and complete route propagation.  {{site.prodname}}
+connections that are needed for correct and complete route propagation.  {{site.tseeprodname}}
 includes optional route reflector function in the {{site.nodecontainer}} image, which is
 enabled by provisioning the `spec.bgp.routeReflectorClusterID` field of the relevant [Node
 resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node).
 
-Some of the existing {{site.prodname}} nodes in a cluster can be [enabled to behave as route
+Some of the existing {{site.tseeprodname}} nodes in a cluster can be [enabled to behave as route
 reflectors]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp#configuring-in-cluster-route-reflectors)
 (simultaneously with their function as workload hosts).
 
@@ -24,15 +24,15 @@ in-cluster case.
 > onto the standalone route reflector nodes.
 {: .alert .alert-info}
 
-Of course there are many other ways to set up and run a non-{{site.prodname}} route reflector
-outside the cluster.  You then need to [configure some or all of the {{site.prodname}} nodes
+Of course there are many other ways to set up and run a non-{{site.tseeprodname}} route reflector
+outside the cluster.  You then need to [configure some or all of the {{site.tseeprodname}} nodes
 to peer with that route reflector]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp).
 
-In addition the non-{{site.prodname}} route reflector may need configuration to accept
-peerings from the {{site.prodname}} nodes, but in general that is outside the scope of this
+In addition the non-{{site.tseeprodname}} route reflector may need configuration to accept
+peerings from the {{site.tseeprodname}} nodes, but in general that is outside the scope of this
 documentation.  For example, if you installed [BIRD](https://bird.network.cz/) to be your
 route reflector, you would need to configure BGP peerings like the following for each
-{{site.prodname}} node that you expect to connect to it.
+{{site.tseeprodname}} node that you expect to connect to it.
 
     protocol bgp <node_shortname> {
       description "<node_ip>";
@@ -45,7 +45,7 @@ route reflector, you would need to configure BGP peerings like the following for
       export all;
     }
 
-> **Note**: Previous {{site.prodname}} releases offered the calico/routereflector image for
+> **Note**: Previous {{site.tseeprodname}} releases offered the calico/routereflector image for
 > the standalone route reflector use case.  However calico/routereflector since Calico v3.0
 > has not supported route reflector clustering, and is now no longer offered at all.
 > {{site.nodecontainer}} fully supports route reflector clustering.

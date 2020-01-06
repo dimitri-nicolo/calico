@@ -9,7 +9,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installatio
 
 ### Set up namespace
 
-1. Create the `calico-monitoring` namespace to store configuration and set up other {{site.prodname}} components
+1. Create the `calico-monitoring` namespace to store configuration and set up other {{site.tseeprodname}} components
 
    ```
    kubectl create -f - <<EOF

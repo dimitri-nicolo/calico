@@ -26,7 +26,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/calicoctl/configure/etcd
 > - Previous versions of `calicoctl` supported `ETCD_SCHEME` and `ETC_AUTHORITY` environment
 >   variables as a mechanism for specifying the etcd endpoints. These variables are
 >   no longer supported. Use `ETCD_ENDPOINTS` instead.
-> - In kubeadm deployments, {{site.prodname}} is not configured to use the etcd run by kubeadm
+> - In kubeadm deployments, {{site.tseeprodname}} is not configured to use the etcd run by kubeadm
 >   on the Kubernetes master. Instead, it launches its own instance of etcd as a pod,
 >   available at `http://10.96.232.136:6666`. Ensure you are connecting to the correct etcd
 >   or you will not see any of the expected data.
@@ -113,7 +113,7 @@ issue then try again.
 
 ### Next steps
 
-Now you are ready to read and configure most aspects of {{site.prodname}}.  You can
+Now you are ready to read and configure most aspects of {{site.tseeprodname}}.  You can
 find the full list of commands in the
 [Command Reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/).
 

@@ -7,10 +7,10 @@
   {% assign flag = "user" %}
   {% assign user = "<USER>" %}
 {%- endif %}
-1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
+1. Grant permission to access the {{site.tseeprodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `{{user}}` with the {{type}} you wish to grant access.
 
-   The ClusterRole `tigera-ui-user` grants permission to use the {{site.prodname}} Manager UI, view flow
+   The ClusterRole `tigera-ui-user` grants permission to use the {{site.tseeprodname}} Manager UI, view flow
    logs, audit logs, network statistics, compliance reports, and access the default policy tier.
 
    ```
@@ -23,7 +23,7 @@
 {%- endif %}
    ```
 
-   The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow
+   The ClusterRole `network-admin` grants permission to use the {{site.tseeprodname}} Manager UI, view flow
    logs, audit logs, compliance reports and network statistics, and administer all network policies and tiers, and
    manage compliance report schedules.
 

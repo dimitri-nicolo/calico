@@ -14,7 +14,7 @@ calico-node.yaml acccepts the following include flags:
 {% capture objname %}{% if include.network == "flannel" and include.datastore == "etcd" %}canal-node{% elsif include.network == "flannel" %}canal{% else %}calico-node{% endif %}{% endcapture -%}
 # This manifest installs the {{site.nodecontainer}} container
 {%-  if include.network != "ecs" %}
-# as well as the {{site.prodname}} CNI plugins and network config
+# as well as the {{site.tseeprodname}} CNI plugins and network config
 {% endif %}
 # on each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
@@ -80,7 +80,7 @@ spec:
           image: {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
           env:
 {%- if include.datastore == "etcd" %}
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the {{site.tseeprodname}} etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -271,7 +271,7 @@ spec:
               mountPath: /var/run/nodeagent
 {%- endif %}
 {%-  if include.network != "ecs" %}
-        # This container installs the {{site.prodname}} CNI binaries
+        # This container installs the {{site.tseeprodname}} CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
           image: {{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
@@ -281,7 +281,7 @@ spec:
             - name: CNI_CONF_NAME
               value: "10-{{include.variant_name | downcase}}.conflist"
 {%- if include.datastore == "etcd" %}
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the {{site.tseeprodname}} etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:

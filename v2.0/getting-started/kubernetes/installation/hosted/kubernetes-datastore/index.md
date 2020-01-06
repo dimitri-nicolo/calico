@@ -3,17 +3,17 @@ title: Kubernetes API datastore
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/
 ---
 
-This document describes how to install {{site.prodname}} on Kubernetes without a separate etcd cluster.
-In this mode, {{site.prodname}} uses the Kubernetes API directly as the datastore.
+This document describes how to install {{site.tseeprodname}} on Kubernetes without a separate etcd cluster.
+In this mode, {{site.tseeprodname}} uses the Kubernetes API directly as the datastore.
 
 Note that this mode currently comes with a number of limitations, namely:
 
 - It does not yet support Calico IPAM.  It is recommended to use `host-local` IPAM in conjunction with Kubernetes pod CIDR assignments.
-- {{site.prodname}} networking support is in beta. Control of the node-to-node mesh, default AS Number and all BGP peering configuration should be configured using `calicoctl`.
+- {{site.tseeprodname}} networking support is in beta. Control of the node-to-node mesh, default AS Number and all BGP peering configuration should be configured using `calicoctl`.
 
 ## Requirements
 
-The provided manifest configures {{site.prodname}} to use host-local IPAM in conjunction with the Kubernetes assigned
+The provided manifest configures {{site.tseeprodname}} to use host-local IPAM in conjunction with the Kubernetes assigned
 pod CIDRs for each node.
 
 You must have a Kubernetes cluster, which meets the following requirements:
@@ -31,10 +31,10 @@ You must have a Kubernetes cluster, which meets the following requirements:
 
 ## Installation
 
-This document describes three installation options for {{site.prodname}} using Kubernetes API as the datastore:
+This document describes three installation options for {{site.tseeprodname}} using Kubernetes API as the datastore:
 
-1. {{site.prodname}} policy with {{site.prodname}} networking (beta)
-2. {{site.prodname}} policy-only with user-supplied networking
+1. {{site.tseeprodname}} policy with {{site.tseeprodname}} networking (beta)
+2. {{site.tseeprodname}} policy-only with user-supplied networking
 
 Ensure you have a cluster which meets the above requirements.  There may be additional requirements based on the installation option you choose.
 
@@ -48,7 +48,7 @@ Ensure you have a cluster which meets the above requirements.  There may be addi
 
 ### Before you start: if your cluster has RBAC enabled
 
-Install {{site.prodname}}'s RBAC manifest, which creates roles and role bindings for {{site.prodname}}'s components:
+Install {{site.tseeprodname}}'s RBAC manifest, which creates roles and role bindings for {{site.tseeprodname}}'s components:
 
 ```
 kubectl apply -f rbac-kdd.yaml
@@ -58,15 +58,15 @@ kubectl apply -f rbac-kdd.yaml
    {: .alert .alert-info}
 
 
-### Option 1. {{site.prodname}} policy with {{site.prodname}} networking (Beta)
+### Option 1. {{site.tseeprodname}} policy with {{site.tseeprodname}} networking (Beta)
 
-With Kubernetes as the {{site.prodname}} datastore, {{site.prodname}} has beta support for {{site.prodname}} networking.  This provides BGP-based
+With Kubernetes as the {{site.tseeprodname}} datastore, {{site.tseeprodname}} has beta support for {{site.tseeprodname}} networking.  This provides BGP-based
 networking with a full node-to-node mesh and/or explicit configuration of peers.
 
-To install {{site.prodname}} with {{site.prodname}} networking, run one of the commands below based on your Kubernetes version.
-This will install {{site.prodname}} and will initially create a full node-to-node mesh.
+To install {{site.tseeprodname}} with {{site.tseeprodname}} networking, run one of the commands below based on your Kubernetes version.
+This will install {{site.tseeprodname}} and will initially create a full node-to-node mesh.
 
-1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
+1. Download [the {{site.tseeprodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
 
 {% include {{page.version}}/cnx-cred-sed.md %}
 
@@ -78,7 +78,7 @@ This will install {{site.prodname}} and will initially create a full node-to-nod
    controller manager.  If you are using `kubeadm` that option is controlled by `kubeadm`'s
    `--pod-network-cidr` option.
 
-   > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
+   > **Note**: {{site.tseeprodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
    > IP pool already created.  Changing the variable after the first node has started has no
    > effect.
    {: .alert .alert-info}
@@ -97,12 +97,12 @@ This will install {{site.prodname}} and will initially create a full node-to-nod
    In either case, see the [Configuring BGP Peers guide]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp)
    for details on using `calicoctl` to configure your topology.
 
-### <a name="policy-only"></a> Option 2: {{site.prodname}} policy-only with user-supplied networking
+### <a name="policy-only"></a> Option 2: {{site.tseeprodname}} policy-only with user-supplied networking
 
-If you run {{site.prodname}} in policy-only mode it is necessary to configure your network to route pod traffic based on pod
+If you run {{site.tseeprodname}} in policy-only mode it is necessary to configure your network to route pod traffic based on pod
 CIDR allocations, either through static routes, a Kubernetes cloud-provider integration, or flannel (self-installed).
 
-To install {{site.prodname}} in policy-only mode:
+To install {{site.tseeprodname}} in policy-only mode:
 
 1. Download [the policy-only manifest](policy-only/1.7/calico.yaml)
 
@@ -116,7 +116,7 @@ To install {{site.prodname}} in policy-only mode:
    controller manager.  If you are using `kubeadm` that option is controlled by `kubeadm`'s
    `--pod-network-cidr` option.
 
-   > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
+   > **Note**: {{site.tseeprodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
    > IP pool already created.  Changing the variable after the first node has started has no
    > effect.
    {: .alert .alert-info}
@@ -140,7 +140,7 @@ To install {{site.prodname}} in policy-only mode:
 
 ## Configuration details
 
-The following environment variable configuration options are supported by the various {{site.prodname}}
+The following environment variable configuration options are supported by the various {{site.tseeprodname}}
 components when using the Kubernetes API datastore.
 
 | Option           | Description    | Examples
@@ -171,11 +171,11 @@ kubernetes-minion-group-x7ce  k8s           kube-system.kubernetes-dashboard-v1.
 
 ## How it works
 
-{{site.prodname}} typically uses `etcd` to store information about Kubernetes pods, namespaces, and network policies.  This information
+{{site.tseeprodname}} typically uses `etcd` to store information about Kubernetes pods, namespaces, and network policies.  This information
 is populated to etcd by the CNI plugin and the Kubernetes controllers, and is interpreted by Felix and BIRD to program the dataplane on
 each host in the cluster.
 
-The above manifest deploys {{site.prodname}} such that Felix uses the Kubernetes API directly to learn the required information to enforce policy,
-removing {{site.prodname}}'s dependency on etcd and the need for the Kubernetes controllers.
+The above manifest deploys {{site.tseeprodname}} such that Felix uses the Kubernetes API directly to learn the required information to enforce policy,
+removing {{site.tseeprodname}}'s dependency on etcd and the need for the Kubernetes controllers.
 
 The CNI plugin is still required to configure each pod's virtual ethernet device and network namespace.

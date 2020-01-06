@@ -3,7 +3,7 @@ title: Tigera Secure EE Manager Policy Editor
 canonical_url: https://docs.tigera.io/v2.3/reference/cnx/policy-editor
 ---
 
-{{site.prodname}} Manager includes a web client for viewing and editing
+{{site.tseeprodname}} Manager includes a web client for viewing and editing
 [tiered security policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
 
 ## Policy Authentication
@@ -70,7 +70,7 @@ and take control before other policy.
 
 The ability to manage NetworkPolicy and GlobalNetworkPolicy in the Web UI requires GET access to any tier
 the user can view/manage, plus the required access to the tiered policy resources. See 
-[Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
+[Configuring {{site.tseeprodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
 for more details and example configurations.
 
 ### The Default Tier
@@ -83,9 +83,9 @@ controller.
 
 ## Secure HTTPS
 
-The {{site.prodname}} Manager Web UI uses HTTPS to securely access the {{site.prodname}} Manager and
-Kubernetes and {{site.prodname}} API servers over TLS - where 'securely' means that these
+The {{site.tseeprodname}} Manager Web UI uses HTTPS to securely access the {{site.tseeprodname}} Manager and
+Kubernetes and {{site.tseeprodname}} API servers over TLS - where 'securely' means that these
 communications are encrypted and that the browser can be sure that it is
 speaking to those servers.  The web browser should display `Secure` in the
-address bar, to indicate this. See [{{site.prodname}} Manager connections](../../usage/encrypt-comms#{{site.prodnamedash}}-manager-connections)
+address bar, to indicate this. See [{{site.tseeprodname}} Manager connections](../../usage/encrypt-comms#{{site.tseeprodnamedash}}-manager-connections)
 for more information.

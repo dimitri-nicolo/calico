@@ -3,14 +3,14 @@ title: Tigera Secure EE BIRD Route Reflector container
 canonical_url: https://docs.tigera.io/v2.3/usage/routereflector
 ---
 
-For many {{site.prodname}} deployments, the use of a Route Reflector is not required.
+For many {{site.tseeprodname}} deployments, the use of a Route Reflector is not required.
 However, for large scale deployments a full mesh of BGP peerings between each
-of your {{site.prodname}} nodes may become untenable.  In this case, route reflectors
+of your {{site.tseeprodname}} nodes may become untenable.  In this case, route reflectors
 allow you to remove the full mesh and scale up the size of the cluster.
 
 This guide discusses the `calico/routereflector` image: a container image that
 packages up the `BIRD` BGP daemon along with the `confd` templating engine to
-provide a simple route reflector image which may be used for scaled-out {{site.prodname}}
+provide a simple route reflector image which may be used for scaled-out {{site.tseeprodname}}
 deployments.
 
 The image is currently experimental and has some key limitations discussed below.
@@ -26,11 +26,11 @@ These instructions are focused on container-based deployments that use the
 
 #### Known limitations
 
--  The `calico/routereflector` instance will automatically peer with the {{site.prodname}}
-   nodes, but it currently has no mechanism to configure peerings with non-{{site.prodname}}
+-  The `calico/routereflector` instance will automatically peer with the {{site.tseeprodname}}
+   nodes, but it currently has no mechanism to configure peerings with non-{{site.tseeprodname}}
    BGP speakers (e.g. edge routers)
 -  There is no `calicoctl` integration or similar.
--  If you are using Kubernetes API as the {{site.prodname}} datastore, the Route Reflector container
+-  If you are using Kubernetes API as the {{site.tseeprodname}} datastore, the Route Reflector container
    currently only supports running as a single-instance.
 -  For etcdv3, the Route Reflector container may be used to form a cluster of route reflectors that
    automatically create a full mesh between each Route Reflector.
@@ -42,12 +42,12 @@ These instructions are focused on container-based deployments that use the
 ## Starting and configuring your route reflectors
 
 Follow the appropriate section to start and configure your route reflectors depending on
-the datastore you are using for {{site.prodname}}:
+the datastore you are using for {{site.tseeprodname}}:
 
--  [Using etcdv3 as the {{site.prodname}} datastore](#using-etcdv3-as-the-{{site.prodnamedash}}-datastore)
--  [Using the Kubernetes API as the {{site.prodname}} datastore](#using-the-kubernetes-api-as-the-{{site.prodnamedash}}-datastore)
+-  [Using etcdv3 as the {{site.tseeprodname}} datastore](#using-etcdv3-as-the-{{site.tseeprodnamedash}}-datastore)
+-  [Using the Kubernetes API as the {{site.tseeprodname}} datastore](#using-the-kubernetes-api-as-the-{{site.tseeprodnamedash}}-datastore)
 
-### Using etcdv3 as the {{site.prodname}} datastore
+### Using etcdv3 as the {{site.tseeprodname}} datastore
 
 #### Starting a Route Reflector instance
 
@@ -106,9 +106,9 @@ the certificate files (you can mount multiple directories with additional
 `-v <DIR>` parameters if they are in separate directories, but be sure
 to choose different `<MOUNT_DIR>` locations if this is the case).
 
-### Using the Kubernetes API as the {{site.prodname}} datastore
+### Using the Kubernetes API as the {{site.tseeprodname}} datastore
 
-If you are using Kubernetes as the datastore for {{site.prodname}}, the {{site.prodname}} Route
+If you are using Kubernetes as the datastore for {{site.tseeprodname}}, the {{site.tseeprodname}} Route
 Reflector container only supports running as a single route reflector.  It is not
 possible with this image to set up a cluster of route reflectors.
 
@@ -141,9 +141,9 @@ When using Kubernetes API as the datastore, this route reflector image only work
 as a single standalone reflector.
 
 
-## Configuring {{site.prodname}} to use the route reflectors
+## Configuring {{site.tseeprodname}} to use the route reflectors
 
-Run through this section  to set up the global {{site.prodname}} configuration
+Run through this section  to set up the global {{site.tseeprodname}} configuration
 before configuring any nodes.  This only needs to be done once.
 
 -  Disable the full node-to-node BGP mesh
@@ -151,13 +151,13 @@ before configuring any nodes.  This only needs to be done once.
    the Route Reflector image when setting up the Route Reflector full mesh).
 
 If you have a small cluster of Route Reflectors and you intend to have every
-{{site.prodname}} Docker node peer with every Route Reflector, set this up one time as
+{{site.tseeprodname}} Docker node peer with every Route Reflector, set this up one time as
 global configuration.
 
 
 ### Turn off the full node-to-node mesh
 
-From any {{site.prodname}} Docker node, run the following:
+From any {{site.tseeprodname}} Docker node, run the following:
 
 ```
 # Get the current bgpconfig settings
@@ -172,17 +172,17 @@ $ calicoctl replace -f bgp.yaml
 
 ### Determine the AS number for your network
 
-From any {{site.prodname}} Docker node, run the following:
+From any {{site.tseeprodname}} Docker node, run the following:
 
     calicoctl get nodes --output=wide
 
-This returns table of all configured {{site.prodname}} node instances and includes the AS
+This returns table of all configured {{site.tseeprodname}} node instances and includes the AS
 number for each node.
 
 ### Peering with every Route Reflector (optional)
 
 If you have a small cluster of Route Reflectors (e.g. a single RR or a pair of
-RRs for redundancy) and you intend to have every {{site.prodname}} Docker node peer with
+RRs for redundancy) and you intend to have every {{site.tseeprodname}} Docker node peer with
 each of the Route Reflectors, you can set up the peerings as a one-time set of
 global configuration.
 
@@ -209,7 +209,7 @@ Where:
 
 ## Setting up node-specific peering
 
-If you are deploying a cluster of Route Reflectors, with each {{site.prodname}} node
+If you are deploying a cluster of Route Reflectors, with each {{site.tseeprodname}} node
 peering to a subset of Route Reflectors it will be necessary to set up the
 peerings on a node-by-node basis.
 
@@ -217,8 +217,8 @@ This would be the typical situation when scaling out to a very large size.  For
 example, you may have:
 
 -  a cluster of 100 route reflectors connected in a full mesh
--  a network of 100,000 {{site.prodname}} Docker nodes
--  each {{site.prodname}} Docker node is connected to two or three different Route
+-  a network of 100,000 {{site.tseeprodname}} Docker nodes
+-  each {{site.tseeprodname}} Docker node is connected to two or three different Route
    Reflectors.
 
 ### Configuring a node-specific Route Reflector peering

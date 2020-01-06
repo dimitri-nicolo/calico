@@ -6,16 +6,16 @@ canonical_url: https://docs.tigera.io/v2.3/usage/troubleshooting/faq
 * TOC
 {:toc}
 
-## "Why use {{site.prodname}}?"
+## "Why use {{site.tseeprodname}}?"
 
-The problem {{site.prodname}} tries to solve is the networking of workloads (VMs,
+The problem {{site.tseeprodname}} tries to solve is the networking of workloads (VMs,
 containers, etc) in a high scale environment. Existing L2 based methods
 for solving this problem have problems at high scale. Compared to these,
-we think {{site.prodname}} is more scalable, simpler and more flexible. We think
+we think {{site.tseeprodname}} is more scalable, simpler and more flexible. We think
 you should look into it if you have more than a handful of nodes on a
 single site.
 
-{{site.prodname}} also provides a rich network security model that
+{{site.tseeprodname}} also provides a rich network security model that
 allows operators and developers to declare intent-based network security
 policy that is automatically rendered into distributed firewall rules
 across a cluster of containers, VMs, and/or servers.
@@ -23,17 +23,17 @@ across a cluster of containers, VMs, and/or servers.
 For a more detailed discussion of this topic, see our blog post at
 [Why Calico?](https://www.projectcalico.org/why-calico/).
 
-## "Does {{site.prodname}} work with IPv6?"
+## "Does {{site.tseeprodname}} work with IPv6?"
 
-Yes! {{site.prodname}}'s core components support IPv6 out-of-the box. However,
+Yes! {{site.tseeprodname}}'s core components support IPv6 out-of-the box. However,
 not all orchestrators that we integrate with support IPv6 yet.
 
 ## "Why does my container have a route to 169.254.1.1?"
 
-In a {{site.prodname}} network, each host acts as a gateway router for the
-workloads that it hosts.  In container deployments, {{site.prodname}} uses
-169.254.1.1 as the address for the {{site.prodname}} router.  By using a
-link-local address, {{site.prodname}} saves precious IP addresses and avoids
+In a {{site.tseeprodname}} network, each host acts as a gateway router for the
+workloads that it hosts.  In container deployments, {{site.tseeprodname}} uses
+169.254.1.1 as the address for the {{site.tseeprodname}} router.  By using a
+link-local address, {{site.tseeprodname}} saves precious IP addresses and avoids
 burdening the user with configuring a suitable address.
 
 While the routing table may look a little odd to someone who is used to
@@ -42,9 +42,9 @@ subnet-local gateways is fairly common in WAN networking.
 
 ## Why can't I see the 169.254.1.1 address mentioned above on my host?
 
-{{site.prodname}} tries hard to avoid interfering with any other configuration
+{{site.tseeprodname}} tries hard to avoid interfering with any other configuration
 on the host.  Rather than adding the gateway address to the host side
-of each workload interface, {{site.prodname}} sets the `proxy_arp` flag on the
+of each workload interface, {{site.tseeprodname}} sets the `proxy_arp` flag on the
 interface.  This makes the host behave like a gateway, responding to
 ARPs for 169.254.1.1 without having to actually allocate the IP address
 to the interface.
@@ -52,7 +52,7 @@ to the interface.
 ## Why do all cali\* interfaces have the MAC address ee:ee:ee:ee:ee:ee?
 
 In some setups the kernel is unable to generate a persistent MAC address and so
-{{site.prodname}} assigns a MAC address itself. Since {{site.prodname}} uses
+{{site.tseeprodname}} assigns a MAC address itself. Since {{site.tseeprodname}} uses
 point-to-point routed interfaces, traffic does not reach the data link layer
 so the MAC Address is never used and can therefore be the same for all the
 cali\* interfaces.
@@ -62,24 +62,24 @@ cali\* interfaces.
 Yes! The Kubernetes [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 API added support for egress policies in v1.8. You can also use `calicoctl`
 to configure egress policy to prevent Kubernetes pods from initiating outgoing
-connections based on the full set of supported {{site.prodname}} policy primitives
+connections based on the full set of supported {{site.tseeprodname}} policy primitives
 including labels, Kubernetes namespaces, CIDRs, and ports.
 
-## I've heard {{site.prodname}} uses proxy ARP, doesn't proxy ARP cause a lot of problems?
+## I've heard {{site.tseeprodname}} uses proxy ARP, doesn't proxy ARP cause a lot of problems?
 
-It can, but not in the way that {{site.prodname}} uses it.
+It can, but not in the way that {{site.tseeprodname}} uses it.
 
-In container deployments, {{site.prodname}} only uses proxy ARP for resolving the
+In container deployments, {{site.tseeprodname}} only uses proxy ARP for resolving the
 169.254.1.1 address.  The routing table inside the container ensures
 that all traffic goes via the 169.254.1.1 gateway so that is the only
 IP that will be ARPed by the container.
 
-## "Is {{site.prodname}} compliant with PCI/DSS requirements?"
+## "Is {{site.tseeprodname}} compliant with PCI/DSS requirements?"
 
 PCI certification applies to the whole end-to-end system, of which
-{{site.prodname}} would be a part. We understand that most current solutions use
+{{site.tseeprodname}} would be a part. We understand that most current solutions use
 VLANs, but after studying the PCI requirements documents, we believe
-that {{site.prodname}} does meet those requirements and that nothing in the
+that {{site.tseeprodname}} does meet those requirements and that nothing in the
 documents *mandates* the use of VLANs.
 
 ## How do I enable IPIP and NAT Outgoing on an IP Pool?
@@ -113,9 +113,9 @@ documents *mandates* the use of VLANs.
    $ calicoctl replace -f pool.yaml
    ```
 
-## "How does {{site.prodname}} maintain saved state?"
+## "How does {{site.tseeprodname}} maintain saved state?"
 
-State is saved in a few places in a {{site.prodname}} deployment, depending on
+State is saved in a few places in a {{site.tseeprodname}} deployment, depending on
 whether it's global or local state.
 
 Local state is state that belongs on a single compute host, associated
@@ -144,54 +144,54 @@ plugin.
     databases, either owned directly by the plugin or by the
     orchestrator itself.
 
-The only other state storage in a {{site.prodname}} network is in the BGP sessions,
+The only other state storage in a {{site.tseeprodname}} network is in the BGP sessions,
 which approximate a distributed database of routes. This BGP state is
 simply a replicated copy of the per-host routes configured by Felix
 based on the global state provided by the orchestrator.
 
-This makes the {{site.prodname}} design very simple, because we store very little
+This makes the {{site.tseeprodname}} design very simple, because we store very little
 state. All of our components can be shutdown and restarted without risk,
 because they resynchronize state as necessary. This makes modelling
 their behaviour extremely simple, reducing the complexity of bugs.
 
-## "I heard {{site.prodname}} is suggesting layer 2: I thought you were layer 3! What's happening?"
+## "I heard {{site.tseeprodname}} is suggesting layer 2: I thought you were layer 3! What's happening?"
 
-It's important to distinguish what {{site.prodname}} provides to the workloads
-hosted in a data center (a purely layer 3 network) with what the {{site.prodname}}
+It's important to distinguish what {{site.tseeprodname}} provides to the workloads
+hosted in a data center (a purely layer 3 network) with what the {{site.tseeprodname}}
 project *recommends* operators use to build their underlying network
 fabric.
 
-{{site.prodname}}'s core principle is that *applications* and *workloads*
+{{site.tseeprodname}}'s core principle is that *applications* and *workloads*
 overwhelmingly need only IP connectivity to communicate. For this reason
 we build an IP-forwarded network to connect the tenant applications and
 workloads to each other, and the broader world.
 
 However, the underlying physical fabric obviously needs to be set up
-too. Here, {{site.prodname}} has discussed how both a layer 2 (see
+too. Here, {{site.tseeprodname}} has discussed how both a layer 2 (see
 [here]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l2-interconnect-fabric))
 or a layer 3 (see
 [here]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l3-interconnect-fabric))
 fabric
-could be integrated with {{site.prodname}}. This is one of the great strengths of
-the {{site.prodname}} model: it allows the infrastructure to be decoupled from what
+could be integrated with {{site.tseeprodname}}. This is one of the great strengths of
+the {{site.tseeprodname}} model: it allows the infrastructure to be decoupled from what
 we show to the tenant applications and workloads.
 
 We have some thoughts on different interconnect approaches (as noted
 above), but just because we say that there are layer 2 and layer 3 ways
 of building the fabric, and that those decisions may have an impact on
-route scale, does not mean that {{site.prodname}} is "going back to Ethernet" or
+route scale, does not mean that {{site.tseeprodname}} is "going back to Ethernet" or
 that we're recommending layer 2 for tenant applications. In all cases we
 forward on IP packets, no matter what architecture is used to build the
 fabric.
 
 ## "How do I control policy/connectivity without virtual/physical firewalls?"
 
-{{site.prodname}} provides an extremely rich security policy model, applying policy at the first and last hop
-of the routed traffic within the {{site.prodname}} network (the source and
+{{site.tseeprodname}} provides an extremely rich security policy model, applying policy at the first and last hop
+of the routed traffic within the {{site.tseeprodname}} network (the source and
 destination compute hosts).
 
 This model is substantially more robust to failure than a centralized
-firewall-based model. In particular, the {{site.prodname}} approach has no
+firewall-based model. In particular, the {{site.tseeprodname}} approach has no
 single-point-of-failure: if the device enforcing the firewall has failed
 then so has one of the workloads involved in the traffic (because the
 firewall is enforced by the compute host).
@@ -219,23 +219,23 @@ again, and again the reachability doesn’t have to change.
 The `-p` flag tells Docker to set up port mapping to connect a port on the
 Docker host to a port on your container via the `docker0` bridge.
 
-If a host's containers are connected to the `docker0` bridge interface, {{site.prodname}}
+If a host's containers are connected to the `docker0` bridge interface, {{site.tseeprodname}}
 would be unable to enforce security rules between workloads on the same host;
 all containers on the bridge would be able to communicate with one other.
 
 You can securely configure port mapping by following our [guide on Exposing
 Container Ports to the Internet]({{site.baseurl}}/{{page.version}}/usage/external-connectivity).
 
-## Can {{site.prodname}} containers use any IP address within a pool, even subnet network/broadcast addresses?
+## Can {{site.tseeprodname}} containers use any IP address within a pool, even subnet network/broadcast addresses?
 
-Yes! {{site.prodname}} is fully routed, so all IP address within a {{site.prodname}} pool are usable as
+Yes! {{site.tseeprodname}} is fully routed, so all IP address within a {{site.tseeprodname}} pool are usable as
 private IP addresses to assign to a workload.  This means addresses commonly
 reserved in a L2 subnet, such as IPv4 addresses ending in .0 or .255, are perfectly
 okay to use.
 
-## How do I get network traffic into and out of my {{site.prodname}} cluster?
+## How do I get network traffic into and out of my {{site.tseeprodname}} cluster?
 
-The recommended way to get traffic to/from your {{site.prodname}} network is by peering to
+The recommended way to get traffic to/from your {{site.tseeprodname}} network is by peering to
 your existing data center L3 routers using BGP and by assigning globally
 routable IPs (public IPs) to containers that need to be accessed from the internet.
 This allows incoming traffic to be routed directly to your containers without the
@@ -261,8 +261,8 @@ If you want to allow containers with private IP addresses to be able to access t
 internet then you can use your data center's existing outbound NAT capabilities
 (typically provided by the data center's border routers).
 
-Alternatively you can use {{site.prodname}}'s built in outbound NAT capability by enabling it on any
-{{site.prodname}} IP pool. In this case {{site.prodname}} will perform outbound NAT locally on the compute
+Alternatively you can use {{site.tseeprodname}}'s built in outbound NAT capability by enabling it on any
+{{site.tseeprodname}} IP pool. In this case {{site.tseeprodname}} will perform outbound NAT locally on the compute
 node on which each container is hosted.
 
 ```
@@ -287,7 +287,7 @@ system for details on how to configure policy.
 
 As discussed, the recommended way to get traffic to containers that
 need to be accessed from the internet is to give them public IP addresses and
-to configure {{site.prodname}} to peer with the data center's existing L3 routers.
+to configure {{site.tseeprodname}} to peer with the data center's existing L3 routers.
 
 In cases where this is not possible then you can configure incoming NAT
 (also known as DNAT) on your data centers existing border routers. Alternatively
@@ -327,9 +327,9 @@ The commands will need to be run each time the host is restarted.
 Remember: the security profile for the container will need to allow traffic to the exposed port as well.
 Refer to the appropriate guide for your orchestration system for details on how to configure policy.
 
-### Can I run {{site.prodname}} in a public cloud environment?
+### Can I run {{site.tseeprodname}} in a public cloud environment?
 
-Yes.  If you are running in a public cloud that doesn't allow either L3 peering or L2 connectivity between {{site.prodname}} hosts then you can enable `ipip` in your {{site.prodname}} IP pool:
+Yes.  If you are running in a public cloud that doesn't allow either L3 peering or L2 connectivity between {{site.tseeprodname}} hosts then you can enable `ipip` in your {{site.tseeprodname}} IP pool:
 
 ```shell
 cat << EOF | calicoctl apply -f -
@@ -344,7 +344,7 @@ spec:
 EOF
 ```
 
-{{site.prodname}} will then route traffic between {{site.prodname}} hosts using IP in IP.
+{{site.tseeprodname}} will then route traffic between {{site.tseeprodname}} hosts using IP in IP.
 
 In AWS, you disable `Source/Dest. Check` instead of using IP in IP as long as all your instances are in the same subnet of your VPC.  This will provide the best performance.  You can disable this with the CLI, or right click the instance in the EC2 console, and `Change Source/Dest. Check` from the `Networking` submenu.
 

@@ -1,5 +1,5 @@
 ---
-title: Upgrading Tigera Secure EE from an earlier release using Helm
+title: Upgrading Calico Enterprise from an earlier release using Helm
 redirect_from: latest/maintenance/helm-upgrade-tsee
 canonical_url: https://docs.tigera.io/master/maintenance/helm-upgrade-tsee
 ---
@@ -53,10 +53,10 @@ steps to upgrade.
    If you installed with `createCustomResources: false`, pre-install the CRDs:
 
    ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+   kubectl apply -f {{ site.url }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml
    ```
 
-   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
 
 1. Run the Helm upgrade command for `tigera-secure-ee`
    ```bash

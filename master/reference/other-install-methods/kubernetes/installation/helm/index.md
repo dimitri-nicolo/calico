@@ -1,8 +1,8 @@
 ---
-title: Installing Tigera Secure EE using Helm
+title: Installing Calico Enterprise using Helm
 ---
 
-This article describes how to install and configure Tigera Secure EE using Helm. After completing the steps you will have a functioning Tigera Secure EE cluster.
+This article describes how to install and configure Calico Enterprise using Helm. After completing the steps you will have a functioning Calico Enterprise cluster.
 
 {% include {{page.version}}/helm-install.md method="full" %}
 

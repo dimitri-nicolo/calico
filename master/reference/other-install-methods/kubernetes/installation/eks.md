@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE on Amazon EKS
+title: Installing Calico Enterprise on Amazon EKS
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
 ---
 

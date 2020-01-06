@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## Overview
 
-This guide covers installing {{site.prodname}} for policy enforcement on Amazon EKS.
+This guide covers installing {{site.tseeprodname}} for policy enforcement on Amazon EKS.
 
 ## Before you begin
 
@@ -17,15 +17,15 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} for policy only
 
 > **Important**: At this time, we include steps for Kubernetes API datastore only. Should you wish
-> to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
+> to install {{site.tseeprodname}} for policy only using the etcd datastore type, contact Tigera support.
 {: .alert .alert-danger}
 
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+### <a name="install-ee-typha-nofed"></a>Installing {{site.tseeprodname}} for policy only without federation, more than 50 nodes
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore with AWS VPC CNI plugin.
+1. Download the {{site.tseeprodname}} policy-only manifest for the Kubernetes API datastore with AWS VPC CNI plugin.
 
    ```bash
    curl \
@@ -70,7 +70,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
 
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
+1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.tseeprodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
    operator continue to the next step instead.
 

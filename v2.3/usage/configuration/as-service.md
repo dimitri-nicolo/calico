@@ -17,7 +17,7 @@ This section describes how to run `{{site.nodecontainer}}` as a Docker container
 {: .alert .alert-info}
 
 Included here is an `EnvironmentFile` that defines the environment
-variables for {{site.prodname}} and a sample systemd service file that uses the
+variables for {{site.tseeprodname}} and a sample systemd service file that uses the
 environment file and starts the `{{site.nodecontainer}}` image as a service.
 
 `calico.env` - the `EnvironmentFile`:
@@ -44,21 +44,21 @@ ETCD_ENDPOINTS to point at the correct etcd cluster endpoints.
 > template to define your SSL values if desired.
 >
 > If `CALICO_NODENAME` is blank, the compute server hostname will be used
-> to identify the {{site.prodname}} node.
+> to identify the {{site.tseeprodname}} node.
 >
-> If `CALICO_IP` or `CALICO_IP6` are left blank, {{site.prodname}} will use the currently
+> If `CALICO_IP` or `CALICO_IP6` are left blank, {{site.tseeprodname}} will use the currently
 > configured values for the next hop IP addresses for this node—these can
 > be configured through the node resource.  If no next hop addresses have
-> been configured, {{site.prodname}} will automatically determine an IPv4 next hop address
+> been configured, {{site.tseeprodname}} will automatically determine an IPv4 next hop address
 > by querying the host interfaces (and it will configure this value in the
 > node resource). You may set `CALICO_IP` to `autodetect` to force
 > auto-detection of IP address every time the node starts. If you set IP
 > addresses through these environments it will reconfigure any values currently
 > set through the node resource.
 >
-> If `CALICO_AS` is left blank, {{site.prodname}} will use the currently configured value
+> If `CALICO_AS` is left blank, {{site.tseeprodname}} will use the currently configured value
 > for the AS Number for the node BGP client—this can be configured through
-> the node resource. If no value is set, {{site.prodname}} will inherit the AS Number
+> the node resource. If no value is set, {{site.tseeprodname}} will inherit the AS Number
 > from the global default value. If you set a value through this environment
 > it will reconfigure any value currently set through the node resource.
 >
@@ -125,7 +125,7 @@ The script will also stop the `{{site.nodecontainer}}` container when the servic
 
 ## Running {{site.nodecontainer}} in a rkt container
 
-Each {{site.prodname}}-rkt enabled node requires the `{{site.nodecontainer}}` container to be running.
+Each {{site.tseeprodname}}-rkt enabled node requires the `{{site.nodecontainer}}` container to be running.
 
 The `{{site.nodecontainer}}` container can be run directly through rkt and needs to be run as
 as a fly stage-1 container.

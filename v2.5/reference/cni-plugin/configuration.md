@@ -3,10 +3,10 @@ title: Configuring the Tigera Secure EE CNI plugins
 canonical_url: https://docs.tigera.io/v2.3/reference/cni-plugin/configuration
 ---
 
-The {{site.prodname}} CNI plugin is configured through the standard CNI
+The {{site.tseeprodname}} CNI plugin is configured through the standard CNI
 [configuration mechanism](https://github.com/containernetworking/cni/blob/master/SPEC.md#network-configuration)
 
-A minimal configuration file that uses {{site.prodname}} for networking
+A minimal configuration file that uses {{site.tseeprodname}} for networking
 and IPAM looks like this
 
 ```json
@@ -39,11 +39,11 @@ Additional configuration can be added as detailed below.
 
 ### Datastore type
 
-The following option allows configuration of the {{site.prodname}} datastore type.
+The following option allows configuration of the {{site.tseeprodname}} datastore type.
 
 * `datastore_type` (default: etcdv3)
 
-The {{site.prodname}} CNI plugin supports the following datastore types:
+The {{site.tseeprodname}} CNI plugin supports the following datastore types:
 
 * etcdv3 (default)
 * kubernetes
@@ -91,14 +91,14 @@ The following options are deprecated.
 
 ### IPAM
 
-When using {{site.prodname}} IPAM, the following flags determine what IP addresses should be assigned. NOTE: These flags are strings and not boolean values.
+When using {{site.tseeprodname}} IPAM, the following flags determine what IP addresses should be assigned. NOTE: These flags are strings and not boolean values.
 
 * `assign_ipv4` (default: `"true"`)
 * `assign_ipv6` (default: `"false"`)
 
 A specific IP address can be chosen by using [`CNI_ARGS`](https://github.com/appc/cni/blob/master/SPEC.md#parameters) and setting `IP` to the desired value.
 
-By default, {{site.prodname}} IPAM will assign IP addresses from all the available IP pools.
+By default, {{site.tseeprodname}} IPAM will assign IP addresses from all the available IP pools.
 
 Optionally, the list of possible IPv4 and IPv6 pools can also be specified via the following properties:
 
@@ -149,7 +149,7 @@ The following options allow configuration of settings within the container names
 
 ## Kubernetes specific
 
-When using the {{site.prodname}} CNI plugin with Kubernetes, the plugin must be able to access the Kubernetes API server in order to find the labels assigned to the Kubernetes pods. The recommended way to configure access is through a `kubeconfig` file specified in the `kubernetes` section of the network config. e.g.
+When using the {{site.tseeprodname}} CNI plugin with Kubernetes, the plugin must be able to access the Kubernetes API server in order to find the labels assigned to the Kubernetes pods. The recommended way to configure access is through a `kubeconfig` file specified in the `kubernetes` section of the network config. e.g.
 
 ```json
 {
@@ -204,25 +204,25 @@ you must also run `{{site.imageNames["kubeControllers"]}}` with the policy, prof
 }
 ```
 
-When using `type: k8s`, the {{site.prodname}} CNI plugin requires read-only Kubernetes API access to the `Pods` resource in all namespaces.
+When using `type: k8s`, the {{site.tseeprodname}} CNI plugin requires read-only Kubernetes API access to the `Pods` resource in all namespaces.
 
 ## IPAM
 
 ### Using host-local IPAM
 
-When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is allowed for the subnet field (either at the top-level, or in a "range").  This tells the plugin to determine the subnet to use from the Kubernetes API based on the Node.podCIDR field. {{site.prodname}} does not use the `gateway` field of a range so that field is not required and it will be ignored if present.
+When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is allowed for the subnet field (either at the top-level, or in a "range").  This tells the plugin to determine the subnet to use from the Kubernetes API based on the Node.podCIDR field. {{site.tseeprodname}} does not use the `gateway` field of a range so that field is not required and it will be ignored if present.
 
 > **Note**: `usePodCidr` can only be used as the value of the `subnet` field, it cannot be used in
 > `rangeStart` or `rangeEnd` so those values are not useful if `subnet` is set to `usePodCidr`.
 {: .alert .alert-info}
 
-{{site.prodname}} supports the host-local IPAM plugin's `routes` field as follows:
+{{site.tseeprodname}} supports the host-local IPAM plugin's `routes` field as follows:
 
-* If there is no `routes` field, {{site.prodname}} will install a default `0.0.0.0/0`, and/or `::/0` route into the pod (depending on whether the pod has an IPv4 and/or IPv6 address).
+* If there is no `routes` field, {{site.tseeprodname}} will install a default `0.0.0.0/0`, and/or `::/0` route into the pod (depending on whether the pod has an IPv4 and/or IPv6 address).
 
-* If there is a `routes` field then {{site.prodname}} will program *only* the routes in the routes field into the pod.  Since {{site.prodname}} implements a point-to-point link into the pod, the `gw` field is not required and it will be ignored if present.  All routes that {{site.prodname}} installs will have {{site.prodname}}'s link-local IP as the next hop.
+* If there is a `routes` field then {{site.tseeprodname}} will program *only* the routes in the routes field into the pod.  Since {{site.tseeprodname}} implements a point-to-point link into the pod, the `gw` field is not required and it will be ignored if present.  All routes that {{site.tseeprodname}} installs will have {{site.tseeprodname}}'s link-local IP as the next hop.
 
-{{site.prodname}} CNI plugin configuration:
+{{site.tseeprodname}} CNI plugin configuration:
 
 * `node_name`
     * The node name to use when looking up the `usePodCidr` value (defaults to current hostname)
@@ -254,7 +254,7 @@ When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is all
 }
 ```
 
-When making use of the `usePodCidr` option, the {{site.prodname}} CNI plugin requires read-only Kubernetes API access to the `Nodes` resource.
+When making use of the `usePodCidr` option, the {{site.tseeprodname}} CNI plugin requires read-only Kubernetes API access to the `Nodes` resource.
 
 #### Configuring node and typha
 
@@ -264,7 +264,7 @@ When using `host-local` IPAM with the Kubernetes API datastore, you must configu
 
 #### Specifying IP pools on a per-namespace or per-pod basis
 
-In addition to specifying IP pools in the CNI config as discussed above, {{site.prodname}} IPAM supports specifying IP pools per-namespace or per-pod using the following [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/).
+In addition to specifying IP pools in the CNI config as discussed above, {{site.tseeprodname}} IPAM supports specifying IP pools per-namespace or per-pod using the following [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/).
 
 - `cni.projectcalico.org/ipv4pools`: A list of configured IPv4 Pools from which to choose an address for the pod.
 
@@ -292,7 +292,7 @@ If provided, these IP pools will override any IP pools specified in the CNI conf
 > match a configured [IPPool]({{site.baseurl}}/{{page.version}}/reference/resources/ippool) resource.
 {: .alert .alert-info}
 
-> **Note**: The {{site.prodname}} CNI plugin supports specifying an annotation per namespace.
+> **Note**: The {{site.tseeprodname}} CNI plugin supports specifying an annotation per namespace.
 > If both the namespace and the pod have this annotation, the pod information will be used.
 > Otherwise, if only the namespace has the annotation the annotation of the namespace will
 > be used for each pod in it.
@@ -300,10 +300,10 @@ If provided, these IP pools will override any IP pools specified in the CNI conf
 
 #### Requesting a specific IP address
 
-You can also request a specific IP address through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.prodname}} IPAM.
+You can also request a specific IP address through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.tseeprodname}} IPAM.
 There are two annotations to request a specific IP address:
 
-- `cni.projectcalico.org/ipAddrs`: A list of IPv4 and/or IPv6 addresses to assign to the Pod. The requested IP addresses will be assigned from {{site.prodname}} IPAM and must exist within a configured IP pool.
+- `cni.projectcalico.org/ipAddrs`: A list of IPv4 and/or IPv6 addresses to assign to the Pod. The requested IP addresses will be assigned from {{site.tseeprodname}} IPAM and must exist within a configured IP pool.
 
   Example:
 
@@ -313,7 +313,7 @@ There are two annotations to request a specific IP address:
    ```
 
 - `cni.projectcalico.org/ipAddrsNoIpam`: A list of IPv4 and/or IPv6 addresses to assign to the Pod, bypassing IPAM. Any IP conflicts and routing have to be taken care of manually or by some other system.
-{{site.prodname}} will only distribute routes to a Pod if its IP address falls within a {{site.prodname}} IP pool. If you assign an IP address that is not in a {{site.prodname}} IP pool, you must ensure that routing to that IP address is taken care of through another mechanism.
+{{site.tseeprodname}} will only distribute routes to a Pod if its IP address falls within a {{site.tseeprodname}} IP pool. If you assign an IP address that is not in a {{site.tseeprodname}} IP pool, you must ensure that routing to that IP address is taken care of through another mechanism.
 
   Example:
 
@@ -350,7 +350,7 @@ There are two annotations to request a specific IP address:
 
 #### Requesting a floating IP
 
-You can request a floating IP address for a pod through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.prodname}}.
+You can request a floating IP address for a pod through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.tseeprodname}}.
 
 > **Note**:
 > The specified address must belong to an IP Pool for advertisement to work properly.
@@ -424,7 +424,7 @@ for a full example.
 
 ### CNI network configuration lists
 
-The CNI 0.3.0 [spec](https://github.com/containernetworking/cni/blob/spec-v0.3.0/SPEC.md#network-configuration-lists) supports "chaining" multiple cni plugins together and {{site.prodname}} supports this as well. {{site.prodname}} enables the portmap plugin by default which is required to implement Kubernetes host port functionality. This can be disabled by removing the portmap section from the CNI network configuration in the {{site.prodname}} manifests.
+The CNI 0.3.0 [spec](https://github.com/containernetworking/cni/blob/spec-v0.3.0/SPEC.md#network-configuration-lists) supports "chaining" multiple cni plugins together and {{site.tseeprodname}} supports this as well. {{site.tseeprodname}} enables the portmap plugin by default which is required to implement Kubernetes host port functionality. This can be disabled by removing the portmap section from the CNI network configuration in the {{site.tseeprodname}} manifests.
 
  ```json
         {
@@ -449,7 +449,7 @@ take on the following precedence, 1 being the highest:
 2. CNI configuration
 3. IP pool node selectors
 
-> **Note**: {{site.prodname}} IPAM will not reassign IP addresses to workloads
+> **Note**: {{site.tseeprodname}} IPAM will not reassign IP addresses to workloads
 > that are already running. To update running workloads with IP addresses from
 > a newly configured IP pool, they must be recreated. We recommmend doing this
 > before going into production or during a maintenance window.

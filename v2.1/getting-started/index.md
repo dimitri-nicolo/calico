@@ -19,7 +19,7 @@ in JSON format. When you open the file, it should look something like the follow
 }
 ```
 
-The file should be named `config.json`. It contains a robot account token that will allow you to retrieve the {{site.prodname}} images from the private Tigera repository.
+The file should be named `config.json`. It contains a robot account token that will allow you to retrieve the {{site.tseeprodname}} images from the private Tigera repository.
 
 ## Obtain a license key
 

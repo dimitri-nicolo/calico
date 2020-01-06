@@ -4,13 +4,13 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-## Installing the {{site.prodname}} API Server
+## Installing the {{site.tseeprodname}} API Server
 
 {% if include.init == "systemd" %}
 
 1. Load the following manifest to Kubernetes to deploy dummy pods that
    will be used for Prometheus targeting. You should ensure that this manifest
-   deploys one pod on each host running {{site.prodname}} that you wish to
+   deploys one pod on each host running {{site.tseeprodname}} that you wish to
    monitor, adjusting the annotations and tolerations as needed.
 
    ```yaml
@@ -79,7 +79,7 @@
 
 {% if include.init == "docker" %}
 
-1. Download the {{site.prodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
+1. Download the {{site.tseeprodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
 
     ```bash
     curl --compressed -o cnx-api.yaml \
@@ -105,7 +105,7 @@
 
 {% elsif include.platform == "eks" %}
 
-1. Download the EKS {{site.prodname}} manifest and save the file
+1. Download the EKS {{site.tseeprodname}} manifest and save the file
    as cnx-api.yaml. That is how we will refer to it in later steps.
 
    ```bash
@@ -115,7 +115,7 @@
 
 {% elsif include.platform == "gke" %}
 
-1. Download the GKE {{site.prodname}} manifest and save the file
+1. Download the GKE {{site.tseeprodname}} manifest and save the file
    as cnx-api.yaml. That is how we will refer to it in later steps.
 
    ```bash
@@ -125,7 +125,7 @@
    
 {% elsif include.platform == "aks" %}
 
-1. Download the AKS {{site.prodname}} manifest and save the file
+1. Download the AKS {{site.tseeprodname}} manifest and save the file
    as cnx-api.yaml for use in subsequent steps.
 
    ```bash
@@ -145,7 +145,7 @@
 
 {% elsif include.init == "openshift" %}
 
-1. Download the {{site.prodname}} manifest.
+1. Download the {{site.tseeprodname}} manifest.
 
    ```bash
    curl --compressed -O {{site.url}}/{{page.version}}/getting-started/openshift/cnx-api.yaml
@@ -154,7 +154,7 @@
 {% endif %}
 
 {% if include.upgrade %}
-   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need 
+   > **Note**: If you are upgrading from {{site.tseeprodname}} v2.2 or earlier you will need 
    > to [upgrade to version 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee) before following
    > these intructions.
    {: .alert .alert-info}
@@ -162,7 +162,7 @@
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
 
-1. Generate TLS certificates for the {{site.prodname}} API server to use. The following example creates a self-signed certificate
+1. Generate TLS certificates for the {{site.tseeprodname}} API server to use. The following example creates a self-signed certificate
    using OpenSSL, but you may generate them using any X.509-compatible tool or obtain them from your organization's Certificate Authority.
 
    ```bash
@@ -176,7 +176,7 @@
 
    > **Note**: The above example certificate is valid for 10 years. You are encouraged to choose a shorter
    > window of validity (365 days is typical), but note that you *must* rotate the certificate before it expires
-   > or the {{site.prodname}} API Server will no longer function correctly.
+   > or the {{site.tseeprodname}} API Server will no longer function correctly.
    {: .alert .alert-info}
 
 1. Copy the certificates into the `cnx-api.yaml` file as base64 encoded strings. You will find three places `cnx-api.yaml`
@@ -196,7 +196,7 @@
    > use the Certificate Authority bundle for the third replacement.
    {: .alert .alert-info}
 
-1. Apply the manifest to install the {{site.prodname}} API server.
+1. Apply the manifest to install the {{site.tseeprodname}} API server.
 
    ```bash
    {{cli}} apply -f cnx-api.yaml

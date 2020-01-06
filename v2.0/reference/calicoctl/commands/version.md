@@ -41,4 +41,4 @@ Cluster Type:      KDD,hosted
 ## See also
 
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
+   the {{site.tseeprodname}} datastore.

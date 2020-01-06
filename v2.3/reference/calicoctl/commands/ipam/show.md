@@ -78,4 +78,4 @@ Description:
 ## See also
 
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
+   the {{site.tseeprodname}} datastore.

@@ -1,4 +1,4 @@
-# This section configures the Tigera Secure Prometheus deployment.
+# This section configures the Calico Enterprise Prometheus deployment.
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:

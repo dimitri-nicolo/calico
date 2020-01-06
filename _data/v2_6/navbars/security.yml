@@ -143,7 +143,7 @@ toc:
   - title: Configure compliance reporting for managed cloud providers
     path: /security/compliance-managed-cloud
 
-- title: Securing Tigera Secure EE component communications
+- title: Securing Calico Enterprise component communications
   section:
   - title: Provide TLS certificates for the manager UI
     path: /security/comms/manager-tls
@@ -166,7 +166,7 @@ toc:
   - title: Scheduling to well-known nodes
     path: /security/comms/reduce-nodes
 
-  - title: Securing Tigera Secure EE Prometheus endpoints
+  - title: Securing Calico Enterprise Prometheus endpoints
     path: /security/comms/secure-metrics
 
   - title: Securing BGP sessions
@@ -189,5 +189,5 @@ toc:
   - title: Kubernetes policy, advanced tutorial
     path:  /security/tutorials/kubernetes-policy-advanced
 
-  - title: Tigera Secure EE policy tutorial
+  - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx

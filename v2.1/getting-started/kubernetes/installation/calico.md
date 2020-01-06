@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## Before you begin
 
-- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
+- Ensure that you have a Kubernetes cluster that meets the {{site.tseeprodname}}
   [system requirements](../requirements). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
@@ -18,11 +18,11 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy and networking
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} for policy and networking
 
 ### Selecting your datastore type and number of nodes
 
-The procedure differs according to the type of datastore you want {{site.prodname}}
+The procedure differs according to the type of datastore you want {{site.tseeprodname}}
 to use and the number of nodes. Refer to the section that matches your desired
 datastore type and number of nodes.
 
@@ -32,15 +32,15 @@ datastore type and number of nodes.
 
 - [Kubernetes API datastore—more than 50 nodes](#installing-with-the-kubernetes-api-datastoremore-than-50-nodes) (beta)
 
-> **Note**: {{site.prodname}} networking with the Kubernetes API datastore
-> is beta because it does not yet support {{site.prodname}} IPAM. It uses
+> **Note**: {{site.tseeprodname}} networking with the Kubernetes API datastore
+> is beta because it does not yet support {{site.tseeprodname}} IPAM. It uses
 > `host-local` IPAM with Kubernetes pod CIDR assignments instead.
 {: .alert .alert-info}
 
 ### Installing with the etcd datastore
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -50,7 +50,7 @@ datastore type and number of nodes.
    > [view the manifest in your browser](rbac.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -85,7 +85,7 @@ datastore type and number of nodes.
    {: .alert .alert-success}
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -95,7 +95,7 @@ datastore type and number of nodes.
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -123,7 +123,7 @@ datastore type and number of nodes.
    {: .alert .alert-success}
 
 1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
+   configure the roles and bindings that {{site.tseeprodname}} requires.
 
    ```
    kubectl apply -f \
@@ -133,7 +133,7 @@ datastore type and number of nodes.
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
+1. Download the {{site.tseeprodname}} networking manifest for the Kubernetes API datastore.
 
    ```bash
    curl \

@@ -10,7 +10,7 @@ Tiers are used to divide these policies into groups of different priorities.  Th
 are ordered within a Tier: the additional hierarchy of Tiers provides more flexibility
 because the `Pass` `action` in a Rule jumps to the next Tier.  Some example use cases for this are.
 - Allowing privileged users to define security policy that takes precedence over other users.
-- Translating hierarchies of physical firewalls directly into {{site.prodname}} policy.
+- Translating hierarchies of physical firewalls directly into {{site.tseeprodname}} policy.
 
 For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
@@ -23,7 +23,7 @@ may be used to specify the resource type on the CLI:
 
 ### How Policy Is Evaluated
 
-When a new connection is processed by {{site.prodname}}, each tier that contains a policy that applies to the endpoint processes the packet.
+When a new connection is processed by {{site.tseeprodname}}, each tier that contains a policy that applies to the endpoint processes the packet.
 Tiers are sorted by their `order` - smallest number first.
 
 Policies in each Tier are then processed in order.
@@ -60,4 +60,4 @@ spec:
 |------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+-----------------------+---------|
 | order      | (Optional) Indicates priority of this Tier, with lower order taking precedence.  No value indicates highest order (lowest precedence)                             |                 | float                 |   `nil` (highest order)   |
 
-All Policies created by {{site.prodname}} orchestrator integrations are created in the default (last) Tier.
+All Policies created by {{site.tseeprodname}} orchestrator integrations are created in the default (last) Tier.

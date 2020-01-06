@@ -3,7 +3,7 @@ title: Flow logs
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/flow
 ---
 
-{{site.prodname}} pushes the following data up to Elasticsearch. The following table
+{{site.tseeprodname}} pushes the following data up to Elasticsearch. The following table
 details the key/value pairs in the JSON blob, including their
 [Elasticsearch datatype](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html).
 This information should assist you in constructing queries.
@@ -13,7 +13,7 @@ This information should assist you in constructing queries.
 | --------------------- | ----------------- | ----------- |
 | `start_time`          | date              | When the collection of the log began in UNIX timestamp format. |
 | `end_time`            | date              | When the collection of the log concluded in UNIX timestamp format. |
-| `action`              | keyword           | {::nomarkdown}<p>&#x25cf;&nbsp;<code>allow</code>: {{site.prodname}} accepted the flow.<br>&#x25cf;&nbsp;<code>deny</code>: {{site.prodname}} denied the flow.</p>{:/}  |
+| `action`              | keyword           | {::nomarkdown}<p>&#x25cf;&nbsp;<code>allow</code>: {{site.tseeprodname}} accepted the flow.<br>&#x25cf;&nbsp;<code>deny</code>: {{site.tseeprodname}} denied the flow.</p>{:/}  |
 | `bytes_in`            | long              | Number of incoming bytes since the last export. |
 | `bytes_out`           | long              | Number of outgoing bytes since the last export. |
 | `dest_ip`             | ip                | The IP address of the destination pod. |

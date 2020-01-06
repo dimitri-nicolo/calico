@@ -3,7 +3,7 @@ title: Enabling integration with AWS security groups (optional)
 canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/aws-sg-integration
 ---
 
-AWS security group integration for {{site.prodname}} allows you to combine AWS security groups with network policy to enforce granular access control between Kubernetes pods and AWS VPC resources. See the [AWS security group integration overview](/{{page.version}}/usage/aws-security-group-integration/) for more details on how to configure security groups in your VPC.
+AWS security group integration for {{site.tseeprodname}} allows you to combine AWS security groups with network policy to enforce granular access control between Kubernetes pods and AWS VPC resources. See the [AWS security group integration overview](/{{page.version}}/usage/aws-security-group-integration/) for more details on how to configure security groups in your VPC.
 
 ### Requirements
 
@@ -250,7 +250,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
    > for more information on the configuration options.
    {: .alert .alert-info}
 
-1. Restart the {{site.prodname}} components.
+1. Restart the {{site.tseeprodname}} components.
 
    If your cluster does not have production workloads yet feel free to restart
    all the components without concern. If your cluster has production workloads

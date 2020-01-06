@@ -20,7 +20,7 @@ This how-to guide uses the following features:
 
 By default, the {{site.prodname}} log storage uses self-signed certificates on connections. To provide TLS certificates,
 get the certificate and key pair for the {{site.prodname}} log storage using any X.509-compatible tool or from your organization's 
-Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `tigera-secure-es-http.tigera-elasticsearch.svc`.
+Certificate Authority. The certificate must have Common Name or a Subject Alternate Name of `calico-enterprise-es-http.tigera-elasticsearch.svc`.
 
 ### How to
 
@@ -29,16 +29,16 @@ Certificate Authority. The certificate must have Common Name or a Subject Altern
 To provide TLS certificates for use by {{site.prodname}} components during deployment, you must create a secret before applying the 'custom-resource.yaml' or before creating the LogStorage resource. Use the following command to create a secret:
 
 ```bash
-kubectl create secret generic tigera-secure-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file>
+kubectl create secret generic calico-enterprise-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file>
 ```
 
 To update existing certificates, run the following command:
 
 ```bash
-kubectl create secret generic tigera-secure-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
+kubectl create secret generic calico-enterprise-elasticsearch-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
 ```
 
 > **Note**: If the {{site.prodname}} log storage already exists, you must manually delete the log storage pods one by one
-after updating the secret. These pods will be in the `tigera-elasticsearch` namespace with the prefix, `tigera-secure`.
+after updating the secret. These pods will be in the `tigera-elasticsearch` namespace with the prefix, `calico-enterprise`.
 Other {{site.prodname}} components will not be unable to communicate with log storage until the pods are restarted.
 {: .alert .alert-info}

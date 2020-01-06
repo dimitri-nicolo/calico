@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/federation/aws
 ## Overview
 
 This section gives a brief overview of a example AWS cluster peered with an on-premise cluster running on physical hardware.
-Both clusters are running {{site.prodname}}. The clusters have federated identity configured, with each cluster
+Both clusters are running {{site.tseeprodname}}. The clusters have federated identity configured, with each cluster
 referencing the other using the Remote Cluster Configuration resource. See [Configuring access to remote clusters](./configure-rcc) for
 more details.
 
@@ -32,7 +32,7 @@ with an on-premise cluster.](/images/federation/aws-rcc.svg)
 - Security group for the worker nodes has:
   - Rule to allow traffic from the peered networks
   - Other rules required for settings up VPN peering (refer to the AWS docs for details)
-- The {{site.prodname}} configuration for this deployment has:
+- The {{site.tseeprodname}} configuration for this deployment has:
   - No IP pools (SNAT is handled by the NAT gateway; IPIP is disabled)
   - no BGP configuration since BGP peering is handled by AWS
   - a Remote Cluster Configuration resource to reference the on-premise cluster
@@ -63,7 +63,7 @@ spec:
 In this example the cluster is installed on real hardware and node and pod IPs are routable,
 using an edge VPN router to peer with the AWS cluster.
 
-The {{site.prodname}} configuration for this deployment has:
+The {{site.tseeprodname}} configuration for this deployment has:
 - IP Pool resource configured for the on-premise IP assignment (IPIP is disabled)
 - If the IP Pool has Outgoing NAT enabled then an IP Pool covering the AWS cluster VPC should be added, with `disabled`
   set to `true`. This pool would not be used for IP allocations, but would instruct Felix to not perform SNAT for traffic
@@ -72,5 +72,5 @@ The {{site.prodname}} configuration for this deployment has:
   - Configure the default BGP Configuration resource to disable node-to-node mesh.
   - Configure a global BGP Peer resource to peer with the VPN Router.
 - A Remote Cluster Configuration resource to reference the AWS cluster
-- The {{site.prodname}} Federated Services Controller is installed to provide discovery of the AWS cluster
+- The {{site.tseeprodname}} Federated Services Controller is installed to provide discovery of the AWS cluster
   services.

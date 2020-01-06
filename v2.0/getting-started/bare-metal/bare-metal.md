@@ -3,22 +3,22 @@ title: Using CNX to Secure Host Interfaces
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/bare-metal
 ---
 
-This guide describes how to use {{site.prodname}} to secure the network interfaces
+This guide describes how to use {{site.tseeprodname}} to secure the network interfaces
 of the host itself (as opposed to those of any container/VM workloads
 that are present on the host). We call such interfaces "host endpoints",
 to distinguish them from "workload endpoints" (such as containers or VMs).
 
-{{site.prodname}} supports the same rich security policy model for host endpoints (host
+{{site.tseeprodname}} supports the same rich security policy model for host endpoints (host
 endpoint policy) that it supports for workload endpoints. Host endpoints can
 have labels, and their labels are in the same "namespace" as those of workload
 endpoints. This allows security rules for either type of endpoint to refer to
 the other type (or a mix of the two) using labels and selectors.
 
-{{site.prodname}} does not support setting IPs or policing MAC addresses for host
+{{site.tseeprodname}} does not support setting IPs or policing MAC addresses for host
 interfaces, it assumes that the interfaces are configured by the
 underlying network fabric.
 
-{{site.prodname}} distinguishes workload endpoints from host endpoints by a configurable
+{{site.tseeprodname}} distinguishes workload endpoints from host endpoints by a configurable
 prefix.  Unless you happen to have host interfaces whose name matches the
 default for that prefix (`cali`), you won't need to change it.  In case you do,
 see the `InterfacePrefix` configuration value at [Configuring
@@ -26,13 +26,13 @@ Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
 Interfaces that start with a value listed in `InterfacePrefix` are assumed to
 be workload interfaces.  Others are treated as host interfaces.
 
-{{site.prodname}} blocks all traffic to/from workload interfaces by default;
+{{site.tseeprodname}} blocks all traffic to/from workload interfaces by default;
 allowing traffic only if the interface is known and policy is in place.
-However, for host endpoints, {{site.prodname}} is more lenient; it only polices
+However, for host endpoints, {{site.tseeprodname}} is more lenient; it only polices
 traffic to/from interfaces that it's been explicitly told about. Traffic
 to/from other interfaces is left alone.
 
-You can use host endpoint policy to secure a NAT gateway or router. {{site.prodname}}
+You can use host endpoint policy to secure a NAT gateway or router. {{site.tseeprodname}}
 supports selector-based policy when running on a gateway or router, allowing for
 rich, dynamic security policy based on the labels attached to your host endpoints.
 
@@ -54,7 +54,7 @@ See [GlobalNetworkPolicy spec]({{site.baseurl}}/{{page.version}}/reference/calic
 
 ## Installation overview
 
-To make use of {{site.prodname}}'s host endpoint support, you will need to complete
+To make use of {{site.tseeprodname}}'s host endpoint support, you will need to complete
 the following steps.
 
 1.  [Install the Felix daemon on each host](bare-metal-install), then return to this
@@ -64,16 +64,16 @@ the following steps.
 1.  [Initialize the etcd database](#initializing-the-etcd-database).
 1.  [Add policy to allow basic connectivity](#creating-basic-connectivity-and-policy).
 1.  [Create host endpoint objects in etcd](#creating-host-endpoint-objects) for each interface you want
-    {{site.prodname}} to police. (In a later
+    {{site.tseeprodname}} to police. (In a later
     release, we plan to support interface templates to remove the need to explicitly
     configure every interface).
-1.  [Insert policy into etcd](#creating-more-security-policy) for {{site.prodname}} to apply.
+1.  [Insert policy into etcd](#creating-more-security-policy) for {{site.tseeprodname}} to apply.
 1.  [Decide whether to disable "failsafe SSH/etcd" access](#failsafe-rules).
 
 
 ## Creating an etcd cluster
 
-If you haven't already created an etcd cluster for your {{site.prodname}}
+If you haven't already created an etcd cluster for your {{site.tseeprodname}}
 deployment, you'll need to create one.
 
 To create a single-node etcd cluster for testing, download an etcd v3.x
@@ -102,7 +102,7 @@ node instance.
 If you are self-installed you should configure a `node` resource for each
 host running Felix.  In this case, the database is initialized after
 creating the first `node` resource.  For a deployment that does not include
-the {{site.prodname}}/BGP integration, the specification of a node resource just requires
+the {{site.tseeprodname}}/BGP integration, the specification of a node resource just requires
 the name of the node;  for most deployments this will be the same as the
 hostname.
 
@@ -122,7 +122,7 @@ transition from periodic notifications that Felix is in state
 ## Creating basic connectivity and policy
 
 When a host endpoint is added, if there is no security policy for that
-endpoint, {{site.prodname}} will default to denying traffic to/from that endpoint,
+endpoint, {{site.tseeprodname}} will default to denying traffic to/from that endpoint,
 except for traffic that is allowed by the [failsafe rules](#failsafe-rules).
 
 While the [failsafe rules](#failsafe-rules) provide protection against removing all
@@ -135,7 +135,7 @@ connectivity to a host:
     required; for example, your network may rely on allowing ICMP,
     or DHCP.
 
-Therefore, we recommend creating a failsafe {{site.prodname}} security policy that
+Therefore, we recommend creating a failsafe {{site.tseeprodname}} security policy that
 is tailored to your environment. The example command below shows one
 example of how you might do that; the command uses `calicoctl` to create a single
 policy resource, which:
@@ -211,7 +211,7 @@ Once you have such a policy in place, you may want to disable the
 > label `endpoint_type = management` and then use selector
 > `endpoint_type == "management"`
 >
-> If you are using {{site.prodname}} for networking workloads, you should add
+> If you are using {{site.tseeprodname}} for networking workloads, you should add
 > inbound and outbound rules to allow BGP:  add an ingress and egress rule
 > to allow TCP traffic to destination port 179.
 {: .alert .alert-info}
@@ -219,14 +219,14 @@ Once you have such a policy in place, you may want to disable the
 
 ## Creating host endpoint objects
 
-For each host endpoint that you want {{site.prodname}} to secure, you'll need to
+For each host endpoint that you want {{site.tseeprodname}} to secure, you'll need to
 create a host endpoint object in etcd.  Use the `calicoctl create` command
 to create a host endpoint resource (`HostEndpoint`).
 
 There are two ways to specify the interface that a host endpoint should
 refer to. You can either specify the name of the interface or its
 expected IP address. In either case, you'll also need to know the name given to
-the {{site.prodname}} node running on the host that owns the interface; in most cases this
+the {{site.tseeprodname}} node running on the host that owns the interface; in most cases this
 will be the same as the hostname of the host.
 
 For example, to secure the interface named `eth0` with IP 10.0.0.1 on
@@ -272,7 +272,7 @@ key/value pairs that can be used in selector expressions.
 
 <!-- TODO(smc) data-model: Link to new data model docs. -->
 
-> **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the
+> **Important**: When rendering security rules on other hosts, {{site.tseeprodname}} uses the
 > `expectedIPs` field to resolve label selectors
 > to IP addresses. If the `expectedIPs` field is omitted
 > then security rules that use labels will fail to match
@@ -302,7 +302,7 @@ After you create host endpoint objects, Felix will start policing
 traffic to/from that interface. If you have no policy or profiles in
 place, then you should see traffic being dropped on the interface.
 
-> **Note**: By default, {{site.prodname}} has a failsafe in place that whitelists certain
+> **Note**: By default, {{site.tseeprodname}} has a failsafe in place that whitelists certain
 > traffic such as ssh. See below for more details on
 > disabling/configuring the failsafe rules.
 {: .alert .alert-info}
@@ -356,15 +356,15 @@ EOF
 ## Failsafe rules
 
 To avoid completely cutting off a host via incorrect or malformed
-policy, {{site.prodname}} has a failsafe mechanism that keeps various pinholes open
+policy, {{site.tseeprodname}} has a failsafe mechanism that keeps various pinholes open
 in the firewall.
 
-By default, {{site.prodname}} keeps port 22 inbound open on *all* host endpoints,
+By default, {{site.tseeprodname}} keeps port 22 inbound open on *all* host endpoints,
 which allows access to ssh; outbound UDP port 53 for DNS queries,
 inbound UDP port 68 and outbound UDP 67 for DHCP; as well as inbound and outbound
 communications to ports 179 ( Calico BGP peering ports),
 2379, 2380 (etcd's default ports), and to ports 6666, 6667 (etcd's ports
-as deployed by {{site.prodname}}'s self-hosted Kubernetes manifests).
+as deployed by {{site.tseeprodname}}'s self-hosted Kubernetes manifests).
 
 The lists of failsafe ports can be configured via the configuration parameters
 described in [Configuring
@@ -395,7 +395,7 @@ would be a server, running directly on a host, that accepts a very high rate of
 shortlived connections, such as `memcached`.  On Linux, if those connections
 are tracked, the conntrack table can fill up and then Linux may drop packets
 for further connection attempts, meaning that those newer connections will
-fail.  If you are using {{site.prodname}} to secure that server's host, you can avoid this
+fail.  If you are using {{site.tseeprodname}} to secure that server's host, you can avoid this
 problem by defining a policy that allows access to the server's ports and is
 marked as `doNotTrack`.
 
@@ -417,7 +417,7 @@ endpoint.
 
 Policy for host endpoints can be marked as `preDNAT`.  This means that rules in
 that policy should be applied before any DNAT (Destination Network Address
-Translation), which is useful if it is more convenient to specify {{site.prodname}} policy
+Translation), which is useful if it is more convenient to specify {{site.tseeprodname}} policy
 in terms of a packet's original destination IP address and port, than in terms
 of that packet's destination IP address and port after it has been DNAT'd.
 
@@ -429,9 +429,9 @@ number on that pod (which is usually different from the NodePort).
 
 As NodePorts are the externally advertised way of connecting to services (and a
 NodePort uniquely identifies a service, whereas an internal port number may
-not), it makes sense to express {{site.prodname}} policy to expose or secure particular
+not), it makes sense to express {{site.tseeprodname}} policy to expose or secure particular
 Services in terms of the corresponding NodePorts.  But that is only possible if
-the {{site.prodname}} policy is applied before DNAT changes the NodePort to something
+the {{site.tseeprodname}} policy is applied before DNAT changes the NodePort to something
 else. Hence this kind of policy needs `preDNAT` set to `true`.
 
 In addition to being applied before any DNAT, the enforcement of pre-DNAT
@@ -478,7 +478,7 @@ no Ingress policies with `applyOnForward: true` that apply to that host endpoint
 allowed.  If there are `applyOnForward: true` policies that select the host endpoint and direction,
 but no rules in the policies allow the traffic, the traffic is denied.
 
-This is different from how {{site.prodname}} treats traffic to or from a local process:
+This is different from how {{site.tseeprodname}} treats traffic to or from a local process:
 if a host endpoint is configured and there are no policies that select the host endpoint in
 the traffic direction, or no rules that allow the traffic, the traffic is denied.
 
@@ -489,7 +489,7 @@ endpoint policy allows the traffic, but workload endpoint policy denies it, the 
 Traffic that ingresses one host endpoint, is forwarded, and egresses host endpoint must
 pass ingress policy on the first host endpoint and egress policy on the second host endpoint.
 
-> **Note**: {{site.prodname}}'s handling of host endpoint policy has changed, since before
+> **Note**: {{site.tseeprodname}}'s handling of host endpoint policy has changed, since before
 > Calico v3.0, in two ways:
 > - It will not apply at all to forwarded traffic, by default. If you have an existing
 > policy and you want it to apply to forwarded traffic, you need to add `applyOnForward: true` to the policy.
@@ -789,20 +789,20 @@ and then using `host-endpoint=='<special-value>'` as the selector of the
 
 ### A note about conntrack
 
-{{site.prodname}} uses Linux's connection tracking ('conntrack') as an important
-optimization to its processing.  It generally means that {{site.prodname}} only needs to
+{{site.tseeprodname}} uses Linux's connection tracking ('conntrack') as an important
+optimization to its processing.  It generally means that {{site.tseeprodname}} only needs to
 check its policies for the first packet in an allowed flow—between a pair of
 IP addresses and ports—and then conntrack automatically allows further
-packets in the same flow, without {{site.prodname}} rechecking every packet.
+packets in the same flow, without {{site.tseeprodname}} rechecking every packet.
 
-This can, however, make it look like a {{site.prodname}} policy is not working as it
+This can, however, make it look like a {{site.tseeprodname}} policy is not working as it
 should, if policy is changed to disallow a flow that was previously allowed.
 If packets were recently exchanged on the previously allowed flow, and so there
 is conntrack state for that flow that has not yet expired, that conntrack state
 will allow further packets between the same IP addresses and ports, even after
-the {{site.prodname}} policy has been changed.
+the {{site.tseeprodname}} policy has been changed.
 
-Per {{site.prodname}}'s current implementation, there are two workarounds for this:
+Per {{site.tseeprodname}}'s current implementation, there are two workarounds for this:
 
 - Somehow ensure that no further packets flow between the relevant IP
    addresses and ports until the conntrack state has expired (typically about
@@ -811,4 +811,4 @@ Per {{site.prodname}}'s current implementation, there are two workarounds for th
 - Use the 'conntrack' tool to delete the relevant conntrack state; for example
    `conntrack -D -p tcp --orig-port-dst 80`.
 
-Then you should observe that the new {{site.prodname}} policy is enforced for new packets.
+Then you should observe that the new {{site.tseeprodname}} policy is enforced for new packets.

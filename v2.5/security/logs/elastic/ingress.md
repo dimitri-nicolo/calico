@@ -5,12 +5,12 @@ canonical_url: https://docs.tigera.io/v2.5/security/logs/elastic/ingress
 
 ## Big Picture
 
-Use {{site.prodname}} flow logs to trace external IP addresses that access
+Use {{site.tseeprodname}} flow logs to trace external IP addresses that access
 clusters.
 
 ## Value
 
-Anomaly detection is key to threat protection. {{site.prodname}} not only
+Anomaly detection is key to threat protection. {{site.tseeprodname}} not only
 captures North-South ingress traffic in flow logs, but also external IP
 addresses that access clusters.
 
@@ -36,9 +36,9 @@ traffic, but not very helpful on their own for ingress because traffic
 typically goes through intermediaries such as load balancers and ingress
 proxies.
 
-To expose external IP addresses in flow logs, {{site.prodname}} must also
+To expose external IP addresses in flow logs, {{site.tseeprodname}} must also
 track these intermediaries that function between the internet and the
-cluster. When configured, {{site.prodname}} flow logs for traffic that has
+cluster. When configured, {{site.tseeprodname}} flow logs for traffic that has
 traversed load balancers and web proxies will include both the source IP of
 the intermediary and the original source IP of the connection.
 
@@ -76,7 +76,7 @@ The following ingress controllers are supported:
 
 The following are required before starting to configure flow logs to trace external
 IP addresses:
-* {{site.prodname}} flow logs are running **with flow log aggregation level of 1 or 0**.
+* {{site.tseeprodname}} flow logs are running **with flow log aggregation level of 1 or 0**.
   See [Felix configuration documentation for flowLogsFileAggregationKindForAllowed](https://docs.tigera.io/v2.5/reference/resources/felixconfig#spec)
   for more details.
 * Ingress controllers/routers are running

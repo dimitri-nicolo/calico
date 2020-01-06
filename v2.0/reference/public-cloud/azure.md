@@ -3,7 +3,7 @@ title: Deploying CNX on Azure
 no_canonical: true
 ---
 
-{{site.prodname}} in [Microsoft Azure][Azure]{:target="_blank"} is supported in [policy-only][PolicyMode] mode. {{site.prodname}} IPAM needs to be configured in host-local mode and used in conjunction with Kubernetes pod CIDR assignments. Additional option would be to use [Canal][Canal] - {{site.prodname}} with flannel networking.
+{{site.tseeprodname}} in [Microsoft Azure][Azure]{:target="_blank"} is supported in [policy-only][PolicyMode] mode. {{site.tseeprodname}} IPAM needs to be configured in host-local mode and used in conjunction with Kubernetes pod CIDR assignments. Additional option would be to use [Canal][Canal] - {{site.tseeprodname}} with flannel networking.
 
 #### Routing Traffic
 
@@ -25,7 +25,7 @@ To enable automatic pod CIDR assignment make sure Kubernetes controller manager 
 and a proper subnet in the `cluster-cidr` parameter. Make sure that the selected pod's subnet is a part of your Azure virtual network IP range.
 You also must have Kubernetes Azure cloud provider configured with your routing table name in configuration file.
 
-#### Why doesn't Azure support {{site.prodname}} networking?
+#### Why doesn't Azure support {{site.tseeprodname}} networking?
 
 Azure does not allow BGP, IPIP traffic, and traffic with unknown source IPs.
 

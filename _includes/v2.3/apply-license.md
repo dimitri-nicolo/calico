@@ -45,4 +45,4 @@
    calicoctl get license
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr).
+1. Continue to [Installing the {{site.tseeprodname}} Manager](#install-cnx-mgr).

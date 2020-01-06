@@ -2,24 +2,24 @@
 title: Installing Tigera Secure EE on OpenShift
 ---
 
-Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
+Installation of {{site.tseeprodname}} in OpenShift is integrated in openshift-ansible.
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
 ## Before you begin
 
-- Ensure that you meet the {{site.prodname}} [system requirements](/{{page.version}}/getting-started/openshift/requirements).
+- Ensure that you meet the {{site.tseeprodname}} [system requirements](/{{page.version}}/getting-started/openshift/requirements).
 
 - Ensure that you have the [private registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
   and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} and OpenShift
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} and OpenShift
 
 ### Edit inventory file
 
-To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
+To install {{site.tseeprodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
 
   - `os_sdn_network_plugin_name=cni`
@@ -69,10 +69,10 @@ etcd1
 
 ### Execute Ansible provisioning script
 
-You are now ready to execute the Ansible provision which will install {{site.prodname}}. Note that by default,
-{{site.prodname}} will connect to the same etcd that OpenShift uses and distribute etcd's
-certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
-such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
+You are now ready to execute the Ansible provision which will install {{site.tseeprodname}}. Note that by default,
+{{site.tseeprodname}} will connect to the same etcd that OpenShift uses and distribute etcd's
+certs to each node. If you would prefer {{site.tseeprodname}} not connect to the same etcd as OpenShift, you may modify the install
+such that {{site.tseeprodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
@@ -85,7 +85,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
    ```
 
 1. To make the following commands easier to copy and paste, set an environment variable called
-   `CNX_MANAGER_ADDR` containing the address of your {{site.prodname}} Manager web interface.
+   `CNX_MANAGER_ADDR` containing the address of your {{site.tseeprodname}} Manager web interface.
    An example follows.
 
    ```bash

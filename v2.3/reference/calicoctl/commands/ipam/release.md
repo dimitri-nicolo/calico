@@ -52,4 +52,4 @@ calicoctl ipam release --ip=192.168.1.2
 ## See also
 
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
+   the {{site.tseeprodname}} datastore.

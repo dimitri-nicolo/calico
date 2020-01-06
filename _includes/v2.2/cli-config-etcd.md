@@ -22,7 +22,7 @@
 > - Previous versions of `{{include.cli}}` supported `ETCD_SCHEME` and `ETC_AUTHORITY` environment
 >   variables as a mechanism for specifying the etcd endpoints. These variables are
 >   no longer supported. Use `ETCD_ENDPOINTS` instead.
-> - In kubeadm deployments, {{site.prodname}} is not configured to use the etcd run by kubeadm
+> - In kubeadm deployments, {{site.tseeprodname}} is not configured to use the etcd run by kubeadm
 >   on the Kubernetes master. Instead, it launches its own instance of etcd as a pod,
 >   available at `http://10.96.232.136:6666`. Ensure you are connecting to the correct etcd
 >   or you will not see any of the expected data.

@@ -6,13 +6,13 @@ canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/view
 ## About accessing logs
 
 You can access the Elasticsearch logs from:
-- [{{site.prodname}} Manager](#view-in-mgr)
+- [{{site.tseeprodname}} Manager](#view-in-mgr)
 - [Kibana](#accessing-logs-from-kibana)
 - [Elasticsearch API](#accessing-logs-from-the-elasticsearch-api)
 
-## <a name="view-in-mgr"></a>Viewing logs in the {{site.prodname}} Manager
+## <a name="view-in-mgr"></a>Viewing logs in the {{site.tseeprodname}} Manager
 
-To view flow log visualizations from the {{site.prodname}} Manager, open the **Flow Visualizations** pane
+To view flow log visualizations from the {{site.tseeprodname}} Manager, open the **Flow Visualizations** pane
 and enter a query. An example of a flow log visualization for the query
 `Filter: Source type: List [ "net", "ns", "wep", "hep" ], Destination type: List [ "net", "ns", "wep", "hep" ], Time range: 24` follows.
 
@@ -20,7 +20,7 @@ and enter a query. An example of a flow log visualization for the query
 
 ## Accessing logs from Kibana
 
-You can access Kibana by clicking the **Kibana** button in the {{site.prodname}} Manager.
+You can access Kibana by clicking the **Kibana** button in the {{site.tseeprodname}} Manager.
 
 In quickstart, demonstration, and proof of concept clusters, you can access the Kibana instance on any node
 in your cluster on port 30601.

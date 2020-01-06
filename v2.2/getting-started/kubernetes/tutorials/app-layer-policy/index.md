@@ -14,7 +14,7 @@ and [enable application layer policy]({{site.baseurl}}/{{page.version}}/getting-
 
 ### Install the demo application
 
-We will use a simple microservice application to demonstrate {{site.prodname}} application layer
+We will use a simple microservice application to demonstrate {{site.tseeprodname}} application layer
 policy.  The [YAO Bank] application creates a customer-facing web application, a microservice that
 serves up account summaries, and an [etcd] datastore.
 
@@ -70,7 +70,7 @@ You should see output similar to the following.
 Notice that Istio CA will have created a secret of type `istio.io/key-and-cert` for each
 service account.  These keys and X.509 certificates are used to cryptographically authenticate
 traffic in the Istio service mesh, and the corresponding service account identities are used by
-{{site.prodname}} in authorization policy.
+{{site.tseeprodname}} in authorization policy.
 
 ### Determining Ingress IP & Port
 
@@ -110,7 +110,7 @@ time you may see 404 or 500 errors.
 
 ### The need for policy
 
-Although {{site.prodname}} & Istio are running in the cluster, we have not defined any authorization
+Although {{site.tseeprodname}} & Istio are running in the cluster, we have not defined any authorization
 policy. Istio was configured to mutually authenticate traffic between the pods in your application,
 so only connections with Istio-issued certificates are allowed, and all inter-pod traffic is encrypted with TLS.  That's already a big step in the right direction.
 
@@ -191,7 +191,7 @@ Return to your web browser and refresh to confirm the new balance.
 
 #### Policy
 
-We can mitigate both of the above deficiencies with a {{site.prodname}} policy.
+We can mitigate both of the above deficiencies with a {{site.tseeprodname}} policy.
 
     wget {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/app-layer-policy/manifests/30-policy.yaml
     kubectl create -f 30-policy.yaml
@@ -282,10 +282,10 @@ whether it succeeds.
 
 You should get no response, and refreshing your browser should not show an increased balance.
 
-You might wonder how {{site.prodname}} was able to detect and prevent this attack—the attacker was
+You might wonder how {{site.tseeprodname}} was able to detect and prevent this attack—the attacker was
 able to steal the keys which prove identity in our system.  This highlights the value of multi-layer
 authorization checks.  Although our attack pod had the keys to fool the X.509 certificate check,
-{{site.prodname}} also monitors the Kubernetes API Server for which IP addresses are associated with which
+{{site.tseeprodname}} also monitors the Kubernetes API Server for which IP addresses are associated with which
 service accounts.  Since our attack pod has an IP not associated with the account summary service
 account we disallow the connection.
 

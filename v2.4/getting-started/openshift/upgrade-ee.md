@@ -10,23 +10,23 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/upgrade-ee
   If not, follow the [Calico OpenShift installation documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/getting-started/openshift/installation)
   before continuing.
 
-- Ensure that you have satisfied all of the {{site.prodname}} prerequisites listed
+- Ensure that you have satisfied all of the {{site.tseeprodname}} prerequisites listed
   by the [OpenShift installation documentation]({{site.url}}/{{page.version}}/getting-started/openshift/installation#before-you-begin).
 
-## Upgrading Calico to {{site.prodname}}
+## Upgrading Calico to {{site.tseeprodname}}
 
 ### Upgrading by rerunning OpenShift Ansible
 
-The simplest way to upgrade from Calico to {{site.prodname}} is by following the
+The simplest way to upgrade from Calico to {{site.tseeprodname}} is by following the
 [OpenShift installation documentation]({{site.url}}/{{page.version}}/getting-started/openshift/installation)
 to reuse the Ansible playbooks. This will overwrite your Calico installation with
-{{site.prodname}}. It will also reinstance your OpenShift installation, which will
+{{site.tseeprodname}}. It will also reinstance your OpenShift installation, which will
 make your cluster unavailable during the installation.
 
 ### Upgrading through a custom playbook
 
 If you do not wish to rerun the OpenShift installation, you can also use
-a custom playbook in order to rerun the {{site.prodname}}-specific sections of 
+a custom playbook in order to rerun the {{site.tseeprodname}}-specific sections of 
 the OpenShift install. First, make sure that you have properly edited your
 [inventory file]({{site.url}}/{{page.version}}/getting-started/openshift/installation#edit-inventory-file).
 

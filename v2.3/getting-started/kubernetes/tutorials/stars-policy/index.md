@@ -87,7 +87,7 @@ kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutor
 The client can now access the frontend, but not the backend.  Neither the frontend nor the backend
 can initiate connections to the client.  The frontend can still access the backend.
 
-To use {{site.prodname}} to enforce egress policy on Kubernetes pods, see [the advanced policy demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/advanced-policy).
+To use {{site.tseeprodname}} to enforce egress policy on Kubernetes pods, see [the advanced policy demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/advanced-policy).
 
 ### 6) (Optional) Clean up the demo environment.
 

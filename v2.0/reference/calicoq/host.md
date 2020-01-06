@@ -3,7 +3,7 @@ title: calicoq host
 ---
 
 `calicoq host <hostname>` shows you the endpoints that are hosted on
-`<hostname>` and all the {{site.prodname}} policies and profiles that relate to those
+`<hostname>` and all the {{site.tseeprodname}} policies and profiles that relate to those
 endpoints.  It is equivalent to running `calicoq endpoint <endpoint-id>` for
 each `<endpoint-id>` that is hosted on `<hostname>`.
 
@@ -53,4 +53,4 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
    the related `calicoq endpoint` command.
 -  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
    [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-   for more information about the {{site.prodname}} policy model.
+   for more information about the {{site.tseeprodname}} policy model.

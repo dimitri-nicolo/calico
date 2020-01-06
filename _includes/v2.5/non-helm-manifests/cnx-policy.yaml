@@ -1,4 +1,4 @@
-# {{site.prodname}} Version {{site.data.versions[page.version].first.title}}
+# {{site.tseeprodname}} Version {{site.data.versions[page.version].first.title}}
 # This file contains Tigera Secure EE tiered security policy to control connectivity to Tigera Secure EE Manager and Tigera Secure EE API Server.
 # See the documentation for a full reference on tiered security policy.
 

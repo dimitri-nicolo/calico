@@ -3,36 +3,36 @@ title: Overview of Calico for DC/OS
 no_canonical: true
 ---
 
-The following information details {{site.prodname}}'s installation and runtime dependencies
-in DC/OS, and looks at how to leverage {{site.prodname}}-DC/OS Framework to get up and running.
+The following information details {{site.tseeprodname}}'s installation and runtime dependencies
+in DC/OS, and looks at how to leverage {{site.tseeprodname}}-DC/OS Framework to get up and running.
 
 ## Overview
 
-{{site.prodname}} provides multi-host networking for DC/OS, giving each task its own IP
+{{site.tseeprodname}} provides multi-host networking for DC/OS, giving each task its own IP
 address and isolated networking namespace, with highly flexible policy configuration.
 
-{{site.prodname}} has the following prerequisites in DC/OS:
+{{site.tseeprodname}} has the following prerequisites in DC/OS:
 
 - An available etcd store
 - Docker configured with a cluster-store (if networking Docker Tasks)
 
-Since many default DC/OS clusters do not meet these basic requirements, {{site.prodname}}
-maintains a simple Universe package for DC/OS that can get {{site.prodname}}
+Since many default DC/OS clusters do not meet these basic requirements, {{site.tseeprodname}}
+maintains a simple Universe package for DC/OS that can get {{site.tseeprodname}}
 installed and running in one-click. The package performs the following
 steps on every agent in the cluster:
 
 1. Run etcd (in proxy mode)
 2. Configure docker with a cluster store
-3. Install {{site.prodname}} CNI binaries and configs (for Unified Containerizer networking)
+3. Install {{site.tseeprodname}} CNI binaries and configs (for Unified Containerizer networking)
 4. Run `calico-libnetwork` (for Docker Containerizer networking)
 5. Run `{{site.noderunning}}`.
 
 The framework is flexible, allowing users to enable, disable, or customize each step.
 Below, we'll see what each step does, and how it can be modified.
 
-The framework runs {{site.prodname}} (and its configuration) **within DC/OS.**
+The framework runs {{site.tseeprodname}} (and its configuration) **within DC/OS.**
 This means it registers as a Mesos Framework, and uses Mesos Resource offers
-to run and configure the cluster with {{site.prodname}}. Alternative to this approach,
+to run and configure the cluster with {{site.tseeprodname}}. Alternative to this approach,
 Calico can be manually installed directly onto Agents as a daemon service integrated
 with the OS (using systemd) to ensure it is available when tasks are eventually
 provisioned.
@@ -51,7 +51,7 @@ Next, we'll dive into each task the Framework performs.
 
 ### etcd
 
-{{site.prodname}} uses etcd as its central database. There are two popular ways to run
+{{site.tseeprodname}} uses etcd as its central database. There are two popular ways to run
 etcd in DC/OS:
 
 1. **Use the Universe etcd package**
@@ -61,8 +61,8 @@ etcd in DC/OS:
     The endpoint endpoint address can be resolved via a SRV lookup of
     `_etcd-server._tcp.etcd.mesos`.
 
-    {{site.prodname}} doesn't support connections to etcd via
-    SRV record, so the {{site.prodname}}-DC/OS Framework first runs its own instance
+    {{site.tseeprodname}} doesn't support connections to etcd via
+    SRV record, so the {{site.tseeprodname}}-DC/OS Framework first runs its own instance
     of etcd in proxy mode on every agent, which it relies on to forward requests
     made to `localhost:2379` onwards to the actual etcd cluster.
 
@@ -76,22 +76,22 @@ etcd in DC/OS:
 
 ### Docker Cluster Store
 
-{{site.prodname}} networks Docker Containerizer tasks at the Docker-engine layer.
+{{site.tseeprodname}} networks Docker Containerizer tasks at the Docker-engine layer.
 To do multi-host networking in Docker, each docker engine must be configured
 to use the same cluster-store.
 
-By default, the {{site.prodname}}-DC/OS Framework will parse the value set for `ETCD_ENDPOINTS`,
+By default, the {{site.tseeprodname}}-DC/OS Framework will parse the value set for `ETCD_ENDPOINTS`,
 configure Docker to use it by adding it to `/etc/docker/daemon.json`,
 and finally restart Docker.
 
 Users can set `override-docker-cluster-store` to manually choose a different
 cluster store (e.g. the existing zookeeper on master), or, if they are only
-planning to use {{site.prodname}} for Unified Containerizer networking,
+planning to use {{site.tseeprodname}} for Unified Containerizer networking,
 can disable modification of the docker daemon altogether.
 
-### {{site.prodname}} CNI Installation
+### {{site.tseeprodname}} CNI Installation
 
-To perform networking on Unified Containerizer tasks, {{site.prodname}}'s CNI binaries and
+To perform networking on Unified Containerizer tasks, {{site.tseeprodname}}'s CNI binaries and
 configuration file must be installed on every agent, and the slave process must
 be restarted to pick up the change. The Framework then performs the following steps:
 
@@ -118,8 +118,8 @@ be restarted to pick up the change. The Framework then performs the following st
 
 ### Run {{site.nodecontainer}}
 
-This task ensures the {{site.prodname}}'s core process `{{site.nodecontainer}}` is running.
+This task ensures the {{site.tseeprodname}}'s core process `{{site.nodecontainer}}` is running.
 
 ## Next Steps: Installing
 
-For installation instructions, see [The {{site.prodname}} DC/OS Install Guide]({{site.baseurl}}/{{page.version}}/getting-started/mesos/installation/dc-os/framework)
+For installation instructions, see [The {{site.tseeprodname}} DC/OS Install Guide]({{site.baseurl}}/{{page.version}}/getting-started/mesos/installation/dc-os/framework)

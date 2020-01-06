@@ -4,7 +4,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/hostend
 ---
 
 A host endpoint resource (`HostEndpoint`) represents one or more real or virtual interfaces
-attached to a host that is running {{site.prodname}}.  It enforces {{site.prodname}} policy on
+attached to a host that is running {{site.tseeprodname}}.  It enforces {{site.tseeprodname}} policy on
 the traffic that is entering or leaving the host's default network namespace through those
 interfaces.
 
@@ -15,10 +15,10 @@ interfaces.
    for example `interfaceName: eth0`, or by leaving `interfaceName`
    empty and including one of the interface's IPs in `expectedIPs`.
 
-Each host endpoint may include a set of labels and list of profiles that {{site.prodname}}
+Each host endpoint may include a set of labels and list of profiles that {{site.tseeprodname}}
 will use to apply
 [policy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy)
-to the interface.  If no profiles or labels are applied, {{site.prodname}} will not apply
+to the interface.  If no profiles or labels are applied, {{site.tseeprodname}} will not apply
 any policy.
 
 > **Note**: Currently, for host endpoints with `interfaceName: *`, only [pre-DNAT
@@ -39,7 +39,7 @@ may be used to specify the resource type on the CLI:
 `hostendpoint.projectcalico.org`, `hostendpoints.projectcalico.org` and abbreviations such as
 `hostendpoint.p` and `hostendpoints.p`.
 
-> **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the
+> **Important**: When rendering security rules on other hosts, {{site.tseeprodname}} uses the
 > `expectedIPs` field to resolve label selectors to IP addresses. If the `expectedIPs` field
 > is omitted then security rules that use labels will fail to match this endpoint.
 {: .alert .alert-danger}

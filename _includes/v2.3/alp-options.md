@@ -13,7 +13,7 @@ allow application layer policy to operate.
 The standard Istio manifests for the sidecar injector include a ConfigMap that
 contains the template used when adding pods to the cluster. The template adds an
 init container and the Envoy sidecar.  Application layer policy requires
-an additional lightweight sidecar called Dikastes which receives {{site.prodname}} policy
+an additional lightweight sidecar called Dikastes which receives {{site.tseeprodname}} policy
 from Felix and applies it to incoming connections and requests.
 
 If you haven't already done so, download an
@@ -58,5 +58,5 @@ Felix.  Once created, a Unix domain socket is an in-memory communications
 channel. The volumes are not used for any kind of stateful storage on disk.
 
 Refer to the
-[{{site.prodname}} ConfigMap manifest](/{{page.version}}/manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
+[{{site.tseeprodname}} ConfigMap manifest](/{{page.version}}/manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
 example with the above changes.

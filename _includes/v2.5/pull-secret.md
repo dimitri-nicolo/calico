@@ -28,5 +28,5 @@
 1. Continue to [Docker Enterprise/UCP Installation](#install-docker-ucp).
 {% elsif include.orch != "openshift" %}
 
-1. Continue to [Installing {{site.prodname}}](#install-cnx).
+1. Continue to [Installing {{site.tseeprodname}}](#install-cnx).
 {% endif %}

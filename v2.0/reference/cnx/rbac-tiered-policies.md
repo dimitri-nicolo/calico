@@ -2,19 +2,19 @@
 title: RBAC on tiered Policies
 ---
 
-The {{site.prodname}} API server adds the ability to manage tiered
+The {{site.tseeprodname}} API server adds the ability to manage tiered
 policies as Kubernetes resources. This allows administrators to apply
 Kubernetes RBAC Authorization APIs to CNX resources.
 
 ### Admin permissions
 
 By default, admin users have sufficient permission to access all the resources
-in the {{site.prodname}} UI.
+in the {{site.tseeprodname}} UI.
 
-### Granting new users {{site.prodname}} UI permissions
+### Granting new users {{site.tseeprodname}} UI permissions
 
 Under Kubernetes, newly created users are not granted RBAC permissions. In
-order to give a user sufficient permissions to use the {{site.prodname}} UI,
+order to give a user sufficient permissions to use the {{site.tseeprodname}} UI,
 bind a user to the `cluster-admin` role:
 
 ```
@@ -24,15 +24,15 @@ kubectl create clusterrolebinding permissive-binding \
 ```
 
 As result of this operation, the user now has full permission to access all
-resources in the {{site.prodname}} UI.
+resources in the {{site.tseeprodname}} UI.
 
 ### Fine-grained permissions
 
 #### Policies and tiers
 
-In {{site.prodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
+In {{site.tseeprodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
 are associated with a specific tier. In addition to the permissions associated
-with resources, {{site.prodname}} also gives you the ability to set permissions
+with resources, {{site.tseeprodname}} also gives you the ability to set permissions
 for tiers.
 
 Giving a non-admin user 'read' permission for a tier is a prerequisite for
@@ -44,7 +44,7 @@ Global/NetworkPolicies is limited by their resource permissions (e.g.
 #### The default tier
 
 Policies created by the underlying orchestration integration such as Kubernetes
-are placed in the `default` tier. In order to use the {{site.prodname}} UI,
+are placed in the `default` tier. In order to use the {{site.tseeprodname}} UI,
 users must be given 'read' access to the `default` tier.
 
 #### Associating a resource with a tier
@@ -53,7 +53,7 @@ For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/cal
 resource and adding a Global/NetworkPolicy to that tier, refer to the
 [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx/).
 
-#### Restricting {{site.prodname}} permissions
+#### Restricting {{site.tseeprodname}} permissions
 
 In order to limit permissions for non-admin users for resources
 outside the `default` tier, use the following steps as a starting point

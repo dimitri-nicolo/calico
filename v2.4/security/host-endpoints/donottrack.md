@@ -15,7 +15,7 @@ would be a server, running directly on a host, that accepts a very high rate of
 shortlived connections, such as `memcached`.  On Linux, if those connections
 are tracked, the conntrack table can fill up and then Linux may drop packets
 for further connection attempts, meaning that those newer connections will
-fail.  If you are using {{site.prodname}} to secure that server's host, you can avoid this
+fail.  If you are using {{site.tseeprodname}} to secure that server's host, you can avoid this
 problem by defining a policy that allows access to the server's ports and is
 marked as `doNotTrack`.
 

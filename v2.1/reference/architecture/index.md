@@ -3,20 +3,20 @@ title: Tigera Secure EE Architecture
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/
 ---
 
-This document discusses the various pieces of {{site.prodname}}'s architecture,
+This document discusses the various pieces of {{site.tseeprodname}}'s architecture,
 with a focus on what specific role each component plays in
-the {{site.prodname}} network.
+the {{site.tseeprodname}} network.
 
 <!-- TODO(smc) data-model: Link to new data model docs. -->
 
 # Components
 
-{{site.prodname}} is made up of the following interdependent components:
+{{site.tseeprodname}} is made up of the following interdependent components:
 
--   [Felix](#felix), the primary {{site.prodname}} agent that runs on each
+-   [Felix](#felix), the primary {{site.tseeprodname}} agent that runs on each
     machine that hosts endpoints.
 -   The [Orchestrator plugin](#orchestrator-plugin),
-    orchestrator-specific code that tightly integrates {{site.prodname}} into
+    orchestrator-specific code that tightly integrates {{site.tseeprodname}} into
     that orchestrator.
 -   [etcd](#etcd), the data store.
 -   [BIRD](#bgp-client-bird), a BGP client that
@@ -61,7 +61,7 @@ endpoints that arrive on at the host are forwarded accordingly.
 Felix is also responsible for programming ACLs into the Linux kernel.
 These ACLs are used to ensure that only valid traffic can be sent
 between endpoints, and ensure that endpoints are not capable of
-circumventing {{site.prodname}}'s security measures.
+circumventing {{site.tseeprodname}}'s security measures.
 
 #### State Reporting
 
@@ -75,8 +75,8 @@ and operators of the network.
 
 Unlike Felix there is no single 'orchestrator plugin': instead, there
 are separate plugins for each major cloud orchestration platform (e.g.
-Kubernetes). The purpose of these plugins is to bind {{site.prodname}}
-more tightly into the orchestrator, allowing users to manage the {{site.prodname}}
+Kubernetes). The purpose of these plugins is to bind {{site.tseeprodname}}
+more tightly into the orchestrator, allowing users to manage the {{site.tseeprodname}}
 network just as they'd manage network tools that were built into the
 orchestrator.
 
@@ -86,18 +86,18 @@ The orchestrator plugin is responsible for the following tasks:
 
 The orchestrator will inevitably have its own set of APIs for managing
 networks. The orchestrator plugin's primary job is to translate those
-APIs into {{site.prodname}}'s data-model and then store it in
-{{site.prodname}}'s datastore.
+APIs into {{site.tseeprodname}}'s data-model and then store it in
+{{site.tseeprodname}}'s datastore.
 
 Some of this translation will be very simple, other bits may be more
 complex in order to render a single complex operation (e.g. live
 migration) into the series of simpler operations the rest of the
-{{site.prodname}} network expects.
+{{site.tseeprodname}} network expects.
 
 #### Feedback
 
 If necessary, the orchestrator plugin will provide feedback from the
-{{site.prodname}} network into the orchestrator. Examples include: providing
+{{site.tseeprodname}} network into the orchestrator. Examples include: providing
 information about Felix liveness; marking certain endpoints as failed if
 network setup failed.
 
@@ -106,8 +106,8 @@ network setup failed.
 ## etcd
 
 etcd is a distributed key-value store that has a focus on consistency.
-{{site.prodname}} uses etcd to provide the communication between components and as
-a consistent data store, which ensures {{site.prodname}} can always build an
+{{site.tseeprodname}} uses etcd to provide the communication between components and as
+a consistent data store, which ensures {{site.tseeprodname}} can always build an
 accurate network.
 
 Depending on the orchestrator plugin, etcd may either be the master data
@@ -135,13 +135,13 @@ etcd is responsible for performing the following tasks:
 
 #### Data Storage
 
-etcd stores the data for the {{site.prodname}} network in a distributed,
+etcd stores the data for the {{site.tseeprodname}} network in a distributed,
 consistent, fault-tolerant manner (for cluster sizes of at least three
-etcd nodes). This set of properties ensures that the {{site.prodname}} network is
+etcd nodes). This set of properties ensures that the {{site.tseeprodname}} network is
 always in a known-good state, while allowing for some number of the
 machines hosting etcd to fail or become unreachable.
 
-This distributed storage of {{site.prodname}} data also improves the ability of the
+This distributed storage of {{site.tseeprodname}} data also improves the ability of the
 Calico components to read from the database (which is their most common
 operation), as they can distribute their reads around the cluster.
 
@@ -158,7 +158,7 @@ into the network.
 
 ## BGP Client (BIRD)
 
-{{site.prodname}} deploys a BGP client on every node that also hosts a [Felix](#felix). The role of the BGP client is to read routing state that [Felix](#felix) programs into the kernel and
+{{site.tseeprodname}} deploys a BGP client on every node that also hosts a [Felix](#felix). The role of the BGP client is to read routing state that [Felix](#felix) programs into the kernel and
 distribute it around the data center.
 
 The BGP client is responsible for performing the following task:

@@ -1,5 +1,5 @@
 ---
-title: Configuring Tigera Secure EE RBAC for Elasticsearch
+title: Configuring Calico Enterprise RBAC for Elasticsearch
 ---
 
 The {{site.prodname}} allows administrators the ability to manage access to Elasticsearch indices from the UI.
@@ -20,7 +20,7 @@ In {{site.prodname}}, resources are associated with the Kubernetes API group `lm
 | tigera_secure_ee_events      | events                        | Access to intrusion detection events                                                                                            |
 | tigera_secure_ee_dns         | dns                           | Access to EE DNS logs                                                                                                           |
 
-Each Elasticsearch index used within Tigera Secure EE is mapped to a specific RBAC resource name within the `lma.tigera.io` API group.
+Each Elasticsearch index used within Calico Enterprise is mapped to a specific RBAC resource name within the `lma.tigera.io` API group.
 
 > **Note**: The `lma.tigera.io` API group is only used for RBAC and is not backed by an actual API.
 {: .alert .alert-info}
@@ -28,7 +28,7 @@ Each Elasticsearch index used within Tigera Secure EE is mapped to a specific RB
 ### Users with custom permissions
 
 To apply custom Elasticsearch index permissions to a user, create a `ClusterRole` that lists the RBAC resource names corresponding
-to the Elasticsearch indexes you want that user to access. For example, the `ClusterRole` below allows access to Tigera Secure audit logs only.
+to the Elasticsearch indexes you want that user to access. For example, the `ClusterRole` below allows access to Calico Enterprise audit logs only.
 
 ```
 kind: ClusterRole
@@ -60,7 +60,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-Note: if you want to provision a user with the minimal Tigera Secure UI permissions, please refer to [Minimum permissions for all UI users](/{{page.version}}/reference/cnx/rbac-tiered-policies#minimum-permissions-for-all-ui-users).
+Note: if you want to provision a user with the minimal Calico Enterprise UI permissions, please refer to [Minimum permissions for all UI users](/{{page.version}}/reference/cnx/rbac-tiered-policies#minimum-permissions-for-all-ui-users).
 
 ### Verify user access to Elasticsearch indexes
 
@@ -73,7 +73,7 @@ In the `SubjectAccessReview` spec:
 - `verb` should be set to `get`
 - and `resource` should be set to a Kubernetes RBAC resource name (as defined in the table above)
 
-Continuing with our running example `ClusterRoleBinding` that allows the user bob access only to the `audit_ee` resource (i.e., Tigera Secure audit logs),
+Continuing with our running example `ClusterRoleBinding` that allows the user bob access only to the `audit_ee` resource (i.e., Calico Enterprise audit logs),
 we can verify that bob has that access with the following:
 
 ```

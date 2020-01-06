@@ -3,17 +3,17 @@ title: Tigera Secure EE for Kubernetes Demo
 canonical_url: https://docs.tigera.io/v2.3/getting-started/cnx/simple-policy-cnx/
 ---
 
-This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.prodname}} to people already familiar with Project Calico for Kubernetes.
+This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.tseeprodname}} to people already familiar with Project Calico for Kubernetes.
 
-It requires a Kubernetes cluster configured with Calico networking and {{site.prodname}}, and expects that you have `kubectl` configured to interact with the cluster.
+It requires a Kubernetes cluster configured with Calico networking and {{site.tseeprodname}}, and expects that you have `kubectl` configured to interact with the cluster.
 
 You can quickly and easily obtain such a cluster by following one of the
 [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/),
 or by [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee).
 
-The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
+The key steps in moving to {{site.tseeprodname}} are to change to the {{site.tseeprodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
-This guide assumes that you have installed all the {{site.prodname}} components from the
+This guide assumes that you have installed all the {{site.tseeprodname}} components from the
 guides above and that your cluster consists of the following nodes:
   * k8s-node1
   * k8s-node2
@@ -74,7 +74,7 @@ can exit the `access` pod now.
 information about the policies for endpoints on a given host.
 
    > **Note**: calicoq complements calicoctl by inspecting the
-   > dynamic aspects of {{site.prodname}} Policy: in particular displaying the endpoints actually affected by policies,
+   > dynamic aspects of {{site.tseeprodname}} Policy: in particular displaying the endpoints actually affected by policies,
    > and the policies that actually apply to endpoints.
    >
    > The full calicoq documentation is [here]({{site.baseurl}}/{{page.version}}/reference/calicoq).
@@ -110,7 +110,7 @@ information about the policies for endpoints on a given host.
 
    For each workload endpoint, the `Policies:` section lists the policies that
    apply to that endpoint, in the order they apply.  calicoq displays both
-   {{site.prodname}} Policies and Kubernetes NetworkPolicies, although this
+   {{site.tseeprodname}} Policies and Kubernetes NetworkPolicies, although this
    example focuses on the latter.  The `Rule matches:` section lists the
    policies that match that endpoint in their rules, in other words that have
    rules that deny or allow that endpoint as a packet source or destination.
@@ -120,7 +120,7 @@ information about the policies for endpoints on a given host.
 
    - The first two policies are defined in the monitor-calico.yaml manifest.
      The selectors here have been translated from the original NetworkPolicies to
-     the {{site.prodname}} format (note the addition of the namespace test).
+     the {{site.tseeprodname}} format (note the addition of the namespace test).
 
    - The third policy and the following profile are created automatically by the
      policy controller.
@@ -155,11 +155,11 @@ information about the policies for endpoints on a given host.
    ```
    {: .no-select-button}
 
-   Alternatively, you may also use {{site.prodname}} Manager to inspect and view information and metrics associated with policies, endpoints, and nodes.
+   Alternatively, you may also use {{site.tseeprodname}} Manager to inspect and view information and metrics associated with policies, endpoints, and nodes.
 
 ### Enable isolation
 
-Let's turn on isolation in our policy-demo namespace. {{site.prodname}} will then prevent connections to pods in this namespace.
+Let's turn on isolation in our policy-demo namespace. {{site.tseeprodname}} will then prevent connections to pods in this namespace.
 
 Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` namespace.
 
@@ -210,11 +210,11 @@ This will prevent all access to the nginx service.  We can see the effect by try
 
    The request should time out after 5 seconds.  By enabling isolation on the namespace, we've prevented access to the service.
 
-### {{site.prodname}} Metrics
+### {{site.tseeprodname}} Metrics
 
 Now would be a great time to take a look at the metrics.
 
-In {{site.prodname}} Manager, head to the dashboard view. You will see graphs associated with allowed packets/bytes and denied packets/bytes. The graphs represent the rates at which packets/bytes are being allowed or denied and are time windowed.
+In {{site.tseeprodname}} Manager, head to the dashboard view. You will see graphs associated with allowed packets/bytes and denied packets/bytes. The graphs represent the rates at which packets/bytes are being allowed or denied and are time windowed.
 
 Now if we wanted to dig in further and find out what's causing the packets to be denied, we could take a look at the **Packets by Policy** bar graph. Each individual bar represents a policy that has either denied or allowed a packet. Also, the policies shown by the graph, just like the rest of the dashboard graphs, are time-windowed i.e. they will reflect only the ones that were recently exercised.
 
@@ -325,7 +325,7 @@ from anywhere else.
    kubectl delete ns policy-demo
    ```
 
-   This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.prodname}} can secure your Kubernetes cluster.  For more
+   This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.tseeprodname}} can secure your Kubernetes cluster.  For more
    information on network policy in Kubernetes, see the [Kubernetes user guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
    For a slightly more detailed demonstration of Policy, check out the [Stars Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/).

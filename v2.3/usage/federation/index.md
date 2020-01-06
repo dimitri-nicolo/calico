@@ -65,7 +65,7 @@ a federated service.
 
 > **Note**: The controller always uses the pod IP for the service endpoints even for pods in remote clusters,
 > thus if a pod on the local cluster uses a federated service to access a pod in a remote cluster, source and
-> destination IP addresses are preserved allowing {{site.prodname}} fine-grained policy to be applied.
+> destination IP addresses are preserved allowing {{site.tseeprodname}} fine-grained policy to be applied.
 >
 > Contrast this to Kubernetes Federation, where federated services use the public service IP to access a remote service.
 > The use of the public IP requires NAT and is therefore not suitable for Federated Endpoint Identity.
@@ -76,4 +76,4 @@ in the Remote Cluster Configuration resources are also accessible to `calicoq`, 
 [Running `calicoq` as a pod on the local cluster](/{{page.version}}/usage/calicoq/#installing-calicoq-as-a-kubernetes-pod)
 is the simplest way to ensure it has access to the correct configuration.
 
-At this time, neither the {{site.prodname}} Manager nor `calicoctl` can be used to view endpoints from remote clusters.
+At this time, neither the {{site.tseeprodname}} Manager nor `calicoctl` can be used to view endpoints from remote clusters.

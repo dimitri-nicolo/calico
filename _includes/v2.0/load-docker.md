@@ -9,7 +9,7 @@ applying manifests that will pull from that registry.
 
 You must have a private registry that each node can access.
 
-> **Important**: Do not push the private {{site.prodname}} images to a public registry.
+> **Important**: Do not push the private {{site.tseeprodname}} images to a public registry.
 {: .alert .alert-danger}
 
 If you do not already have a private registry, consider one of the following options.

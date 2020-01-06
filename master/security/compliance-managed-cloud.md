@@ -27,7 +27,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 **Required**
 - Install {{site.prodname}} for your managed cloud provider using [Managed public cloud]({{site.url}}/{{page.version}}/getting-started/kubernetes/managed-public-cloud/eks)
-- Configure access to the [Tigera Secure EE Manager UI]({{site.url}}/{{page.version}}/getting-started/access-the-manager)
+- Configure access to the [Calico Enterprise Manager UI]({{site.url}}/{{page.version}}/getting-started/access-the-manager)
 - Create a [user login]({{site.url}}/{{page.version}}/getting-started/create-user-login)
 
 **Support**
@@ -40,8 +40,8 @@ Complete the following steps to configure Amazon EKS for compliance reporting:
 
 1. [Enable audit logs in EKS](#enable-audit-logs-in-eks)
 1. [Create a restricted AWS user for compliance reporting](#create-a-restricted-aws-user-for-compliance-reporting)
-1. [Update Tigera Secure EE log collector with EKS values](#update-tigera-secure-ee-log-collector-with-eks-values)
-1. [Configure authentication between Tigera Secure EE and Cloudwatch logs](#configure-authentication-between-tigera-secure-ee-and-cloudwatch-logs)
+1. [Update Calico Enterprise log collector with EKS values](#update-calico-enterprise-log-collector-with-eks-values)
+1. [Configure authentication between Calico Enterprise and Cloudwatch logs](#configure-authentication-between-calico-enterprise-and-cloudwatch-logs)
 
 #### Enable audit logs in EKS
 
@@ -72,7 +72,7 @@ Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.
 1. (Optional) In the **Add tags** section, add a tag for the user based on your cluster information.
 1. Click **Submit** to create a restricted user.
 
-#### Update Tigera Secure EE log collector with EKS values
+#### Update Calico Enterprise log collector with EKS values
 
 1. Update the `tigera-secure` LogCollector resource with values from the EKS configuration.
 
@@ -102,7 +102,7 @@ Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.
      state: Ready
    ```
 
-#### Configure authentication between Tigera Secure EE and Cloudwatch logs
+#### Configure authentication between Calico Enterprise and Cloudwatch logs
 
 In this step, you add AWS authentication information to enable {{site.prodname}} to get logs from the EKS Cloudwatch instance.
 

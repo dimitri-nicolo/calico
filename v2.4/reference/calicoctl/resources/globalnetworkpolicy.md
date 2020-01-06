@@ -12,7 +12,7 @@ Select a namespace in a `GlobalNetworkPolicy` in the standard selector by using
 value to compare against, e.g., `projectcalico.org/namespace == "default"`.
 See [network policy resource]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for namespaced network policy.
 
-`GlobalNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
+`GlobalNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.tseeprodname}} endpoints and host endpoints, and
 take precedence over [Profile resources]({{site.url}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
 GlobalNetworkPolicies are organized into [tiers]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
@@ -67,7 +67,7 @@ spec:
 
 | Field              | Description                                                                                                                                           | Accepted Values | Schema                | Default |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
-| order              | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first.                                                   |                 | float                 |         |
+| order              | Controls the order of precedence. {{site.tseeprodname}} applies the policy with the lowest value first.                                                   |                 | float                 |         |
 | tier               | Name of the [tier]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector           | Selects the endpoints to which this policy applies.                                                                                                   |                 | [selector](#selector) | all()   |
 | types              | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress`  | List of strings | Depends on presence of ingress/egress rules\* |
@@ -77,7 +77,7 @@ spec:
 | preDNAT\*\*        | Indicates to apply the rules in this policy before any DNAT.                                                                                          | true, false     | boolean               | false   |
 | applyOnForward\*\* | Indicates to apply the rules in this policy on forwarded traffic as well as to locally terminated traffic.                                            | true, false     | boolean               | false   |
 
-\* If `types` has no value, {{site.prodname}} defaults as follows.
+\* If `types` has no value, {{site.tseeprodname}} defaults as follows.
 
 >| Ingress Rules Present | Egress Rules Present | `Types` value       |
  |-----------------------|----------------------|---------------------|
@@ -97,7 +97,7 @@ the policy is enforced after connection tracking and any DNAT.
 `true` because for a given policy, any untracked rules or rules before DNAT will
  in practice apply to forwarded traffic.
 
-See [Using {{site.prodname}} to Secure Host Interfaces]({{site.url}}/{{page.version}}/security/host-endpoints/)
+See [Using {{site.tseeprodname}} to Secure Host Interfaces]({{site.url}}/{{page.version}}/security/host-endpoints/)
 for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host endpoints.
 
 #### Rule
@@ -126,7 +126,7 @@ for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host e
 
 ### Application layer policy
 
-Application layer policy is an optional feature of {{site.prodname}} and
+Application layer policy is an optional feature of {{site.tseeprodname}} and
 [must be enabled]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 

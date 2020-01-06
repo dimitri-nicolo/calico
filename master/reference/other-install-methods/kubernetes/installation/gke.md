@@ -1,5 +1,5 @@
 ---
-title: Installing Tigera Secure EE on Google GKE
+title: Installing Calico Enterprise on Google GKE
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
 ---
 

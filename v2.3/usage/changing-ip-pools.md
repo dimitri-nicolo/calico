@@ -16,16 +16,16 @@ Provide guidance on how to change from one IP pool to another on a running clust
 
 ## Prerequisites
 
-**{{site.prodname}} IPAM**
+**{{site.tseeprodname}} IPAM**
 
-This guide only applies if you are using {{site.prodname}} IPAM.
+This guide only applies if you are using {{site.tseeprodname}} IPAM.
 
 **Orchestrator support**
 
 While {{ site.prodname }} supports changing IP pools, not all orchestrators do.
 Be sure to consult the documentation of the orchestrator you are using to ensure it supports changing the workload CIDR.
 
-For example, in Kubernetes, all three of the following arguments must be equal to, or contain, the {{site.prodname}} IP pool CIDRs:
+For example, in Kubernetes, all three of the following arguments must be equal to, or contain, the {{site.tseeprodname}} IP pool CIDRs:
 
 - kube-apiserver: `--pod-network-cidr`
 - kube-proxy: `--cluster-cidr`
@@ -45,7 +45,7 @@ workloads with addresses from that IP pool. Namely:
 
 - If IP-in-IP was enabled on the IP pool, those workloads will no longer have their traffic encapsulated.
 - If nat-outgoing was enabled on the IP pool, those workloads will no longer have their traffic NAT'd.
-- If using {{site.prodname}} BGP routing, routes to pods will no longer be aggregated.
+- If using {{site.tseeprodname}} BGP routing, routes to pods will no longer be aggregated.
 
 ## Changing an IP pool
 
@@ -61,7 +61,7 @@ The basic process is as follows:
 In this example, we created a cluster with kubeadm.  We wanted the pods to use IPs in the range
 `10.0.0.0/16` so we set `--pod-network-cidr=10.0.0.0/16` when running `kubeadm init`.  However, we
 installed {{ site.prodname }} without setting the default IP pool to match. Running `calicoctl get ippool -o wide` shows
-{{site.prodname}} created its default IP pool of `192.168.0.0/16`:
+{{site.tseeprodname}} created its default IP pool of `192.168.0.0/16`:
 
 ```
 NAME                  CIDR             NAT    IPIPMODE   DISABLED

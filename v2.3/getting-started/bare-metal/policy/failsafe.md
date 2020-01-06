@@ -5,10 +5,10 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/fai
 
 
 To avoid completely cutting off a host via incorrect or malformed
-policy, {{site.prodname}} has a failsafe mechanism that keeps various pinholes open
+policy, {{site.tseeprodname}} has a failsafe mechanism that keeps various pinholes open
 in the firewall.
 
-By default, {{site.prodname}} keeps the following ports open on *all* host endpoints:
+By default, {{site.tseeprodname}} keeps the following ports open on *all* host endpoints:
 
 | Port   | Protocol | Direction           |              Purpose                           |
 |--------|----------|---------------------|------------------------------------------------|

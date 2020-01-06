@@ -5,9 +5,9 @@ canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installati
 
 ## Overview
 
-This guide covers installing {{site.prodname}} for policy enforcement on Azure AKS.
+This guide covers installing {{site.tseeprodname}} for policy enforcement on Azure AKS.
 
-> **Note**: AKS support on {{site.prodname}} is currently in technical preview
+> **Note**: AKS support on {{site.tseeprodname}} is currently in technical preview
    and is suitable for non-production clusters only.
 {: .alert .alert-info}
 
@@ -15,13 +15,13 @@ This guide covers installing {{site.prodname}} for policy enforcement on Azure A
 
 - Create an AKS cluster with the following settings:
 
-  - *Azure CNI plugin in transparent mode*. {{site.prodname}} requires Azure CNI plugin to be operating in transparent mode.
+  - *Azure CNI plugin in transparent mode*. {{site.tseeprodname}} requires Azure CNI plugin to be operating in transparent mode.
 
-  - *No network policy*. This is to avoid conflicts between other network policy providers in the cluster and {{site.prodname}}.
+  - *No network policy*. This is to avoid conflicts between other network policy providers in the cluster and {{site.tseeprodname}}.
 
-- Ensure that your Azure account has sufficient IAM permissions. To apply the {{site.prodname}} manifests requires permissions to create Kubernetes `ClusterRoles` and `ClusterRoleBindings`. The easiest way to grant such permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. Please refer to [AKS access control](https://docs.microsoft.com/bs-latn-ba/azure/aks/control-kubeconfig-access).
+- Ensure that your Azure account has sufficient IAM permissions. To apply the {{site.tseeprodname}} manifests requires permissions to create Kubernetes `ClusterRoles` and `ClusterRoleBindings`. The easiest way to grant such permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. Please refer to [AKS access control](https://docs.microsoft.com/bs-latn-ba/azure/aks/control-kubeconfig-access).
 
-- Ensure your cluster has sufficient RAM to install {{site.prodname}}.  The datastore and indexing components pre-allocate significant resources.  At least 10GB is required.
+- Ensure your cluster has sufficient RAM to install {{site.tseeprodname}}.  The datastore and indexing components pre-allocate significant resources.  At least 10GB is required.
 
 - Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
@@ -34,9 +34,9 @@ This guide covers installing {{site.prodname}} for policy enforcement on Azure A
 
 {% include {{page.version}}/pull-secret.md %}
 
-### <a name="install-cnx"></a><a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} without federation
+### <a name="install-cnx"></a><a name="install-ee-typha-nofed"></a>Installing {{site.tseeprodname}} without federation
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore with Azure CNI plugin support.
+1. Download the {{site.tseeprodname}} policy-only manifest for the Kubernetes API datastore with Azure CNI plugin support.
 
    ```bash
    curl \
@@ -54,7 +54,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Azure A
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
+1. Continue to [Installing the {{site.tseeprodname}} API Server](#installing-the-{{site.tseeprodnamedash}}-api-server)
 
 {% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" platform="aks" %}
 
@@ -64,7 +64,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Azure A
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="aks" %}
 
-1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+1. Continue to [Installing the {{site.tseeprodname}} Manager](#installing-the-{{site.tseeprodnamedash}}-manager)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="aks" %}
 

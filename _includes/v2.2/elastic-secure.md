@@ -38,7 +38,7 @@
    ```
 
 1. Create a configmap with information on how to reach the Elasticsearch cluster.
-   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
+   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.tseeprodname}} should access Elasticsearch through.
    If your cluster is listening on a port other than `9200`, replace that too.
    ```
    {{cli}} create configmap tigera-es-proxy \
@@ -47,7 +47,7 @@
    -n calico-monitoring
    ```
    
-1. Download the configmap patch for {{site.prodname}} Manager.
+1. Download the configmap patch for {{site.tseeprodname}} Manager.
     ```
     curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/patch-cnx-manager-configmap.yaml
     ```
@@ -57,7 +57,7 @@
    ```
    {{cli}} patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
    ```
-1. Restart {{site.prodname}} Manager pod
+1. Restart {{site.tseeprodname}} Manager pod
    ```
    kubectl delete pod -n kube-system -l k8s-app=cnx-manager
    ```

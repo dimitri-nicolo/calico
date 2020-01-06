@@ -1,7 +1,7 @@
 {% unless include.upgrade %}
 ## Before you begin
 
-- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
+- Ensure that you have a Kubernetes cluster that meets the {{site.tseeprodname}}
   [system requirements](../requirements). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
@@ -15,7 +15,7 @@
 {% include {{page.version}}/pull-secret.md %}
 {% endunless %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy and networking
+## <a name="install-cnx"></a>Installing {{site.tseeprodname}} for policy and networking
 
 ### Selecting your cluster configuration
 
@@ -32,7 +32,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
 ### Installing without federation, using etcd
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -56,7 +56,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
+1. Continue to [Installing the {{site.tseeprodname}} API Server](#installing-the-{{site.tseeprodnamedash}}-api-server)
 
 
 ### Installing without federation, using Kubernetes API datastore
@@ -69,7 +69,7 @@ and your datastore type. Refer to the section that matches your configuration.
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
 
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
+1. Download the {{site.tseeprodname}} networking manifest for the Kubernetes API datastore.
 
    ```bash
    curl \
@@ -113,12 +113,12 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
+1. Continue to [Installing the {{site.tseeprodname}} API Server](#installing-the-{{site.tseeprodnamedash}}-api-server)
 
 
 ### Installing with federation, using etcd
 
-The following procedure describes how to install {{site.prodname}} on a single cluster that uses an
+The following procedure describes how to install {{site.tseeprodname}} on a single cluster that uses an
 etcd datastore (the [local cluster](/{{page.version}}/networking/federation/index#terminology)).
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig)
@@ -141,7 +141,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    --namespace=kube-system
    ```
 
-1. Download the {{site.prodname}} networking manifest for etcd.
+1. Download the {{site.tseeprodname}} networking manifest for etcd.
 
    ```bash
    curl \
@@ -191,12 +191,12 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
+1. Continue to [Installing the {{site.tseeprodname}} API Server](#installing-the-{{site.tseeprodnamedash}}-api-server)
 
 
 ### Installing with federation, using Kubernetes API datastore
 
-The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
+The following procedure describes how to install {{site.tseeprodname}} on a single cluster that uses the
 Kubernetes API datastore (the [local cluster](/{{page.version}}/networking/federation/index#terminology)).
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig)
@@ -229,7 +229,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
 
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
+1. Download the {{site.tseeprodname}} networking manifest for the Kubernetes API datastore.
 
    ```bash
    curl \
@@ -271,7 +271,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
+1. Continue to [Installing the {{site.tseeprodname}} API Server](#installing-the-{{site.tseeprodnamedash}}-api-server)
 
 {% include {{page.version}}/cnx-api-install.md init="kubernetes" net="calico" upgrade=include.upgrade %}
 
@@ -295,7 +295,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator"%}
 {% endif %}
 
-1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+1. Continue to [Installing the {{site.tseeprodname}} Manager](#installing-the-{{site.tseeprodnamedash}}-manager)
 
 {% if include.upgrade %}
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" elasticsearch="external" upgrade=include.upgrade %}

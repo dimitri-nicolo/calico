@@ -95,7 +95,7 @@ Use the `NamesAndLabelsMatch`to limit the scope of endpoints. If both `names`
 and `selector` are specified, the resource is identified using label *AND* name
 match.
 
-> **Note**: To use the {{site.prodname}} compliance reporting feature, you must ensure all required resource types
+> **Note**: To use the {{site.tseeprodname}} compliance reporting feature, you must ensure all required resource types
 > are being audited and the logs archived in Elasticsearch. You must explicitly configure the [Kubernetes API
 > Server](/{{page.version}}/security/logs/elastic/ee-audit#kubernetes) to send audit logs for Kubernetes-owned resources
 > to Elasticsearch. 

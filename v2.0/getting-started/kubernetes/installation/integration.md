@@ -4,7 +4,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 ---
 
 
-This document explains the components necessary to install {{site.prodname}} on Kubernetes for integrating
+This document explains the components necessary to install {{site.tseeprodname}} on Kubernetes for integrating
 with custom configuration management.
 
 The [self-hosted installation method](hosted/) will perform these steps automatically for you and is *strongly* recommended
@@ -18,7 +18,7 @@ installation method.
 
 - An existing Kubernetes cluster running Kubernetes >= v1.8.
 
-- An `etcd` cluster accessible by all nodes in the Kubernetes cluster. {{site.prodname}} can share the etcd cluster used by Kubernetes, but in some cases it's recommended that a separate cluster is set up. A number of production users do share the etcd cluster between the two, but separating them gives better performance at high scale.
+- An `etcd` cluster accessible by all nodes in the Kubernetes cluster. {{site.tseeprodname}} can share the etcd cluster used by Kubernetes, but in some cases it's recommended that a separate cluster is set up. A number of production users do share the etcd cluster between the two, but separating them gives better performance at high scale.
 
 - The CNX images must be made available to your cluster by either pre-loading
   them on your hosts or setting up the appropriate configuration to allow
@@ -26,28 +26,28 @@ installation method.
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-> **Note**: {{site.prodname}} can also be installed
+> **Note**: {{site.tseeprodname}} can also be installed
 > [without a dependency on etcd](hosted/kubernetes-datastore/),
 > but that is not covered in this document.
 {: .alert .alert-info}
 
 
-## About the {{site.prodname}} Components
+## About the {{site.tseeprodname}} Components
 
-There are three components of a {{site.prodname}} / Kubernetes integration.
+There are three components of a {{site.tseeprodname}} / Kubernetes integration.
 
-- The {{site.prodname}} per-node Docker container `{{site.nodecontainer}}`.
+- The {{site.tseeprodname}} per-node Docker container `{{site.nodecontainer}}`.
 - The [cni-plugin](https://github.com/projectcalico/cni-plugin) network plugin binaries. This is the combination of two binary executables and a configuration file.
-- The {{site.prodname}} Kubernetes controllers, which run in a single-instance pod.  These components monitor the Kubernetes API to keep {{site.prodname}} in sync.
+- The {{site.tseeprodname}} Kubernetes controllers, which run in a single-instance pod.  These components monitor the Kubernetes API to keep {{site.tseeprodname}} in sync.
 
 The `{{site.nodecontainer}}` docker container must be run on the Kubernetes master and each
-Kubernetes node in your cluster.  It contains the BGP agent necessary for {{site.prodname}} routing to occur,
+Kubernetes node in your cluster.  It contains the BGP agent necessary for {{site.tseeprodname}} routing to occur,
 and the Felix agent which programs network policy rules.
 
 The `cni-plugin` plugin integrates directly with the Kubernetes `kubelet` process
-on each node to discover which pods have been created, and adds them to {{site.prodname}} networking.
+on each node to discover which pods have been created, and adds them to {{site.tseeprodname}} networking.
 
-The `calico/kube-controllers` container runs as a pod on top of Kubernetes and keeps {{site.prodname}}
+The `calico/kube-controllers` container runs as a pod on top of Kubernetes and keeps {{site.tseeprodname}}
 in-sync with Kubernetes.
 
 ## Installing {{site.nodecontainer}}
@@ -55,7 +55,7 @@ in-sync with Kubernetes.
 ### Run {{site.nodecontainer}} and configure the node.
 
 The Kubernetes master and each Kubernetes node require the `{{site.nodecontainer}}` container.
-Each node must also be recorded in the {{site.prodname}} datastore.
+Each node must also be recorded in the {{site.tseeprodname}} datastore.
 
 The `{{site.nodecontainer}}` container can be run directly through Docker, or it can be
 done using the `calicoctl` utility.
@@ -118,15 +118,15 @@ Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 
 ### Configuring {{site.nodecontainer}} for metrics collection
 
-Enable metrics in {{site.prodname}} by updating the global `FelixConfiguration` resource (`default`).
+Enable metrics in {{site.tseeprodname}} by updating the global `FelixConfiguration` resource (`default`).
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
-## Installing the {{site.prodname}} CNI plugins
+## Installing the {{site.tseeprodname}} CNI plugins
 
 The Kubernetes `kubelet` should be configured to use the `calico` and `calico-ipam` plugins.
 
-### Install the {{site.prodname}} plugins
+### Install the {{site.tseeprodname}} plugins
 
 Download the binaries and make sure they're executable.
 
@@ -136,7 +136,7 @@ wget -N -P /opt/cni/bin {{site.data.versions[page.version].first.components["cal
 chmod +x /opt/cni/bin/calico /opt/cni/bin/calico-ipam
 ```
 
-The {{site.prodname}} CNI plugins require a standard CNI config file.  The `policy` section is only required when
+The {{site.tseeprodname}} CNI plugins require a standard CNI config file.  The `policy` section is only required when
 running the `calico/kube-controllers` container .
 
 ```bash
@@ -164,7 +164,7 @@ EOF
 Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 Replace `</PATH/TO/KUBECONFIG>` with your kubeconfig file. See [Kubernetes kubeconfig](http://kubernetes.io/docs/user-guide/kubeconfig-file/) for more information about kubeconfig.
 
-For more information on configuring the {{site.prodname}} CNI plugins, see the [configuration guide]({{site.baseurl}}/{{page.version}}/reference/cni-plugin/configuration)
+For more information on configuring the {{site.tseeprodname}} CNI plugins, see the [configuration guide]({{site.baseurl}}/{{page.version}}/reference/cni-plugin/configuration)
 
 ### Install standard CNI loopback plugin
 
@@ -178,9 +178,9 @@ tar -zxvf cni-v0.6.0.tgz
 sudo cp loopback /opt/cni/bin/
 ```
 
-## Installing the {{site.prodname}} Kubernetes controllers
+## Installing the {{site.tseeprodname}} Kubernetes controllers
 
-The `calico/kube-controllers` container keeps {{site.prodname}}'s datastore in-sync with Kubernetes.
+The `calico/kube-controllers` container keeps {{site.tseeprodname}}'s datastore in-sync with Kubernetes.
 It runs as a single pod managed by a Deployment.
 
 > **Note**: The `calico/kube-controllers` container is required even if policy is not in use.
@@ -214,14 +214,14 @@ see the [configuration guide]({{site.baseur}}/{{page.version}}/reference/kube-co
 
 ## Role-based access control (RBAC)
 
-When installing {{site.prodname}} on Kubernetes clusters with RBAC enabled, it is necessary to provide {{site.prodname}} access to some Kubernetes
-APIs.  To do this, subjects and roles must be configured in the Kubernetes API and {{site.prodname}} components must be provided with the appropriate
+When installing {{site.tseeprodname}} on Kubernetes clusters with RBAC enabled, it is necessary to provide {{site.tseeprodname}} access to some Kubernetes
+APIs.  To do this, subjects and roles must be configured in the Kubernetes API and {{site.tseeprodname}} components must be provided with the appropriate
 tokens or certificates to present which identify it as the configured API user.
 
 Detailed instructions for configuring Kubernetes RBAC are outside the scope of this document.  For more information,
 please see the [upstream Kubernetes documentation](https://kubernetes.io/docs/admin/authorization/rbac/) on the topic.
 
-The following YAML file defines the necessary API permissions required by {{site.prodname}}
+The following YAML file defines the necessary API permissions required by {{site.tseeprodname}}
 when using the etcd datastore.
 
 ```
@@ -234,9 +234,9 @@ kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/instal
 
 ### Configuring the kubelet
 
-The kubelet needs to be configured to use the {{site.prodname}} network plugin when starting pods.
+The kubelet needs to be configured to use the {{site.tseeprodname}} network plugin when starting pods.
 
-The kubelet can be configured to use {{site.prodname}} by starting it with the following options
+The kubelet can be configured to use {{site.tseeprodname}} by starting it with the following options
 
 - `--network-plugin=cni`
 - `--cni-conf-dir=/etc/cni/net.d`
@@ -250,7 +250,7 @@ for more details.
 
 ### Configuring the kube-proxy
 
-In order to use {{site.prodname}} policy with Kubernetes, the `kube-proxy` component must
+In order to use {{site.tseeprodname}} policy with Kubernetes, the `kube-proxy` component must
 be configured to leave the source address of service bound traffic intact.
 This feature is first officially supported in Kubernetes v1.1.0 and is the default mode starting
 in Kubernetes v1.2.0.
@@ -276,7 +276,7 @@ on selectable pods to target for Prometheus monitoring. If you wish to use the
 provided monitoring, the following manifest needs to be loaded to Kubernetes
 which will deploy dummy pods that will be used for Prometheus targeting. You
 should ensure that this manifest deploys one pod on each host running
-{{site.prodname}} that you wish to monitor, adjusting the annotations and
+{{site.tseeprodname}} that you wish to monitor, adjusting the annotations and
 tolerations as needed.
 
 ```

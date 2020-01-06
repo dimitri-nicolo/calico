@@ -3,7 +3,7 @@ title: Standard Hosted Install
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/
 ---
 
-The following steps install {{site.prodname}} as a Kubernetes add-on using your own etcd cluster.
+The following steps install {{site.tseeprodname}} as a Kubernetes add-on using your own etcd cluster.
 
 ## Requirements
 
@@ -15,15 +15,15 @@ The following steps install {{site.prodname}} as a Kubernetes add-on using your 
 
 ## RBAC
 
-If deploying {{site.prodname}} on an RBAC-enabled cluster, you should first apply the `ClusterRole` and `ClusterRoleBinding` specs:
+If deploying {{site.tseeprodname}} on an RBAC-enabled cluster, you should first apply the `ClusterRole` and `ClusterRoleBinding` specs:
 
 ```
 kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac.yaml
 ```
 
-## Installing {{site.prodname}}
+## Installing {{site.tseeprodname}}
 
-To install {{site.prodname}}:
+To install {{site.tseeprodname}}:
 
 1. [Open calico.yaml in a new tab](calico.yaml){:target="_blank"}.
 

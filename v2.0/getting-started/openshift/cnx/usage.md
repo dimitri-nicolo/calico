@@ -2,10 +2,10 @@
 title: Using CNX for OpenShift
 ---
 
-{{site.prodname}} for OpenShift is mostly similar to {{site.prodname}} for Kubernetes, with a few exceptions:
+{{site.tseeprodname}} for OpenShift is mostly similar to {{site.tseeprodname}} for Kubernetes, with a few exceptions:
 
-1. {{site.prodname}} settings are tweaked using [the `FelixConfiguration` resource](../../../reference/calicoctl/resources/felixconfig) instead of editing manifests, since {{site.prodname}} is launched as a systemd service instead of a hosted install in OpenShift.
-1. A `calicoctl.cfg` file owned by root exists in the default path on each host, which authenticates all {{site.prodname}}
+1. {{site.tseeprodname}} settings are tweaked using [the `FelixConfiguration` resource](../../../reference/calicoctl/resources/felixconfig) instead of editing manifests, since {{site.tseeprodname}} is launched as a systemd service instead of a hosted install in OpenShift.
+1. A `calicoctl.cfg` file owned by root exists in the default path on each host, which authenticates all {{site.tseeprodname}}
 CLI tools (`calicoctl` & `calicoq`) by default without needing to be passed in any etcd connection information, provided they
 are run by root user (which is the only user with access to the config file).
 
@@ -13,8 +13,8 @@ More information on these exceptions is covered below.
 
 #### Policy Query with calicoq
 
-Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
-a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate
+Once {{site.tseeprodname}} is installed in OpenShift, each node is automatically configured with
+a `calicoctl.cfg` (owned by the root user) which is used by {{site.tseeprodname}} to locate and authenticate
 requests to etcd.
 
 To install `calicoq` in OpenShift:
@@ -26,14 +26,14 @@ See the [calicoq reference](../../../reference/calicoq/) for more information on
 
 ### Policy Violation Alerting
 
-Policy Violation Alerting is mostly the same in {{site.prodname}} for OpenShift as it is in {{site.prodname}}. Below,
-we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+Policy Violation Alerting is mostly the same in {{site.tseeprodname}} for OpenShift as it is in {{site.tseeprodname}}. Below,
+we'll cover how to enable metrics in {{site.tseeprodname}} and how to launch Prometheus using Prometheus-Operator.
 
 #### Enable Metrics
 
 **Prerequisite**: `calicoctl` [installed](../../../usage/calicoctl/install) and [configured](../../../usage/calicoctl/configure).
 
-Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
+Enable metrics in {{site.tseeprodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
