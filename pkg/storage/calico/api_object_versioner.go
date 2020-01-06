@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/storage/etcd"
+	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 )

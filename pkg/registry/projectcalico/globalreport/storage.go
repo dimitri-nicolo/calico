@@ -3,6 +3,8 @@
 package globalreport
 
 import (
+	"context"
+
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
 
@@ -12,7 +14,6 @@ import (
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/apiserver/pkg/storage"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -40,17 +41,18 @@ func (r *StatusREST) New() runtime.Object {
 }
 
 // Get retrieves the object from the storage. It is required to support Patch.
-func (r *StatusREST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+func (r *StatusREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	return r.store.Get(ctx, name, options)
 }
 
 // Update alters the status subset of an object.
-func (r *StatusREST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (runtime.Object, bool, error) {
-	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation)
+func (r *StatusREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc,
+	updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
+	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, forceAllowCreate, options)
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST) {
+func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -67,15 +69,18 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST) {
 			accessor.GetName(),
 		)
 	}
-	storageInterface, dFunc := opts.GetStorage(
-		&calico.GlobalReport{},
+	storageInterface, dFunc, err := opts.GetStorage(
 		prefix,
 		keyFunc,
 		strategy,
+		func() runtime.Object { return &calico.GlobalReport{} },
 		func() runtime.Object { return &calico.GlobalReportList{} },
 		GetAttrs,
-		storage.NoTriggerPublisher,
+		nil,
 	)
+	if err != nil {
+		return nil, nil, err
+	}
 	store := &genericregistry.Store{
 		NewFunc:     func() runtime.Object { return &calico.GlobalReport{} },
 		NewListFunc: func() runtime.Object { return &calico.GlobalReportList{} },
@@ -99,5 +104,5 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, *StatusREST) {
 	statusStore := *store
 	statusStore.UpdateStrategy = NewStatusStrategy(strategy)
 
-	return &REST{store}, &StatusREST{&statusStore}
+	return &REST{store}, &StatusREST{&statusStore}, nil
 }

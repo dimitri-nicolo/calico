@@ -9,8 +9,9 @@ import (
 
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/etcd"
+	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -20,7 +21,7 @@ import (
 )
 
 // NewBGPConfigurationStorage creates a new libcalico-based storage.Interface implementation for BGPConfigurations
-func NewBGPConfigurationStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
+func NewBGPConfigurationStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
 	c := createClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
@@ -48,7 +49,7 @@ func NewBGPConfigurationStorage(opts Options) (storage.Interface, factory.Destro
 		olo := opts.(options.ListOptions)
 		return c.BGPConfigurations().Watch(ctx, olo)
 	}
-	return &resourceStore{
+	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
@@ -65,7 +66,8 @@ func NewBGPConfigurationStorage(opts Options) (storage.Interface, factory.Destro
 		watch:             watchFn,
 		resourceName:      "BGPConfiguration",
 		converter:         BGPConfigurationConverter{},
-	}, func() {}
+	}, Codec: opts.RESTOptions.StorageConfig.Codec}
+	return dryRunnableStorage, func() {}
 }
 
 type BGPConfigurationConverter struct {

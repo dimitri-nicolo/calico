@@ -22,7 +22,6 @@ import (
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/apiserver/pkg/storage"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
@@ -44,7 +43,7 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
+func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -61,15 +60,18 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 			accessor.GetName(),
 		)
 	}
-	storageInterface, dFunc := opts.GetStorage(
-		&calico.GlobalAlertTemplate{},
+	storageInterface, dFunc, err := opts.GetStorage(
 		prefix,
 		keyFunc,
 		strategy,
+		func() runtime.Object { return &calico.GlobalAlertTemplate{} },
 		func() runtime.Object { return &calico.GlobalAlertTemplateList{} },
 		GetAttrs,
-		storage.NoTriggerPublisher,
+		nil,
 	)
+	if err != nil {
+		return nil, err
+	}
 	store := &genericregistry.Store{
 		NewFunc:     func() runtime.Object { return &calico.GlobalAlertTemplate{} },
 		NewListFunc: func() runtime.Object { return &calico.GlobalAlertTemplateList{} },
@@ -90,5 +92,5 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store}
+	return &REST{store}, nil
 }

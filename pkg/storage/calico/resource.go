@@ -12,7 +12,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/golang/glog"
 	aapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/klog"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -76,19 +76,19 @@ func createClientFromConfig() clientv3.Interface {
 	// TODO(doublek): nicer errors returned
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
-		glog.Errorf("Failed to load client config: %q", err)
+		klog.Errorf("Failed to load client config: %q", err)
 		os.Exit(1)
 	}
 
 	c, err := clientv3.New(*cfg)
 	if err != nil {
-		glog.Errorf("Failed creating client: %q", err)
+		klog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
 	}
 
 	err = c.EnsureInitialized(context.Background(), "", "", "")
 	if err != nil {
-		glog.Errorf("Failed initializing client: %q", err)
+		klog.Errorf("Failed initializing client: %q", err)
 		os.Exit(1)
 	}
 
@@ -119,13 +119,13 @@ func validationError(err error, qualifiedKind schema.GroupKind, name string) *aa
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
-	glog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
+	klog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
 	lcObj := rs.converter.convertToLibcalico(obj)
 
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
 	createdObj, err := rs.create(ctx, rs.client, lcObj, opts)
 	if err != nil {
-		glog.Errorf("Error creating resource %v key %v error %v\n", rs.resourceName, key, err)
+		klog.Errorf("Error creating resource %v key %v error %v\n", rs.resourceName, key, err)
 		switch err.(type) {
 		case errors.ErrorValidation:
 			rObj := obj.(resourceObject)
@@ -141,8 +141,8 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 // Delete removes the specified key and returns the value that existed at that spot.
 // If key didn't exist, it will return NotFound storage error.
 func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Object,
-	preconditions *storage.Preconditions) error {
-	glog.Infof("Delete called with key: %v for resource %v\n", key, rs.resourceName)
+	preconditions *storage.Preconditions, validateDeletion storage.ValidateObjectFunc) error {
+	klog.Infof("Delete called with key: %v for resource %v\n", key, rs.resourceName)
 
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
@@ -167,7 +167,7 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 
 	libcalicoObj, err := rs.delete(ctx, rs.client, ns, name, delOpts)
 	if err != nil {
-		glog.Errorf("Clientv3 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
+		klog.Errorf("Clientv3 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
 		return aapiError(err, key)
 	}
 	rs.converter.convertToAAPI(libcalicoObj, out)
@@ -198,7 +198,7 @@ func checkPreconditions(key string, preconditions *storage.Preconditions, out ru
 // and send it in an "ADDED" event, before watch starts.
 func (rs *resourceStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (k8swatch.Interface, error) {
-	glog.Infof("Watch called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.Infof("Watch called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (rs *resourceStore) Watch(ctx context.Context, key string, resourceVersion 
 // and send them in "ADDED" events, before watch starts.
 func (rs *resourceStore) WatchList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (k8swatch.Interface, error) {
-	glog.Infof("WatchList called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.Infof("WatchList called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return nil, err
@@ -230,7 +230,7 @@ func (rs *resourceStore) WatchList(ctx context.Context, key string, resourceVers
 // be have at least 'resourceVersion'.
 func (rs *resourceStore) Get(ctx context.Context, key string, resourceVersion string,
 	out runtime.Object, ignoreNotFound bool) error {
-	glog.Infof("Get called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.Infof("Get called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return err
@@ -254,7 +254,7 @@ func (rs *resourceStore) Get(ctx context.Context, key string, resourceVersion st
 // be have at least 'resourceVersion'.
 func (rs *resourceStore) GetToList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	glog.Infof("GetToList called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.Infof("GetToList called with key: %v on resource %v\n", key, rs.resourceName)
 	return rs.List(ctx, key, resourceVersion, p, listObj)
 }
 
@@ -264,7 +264,7 @@ func (rs *resourceStore) GetToList(ctx context.Context, key string, resourceVers
 // be have at least 'resourceVersion'.
 func (rs *resourceStore) List(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	glog.Infof("List called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.Infof("List called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return err
@@ -368,14 +368,14 @@ func (rs *resourceStore) GuaranteedUpdate(
 	} else {
 		initObj = reflect.New(rs.aapiType).Interface().(runtime.Object)
 		if err := rs.Get(ctx, key, "", initObj, ignoreNotFound); err != nil {
-			glog.Errorf("getting initial object (%s)", err)
+			klog.Errorf("getting initial object (%s)", err)
 			return aapiError(err, key)
 		}
 	}
 	// In either case, extract current state from the initial object
 	curState, err := rs.getStateFromObject(initObj)
 	if err != nil {
-		glog.Errorf("getting state from initial object (%s)", err)
+		klog.Errorf("getting state from initial object (%s)", err)
 		return err
 	}
 
@@ -386,19 +386,19 @@ func (rs *resourceStore) GuaranteedUpdate(
 		totalLoopCount++
 
 		if err := checkPreconditions(key, precondtions, curState.obj); err != nil {
-			glog.Errorf("checking preconditions (%s)", err)
+			klog.Errorf("checking preconditions (%s)", err)
 			return err
 		}
 		// update the object by applying the userUpdate func & encode it
 		updatedObj, ttl, err := userUpdate(curState.obj, *curState.meta)
 		if err != nil {
-			glog.Errorf("applying user update: (%s)", err)
+			klog.Errorf("applying user update: (%s)", err)
 			return err
 		}
 
 		updatedData, err := runtime.Encode(rs.codec, updatedObj)
 		if err != nil {
-			glog.Errorf("encoding candidate obj (%s)", err)
+			klog.Errorf("encoding candidate obj (%s)", err)
 			return err
 		}
 
@@ -435,18 +435,18 @@ func (rs *resourceStore) GuaranteedUpdate(
 			default:
 				e := aapiError(err, key)
 				if storage.IsConflict(e) {
-					glog.V(4).Infof(
+					klog.V(4).Infof(
 						"GuaranteedUpdate of %s failed because of a conflict, going to retry",
 						key,
 					)
 					newCurObj := reflect.New(rs.aapiType).Interface().(runtime.Object)
 					if err := rs.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
-						glog.Errorf("getting new current object (%s)", err)
+						klog.Errorf("getting new current object (%s)", err)
 						return aapiError(err, key)
 					}
 					ncs, err := rs.getStateFromObject(newCurObj)
 					if err != nil {
-						glog.Errorf("getting state from new current object (%s)", err)
+						klog.Errorf("getting state from new current object (%s)", err)
 						return err
 					}
 					curState = ncs
@@ -458,7 +458,7 @@ func (rs *resourceStore) GuaranteedUpdate(
 		rs.converter.convertToAAPI(createdLibcalicoObj, out)
 		return nil
 	}
-	glog.Errorf("GuaranteedUpdate failed.")
+	klog.Errorf("GuaranteedUpdate failed.")
 	return nil
 }
 

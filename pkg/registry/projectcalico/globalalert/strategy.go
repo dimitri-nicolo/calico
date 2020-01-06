@@ -17,6 +17,7 @@ limitations under the License.
 package globalalert
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -50,19 +50,19 @@ func (apiServerStrategy) NamespaceScoped() bool {
 }
 
 // PrepareForCreate clears the Status
-func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	globalAlert := obj.(*calico.GlobalAlert)
 	globalAlert.Status = v3.GlobalAlertStatus{}
 }
 
 // PrepareForUpdate copies the Status from old to obj
-func (apiServerStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newGlobalAlert := obj.(*calico.GlobalAlert)
 	oldGlobalAlert := old.(*calico.GlobalAlert)
 	newGlobalAlert.Status = oldGlobalAlert.Status
 }
 
-func (apiServerStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (apiServerStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	return field.ErrorList{}
 }
 
@@ -77,7 +77,7 @@ func (apiServerStrategy) AllowUnconditionalUpdate() bool {
 func (apiServerStrategy) Canonicalize(obj runtime.Object) {
 }
 
-func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (apiServerStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return ValidateGlobalAlertUpdate(obj.(*calico.GlobalAlert), old.(*calico.GlobalAlert))
 }
 
@@ -89,7 +89,7 @@ func NewStatusStrategy(strategy apiServerStrategy) apiServerStatusStrategy {
 	return apiServerStatusStrategy{strategy}
 }
 
-func (apiServerStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newGlobalAlert := obj.(*calico.GlobalAlert)
 	oldGlobalAlert := old.(*calico.GlobalAlert)
 	newGlobalAlert.Spec = oldGlobalAlert.Spec
@@ -97,16 +97,16 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, o
 }
 
 // ValidateUpdate is the default update validation for an end user updating status
-func (apiServerStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (apiServerStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return ValidateGlobalAlertUpdate(obj.(*calico.GlobalAlert), old.(*calico.GlobalAlert))
 }
 
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	apiserver, ok := obj.(*calico.GlobalAlert)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object (type %v) is not a Global Alert", reflect.TypeOf(obj))
+		return nil, nil, fmt.Errorf("given object (type %v) is not a Global Alert", reflect.TypeOf(obj))
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), AlertToSelectableFields(apiserver), apiserver.Initializers != nil, nil
+	return labels.Set(apiserver.ObjectMeta.Labels), AlertToSelectableFields(apiserver), nil
 }
 
 // MatchAlert is the filter used by the generic etcd backend to watch events

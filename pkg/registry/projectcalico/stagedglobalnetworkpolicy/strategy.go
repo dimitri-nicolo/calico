@@ -17,6 +17,7 @@ limitations under the License.
 package stagedglobalpolicy
 
 import (
+	"context"
 	"fmt"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 )
@@ -43,13 +43,13 @@ func (policyStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (policyStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (policyStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 }
 
-func (policyStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (policyStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 }
 
-func (policyStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (policyStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	return field.ErrorList{}
 	//return validation.ValidatePolicy(obj.(*calico.Policy))
 }
@@ -65,17 +65,17 @@ func (policyStrategy) AllowUnconditionalUpdate() bool {
 func (policyStrategy) Canonicalize(obj runtime.Object) {
 }
 
-func (policyStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (policyStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return field.ErrorList{}
 	// return validation.ValidatePolicyUpdate(obj.(*calico.Policy), old.(*calico.Policy))
 }
 
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	policy, ok := obj.(*calico.StagedGlobalNetworkPolicy)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object is not a Global Policy.")
+		return nil, nil, fmt.Errorf("given object is not a Global Policy.")
 	}
-	return labels.Set(policy.ObjectMeta.Labels), PolicyToSelectableFields(policy), policy.Initializers != nil, nil
+	return labels.Set(policy.ObjectMeta.Labels), PolicyToSelectableFields(policy), nil
 }
 
 // MatchPolicy is the filter used by the generic etcd backend to watch events

@@ -1,18 +1,18 @@
 package: github.com/tigera/calico-k8sapiserver
 import:
 - package: gopkg.in/yaml.v2
-  version: v2.2.5
+  version: v2.2.4
 - package: github.com/projectcalico/go-yaml-wrapper
   version: calico
 - package: github.com/coreos/etcd
-  version: 95a726a27e09030f9ccbd9982a1508f5a6d25ada
+  version: v3.3.17+incompatible
   subpackages:
   - client
   - clientv3
   - mvcc/mvccpb
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
-  version: 8b565fb76d3402a05abc55404a01b8fd05f3dde1
+  version: 37ba08c32fe9fb91a937ffee0095aea99c27b9f4
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -28,33 +28,37 @@ import:
   vcs: git
   subpackages:
   - client
+- package: github.com/Azure/go-autorest
+  version: v13.3.0
+- package: k8s.io/component-base
+  version: v0.16.4
 - package: k8s.io/apiserver
-  version: kubernetes-1.10.0
+  version: v0.16.4
 - package: k8s.io/apiextensions-apiserver
-  version: kubernetes-1.10.0
+  version: v0.16.4
 - package: k8s.io/kubernetes
-  version: v1.10.0
+  version: v1.16.4
 - package: k8s.io/apimachinery
-  version: kubernetes-1.10.2-duration-backport
-  repo: git@github.com:tigera/apimachinery-private.git
-  vcs: git
+  version: v0.16.4
 - package: k8s.io/api
-  version: 73d903622b7391f3312dcbac6483fed484e185f8
+  version: v0.16.4
 - package: k8s.io/client-go
-  version: 23781f4d6632d88e869066eaebb743857aa1ef9b
+  version: v0.16.4
 - package: k8s.io/code-generator
-  version: kubernetes-1.10.0
+  version: v0.16.4
 - package: golang.org/x/tools
   subpackages:
   - import
 - package: k8s.io/gengo
-  version: 4242d8e6c5dba56827bb7bcf14ad11cda38f3991
+  version: e74f70b9b27e1167f8aba52265fe03a6805efdcd
 - package: google.golang.org/grpc
-  version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
+  version: v1.19.0
+- package: k8s.io/klog
+  version: v0.4.0
 - package: github.com/spf13/cobra
   version: f62e98d28ab7ad31d707ba837a966378465c7b57
 - package: github.com/spf13/pflag
-  version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
+  version: v1.0.3
 - package: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
@@ -62,9 +66,15 @@ import:
 - package: github.com/kubernetes/repo-infra
 - package: github.com/imdario/mergo
   version: ~0.3.7
-- package: bitbucket.org/ww/goautoneg
-  vcs: hg
 - package: github.com/Masterminds/sprig
   version: v2.22.0
 - package: github.com/Masterminds/semver
   version: ~1.5.0
+- package: sigs.k8s.io/structured-merge-diff
+  version: v1.0.1
+- package: github.com/go-openapi/spec
+  version: v0.19.2
+- package: k8s.io/kube-openapi
+  version: 743ec37842bf
+- package: github.com/satori/go.uuid
+  version: v1.2.0

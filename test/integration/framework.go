@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -75,8 +75,9 @@ func withConfigGetFreshApiserverAndClient(
 	t.Logf("Starting server on port: %d", securePort)
 	// start the server in the background
 	go func() {
-		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
-		ro.Etcd.StorageConfig.ServerList = serverConfig.etcdServerList
+		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion),
+			genericoptions.NewProcessInfo("tigera-apiserver", "tigera-system"))
+		ro.Etcd.StorageConfig.Transport.ServerList = serverConfig.etcdServerList
 		options := &server.CalicoServerOptions{
 			RecommendedOptions: ro,
 			DisableAuth:        true,
@@ -129,14 +130,14 @@ func waitForApiserverUp(serverURL string, stopCh <-chan struct{}) error {
 			case <-stopCh:
 				return true, fmt.Errorf("apiserver failed")
 			default:
-				glog.Infof("Waiting for : %#v", serverURL)
+				klog.Infof("Waiting for : %#v", serverURL)
 				tr := &http.Transport{
 					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 				}
 				c := &http.Client{Transport: tr}
 				_, err := c.Get(serverURL)
 				if err == nil {
-					glog.Infof("Found server after %v tries and duration %v",
+					klog.Infof("Found server after %v tries and duration %v",
 						tries, time.Since(startWaiting))
 					return true, nil
 				}

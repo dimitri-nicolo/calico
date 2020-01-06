@@ -17,11 +17,12 @@ limitations under the License.
 package rest
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/apiserver/pkg/storage"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicobgpconfiguration "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgpconfiguration"
@@ -76,7 +77,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicopolicy.NewStrategy(scheme),
 			NewListFunc:   calicopolicy.NewList,
 			GetAttrsFunc:  calicopolicy.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: policyRESTOptions,
@@ -97,7 +98,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: caliconetworkset.NewStrategy(scheme),
 			NewListFunc:   caliconetworkset.NewList,
 			GetAttrsFunc:  caliconetworkset.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: networksetRESTOptions,
@@ -118,7 +119,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicostagedk8spolicy.NewStrategy(scheme),
 			NewListFunc:   calicostagedk8spolicy.NewList,
 			GetAttrsFunc:  calicostagedk8spolicy.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: stagedk8spolicyRESTOptions,
@@ -139,7 +140,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicostagedpolicy.NewStrategy(scheme),
 			NewListFunc:   calicostagedpolicy.NewList,
 			GetAttrsFunc:  calicostagedpolicy.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: stagedpolicyRESTOptions,
@@ -160,7 +161,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicotier.NewStrategy(scheme),
 			NewListFunc:   calicotier.NewList,
 			GetAttrsFunc:  calicotier.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: tierRESTOptions,
@@ -181,7 +182,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicogpolicy.NewStrategy(scheme),
 			NewListFunc:   calicogpolicy.NewList,
 			GetAttrsFunc:  calicogpolicy.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: gpolicyRESTOptions,
@@ -202,7 +203,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicostagedgpolicy.NewStrategy(scheme),
 			NewListFunc:   calicostagedgpolicy.NewList,
 			GetAttrsFunc:  calicostagedgpolicy.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: stagedgpolicyRESTOptions,
@@ -223,7 +224,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicognetworkset.NewStrategy(scheme),
 			NewListFunc:   calicognetworkset.NewList,
 			GetAttrsFunc:  calicognetworkset.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: gNetworkSetRESTOptions,
@@ -244,7 +245,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicolicensekey.NewStrategy(scheme),
 			NewListFunc:   calicolicensekey.NewList,
 			GetAttrsFunc:  calicolicensekey.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: licenseKeyRESTOptions,
@@ -265,7 +266,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicogalert.NewStrategy(scheme),
 			NewListFunc:   calicogalert.NewList,
 			GetAttrsFunc:  calicogalert.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: gAlertRESTOptions,
@@ -286,7 +287,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicogalert.NewStrategy(scheme),
 			NewListFunc:   calicogalert.NewList,
 			GetAttrsFunc:  calicogalert.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: gAlertTemplateRESTOptions,
@@ -307,7 +308,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicogthreatfeed.NewStrategy(scheme),
 			NewListFunc:   calicogthreatfeed.NewList,
 			GetAttrsFunc:  calicogthreatfeed.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: gThreatFeedRESTOptions,
@@ -328,7 +329,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicohostendpoint.NewStrategy(scheme),
 			NewListFunc:   calicohostendpoint.NewList,
 			GetAttrsFunc:  calicohostendpoint.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: hostEndpointRESTOptions,
@@ -349,7 +350,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicoglobalreport.NewStrategy(scheme),
 			NewListFunc:   calicoglobalreport.NewList,
 			GetAttrsFunc:  calicoglobalreport.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: globalReportRESTOptions,
@@ -370,7 +371,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicoglobalreporttype.NewStrategy(scheme),
 			NewListFunc:   calicoglobalreporttype.NewList,
 			GetAttrsFunc:  calicoglobalreporttype.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: globalReportTypeRESTOptions,
@@ -391,7 +392,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicoippool.NewStrategy(scheme),
 			NewListFunc:   calicoippool.NewList,
 			GetAttrsFunc:  calicoippool.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: ipPoolRESTOptions,
@@ -412,7 +413,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicobgpconfiguration.NewStrategy(scheme),
 			NewListFunc:   calicobgpconfiguration.NewList,
 			GetAttrsFunc:  calicobgpconfiguration.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: bgpConfigurationRESTOptions,
@@ -433,7 +434,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicobgppeer.NewStrategy(scheme),
 			NewListFunc:   calicobgppeer.NewList,
 			GetAttrsFunc:  calicobgppeer.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: bgpPeerRESTOptions,
@@ -454,7 +455,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicoprofile.NewStrategy(scheme),
 			NewListFunc:   calicoprofile.NewList,
 			GetAttrsFunc:  calicoprofile.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: profileRESTOptions,
@@ -475,7 +476,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicoremoteclusterconfig.NewStrategy(scheme),
 			NewListFunc:   calicoremoteclusterconfig.NewList,
 			GetAttrsFunc:  calicoremoteclusterconfig.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: remoteclusterconfigRESTOptions,
@@ -496,7 +497,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicofelixconfig.NewStrategy(scheme),
 			NewListFunc:   calicofelixconfig.NewList,
 			GetAttrsFunc:  calicofelixconfig.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: felixConfigRESTOptions,
@@ -517,7 +518,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicomanagedcluster.NewStrategy(scheme),
 			NewListFunc:   calicomanagedcluster.NewList,
 			GetAttrsFunc:  calicomanagedcluster.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: managedClusterRESTOptions,
@@ -538,7 +539,7 @@ func (p RESTStorageProvider) NewV3Storage(
 			ScopeStrategy: calicoclusterinformation.NewStrategy(scheme),
 			NewListFunc:   calicoclusterinformation.NewList,
 			GetAttrsFunc:  calicoclusterinformation.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
+			Trigger:       nil,
 		},
 		calicostorage.Options{
 			RESTOptions: clusterInformationRESTOptions,
@@ -548,45 +549,60 @@ func (p RESTStorageProvider) NewV3Storage(
 	)
 
 	storage := map[string]rest.Storage{}
-	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
-	storage["stagednetworkpolicies"] = calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts)
-	storage["stagedkubernetesnetworkpolicies"] = calicostagedk8spolicy.NewREST(scheme, *stagedk8spolicyOpts)
-	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
-	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
-	storage["stagedglobalnetworkpolicies"] = calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts)
-	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
-	storage["networksets"] = caliconetworkset.NewREST(scheme, *networksetOpts)
-	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
+	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
+	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
+	storage["stagedkubernetesnetworkpolicies"] = rESTInPeace(calicostagedk8spolicy.NewREST(scheme, *stagedk8spolicyOpts))
+	storage["tiers"] = rESTInPeace(calicotier.NewREST(scheme, *tierOpts))
+	storage["globalnetworkpolicies"] = rESTInPeace(calicogpolicy.NewREST(scheme, *gpolicyOpts))
+	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts))
+	storage["globalnetworksets"] = rESTInPeace(calicognetworkset.NewREST(scheme, *gNetworkSetOpts))
+	storage["networksets"] = rESTInPeace(caliconetworkset.NewREST(scheme, *networksetOpts))
+	storage["licensekeys"] = rESTInPeace(calicolicensekey.NewREST(scheme, *licenseKeysSetOpts))
 
-	globalAlertsStorage, globalAlertsStatusStorage := calicogalert.NewREST(scheme, *gAlertOpts)
+	globalAlertsStorage, globalAlertsStatusStorage, err := calicogalert.NewREST(scheme, *gAlertOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
 	storage["globalalerts"] = globalAlertsStorage
 	storage["globalalerts/status"] = globalAlertsStatusStorage
-	storage["globalalerttemplates"] = calicogalerttemplate.NewREST(scheme, *gAlertTemplateOpts)
+	storage["globalalerttemplates"] = rESTInPeace(calicogalerttemplate.NewREST(scheme, *gAlertTemplateOpts))
 
-	globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+	globalThreatFeedsStorage, globalThreatFeedsStatusStorage, err := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
 	storage["globalthreatfeeds"] = globalThreatFeedsStorage
 	storage["globalthreatfeeds/status"] = globalThreatFeedsStatusStorage
 
-	storage["hostendpoints"] = calicohostendpoint.NewREST(scheme, *hostEndpointOpts)
+	storage["hostendpoints"] = rESTInPeace(calicohostendpoint.NewREST(scheme, *hostEndpointOpts))
 
-	globalReportsStorage, globalReportsStatusStorage := calicoglobalreport.NewREST(scheme, *globalReportOpts)
+	globalReportsStorage, globalReportsStatusStorage, err := calicoglobalreport.NewREST(scheme, *globalReportOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
 	storage["globalreports"] = globalReportsStorage
 	storage["globalreports/status"] = globalReportsStatusStorage
 
-	storage["globalreporttypes"] = calicoglobalreporttype.NewREST(scheme, *globalReportTypeOpts)
-	storage["ippools"] = calicoippool.NewREST(scheme, *ipPoolSetOpts)
-	storage["bgpconfigurations"] = calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts)
-	storage["bgppeers"] = calicobgppeer.NewREST(scheme, *bgpPeerOpts)
-	storage["profiles"] = calicoprofile.NewREST(scheme, *profileOpts)
-	storage["remoteclusterconfigurations"] = calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts)
-	storage["felixconfigurations"] = calicofelixconfig.NewREST(scheme, *felixConfigOpts)
+	storage["globalreporttypes"] = rESTInPeace(calicoglobalreporttype.NewREST(scheme, *globalReportTypeOpts))
+	storage["ippools"] = rESTInPeace(calicoippool.NewREST(scheme, *ipPoolSetOpts))
+	storage["bgpconfigurations"] = rESTInPeace(calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts))
+	storage["bgppeers"] = rESTInPeace(calicobgppeer.NewREST(scheme, *bgpPeerOpts))
+	storage["profiles"] = rESTInPeace(calicoprofile.NewREST(scheme, *profileOpts))
+	storage["remoteclusterconfigurations"] = rESTInPeace(calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts))
+	storage["felixconfigurations"] = rESTInPeace(calicofelixconfig.NewREST(scheme, *felixConfigOpts))
 
-	managedClusterStorage, managedClusterStatusStorage := calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
+	managedClusterStorage, managedClusterStatusStorage, err := calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
 	storage["managedclusters"] = managedClusterStorage
 	storage["managedclusters/status"] = managedClusterStatusStorage
 
-
-	storage["clusterinformations"] = calicoclusterinformation.NewREST(scheme, *clusterInformationOpts)
+	storage["clusterinformations"] = rESTInPeace(calicoclusterinformation.NewREST(scheme, *clusterInformationOpts))
 
 	return storage, nil
 }
@@ -594,4 +610,15 @@ func (p RESTStorageProvider) NewV3Storage(
 // GroupName returns the API group name.
 func (p RESTStorageProvider) GroupName() string {
 	return calico.GroupName
+}
+
+// rESTInPeace is just a simple function that panics on error.
+// Otherwise returns the given storage object. It is meant to be
+// a wrapper for projectcalico registries.
+func rESTInPeace(storage rest.Storage, err error) rest.Storage {
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	return storage
 }

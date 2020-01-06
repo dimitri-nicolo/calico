@@ -7,20 +7,20 @@ import (
 
 	"golang.org/x/net/context"
 
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/etcd"
-	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
+	"k8s.io/apiserver/pkg/storage"
+	etcd "k8s.io/apiserver/pkg/storage/etcd3"
+	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 )
 
 // NewTierStorage creates a new libcalico-based storage.Interface implementation for Tiers
-func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
+func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
 	c := createClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
@@ -49,7 +49,7 @@ func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return c.Tiers().Watch(ctx, olo)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
-	return &resourceStore{
+	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
@@ -66,7 +66,8 @@ func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		watch:             watchFn,
 		resourceName:      "Tier",
 		converter:         TierConverter{},
-	}, func() {}
+	}, Codec: opts.RESTOptions.StorageConfig.Codec}
+	return dryRunnableStorage, func() {}
 }
 
 type TierConverter struct {

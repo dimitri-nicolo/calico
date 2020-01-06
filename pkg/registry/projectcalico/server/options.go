@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
@@ -24,11 +25,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+	"k8s.io/klog"
 )
 
 type errUnsupportedStorageType struct {
@@ -109,10 +110,10 @@ func (o Options) ResourcePrefix() string {
 // KeyRootFunc returns the appropriate key root function for the storage type in o.
 // This function produces a path that etcd or Calico storage understands, to the root of the resource
 // by combining the namespace in the context with the given prefix
-func (o Options) KeyRootFunc(namespaced bool) func(genericapirequest.Context) string {
+func (o Options) KeyRootFunc(namespaced bool) func(context.Context) string {
 	prefix := o.ResourcePrefix()
 
-	return func(ctx genericapirequest.Context) string {
+	return func(ctx context.Context) string {
 		if namespaced {
 			return registry.NamespaceKeyRootFunc(ctx, prefix)
 		}
@@ -123,10 +124,10 @@ func (o Options) KeyRootFunc(namespaced bool) func(genericapirequest.Context) st
 // KeyFunc returns the appropriate key function for the storage type in o.
 // This function should produce a path that etcd or Calico storage understands, to the resource
 // by combining the namespace in the context with the given prefix
-func (o Options) KeyFunc(namespaced bool) func(genericapirequest.Context, string) (string, error) {
+func (o Options) KeyFunc(namespaced bool) func(context.Context, string) (string, error) {
 	prefix := o.ResourcePrefix()
 
-	return func(ctx genericapirequest.Context, name string) (string, error) {
+	return func(ctx context.Context, name string) (string, error) {
 		if namespaced {
 			return registry.NamespaceKeyFunc(ctx, prefix, name)
 		}
@@ -136,25 +137,32 @@ func (o Options) KeyFunc(namespaced bool) func(genericapirequest.Context, string
 
 // GetStorage returns the storage from the given parameters
 func (o Options) GetStorage(
-	objectType runtime.Object,
 	resourcePrefix string,
 	keyFunc func(obj runtime.Object) (string, error),
 	scopeStrategy rest.NamespaceScopedStrategy,
+	newFunc func() runtime.Object,
 	newListFunc func() runtime.Object,
 	getAttrsFunc storage.AttrFunc,
-	trigger storage.TriggerPublisherFunc,
-) (storage.Interface, factory.DestroyFunc) {
+	trigger storage.IndexerFuncs,
+) (registry.DryRunnableStorage, factory.DestroyFunc, error) {
 	if o.storageType == StorageTypeEtcd {
 		etcdRESTOpts := o.EtcdOptions.RESTOptions
-		return etcdRESTOpts.Decorator(
+		storageInterface, dFunc, err := etcdRESTOpts.Decorator(
 			etcdRESTOpts.StorageConfig,
-			objectType,
 			resourcePrefix,
 			keyFunc, /* keyFunc for decorator -- looks to be unused everywhere */
+			newFunc,
 			newListFunc,
 			getAttrsFunc,
 			trigger,
 		)
+		if err != nil {
+			klog.Warning("error (%s)", err)
+			return registry.DryRunnableStorage{}, nil, err
+		}
+		dryRunnableStorage := registry.DryRunnableStorage{Storage: storageInterface, Codec: etcdRESTOpts.StorageConfig.Codec}
+		return dryRunnableStorage, dFunc, nil
 	}
-	return calico.NewStorage(o.CalicoOptions)
+	dryRunnableStorage, dFunc := calico.NewStorage(o.CalicoOptions)
+	return dryRunnableStorage, dFunc, nil
 }

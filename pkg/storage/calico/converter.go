@@ -5,7 +5,7 @@ package calico
 import (
 	"reflect"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
@@ -148,7 +148,7 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		ClusterInformationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
-		glog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
+		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil
 	}
 }

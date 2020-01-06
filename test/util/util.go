@@ -19,7 +19,7 @@ package util
 import (
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +33,7 @@ import (
 func WaitForGlobalNetworkPoliciesToNotExist(client v3calico.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
-			glog.V(5).Infof("Waiting for broker %v to not exist", name)
+			klog.V(5).Infof("Waiting for broker %v to not exist", name)
 			_, err := client.GlobalNetworkPolicies().Get(name, metav1.GetOptions{})
 			if nil == err {
 				return false, nil
@@ -53,7 +53,7 @@ func WaitForGlobalNetworkPoliciesToNotExist(client v3calico.ProjectcalicoV3Inter
 func WaitForGlobalNetworkPoliciesToExist(client v3calico.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
-			glog.V(5).Infof("Waiting for serviceClass %v to exist", name)
+			klog.V(5).Infof("Waiting for serviceClass %v to exist", name)
 			_, err := client.GlobalNetworkPolicies().Get(name, metav1.GetOptions{})
 			if nil == err {
 				return true, nil
@@ -69,7 +69,7 @@ func WaitForGlobalNetworkPoliciesToExist(client v3calico.ProjectcalicoV3Interfac
 func WaitForTierToNotExist(client v3calico.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
-			glog.V(5).Infof("Waiting for serviceClass %v to not exist", name)
+			klog.V(5).Infof("Waiting for serviceClass %v to not exist", name)
 			_, err := client.Tiers().Get(name, metav1.GetOptions{})
 			if nil == err {
 				return false, nil
@@ -89,7 +89,7 @@ func WaitForTierToNotExist(client v3calico.ProjectcalicoV3Interface, name string
 func WaitForTierToExist(client v3calico.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
-			glog.V(5).Infof("Waiting for serviceClass %v to exist", name)
+			klog.V(5).Infof("Waiting for serviceClass %v to exist", name)
 			_, err := client.Tiers().Get(name, metav1.GetOptions{})
 			if nil == err {
 				return true, nil

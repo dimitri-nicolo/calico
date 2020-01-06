@@ -34,6 +34,6 @@ type Options struct {
 	ObjectType    runtime.Object
 	ScopeStrategy rest.NamespaceScopedStrategy
 	NewListFunc   func() runtime.Object
-	GetAttrsFunc  func(runtime.Object) (labels.Set, fields.Set, bool, error)
-	Trigger       storage.TriggerPublisherFunc
+	GetAttrsFunc  func(runtime.Object) (labels.Set, fields.Set, error)
+	Trigger       storage.IndexerFunc
 }

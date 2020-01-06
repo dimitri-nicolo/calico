@@ -2,6 +2,7 @@
 package authorizer_test
 
 import (
+	"context"
 	"testing"
 
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -116,7 +117,7 @@ func createNpTierAttr(verb string) k8sauth.Attributes {
 }
 
 // createGnpContext returns the expected attributes for a tier wildcard NP match
-func createGnpContext(verb string) genericapirequest.Context {
+func createGnpContext(verb string) context.Context {
 	ctx := genericapirequest.NewContext()
 	ctx = genericapirequest.WithUser(ctx, testUser)
 	ri := &genericapirequest.RequestInfo{
@@ -137,7 +138,7 @@ func createGnpContext(verb string) genericapirequest.Context {
 }
 
 // createNpContext returns the expected attributes for a tier wildcard NP match
-func createNpContext(verb string) genericapirequest.Context {
+func createNpContext(verb string) context.Context {
 	ctx := genericapirequest.NewContext()
 	ctx = genericapirequest.WithUser(ctx, testUser)
 	ctx = genericapirequest.WithNamespace(ctx, "test-namespace")
