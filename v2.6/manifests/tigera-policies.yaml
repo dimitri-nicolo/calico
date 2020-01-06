@@ -185,6 +185,8 @@ spec:
     ports:
     - port: 6783
       protocol: TCP
+    - port: 9094
+      protocol: TCP
     - port: 6783
       protocol: UDP
   podSelector:
