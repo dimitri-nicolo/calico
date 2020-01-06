@@ -15,7 +15,7 @@ Honeypod may be used to detect resources enumeration, privilege escalation, data
 * Clusterolebinding: tigera-internal-binding
 * Clusterole: tigera-internal-role
 
-## Demo Installation (only compromised pod scenarios)
+## Demo Installation
 0. Ensure Calico Enterprise version 2.6+ is installed
 1. `kubectl apply -f honeypod\_sample\_setup.yaml`
 
@@ -39,7 +39,3 @@ We currently have several Honeypod deployments that can be used to detect differ
   * Expose a nginx service that serves a generic page. The pod can be discovered via clusterip or DNS lookup.
 * Vulnerable Service (mysql)
   * Expose a SQL service that contains an empty database with easy (root, no password) access. The pod can be discovered via clusterip or DNS lookup.
-
-### Compromised Node
-* IP Enumeration
-  * By not setting a service and adding strict network policy, the pod can only be reach by the hosting Node.

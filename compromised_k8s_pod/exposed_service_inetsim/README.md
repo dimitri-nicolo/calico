@@ -1,4 +1,4 @@
-# Exposed Service
+# Exposed Service [Do Not Use]
 
 Have a [inetsim](https://www.inetsim.org/features.html) honeypod and have the honeypod simulate a HTTP server on port 8888. Two services is then applied to expose port 443 and 8888 to the honeypod. This will generate 2 entries into our DNS record: tigera-dashboard-internal-service.tigera-internal.svc.cluster.local(443) and tigera-dashboard-internal-debug.tigera-internal.svc.cluster.local(8888). This mimics a web application with a secure endpoint (443) and a debug instance. This entice the attacker in trying to connect to tigera-dashboard-internal-debug.tigera-internal.svc.cluster.local(8888). Since no pods should be accessing these services, we can indicate that a pod has been compromised and is attempting to move latterally.
 

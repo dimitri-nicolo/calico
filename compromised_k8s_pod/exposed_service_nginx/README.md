@@ -5,6 +5,10 @@ Have a nginx container serving HTTP with a generic response on port 8888. Two se
 ## Detection:
 If anyone talks to it (other than healthchecks) we create an alert. 
 
+# Alert:
+* `[Honeypod] Exposed Service accessed by ${source_namespace}/${source_name_aggr} on port 80`
+  * Detection of a Pod reaching the Honeypod services on specified destionation port
+
 **Pros**
 * Easy to setup 
 

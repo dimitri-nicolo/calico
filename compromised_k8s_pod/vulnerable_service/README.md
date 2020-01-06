@@ -5,6 +5,10 @@ Have a mysql container serving an empty database on port 3306. The database cont
 ## Detection:
 If anyone talks to it (other than healthchecks) we create an alert. 
 
+## Alert:
+* `[Honeypod] Vulnerable Service (FTP) accessed by ${source_namespace}/${source_name_aggr}`
+  * Detection of a Pod reaching our Honeypod FTP service
+
 **Pros**
 * Easy to setup 
 
