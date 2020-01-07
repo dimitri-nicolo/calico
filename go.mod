@@ -46,6 +46,7 @@ require (
 	github.com/rogpeppe/go-internal v1.3.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
+	github.com/stretchr/testify v1.4.0
 	github.com/tigera/licensing v2.6.0-0.dev+incompatible
 	github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be
 	github.com/ugorji/go v1.1.7 // indirect
