@@ -198,10 +198,8 @@ spec:
           values:
           - calico-node-alertmanager
     ports:
-    - port: 6783
+    - port: 9094
       protocol: TCP
-    - port: 6783
-      protocol: UDP
   podSelector:
     matchLabels:
       alertmanager: calico-node-alertmanager
