@@ -200,27 +200,6 @@ toc:
     section:
     - title: Installing Calico Enterprise using Helm
       path: /reference/other-install-methods/kubernetes/installation/helm/
-  # TODO: Convert/merge this with "the hard way" documentation.
-  - title: Manual
-    section:
-    - title: Introduction
-      path: /reference/other-install-methods/kubernetes/installation/
-    - title: Installing Calico Enterprise for policy and networking
-      path: /reference/other-install-methods/kubernetes/installation/calico
-    - title: Installing Calico Enterprise for policy only
-      path: /reference/other-install-methods/kubernetes/installation/other
-    - title: Enabling integration with AWS security groups (optional)
-      path: /reference/other-install-methods/kubernetes/installation/aws-sg-integration
-    - title: Customizing the Calico manifests
-      path: /reference/other-install-methods/kubernetes/installation/config-options
-    - title: Customizing the Calico Enterprise manifests
-      path: /reference/other-install-methods/kubernetes/installation/hosted/cnx/cnx
-    - title: Installing Calico Enterprise on Docker Enterprise
-      path: /reference/other-install-methods/kubernetes/installation/docker-ee
-    - title: Installing Calico Enterprise on Amazon EKS
-      path: /reference/other-install-methods/kubernetes/installation/eks
-    - title: Installing Calico Enterprise on Google GKE
-      path: /reference/other-install-methods/kubernetes/installation/gke
   # TODO: This is old content that needs refreshing in order to work with the operator.
   - title: Configure Metrics 
     section:
