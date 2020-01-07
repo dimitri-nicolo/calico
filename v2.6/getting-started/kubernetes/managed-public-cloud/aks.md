@@ -7,10 +7,6 @@ redirect_from: latest/getting-started/kubernetes/managed-public-cloud/aks
 
 Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 
-> **Note**: AKS support for {{site.prodname}} is currently in technical preview
-   and is suitable for non-production clusters only.
-{: .alert .alert-info}
-
 ### Before you begin
 
 - [Create a compatible AKS cluster](#create-a-compatible-aks-cluster)
