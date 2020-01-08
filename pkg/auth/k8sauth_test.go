@@ -23,7 +23,6 @@ var _ = Describe("Test request parsing", func() {
 	DescribeTable("Test invalid Authorization Headers",
 		func(req *http.Request) {
 			var ka k8sauth
-			ka.delegateAuthentication = true
 			h := &DummyHttpHandler{serveCalled: false}
 			w := httptest.NewRecorder()
 
@@ -39,9 +38,5 @@ var _ = Describe("Test request parsing", func() {
 			&http.Request{Header: http.Header{"Authorization": []string{"bear token"}}}),
 		Entry("Bad token: Bearer: token",
 			&http.Request{Header: http.Header{"Authorization": []string{"Bearer: token"}}}),
-		Entry("No authorization header and empty string for impersonate user header",
-			&http.Request{Header: http.Header{"Authorization": []string{"Bearer"}, "Impersonate-User": []string{""}}}),
-		Entry("No authorization header and empty impersonate user header",
-			&http.Request{Header: http.Header{"Authorization": []string{"Bearer"}, "Impersonate-User": []string{}}}),
 	)
 })
