@@ -16,6 +16,7 @@ require (
 	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.0.0+incompatible
+	github.com/elastic/go-elasticsearch/v7 v7.3.0
 	github.com/emicklei/go-restful v2.9.5+incompatible
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/ghodss/yaml v1.0.0
