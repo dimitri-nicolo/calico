@@ -553,7 +553,7 @@ git-push:
 
 update-felix-confd update-pins: update-libcalico-pin update-licensing-pin update-felix-pin update-confd-pin update-cni-pin
 
-commit-pin-updates: update-pins git-status ci git-config git-commit git-push
+commit-pin-updates: update-pins git-status ci-no-assert git-config git-commit git-push
 
 ###############################################################################
 # Static checks
@@ -847,6 +847,9 @@ mod-download:
 
 .PHONY: ci
 ci: clean mod-download static-checks ut fv image-all assert-not-dirty build-windows-archive st
+
+# use this target to run all but assert-not-dirty target to use with commit-pin-updates.
+ci-no-assert: clean mod-download static-checks ut fv image-all build-windows-archive st
 
 ## Deploys images to registry
 cd:
