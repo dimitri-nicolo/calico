@@ -343,6 +343,31 @@ class FailoverTest(object):
 
 # FailoverCluster holds methods to setup/cleanup testing enviroment.
 class FailoverCluster(object):
+    #
+    #             +--------------------+-----plane 1----------+------------------+
+    #             |                    |                      |                  |
+    #             |   +--------------------+-------plane 2--------+------------------+
+    #             |   |                |   |                  |   |              |   |
+    #   +--------------------+  +-----------------+     +----------------+  +----------------+
+    #   | kind-control-plane |  | kind-worker     |     | kind-worker2   |  | kind-worker3   |
+    #   |                    |  |                 |     |                |  |                |
+    #   |  POD: ra-server    |  | POD: client     |     | Target for     |  | POD: rb-server |
+    #   |                    |  | HN: client-host |     | NodePort tests |  |                |
+    #   +--------------------+  +-----------------+     +----------------+  +----------------+
+    #
+    #
+    # PodIP tests: client -> ra-server pod IP
+    #              client -> rb-server pod IP
+    #
+    # ServiceIP tests: client -> ra-server service cluster IP
+    #                  client -> rb-server service cluster IP
+    #
+    # NodePort tests: client -> ra-server service node port on kind-worker2
+    #                 client -> rb-server service node port on kind-worker2
+    #
+    # HostAccess tests: client-host -> ra-server pod IP
+    #                   client-host -> rb-server pod IP
+    #
     def setup(self):
         kubectl("create ns dualtor")
 
