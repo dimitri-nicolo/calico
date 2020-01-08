@@ -9,7 +9,8 @@ the page will not display any data from that index.
 
 ### Elasticsearch indexes and RBAC
 
-In {{site.prodname}}, resources are associated with the Kubernetes API group `lma.tigera.io`.
+In {{site.prodname}}, Elasticsearch resources are associated with the Kubernetes API group `lma.tigera.io` and access 
+can be granted per cluster. The default cluster name for {{site.prodname}} is `cluster`.
 
 | Elasticsearch Index          | Kubernetes RBAC resource name | Description                                                                                                                     |
 |------------------------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
@@ -37,7 +38,7 @@ metadata:
   name: audit-ee-only
 rules:
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: ["audit_ee"]
   verbs: ["get"]
 ```
@@ -69,7 +70,7 @@ Creating a `SubjectAccessReview` returns YAML output that tells you whether the 
 
 In the `SubjectAccessReview` spec:
 - `group` should be set to `lma.tigera.io`
-- `resource` should be set to `index`
+- `resource` should be set to `cluster`
 - `verb` should be set to `get`
 - and `resource` should be set to a Kubernetes RBAC resource name (as defined in the table above)
 
@@ -83,7 +84,7 @@ kind: SubjectAccessReview
 spec:
   resourceAttributes:
     group: lma.tigera.io
-    resource: index
+    resource: cluster
     name: audit_ee
     verb: get
   user: bob
@@ -101,7 +102,7 @@ spec:
   resourceAttributes:
     group: lma.tigera.io
     name: audit_ee
-    resource: index
+    resource: cluster
     verb: get
   user: bob
 status:
@@ -121,7 +122,7 @@ kind: SubjectAccessReview
 spec:
   resourceAttributes:
     group: lma.tigera.io
-    resource: index
+    resource: cluster
     name: ""
     verb: get
   user: bob
@@ -138,7 +139,7 @@ metadata:
 spec:
   resourceAttributes:
     group: lma.tigera.io
-    resource: index
+    resource: cluster
     verb: get
   user: bob
 status:
@@ -163,7 +164,7 @@ metadata:
   name: allow-all-es
 rules:
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: []
   verbs: ["get"]
 ```

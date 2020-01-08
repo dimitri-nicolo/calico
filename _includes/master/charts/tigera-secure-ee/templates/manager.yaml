@@ -462,7 +462,7 @@ rules:
   resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090"]
   verbs: ["get","create"]
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["*"]
   resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 # Access to policies in the default tier
@@ -507,7 +507,7 @@ rules:
   verbs: ["get","create"]
 # Access to flow logs, audit logs, and statistics
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["*"]
   resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 # Manage globalreport configuration, view report generation status, and list reports in the UI.

@@ -165,8 +165,8 @@
 
    To ensure that {{site.prodname}} Manager users have the same level of access to
    Elasticsearch indices, ClusterRoles that grant access to Elasticsearch in the
-   manner show above should be modified to give access to all resource names under
-   of type `index` in the `lma.tigera.io` group.
+   manner shown above should be modified to give access to all resource names for cluster
+    `cluster` in the `lma.tigera.io` group.
 
    ```
    kubectl apply -f - <<EOF
@@ -176,7 +176,7 @@
      name: tigera-elasticsearch-access
    rules:
    - apiGroups: ["lma.tigera.io"]
-     resources: ["index"]
+     resources: ["cluster"]
      resourceNames: []
      verbs: ["get"]
    EOF

@@ -23,7 +23,7 @@ rules:
   verbs: ["get","create"]
 # Access to flow logs, audit logs, and statistics
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: ["flows", "audit*", "events", "dns"]
   verbs: ["get"]
 ---
