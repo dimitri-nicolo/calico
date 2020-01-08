@@ -1,3 +1,15 @@
+PACKAGE_NAME    ?=github.com/tigera/calico-k8sapiserver
+GO_BUILD_VER    ?=v0.30
+
+GOMOD_VENDOR    := true
+LOCAL_CHECKS     = vendor goimports check-gen-files
+GIT_USE_SSH      = true
+
+K8S_VERSION     ?= v1.16.3
+BINDIR          ?= bin
+
+default: ut
+
 ###############################################################################
 # Both native and cross architecture builds are supported.
 # The target architecture is select by setting the ARCH variable.
@@ -47,18 +59,13 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
 CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
-PACKAGE_NAME?=github.com/tigera/calico-k8sapiserver
-
-GO_BUILD_VER?=v0.24
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
-
 #This is a version with known container with compatible versions of sed/grep etc.
 TOOLING_BUILD?=calico/go-build:v0.25
-
 
 
 help:
@@ -75,9 +82,6 @@ help:
 	@echo
 	@echo "Maintenance:"
 	@echo
-	@echo "  make update-vendor  Update the vendor directory with new "
-	@echo "                      versions of upstream packages.  Record results"
-	@echo "                      in glide.lock."
 	@echo "  make clean         Remove binary files."
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
@@ -124,11 +128,75 @@ BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 KUBECONFIG_DIR?=/etc/kubernetes/admin.conf
 
-# Figure out the users UID/GID.  These are needed to run docker containers
+##### XXX: temp changes from common Makefile ####
+ifeq ($(GOMOD_VENDOR),true)
+    GOFLAGS?="-mod=vendor"
+else
+ifeq ($(CI),true)
+ifneq ($(LOCAL_BUILD),true)
+    GOFLAGS?="-mod=readonly"
+endif # LOCAL_BUILD
+endif # CI
+endif # GOMOD_VENDOR
+
+EXTRA_DOCKER_ARGS += -e GO111MODULE=on -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
+GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+
+define get_remote_version
+    $(shell git ls-remote https://$(1) $(2) 2>/dev/null | cut -f 1)
+endef
+
+# update_pin updates the given package's version to the latest available in the specified repo and branch.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_pin
+    $(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+    $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
+        if [[ ! -z "$(new_ver)" ]]; then \
+            $(GIT_CONFIG_SSH); \
+            go get $(1)@$(new_ver); \
+            go mod download; \
+        else \
+            error "error getting remote version"; \
+        fi'
+endef
+
+# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
+# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
+# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
+define update_replace_pin
+    $(eval new_ver := $(call get_remote_version,$(2),$(3)))
+
+    $(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+        if [ ! -z "$(new_ver)" ]; then \
+            $(GIT_CONFIG_SSH); \
+            go mod edit -replace $(1)=$(2)@$(new_ver); \
+            go mod download; \
+        else \
+            echo "error getting remote version"; \
+            exit 1; \
+        fi'
+endef
+
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LICENSING_BRANCH?=$(PIN_BRANCH)
+LICENSING_REPO?=github.com/tigera/licensing
+
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
+	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
+
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
+##### temp changes from common Makefile #####
+
+
+# Figure out the users UID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
 MY_UID:=$(shell id -u)
-MY_GID:=$(shell id -g)
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
@@ -141,8 +209,6 @@ else
 	GOMOD_CACHE = $$HOME/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
-
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
   EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
@@ -151,21 +217,22 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache .lint-cache $(GOMOD_CACHE) && \
+DOCKER_RUN := mkdir -p .go-pkg-cache bin .lint-cache $(GOMOD_CACHE) && \
 			  docker run --rm \
 				 --net=host \
 				 $(EXTRA_DOCKER_ARGS) \
 				 -e LOCAL_USER_ID=$(MY_UID) \
 				 -e GOCACHE=/go-cache \
+				 -e GOPATH=/go \
+				 -e GOOS=$(BUILDOS) \
+				 -e GOARCH=$(ARCH)\
+				 -e GOFLAGS=$(GOFLAGS) \
 				 -e GOLANGCI_LINT_CACHE=/lint-cache \
-				 -e GO111MODULE=off \
-				 -v $(HOME)/.glide:/home/user/.glide:rw \
-				 -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
-				 -v $${PWD}/.go-pkg-cache:/go-cache:rw \
-				 -v $${PWD}/.lint-cache:/lint-cache:rw \
-				 -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
-				 -w /go/src/github.com/tigera/calico-k8sapiserver \
-				 -e GOARCH=$(ARCH)
+				 -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+				 -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+				 -v $(CURDIR)/.lint-cache:/lint-cache:rw \
+				 -v $(CURDIR)/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
+				 -w /go/src/$(PACKAGE_NAME)
 
 # Update the vendored dependencies with the latest upstream versions matching
 # our glide.yaml.  If there area any changes, this updates glide.lock
@@ -173,18 +240,15 @@ DOCKER_RUN := mkdir -p .go-pkg-cache .lint-cache $(GOMOD_CACHE) && \
 # want to use the vendor target to install the versions from glide.lock.
 .PHONY: update-vendor
 update-vendor:
-	mkdir -p $$HOME/.glide
-	$(DOCKER_RUN) $(CALICO_BUILD) glide up --strip-vendor
-	touch vendor/.up-to-date
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) && go mod tidy'
 
 # vendor is a shortcut for force rebuilding the go vendor directory.
 .PHONY: vendor
-vendor vendor/.up-to-date: glide.lock
-	mkdir -p $$HOME/.glide
-	$(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor
+vendor: go.mod
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) && go mod vendor'
 	touch vendor/.up-to-date
-
-
 
 ###############################################################################
 # Managing the upstream library pins
@@ -237,17 +301,6 @@ guard-git-libcalico:
 	fi;
 
 ## Update libary pin in glide.yaml
-update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
-		REPO="$(LIBCALICO_REPO)" \
-		VERSION="$(LIBCALICO_VERSION)" \
-		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
-		BRANCH="$(LIBCALICO_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-
 
 ###############################################################################
 ## licensing
@@ -271,19 +324,6 @@ guard-git-licensing:
 		exit 1; \
 	fi;
 
-## Update libary pin in glide.yaml
-update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(LICENSING_GLIDE_LABEL)" \
-		REPO="$(LICENSING_REPO)" \
-		VERSION="$(LICENSING_VERSION)" \
-		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
-		BRANCH="$(LICENSING_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-
-
 
 # This section contains the code generation stuff
 #################################################
@@ -298,34 +338,34 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 
 $(BINDIR)/defaulter-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/defaulter-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/defaulter-gen/*.go'
 
 $(BINDIR)/deepcopy-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/deepcopy-gen/*.go'
 
 $(BINDIR)/conversion-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/conversion-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/conversion-gen/*.go'
 
 $(BINDIR)/client-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/client-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/client-gen/*.go'
 
 $(BINDIR)/lister-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/lister-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/lister-gen/*.go'
 
 $(BINDIR)/informer-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/informer-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/informer-gen/*.go'
 
 $(BINDIR)/openapi-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+	    sh -c 'go build -o $@ vendor/k8s.io/code-generator/cmd/openapi-gen/*.go'
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
-.generate_files: .generate_exes $(TYPES_FILES)
+.generate_files: .generate_exes
 	# Generate defaults
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(BINDIR)/defaulter-gen \
@@ -343,7 +383,7 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico" \
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3" \
-		--bounding-dirs "github.com/tigera/calico-k8sapiserver" \
+		--bounding-dirs $(PACKAGE_NAME) \
 		--output-file-base zz_generated.deepcopy'
 	# Generate conversions
 	$(DOCKER_RUN) $(CALICO_BUILD) \
@@ -471,8 +511,19 @@ run-etcd: stop-etcd
 stop-etcd:
 	-docker rm -f calico-etcd
 
+GITHUB_TEST_INTEGRATION_URI := https://raw.githubusercontent.com/kubernetes/kubernetes/v1.16.4/hack/lib
+
+hack-lib:
+	mkdir -p hack/lib/
+	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/init.sh -o hack/lib/init.sh
+	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/util.sh -o hack/lib/util.sh
+	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/logging.sh -o hack/lib/logging.sh
+	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/version.sh -o hack/lib/version.sh
+	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/golang.sh -o hack/lib/golang.sh
+	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/etcd.sh -o hack/lib/etcd.sh
+
 .PHONY: fv
-fv: vendor/.up-to-date run-etcd
+fv: vendor/.up-to-date run-etcd hack-lib
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
 
@@ -546,12 +597,13 @@ stop-kubernetes-master:
 	-docker rm -f st-apiserver st-controller-manager
 
 .PHONY: fv-kdd
-fv-kdd: vendor/.up-to-date run-kubernetes-master
+fv-kdd: vendor/.up-to-date run-kubernetes-master hack-lib
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'K8S_API_ENDPOINT="http://127.0.0.1:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
-clean: clean-bin clean-build-image clean-generated
+clean: clean-bin clean-build-image clean-generated clean-hack-lib
+	rm -rf vendor/
 clean-build-image:
 	docker rmi -f tigera/cnx-apiserver > /dev/null 2>&1 || true
 
@@ -563,8 +615,11 @@ clean-generated:
 
 clean-bin:
 	rm -rf $(BINDIR) \
-			.generate_exes \
-			docker-image/bin
+	    .generate_exes \
+	    docker-image/bin
+
+clean-hack-lib:
+	rm -rf hack/lib/
 
 .PHONY: release
 release: clean
