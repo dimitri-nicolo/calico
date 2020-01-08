@@ -561,7 +561,7 @@ commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 .PHONY: static-checks
 LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run $(LINT_ARGS)'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); GOGC=50 golangci-lint run $(LINT_ARGS)'
 
 .PHONY: fix
 fix:

@@ -604,6 +604,10 @@ func (c shimClient) GlobalAlerts() client.GlobalAlertInterface {
 	panic("not implemented")
 }
 
+func (c shimClient) GlobalAlertTemplates() client.GlobalAlertTemplateInterface {
+	panic("not implemented")
+}
+
 func (c shimClient) StagedGlobalNetworkPolicies() client.StagedGlobalNetworkPolicyInterface {
 	panic("not implemented")
 }
