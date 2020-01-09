@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ import (
 
 	"fmt"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 )
 
 func Replace(args []string) error {
@@ -78,7 +79,7 @@ Description:
   terminating error.
 
   The output of the command indicates how many resources were successfully
-  eplaced, and the error reason if an error occurred.
+  replaced, and the error reason if an error occurred.
 
   The resources are replaced in the order they are specified.  In the event of
   a failure replacing a specific resource it is possible to work out which

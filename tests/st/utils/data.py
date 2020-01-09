@@ -432,14 +432,6 @@ networkpolicy_name2_rev1 = {
             'name': 'endpoint1',
             'uid': 'test-uid-change',
         }],
-        'initializers': {
-            'pending': [{
-                'name': 'initializer1',
-            }],
-            'result': {
-                'status': 'test-status',
-            },
-        },
         'clusterName': 'cluster1',
         'labels': {'label1': 'l1', 'label2': 'l2'},
         'annotations': {'key': 'value'},
@@ -636,14 +628,6 @@ stagednetworkpolicy_name2_rev1 = {
             'name': 'endpoint1',
             'uid': 'test-uid-change',
         }],
-        'initializers': {
-            'pending': [{
-                'name': 'initializer1',
-            }],
-            'result': {
-                'status': 'test-status',
-            },
-        },
         'clusterName': 'cluster1',
         'labels': {'label1': 'l1', 'label2': 'l2'},
         'annotations': {'key': 'value'},
@@ -1084,7 +1068,7 @@ stagedglobalnetworkpolicy_os_name1_rev1 = {
         'name': 'os-policy-mystagedpolicy1',
     },
     'spec': {
-        'stagedAction': "Set",       
+        'stagedAction': "Set",
         'order': 100,
         'selector': "type=='database'",
         'types': ['Ingress', 'Egress'],

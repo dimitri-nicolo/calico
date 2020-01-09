@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018,2020 Tigera, Inc. All rights reserved.
 
 package node_test
 
@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/onsi/ginkgo/reporters"
+
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 

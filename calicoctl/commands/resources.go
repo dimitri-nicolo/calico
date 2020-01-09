@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016,2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	licClient "github.com/tigera/licensing/client"
+
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
@@ -33,7 +35,6 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	licClient "github.com/tigera/licensing/client"
 )
 
 type action int
