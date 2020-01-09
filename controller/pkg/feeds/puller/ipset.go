@@ -41,34 +41,20 @@ type ipSetGNSHandler struct {
 }
 
 type ipSetContent struct {
-	lock   sync.RWMutex
 	name   string
 	parser parser
 }
 
-func (i *ipSetContent) setFeed(f *calico.GlobalThreatFeed) {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	i.name = f.Name
-	i.parser = getParserForFormat(f.Spec.Pull.HTTP.Format)
-}
-
 func (i *ipSetContent) snapshot(r io.Reader) (interface{}, error) {
-	i.lock.RLock()
-	name := i.name
-	parser := i.parser
-	i.lock.RUnlock()
-
 	var snapshot db.IPSetSpec
 	var once sync.Once
 
 	// entry handler
 	h := func(n int, entry string) {
-		snapshot = append(snapshot, parseIP(entry, log.WithField("name", name), n, &once)...)
+		snapshot = append(snapshot, parseIP(entry, log.WithField("name", i.name), n, &once)...)
 	}
 
-	err := parser(r, h)
+	err := i.parser(r, h)
 	return snapshot, err
 }
 
@@ -159,22 +145,6 @@ func (h *ipSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface
 	} else {
 		st.ClearError(statser.GlobalNetworkSetSyncFailed)
 	}
-}
-
-func (h *ipSetGNSHandler) setFeed(f *calico.GlobalThreatFeed) bool {
-	oldEnabled := h.enabled
-	h.name = f.Name
-	if f.Spec.GlobalNetworkSet != nil {
-		h.enabled = true
-		h.labels = make(map[string]string)
-		for k, v := range f.Spec.GlobalNetworkSet.Labels {
-			h.labels[k] = v
-		}
-	} else {
-		h.enabled = false
-		h.labels = nil
-	}
-	return h.enabled && !oldEnabled
 }
 
 func NewIPSetHTTPPuller(

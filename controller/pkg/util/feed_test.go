@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	testGlobalThreatFeed = v3.GlobalThreatFeed{
+	testGlobalThreatFeed = &v3.GlobalThreatFeed{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "mock",
 			Namespace: FeedsNamespace,
@@ -42,7 +42,7 @@ var (
 func TestParseFeedDuration(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	period := ParseFeedDuration(&testGlobalThreatFeed)
+	period := ParseFeedDuration(testGlobalThreatFeed)
 
 	g.Expect(period).Should(BeNumerically("==", 12*time.Hour))
 }
@@ -80,23 +80,52 @@ func TestParseFeedDurationNilPull(t *testing.T) {
 func TestFeedNeedsRestart(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	a := testGlobalThreatFeed.DeepCopy()
-	a.Spec.Pull = nil
-	b := testGlobalThreatFeed.DeepCopy()
-	b.Spec.Pull.Period = "24h"
-	c := testGlobalThreatFeed.DeepCopy()
-	c.Spec.Pull.Period = "12h"
-	d := testGlobalThreatFeed.DeepCopy()
-	d.Spec.Pull.Period = ""
+	noPull := testGlobalThreatFeed.DeepCopy()
+	noPull.Spec.Pull = nil
+	period24h := testGlobalThreatFeed.DeepCopy()
+	period24h.Spec.Pull.Period = "24h"
+	period12h := testGlobalThreatFeed.DeepCopy()
+	period12h.Spec.Pull.Period = "12h"
+	periodEmpty := testGlobalThreatFeed.DeepCopy()
+	periodEmpty.Spec.Pull.Period = ""
+	noHTTP := testGlobalThreatFeed.DeepCopy()
+	noHTTP.Spec.Pull.HTTP = nil
+	emptyFormat := testGlobalThreatFeed.DeepCopy()
+	emptyFormat.Spec.Pull.HTTP.Format.NewlineDelimited = nil
+	jsonFormat := emptyFormat.DeepCopy()
+	jsonFormat.Spec.Pull.HTTP.Format.JSON = &v32.ThreatFeedFormatJSON{Path: "$."}
+	jsonFormat2 := emptyFormat.DeepCopy()
+	jsonFormat2.Spec.Pull.HTTP.Format.JSON = &v32.ThreatFeedFormatJSON{Path: "$.foo"}
+	csvFormat := emptyFormat.DeepCopy()
+	csvFormat.Spec.Pull.HTTP.Format.CSV = &v32.ThreatFeedFormatCSV{FieldNum: UintPtr(1)}
+	csvFormat2 := emptyFormat.DeepCopy()
+	csvFormat2.Spec.Pull.HTTP.Format.CSV = &v32.ThreatFeedFormatCSV{FieldNum: UintPtr(2)}
+	noGlobalNetworkSet := testGlobalThreatFeed.DeepCopy()
+	noGlobalNetworkSet.Spec.GlobalNetworkSet = nil
 
-	g.Expect(FeedNeedsRestart(a, a)).Should(BeFalse())
-	g.Expect(FeedNeedsRestart(a, b)).Should(BeTrue())
-	g.Expect(FeedNeedsRestart(b, a)).Should(BeTrue())
-	g.Expect(FeedNeedsRestart(b, b)).Should(BeFalse())
-	g.Expect(FeedNeedsRestart(b, c)).Should(BeTrue())
-	g.Expect(FeedNeedsRestart(c, b)).Should(BeTrue())
-	g.Expect(FeedNeedsRestart(b, d)).Should(BeFalse())
-	g.Expect(FeedNeedsRestart(d, b)).Should(BeFalse())
-	g.Expect(FeedNeedsRestart(c, d)).Should(BeTrue())
-	g.Expect(FeedNeedsRestart(d, c)).Should(BeTrue())
+	g.Expect(FeedNeedsRestart(noPull, noPull)).Should(BeFalse(), "two push feeds")
+	g.Expect(FeedNeedsRestart(noPull, period24h)).Should(BeTrue(), "24h period vs no pull")
+	g.Expect(FeedNeedsRestart(period24h, noPull)).Should(BeTrue(), "No pull section vs 24h period")
+	g.Expect(FeedNeedsRestart(period24h, period24h)).Should(BeFalse(), "24h period with its duplicate")
+	g.Expect(FeedNeedsRestart(period24h, period12h)).Should(BeTrue(), "Differing periods")
+	g.Expect(FeedNeedsRestart(period12h, period24h)).Should(BeTrue(), "Differing periods")
+	g.Expect(FeedNeedsRestart(period24h, periodEmpty)).Should(BeFalse(), "24h period vs empty period")
+	g.Expect(FeedNeedsRestart(periodEmpty, period24h)).Should(BeFalse(), "empty period vs 24h period")
+	g.Expect(FeedNeedsRestart(period12h, periodEmpty)).Should(BeTrue(), "12h period vs empty period")
+	g.Expect(FeedNeedsRestart(periodEmpty, period12h)).Should(BeTrue(), "empty period vs 12h period")
+	g.Expect(FeedNeedsRestart(testGlobalThreatFeed, noHTTP)).Should(BeTrue(), "missing http on right")
+	g.Expect(FeedNeedsRestart(noHTTP, testGlobalThreatFeed)).Should(BeTrue(), "missing http on left")
+	g.Expect(FeedNeedsRestart(noHTTP, noHTTP)).Should(BeFalse(), "two missing http")
+	g.Expect(FeedNeedsRestart(testGlobalThreatFeed, emptyFormat)).Should(BeFalse(), "empty (default) format on right")
+	g.Expect(FeedNeedsRestart(emptyFormat, testGlobalThreatFeed)).Should(BeFalse(), "empty (default) format on left")
+	g.Expect(FeedNeedsRestart(testGlobalThreatFeed, jsonFormat)).Should(BeTrue(), "json format on right")
+	g.Expect(FeedNeedsRestart(jsonFormat, testGlobalThreatFeed)).Should(BeTrue(), "json format on left")
+	g.Expect(FeedNeedsRestart(testGlobalThreatFeed, csvFormat)).Should(BeTrue(), "csv format on right")
+	g.Expect(FeedNeedsRestart(csvFormat, testGlobalThreatFeed)).Should(BeTrue(), "csv format on left")
+	g.Expect(FeedNeedsRestart(jsonFormat, csvFormat)).Should(BeTrue(), "json vs csv format")
+	g.Expect(FeedNeedsRestart(csvFormat, jsonFormat)).Should(BeTrue(), "csv vs json format")
+	g.Expect(FeedNeedsRestart(jsonFormat, jsonFormat2)).Should(BeTrue(), "two json formats")
+	g.Expect(FeedNeedsRestart(csvFormat, csvFormat2)).Should(BeTrue(), "two csv formats")
+	g.Expect(FeedNeedsRestart(testGlobalThreatFeed, noGlobalNetworkSet)).Should(BeTrue(), "no gns on right")
+	g.Expect(FeedNeedsRestart(noGlobalNetworkSet, testGlobalThreatFeed)).Should(BeTrue(), "no gns on left")
 }

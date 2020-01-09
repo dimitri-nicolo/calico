@@ -54,12 +54,10 @@ type persistence interface {
 }
 
 type content interface {
-	setFeed(f *calico.GlobalThreatFeed)
 	snapshot(r io.Reader) (interface{}, error)
 }
 
 type gnsHandler interface {
-	setFeed(f *calico.GlobalThreatFeed) bool
 	handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction)
 	syncFromDB(ctx context.Context, st statser.Statser)
 }
@@ -68,15 +66,8 @@ func (h *httpPuller) SetFeed(f *calico.GlobalThreatFeed) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	needsSync := h.gnsHandler.setFeed(f)
-	h.content.setFeed(f)
-
 	h.feed = f.DeepCopy()
 	h.needsUpdate = true
-
-	if needsSync {
-		h.enqueueSyncFunction()
-	}
 }
 
 func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {

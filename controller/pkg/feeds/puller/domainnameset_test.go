@@ -131,15 +131,6 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
 	g.Expect(status.ErrorConditions).
 		Should(ConsistOf([]v3.ErrorCondition{{Type: statser.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
-
-	// Update the feed to remove the GNS and re-query
-	puller.SetFeed(&testGTFDomainNameSet)
-	go func() {
-		err := puller.query(ctx, s, 1, 0)
-		g.Expect(err).ShouldNot(HaveOccurred())
-	}()
-
-	g.Eventually(func() []v3.ErrorCondition { return s.Status().ErrorConditions }).Should(HaveLen(0), "should clear GNS error")
 }
 
 func TestGetStartupDelayDomainNameSet(t *testing.T) {
@@ -197,9 +188,4 @@ func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
 
 	g.Expect(s.Status().ErrorConditions).
 		Should(ConsistOf([]v3.ErrorCondition{{Type: statser.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
-
-	// modify to remove GNS sync and resync
-	puller.SetFeed(&testGTFDomainNameSet)
-	puller.gnsHandler.syncFromDB(ctx, s)
-	g.Expect(s.Status().ErrorConditions).To(HaveLen(0))
 }

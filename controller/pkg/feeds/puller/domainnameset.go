@@ -42,17 +42,7 @@ type dnSetGNSHandler struct {
 	enabled bool
 }
 
-func (d *dnSetContent) setFeed(f *calico.GlobalThreatFeed) {
-	d.lock.Lock()
-	d.parser = getParserForFormat(f.Spec.Pull.HTTP.Format)
-	d.lock.Unlock()
-}
-
 func (d *dnSetContent) snapshot(r io.Reader) (interface{}, error) {
-	d.lock.RLock()
-	parser := d.parser
-	d.lock.RUnlock()
-
 	var snapshot db.DomainNameSetSpec
 
 	// line handler
@@ -69,7 +59,7 @@ func (d *dnSetContent) snapshot(r io.Reader) (interface{}, error) {
 		snapshot = append(snapshot, entry)
 	}
 
-	err := parser(r, h)
+	err := d.parser(r, h)
 	return snapshot, err
 }
 
@@ -95,11 +85,6 @@ func (d *dnSetGNSHandler) syncFromDB(ctx context.Context, st statser.Statser) {
 	} else {
 		st.ClearError(statser.GlobalNetworkSetSyncFailed)
 	}
-}
-
-func (d *dnSetGNSHandler) setFeed(f *calico.GlobalThreatFeed) bool {
-	d.enabled = f.Spec.GlobalNetworkSet != nil
-	return false
 }
 
 func NewDomainNameSetHTTPPuller(
