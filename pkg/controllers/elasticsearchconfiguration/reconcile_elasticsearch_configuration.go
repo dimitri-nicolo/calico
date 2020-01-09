@@ -1,0 +1,185 @@
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+
+package elasticsearchconfiguration
+
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/kube-controllers/pkg/resource"
+	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+
+	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+)
+
+type reconciler struct {
+	clusterName      string
+	esServiceURL     string
+	management       bool
+	managementK8sCLI kubernetes.Interface
+	managedK8sCLI    kubernetes.Interface
+	esK8sCLI         relasticsearch.RESTClient
+}
+
+// Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
+// to access elasticsearch. If the managed cluster this is running for is actually a management cluster, then the secret
+// for the elasticsearch public certificate and the ConfigMap containing elasticsearch configuration are not copied over
+func (c *reconciler) Reconcile(name types.NamespacedName) error {
+	reqLogger := log.WithField("cluster", c.clusterName)
+	reqLogger.Info("Reconciling Elasticsearch credentials")
+
+	if err := c.reconcileUsers(reqLogger); err != nil {
+		return err
+	}
+
+	if !c.management {
+		if err := c.reconcileConfigMap(); err != nil {
+			return err
+		}
+
+		if err := c.reconcilePublicCert(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// reconcileConfigMap copies the tigera-secure-elasticsearch ConfigMap in the management cluster to the managed cluster,
+// changing the clusterName data value to the cluster name this ConfigMap is being copied to
+func (c *reconciler) reconcileConfigMap() error {
+	configMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(resource.ElasticsearchConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	cp := resource.CopyConfigMap(configMap)
+	cp.Data["clusterName"] = c.clusterName
+	if err := resource.WriteConfigMapToK8s(c.managedK8sCLI, cp); err != nil {
+		return err
+	}
+	return nil
+}
+
+// reconcilePublicCert copies the tigera-secure-es-http-certs-public secret from the management cluster to the managed cluster
+func (c *reconciler) reconcilePublicCert() error {
+	secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// reconcileUsers makes sure that all the necessary users exist for a managed cluster in elasticsearch and that the managed
+// cluster has access to those users via secrets
+func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
+	esHash, err := c.esK8sCLI.CalculateTigeraElasticsearchHash()
+	if err != nil {
+		return err
+	}
+
+	staleOrMissingUsers, err := c.missingOrStaleUsers(esHash)
+	if err != nil {
+		return err
+	}
+
+	for username, user := range staleOrMissingUsers {
+		reqLogger.Infof("creating user %s", username)
+		if err := c.createUser(username, user, esHash); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createUser creates the given elasticsearch user in elasticsearch and creates a secret in the managed cluster containing
+// that users credentials
+func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User, esHash string) error {
+	user, password, roots, err := relasticsearch.ClientCredentialsFromK8sCLI(c.managementK8sCLI)
+	if err != nil {
+		return err
+	}
+
+	esCli, err := elasticsearch.NewClient(c.esServiceURL, user, password, roots)
+	if err != nil {
+		return err
+	}
+
+	userPassword, err := randomPassword(16)
+	if err != nil {
+		return err
+	}
+	esUser.Password = userPassword
+	if err := esCli.CreateUser(esUser); err != nil {
+		return err
+	}
+
+	changeHash, err := calculateUserChangeHash(esHash, esUser)
+	if err != nil {
+		return err
+	}
+
+	return resource.WriteSecretToK8s(c.managedK8sCLI, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-elasticsearch-access", username),
+			Namespace: resource.OperatorNamespace,
+			Labels: map[string]string{
+				UserChangeHashLabel:        changeHash,
+				ElasticsearchUserNameLabel: string(username),
+			},
+		},
+		Data: map[string][]byte{
+			"username": []byte(esUser.Username),
+			"password": []byte(esUser.Password),
+		},
+	})
+}
+
+// missingOrStaleUsers returns a map of all the users that are missing from the cluster or have mismatched elasticsearch
+// hashes (indicating that elasticsearch changed in a way that requires user credential recreation)
+func (c *reconciler) missingOrStaleUsers(esHash string) (map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
+	esUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
+	secretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, secret := range secretsList.Items {
+		username := esusers.ElasticsearchUserName(secret.Labels[ElasticsearchUserNameLabel])
+		if user, exists := esUsers[username]; exists {
+			userHash, err := calculateUserChangeHash(esHash, user)
+			if err != nil {
+				return nil, err
+			}
+			if secret.Labels[UserChangeHashLabel] == userHash {
+				delete(esUsers, username)
+			}
+		}
+	}
+
+	return esUsers, nil
+}
+
+func calculateUserChangeHash(elasticsearchHash string, user elasticsearch.User) (string, error) {
+	return resource.CreateHashFromObject([]interface{}{elasticsearchHash, user.Roles})
+}
+
+func randomPassword(length int) (string, error) {
+	byts := make([]byte, length)
+	_, err := rand.Read(byts)
+
+	return base64.URLEncoding.EncodeToString(byts), err
+}

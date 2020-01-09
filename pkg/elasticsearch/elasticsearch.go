@@ -109,7 +109,7 @@ func (cli Client) createRole(role Role) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("_security/role/%s", role.Name), bytes.NewBuffer(j))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/_security/role/%s", role.Name), bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func (cli Client) CreateUser(user User) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("_security/user/%s", user.Username), bytes.NewBuffer(j))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/_security/user/%s", user.Username), bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (cli Client) UpdateUser(user User) error {
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("_security/user/%s", user.Username), bytes.NewBuffer(j))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("/_security/user/%s", user.Username), bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (cli Client) UpdateUser(user User) error {
 
 // UserExists queries Elasticsearch to see if a user with the given username already exists
 func (cli Client) UserExists(username string) (bool, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("_security/user/%s", username), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("/_security/user/%s", username), nil)
 	if err != nil {
 		return false, err
 	}
