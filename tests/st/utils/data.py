@@ -438,6 +438,7 @@ networkpolicy_name2_rev1 = {
         'selfLink': 'test-self-link',
         'uid': 'test-uid-change',
         'generation': 3,
+        'finalizers': ['finalizer1', 'finalizer2'],
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
@@ -633,6 +634,7 @@ stagednetworkpolicy_name2_rev1 = {
         'selfLink': 'test-self-link',
         'uid': 'test-uid-change',
         'generation': 3,
+        'finalizers': ['finalizer1', 'finalizer2'],
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
@@ -1229,6 +1231,7 @@ hostendpoint_name1_rev3 = {
         'selfLink': 'test-self-link',
         'uid': 'test-uid-change',
         'generation': 3,
+        'finalizers': ['finalizer1', 'finalizer2'],
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
@@ -1681,7 +1684,7 @@ globalthreatfeed_name0 = {
 }
 
 # Note: whitespace matters!  Be careful editing.
-globalthreatfeed_get_table_output = """NAME    PERIOD   URL                                         
-name0                                                        
-name1   13.5h    https://notreal.tigera.io/threatfeed        
+globalthreatfeed_get_table_output = """NAME    PERIOD   URL
+name0
+name1   13.5h    https://notreal.tigera.io/threatfeed
 name2   24h      https://notreal.tigera.io/threatfeed/rev2"""
