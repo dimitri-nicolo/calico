@@ -33,8 +33,6 @@ We currently have several Honeypod deployments that can be used to detect differ
 ### Compromised Pod
 * IP Enumeration
   * By not setting a service, the pod can only be reach locally (adjecant pods within same subnet).
-* Exposed Service (inetsim)
-  * Setup a simulator service pod that is exposed as a HTTP service. The pod can be discovered via clusterip or DNS lookup.
 * Exposed Service (nginx)
   * Expose a nginx service that serves a generic page. The pod can be discovered via clusterip or DNS lookup.
 * Vulnerable Service (mysql)
