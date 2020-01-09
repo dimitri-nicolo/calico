@@ -432,21 +432,12 @@ networkpolicy_name2_rev1 = {
             'name': 'endpoint1',
             'uid': 'test-uid-change',
         }],
-        'initializers': {
-            'pending': [{
-                'name': 'initializer1',
-            }],
-            'result': {
-                'status': 'test-status',
-            },
-        },
         'clusterName': 'cluster1',
         'labels': {'label1': 'l1', 'label2': 'l2'},
         'annotations': {'key': 'value'},
         'selfLink': 'test-self-link',
         'uid': 'test-uid-change',
         'generation': 3,
-        'finalizers': ['finalizer1', 'finalizer2'],
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
@@ -636,21 +627,12 @@ stagednetworkpolicy_name2_rev1 = {
             'name': 'endpoint1',
             'uid': 'test-uid-change',
         }],
-        'initializers': {
-            'pending': [{
-                'name': 'initializer1',
-            }],
-            'result': {
-                'status': 'test-status',
-            },
-        },
         'clusterName': 'cluster1',
         'labels': {'label1': 'l1', 'label2': 'l2'},
         'annotations': {'key': 'value'},
         'selfLink': 'test-self-link',
         'uid': 'test-uid-change',
         'generation': 3,
-        'finalizers': ['finalizer1', 'finalizer2'],
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
@@ -1084,7 +1066,7 @@ stagedglobalnetworkpolicy_os_name1_rev1 = {
         'name': 'os-policy-mystagedpolicy1',
     },
     'spec': {
-        'stagedAction': "Set",       
+        'stagedAction': "Set",
         'order': 100,
         'selector': "type=='database'",
         'types': ['Ingress', 'Egress'],
@@ -1247,7 +1229,6 @@ hostendpoint_name1_rev3 = {
         'selfLink': 'test-self-link',
         'uid': 'test-uid-change',
         'generation': 3,
-        'finalizers': ['finalizer1', 'finalizer2'],
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
@@ -1700,7 +1681,7 @@ globalthreatfeed_name0 = {
 }
 
 # Note: whitespace matters!  Be careful editing.
-globalthreatfeed_get_table_output = """NAME    PERIOD   URL                                         
-name0                                                        
-name1   13.5h    https://notreal.tigera.io/threatfeed        
+globalthreatfeed_get_table_output = """NAME    PERIOD   URL
+name0
+name1   13.5h    https://notreal.tigera.io/threatfeed
 name2   24h      https://notreal.tigera.io/threatfeed/rev2"""
