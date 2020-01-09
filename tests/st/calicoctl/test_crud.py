@@ -37,7 +37,7 @@ class TestCalicoctlCommands(TestBase):
 
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
-        rc = calicoctl("create", data=valid_cnx_license_expires_jan_1st_2020)
+        rc = calicoctl("create", data=valid_cnx_license_expires_march_14_2020)
         rc.assert_no_error()
 
     def test_get(self):
@@ -1048,6 +1048,7 @@ class TestCalicoctlCommands(TestBase):
             " %s -o yaml" % name(rcc_rev2))
         rc.assert_no_error()
         rev1 = rc.decoded
+
         self.assertNotEqual(rev0['metadata']['resourceVersion'], rev1['metadata']['resourceVersion'])
 
         # Apply an update to the configuration and assert the resource version is not the same.
@@ -1485,7 +1486,7 @@ class TestCalicoctlCommands(TestBase):
         """
         Test that a basic CRUD flow for patch command works.
         """
-        
+
         # test patching a node
         rc = calicoctl("create", data=node_name1_rev1)
         rc.assert_no_error()
@@ -1497,7 +1498,7 @@ class TestCalicoctlCommands(TestBase):
         rc.assert_no_error()
         node1_rev1 = rc.decoded
         self.assertEqual("192.168.0.1",node1_rev1['spec']['bgp']['routeReflectorClusterID'])
-        
+
         # test patching an ippool
         rc = calicoctl("create", data=ippool_name1_rev1_v4)
         rc.assert_no_error()
