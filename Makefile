@@ -98,11 +98,10 @@ bin/calicoctl-%: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(MAKE) build-calicoctl BUILDOS=$(BUILDOS) ARCH=$(ARCH)
 build-calicoctl:
 	mkdir -p bin
-	$(DOCKER_RUN) \
+	$(DOCKER_RUN) $(EXTRA_DOCKER_ARGS) \
 	  -e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) \
-	  go build -v -o bin/calicoctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build -v -o bin/calicoctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"'
 # Overrides for the binaries that need different output names
 bin/calicoctl: bin/calicoctl-linux-amd64
 	cp $< $@
