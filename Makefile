@@ -65,7 +65,7 @@ guard-ssh-forwarding-bug:
 	fi;
 
 define get_remote_version2
-	$(shell git ls-remote https://$(1) $(2) 2>/dev/null | cut -f 1)
+	$(shell $(GIT_CONFIG_SSH) git ls-remote https://$(1) $(2) 2>/dev/null | cut -f 1)
 endef
 
 define update_replace_pin2
