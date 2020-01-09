@@ -1,6 +1,7 @@
 PACKAGE_NAME    ?= github.com/tigera/lma
-GO_BUILD_VER    ?= v0.30
+GO_BUILD_VER    ?= v0.32
 GIT_USE_SSH     := true
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
 build: ut
 
@@ -64,26 +65,7 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-define get_remote_version2
-	$(shell $(GIT_CONFIG_SSH) git ls-remote https://$(1) $(2) 2>/dev/null | cut -f 1)
-endef
-
-define update_replace_pin2
-	$(eval new_ver := $(call get_remote_version2,$(2),$(3)))
-
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-		if [ ! -z "$(new_ver)" ]; then \
-			$(GIT_CONFIG_SSH) \
-			go mod edit -replace $(1)=$(2)@$(new_ver); \
-			go mod download; \
-		fi'
-endef
-
-LIBCALICO_PRIVATE_REPO = github.com/tigera/libcalico-go-private
-replace-libcalico-pin2: guard-ssh-forwarding-bug
-	$(call update_replace_pin2,$(LIBCALICO_REPO),$(LIBCALICO_PRIVATE_REPO),$(LIBCALICO_BRANCH))
-
-update-pins: replace-libcalico-pin2
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 #############################################################################
 # Testing
