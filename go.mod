@@ -1,4 +1,4 @@
-module tigera/calicoq
+module github.com/tigera/calicoq
 
 go 1.12
 
@@ -27,7 +27,6 @@ require (
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/calicoq v2.6.1+incompatible
 	github.com/tigera/licensing v2.6.0-0.dev+incompatible
 	gopkg.in/square/go-jose.v2 v2.1.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d // indirect

@@ -15,3 +15,4 @@ venv
 .*-created
 .go-pkg-cache
 .go-build-with-docker.created
+Makefile.common*

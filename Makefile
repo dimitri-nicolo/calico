@@ -1,26 +1,39 @@
-.PHONY: all test
+PACKAGE_NAME    ?= github.com/tigera/calicoq
+GO_BUILD_VER    ?= v0.32
+GOMOD_VENDOR     = true
+GIT_USE_SSH      = true
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+FELIX_REPO       = github.com/tigera/felix-private
 
-default: all
-all: test
-test: ut
+build: ut
 
+##############################################################################
+# Download and include Makefile.common before anything else
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+include Makefile.common
+
+##############################################################################
+# Define some constants
+##############################################################################
 BUILD_VER?=latest
 BUILD_IMAGE:=tigera/calicoq
 REGISTRY_PREFIX?=gcr.io/unique-caldron-775/cnx/
-PACKAGE_NAME?=github.com/tigera/calicoq
-LOCAL_USER_ID?=$(shell id -u $$USER)
 BINARY:=bin/calicoq
-
-GO_BUILD_VER?=v0.30
-CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
-# Specific version for fossa license checks
-FOSSA_GO_BUILD_VER?=v0.18
-FOSSA_GO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
 
 CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-CALICOQ_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 CALICOQ_GIT_DESCRIPTION?=$(shell git describe --tags)
+CALICOQ_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 
 VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(CALICOQ_BUILD_DATE) \
@@ -34,166 +47,17 @@ TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 
-##### XXX: temp changes from common Makefile ####
-BUILD_OS ?= $(shell uname -s | tr A-Z a-z)
-BUILD_ARCH ?= $(shell uname -m)
-
-# canonicalized names for host architecture
-ifeq ($(BUILDARCH),aarch64)
-    BUILDARCH=arm64
-endif
-ifeq ($(BUILDARCH),x86_64)
-    BUILDARCH=amd64
-endif
-
-ARCH ?= $(BUILDARCH)
-# canonicalized names for target architecture
-ifeq ($(ARCH),aarch64)
-    override ARCH=arm64
-endif
-ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
-endif
-
-GOMOD_VENDOR := true
-ifeq ($(GOMOD_VENDOR),true)
-    GOFLAGS?="-mod=vendor"
-else
-ifeq ($(CI),true)
-ifneq ($(LOCAL_BUILD),true)
-    GOFLAGS?="-mod=readonly"
-endif
-endif
-endif
-
-ifneq ($(GOPATH),)
-    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
-else
-    # If gopath is empty, default to $(HOME)/go.
-    GOMOD_CACHE = $(HOME)/go/pkg/mod
-endif
-
-EXTRA_DOCKER_ARGS += -e GO111MODULE=on -v $(GOMOD_CACHE):/go/pkg/mod:rw
-
-GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-
-define get_remote_version
-    $(shell git ls-remote https://$(1) $(2) 2>/dev/null | cut -f 1)
-endef
-
-# update_pin updates the given package's version to the latest available in the specified repo and branch.
-# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
-define update_pin
-    $(eval new_ver := $(call get_remote_version,$(2),$(3)))
-
-    $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-        if [[ ! -z "$(new_ver)" ]]; then \
-            $(GIT_CONFIG_SSH); \
-            go get $(1)@$(new_ver); \
-            go mod download; \
-        else \
-            error "error getting remote version"; \
-        fi'
-endef
-
-# update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
-# This routine can only be used for packages being replaced in go.mod, such as private versions of open-source packages.
-# $(1) should be the name of the package, $(2) and $(3) the repository and branch from which to update it.
-define update_replace_pin
-    $(eval new_ver := $(call get_remote_version,$(2),$(3)))
-
-    $(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
-        if [ ! -z "$(new_ver)" ]; then \
-            $(GIT_CONFIG_SSH); \
-            go mod edit -replace $(1)=$(2)@$(new_ver); \
-            go mod download; \
-        else \
-            echo "error getting remote version"; \
-            exit 1; \
-        fi'
-endef
-
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-FELIX_BRANCH?=$(PIN_BRANCH)
-FELIX_REPO?=github.com/tigera/felix-private
-LOGRUS_BRANCH?=$(PIN_BRANCH)
-LOGRUS_REPO?=github.com/projectcalico/logrus
-LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/tigera/licensing
-
-update-libcalico-pin:
-	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
-
-update-felix-pin:
-	$(call update_replace_pin,github.com/projectcalico/felix,$(FELIX_REPO),$(FELIX_BRANCH))
-
-update-logrus-pin:
-	$(call update_replace_pin,github.com/sirupsen/logrus,$(LOGRUS_REPO),$(LOGRUS_BRANCH))
-
-update-licensing-pin:
-	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
-##### temp changes from common Makefile #####
-
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
 	touch $@
 
-# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
-# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
-ifneq ($(GOPATH),)
-    # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
-    # is the default one used by go modules.
-    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
-else
-    # If gopath is empty, default to $(HOME)/go.
-    GOMOD_CACHE = $$HOME/go/pkg/mod
-endif
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-DOCKER_RUN := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
-                docker run --rm \
-                         --net=host \
-                         $(EXTRA_DOCKER_ARGS) \
-                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                         -e GOCACHE=/go-cache \
-                         -e GOPATH=/go \
-                         -e GOOS=$(BUILD_OS) \
-                         -e GOARCH=$(ARCH) \
-                         -e GOFLAGS=$(GOFLAGS) \
-                         -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                         -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-                         -w /go/src/$(PACKAGE_NAME)
-
-# Always install the git hooks to prevent publishing closed source code to a non-private repo.
-hooks_installed:=$(shell ./install-git-hooks)
-
-.PHONY: install-git-hooks
-## Install Git hooks
-install-git-hooks:
-	./install-git-hooks
-
-vendor: go.mod go.sum
+vendor: go.mod mod-download
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) && go mod vendor -v'
+	    sh -c '$(GIT_CONFIG_SSH) go mod vendor -v'
 
-foss-checks: vendor
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(FOSSA_GO_BUILD) /usr/local/bin/fossa
-
-.PHONY: ut
+.PHONY: ut ut-containerized
 ut: bin/calicoq
 	ginkgo -cover -r --skipPackage vendor calicoq/*
 
@@ -211,7 +75,6 @@ ut: bin/calicoq
 	@echo
 	@find ./calicoq/ -iname '*.coverprofile' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'
 
-.PHONY: ut-containerized
 ut-containerized: bin/calicoq
 	docker run --rm -t \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
@@ -220,11 +83,10 @@ ut-containerized: bin/calicoq
 		$(CALICO_BUILD) \
 		sh -c 'make ut'
 
-.PHONY: fv
+.PHONY: fv fv-containerized
 fv: bin/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 
-.PHONY: fv-containerized
 fv-containerized: build-image run-etcd
 	docker run --net=host --privileged \
 		--rm -t \
@@ -235,11 +97,10 @@ fv-containerized: build-image run-etcd
 		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
 
-.PHONY: st
+.PHONY: st st-containerized
 st: bin/calicoq
 	CALICOQ=`pwd`/$^ st/run-test
 
-.PHONY: st-containerized
 st-containerized: build-image $(TOOLING_IMAGE_CREATED)
 	docker run --net=host --privileged \
 		--rm -t \
@@ -250,11 +111,10 @@ st-containerized: build-image $(TOOLING_IMAGE_CREATED)
 		$(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) \
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 
-.PHONY: scale-test
+.PHONY: scale-test scale-test-containerized
 scale-test: bin/calicoq
 	CALICOQ=`pwd`/$^ scale-test/run-test
 
-.PHONY: scale-test-containerized
 scale-test-containerized: build-image
 	docker run --net=host --privileged \
 		--rm -t \
@@ -295,11 +155,8 @@ endif
 	$(MAKE) felixbackend
 	# Create the binary
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) && \
-	   GOPRIVATE="github.com/tigera" cd /go/src/github.com/tigera/calicoq && \
-	   go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
+	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
 
-# ensure we have a real imagetag
 imagetag:
 ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
@@ -311,25 +168,11 @@ tag-image: imagetag build-image
 push-image: imagetag tag-image
 	docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
 
-
-
 ###############################################################################
-# Managing the upstream library pins
-#
-# If you're updating the pins with a non-release branch checked out,
-# set PIN_BRANCH to the parent branch, e.g.:
-#
-#     PIN_BRANCH=release-v2.5 make update-pins
-#        - or -
-#     PIN_BRANCH=master make update-pins
-#
+# Updating pins
 ###############################################################################
 
-## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin update-felix-pin update-logrus-pin update-licensing-pin
-
-## TODO: Not sure if this is still needed.
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
 		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
@@ -337,18 +180,25 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-###############################################################################
-# Static checks
-###############################################################################
-# TODO: re-enable these linters !
-LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
 
-.PHONY: static-checks
-## Perform static checks on the code.
-static-checks: vendor
-	$(DOCKER_RUN) \
-	  $(CALICO_BUILD) \
-	  golangci-lint run --deadline 5m $(LINT_ARGS)
+LICENSING_REPO=github.com/tigera/licensing
+LICENSING_BRANCH=$(PIN_BRANCH)
+LOGRUS_REPO_ORIG=github.com/sirupsen/logrus
+LOGRUS_REPO=github.com/projectcalico/logrus
+LOGRUS_BRANCH=$(PIN_BRANCH)
+
+update-licensing-pin:
+	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
+
+replace-logrus-pin:
+	$(call update_replace_pin,$(LOGRUS_REPO_ORIG),$(LOGRUS_REPO),$(LOGRUS_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin update-licensing-pin replace-logrus-pin
+###############################################################################
+
+
+# TODO: re-enable these linters!
+LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
 
 ###############################################################################
 # CI/CD
