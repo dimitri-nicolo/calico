@@ -76,7 +76,7 @@ LICENSING_REPO?=github.com/tigera/licensing
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: update-licensing-pin update-libcalico-pin
+update-pins: update-licensing-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary
