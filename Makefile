@@ -65,6 +65,12 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
+
 update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 #############################################################################
