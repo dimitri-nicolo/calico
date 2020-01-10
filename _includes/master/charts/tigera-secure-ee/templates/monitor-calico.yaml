@@ -1386,3 +1386,7 @@ users:
 groups:
 - system:authenticated
 {{- end }}
+
+---
+
+{{ .Files.Get "global-alert-templates.yaml" }}

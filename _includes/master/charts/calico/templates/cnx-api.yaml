@@ -208,6 +208,7 @@ rules:
       - hostendpoints
       - licensekeys
       - globalalerts
+      - globalalerttemplates
       - globalnetworksets
       - networksets
       - globalthreatfeeds
