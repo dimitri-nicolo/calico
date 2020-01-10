@@ -96,8 +96,8 @@ var _ = Context("with a k8s clientset", func() {
 				triggerFelixGCAndMemoryDump()
 
 				// Get current occupancy.
-				heapInUse := getFelixFloatMetricOrPanic("go_memstats_heap_inuse_bytes")
-				heapAlloc := getFelixFloatMetricOrPanic("go_memstats_heap_alloc_bytes")
+				heapInUse := getFelixFloatMetricOrPanicOrPanic("go_memstats_heap_inuse_bytes")
+				heapAlloc := getFelixFloatMetricOrPanicOrPanic("go_memstats_heap_alloc_bytes")
 				log.WithFields(log.Fields{
 					"iteration": ii,
 					"heapInUse": heapInUse,
@@ -186,8 +186,8 @@ var _ = Context("with a k8s clientset", func() {
 					triggerFelixGCAndMemoryDump()
 
 					// Get current occupancy.
-					heapInUse := getFelixFloatMetric("go_memstats_heap_inuse_bytes")
-					heapAlloc := getFelixFloatMetric("go_memstats_heap_alloc_bytes")
+					heapInUse := getFelixFloatMetricOrPanic("go_memstats_heap_inuse_bytes")
+					heapAlloc := getFelixFloatMetricOrPanic("go_memstats_heap_alloc_bytes")
 					log.WithFields(log.Fields{
 						"iteration": cycle*10 + ii,
 						"heapInUse": heapInUse,
