@@ -32,6 +32,7 @@ endif
 include Makefile.common
 
 ###############################################################################
+BIN=bin/$(ARCH)
 SRC_FILES=$(shell find pkg cmd internal -name '*.go')
 TEST_SRC_FILES=$(shell find tests -name '*.go')
 WINFV_SRCFILES=$(shell find win_tests -name '*.go')
@@ -82,7 +83,6 @@ update-pins: update-licensing-pin replace-libcalico-pin
 ###############################################################################
 # Building the binary
 ###############################################################################
-BIN=bin
 build: $(BIN)/calico $(BIN)/calico-ipam
 ifeq ($(ARCH),amd64)
 # Go only supports amd64 for Windows builds.
