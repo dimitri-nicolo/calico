@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -9,6 +9,19 @@ import (
 const (
 	KindManagedCluster     = "ManagedCluster"
 	KindManagedClusterList = "ManagedClusterList"
+)
+
+type ManagedClusterStatusType string
+type ManagedClusterStatusValue string
+
+const (
+	// Status for Type ManagedClusterConnected will be Unknown when ManagedCluster is created,
+	// True when ManagedCluster is connected to ManagementCluster via tunnel,
+	// False when the tunnel drops
+	ManagedClusterStatusTypeConnected ManagedClusterStatusType  = "ManagedClusterConnected"
+	ManagedClusterStatusValueUnknown  ManagedClusterStatusValue = "Unknown"
+	ManagedClusterStatusValueTrue     ManagedClusterStatusValue = "True"
+	ManagedClusterStatusValueFalse    ManagedClusterStatusValue = "False"
 )
 
 // +genclient
@@ -40,10 +53,10 @@ type ManagedClusterStatus struct {
 
 // Condition contains various status information
 type ManagedClusterStatusCondition struct {
-	Message string `json:"message"`
-	Reason  string `json:"reason"`
-	Status  string `json:"status"`
-	Type    string `json:"type"`
+	Message string                    `json:"message,omitempty"`
+	Reason  string                    `json:"reason,omitempty"`
+	Status  ManagedClusterStatusValue `json:"status"`
+	Type    ManagedClusterStatusType  `json:"type"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

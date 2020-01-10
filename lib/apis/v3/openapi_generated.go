@@ -7251,7 +7251,7 @@ func schema_libcalico_go_lib_apis_v3_ManagedClusterStatusCondition(ref common.Re
 						},
 					},
 				},
-				Required: []string{"message", "reason", "status", "type"},
+				Required: []string{"status", "type"},
 			},
 		},
 	}
