@@ -269,6 +269,7 @@ var _ = Context("with a k8s clientset", func() {
 		})
 	})
 })
+
 func expectFelixReady() {
 	EventuallyWithOffset(1,
 		func() int64 {
@@ -327,7 +328,6 @@ func sumCalicoDeniedPackets(felixIP string) (sum int64) {
 	}
 	return
 }
-
 
 func triggerFelixGCAndMemoryDump() {
 	err := exec.Command("pkill", "-USR1", "calico-felix").Run()

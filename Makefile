@@ -152,8 +152,11 @@ clean:
 ###############################################################################
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-TYPHA_REPO?=github.com/tigera/typha-private
+LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+TYPHA_REPO=github.com/tigera/typha-private
+
+update-licensing-pin:
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
 update-pins: update-licensing-pin replace-libcalico-pin replace-typha-pin
 
@@ -512,6 +515,7 @@ LIBCALICO_FELIX?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) 
 TYPHA_GOMOD_DIR?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download; go list -m -f "{{.Dir}}" github.com/projectcalico/typha')
 ifneq ($(TYPHA_GOMOD_DIR),)
 	LIBCALICO_TYPHA?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download; (cd $(TYPHA_GOMOD_DIR); go list -m -f "{{.Replace.Version}}" github.com/projectcalico/libcalico-go)')
+endif
 
 .PHONY: check-typha-pins
 check-typha-pins:
@@ -525,16 +529,8 @@ check-typha-pins:
 	     false; \
 	fi
 
-.PHONY: pre-commit
-pre-commit:
-	$(DOCKER_RUN) $(CALICO_BUILD) git-hooks/pre-commit-in-container
-
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
-
-.PHONY: install-git-hooks
-install-git-hooks:
-	./install-git-hooks
 
 ###############################################################################
 # Unit Tests
