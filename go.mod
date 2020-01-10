@@ -36,7 +36,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200102171614-37ba08c32fe9
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200110190915-9fa812d46e44
 
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 

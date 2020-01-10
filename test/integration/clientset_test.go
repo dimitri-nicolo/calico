@@ -1029,13 +1029,13 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	}
 
 	globalAlertUpdate := globalAlertServer.DeepCopy()
-	globalAlertUpdate.Spec.Metric = "count"
+	globalAlertUpdate.Spec.Description += "-updated"
 	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
 	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
 	}
-	if globalAlertServer.Spec.Metric != globalAlertUpdate.Spec.Metric {
+	if globalAlertServer.Spec.Description != globalAlertUpdate.Spec.Description {
 		return errors.New("didn't update spec.content")
 	}
 	if globalAlertServer.Status.LastUpdate != nil {
@@ -1045,7 +1045,8 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	globalAlertUpdate = globalAlertServer.DeepCopy()
 	globalAlertUpdate.Status.LastUpdate = &v1.Time{Time: time.Now()}
 	globalAlertUpdate.Labels = map[string]string{"foo": "bar"}
-	globalAlertUpdate.Spec.Metric = ""
+	statusDescription := "status"
+	globalAlertUpdate.Spec.Description = statusDescription
 	globalAlertServer, err = globalAlertClient.UpdateStatus(globalAlertUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalAlert %s (%s)", name, err)
@@ -1056,7 +1057,7 @@ func testGlobalAlertClient(client calicoclient.Interface, name string) error {
 	if _, ok := globalAlertServer.Labels["foo"]; ok {
 		return fmt.Errorf("updatestatus updated labels")
 	}
-	if globalAlertServer.Spec.Metric == "" {
+	if globalAlertServer.Spec.Description == statusDescription {
 		return fmt.Errorf("updatestatus updated spec")
 	}
 
@@ -1182,12 +1183,12 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	}
 
 	globalAlertUpdate := globalAlertServer.DeepCopy()
-	globalAlertUpdate.Spec.Metric = "count"
+	globalAlertUpdate.Spec.Description += "-update"
 	globalAlertServer, err = globalAlertClient.Update(globalAlertUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalAlertTemplate %s (%s)", name, err)
 	}
-	if globalAlertServer.Spec.Metric != globalAlertUpdate.Spec.Metric {
+	if globalAlertServer.Spec.Description != globalAlertUpdate.Spec.Description {
 		return errors.New("didn't update spec.content")
 	}
 
@@ -2298,6 +2299,15 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 		},
 	}
 
+	expectedInitialStatus := calico.ManagedClusterStatus{
+		Conditions: []calico.ManagedClusterStatusCondition{
+			{
+				Status: calico.ManagedClusterStatusValueUnknown,
+				Type:   calico.ManagedClusterStatusTypeConnected,
+			},
+		},
+	}
+
 	// start from scratch
 	managedClusters, err := managedClusterClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -2334,7 +2344,9 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 		managedCluster.ResourceVersion == managedClusterServer.ResourceVersion {
 		return fmt.Errorf("didn't get the same managedCluster back from the server \n%+v\n%+v", managedCluster, managedClusterServer)
 	}
-
+	if !reflect.DeepEqual(managedClusterServer.Status, expectedInitialStatus) {
+		return fmt.Errorf("status was set on create to %#v", managedClusterServer.Status)
+	}
 	// ------------------------------------------------------------------------------------------
 	managedClusterUpdate := managedClusterServer.DeepCopy()
 	managedClusterUpdate.Spec.InstallationManifest = "manifest v2"
@@ -2342,8 +2354,8 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 		{
 			Message: "Connected to Managed Cluster",
 			Reason:  "ConnectionSuccessful",
-			Status:  "False",
-			Type:    "ManagedClusterConnectedStatusType",
+			Status:  calico.ManagedClusterStatusValueTrue,
+			Type:    calico.ManagedClusterStatusTypeConnected,
 		},
 	}
 	managedClusterServer, err = managedClusterClient.Update(managedClusterUpdate)
@@ -2352,6 +2364,9 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 	if managedClusterServer.Spec.InstallationManifest != managedClusterUpdate.Spec.InstallationManifest {
 		return errors.New("didn't update spec.installationManifest")
+	}
+	if !reflect.DeepEqual(managedClusterServer.Status, managedClusterUpdate.Status) {
+		return fmt.Errorf("didn't update status %#v", managedClusterServer.Status)
 	}
 	// ------------------------------------------------------------------------------------------
 	err = managedClusterClient.Delete(name, &metav1.DeleteOptions{})

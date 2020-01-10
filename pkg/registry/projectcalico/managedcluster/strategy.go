@@ -35,17 +35,19 @@ func (apiServerStrategy) NamespaceScoped() bool {
 }
 
 // PrepareForCreate clears the Status
-// TODO: This is where we will generate the manifest for Guardian (https://tigera.atlassian.net/browse/SAAS-168)
 func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	managedCluster := obj.(*calico.ManagedCluster)
-	managedCluster.Status = v3.ManagedClusterStatus{}
+	managedCluster.Status = v3.ManagedClusterStatus{
+		Conditions: []v3.ManagedClusterStatusCondition{
+			{
+				Status: v3.ManagedClusterStatusValueUnknown,
+				Type:   v3.ManagedClusterStatusTypeConnected,
+			},
+		},
+	}
 }
 
-// TODO: This is where we will copy the Status from old to obj when we add Status (https://tigera.atlassian.net/browse/SAAS-182)
 func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newManagedCluster := obj.(*calico.ManagedCluster)
-	oldManagedCluster := old.(*calico.ManagedCluster)
-	newManagedCluster.Status = oldManagedCluster.Status
 }
 
 func (apiServerStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
