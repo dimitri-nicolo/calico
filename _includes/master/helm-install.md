@@ -18,7 +18,7 @@ The high-level steps to a functioning cluster with access to the user interface 
 
 {%- if include.method == "full" %}
 
-- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-calico-enterprise-core)
+- [Create values-core.yaml for {{ site.prodname }} Core](#create-values-coreyaml-for-calico-enterprise-core)
 
 {% endif %}
 
@@ -51,9 +51,9 @@ The bundled ElasticSearch operator is configured to use a `StorageClass` called 
 
 Create a StorageClass with that name providing persistent storage that meets the requirements.
 
-### Create values.yaml for {{ site.prodname }} Core
+### Create values-core.yaml for {{ site.prodname }} Core
 
-In this step, you create a values.yaml file with your configuration values to build a running cluster.
+In this step, you create a values-core.yaml file with your configuration values to build a running cluster.
 
 #### Configure your Datastore Connection
 
@@ -153,12 +153,12 @@ initialPool:
 
 ### Install {{ site.prodname }} Core
 
-1. Install the chart, passing in the `values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
+1. Install the chart, passing in the `values-core.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
 {%- if include.method == "full" %}
    ```
    helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
-     -f values.yaml \
+     -f values-core.yaml \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 {% else %}
