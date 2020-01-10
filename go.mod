@@ -62,9 +62,15 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0-20170531160350-a96e63847dc3
 	gopkg.in/square/go-jose.v2 v2.0.0-20180411045311-89060dee6a84 // indirect
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
-	k8s.io/api v0.0.0-20180628040859-072894a440bd
-	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
-	k8s.io/client-go v8.0.0+incompatible
+
+	// k8s.io/api v1.16.3 is at 16d7abae0d2a
+	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+
+	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
+	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+
+	// k8s.io/client-go 1.16.3 is at 6c5935290e33
+	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
 )
 
 replace (
