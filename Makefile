@@ -81,6 +81,7 @@ update-pins: update-licensing-pin update-libcalico-pin
 ###############################################################################
 # Building the binary
 ###############################################################################
+BIN=bin
 build: $(BIN)/calico $(BIN)/calico-ipam
 ifeq ($(ARCH),amd64)
 # Go only supports amd64 for Windows builds.
@@ -93,7 +94,6 @@ sub-build-%:
 ## Build the Calico network plugin and ipam plugins
 $(BIN)/calico $(BIN)/calico-ipam: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
-	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
 	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go build -v -o $(BIN)/calico -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
 		go build -v -o $(BIN)/calico-ipam -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico-ipam'
@@ -102,7 +102,6 @@ $(BIN)/calico $(BIN)/calico-ipam: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 $(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	-e GOOS=windows \
-	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
 	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go build -v -o $(BIN)/calico.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
 		go build -v -o $(BIN)/calico-ipam.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico-ipam'
@@ -204,21 +203,6 @@ sub-base-tag-images-%:
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
-
-$(DEPLOY_CONTAINER_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
-	GO111MODULE=on docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	# Need amd64 builds tagged as :latest because Semaphore depends on that
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
-endif
-	touch $@
-
-.PHONY: fetch-cni-bins
-fetch-cni-bins: $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth
-
-$(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth:
-	mkdir -p $(BIN)
-	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/$(CNI_VERSION)/cni-plugins-linux-$(ARCH)-$(CNI_VERSION).tgz | tar -xz -C $(BIN) ./flannel ./loopback ./host-local ./portmap ./tuning ./bandwidth
 
 ###############################################################################
 # Static checks
