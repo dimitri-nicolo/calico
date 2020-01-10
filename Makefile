@@ -18,6 +18,8 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
 ifdef LOCAL_BUILD
