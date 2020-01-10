@@ -15,10 +15,13 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
 	google.golang.org/grpc v1.19.0
-	k8s.io/apimachinery v0.0.0-20180628120320-b593b18191da // indirect
+	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
+	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20191120194820-00382998ff0b
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200103165626-2c83fde7c5ce
+
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
