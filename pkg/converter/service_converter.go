@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -281,12 +281,12 @@ func (s *endpointConverter) k8sEndpointToNetworkSet(ep *corev1.Endpoints) (*mode
 	//TODO: mgianluc: what if
 	//1) Endpoints configuration does not match Service one, for instance Endpoint ports is different than Service targetPorts
 
-	// Create the NetworkSet.
+	// Create the NetworkSet: only fields used are name, namespace and subsets.
+	// If any other field is used when converting from Endpoints to NetworkSet, change also onEndpointsUpdate
 	ns := api.NewNetworkSet()
 	ns.ObjectMeta = metav1.ObjectMeta{
-		Name:              nsName,
-		Namespace:         nsNamespace,
-		CreationTimestamp: ep.CreationTimestamp,
+		Name:      nsName,
+		Namespace: nsNamespace,
 	}
 
 	//Note that a NetworkSet does not include port and protocol information for each endpoint IP
