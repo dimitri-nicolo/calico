@@ -33,13 +33,18 @@ require (
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
-	k8s.io/api v0.0.0-20180628040859-072894a440bd
-	k8s.io/apimachinery v0.0.0-20180621070125-103fd098999d
-	k8s.io/client-go v8.0.0+incompatible
+	// k8s.io/api v1.16.3 is at 16d7abae0d2a
+	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+
+	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
+	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+
+	// k8s.io/client-go 1.16.3 is at 6c5935290e33
+	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
 	k8s.io/utils v0.0.0-20180918230422-cd34563cd63c
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20191120194820-00382998ff0b
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200103165626-2c83fde7c5ce
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
