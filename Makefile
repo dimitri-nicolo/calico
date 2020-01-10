@@ -345,7 +345,7 @@ endif
 
 ## Build fv binary for Windows
 $(BIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
-	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && go test ./win_tests -c -o $(BIN)/win-fv.exe'
+	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(BIN)/win-fv.exe'
 
 # Assert no local changes after a clean build. This helps catch errors resulting from
 # misconfigured go.mod / go.sum / gitignore, etc.
