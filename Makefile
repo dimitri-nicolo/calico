@@ -389,7 +389,7 @@ sub-tag-images-%:
 PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 
 define get_remote_version
-	$(shell git ls-remote ssh://git@$(1) $(2) 2>/dev/null | cut -f 1)
+	$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); git ls-remote https://$(1) $(2) | cut -f1')
 endef
 
 # update_replace_pin updates the given package's version to the latest available in the specified repo and branch.
@@ -398,24 +398,18 @@ endef
 define update_replace_pin
 	$(eval new_ver := $(call get_remote_version,$(2),$(3)))
 
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
-		if [[ ! -z "$(new_ver)" ]]; then \
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+		if [ ! -z "$(new_ver)" ]; then \
+			$(GIT_CONFIG_SSH) \
 			go mod edit -replace $(1)=$(2)@$(new_ver); \
 			go mod download; \
 		fi'
 endef
 
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
 LIBCALICO_BRANCH?=$(PIN_BRANCH)
 LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
 
-update-libcalico-pin: guard-ssh-forwarding-bug
+replace-libcalico-pin:
 	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
 
 git-status:
@@ -424,7 +418,7 @@ git-status:
 git-config:
 ifdef CONFIRM
 	git config --global user.name "Semaphore Automatic Update"
-	git config --global user.email "marvin@tigera.io"
+	git config --global user.email "marvin@projectcalico.io"
 endif
 
 git-commit:
@@ -433,9 +427,10 @@ git-commit:
 git-push:
 	git push
 
-update-pins: update-libcalico-pin
+update-pins: replace-libcalico-pin
 
-commit-pin-updates: update-pins git-status ci git-config git-commit git-push
+## Update dependency pins to their latest changeset, committing and pushing it.
+commit-pin-updates: update-pins build git-status git-config git-commit ci git-push
 
 ###############################################################################
 # Static checks
