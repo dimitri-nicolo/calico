@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -543,7 +543,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
 		if !r.deviceRouteSourceAddress.Equal(route.Src) {
 			routeProblems = append(routeProblems, "incorrect source address")
 		}
-		if r.deviceRouteProtocol != route.Protocol {
+		if dest != ipV6LinkLocalCIDR && r.deviceRouteProtocol != route.Protocol {
 			routeProblems = append(routeProblems, "incorrect protocol")
 		}
 		if len(routeProblems) == 0 {

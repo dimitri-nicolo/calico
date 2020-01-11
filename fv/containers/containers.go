@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ func withTimeoutPanic(logCxt *log.Entry, t time.Duration, f func()) {
 func (c *Container) execDockerStop() {
 	logCxt := log.WithField("container", c.Name)
 	logCxt.Info("Executing 'docker stop'")
-	cmd := exec.Command("docker", "stop", c.Name)
+	cmd := exec.Command("docker", "stop", "-t0", c.Name)
 	err := cmd.Run()
 	if err != nil {
 		logCxt.WithError(err).WithField("cmd", cmd).Error("docker stop command failed")

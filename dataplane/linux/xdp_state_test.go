@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2711,7 +2711,7 @@ var _ = Describe("XDP state", func() {
 					state := NewXDPStateWithBPFLibrary(bpf.NewMockBPFLib(), true)
 					state.ipV4State.newCurrentState = newXDPSystemState()
 					ipsetsSrc := &nilIPSetsSource{}
-					resyncState, err := state.ipV4State.newXDPResyncState(&state.common, ipsetsSrc)
+					resyncState, err := state.ipV4State.newXDPResyncState(state.common.bpfLib, ipsetsSrc, state.common.programTag, state.common.xdpModes)
 					Expect(err).NotTo(HaveOccurred())
 					state.ipV4State.bpfActions.InstallXDP.AddAll(s.install)
 					state.ipV4State.bpfActions.UninstallXDP.AddAll(s.uninstall)
