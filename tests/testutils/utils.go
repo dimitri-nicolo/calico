@@ -139,8 +139,8 @@ func GetK8sClient(kubeconfig string) (*kubernetes.Clientset, error) {
 }
 
 func Stop(c *containers.Container) {
+	var args = []string{"stop", c.Name}
 	log.WithField("container", c.Name).Info("Stopping container")
-	args := []string{"stop", c.Name}
 	cmd := exec.Command("docker", args...)
 	err := cmd.Run()
 	Expect(err).NotTo(HaveOccurred())
@@ -150,8 +150,8 @@ func Stop(c *containers.Container) {
 }
 
 func Start(c *containers.Container) {
+	var args = []string{"start", c.Name}
 	log.WithField("container", c.Name).Info("Starting container")
-	args := []string{"start", c.Name}
 	cmd := exec.Command("docker", args...)
 	err := cmd.Run()
 	Expect(err).NotTo(HaveOccurred())
