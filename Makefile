@@ -37,6 +37,7 @@ PACKAGE_NAME?=github.com/projectcalico/felix
 GO_BUILD_VER?=v0.32
 
 GIT_USE_SSH = true
+LOCAL_CHECKS = check-typha-pins check-packr
 
 ###############################################################################
 # Download and include Makefile.common
@@ -503,6 +504,9 @@ calico-build/centos6:
 ###############################################################################
 # Static checks.
 ###############################################################################
+# TODO: re-enable linting
+LINT_ARGS = --disable gosimple,unused,staticcheck,govet,errcheck,structcheck,varcheck,deadcode,ineffassign
+
 .PHONY: check-packr
 check-packr: bpf/packrd/packed-packr.go
 	@if [ "$$(git diff --ignore-blank-lines bpf/packrd/packed-packr.go)" != "" ] ; then \
