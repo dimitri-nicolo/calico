@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
 
 package ipamplugin
 
@@ -144,6 +144,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+
 	r := &current.Result{}
 	if ipamArgs.IP != nil {
 		logger.Infof("Calico CNI IPAM request IP: %v", ipamArgs.IP)
@@ -295,6 +298,9 @@ func cmdDel(args *skel.CmdArgs) error {
 
 	logger.Info("Releasing address using handleID")
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+
 	if err := calicoClient.IPAM().ReleaseByHandle(ctx, handleID); err != nil {
 		if _, ok := err.(errors.ErrorResourceDoesNotExist); !ok {
 			logger.WithError(err).Error("Failed to release address")

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package testutils
 
@@ -269,6 +269,16 @@ func RunCNIPluginWithId(
 		contAddr, err = netlink.AddrList(contVeth, syscall.AF_INET)
 		if err != nil {
 			return err
+		}
+		v6Addrs, err := netlink.AddrList(contVeth, syscall.AF_INET6)
+		if err != nil {
+			return err
+		}
+		for _, addr := range v6Addrs {
+			// Also return IPv6 addresses, except for link local ones.
+			if !strings.HasPrefix(addr.IPNet.String(), "fe80:") {
+				contAddr = append(contAddr, addr)
+			}
 		}
 
 		contRoutes, err = netlink.RouteList(contVeth, syscall.AF_INET)
