@@ -174,7 +174,7 @@ sub-manifest-%:
 	# manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*:$(IMAGETAG))-ARCH --target $(call unescapefs,$*:$(IMAGETAG))"
 
- ## push default amd64 arch where multi-arch manifest is not supported
+## push default amd64 arch where multi-arch manifest is not supported
 push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
 sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
@@ -346,11 +346,6 @@ endif
 ## Build fv binary for Windows
 $(BIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
 	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(BIN)/win-fv.exe'
-
-# Assert no local changes after a clean build. This helps catch errors resulting from
-# misconfigured go.mod / go.sum / gitignore, etc.
-assert-not-dirty:
-	@./hack/check-dirty.sh
 
 ###############################################################################
 # Release
