@@ -18,6 +18,8 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
 ifdef LOCAL_BUILD
@@ -69,8 +71,11 @@ clean:
 ###############################################################################
 LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/tigera/licensing
+LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+FELIX_REPO=github.com/tigera/felix-private
+TYPHA_REPO=github.com/tigera/typha-private
 
-update-licensing-pin: guard-ssh-forwarding-bug
+update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
 update-pins: update-licensing-pin replace-libcalico-pin replace-felix-pin replace-typha-pin
