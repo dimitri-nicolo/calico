@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -505,13 +505,25 @@ func (c *serviceController) onEndpointsAdd(obj interface{}) {
 }
 
 // onEndpointsUpdates is called when a k8s endpoint is updated
-func (c *serviceController) onEndpointsUpdate(_, obj interface{}) {
-	ep, ok := obj.(*v1.Endpoints)
+func (c *serviceController) onEndpointsUpdate(oldObj, currentObj interface{}) {
+	current, ok := currentObj.(*v1.Endpoints)
 	if !ok {
 		log.Warn("failed to assert type to endpoints, passing")
 		return
 	}
-	c.setNetworkSetForSvc(nil, ep)
+	old, ok := oldObj.(*v1.Endpoints)
+	if !ok {
+		log.Warn("failed to assert type to endpoints, passing")
+		return
+	}
+
+	// Create the NetworkSet: only fields used are name, namespace and subsets.
+	// If any other field is used when converting from Endpoints to NetworkSet, change also k8sEndpointToNetworkSet
+	// This check is in place cause we used to receive tons of updates because renewTime changed. Subsets is the only
+	// field whose changes we are interested in. Discard any other update
+	if !reflect.DeepEqual(current.Subsets, old.Subsets) {
+		c.setNetworkSetForSvc(nil, current)
+	}
 }
 
 // onEPDelete is called when a k8s endpoint is deleted

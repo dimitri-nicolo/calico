@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -241,6 +241,13 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testEndpoint",
 				Namespace: "policy-demo",
+				Labels: map[string]string{
+					"foo.org/bar": "baz",
+					"champions":   "juventus",
+				},
+				Annotations: map[string]string{
+					"country": "italy",
+				},
 			},
 			Subsets: []corev1.EndpointSubset{
 				corev1.EndpointSubset{
@@ -274,6 +281,18 @@ var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {
 		// Assert networkset namespace
 		By("returning a networkset with expected namespace", func() {
 			Expect(ns.(api.NetworkSet).Namespace).To(Equal("policy-demo"))
+		})
+
+		//Labels are not copied over from Endpoints to NetworkSet
+		//If this changes, both converter k8sEndpointToNetworkSet and controller onEndpointsUpdate need to be updated
+		By("returning a networkset with expected labels", func() {
+			Expect(len(ns.(api.NetworkSet).Labels)).To(Equal(0))
+		})
+
+		//Annotations are not copied over from Endpoints to NetworkSet
+		//If this changes, both converter k8sEndpointToNetworkSet and controller onEndpointsUpdate need to be updated
+		By("returning a networkset with expected annotations", func() {
+			Expect(len(ns.(api.NetworkSet).Annotations)).To(Equal(0))
 		})
 
 		nets := ns.(api.NetworkSet).Spec.Nets
