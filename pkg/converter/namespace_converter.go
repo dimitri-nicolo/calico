@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -52,7 +52,7 @@ func (nc *namespaceConverter) Convert(k8sObj interface{}) (interface{}, error) {
 	profile := kvp.Value.(*api.Profile)
 
 	// Isolate the metadata fields that we care about. ResourceVersion, CreationTimeStamp, etc are
-	// not relevant so we ignore them. This prevents uncessary updates.
+	// not relevant so we ignore them. This prevents unnecessary updates.
 	profile.ObjectMeta = metav1.ObjectMeta{Name: profile.Name}
 
 	return *profile, nil

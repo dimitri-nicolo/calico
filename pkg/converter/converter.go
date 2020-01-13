@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ type Converter interface {
 	// Converts kubernetes object to calico representation of it.
 	Convert(k8sObj interface{}) (interface{}, error)
 
-	// Returns apporpriate key for the object
+	// Returns appropriate key for the object
 	GetKey(obj interface{}) string
 
 	// DeleteArgsFromKey returns name and namespace of the object to pass to Delete

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -69,14 +70,6 @@ var VERSION string
 var version bool
 
 func init() {
-	// Tell glog (used by client-go) to log into STDERR. Otherwise, we risk
-	// certain kinds of API errors getting logged into a directory not
-	// available in a `FROM scratch` Docker container, causing glog to abort
-	err := flag.Set("logtostderr", "true")
-	if err != nil {
-		log.WithError(err).Fatal("Failed to set logging configuration")
-	}
-
 	// Add a flag to check the version.
 	flag.BoolVar(&version, "version", false, "Display version")
 
@@ -85,7 +78,7 @@ func init() {
 	// available in a `FROM scratch` Docker container, causing us to abort
 	var flags flag.FlagSet
 	klog.InitFlags(&flags)
-	err = flags.Set("logtostderr", "true")
+	err := flags.Set("logtostderr", "true")
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set klog logging configuration")
 	}
@@ -384,11 +377,14 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		CertFile: config.Spec.EtcdCertFile,
 		KeyFile:  config.Spec.EtcdKeyFile,
 	}
-	tls, _ := tlsInfo.ClientConfig()
+	tlsClient, _ := tlsInfo.ClientConfig()
+
+	// go 1.13 defaults to TLS 1.3, which we don't support just yet
+	tlsClient.MaxVersion = tls.VersionTLS13
 
 	cfg := clientv3.Config{
 		Endpoints:   etcdLocation,
-		TLS:         tls,
+		TLS:         tlsClient,
 		DialTimeout: 10 * time.Second,
 	}
 

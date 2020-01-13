@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ func (p *policyConverter) Convert(k8sObj interface{}) (interface{}, error) {
 	cnp := kvp.Value.(*api.NetworkPolicy)
 
 	// Isolate the metadata fields that we care about. ResourceVersion, CreationTimeStamp, etc are
-	// not relevant so we ignore them. This prevents uncessary updates.
+	// not relevant so we ignore them. This prevents unnecessary updates.
 	cnp.ObjectMeta = metav1.ObjectMeta{Name: cnp.Name, Namespace: cnp.Namespace}
 
 	return *cnp, err

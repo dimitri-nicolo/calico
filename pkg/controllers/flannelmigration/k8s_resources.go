@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,6 +163,10 @@ func (d daemonset) AddNodeSelector(k8sClientset *kubernetes.Clientset, namespace
 	ds, err := k8sClientset.AppsV1().DaemonSets(namespace).Get(string(d), metav1.GetOptions{})
 	if err != nil {
 		return err
+	}
+
+	if ds.Spec.Template.Spec.NodeSelector == nil {
+		ds.Spec.Template.Spec.NodeSelector = make(map[string]string)
 	}
 
 	needUpdate := false
