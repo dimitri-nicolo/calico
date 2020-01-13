@@ -512,9 +512,7 @@ st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd ca
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download static-checks ut fv image-all assert-not-dirty build-windows-archive st
-
-# use this target to run all but assert-not-dirty target to use with commit-pin-updates.
+ci: clean mod-download static-checks ut fv image-all build-windows-archive st
 
 ## Deploys images to registry
 cd:
