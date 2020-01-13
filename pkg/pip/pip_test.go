@@ -3,6 +3,8 @@ package pip
 import (
 	"context"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	. "github.com/onsi/ginkgo"
@@ -47,21 +49,33 @@ var _ = Describe("Test handling of flow splitting", func() {
 		//   flow so will readjust the actual flow data.
 		By("Creating an ES client with a mocked out search results with all allow actions")
 		client := pelastic.NewMockSearchClient([]interface{}{
-			// Dest flows.
+			// before: deny/na       after: allow/allow
 			//flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)), <- denied at source
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 2)),
-			flow("dst", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3)),
-			flow("dst", "deny", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 1)),
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 2)),
-			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 3)),
-			//flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 3), wepd("wepdst", "ns1", 1)), <- denied at source
 			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 1)),
+
+			// before: allow/allow   after: allow/unknown
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 2)),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 2)),
+
+			// before: allow/deny    after: allow/deny
+			flow("dst", "deny", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3)),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 1), wepd("wepdst", "ns1", 3)),
+
+			// before: allow/deny    after: unknown/allow
+			flow("dst", "deny", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 1)),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 1)),
+
+			// before: allow/allow   after: unknown/unknown
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 2)),
 			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 2)),
-			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 3)),
+
+			// before: deny/na       after: deny/na
+			//flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 3), wepd("wepdst", "ns1", 1)), <- denied at source
 			flow("src", "deny", "tcp", wepd("wepsrc", "ns1", 3), wepd("wepdst", "ns1", 1)),
+
+			// before: allow/allow   after: unknown/deny
+			flow("dst", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 3)),
+			flow("src", "allow", "tcp", wepd("wepsrc", "ns1", 2), wepd("wepdst", "ns1", 3)),
 		})
 
 		By("Creating a policy calculator with the required policy updates")
@@ -132,8 +146,8 @@ var _ = Describe("Test handling of flow splitting", func() {
 				},
 			},
 		}
-		modified := make(policycalc.ModifiedResources)
-		modified.Add(np)
+		impacted := make(policycalc.ImpactedResources)
+		impacted.Add(resources.GetResourceID(np), policycalc.Impact{Modified: true})
 		pc := policycalc.NewPolicyCalculator(
 			&config.Config{
 				CalculateOriginalAction: true, // <- we want to recalculate the original action
@@ -142,10 +156,10 @@ var _ = Describe("Test handling of flow splitting", func() {
 			&policycalc.ResourceData{},
 			&policycalc.ResourceData{
 				Tiers: policycalc.Tiers{
-					{np},
+					{policycalc.Policy{Policy: np}},
 				},
 			},
-			modified,
+			impacted,
 		)
 
 		By("Creating a composite agg query")
@@ -279,6 +293,48 @@ var _ = Describe("Test handling of flow splitting", func() {
 			{"dest_namespace", "ns1"},
 			{"dest_name", "wepdst"},
 			{"reporter", "dst"},
+			{"action", "unknown"},
+			{"source_action", "unknown"},
+			{"flow_impacted", true},
+		}))
+
+		Expect(after[6].DocCount).To(BeEquivalentTo(3))
+		Expect(after[6].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+			{"source_type", "wep"},
+			{"source_namespace", "ns1"},
+			{"source_name", "wepsrc"},
+			{"dest_type", "wep"},
+			{"dest_namespace", "ns1"},
+			{"dest_name", "wepdst"},
+			{"reporter", "src"},
+			{"action", "allow"},
+			{"source_action", "allow"},
+			{"flow_impacted", true},
+		}))
+
+		Expect(after[7].DocCount).To(BeEquivalentTo(1))
+		Expect(after[7].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+			{"source_type", "wep"},
+			{"source_namespace", "ns1"},
+			{"source_name", "wepsrc"},
+			{"dest_type", "wep"},
+			{"dest_namespace", "ns1"},
+			{"dest_name", "wepdst"},
+			{"reporter", "src"},
+			{"action", "deny"},
+			{"source_action", "deny"},
+			{"flow_impacted", true},
+		}))
+
+		Expect(after[8].DocCount).To(BeEquivalentTo(3))
+		Expect(after[8].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+			{"source_type", "wep"},
+			{"source_namespace", "ns1"},
+			{"source_name", "wepsrc"},
+			{"dest_type", "wep"},
+			{"dest_namespace", "ns1"},
+			{"dest_name", "wepdst"},
+			{"reporter", "src"},
 			{"action", "unknown"},
 			{"source_action", "unknown"},
 			{"flow_impacted", true},

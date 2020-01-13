@@ -20,11 +20,12 @@ var (
 	pr1 = &v3.NetworkPolicy{
 		TypeMeta: resources.TypeCalicoNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "tier1.np",
+			Name:      "tier1.np",
+			Namespace: "ns1",
 		},
 		Spec: v3.NetworkPolicySpec{
 			Tier:     "tier1",
-			Selector: "has('hello1')",
+			Selector: "has(hello1)",
 		},
 	}
 	pr2 = &v3.GlobalNetworkPolicy{
@@ -34,7 +35,7 @@ var (
 		},
 		Spec: v3.GlobalNetworkPolicySpec{
 			Tier:     "tier1",
-			Selector: "has('hello2')",
+			Selector: "has(hello2)",
 		},
 	}
 	pr3 = &networkingv1.NetworkPolicy{
@@ -53,28 +54,29 @@ var (
 
 	// Staged policy updates
 	supr1 = &v3.StagedNetworkPolicy{
-		TypeMeta: resources.TypeCalicoNetworkPolicies,
+		TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "tier1.np",
+			Name:      "tier1.np",
+			Namespace: "ns1",
 		},
 		Spec: v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionSet,
 			Tier:         "tier1",
-			Selector:     "has('goodbye1')",
+			Selector:     "has(goodbye1)",
 		},
 	}
 	supr2 = &v3.StagedGlobalNetworkPolicy{
-		TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+		TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tier1.gnp",
 		},
 		Spec: v3.StagedGlobalNetworkPolicySpec{
 			Tier:     "tier1",
-			Selector: "has('goodbye2')",
+			Selector: "has(goodbye2)",
 		},
 	}
 	supr3 = &v3.StagedKubernetesNetworkPolicy{
-		TypeMeta: resources.TypeK8sNetworkPolicies,
+		TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default-deny-ingress",
 			Namespace: "ns1",
@@ -89,9 +91,10 @@ var (
 
 	// Staged policy deletes
 	sdpr1 = &v3.StagedNetworkPolicy{
-		TypeMeta: resources.TypeCalicoNetworkPolicies,
+		TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "tier1.np",
+			Name:      "tier1.np",
+			Namespace: "ns1",
 		},
 		Spec: v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionDelete,
@@ -99,7 +102,7 @@ var (
 		},
 	}
 	sdpr2 = &v3.StagedGlobalNetworkPolicy{
-		TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+		TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "tier1.gnp",
 		},
@@ -109,7 +112,7 @@ var (
 		},
 	}
 	sdpr3 = &v3.StagedKubernetesNetworkPolicy{
-		TypeMeta: resources.TypeK8sNetworkPolicies,
+		TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default-deny-ingress",
 			Namespace: "ns1",
@@ -124,7 +127,7 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 	var xc xrefcache.XrefCache
 
 	BeforeEach(func() {
-		xc = xrefcache.NewXrefCache(&config.Config{}, func() {})
+		xc = xrefcache.NewXrefCache(&config.Config{IncludeStagedNetworkPolicies: true}, func() {})
 		xc.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 		xc.OnUpdates([]syncer.Update{{
@@ -161,13 +164,13 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		Expect(ce).ToNot(BeNil())
 		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
 		Expect(ok).To(BeTrue())
-		Expect(p1.Spec.Selector).To(Equal("has('goodbye1')"))
+		Expect(p1.Spec.Selector).To(Equal("has(goodbye1)"))
 
 		ce = xc.Get(resources.GetResourceID(pr2))
 		Expect(ce).ToNot(BeNil())
 		p2, ok := ce.GetPrimary().(*v3.GlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
-		Expect(p2.Spec.Selector).To(Equal("has('goodbye2')"))
+		Expect(p2.Spec.Selector).To(Equal("has(goodbye2)"))
 
 		ce = xc.Get(resources.GetResourceID(pr3))
 		Expect(ce).ToNot(BeNil())
@@ -177,10 +180,16 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 			networkingv1.PolicyTypeEgress,
 		}))
 
-		By("Checking the modified set")
-		Expect(modified.IsModified(pr1)).To(BeTrue())
-		Expect(modified.IsModified(pr2)).To(BeTrue())
-		Expect(modified.IsModified(pr3)).To(BeTrue())
+		By("Checking the impacted set")
+		Expect(modified.IsModified(pr1)).To(BeFalse())
+		Expect(modified.IsModified(pr2)).To(BeFalse())
+		Expect(modified.IsModified(pr3)).To(BeFalse())
+		Expect(modified.UseStaged(pr1)).To(BeTrue())
+		Expect(modified.UseStaged(pr2)).To(BeTrue())
+		Expect(modified.UseStaged(pr3)).To(BeTrue())
+		Expect(modified.IsDeleted(pr1)).To(BeFalse())
+		Expect(modified.IsDeleted(pr2)).To(BeFalse())
+		Expect(modified.IsDeleted(pr3)).To(BeFalse())
 	})
 
 	It("Handles deletion of staged policy sets", func() {
@@ -202,13 +211,13 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		Expect(ce).ToNot(BeNil())
 		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
 		Expect(ok).To(BeTrue())
-		Expect(p1.Spec.Selector).To(Equal("has('hello1')"))
+		Expect(p1.Spec.Selector).To(Equal("has(hello1)"))
 
 		ce = xc.Get(resources.GetResourceID(pr2))
 		Expect(ce).ToNot(BeNil())
 		p2, ok := ce.GetPrimary().(*v3.GlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
-		Expect(p2.Spec.Selector).To(Equal("has('hello2')"))
+		Expect(p2.Spec.Selector).To(Equal("has(hello2)"))
 
 		ce = xc.Get(resources.GetResourceID(pr3))
 		Expect(ce).ToNot(BeNil())
@@ -218,10 +227,16 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 			networkingv1.PolicyTypeIngress,
 		}))
 
-		By("Checking the modified set")
+		By("Checking the impacted set")
 		Expect(modified.IsModified(pr1)).To(BeFalse())
 		Expect(modified.IsModified(pr2)).To(BeFalse())
 		Expect(modified.IsModified(pr3)).To(BeFalse())
+		Expect(modified.UseStaged(pr1)).To(BeFalse())
+		Expect(modified.UseStaged(pr2)).To(BeFalse())
+		Expect(modified.UseStaged(pr3)).To(BeFalse())
+		Expect(modified.IsDeleted(pr1)).To(BeFalse())
+		Expect(modified.IsDeleted(pr2)).To(BeFalse())
+		Expect(modified.IsDeleted(pr3)).To(BeFalse())
 	})
 
 	It("Handles deletion of staged policy deletes", func() {
@@ -243,13 +258,13 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		Expect(ce).ToNot(BeNil())
 		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
 		Expect(ok).To(BeTrue())
-		Expect(p1.Spec.Selector).To(Equal("has('hello1')"))
+		Expect(p1.Spec.Selector).To(Equal("has(hello1)"))
 
 		ce = xc.Get(resources.GetResourceID(pr2))
 		Expect(ce).ToNot(BeNil())
 		p2, ok := ce.GetPrimary().(*v3.GlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
-		Expect(p2.Spec.Selector).To(Equal("has('hello2')"))
+		Expect(p2.Spec.Selector).To(Equal("has(hello2)"))
 
 		ce = xc.Get(resources.GetResourceID(pr3))
 		Expect(ce).ToNot(BeNil())
@@ -259,10 +274,16 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 			networkingv1.PolicyTypeIngress,
 		}))
 
-		By("Checking the modified set")
+		By("Checking the impacted set")
 		Expect(modified.IsModified(pr1)).To(BeFalse())
 		Expect(modified.IsModified(pr2)).To(BeFalse())
 		Expect(modified.IsModified(pr3)).To(BeFalse())
+		Expect(modified.UseStaged(pr1)).To(BeFalse())
+		Expect(modified.UseStaged(pr2)).To(BeFalse())
+		Expect(modified.UseStaged(pr3)).To(BeFalse())
+		Expect(modified.IsDeleted(pr1)).To(BeFalse())
+		Expect(modified.IsDeleted(pr2)).To(BeFalse())
+		Expect(modified.IsDeleted(pr3)).To(BeFalse())
 	})
 
 	It("Handles setting of staged policy deletes", func() {
@@ -289,9 +310,15 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		ce = xc.Get(resources.GetResourceID(pr3))
 		Expect(ce).To(BeNil())
 
-		By("Checking the modified set")
-		Expect(modified.IsModified(pr1)).To(BeTrue())
-		Expect(modified.IsModified(pr2)).To(BeTrue())
-		Expect(modified.IsModified(pr3)).To(BeTrue())
+		By("Checking the impacted set")
+		Expect(modified.IsModified(pr1)).To(BeFalse())
+		Expect(modified.IsModified(pr2)).To(BeFalse())
+		Expect(modified.IsModified(pr3)).To(BeFalse())
+		Expect(modified.UseStaged(pr1)).To(BeTrue())
+		Expect(modified.UseStaged(pr2)).To(BeTrue())
+		Expect(modified.UseStaged(pr3)).To(BeTrue())
+		Expect(modified.IsDeleted(pr1)).To(BeTrue())
+		Expect(modified.IsDeleted(pr2)).To(BeTrue())
+		Expect(modified.IsDeleted(pr3)).To(BeTrue())
 	})
 })

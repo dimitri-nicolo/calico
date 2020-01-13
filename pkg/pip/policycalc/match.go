@@ -32,8 +32,8 @@ func (m MatchType) String() string {
 	}
 }
 
-type FlowMatcher func(*Flow) MatchType
-type EndpointMatcher func(*Flow, *FlowEndpointData) MatchType
+type FlowMatcher func(*Flow, *flowCache) MatchType
+type EndpointMatcher func(*Flow, *FlowEndpointData, *flowCache, *endpointCache) MatchType
 
 // NewMatcherFactory creates a new MatcherFactory
 func NewMatcherFactory(
@@ -62,8 +62,8 @@ func (m *MatcherFactory) Not(fm FlowMatcher) FlowMatcher {
 	}
 
 	// Return a closure that invokes the matcher and negates the response.
-	return func(flow *Flow) MatchType {
-		mt := fm(flow)
+	return func(flow *Flow, flowCache *flowCache) MatchType {
+		mt := fm(flow, flowCache)
 		switch mt {
 		case MatchTypeTrue:
 			mt = MatchTypeFalse
@@ -82,7 +82,7 @@ func (m *MatcherFactory) IPVersion(version *int) FlowMatcher {
 	}
 
 	// Create a closure that checks the IP version against the version of the IPs in the flow.
-	return func(flow *Flow) MatchType {
+	return func(flow *Flow, flowCache *flowCache) MatchType {
 		// Do the best match we can, by checking actual IPs if present.
 		if flow.IPVersion == nil {
 			log.Debugf("IPVersion: %s (unknown)", MatchTypeUncertain)
@@ -107,7 +107,7 @@ func (m *MatcherFactory) ICMP(icmp *v3.ICMPFields) FlowMatcher {
 
 	// Flows will not contain ICMP data, the best we can do is check the protocol and set match type to false if not
 	// ICMP.
-	return func(flow *Flow) MatchType {
+	return func(flow *Flow, flowCache *flowCache) MatchType {
 		if flow.Proto == nil {
 			log.Debugf("ICMP: %s (protocol unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
@@ -131,7 +131,7 @@ func (m *MatcherFactory) HTTP(http *v3.HTTPMatch) FlowMatcher {
 	}
 
 	// Flows will not contain HTTP data.
-	return func(flow *Flow) MatchType {
+	return func(flow *Flow, flowCache *flowCache) MatchType {
 		log.Debugf("HTTP: %s (unknown)", MatchTypeUncertain)
 		return MatchTypeUncertain
 	}
@@ -144,7 +144,7 @@ func (m *MatcherFactory) Protocol(p *numorstring.Protocol) FlowMatcher {
 		return nil
 	}
 
-	return func(flow *Flow) MatchType {
+	return func(flow *Flow, flowCache *flowCache) MatchType {
 		if flow.Proto == nil {
 			log.Debugf("Protocol: %s (unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
@@ -164,9 +164,9 @@ func (m *MatcherFactory) Src(em EndpointMatcher) FlowMatcher {
 		return nil
 	}
 
-	return func(flow *Flow) MatchType {
+	return func(flow *Flow, flowCache *flowCache) MatchType {
 		log.Debug("Source match")
-		return em(flow, &flow.Source)
+		return em(flow, &flow.Source, flowCache, &flowCache.source)
 	}
 }
 
@@ -176,16 +176,16 @@ func (m *MatcherFactory) Dst(em EndpointMatcher) FlowMatcher {
 		return nil
 	}
 
-	return func(flow *Flow) MatchType {
+	return func(flow *Flow, flowCache *flowCache) MatchType {
 		log.Debug("Destination match")
-		return em(flow, &flow.Destination)
+		return em(flow, &flow.Destination, flowCache, &flowCache.destination)
 	}
 }
 
 // CalicoEndpointSelector endpoints matcher
 func (m *MatcherFactory) CalicoEndpointSelector() EndpointMatcher {
-	return func(_ *Flow, ed *FlowEndpointData) MatchType {
-		if ed.isCalicoEndpoint() {
+	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+		if ed.IsCalicoManagedEndpoint() {
 			return MatchTypeTrue
 		}
 		return MatchTypeFalse
@@ -216,11 +216,11 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 	}
 
 	// Create a closure matching on the nets.
-	return func(_ *Flow, ed *FlowEndpointData) MatchType {
+	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		if ed.IP == nil {
 			// Endpoint IP is unknown. If this is a Calico endpoint then we either have a negative match or an uncertain
 			// match depending on configuration.
-			if ed.isCalicoEndpoint() && !m.cfg.CalicoEndpointNetMatchAlways {
+			if ed.IsCalicoManagedEndpoint() && !m.cfg.CalicoEndpointNetMatchAlways {
 				log.Debugf("Nets: %s (unknown, but assume Calico endpoint matchers use label selectors only)", MatchTypeFalse)
 				return MatchTypeFalse
 			}
@@ -248,7 +248,7 @@ func (m *MatcherFactory) Ports(ports []numorstring.Port) EndpointMatcher {
 
 	// Create a closure matching on the numerical port values.
 	log.Debug("Ports matcher")
-	return func(f *Flow, ed *FlowEndpointData) MatchType {
+	return func(f *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		// If the port is not specified in the endpoint data then return uncertain.
 		if ed.Port == nil {
 			log.Debugf("Ports: %s (unknown)", MatchTypeUncertain)
@@ -306,7 +306,7 @@ func (m *MatcherFactory) Domains(domains []string) EndpointMatcher {
 	if len(domains) == 0 {
 		return nil
 	}
-	return func(_ *Flow, ed *FlowEndpointData) MatchType {
+	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		log.Debugf("Domains: %s (unknown)", MatchTypeUncertain)
 		return MatchTypeUncertain
 	}
@@ -335,7 +335,7 @@ func (m *MatcherFactory) Namespace(namespace string) EndpointMatcher {
 	}
 
 	// Create a closure to match the endpoint namespace against the specified namespace.
-	return func(_ *Flow, ed *FlowEndpointData) MatchType {
+	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		if ed.Namespace == namespace {
 			log.Debugf("Namespace: %s (name matches %s)", MatchTypeTrue, ed.Namespace)
 			return MatchTypeTrue
