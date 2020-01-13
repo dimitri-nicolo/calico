@@ -77,7 +77,7 @@ WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/tigera-calico.exe
 # Name of the Windows release ZIP archive.
 WINDOWS_ARCHIVE_ROOT := windows-packaging/TigeraCalico
 WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/tigera-calico.exe
-WINDOWS_ARCHIVE_TAG?=$(CNX_GIT_VER)
+WINDOWS_ARCHIVE_TAG?=$(GIT_VERSION)
 WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
 WINDOWS_NSSM_VERSION=2.24
@@ -128,7 +128,7 @@ ST_OPTIONS?=
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
+	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(GIT_VERSION) -X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
 	-X main.VERSION=$(CALICO_GIT_VER) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
@@ -161,7 +161,7 @@ LIBCALICO_REPO=github.com/tigera/libcalico-go-private
 CONFD_REPO=github.com/tigera/confd-private
 FELIX_REPO=github.com/tigera/felix-private
 TYPHA_REPO=github.com/tigera/typha-private
-CNI_PLUGIN_REPO=github.com/tigera/cni-plugin-private
+CNI_REPO=github.com/tigera/cni-plugin-private
 
 update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-typha-pin replace-cni-pin
 
