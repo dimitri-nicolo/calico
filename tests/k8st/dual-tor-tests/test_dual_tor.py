@@ -34,7 +34,7 @@ class FailoverTestConfig(object):
         self.total_packets = total_packets
         self.spec_name = spec_name
         self.max_errors = max_errors
-        self.timeout = total_packets/100 + 10 # expect receiving 100 packets per seconds plus 10 seconds buffer. 
+        self.timeout = total_packets/100 + 10 # expect receiving 100 packets per seconds plus 10 seconds buffer.
 
         # get pod ip and target port
         _, self.client_ip = self.get_pod_ip("pod-name", "client")
@@ -55,11 +55,11 @@ class FailoverTestConfig(object):
 
         if spec_name == "host access":
             self.get_plane_from_host()
-        else:    
+        else:
             self.get_plane_from_pod()
 
         self.output()
-   
+
     def output(self):
         _log.info("Pod IPs: client<%s> client-host<%s> ra-server<%s> rb-server<%s>  port <%s>", self.client_ip, self.client_host_ip, self.ra_server_ip, self.rb_server_ip, self.target_port)
         _log.info("Service IP: ra-server <%s> rb-server <%s> port <%s>", self.ra_service_ip, self.rb_service_ip, self.service_port)
@@ -75,7 +75,7 @@ class FailoverTestConfig(object):
             _log.exception("failed to get pod ip for label %s==%s", key, value)
             raise Exception("error getting pod ip")
         return s[0], s[1]
-    
+
     def get_service_ip(self, name):
         cmd = "kubectl get service " + name + " -n dualtor -o json | jq -r '.spec.clusterIP'"
         output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -96,14 +96,14 @@ class FailoverTestConfig(object):
         else:
             _log.exception("failed to get interface name from plane output %s", output)
             raise Exception("error getting dev")
-    
+
         return output, dev
-    
+
     def get_plane(self, src_pod_name, dst_ip, route_order):
         # traceroute src --> dst and get the route with route_order
         cmd="kubectl exec -t " + src_pod_name + " -n dualtor -- timeout 5s traceroute -n " + dst_ip + " | grep '" + str(route_order) + "  172'"
         print cmd
-        try: 
+        try:
             output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         except Exception:
             print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
@@ -141,7 +141,7 @@ class FailoverTestConfig(object):
 
         self.client_rb_plane, self.client_rb_dev = self.get_plane("client-host", self.rb_server_ip, 1)
         self.rb_server_plane, self.rb_server_dev = self.get_plane("rb-server", self.client_host_ip, 2)
-    
+
 class FailoverTest(object):
     def __init__(self, config):
         self.config = config
@@ -158,22 +158,22 @@ class FailoverTest(object):
 
         if self.config.spec_name == "node port":
             self.client_func = self.client_func_node_port
-         
+
         if self.client_func == None:
             _log.exception("unknown test spec <%s> specified.", self.config.spec_name)
             raise Exception("unknown test spec")
 
     def start_server(self, name, server_logs):
         run_daemon_with_log("kubectl exec -n dualtor " + name + " -- nc -l -p " + self.config.target_port, server_logs)
-    
+
     def start_client(self, name, ip, port):
         script="for i in `seq 1 " + str(self.config.total_packets) + "`; do echo $i -- " + name + "; sleep 0.01; done | nc -w 1 " + ip +  " " + port
-        if self.config.spec_name == "host access":
+        if self.config.spec_name != "host access":
             cmd = "kubectl exec -n dualtor -t client -- /bin/sh -c \"" + script + "\""
-        else:    
+        else:
             cmd = "kubectl exec -n dualtor -t client-host -- /bin/sh -c \"" + script + "\""
         proc1 = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-   
+
     def print_diag(self, name):
         cmd="docker exec -t kind-worker3 ip r"
         server_output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -188,7 +188,7 @@ class FailoverTest(object):
     def packets_received(self, name, server_log, count, previous_seq):
         error = 0
 
-        if len(server_log) == 0: 
+        if len(server_log) == 0:
             _log.exception("empty server log of %s at %d seconds", name, count)
             raise Exception("error empty server log")
 
@@ -196,20 +196,20 @@ class FailoverTest(object):
         if last_log.find("--") == -1:
             _log.exception("failed to parse server log of %s at %d seconds", name, count)
             raise Exception("error parsing server log")
-    
+
         seq_string = last_log.split("--")[0]
         seq = int(seq_string)
         diff = seq - previous_seq
 
         _log.info("%d second -- %s %s packets received", count, diff, name)
         #check if packets received is more than 50 except for first and last iterations.
-        if previous_seq != 0 and seq != self.config.total_packets and diff < 50: 
+        if previous_seq != 0 and seq != self.config.total_packets and diff < 50:
             error =1
             _log.error("server log of %s at %d seconds -- received %d packets, link broken", name, count, diff)
             if self.rb_error == 5:
                 print "may stop for debug"
                 #time.sleep(2)
-  
+
         return seq, error
     
     def clean_up(self):
@@ -244,13 +244,13 @@ class FailoverTest(object):
 
           if count == 5:
               break_func()
-    
+
           if count == 15:
               restore_func()
 
           self.ra_error += ra_error
           self.rb_error += rb_error
-        
+
         # cleanup server
         self.clean_up()
 
@@ -268,15 +268,15 @@ class FailoverTest(object):
         self.start_client("ra-server", self.config.ra_server_ip, self.config.target_port)
         self.start_client("rb-server", self.config.rb_server_ip, self.config.target_port)
 
-    def client_func_service_ip(self):      
+    def client_func_service_ip(self):
         self.start_client("service-ip-server-0", self.config.ra_service_ip, self.config.service_port)
         self.start_client("service-ip-server-1", self.config.rb_service_ip, self.config.service_port)
 
-    def client_func_node_port(self):      
+    def client_func_node_port(self):
         self.start_client("node-port-0", self.config.node_port_ip, self.config.ra_node_port)
         self.start_client("node-port-1", self.config.node_port_ip, self.config.rb_node_port)
 
-    def link_func_break_tor2tor(self):      
+    def link_func_break_tor2tor(self):
         # break tor2tor link via eth1 of tor router.
         # client to rb-server is currently via client_rb_plane.
         cmd="docker exec bird-a" + self.config.client_rb_plane + " ip link set dev eth1 down"
@@ -288,7 +288,7 @@ class FailoverTest(object):
         output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         _log.info("link function: restore tor2tor")
 
-    def link_func_break_tor2node(self):      
+    def link_func_break_tor2node(self):
         # break tor2node link via eth0 of tor router.
         # client to rb-server is currently via client_rb_plane.
         cmd="docker exec bird-b" + self.config.client_rb_plane + " ip link set dev eth0 down"
@@ -300,7 +300,7 @@ class FailoverTest(object):
         output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         _log.info("link function: restore tor2node")
 
-    def link_func_drop_client_node(self):      
+    def link_func_drop_client_node(self):
         # drop packets silently on client node on interface to rb-server.
         cmd="docker exec kind-worker tc qdisc add dev " +  self.config.client_rb_dev + " root netem loss 100%"
         output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -311,7 +311,7 @@ class FailoverTest(object):
         output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
         _log.info("link function: restore client node")
 
-    def link_func_drop_server_node(self):      
+    def link_func_drop_server_node(self):
         # drop packets silently on rb-server node on interface to client.
         cmd="docker exec kind-worker3 tc qdisc add dev " +  self.config.rb_server_dev + " root netem loss 100%"
         output=subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
@@ -341,12 +341,37 @@ class FailoverTest(object):
         self.run_single_test("basic_connection", self.client_func, self.do_nothing, self.do_nothing)
 
 
-# FailoverCluster holds methods to setup/cleanup testing enviroment. 
+# FailoverCluster holds methods to setup/cleanup testing enviroment.
 class FailoverCluster(object):
+    #
+    #             +--------------------+-----plane 1----------+------------------+
+    #             |                    |                      |                  |
+    #             |   +--------------------+-------plane 2--------+------------------+
+    #             |   |                |   |                  |   |              |   |
+    #   +--------------------+  +-----------------+     +----------------+  +----------------+
+    #   | kind-control-plane |  | kind-worker     |     | kind-worker2   |  | kind-worker3   |
+    #   |                    |  |                 |     |                |  |                |
+    #   |  POD: ra-server    |  | POD: client     |     | Target for     |  | POD: rb-server |
+    #   |                    |  | HN: client-host |     | NodePort tests |  |                |
+    #   +--------------------+  +-----------------+     +----------------+  +----------------+
+    #
+    #
+    # PodIP tests: client -> ra-server pod IP
+    #              client -> rb-server pod IP
+    #
+    # ServiceIP tests: client -> ra-server service cluster IP
+    #                  client -> rb-server service cluster IP
+    #
+    # NodePort tests: client -> ra-server service node port on kind-worker2
+    #                 client -> rb-server service node port on kind-worker2
+    #
+    # HostAccess tests: client-host -> ra-server pod IP
+    #                   client-host -> rb-server pod IP
+    #
     def setup(self):
         kubectl("create ns dualtor")
 
-        # Create client, ra-server, rb-server and service. 
+        # Create client, ra-server, rb-server and service.
         kubectl("run --generator=run-pod/v1 client -n dualtor" +
                 " --image busybox --labels='pod-name=client' " +
                 " --overrides='{ \"apiVersion\": \"v1\", \"spec\": { \"nodeSelector\": { \"kubernetes.io/hostname\": \"kind-worker\" } } }'" +
@@ -430,7 +455,7 @@ class TestFailoverPodIP(TestBase):
         self.test.test_failover_drop_client()
 
     def test_failover_drop_server(self):
-        self.test.test_failover_drop_server() 
+        self.test.test_failover_drop_server()
 
 class TestFailoverServiceIP(TestBase):
     @classmethod
@@ -465,10 +490,10 @@ class TestFailoverServiceIP(TestBase):
         self.test.test_failover_drop_client()
 
     def test_failover_drop_server(self):
-        self.test.test_failover_drop_server() 
+        self.test.test_failover_drop_server()
 
     def test_z_deploy_daemonset(self):
-        # make it last test case to run. 
+        # make it last test case to run.
         # deploy four pods onto four nodes
         nodes = ["kind-control-plane", "kind-worker", "kind-worker2", "kind-worker3"]
         for node in nodes:
@@ -511,7 +536,7 @@ class TestFailoverNodePort(TestBase):
         self.test.test_failover_drop_client()
 
     def test_failover_drop_server(self):
-        self.test.test_failover_drop_server() 
+        self.test.test_failover_drop_server()
 
 class TestFailoverHostAccess(TestBase):
     @classmethod
@@ -547,4 +572,4 @@ class TestFailoverHostAccess(TestBase):
         self.test.test_failover_drop_client()
 
     def test_failover_drop_server(self):
-        self.test.test_failover_drop_server() 
+        self.test.test_failover_drop_server()
