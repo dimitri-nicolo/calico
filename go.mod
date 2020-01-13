@@ -21,7 +21,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
-	github.com/tigera/licensing v2.5.1+incompatible
+	github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 
 	// k8s.io/api v1.16.3 is at 16d7abae0d2a
@@ -40,6 +40,7 @@ require (
 )
 
 replace (
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200111003839-08326be6b392
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200111223629-729cb7baf6f1
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200110190915-9fa812d46e44
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200103211238-4018e3107793
