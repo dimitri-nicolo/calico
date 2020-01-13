@@ -168,7 +168,7 @@ class FailoverTest(object):
 
     def start_client(self, name, ip, port):
         script="for i in `seq 1 " + str(self.config.total_packets) + "`; do echo $i -- " + name + "; sleep 0.01; done | nc -w 1 " + ip +  " " + port
-        if self.config.spec_name == "host access":
+        if self.config.spec_name != "host access":
             cmd = "kubectl exec -n dualtor -t client -- /bin/sh -c \"" + script + "\""
         else:
             cmd = "kubectl exec -n dualtor -t client-host -- /bin/sh -c \"" + script + "\""
