@@ -32,7 +32,7 @@ EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/proje
 
 $(LOCAL_BUILD_DEP):
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go \
-		-replace=github.com/projectcalico/felix=../felix
+		-replace=github.com/projectcalico/felix=../felix \
 		-replace=github.com/projectcalico/typha=../typha
 endif
 
@@ -130,6 +130,7 @@ endif
 remote-deps:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go mod download; \
+		mkdir -p tests; \
 		cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml tests/crds.yaml; \
 		chmod +w tests/crds.yaml'
 
