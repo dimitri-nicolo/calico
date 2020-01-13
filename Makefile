@@ -694,6 +694,54 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
+## tag version number build images i.e.  tigera/node:latest-amd64 -> tigera/node:v1.1.1-amd64
+tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
+sub-base-tag-images-%:
+	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
+
+###############################################################################
+# Windows packaging
+###############################################################################
+# Pull the BGP configuration scripts and templates from the confd repo.
+$(WINDOWS_VENDORED_FILES): remote-deps
+
+$(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: ./vendor/github.com/tigera/confd-private/windows-packaging/config-bgp%
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: ./vendor/github.com/tigera/confd-private/windows-packaging/conf.d/%
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: ./vendor/github.com/tigera/confd-private/windows-packaging/templates/%
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1: ./vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt: ./vendor/github.com/Microsoft/SDN/License.txt
+	cp $< $@
+
+## Download NSSM.
+windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
+	wget -O windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip https://nssm.cc/release/nssm-$(WINDOWS_NSSM_VERSION).zip
+
+build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip
+	# To be as atomic as possible, we re-do work like unpacking NSSM here.
+	-rm -f "$(WINDOWS_ARCHIVE)"
+	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)
+	mkdir -p dist
+	cd windows-packaging && \
+	sha256sum --check nssm.sha256sum && \
+	cd TigeraCalico && \
+	unzip  ../nssm-$(WINDOWS_NSSM_VERSION).zip \
+	       -x 'nssm-$(WINDOWS_NSSM_VERSION)/src/*' && \
+	cd .. && \
+	zip -r "../$(WINDOWS_ARCHIVE)" TigeraCalico -x '*.git*'
+	@echo
+	@echo "Windows archive built at $(WINDOWS_ARCHIVE)"
+
+$(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
+	cp $< $@
+
 ###############################################################################
 # Utilities
 ###############################################################################
