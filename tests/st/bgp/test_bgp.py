@@ -21,7 +21,6 @@ from tests.st.utils.utils import check_bird_status, retry_until_success
 _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
-
 class TestReadiness(TestBase):
     def test_readiness(self):
         """
