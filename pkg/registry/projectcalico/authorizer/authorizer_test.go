@@ -9,7 +9,7 @@ import (
 	k8sauth "k8s.io/apiserver/pkg/authorization/authorizer"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/authorizer"
+	"github.com/tigera/apiserver/pkg/registry/projectcalico/authorizer"
 )
 
 type testAuth struct {

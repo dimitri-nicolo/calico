@@ -5,7 +5,7 @@
 package scheme
 
 import (
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico/install"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

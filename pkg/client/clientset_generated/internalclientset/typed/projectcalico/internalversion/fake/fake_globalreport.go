@@ -5,7 +5,7 @@
 package fake
 
 import (
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

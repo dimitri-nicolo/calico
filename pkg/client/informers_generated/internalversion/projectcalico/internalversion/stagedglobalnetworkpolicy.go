@@ -7,10 +7,10 @@ package internalversion
 import (
 	time "time"
 
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	internalclientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset"
-	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
-	internalversion "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/projectcalico/internalversion"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	internalclientset "github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset"
+	internalinterfaces "github.com/tigera/apiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
+	internalversion "github.com/tigera/apiserver/pkg/client/listers_generated/projectcalico/internalversion"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -17,8 +17,8 @@ limitations under the License.
 package networkset
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
+	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -42,7 +42,7 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST,error) {
+func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()

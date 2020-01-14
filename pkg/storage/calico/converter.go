@@ -10,7 +10,7 @@ import (
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 )

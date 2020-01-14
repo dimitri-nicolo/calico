@@ -27,8 +27,8 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
+	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
 )
 
 // rest implements a RESTStorage for API services against etcd

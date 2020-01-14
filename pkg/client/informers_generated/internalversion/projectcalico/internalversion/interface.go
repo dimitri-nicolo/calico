@@ -5,7 +5,7 @@
 package internalversion
 
 import (
-	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
+	internalinterfaces "github.com/tigera/apiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

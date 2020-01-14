@@ -5,7 +5,7 @@
 package fake
 
 import (
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	v3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

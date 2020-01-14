@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	calicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	apitesting "k8s.io/apimachinery/pkg/api/apitesting"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"

@@ -5,9 +5,9 @@
 package fake
 
 import (
-	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	fakeprojectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
+	clientset "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	projectcalicov3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	fakeprojectcalicov3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

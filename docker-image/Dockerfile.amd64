@@ -5,9 +5,9 @@ FROM alpine:3.9 as base
 RUN mkdir /code
 RUN chgrp -R 0 /code && \
     chmod -R g=u /code
-ADD bin/calico-k8sapiserver /code
+ADD bin/apiserver /code
 WORKDIR /code
-RUN ln -s /code/calico-k8sapiserver /usr/bin
+RUN ln -s /code/apiserver /usr/bin
 
 # Run apiserver by default
-ENTRYPOINT ["calico-k8sapiserver"]
+ENTRYPOINT ["apiserver"]

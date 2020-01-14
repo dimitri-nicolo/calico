@@ -20,7 +20,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/tigera/calico-k8sapiserver/cmd/apiserver/server"
+	"github.com/tigera/apiserver/cmd/apiserver/server"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog"
 )

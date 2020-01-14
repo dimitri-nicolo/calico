@@ -9,3 +9,5 @@ cscope.*
 .go-pkg-cache/
 .lint-cache/
 hack/lib/*
+Makefile.common*
+docker-image/bin/

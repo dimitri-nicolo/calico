@@ -7,7 +7,7 @@ package internalinterfaces
 import (
 	time "time"
 
-	internalclientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset"
+	internalclientset "github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"

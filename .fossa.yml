@@ -5,12 +5,12 @@ version: 1
 cli:
   server: https://app.fossa.io
   fetcher: custom
-  project: git@github.com:tigera/calico-k8sapiserver.git
+  project: git@github.com:tigera/apiserver.git
 analyze:
   modules:
-  - name: github.com/tigera/calico-k8sapiserver/cmd/apiserver
+  - name: github.com/tigera/apiserver/cmd/apiserver
     type: go
-    target: github.com/tigera/calico-k8sapiserver/cmd/apiserver
-    path: /go/src/github.com/tigera/calico-k8sapiserver/cmd/apiserver
+    target: github.com/tigera/apiserver/cmd/apiserver
+    path: /go/src/github.com/tigera/apiserver/cmd/apiserver
     options:
       allow-unresolved: true
