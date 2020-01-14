@@ -1,6 +1,7 @@
 ---
-title: Configure IP autodetection
-canonical_url: 'https://docs.tigera.io/v2.3/usage/configuration/node'
+title: Configuring a node IP address and subnet
+description: Describes how to configure IP autodetection
+canonical_url: 'https://docs.tigera.io/v2.6/networking/node'
 ---
 
 By default, {{site.prodname}} automatically detects each node's IP address and subnet.  In most cases,

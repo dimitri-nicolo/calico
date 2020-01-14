@@ -4,6 +4,8 @@ order: 2
 toc:
 - title: Networking
   path: /networking/
+- title: Determine best networking option
+  path: /networking/determine-best-networking  
 - title: Connecting workloads across networks that you do not control
   path: /networking/vxlan-ipip
 - title: Configure default IP pools
@@ -28,6 +30,14 @@ toc:
   path: /networking/custom-bgp-config
 - title: Assigning IP addresses based on topology
   path: /networking/assigning-ip-addresses-topology
+- title: Assign IP addresses based on topology
+  path: /networking/assign-ip-addresses-topology  
+- title: Use IPVS kube-proxy
+  path: /networking/use-ipvs
+- title: Configure workload access outside cluster
+  path: /networking/workloads-outside-cluster  
+- title: Advertise Kubernetes service IP addresses
+  path: /networking/advertise-service-ips
 - title: Network design
   section:
     - title: Calico over Ethernet fabrics
@@ -58,7 +68,5 @@ toc:
   path: /networking/add-floating-ip
 - title: Get started with IP address management
   path: /networking/get-started-ip-addresses
-- title: Advertise Kubernetes service IP addresses
-  path: /networking/advertise-service-ips
 - title: Deploy a dual ToR cluster
   path: /networking/dual-tor

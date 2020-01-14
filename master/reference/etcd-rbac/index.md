@@ -1,5 +1,6 @@
 ---
 title: Setting up etcd certificates for RBAC
+description: Protect your etcd datastore by restricting operation permissions.
 canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/'
 ---
 

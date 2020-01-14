@@ -83,6 +83,8 @@ kubectl create -f {{site.url}}/{{page.version}}/manifests/tigera-policies.yaml
 ### Above and beyond
 
 - [Configure access to the manager UI](/{{page.version}}/getting-started/access-the-manager)
+- [Everything you need to know about Kubernetes pod networking on AWS](https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-pod-networking-on-aws/)
+- [Install calicoctl command line tool]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)
 - [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)

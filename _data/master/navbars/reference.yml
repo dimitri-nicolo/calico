@@ -188,10 +188,10 @@ toc:
     path: /reference/architecture/data-path
   - title: Network design
     section: 
-    - title: Calico over Ethernet fabrics
-      path: /networking/design/l2-interconnect-fabric
-    - title: Calico over IP fabrics
-      path: /networking/design/l3-interconnect-fabric
+    - title: Calico Enterprise over Ethernet fabrics
+      path: /reference/architecture/design/l2-interconnect-fabric
+    - title: Calico Enterprise over IP fabrics
+      path: /reference/architecture/design/l3-interconnect-fabric
 - title: Frequently asked questions
   path: /reference/faq
 - title: Other installation methods

@@ -1,7 +1,8 @@
 ---
 title: Assign IP addresses based on topology
-Description: Configure Calico to use specific IP pools for different topologies including zone, rack, or region. 
-canonical_url: 'https://docs.projectcalico.org/v3.10/networking/assign-ip-addresses-topology'
+Description: Configure Calico Enterprise to use specific IP pools for different topologies including zone, rack, or region. 
+redirect_from: latest/networking/assigning-ip-addresses-topology
+canonical_url: 'https://docs.tigera.io/v2.6/networking/assign-ip-addresses-topology'
 ---
 
 ### Big picture
@@ -27,7 +28,7 @@ As such, Kubernetes annotations cannot be used because annotations are only per-
 
 #### Node-selection IP address management
 
-Node selection-based IP address assignment is exactly what it sounds like: node labels are set, and {{site.prodname}} uses node selectors to decide which IP pools to use when assigning IP addresses to the node.
+Node selection-based IP address assignment is exactly what it sounds like: node labels are set, and Calico uses node selectors to decide whih IP pools to use when assigning IP addresses to the node.
 
 #### Best practice
 

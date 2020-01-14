@@ -1,6 +1,7 @@
 ---
 title: Host endpoints
-canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/bare-metal'
+description: Secure the network interfaces of hosts 
+canonical_url: 'https://docs.tigera.io/v2.6/reference/host-endpoints/'
 ---
 
 This guide describes how to use {{site.prodname}} to secure the network interfaces

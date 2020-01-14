@@ -56,7 +56,7 @@ data:
           "datastore_type": "kubernetes",
           "nodename": "__KUBERNETES_NODE_NAME__",
   {{- end }}
-  {{- if eq .Values.network "calico" }}
+  {{- if or (eq .Values.network "calico") (eq .Values.network "flannel") }}
           "mtu": __CNI_MTU__,
   {{- else if eq .Values.network "none" }}
           "mtu": 1500,
@@ -78,6 +78,10 @@ data:
           "type": "portmap",
           "snat": true,
           "capabilities": {"portMappings": true}
+        },
+        {
+          "type": "bandwidth",
+          "capabilities": {"bandwidth": true}
         }
       ]
     }

@@ -1,6 +1,7 @@
 ---
 title: Quickstart for Calico Enterprise on Kubernetes
-canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/
+description: Install a single-host Kubernetes cluster with Calico Enterprise
+canonical_url: https://docs.tigera.io/v2.6/getting-started/kubernetes/
 ---
 
 ### Big picture

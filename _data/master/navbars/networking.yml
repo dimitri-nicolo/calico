@@ -4,14 +4,14 @@ order: 2
 toc:
 - title: Networking
   path: /networking/
+- title: Determine best networking option
+  path: /networking/determine-best-networking
 - title: Configure networking
   section:  
-  - title: Determine best networking option
-    path: /networking/determine-best-networking
-  - title: Configure BGP peers
+  - title: Configure BGP peering
     path: /networking/bgp 
   - title: Deploy a dual ToR cluster
-    path: /networking/dual-tor  
+    path: /networking/dual-tor
   - title: Connect workloads across networks that you do not control
     path: /networking/vxlan-ipip 
   - title: Configure MTU to maximize network performance
@@ -19,9 +19,9 @@ toc:
   - title: Configure workload access outside cluster
     path: /networking/workloads-outside-cluster
   - title: Use IPVS kube-proxy
-    path: /networking/use-ipvs  
+    path: /networking/use-ipvs
   - title: Accelerate Istio network performance
-    path: /networking/sidecar-acceleration  
+    path: /networking/sidecar-acceleration
 - title: Customize IP address management
   section:
    - title: Get started with IP address management

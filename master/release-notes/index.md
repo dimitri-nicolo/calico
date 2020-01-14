@@ -1,6 +1,7 @@
 ---
 title: Release notes
-canonical_url: 'https://docs.projectcalico.org/v3.7/release-notes/index'
+description: What's new, and why features provide value for upgrading.
+canonical_url: 'https://docs.tigera.io/v2.6/release-notes/'
 ---
 <div class="git-hash" id="{{site.data['hash']}}">
 </div>

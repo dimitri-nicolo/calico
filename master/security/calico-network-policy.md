@@ -68,7 +68,9 @@ metadata:
   name: allow-tcp-port-6379
 ```
 
-**Calico network policies and Calico global network policies** are applied using calicoctl. Syntax is similar to Kubernetes, but there a few differences. For help, see [calicoctl user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/).
+#### kubectl vs calicoctl
+
+Calico network policies and Calico global network policies are applied using calicoctl. Syntax is similar to Kubernetes, but there a few differences. For help, see [calicoctl user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/).
 
 #### Ingress and egress
 
@@ -267,3 +269,4 @@ Spec:
 - For an alternative to using IP addresses or CIDRs in policy, see [Network sets]({{site.baseurl}}/{{page.version}}/reference/resources/networkset) 
 - For details on the calicoctl command line tool, see [calicoctl user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) 
 - For details on how to stage network policy, see [Staged network policies]({{site.baseurl}}/{{page.version}}/security/staged-network-policies) 
+- {% include enterprise_icon.html %}[Compliance and threat detection with Calico Enterprise]({{site.baseurl}}/{{page.version}}/security/calico-enterprise/network-visibility)

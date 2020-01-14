@@ -1,6 +1,5 @@
 ---
 title: Maintenance
+description: Post-installation tasks for managing Calico including upgrading and troubleshooting
+canonical_url: 'https://docs.tigera.io/v2.6/maintenance/'
 ---
-
-Once you have {{site.prodname}} up and running, refer to the topics in this section for
-maintenance information.

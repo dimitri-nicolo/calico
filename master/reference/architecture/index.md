@@ -1,6 +1,7 @@
 ---
-title: Calico Enterprise Architecture
-canonical_url: https://docs.tigera.io/v2.3/reference/architecture/
+title: Calico Enterprise architecture
+description: Understand the Calico Enterprise components and the basics of BGP networking
+canonical_url: https://docs.tigera.io/v2.6/reference/architecture/
 ---
 
 This document discusses the various pieces of {{site.prodname}}'s architecture,
@@ -25,7 +26,6 @@ the {{site.prodname}} network.
     route reflector for higher scale.
 
 The following sections break down each component in more detail.
-
 
 ## Felix
 

@@ -1,6 +1,7 @@
 ---
 title: Installing Calico Enterprise on host endpoints
-canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/
+description: Choose a method to install Calico on hosts
+canonical_url: https://docs.tigera.io/v2.6/getting-started/bare-metal/installation/
 ---
 
 You will need to install calicoctl and configure it to connect to your etcd datastore.

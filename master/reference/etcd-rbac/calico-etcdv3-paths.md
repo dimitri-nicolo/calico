@@ -16,6 +16,7 @@ component needs access to in etcd to function successfully.
 | Path                                                          | Access |
 |---------------------------------------------------------------|--------|
 | /calico/felix/v1/\*                                           |   RW   |
+| /calico/felix/v2/\*                                           |   RW   |
 | /calico/ipam/v2/\*                                            |   RW   |
 | /calico/resources/v3/projectcalico.org/felixconfigurations/\* |   RW   |
 | /calico/resources/v3/projectcalico.org/nodes/\*               |   RW   |
@@ -29,6 +30,7 @@ component needs access to in etcd to function successfully.
 | Path                                      | Access |
 |-------------------------------------------|--------|
 | /calico/felix/v1/\*                       |   RW   |
+| /calico/felix/v2/\*                       |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   R    |
 
 ## CNI-plugin
@@ -65,8 +67,14 @@ component needs access to in etcd to function successfully.
 
 | Path                                      | Access |
 |-------------------------------------------|--------|
-| /calico/ipam/v2/\*                        |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   RW   |
+| /calico/dhcp/v1/\*                        |   RW   |
+| /calico/dhcp/v2/\*                        |   RW   |
+| /calico/compaction/v1/\*                  |   RW   |
+| /calico/openstack/v1/\*                   |   RW   |
+| /calico/openstack/v2/\*                   |   RW   |
+| /calico/felix/v1/\*                       |   R    |
+| /calico/felix/v2/\*                       |   R    |
 
 ## calicoctl (read only access)
 

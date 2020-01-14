@@ -1,6 +1,7 @@
 ---
 title: Configure encryption and authentication
-canonical_url: https://docs.tigera.io/v2.3/usage/encrypt-comms
+description: Learn how to enable TLS authentication and encryption for various Calico Enterprise components
+canonical_url: https://docs.tigera.io/v2.6/security/comms/crypto-auth
 ---
 
 ## Connections from {{site.prodname}} components to etcd

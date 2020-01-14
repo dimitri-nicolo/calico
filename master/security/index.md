@@ -1,7 +1,5 @@
 ---
 title: Security
-canonical_url: 'https://docs.tigera.io/v2.4/security/index'
+description: Secure nodes and hosts using Calico Enterprise network policy
+canonical_url: 'https://docs.tigera.io/v2.6/security/'
 ---
-
-This section provides policy tutorials and describes how to secure {{site.prodname}} component
-communications with encryption and authentication.
