@@ -85,11 +85,11 @@ class TestReadiness(TestBase):
         with DockerHost('host1',
                         additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS) as host1:
             retry_until_success(host1.assert_is_ready, retries=30)
-            host1.execute("docker exec -it calico-node sv stop /etc/service/enabled/bird")
+            host1.execute("docker exec -it cnx-node sv stop /etc/service/enabled/bird")
 
             # Check that the readiness script is reporting 'not ready'
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: bird/confd is not live: Service bird is not running.",
-                                host1.execute, "docker exec calico-node /bin/calico-node -bird-live")
+                                host1.execute, "docker exec cnx-node /bin/calico-node -bird-live")
 
     def test_liveness_bird_confd_down(self):
         """
@@ -98,11 +98,11 @@ class TestReadiness(TestBase):
         with DockerHost('host1',
                         additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS) as host1:
             retry_until_success(host1.assert_is_ready, retries=30)
-            host1.execute("docker exec -it calico-node sv stop /etc/service/enabled/confd")
+            host1.execute("docker exec -it cnx-node sv stop /etc/service/enabled/confd")
 
             # Check that the readiness script is reporting 'not ready'
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: bird/confd is not live: Service confd is not running.",
-                                    host1.execute, "docker exec calico-node /bin/calico-node -bird-live")
+                                    host1.execute, "docker exec cnx-node /bin/calico-node -bird-live")
 
     def test_liveness_bird6_down(self):
         """
@@ -111,11 +111,11 @@ class TestReadiness(TestBase):
         with DockerHost('host1',
                         additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS) as host1:
             retry_until_success(host1.assert_is_ready, retries=30)
-            host1.execute("docker exec -it calico-node sv stop /etc/service/enabled/bird6")
+            host1.execute("docker exec -it cnx-node sv stop /etc/service/enabled/bird6")
 
             # Check that the readiness script is reporting 'not ready'
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: bird6/confd is not live: Service bird6 is not running.",
-                                    host1.execute, "docker exec calico-node /bin/calico-node -bird6-live")
+                                    host1.execute, "docker exec cnx-node /bin/calico-node -bird6-live")
 
     def test_liveness_bird6_confd_down(self):
         """
@@ -124,11 +124,11 @@ class TestReadiness(TestBase):
         with DockerHost('host1',
                     additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS) as host1:
             retry_until_success(host1.assert_is_ready, retries=30)
-            host1.execute("docker exec -it calico-node sv stop /etc/service/enabled/confd")
+            host1.execute("docker exec -it cnx-node sv stop /etc/service/enabled/confd")
 
             # Check that the readiness script is reporting 'not ready'
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: bird/confd is not live: Service confd is not running.",
-                                host1.execute, "docker exec calico-node /bin/calico-node -bird-live")
+                                host1.execute, "docker exec cnx-node /bin/calico-node -bird-live")
 
     def test_not_ready_with_broken_felix(self):
         """
