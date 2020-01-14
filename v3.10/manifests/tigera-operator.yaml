@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-operator %}
-openshift: false
-{% endhelm %}
