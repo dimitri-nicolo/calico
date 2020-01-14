@@ -1,4 +1,4 @@
-{%- assign c = site.data.versions[page.version].first.components[include.component] -%}
+{%- assign c = site.data.versions.first.components[include.component] -%}
 {%- if c.registry -%}
     {{- c.registry -}}/
 {%- endif -%}

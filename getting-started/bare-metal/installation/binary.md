@@ -9,6 +9,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installati
 
    ```bash
    docker pull {{page.registry}}{% include component_image component="cnx-node" %}
+   docker pull {{site.nodecontainer}}:{{site.data.versions.first.components["calico/node"].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.

@@ -92,7 +92,7 @@ spec:
 
 #### EndpointPort
 
-{% include {{page.version}}/endpointport.md %}
+{% include content/endpointport.md %}
 
 ### Supported operations
 

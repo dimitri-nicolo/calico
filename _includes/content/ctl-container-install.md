@@ -38,7 +38,7 @@
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
-{%- assign c = site.data.versions[page.version].first.components[include.cli] %}
+{%- assign c = site.data.versions.first.components[include.cli] %}
    ```bash
    REPOSITORY                TAG               IMAGE ID       CREATED         SIZE
    {{ c.image }}    {{ c.version }}            e07d59b0eb8a   2 minutes ago   42MB

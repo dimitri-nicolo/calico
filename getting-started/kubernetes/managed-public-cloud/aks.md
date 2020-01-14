@@ -106,9 +106,12 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
+> **Note**: The Calico network policy feature can only be enabled when the cluster is created. You can't enable Calico network policy on an existing AKS cluster.
+{: .alert .alert-info}
+
 ### Above and beyond
 
-- [Configure access to the manager UI](/{{page.version}}/getting-started/access-the-manager)
-- [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
-- [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
-- [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)
+- [Install calicoctl command line tool]({{ site.baseurl }}/getting-started/calicoctl/install)
+- [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
+- [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)
+- [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)

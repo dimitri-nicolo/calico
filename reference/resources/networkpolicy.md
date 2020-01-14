@@ -76,7 +76,7 @@ spec:
 | types    | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress` | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress  | Ordered list of ingress rules applied by policy.                                                    |                 | List of [Rule](#rule) |         |
 | egress   | Ordered list of egress rules applied by this policy.                                                |                 | List of [Rule](#rule) |         |
- serviceAccountSelector | Selects the service account(s) to which this policy applies.                           |                 | [selector](#selector)  | all()   |
+| serviceAccountSelector | Selects the service account(s) to which this policy applies. Select a specific service account by name using the `projectcalico.org/name` label.  |                 | [selector](#selector) | all()   |
 
 \* If `types` has no value, {{site.prodname}} defaults as follows.
 
@@ -90,27 +90,27 @@ spec:
 
 #### Rule
 
-{% include {{page.version}}/rule.md %}
+{% include content/rule.md %}
 
 #### ICMP
 
-{% include {{page.version}}/icmp.md %}
+{% include content/icmp.md %}
 
 #### EntityRule
 
-{% include {{page.version}}/entityrule.md global="false" %}
+{% include content/entityrule.md global="false" %}
 
 #### Selector
 
-{% include {{page.version}}/selectors.md %}
+{% include content/selectors.md %}
 
 #### Ports
 
-{% include {{page.version}}/ports.md %}
+{% include content/ports.md %}
 
 #### ServiceAccountMatch
 
-{% include {{page.version}}/serviceaccountmatch.md %}
+{% include content/serviceaccountmatch.md %}
 
 ### Application layer policy
 
@@ -125,7 +125,7 @@ in order to use the following match criteria.
 
 #### HTTPMatch
 
-{% include {{page.version}}/httpmatch.md %}
+{% include content/httpmatch.md %}
 
 ### Supported operations
 

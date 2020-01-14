@@ -1,9 +1,9 @@
-def gen_values_master(versions, _, imageRegistry, chart, forDocs)
-    return gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
+def gen_values(versions, _, imageRegistry, chart, forDocs)
+    return gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
 end
 
 
-def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
+def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
   docsOverrides = Hash.new("")
   if forDocs
     docsOverrides["core.apiserver.tls.crt"] = "<replace with base64 encoded certificate>"
