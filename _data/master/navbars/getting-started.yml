@@ -18,7 +18,7 @@ toc:
       path: /getting-started/kubernetes/managed-public-cloud/gke
     - title: Microsoft Azure Kubernetes Service (AKS)
       path: /getting-started/kubernetes/managed-public-cloud/aks
-  - title: Self-managed on-prem    
+  - title: Self-managed on-prem
     section:
     - title: Docker Enterprise
       path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise

@@ -93,7 +93,7 @@ This option also provides near host-to-host levels of performance and allows the
   
 Traffic cannot be routed between pods and destinations that aren’t also in the {{site.prodname}} cluster without allowing workload access outside cluster, or peering with infrastructure.
 
-> **Tip**: On AWS, you can disable source/destination checking to use this option within a VPC subnet. [Can I run Calico in a public cloud environment?]({{site.baseurl}}/{{page.version}}/reference/faq#can-i-run-calico-in-a-public-cloud-environment).
+> **Tip**: On AWS, you can disable source/destination checking to use this option within a VPC subnet. [Can I run Calico in a public cloud environment?]({{site.baseurl}}/{{page.version}}/reference/faq#can-i-run-{{ site.prodnamedash }}-in-a-public-cloud-environment).
 {: .alert .alert-info}
 
 #### IP in IP or VXLAN encapsulation

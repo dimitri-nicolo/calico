@@ -28,8 +28,6 @@ toc:
   path: /networking/mtu
 - title: Custom BGP configuration
   path: /networking/custom-bgp-config
-- title: Assigning IP addresses based on topology
-  path: /networking/assigning-ip-addresses-topology
 - title: Assign IP addresses based on topology
   path: /networking/assign-ip-addresses-topology  
 - title: Use IPVS kube-proxy
