@@ -100,7 +100,7 @@ collected logs. The installation of the ingress log collector will be done in a 
 
 1. Download the patch file to patch-ingress.yaml.
    ```
-   curl {{site.url}}/{{page.version}}/manifests/ingress/patch-ingress.yaml -O
+   curl {{ "/manifests/ingress/patch-ingress.yaml" | absolute_url }} -O
    ```
 
 1. Modify patch-ingress.yaml so that the ingress controller container name appropriately
@@ -145,7 +145,7 @@ kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"policySync
 
 1. Download the appropriate patch file for enabling the Policy Sync API on Felix.
    ```
-   curl {{site.url}}/{{page.version}}/manifests/ingress/patch-flexvol.yaml -O
+   curl {{ "/manifests/ingress/patch-flexvol.yaml" | absolute_url }} -O
    ```
 1. Apply the Policy Sync API patch.
    ```

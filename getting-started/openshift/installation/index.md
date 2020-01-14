@@ -73,50 +73,50 @@ openshift-install create manifests
 Download the {{site.prodname}} manifests for OpenShift and add them to the generated manifests directory:
 
 ```bash
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-alertmanager.yaml -o manifests/01-crd-alertmanager.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-apiserver.yaml -o manifests/01-crd-apiserver.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-compliance.yaml -o manifests/01-crd-compliance.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-manager.yaml -o manifests/01-crd-manager.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-apmserver.yaml -o manifests/01-crd-eck-apmserver.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-elasticsearch.yaml -o manifests/01-crd-eck-elasticsearch.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-kibana.yaml -o manifests/01-crd-eck-kibana.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-eck-trustrelationship.yaml -o manifests/01-crd-eck-trustrelationship.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-installation.yaml -o manifests/01-crd-installation.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-intrusiondetection.yaml -o manifests/01-crd-intrusiondetection.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-logstorage.yaml -o manifests/01-crd-logstorage.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-logcollector.yaml -o manifests/01-crd-logcollector.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheusrule.yaml -o manifests/01-crd-prometheusrule.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-prometheus.yaml -o manifests/01-crd-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-servicemonitor.yaml -o manifests/01-crd-servicemonitor.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-tigerastatus.yaml -o manifests/01-crd-tigerastatus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/crds/01-crd-managementclusterconnection.yaml -o manifests/01-crd-managementclusterconnection.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/00-namespace-tigera-operator.yaml -o manifests/00-namespace-tigera-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml -o manifests/02-rolebinding-tigera-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml -o manifests/02-role-tigera-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-serviceaccount-tigera-operator.yaml -o manifests/02-serviceaccount-tigera-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/tigera-operator/02-tigera-operator.yaml -o manifests/02-tigera-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/00-namespace-tigera-prometheus.yaml -o manifests/00-namespace-tigera-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus-operator.yaml -o manifests/04-clusterrolebinding-prometheus-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus.yaml -o manifests/04-clusterrolebinding-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrole-prometheus-operator.yaml -o manifests/04-clusterrole-prometheus-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-clusterrole-prometheus.yaml -o manifests/04-clusterrole-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-deployment-prometheus-operator.yaml -o manifests/04-deployment-prometheus-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus-operator.yaml -o manifests/04-serviceaccount-prometheus-operator.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus.yaml -o manifests/04-serviceaccount-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-alertmanager-secret.yaml -o manifests/99-alertmanager-secret.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-alertmanager-service.yaml -o manifests/99-alertmanager-service.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/misc/99-prometheus-service.yaml -o manifests/99-prometheus-service.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-apiserver.yaml -o manifests/01-cr-apiserver.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-manager.yaml -o manifests/01-cr-manager.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-compliance.yaml -o manifests/01-cr-compliance.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-intrusiondetection.yaml -o manifests/01-cr-intrusiondetection.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logstorage.yaml -o manifests/01-cr-logstorage.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-logcollector.yaml -o manifests/01-cr-logcollector.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheus.yaml -o manifests/01-cr-prometheus.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-prometheusrule.yaml -o manifests/01-cr-prometheusrule.yaml
-curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o manifests/01-cr-servicemonitor.yaml
+curl {{ "/manifests/ocp/crds/01-crd-alertmanager.yaml -o manifests/01-crd-alertmanager.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-apiserver.yaml -o manifests/01-crd-apiserver.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-compliance.yaml -o manifests/01-crd-compliance.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-manager.yaml -o manifests/01-crd-manager.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-eck-apmserver.yaml -o manifests/01-crd-eck-apmserver.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-eck-elasticsearch.yaml -o manifests/01-crd-eck-elasticsearch.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-eck-kibana.yaml -o manifests/01-crd-eck-kibana.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-eck-trustrelationship.yaml -o manifests/01-crd-eck-trustrelationship.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-installation.yaml -o manifests/01-crd-installation.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-intrusiondetection.yaml -o manifests/01-crd-intrusiondetection.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-logstorage.yaml -o manifests/01-crd-logstorage.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-logcollector.yaml -o manifests/01-crd-logcollector.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-prometheusrule.yaml -o manifests/01-crd-prometheusrule.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-prometheus.yaml -o manifests/01-crd-prometheus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-servicemonitor.yaml -o manifests/01-crd-servicemonitor.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-tigerastatus.yaml -o manifests/01-crd-tigerastatus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml -o manifests/01-crd-managementclusterconnection.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/tigera-operator/00-namespace-tigera-operator.yaml -o manifests/00-namespace-tigera-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml -o manifests/02-rolebinding-tigera-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml -o manifests/02-role-tigera-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/tigera-operator/02-serviceaccount-tigera-operator.yaml -o manifests/02-serviceaccount-tigera-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/tigera-operator/02-tigera-operator.yaml -o manifests/02-tigera-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/misc/00-namespace-tigera-prometheus.yaml -o manifests/00-namespace-tigera-prometheus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus-operator.yaml -o manifests/04-clusterrolebinding-prometheus-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus.yaml -o manifests/04-clusterrolebinding-prometheus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-clusterrole-prometheus-operator.yaml -o manifests/04-clusterrole-prometheus-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-clusterrole-prometheus.yaml -o manifests/04-clusterrole-prometheus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-deployment-prometheus-operator.yaml -o manifests/04-deployment-prometheus-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus-operator.yaml -o manifests/04-serviceaccount-prometheus-operator.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus.yaml -o manifests/04-serviceaccount-prometheus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/misc/99-alertmanager-secret.yaml -o manifests/99-alertmanager-secret.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/misc/99-alertmanager-service.yaml -o manifests/99-alertmanager-service.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/misc/99-prometheus-service.yaml -o manifests/99-prometheus-service.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-apiserver.yaml -o manifests/01-cr-apiserver.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-manager.yaml -o manifests/01-cr-manager.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-compliance.yaml -o manifests/01-cr-compliance.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-intrusiondetection.yaml -o manifests/01-cr-intrusiondetection.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-alertmanager.yaml -o manifests/01-cr-alertmanager.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-logstorage.yaml -o manifests/01-cr-logstorage.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-logcollector.yaml -o manifests/01-cr-logcollector.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-prometheus.yaml -o manifests/01-cr-prometheus.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-prometheusrule.yaml -o manifests/01-cr-prometheusrule.yaml" | absolute_url }}
+curl {{ "/manifests/ocp/01-cr-servicemonitor.yaml -o manifests/01-cr-servicemonitor.yaml" | absolute_url }}
 ```
 
 > **Note**: The Tigera operator manifest downloaded above includes an initialization container which configures Amazon AWS
@@ -128,7 +128,7 @@ curl {{site.url}}/{{page.version}}/manifests/ocp/01-cr-servicemonitor.yaml -o ma
 1. Download the pull secret manifest template into the manifests directory.
 
    ```
-   curl {{site.url}}/{{page.version}}/manifests/ocp/02-pull-secret.yaml -o manifests/02-pull-secret.yaml
+   curl {{ "/manifests/ocp/02-pull-secret.yaml -o manifests/02-pull-secret.yaml" | absolute_url }}
    ```
 
 1. Update the contents of the secret with the image pull secret provided to you by Tigera.
@@ -182,7 +182,7 @@ When it shows all components with status `Available`, proceed to the next sectio
 To secure the components which make up {{site.prodname}}, install the following set of network policies.
 
 ```
-oc create -f {{site.url}}/{{page.version}}/manifests/tigera-policies.yaml
+oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
 ### Above and beyond

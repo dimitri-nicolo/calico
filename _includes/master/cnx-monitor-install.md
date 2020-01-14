@@ -61,16 +61,16 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% if include.orch == "openshift" and include.installer == "operator" %}
    ```bash
    {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/manifests/ocp/cnx-policy.yaml
+   {{ "/manifests/ocp/cnx-policy.yaml" | absolute_url }}
    ```
 {% else %}
    ```bash
    {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/manifests/cnx-policy.yaml
+   {{ "/manifests/cnx-policy.yaml" | absolute_url }}
    ```
 {% endif %}
    > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/manifests/cnx-policy.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{ "/manifests/cnx-policy.yaml" | absolute_url }}){:target="_blank"}.
    {: .alert .alert-info}
 
 1. Download the `operator.yaml` and `operator-crds.yaml` manifests.
@@ -87,12 +87,12 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% elsif include.orch == "openshift" and include.installer == "operator" %}
    ```bash
    curl --compressed -o operator.yaml \
-   {{site.url}}/{{page.version}}/manifests/ocp/monitoring-operator.yaml
+   {{ "/manifests/ocp/monitoring-operator.yaml" | absolute_url }}
    ```
 {% else %}
    ```bash
    curl --compressed -o operator-crds.yaml \
-   {{site.url}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+   {{ "/reference/other-install-methods/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml" | absolute_url }}
    curl --compressed -O \
    {{docpath}}{{secure}}/operator.yaml
    ```
@@ -154,7 +154,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% elsif include.orch == "openshift" and include.installer == "operator" %}
     ```bash
     curl --compressed -O \
-    {{site.url}}/{{page.version}}/manifests/ocp/monitor-calico.yaml
+    {{ "/manifests/ocp/monitor-calico.yaml" | absolute_url }}
     ```
 {% else %}
     ```bash

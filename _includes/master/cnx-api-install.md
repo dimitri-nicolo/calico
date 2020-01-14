@@ -57,7 +57,7 @@
 
       ```bash
       curl --compressed -o cnx-configmap.yaml \
-      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml
+      {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml" | absolute_url }}
       ```
 
    1. Use the following commands to: set an environment variable called `ETCD_ENDPOINTS`
@@ -83,7 +83,7 @@
 
     ```bash
     curl --compressed -o cnx-api.yaml \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml
+    {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml" | absolute_url }}
     ```
 
 {% elsif include.init != "openshift" and include.net == "calico" %}
@@ -94,13 +94,13 @@
    - **etcd datastore**
      ```bash
      curl --compressed -o cnx-api.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml
+     {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml" | absolute_url }}
      ```
 
    - **Kubernetes API datastore**
      ```bash
      curl --compressed -o cnx-api.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml
+     {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml" | absolute_url }}
      ```
 
 {% elsif include.platform == "eks" %}
@@ -110,7 +110,7 @@
 
    ```bash
      curl --compressed -o cnx-api.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml
+     {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml" | absolute_url }}
    ```
 
 {% elsif include.platform == "gke" %}
@@ -120,7 +120,7 @@
 
    ```bash
    curl --compressed -o cnx-api.yaml \
-   {{site.url}}/{{page.version}}/manifests/gke/cnx-api-kdd.yaml
+   {{ "/manifests/gke/cnx-api-kdd.yaml" | absolute_url }}
    ```
 
 {% elsif include.platform == "aks" %}
@@ -130,7 +130,7 @@
 
    ```bash
    curl --compressed -o cnx-api.yaml \
-   {{site.url}}/{{page.version}}/manifests/aks/cnx-api-kdd.yaml
+   {{ "/manifests/aks/cnx-api-kdd.yaml" | absolute_url }}
    ```
 
 {% elsif include.init != "openshift" and include.net == "other" %}
@@ -140,7 +140,7 @@
 
    ```bash
    curl --compressed -o cnx-api.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml
+   {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml" | absolute_url }}
    ```
 
 {% elsif include.init == "openshift" %}
@@ -148,7 +148,7 @@
 1. Download the {{site.prodname}} manifest.
 
    ```bash
-   curl --compressed -O {{site.url}}/{{page.version}}/getting-started/openshift/cnx-api.yaml
+   curl --compressed -O {{ "/getting-started/openshift/cnx-api.yaml" | absolute_url }}
    ```
 
 {% endif %}

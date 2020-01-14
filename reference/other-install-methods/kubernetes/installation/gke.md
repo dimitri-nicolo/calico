@@ -64,7 +64,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/manifests/gke/calico-typha.yaml \
+   {{ "/manifests/gke/calico-typha.yaml" | absolute_url }} \
    -o calico.yaml
    ```
 

@@ -124,7 +124,7 @@
 
      ```
      curl -O \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
+     {{ "/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml" | absolute_url }}
      ```
 
      > **Note**: You can also
@@ -135,7 +135,7 @@
 
      ```
      curl -O \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml" | absolute_url }}
      ```
 
      > **Note**: You can also

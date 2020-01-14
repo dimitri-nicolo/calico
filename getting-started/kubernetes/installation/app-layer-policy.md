@@ -67,7 +67,7 @@ The sidecar injector automatically modifies pods as they are created to work wit
 1. Patch the istio-sidecar-injector `ConfigMap` to enable injection of Dikastes alongside Envoy.
 
 ```
-curl {{site.url}}/{{page.version}}/manifests/alp/istio-inject-configmap-1.4.2.yaml -o istio-inject-configmap.yaml
+curl {{ "/manifests/alp/istio-inject-configmap-1.4.2.yaml -o istio-inject-configmap.yaml" | absolute_url }}
 kubectl patch configmap -n istio-system istio-sidecar-injector --patch "$(cat istio-inject-configmap.yaml)"
 ```
 [View sample manifest]({{site.baseurl}}/{{page.version}}/manifests/alp/istio-inject-configmap-1.3.5.yaml){:target="_blank"}
@@ -83,7 +83,7 @@ Apply the following manifest to configure Istio to query {{site.prodname}} for a
 kubectl apply -f {{site.url}}/{page.version}}/manifests/alp/istio-app-layer-policy.yaml
 ```
 
-[View sample manifest]({{site.url}}/{{page.version}}/manifests/alp/istio-app-layer-policy.yaml){:target="_blank"}
+[View sample manifest]({{ "/manifests/alp/istio-app-layer-policy.yaml" | absolute_url }}){:target="_blank"}
 
 #### Add namespace labels
 
@@ -97,7 +97,7 @@ kubectl label namespace <your namespace name> istio-injection=enabled
 
 If the namespace already has pods in it, you must recreate them for this to take effect.
 
->**Note**: Envoy must be able to communicate with the `istio-pilot.istio-system service`. If you apply any egress policies to your pods, you *must* enable access. For example, you could [apply a network policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/allow-istio-pilot.yaml).
+>**Note**: Envoy must be able to communicate with the `istio-pilot.istio-system service`. If you apply any egress policies to your pods, you *must* enable access. For example, you could [apply a network policy]({{ "/getting-started/kubernetes/installation/manifests/app-layer-policy/allow-istio-pilot.yaml" | absolute_url }}).
 {: .alert .alert-info}
 
 ### Above and beyond

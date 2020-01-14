@@ -36,7 +36,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
+   {{ "/getting-started/kubernetes/installation/hosted/calico.yaml" | absolute_url }} \
    -O
    ```
 
@@ -73,7 +73,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml \
+   {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml" | absolute_url }} \
    -O
    ```
 
@@ -119,7 +119,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/federation/calico.yaml \
+   {{ "/getting-started/kubernetes/installation/hosted/federation/calico.yaml" | absolute_url }} \
    -O
    ```
 
@@ -185,7 +185,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/federation/calico.yaml \
+   {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/federation/calico.yaml" | absolute_url }} \
    -O
    ```
 

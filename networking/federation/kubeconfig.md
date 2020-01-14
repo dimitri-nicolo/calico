@@ -12,20 +12,20 @@ Before installing {{site.prodname}}, you must complete the following steps on ea
    - **Kubernetes API datastore**
      ```bash
      kubectl apply -f \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/federation-rem-rbac-kdd.yaml
+     {{ "/getting-started/kubernetes/installation/federation-rem-rbac-kdd.yaml" | absolute_url }}
      ```
 
    - **etcd datastore**
      ```bash
      kubectl apply -f \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/federation-rem-rbac-etcd.yaml
+     {{ "/getting-started/kubernetes/installation/federation-rem-rbac-etcd.yaml" | absolute_url }}
      ```
 
 1. Apply the following manifest to create a service account called `tigera-federation-remote-cluster`.
 
    ```bash
    kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/federation-remote-sa.yaml
+   {{ "/getting-started/kubernetes/installation/federation-remote-sa.yaml" | absolute_url }}
    ```
 
 1. Use the following command to retrieve the name of the secret containing the token associated

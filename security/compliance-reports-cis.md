@@ -142,11 +142,11 @@ To manually run a report:
    **Operator**
 
    ```bash
-   curl -O {{site.url}}/{{page.version}}/manifests/compliance-reporter-pod.yaml
+   curl -O {{ "/manifests/compliance-reporter-pod.yaml" | absolute_url }}
    ```
    **Helm**
    ```bash
-   curl -o {{site.url}}/{{page.version}}/manifests/compliance-reporter-pod-es-config.yaml
+   curl -o {{ "/manifests/compliance-reporter-pod-es-config.yaml" | absolute_url }}
    ```
 
 1. If you installed using the Operator, properly configure the template to read the correct certificates.

@@ -54,7 +54,7 @@ Ensure that your AKS cluster that meets the following requirements.
 1. Install the Tigera operators and custom resource definitions.
 
    ```
-   kubectl create -f {{site.url}}/{{page.version}}/manifests/tigera-operator.yaml
+   kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
 
 1. Install your pull secret.
@@ -70,7 +70,7 @@ Ensure that your AKS cluster that meets the following requirements.
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference](/{{page.version}}/reference/installation/api).
 
    ```
-   kubectl create -f {{site.url}}/{{page.version}}/manifests/aks/custom-resources.yaml
+   kubectl create -f {{ "/manifests/aks/custom-resources.yaml" | absolute_url }}
    ```
 
    You can now monitor progress with the following command:
@@ -103,7 +103,7 @@ When all components show a status of `Available`, proceed to the next section.
 To secure {{site.prodname}} component communications, install the following set of network policies.
 
 ```
-kubectl create -f {{site.url}}/{{page.version}}/manifests/tigera-policies.yaml
+kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
 ### Above and beyond

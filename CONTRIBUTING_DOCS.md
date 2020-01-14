@@ -198,7 +198,7 @@ To link to a page not named `index.md`, omit the closing slash. To link to a pag
 To create clickable links to other doc site content, use links prefixed with: `{{ site.baseurl }}`. For example:
 
 ```
-[Get started]({{ site.baseurl }}/{{ page.version }}/getting-started/)
+[Get started]({{ site.baseurl }}/getting-started/)
 ```
 
 Will render as:
@@ -216,7 +216,7 @@ The `site.url` prefix must be used whenever you are not creating a clickable `<a
 For absolute links, use `{{ site.url }}`. For example:
 
 ```
-kubectl apply -f `{{ site.url }}/{{ page.version }}/manifests/calicoctl.yaml`
+kubectl apply -f `{{ "/manifests/calicoctl.yaml" | absolute_url }}`
 ```
 
 Will render as:

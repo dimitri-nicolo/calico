@@ -110,12 +110,12 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
 
    **{{site.prodname}} for policy and networking**
    ```bash
-   curl {{site.url}}/{{page.version}}/manifests/calico-etcd.yaml -O
+   curl {{ "/manifests/calico-etcd.yaml" | absolute_url }} -O
    ```
 
    **{{site.prodname}} for policy and flannel for networking**
    ```bash
-   curl {{site.url}}/{{page.version}}/manifests/canal.yaml -O
+   curl {{ "/manifests/canal.yaml" | absolute_url }} -O
    ```
 
 1. Within the `ConfigMap` section, uncomment the `etcd_ca`, `etcd_key`, and `etcd_cert`

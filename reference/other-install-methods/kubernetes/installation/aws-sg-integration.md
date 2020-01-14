@@ -127,7 +127,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     ```bash
     aws cloudformation create-stack \
     --stack-name tigera-cloudtrail \
-    --template-body {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/account-cf.yaml
+    --template-body {{ "/getting-started/kubernetes/installation/manifests/aws-sg-integration/account-cf.yaml" | absolute_url }}
 
     # Wait for the stack to finish provisioning
     aws cloudformation wait stack-create-complete --stack-name tigera-cloudtrail
@@ -149,7 +149,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --stack-name tigera-vpc-$VPC_ID \
     --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
     --capabilities CAPABILITY_IAM \
-    --template-body {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/vpc-cf.yaml
+    --template-body {{ "/getting-started/kubernetes/installation/manifests/aws-sg-integration/vpc-cf.yaml" | absolute_url }}
 
     # Wait for the stack to finish provisioning
     aws cloudformation wait stack-create-complete --stack-name tigera-vpc-$VPC_ID
@@ -163,7 +163,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
                  ParameterKey=KubernetesHostDefaultSGId,ParameterValue=$K8S_NODE_SGS \
                  ParameterKey=KubernetesControlPlaneSGId,ParameterValue=$CONTROL_PLANE_SG \
-    --template-body {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml
+    --template-body {{ "/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml" | absolute_url }}
 
     # Wait for the stack to finish provisioning
     aws cloudformation wait stack-create-complete --stack-name tigera-cluster-$CLUSTER_NAME
@@ -273,7 +273,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
     ```bash
     curl \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml \
+    {{ "/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml" | absolute_url }} \
     -O
     ```
 

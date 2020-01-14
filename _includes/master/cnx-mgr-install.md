@@ -24,7 +24,7 @@
 
    ```bash
    curl --compressed -O \
-   {{site.url}}/{{page.version}}/{{manifestPath}}/cnx.yaml
+   {{ "/{{manifestPath}}/cnx.yaml" | absolute_url }}
    ```
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}

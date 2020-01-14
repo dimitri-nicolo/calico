@@ -58,14 +58,14 @@ configuration.
    - **AWS VPC CNI plugin**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml \
+     {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml" | absolute_url }} \
      -O
      ```
 
    - **All others**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-typha.yaml \
+     {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-typha.yaml" | absolute_url }} \
      -O
      ```
 
@@ -121,14 +121,14 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    - **AWS VPC CNI plugin**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-federation.yaml \
+     {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-federation.yaml" | absolute_url }} \
      -O
      ```
 
    - **All others**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml \
+     {{ "/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml" | absolute_url }} \
      -O
      ```
 

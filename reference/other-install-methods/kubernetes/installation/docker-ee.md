@@ -68,7 +68,7 @@ you'll need to update the {{site.prodname}} etcd manifest are:
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml -O
+   {{ "/getting-started/kubernetes/installation/hosted/calico.yaml" | absolute_url }} -O
    ```
 
 There are a few sections within the `calico-config` section of the `ConfigMap` that need to be updated:
@@ -150,7 +150,7 @@ kubectl get pods --all-namespaces
 
     ```bash
     curl --compressed -O \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml
+    {{ "/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml" | absolute_url }}
     ```
 
     > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
