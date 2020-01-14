@@ -1,8 +1,6 @@
 ---
 title: Reference
-canonical_url: https://docs.tigera.io/v2.3/reference/
+description: APIs, CLI, architecture and design, and FAQ
+canonical_url: https://docs.tigera.io/v2.6/reference/
 noversion: yes
 ---
-
-This section contains reference information about {{site.prodname}} resources,
-components, and third party attributions.

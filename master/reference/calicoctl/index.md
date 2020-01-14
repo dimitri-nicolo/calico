@@ -1,6 +1,7 @@
 ---
 title: calicoctl user reference
-canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/
+description: The command line interface tool (CLI) to manage Calico Enterprise network and security policy.
+canonical_url: https://docs.tigera.io/v2.6/reference/calicoctl/
 ---
 
 The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}}

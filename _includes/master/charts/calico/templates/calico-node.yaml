@@ -44,7 +44,7 @@ spec:
 {{- tuple .Values.cni "install-cni" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       hostNetwork: true
       tolerations:
         # Make sure {{include "nodeName" . }} gets scheduled on all nodes.
@@ -97,7 +97,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
 {{- end }}
-{{- if eq .Values.network "calico" }}
+{{- if or (eq .Values.network "calico") (eq .Values.network "flannel") }}
             # CNI MTU Config variable
             - name: CNI_MTU
               valueFrom:
@@ -352,6 +352,9 @@ spec:
               command:
               - /bin/calico-node
               - -felix-live
+{{- if and (eq .Values.network "calico") (not .Values.flannel_migration) }}
+              - -bird-live
+{{- end }}
             periodSeconds: 10
             initialDelaySeconds: 10
             failureThreshold: 6

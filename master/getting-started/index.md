@@ -1,6 +1,7 @@
 ---
-title: Getting started with Calico Enterprise
-canonical_url: https://docs.tigera.io/v2.3/getting-started/
+title: Getting started
+description: Install Calico Enterprise on nodes and hosts for popular orchestrators, and install the calicoctl command line interface (CLI) tool. 
+canonical_url: https://docs.tigera.io/v2.6/getting-started/
 ---
 
 ## Obtain the private registry credentials

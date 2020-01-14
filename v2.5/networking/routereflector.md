@@ -1,6 +1,7 @@
 ---
 title: Route reflectors
-canonical_url: 'https://docs.tigera.io/v2.3/usage/routereflector'
+description: Configure BGP route reflectors for large scale deployments
+canonical_url: 'https://docs.tigera.io/v2.6/networking/routereflector'
 ---
 
 BGP route reflectors are useful in large scale deployments, to reduce the number of BGP

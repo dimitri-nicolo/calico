@@ -1,6 +1,7 @@
 ---
 title: Resource definitions
-canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/
+description: Calico Enterprise resources (APIs) that you can manage using calicoctl
+canonical_url: https://docs.tigera.io/v2.6/reference/resources/
 ---
 
 This section describes the set of valid resource types that can be managed

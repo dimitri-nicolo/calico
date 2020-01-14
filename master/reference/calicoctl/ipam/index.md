@@ -1,6 +1,7 @@
 ---
 title: calicoctl ipam
-canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/
+description: Commands for calicoctl IP address management (IPAM).
+canonical_url: https://docs.tigera.io/v2.6/reference/calicoctl/ipam/
 ---
 
 This section describes the `calicoctl ipam` commands.

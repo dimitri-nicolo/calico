@@ -299,7 +299,7 @@ To do that, you will need to:
 
 Your details will be deployment-specific, but here we show those steps for our example
 cluster and addressing scheme, following an [AS per
-rack]({{site.baseurl}}/{{page.version}}/networking/design/l3-interconnect-fabric#the-as-per-rack-model)
+rack]({{site.baseurl}}/{{page.version}}/reference/architecture/design/l3-interconnect-fabric#the-as-per-rack-model)
 model with AS 65001 for the first rack, 65002 for the second, and so on.
 
 To set the correct AS number of each {{site.prodname}} node:
@@ -391,7 +391,7 @@ EOF
 And so on for the other racks.
 
 Once BGPPeer resources have been configured, you should [disable the full node-to-node
-mesh](bgp#disabling-the-full-node-to-node-bgp-mesh):
+mesh](bgp#disable-the-default-bgp-node-to-node-mesh):
 
 ```
 calicoctl patch bgpconfig default -p '{"spec":{"nodeToNodeMeshEnabled": "false"}}'

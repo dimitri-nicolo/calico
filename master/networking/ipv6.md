@@ -1,5 +1,6 @@
 ---
 title: Enable IPv6 support
+Description: Enable IPv6 support for workloads on Kubernetes and OpenStack.
 ---
 
 ### About enabling IPv6

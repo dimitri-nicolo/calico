@@ -1,6 +1,7 @@
 ---
 title: Use IPVS kube-proxy
-canonical_url: 'https://docs.projectcalico.org/v3.10/networking/use-ipvs'
+description: Use IPVS kube-proxy for performance improvements 
+canonical_url: 'https://docs.tigera.io/v2.6/networking/use-ipvs'
 ---
 
 ### Big picture

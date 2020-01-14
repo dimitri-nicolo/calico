@@ -1,6 +1,7 @@
 ---
 title: Schedule to well-known nodes
-canonical_url: https://docs.tigera.io/v2.3/usage/reduce-nodes
+description: Learn how to configure the Calico Enterprise Typha TCP port.
+canonical_url: https://docs.tigera.io/v2.6/security/comms/reduce-nodes
 ---
 
 The following {{site.prodname}} components must accept connections on

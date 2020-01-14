@@ -1,6 +1,7 @@
 ---
 title: calicoctl node
-canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/
+description: Commands for calicoctl node 
+canonical_url: https://docs.tigera.io/v2.6/reference/calicoctl/node/
 ---
 
 This section describes the `calicoctl node` commands.
