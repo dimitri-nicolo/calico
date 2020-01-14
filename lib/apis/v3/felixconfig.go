@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -393,7 +393,8 @@ type FelixConfigurationSpec struct {
 	// Accepted values are 0, 1 and 2.
 	// 0 - No aggregation
 	// 1 - Source port based aggregation
-	// 2 - Pod prefix name based aggreagation.
+	// 2 - Pod prefix name based aggregation.
+	// 3 - No destination ports based aggregation
 	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
 	// FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
@@ -401,6 +402,14 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
 	FlowLogsFileEnabledForDenied *bool `json:"flowLogsFileEnabledForDenied,omitempty"`
+	// FlowLogsDynamicAggregationEnabled is used to enable/disable dynamically changing aggregation levels. Default is true.
+	FlowLogsDynamicAggregationEnabled *bool `json:"flowLogsDynamicAggregationEnabled,omitempty"`
+	// FlowLogsPositionFilePath is used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos.
+	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
+	FlowLogsPositionFilePath *string `json:"flowLogsPositionFilePath,omitempty"`
+	// FlowLogsAggregationThresholdBytes is used specify how far behind the external pipeline that reads flow logs can be. Default is 8192 bytes.
+	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
+	FlowLogsAggregationThresholdBytes *int `json:"flowLogsAggregationThresholdBytes,omitempty"`
 
 	// The DNS servers that Felix should trust. Each entry here must be an IP, or "k8s-service:<name>",
 	// where <name> is the name of a Kubernetes Service in the "kube-system" namespace. [Default:

@@ -4779,7 +4779,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"flowLogsFileAggregationKindForDenied": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+							Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggregation. 3 - No destination ports based aggregation",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -4796,6 +4796,27 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Description: "FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"flowLogsDynamicAggregationEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsDynamicAggregationEnabled is used to enable/disable dynamically changing aggregation levels. Default is true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"flowLogsPositionFilePath": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsPositionFilePath is used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"flowLogsAggregationThresholdBytes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsAggregationThresholdBytes is used specify how far behind the external pipeline that reads flow logs can be. Default is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"dnsTrustedServers": {

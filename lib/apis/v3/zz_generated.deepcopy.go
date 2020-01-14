@@ -1409,6 +1409,21 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.FlowLogsDynamicAggregationEnabled != nil {
+		in, out := &in.FlowLogsDynamicAggregationEnabled, &out.FlowLogsDynamicAggregationEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.FlowLogsPositionFilePath != nil {
+		in, out := &in.FlowLogsPositionFilePath, &out.FlowLogsPositionFilePath
+		*out = new(string)
+		**out = **in
+	}
+	if in.FlowLogsAggregationThresholdBytes != nil {
+		in, out := &in.FlowLogsAggregationThresholdBytes, &out.FlowLogsAggregationThresholdBytes
+		*out = new(int)
+		**out = **in
+	}
 	if in.DNSTrustedServers != nil {
 		in, out := &in.DNSTrustedServers, &out.DNSTrustedServers
 		*out = new([]string)
