@@ -37,9 +37,9 @@ sudo mv ./kubectl /usr/local/bin/kubectl
 
 For more information please refer to [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" platform="docker-ee" %}
+{% include content/load-docker.md yaml="calico" orchestrator="kubernetes" platform="docker-ee" %}
 
-{% include {{page.version}}/pull-secret.md platform="docker-ee" %}
+{% include content/pull-secret.md platform="docker-ee" %}
 
 ## <a name="install-docker-ucp"></a>Docker Enterprise/UCP Installation
 During the installation of UCP, the installation will require the following flag `--unmanaged-cni`. This tells UCP to
@@ -136,11 +136,11 @@ running. Verify the containers are running with the following cmd
 kubectl get pods --all-namespaces
 ```
 
-{% include {{page.version}}/cnx-api-install.md init="docker" net="calico" upgrade=include.upgrade %}
+{% include content/cnx-api-install.md init="docker" net="calico" upgrade=include.upgrade %}
 
-{% include {{page.version}}/apply-license.md cli="kubectl" %}
+{% include content/apply-license.md cli="kubectl" %}
 
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
+{% include content/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
 
 1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr)
 
@@ -160,7 +160,7 @@ kubectl get pods --all-namespaces
     > for more details.
     {: .alert .alert-info}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
+{% include content/cnx-cred-sed.md yaml="cnx" %}
 
 1. Update the `cnx-manager` service section and replace `nodePort: 30003` with `nodePort: 33333`
 

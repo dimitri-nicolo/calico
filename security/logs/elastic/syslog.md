@@ -39,4 +39,4 @@ In order to copy the flow, audit, and dns logs to syslog, the following configur
 
 ### Configuring syslog archiving (non-Operator)
 
-{% include {{page.version}}/syslog-fluentd.md %}
+{% include content/syslog-fluentd.md %}

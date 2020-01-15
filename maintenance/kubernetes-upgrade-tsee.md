@@ -23,4 +23,4 @@ Note: If you depend on the cluster IP of the `cnx-manager` service, you will nee
 port `9443`.
 {: .alert .alert-info}
 
-{% include {{page.version}}/install-upgrade-main.md upgrade=true %}
+{% include content/install-upgrade-main.md upgrade=true %}

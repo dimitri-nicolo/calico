@@ -90,27 +90,27 @@ spec:
 
 #### Rule
 
-{% include {{page.version}}/rule.md %}
+{% include content/rule.md %}
 
 #### ICMP
 
-{% include {{page.version}}/icmp.md %}
+{% include content/icmp.md %}
 
 #### EntityRule
 
-{% include {{page.version}}/entityrule.md global="false" %}
+{% include content/entityrule.md global="false" %}
 
 #### Selector
 
-{% include {{page.version}}/selectors.md %}
+{% include content/selectors.md %}
 
 #### Ports
 
-{% include {{page.version}}/ports.md %}
+{% include content/ports.md %}
 
 #### ServiceAccountMatch
 
-{% include {{page.version}}/serviceaccountmatch.md %}
+{% include content/serviceaccountmatch.md %}
 
 ### Application layer policy
 
@@ -125,7 +125,7 @@ in order to use the following match criteria.
 
 #### HTTPMatch
 
-{% include {{page.version}}/httpmatch.md %}
+{% include content/httpmatch.md %}
 
 ### Supported operations
 

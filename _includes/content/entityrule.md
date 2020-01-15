@@ -19,7 +19,7 @@ The `domains` field is only valid for egress Allow rules.  It restricts the
 rule to apply only to traffic to one of the specified domains.  If this field is specified, the
 parent [Rule](#rule)'s `action` must be `Allow`, and `nets` and `selector` must both be left empty.
 
-{% include {{page.version}}/domain-names.md %}
+{% include content/domain-names.md %}
 
 > **Note**: {{site.prodname}} implements policy for domain names by learning the
 > corresponding IPs from DNS, then programming rules to allow those IPs.  This means that

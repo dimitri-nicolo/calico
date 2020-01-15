@@ -55,4 +55,4 @@ To copy the flow/audit/dns logs to Amazon S3 cloud object storage, follow these 
 
 #### Manual/Helm deployment
 
-{% include {{page.version}}/s3_fluentd.md %}
+{% include content/s3_fluentd.md %}

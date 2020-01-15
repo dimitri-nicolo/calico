@@ -27,7 +27,7 @@
    {{ "/{{manifestPath}}/cnx.yaml" | absolute_url }}
    ```
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
+{% include content/cnx-cred-sed.md yaml="cnx" %}
 
 {% if include.init == "openshift" %}
 
@@ -220,9 +220,9 @@
    Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
    to it.  Use the value of `$USER` as `<USER>` and `$NAMESPACE` as `<NAMESPACE>` in the following step.
 
-{% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
+{% include content/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
 {% else %}
-{% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
+{% include content/cnx-grant-user-manager-permissions.md %}
 {% endif %}
 
 {% if include.platform == "aks" %}

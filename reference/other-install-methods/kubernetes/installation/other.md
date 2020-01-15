@@ -22,9 +22,9 @@ with another solution, such as:
 - Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
   and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
+{% include content/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-{% include {{page.version}}/pull-secret.md %}
+{% include content/pull-secret.md %}
 
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
 
@@ -69,9 +69,9 @@ configuration.
      -O
      ```
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include content/cnx-cred-sed.md yaml="calico" %}
 
-{% include {{page.version}}/config-typha.md %}
+{% include content/config-typha.md %}
 
 1. Apply the manifest using the following command.
 
@@ -132,9 +132,9 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
      -O
      ```
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include content/cnx-cred-sed.md yaml="calico" %}
 
-{% include {{page.version}}/config-typha.md %}
+{% include content/config-typha.md %}
 
 1. Apply the manifest using the following command.
 
@@ -144,16 +144,16 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 
 1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" %}
+{% include content/cnx-api-install.md init="kubernetes" net="other" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md cli="kubectl" %}
+{% include content/apply-license.md cli="kubectl" %}
 
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" type="policy-only" %}
+{% include content/cnx-monitor-install.md elasticsearch="operator" type="policy-only" %}
 
 1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
+{% include content/cnx-mgr-install.md init="kubernetes" net="other" %}
 
-{% include {{page.version}}/gs-next-steps.md %}
+{% include content/gs-next-steps.md %}

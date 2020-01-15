@@ -142,7 +142,7 @@
      > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
      {: .alert .alert-info}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml=include.yaml %}
+{% include content/cnx-cred-sed.md yaml=include.yaml %}
 
 {% if include.yaml == "calicoq" %}
 1. The manifest will need to be modified if you are using {{site.prodname}} federation and need to mount in secrets to

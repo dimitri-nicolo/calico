@@ -36,7 +36,7 @@ Using domain names in policy rules is limited to only egress allow rules. {{site
 
 #### Domain name matching
 
-{% include {{page.version}}/domain-names.md %}
+{% include content/domain-names.md %}
 
 #### Trusted DNS servers
 

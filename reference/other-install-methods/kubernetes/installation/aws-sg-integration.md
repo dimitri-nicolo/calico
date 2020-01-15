@@ -277,7 +277,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     -O
     ```
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="cloud-controllers" %}
+{% include content/cnx-cred-sed.md yaml="cloud-controllers" %}
 
 1. Apply the manifest using the following command.
 

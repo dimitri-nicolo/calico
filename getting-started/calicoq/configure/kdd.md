@@ -5,5 +5,5 @@ no_canonical: true
 ---
 
 
-{% include {{page.version}}/cli-config-kdd.md %}
+{% include content/cli-config-kdd.md %}
 

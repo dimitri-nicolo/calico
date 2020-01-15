@@ -9,10 +9,10 @@
   and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 {% endunless %}
 
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" upgrade=include.upgrade %}
+{% include content/load-docker.md yaml="calico" orchestrator="kubernetes" upgrade=include.upgrade %}
 
 {% unless include.upgrade %}
-{% include {{page.version}}/pull-secret.md %}
+{% include content/pull-secret.md %}
 {% endunless %}
 
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy and networking
@@ -46,9 +46,9 @@ and your datastore type. Refer to the section that matches your configuration.
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
 
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+{% include content/cnx-pod-cidr-sed.md yaml="calico" %}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include content/cnx-cred-sed.md yaml="calico" %}
 
 1. Apply the manifest using the following command.
 
@@ -77,9 +77,9 @@ and your datastore type. Refer to the section that matches your configuration.
    -O
    ```
 
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+{% include content/cnx-pod-cidr-sed.md yaml="calico" %}
 
-{% include {{page.version}}/config-typha.md %}
+{% include content/config-typha.md %}
 
 1. Apply the manifest.
 
@@ -123,7 +123,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    -O
    ```
 
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+{% include content/cnx-pod-cidr-sed.md yaml="calico" %}
 
 1. In the `ConfigMap` named `calico-config`, set the value of
    `etcd_endpoints` to the IP address and port of your etcd server.
@@ -131,11 +131,11 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
 
-{% include {{page.version}}/config-typha.md %}
+{% include content/config-typha.md %}
 
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+{% include content/cnx-pod-cidr-sed.md yaml="calico" %}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include content/cnx-cred-sed.md yaml="calico" %}
 
 1. Apply the manifest using the following command.
 
@@ -189,11 +189,11 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    -O
    ```
 
-{% include {{page.version}}/config-typha.md %}
+{% include content/config-typha.md %}
 
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+{% include content/cnx-pod-cidr-sed.md yaml="calico" %}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include content/cnx-cred-sed.md yaml="calico" %}
 
 1. Apply the manifest.
 
@@ -203,16 +203,16 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 
 1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="calico" upgrade=include.upgrade %}
+{% include content/cnx-api-install.md init="kubernetes" net="calico" upgrade=include.upgrade %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md cli="kubectl" %}
+{% include content/apply-license.md cli="kubectl" %}
 
 {% unless include.upgrade %}
 1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
+{% include content/cnx-mgr-install.md init="kubernetes" %}
 
-{% include {{page.version}}/gs-next-steps.md %}
+{% include content/gs-next-steps.md %}
 {% endunless %}

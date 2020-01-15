@@ -27,7 +27,7 @@ Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch 
 
 Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
-{% include {{page.version}}/enable-felix-prometheus-reporting.md %}
+{% include content/enable-felix-prometheus-reporting.md %}
 
 1. Allow Prometheus to scrape the metrics by opening up the port on each host:
 
@@ -141,7 +141,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% endif %}
 
 {% if include.elasticsearch == "operator" %}
-{% include {{page.version}}/elastic-storage.md orch=include.orch %}
+{% include content/elastic-storage.md orch=include.orch %}
 {% endif %}
 
 1.  Download the `monitor-calico.yaml` manifest.
@@ -163,7 +163,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
     ```
 {% endif %}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
+{% include content/cnx-cred-sed.md yaml="monitor-calico" %}
 
    > **Note**: To configure storage for Prometheus instance please refer to the
    > [configuring prometheus storage](/{{page.version}}/reference/other-install-methods/security/configuration/prometheus#storage).

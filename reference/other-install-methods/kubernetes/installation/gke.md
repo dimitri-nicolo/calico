@@ -54,9 +54,9 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 - To follow the TLS certificate and key creation instructions below you'll need openssl.
 
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
+{% include content/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-{% include {{page.version}}/pull-secret.md %}
+{% include content/pull-secret.md %}
 
 ### <a name="install-cnx"></a><a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} without federation
 
@@ -68,9 +68,9 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
    -o calico.yaml
    ```
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include content/cnx-cred-sed.md yaml="calico" %}
 
-{% include {{page.version}}/config-typha.md autoscale="true" %}
+{% include content/config-typha.md autoscale="true" %}
 
 1. Apply the manifest using the following command.
 
@@ -80,16 +80,16 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" platform="gke" %}
+{% include content/cnx-api-install.md init="kubernetes" net="other" platform="gke" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md platform="gke" cli="kubectl" %}
+{% include content/apply-license.md platform="gke" cli="kubectl" %}
 
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="gke" %}
+{% include content/cnx-monitor-install.md elasticsearch="operator" platform="gke" %}
 
 1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="gke" %}
+{% include content/cnx-mgr-install.md init="kubernetes" net="other" platform="gke" %}
 
-{% include {{page.version}}/gs-next-steps.md %}
+{% include content/gs-next-steps.md %}

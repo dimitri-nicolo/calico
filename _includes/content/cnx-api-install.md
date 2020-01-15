@@ -160,7 +160,7 @@
    {: .alert .alert-info}
 {% endif %}
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
+{% include content/cnx-cred-sed.md yaml="cnx-api" %}
 
 1. Generate TLS certificates for the {{site.prodname}} API server to use. The following example creates a self-signed certificate
    using OpenSSL, but you may generate them using any X.509-compatible tool or obtain them from your organization's Certificate Authority.

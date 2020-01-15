@@ -75,4 +75,4 @@ spec:
 
 #### Exact and wildcard domain names
 
-{% include {{page.version}}/domain-names.md %}
+{% include content/domain-names.md %}
