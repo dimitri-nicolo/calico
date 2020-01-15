@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/textproto"
+	"regexp"
 	"time"
 
 	"github.com/tigera/voltron/pkg/tunnelmgr"
@@ -55,7 +56,8 @@ type Server struct {
 
 	k8s K8sInterface
 
-	defaultProxy *proxy.Proxy
+	defaultProxy          *proxy.Proxy
+	tunnelTargetWhitelist []regexp.Regexp
 
 	clusters *clusters
 	health   *health
@@ -307,14 +309,27 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
-	if _, ok := r.Header[ClusterHeaderFieldCanon]; !ok {
+	// With the introduction of Centralized ElasticSearch for Multi-cluster Management,
+	// certain categories of requests related to a specific cluster will be proxied
+	// within the Management cluster (instead of being sent down a secure tunnel to the
+	// actual Managed cluster).
+	// To see how the s.tunnelTargetWhitelist is configured, please look at the Voltron
+	// main function.
+	shouldUseTunnel := shouldUseTunnel(r, s.tunnelTargetWhitelist)
+
+	if _, ok := r.Header[ClusterHeaderFieldCanon]; !shouldUseTunnel || !ok {
+		if !shouldUseTunnel {
+			log.Debugf("Server Proxy: Skip tunnel, send request %q to default proxy (local)", r.URL)
+		} else {
+			log.Debugf("Server Proxy: No cluster header, send request %q to default proxy (local)", r.URL)
+		}
 		if s.defaultProxy != nil {
 			s.defaultProxy.ServeHTTP(w, r)
 			return
 		}
 
 		msg := fmt.Sprintf("missing %q header", ClusterHeaderField)
-		log.Errorf("clusterMuxer: %s", msg)
+		log.Errorf("clusterMuxer: %s (and cannot proxy locally, no default proxy was configured)", msg)
 		http.Error(w, msg, 400)
 		return
 	}
@@ -358,10 +373,22 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	addImpersonationHeaders(r, user)
 	removeAuthHeaders(r)
 
-	log.Debugf("tunneling %q from %q through %q", r.URL, r.RemoteAddr, clusterID)
+	log.Debugf("Server Proxy: Sending request %q from %q through tunnel to %q", r.URL, r.RemoteAddr, clusterID)
 	r.Header.Del(ClusterHeaderField)
 
 	c.ServeHTTP(w, r)
+}
+
+// Determine whether or not the given request should use the tunnel proxying
+// by comparing its URL path against the provide list of regex expressions
+// (representing paths for targets that the request might be going to).
+func shouldUseTunnel(r *http.Request, targetPaths []regexp.Regexp) bool {
+	for _, p := range targetPaths {
+		if p.MatchString(r.URL.Path) {
+			return true
+		}
+	}
+	return false
 }
 
 func removeAuthHeaders(r *http.Request) {

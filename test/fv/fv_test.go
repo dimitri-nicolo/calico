@@ -24,6 +24,7 @@ import (
 
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/internal/pkg/utils"
@@ -188,11 +189,17 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		lisTun, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
+		tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
+			`^/$`,
+			`^/some/path$`,
+		})
+
 		voltron, err = server.New(
 			k8sAPI,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(&rest.Config{}),
+			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())

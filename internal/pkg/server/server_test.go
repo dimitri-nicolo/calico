@@ -27,6 +27,7 @@ import (
 
 	"github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/internal/pkg/utils"
@@ -214,17 +215,29 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		defaultURL, e := url.Parse(defaultServer.URL)
 		Expect(e).NotTo(HaveOccurred())
 
-		defaultProxy, e := proxy.New([]proxy.Target{{
-			Path: "/",
-			Dest: defaultURL,
-		}})
+		defaultProxy, e := proxy.New([]proxy.Target{
+			{
+				Path: "/",
+				Dest: defaultURL,
+			},
+			{
+				Path: "/compliance/",
+				Dest: defaultURL,
+			},
+		})
 		Expect(e).NotTo(HaveOccurred())
+
+		tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
+			`^/$`,
+			`^/some/path$`,
+		})
 
 		opts = append(opts,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(&rest.Config{}),
 			server.WithDefaultProxy(defaultProxy),
+			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
 		)
 
@@ -292,6 +305,21 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		It("Should proxy to default if no header", func() {
 			resp, err := http.Get(defaultServer.URL)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+
+		It("Should proxy to default even with header, if request path matches one of bypass tunnel targets", func() {
+			req, err := http.NewRequest(
+				"GET",
+				"http://"+lis.Addr().String()+"/compliance/reports",
+				strings.NewReader("HELLO"),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			req.Header.Add(server.ClusterHeaderField, clusterA)
+			test.AddJaneToken(req)
+			resp, err := http.DefaultClient.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			log.Infof("\n\n\nSTEVE GAO TEST resp = %+v\n", resp)
 			Expect(resp.StatusCode).To(Equal(200))
 		})
 
@@ -659,11 +687,16 @@ var _ = Describe("Server authenticates requests", func() {
 		lisTun, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
+		tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
+			`^/?`,
+		})
+
 		srv, err = server.New(
 			k8sAPI,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(&rest.Config{}),
+			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())

@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"time"
 
 	"k8s.io/client-go/rest"
@@ -123,6 +124,16 @@ func WithKeepAliveSettings(enable bool, intervalMs int) Option {
 func WithDefaultProxy(p *proxy.Proxy) Option {
 	return func(s *Server) error {
 		s.defaultProxy = p
+		return nil
+	}
+}
+
+// WithTunnelTargetWhitelist sets a whitelist of regex representing potential target paths
+// that should go through tunnel proxying in the server. This happens within the server
+// clusterMux handler.
+func WithTunnelTargetWhitelist(tgts []regexp.Regexp) Option {
+	return func(s *Server) error {
+		s.tunnelTargetWhitelist = tgts
 		return nil
 	}
 }

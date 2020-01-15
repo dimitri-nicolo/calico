@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/utils"
 
 	"github.com/kelseyhightower/envconfig"
@@ -106,6 +107,23 @@ func main() {
 			log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
 		}
 
+		// With the introduction of Centralized ElasticSearch for Multi-cluster Management,
+		// certain categories of requests related to a specific cluster will be proxied
+		// within the Management cluster (instead of being sent down a secure tunnel to the
+		// actual Managed cluster).
+		// In the setup below, we create a list of URI paths that should still go through the
+		// tunnel down to a Managed cluster. Requests that do not match this whitelist, will
+		// instead be proxied locally (within the Management cluster itself using the
+		// defaultProxy that is set up later on in this function). The whitelist is used
+		// within the server's clusterMuxer handler.
+		tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{
+			`^/api/?`,
+			`^/apis/?`,
+		})
+
+		if err != nil {
+			log.Fatalf("Failed to parse tunnel target whitelist: %s", err)
+		}
 		opts = append(opts,
 			server.WithTemplate(cfg.TemplatePath),
 			server.WithPublicAddr(cfg.PublicIP),
@@ -114,6 +132,7 @@ func main() {
 			server.WithAuthentication(config),
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
+			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
 			server.WithAutoRegister())
 	}
