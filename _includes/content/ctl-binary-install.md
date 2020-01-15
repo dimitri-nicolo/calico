@@ -5,7 +5,7 @@ you want to install the binary.
    > `/usr/local/bin/`.
    {: .alert .alert-success}
 
-1. Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
+1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials).
 
 1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
 

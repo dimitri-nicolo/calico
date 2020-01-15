@@ -23,8 +23,8 @@ file, it will check a specific set of environment variables.
 Refer to the section that corresponds to your datastore type for a full set of options
 and examples.
 
-- [etcd datastore](/{{page.version}}/getting-started/{{include.cli}}/configure/etcd)
-- [Kubernetes API datastore](/{{page.version}}/getting-started/{{include.cli}}/configure/kdd)
+- [etcd datastore]({{site.baseurl}}/getting-started/{{include.cli}}/configure/etcd)
+- [Kubernetes API datastore]({{site.baseurl}}/getting-started/{{include.cli}}/configure/kdd)
 
 > **Note**: When running `{{ include.cli }}` inside a container, any environment variables and
 > configuration files must be passed to the container so they are available to
@@ -36,7 +36,7 @@ and examples.
 {% if include.cli == "calicoq" %}
 #### {{site.prodname}} Federation
 
-If you are using [{{site.prodname}} Federation](/{{page.version}}/networking/federation/index) and you wish to view the
+If you are using [{{site.prodname}} Federation]({{site.baseurl}}/networking/federation/index) and you wish to view the
 remote cluster endpoints using `{{ include.cli }}` then it is also necessary to include any files (kubeconfigs,
 certificates and keys) that are referenced in the Remote Cluster Configuration resources in the same location as
 specified in these resources. For example, suppose you have a Remote Cluster Configuration resource that references a
@@ -52,7 +52,7 @@ an error for that cluster.
 #### {{site.prodname}} AWS Security Group Integration
 
 If you are using
-[{{site.prodname}} AWS Security Group Integration](/{{page.version}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration)
+[{{site.prodname}} AWS Security Group Integration]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration)
 some additional environment variables need to be provided to `{{include.cli}}`
 to ensure endpoints have the proper labels when they are evaluated.
 

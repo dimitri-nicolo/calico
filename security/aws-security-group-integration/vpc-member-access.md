@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/
 
 > **Note**: For pods in the Kubernetes cluster to be available to VPC member resources those
 > resources must be members of appropriate security groups.  See
-> [Interconnecting your VPC and cluster](/{{page.version}}/security/aws-security-group-integration/interconnection)
+> [Interconnecting your VPC and cluster]({{site.baseurl}}/security/aws-security-group-integration/interconnection)
 > for more information.
 {: .alert .alert-info}
 

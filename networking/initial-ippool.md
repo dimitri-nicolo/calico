@@ -26,9 +26,9 @@ The **Kubernetes pod CIDR** is the expected IP address range for pod IPs.  It is
 
 #### Tigera Operator and IP pools
 
-[Calico IP pools](/{{page.version}}/reference/resources/ippool) are ranges of IP addresses that Calico uses to assign to pods; the ranges must within the [Kubernetes pod CIDR](#kubernetes-pod-cidr). 
+[Calico IP pools]({{site.baseurl}}/reference/resources/ippool) are ranges of IP addresses that Calico uses to assign to pods; the ranges must within the [Kubernetes pod CIDR](#kubernetes-pod-cidr). 
 
-The Tigera Operator reads the [Installation](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation)
+The Tigera Operator reads the [Installation]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)
 resource and configures the default Calico IP pool. Note the following:
 
 - Default fields for any that are omitted:
@@ -37,7 +37,7 @@ resource and configures the default Calico IP pool. Note the following:
   - NodeSelector: all()
   - NATOutgoing: Enabled
 - IP pools are only used when Calico is used for pod networking, IP pools are not utilized when using other pod networking solutions. 
-- To make changes to the IP pools after Tigera Operator install, you may use [calicoctl](/{{page.version}}/reference/calicoctl/) or kubectl. If you make the changes to the IP Pool in the Installation resource (Operator IPPool) after installation, the the changes are not applied.
+- To make changes to the IP pools after Tigera Operator install, you may use [calicoctl]({{site.baseurl}}/reference/calicoctl/) or kubectl. If you make the changes to the IP Pool in the Installation resource (Operator IPPool) after installation, the the changes are not applied.
 
 ### Before you begin...
 
@@ -49,7 +49,7 @@ resource and configures the default Calico IP pool. Note the following:
 
 1. Download the custom-resource.yaml file. 
 
-1. Edit the [Installation resource](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Installation.
+1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation.
    **Required values**: `cidr:`
    **Empty values**: Defaulted
 
@@ -71,5 +71,5 @@ resource and configures the default Calico IP pool. Note the following:
 
 ### Above and beyond
 
-- [IPPool resource](/{{page.version}}/reference/resources/ippool)
-- [calicoctl](/{{page.version}}/reference/calicoctl/) to edit the
+- [IPPool resource]({{site.baseurl}}/reference/resources/ippool)
+- [calicoctl]({{site.baseurl}}/reference/calicoctl/) to edit the

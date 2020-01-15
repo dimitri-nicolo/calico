@@ -12,7 +12,7 @@ By default, the manager UI is not exposed outside of the cluster. This article e
 
 ### Before you begin...
 
-Make sure you have installed {{site.prodname}} using one of the [installation guides](/{{page.version}}/getting-started/).
+Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/).
 
 ### How to
 

@@ -17,7 +17,7 @@ A remote cluster configuration causes Typha and `calicoq` to retrieve the follow
 When using the Kubernetes API datastore with RBAC enabled on the remote cluster, the RBAC rules must be configured to
 allow access to these resources.
 
-For more details on the federation feature refer to the [Overview](/{{page.version}}/networking/federation).
+For more details on the federation feature refer to the [Overview]({{site.baseurl}}/networking/federation).
 
 The meaning of the fields matches the configuration used for configuring `calicoctl`, see the [etcd]({{site.url}}/{{page.version}}/getting-started/calicoctl/configure/etcd) and [kubernetes]({{site.url}}/{{page.version}}/getting-started/calicoctl/configure/kdd) instructions for more details.
 

@@ -5,13 +5,13 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## About the manifests
 
-The **[cnx-api-etcd.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml)** and **[cnx-api-kdd.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml)** manifests do the following:
+The **[cnx-api-etcd.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml)** and **[cnx-api-kdd.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml)** manifests do the following:
   - Installs the {{site.prodname}} API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
   - Installs the {{site.prodname}} Manager web server, and configures it with the location
     of the Kubernetes API, login methods and SSL certificates.
 
-The **[operator.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml)** manifest does the following:
+The **[operator.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml)** manifest does the following:
   - Create a namespace called calico-monitoring
   - Create RBAC artifacts
       - ServiceAccounts: prometheus-operator and prometheus
@@ -20,7 +20,7 @@ The **[operator.yaml](/{{page.version}}/getting-started/kubernetes/installation/
     - Creates a kubernetes deployment, which in turn creates 3 _Custom Resource
       Definitions_(CRD): `prometheus`, `alertmanager` and "servicemonitor".
 
-The **[monitor-calico.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml)** manifest does the following:
+The **[monitor-calico.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml)** manifest does the following:
   - Creates a new service: calico-node-metrics exposing prometheus reporting
     port.
   - A secret for storing alertmanager config - Should be customized for your
@@ -62,9 +62,9 @@ network policies to update for this service.
 There are 3 places where `nodeSelectors` can be customized. Ensure to update
 these.
 
-- [operator.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) - The _Deployment_
+- [operator.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) - The _Deployment_
   manifest for the `calico-prometheus-operator`
-- [monitor-calico.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) - The _Prometheus_ and
+- [monitor-calico.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) - The _Prometheus_ and
   _AlertManager_ manifests.
 
 For example, to deploy Prometheus Operator in GKE infrastructure nodes,
@@ -102,7 +102,7 @@ spec:
 
 ## Configure the {{site.prodname}} Manager
 
-The **[cnx.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml)** manifests must be updated with
+The **[cnx.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
 are described [here]({{site.url}}/{{page.version}}/reference/cnx/authentication).

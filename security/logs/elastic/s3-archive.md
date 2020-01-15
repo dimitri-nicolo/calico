@@ -29,8 +29,8 @@ To copy the flow/audit/dns logs to Amazon S3 cloud object storage, follow these 
     -n tigera-operator
    ```
 
-1. Update the [LogCollector](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
-   resource named, `tigera-secure` to include an [S3 section](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.S3StoreSpec)
+1. Update the [LogCollector]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
+   resource named, `tigera-secure` to include an [S3 section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.S3StoreSpec)
    with your information noted from above.
    Example:
 

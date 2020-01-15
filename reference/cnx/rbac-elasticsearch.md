@@ -61,7 +61,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-Note: if you want to provision a user with the minimal Calico Enterprise UI permissions, please refer to [Minimum permissions for all UI users](/{{page.version}}/reference/cnx/rbac-tiered-policies#minimum-permissions-for-all-ui-users).
+Note: if you want to provision a user with the minimal Calico Enterprise UI permissions, please refer to [Minimum permissions for all UI users]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#minimum-permissions-for-all-ui-users).
 
 ### Verify user access to Elasticsearch indexes
 

@@ -194,7 +194,7 @@ directory in order to execute the benchmark tests.
 
 ### Above and beyond
 
-- For details on configuring and scheduling reports, see [Global Reports](/{{page.version}}/reference/resources/globalreport).
-- For other predefined compliance reports, see [Compliance Reports](/{{page.version}}/reference/compliance-reports/).
+- For details on configuring and scheduling reports, see [Global Reports]({{site.baseurl}}/reference/resources/globalreport).
+- For other predefined compliance reports, see [Compliance Reports]({{site.baseurl}}/reference/compliance-reports/).
 
 [parse-duration]: https://golang.org/pkg/time/#ParseDuration

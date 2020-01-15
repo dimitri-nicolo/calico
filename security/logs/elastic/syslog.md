@@ -13,9 +13,9 @@ this feature, follow the instructions below to configure it.
 In order to copy the flow, audit, and dns logs to syslog, the following configuration is needed:
 
 1. Update the
-   [LogCollector](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
+   [LogCollector]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollector)
    resource named `tigera-secure` to include
-   a [Syslog section](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec)
+   a [Syslog section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.SyslogStoreSpec)
    with your syslog information.
    Example:
    ```

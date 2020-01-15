@@ -11,9 +11,9 @@ Authorization APIs.
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
 pre-v2.3 RBAC behavior, [upgrade to 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23),
 following the instructions for handling RBAC. Then, continue to
-[upgrade to this release](/{{page.version}}/maintenance/kubernetes-upgrade-tsee).
+[upgrade to this release]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee).
 
-For RBAC related to elasticsearch, please refer to [Configuring Calico Enterprise RBAC for Elasticsearch](/{{page.version}}/reference/cnx/rbac-elasticsearch).
+For RBAC related to elasticsearch, please refer to [Configuring Calico Enterprise RBAC for Elasticsearch]({{site.baseurl}}/reference/cnx/rbac-elasticsearch).
 
 ### Policy and tier RBAC
 

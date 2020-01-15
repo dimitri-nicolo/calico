@@ -65,7 +65,7 @@ This article requires a Linux host that meets the following requirements.
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.](/{{page.version}}/getting-started/create-storage)
+1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -81,7 +81,7 @@ This article requires a Linux host that meets the following requirements.
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
-1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference](/{{page.version}}/reference/installation/api).
+1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```
    kubectl create -f {{ "/manifests/custom-resources.yaml" | absolute_url }}
@@ -121,7 +121,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 ### Above and beyond
 
-- [Configure access to the manager UI](/{{page.version}}/getting-started/access-the-manager)
+- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)

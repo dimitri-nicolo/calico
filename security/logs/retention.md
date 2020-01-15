@@ -14,7 +14,7 @@ This how-to guide uses the following features:
 
 ### Before you begin...
 
-Review [LogStorageSpec.Retention](/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Retention) and determine the appropriate values for your deployment.
+Review [LogStorageSpec.Retention]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Retention) and determine the appropriate values for your deployment.
 
 > **Note**: LogStorage has built-in retention thresholds of 80% for total storage, and 70% for logs (flow and DNS). If either of these are exceeded, the oldest records and logs are removed.
 {: .alert .alert-info}

@@ -25,7 +25,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Domain name threat feeds
 
-A best practice is to develop a whitelist of "known-good" domains that particular applications or services must access, and then [enforce this whitelist with network policy](/{{page.version}}/security/domain-based-policy).
+A best practice is to develop a whitelist of "known-good" domains that particular applications or services must access, and then [enforce this whitelist with network policy]({{site.baseurl}}/security/domain-based-policy).
 
 In addition to whitelists, you can use threat feeds to monitor your cluster for DNS queries to known malicious or suspicious domain names. {{site.prodname}} monitors DNS queries and generates alerts for any that are listed in your threat feed.
 
@@ -39,7 +39,7 @@ Privileges to manage GlobalThreatFeed.
 
 #### Recommended
 
-We recommend that you turn down the aggregation of DNS logs sent to Elasticsearch for configuring threat feeds. If you do not adjust DNS log aggregation settings, {{site.prodname}} aggregates DNS queries from workloads in the same replica set. This means if a suspicious DNS query is detected, you will only know which replica set made the query and not which specific pod. Go to: [FelixConfiguration](/{{page.version}}/reference/resources/felixconfig) and set the field, **dnsLogsFileAggregationKind** to **0** to log individual pods separately.
+We recommend that you turn down the aggregation of DNS logs sent to Elasticsearch for configuring threat feeds. If you do not adjust DNS log aggregation settings, {{site.prodname}} aggregates DNS queries from workloads in the same replica set. This means if a suspicious DNS query is detected, you will only know which replica set made the query and not which specific pod. Go to: [FelixConfiguration]({{site.baseurl}}/reference/resources/felixconfig) and set the field, **dnsLogsFileAggregationKind** to **0** to log individual pods separately.
 
 ### How to
 

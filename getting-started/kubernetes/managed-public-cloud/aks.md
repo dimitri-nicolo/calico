@@ -26,7 +26,7 @@ Ensure that your AKS cluster that meets the following requirements.
 - Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings. This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see [AKS access control](https://docs.microsoft.com/bs-latn-ba/azure/aks/control-kubeconfig-access).
 
 
-- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials) and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
 
 #### Enable transparent mode
 
@@ -49,7 +49,7 @@ Ensure that your AKS cluster that meets the following requirements.
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.](/{{page.version}}/getting-started/create-storage)
+1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -67,7 +67,7 @@ Ensure that your AKS cluster that meets the following requirements.
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
-1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference](/{{page.version}}/reference/installation/api).
+1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```
    kubectl create -f {{ "/manifests/aks/custom-resources.yaml" | absolute_url }}

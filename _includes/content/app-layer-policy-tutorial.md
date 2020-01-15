@@ -27,7 +27,7 @@ kubectl apply -n yaobank -f \
 ```
 
 > **Note**: You can also
-> [view the manifest in your browser](/{{page.version}}/security/app-layer-policy/manifests/10-yaobank.yaml){:target="_blank"}.
+> [view the manifest in your browser]({{site.baseurl}}/security/app-layer-policy/manifests/10-yaobank.yaml){:target="_blank"}.
 {: .alert .alert-info}
 
 
@@ -202,7 +202,7 @@ kubectl apply -n yaobank -f \
 {{ "/security/app-layer-policy/manifests/20-attack-pod.yaml" | absolute_url }}
 ```
 
-Take a look at the [`20-attack-pod.yaml` manifest in your browser](/{{page.version}}/security/app-layer-policy/manifests/20-attack-pod.yaml).
+Take a look at the [`20-attack-pod.yaml` manifest in your browser]({{site.baseurl}}/security/app-layer-policy/manifests/20-attack-pod.yaml).
 It creates a pod and mounts `istio.summary` secret.  This will allow us to masquerade as if we were
 the `summary` service, even though this pod is not run as that service account.  Let's try this out.  First, `exec` into the pod.
 
@@ -238,7 +238,7 @@ kubectl create -n yaobank -f 30-policy.yaml
 ```
 
 > **Note**: You can also
-> [view the manifest in your browser](/{{page.version}}/security/app-layer-policy/manifests/30-policy.yaml){:target="_blank"}.
+> [view the manifest in your browser]({{site.baseurl}}/security/app-layer-policy/manifests/30-policy.yaml){:target="_blank"}.
 {: .alert .alert-info}
 
 Let's examine this policy piece by piece.  It consists of three policy objects, one for each

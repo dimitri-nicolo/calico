@@ -253,7 +253,7 @@ manager:
 
 ### Grant access to user interface
 
-In this step, we are going to grant a user permission to access the Calico Enterprise Manager in your cluster. For instructions on how to create a user, please consult our ["Configuring user authentication to Calico Enterprise Manager" document](/{{page.version}}/reference/cnx/authentication#basic-authentication). Once you have a user, you can run the following commands, replacing `<USER>` with the name of the user you wish to grant access.
+In this step, we are going to grant a user permission to access the Calico Enterprise Manager in your cluster. For instructions on how to create a user, please consult our ["Configuring user authentication to Calico Enterprise Manager" document]({{site.baseurl}}/reference/cnx/authentication#basic-authentication). Once you have a user, you can run the following commands, replacing `<USER>` with the name of the user you wish to grant access.
 
 **User manager**
 

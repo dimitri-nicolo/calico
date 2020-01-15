@@ -18,7 +18,7 @@ By default, {{site.prodname}} Typha and Node components are configured with self
 
 **Get the Certificate Authority certificate and signed certificate and key pairs for {{site.prodname}} Typha and Node**
   - Generate the certificates using any X.509-compatible tool or from your organization's CA.
-  - Ensure the generated certificates meet the requirements for [TLS connections between Node and Typha](/{{page.version}}/security/comms/crypto-auth#connections-from-node-to-typha-kubernetes).
+  - Ensure the generated certificates meet the requirements for [TLS connections between Node and Typha]({{site.baseurl}}/security/comms/crypto-auth#connections-from-node-to-typha-kubernetes).
 
 ### How to
 

@@ -83,7 +83,7 @@ spec:
 
 | Field           | Description                                    | Required | Accepted Values | Schema    |
 |-----------------|------------------------------------------------|----------|-----------------|-----------|
-| reportType      | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [cis&#8209;benchmark](/{{page.version}}/reference/compliance-reports/cis-benchmark), [inventory](/{{page.version}}/reference/compliance-reports/inventory), [network&#8209;access](/{{page.version}}/reference/compliance-reports/network-access), [policy&#8209;audit](/{{page.version}}/reference/compliance-reports/policy-audit) | string |
+| reportType      | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [cis&#8209;benchmark]({{site.baseurl}}/reference/compliance-reports/cis-benchmark), [inventory]({{site.baseurl}}/reference/compliance-reports/inventory), [network&#8209;access]({{site.baseurl}}/reference/compliance-reports/network-access), [policy&#8209;audit]({{site.baseurl}}/reference/compliance-reports/policy-audit) | string |
 | endpoints       | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
 | schedule        | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of 12 schedules per hour is enforced (an average of one report every 5 minutes). | Yes || string |
 | jobNodeSelector | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
@@ -135,7 +135,7 @@ match.
 
 > **Note**: To use the {{site.prodname}} compliance reporting feature, you must ensure all required resource types
 > are being audited and the logs archived in Elasticsearch. You must explicitly configure the [Kubernetes API
-> Server](/{{page.version}}/security/logs/elastic/ee-audit#kubernetes) to send audit logs for Kubernetes-owned resources
+> Server]({{site.baseurl}}/security/logs/elastic/ee-audit#kubernetes) to send audit logs for Kubernetes-owned resources
 > to Elasticsearch.
 
 ### Supported operations

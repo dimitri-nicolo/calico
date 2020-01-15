@@ -8,8 +8,8 @@ This guide is a variation of the simple policy demo intended to introduce the ex
 It requires a Kubernetes cluster configured with Calico networking and {{site.prodname}}, and expects that you have `kubectl` configured to interact with the cluster.
 
 You can quickly and easily obtain such a cluster by following one of the
-[installation guides](/{{page.version}}/getting-started/kubernetes/),
-or by [upgrading an existing cluster](/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee).
+[installation guides]({{site.baseurl}}/getting-started/kubernetes/),
+or by [upgrading an existing cluster]({{site.baseurl}}/getting-started/kubernetes/upgrade/upgrade-to-tsee).
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
@@ -77,7 +77,7 @@ information about the policies for endpoints on a given host.
    > dynamic aspects of {{site.prodname}} Policy: in particular displaying the endpoints actually affected by policies,
    > and the policies that actually apply to endpoints.
    >
-   > The full calicoq documentation is [here](/{{page.version}}/reference/calicoq).
+   > The full calicoq documentation is [here]({{site.baseurl}}/reference/calicoq).
    {: .alert .alert-info}
 
    ```
@@ -219,7 +219,7 @@ In {{site.prodname}} Manager, head to the dashboard view. You will see graphs as
 Now if we wanted to dig in further and find out what's causing the packets to be denied, we could take a look at the **Packets by Policy** bar graph. Each individual bar represents a policy that has either denied or allowed a packet. Also, the policies shown by the graph, just like the rest of the dashboard graphs, are time-windowed i.e. they will reflect only the ones that were recently exercised.
 
 > **Note**: The `NetworkPolicy` spec for [`default-deny`](#enable-isolation) does not come configured
-> with any rules. This policy results in a 'default deny' because of how it is [evaluated](/{{page.version}}/reference/resources/tier#how-policy-is-evaluated). A packet will be dropped if the policies (like default-deny in this case) affecting the
+> with any rules. This policy results in a 'default deny' because of how it is [evaluated]({{site.baseurl}}/reference/resources/tier#how-policy-is-evaluated). A packet will be dropped if the policies (like default-deny in this case) affecting the
 > endpoint takes no action.
 >
 > You can review the metrics associated with such behavior in the **Implict Drops** block.

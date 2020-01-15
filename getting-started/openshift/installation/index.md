@@ -15,10 +15,10 @@ to install {{site.prodname}}.
 
 #### Before you begin
 
-- Ensure that your environment meets the {{site.prodname}} [system requirements](/{{page.version}}/getting-started/openshift/requirements).
+- Ensure that your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements).
 
-- Ensure that you have the [private registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [private registry credentials]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
 
 - **If installing on AWS**, ensure that you have [configured an AWS account](https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-account.html) appropriate for OpenShift v4,
   and have [set up your AWS credentials](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html).
@@ -55,7 +55,7 @@ Once the installer has finished, your staging directory will contain the configu
 
 #### Update the configuration file to use {{site.prodname}}
 
-Override the OpenShift networking to use Calico and update the AWS instance types to meet the [system requirements](/{{page.version}}/getting-started/openshift/requirements):
+Override the OpenShift networking to use Calico and update the AWS instance types to meet the [system requirements]({{site.baseurl}}/getting-started/openshift/requirements):
 
 ```bash
 sed -i 's/OpenShiftSDN/Calico/' install-config.yaml
@@ -150,7 +150,7 @@ openshift-install create cluster
 
 #### Create storage class
 
-{{site.prodname}} requires storage for logs and reports. Before finishing the installation, you must [create a StorageClass for {{site.prodname}}](/{{page.version}}/getting-started/create-storage).
+{{site.prodname}} requires storage for logs and reports. Before finishing the installation, you must [create a StorageClass for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
 #### Install the {{site.prodname}} license
 
@@ -187,7 +187,7 @@ oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 ### Above and beyond
 
-- [Configure access to the manager UI](/{{page.version}}/getting-started/access-the-manager)
+- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.url}}/{{page.version}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.url}}/{{page.version}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.url}}/{{page.version}}/security/kubernetes-default-deny)

@@ -10,7 +10,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 - Ensure that you have an EKS cluster without Calico installed and with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html) at least eks.2 (for aggregated API server support).
 
-- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials) and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
@@ -22,7 +22,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.](/{{page.version}}/getting-started/create-storage)
+1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -40,7 +40,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
-1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference](/{{page.version}}/reference/installation/api).
+1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```
    kubectl create -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}

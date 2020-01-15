@@ -95,7 +95,7 @@ Follow these steps to configure and produce audit logs:
 1. Start using `kubectl` (rather than calicoctl). Because compliance reports use audited data, you must use `kubectl`,
    the Kubernetes API, or the {{ site.prodname }} Manager to manage policy, tiers and host endpoints. If you use `calicoctl`
    you will not get audit logs for changes to these resources.
-1. [Configure Kubernetes audit logs](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources).
+1. [Configure Kubernetes audit logs]({{site.baseurl}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources).
 
 #### Configure report permissions
 
@@ -210,7 +210,7 @@ roleRef:
 
 #### Configure and schedule reports
 
-To configure and schedule a compliance report, create a [GlobalReport](/{{page.version}}/reference/resources/globalreport) with the following information.
+To configure and schedule a compliance report, create a [GlobalReport]({{site.baseurl}}/reference/resources/globalreport) with the following information.
 
 | **Fields**      | **Description**                                              |
 | --------------- | ------------------------------------------------------------ |
@@ -408,7 +408,7 @@ To manually run a report:
 
 ### Above and beyond
 
-- For details on configuring and scheduling reports, see [Global Reports](/{{page.version}}/reference/resources/globalreport).
-- For report field descriptions, see [Compliance Reports](/{{page.version}}/reference/compliance-reports/).
+- For details on configuring and scheduling reports, see [Global Reports]({{site.baseurl}}/reference/resources/globalreport).
+- For report field descriptions, see [Compliance Reports]({{site.baseurl}}/reference/compliance-reports/).
 
 [parse-duration]: https://golang.org/pkg/time/#ParseDuration

@@ -13,7 +13,7 @@ By default, the {{site.prodname}} manager UI uses self-signed TLS certificates o
 ### Before you begin...
 
 - **Get the certificate and key pair for the {{site.prodname}} Manager UI**
-  Generate the certificate using any X.509-compatible tool or from your organization's Certificate Authority. The certificate must have Common Name or Subject Alternate Names that match the IPs or DNS names that will be used to [access the manager UI](/{{page.version}}/getting-started/access-the-manager).
+  Generate the certificate using any X.509-compatible tool or from your organization's Certificate Authority. The certificate must have Common Name or Subject Alternate Names that match the IPs or DNS names that will be used to [access the manager UI]({{site.baseurl}}/getting-started/access-the-manager).
 
 ### How to
 
@@ -33,4 +33,4 @@ If the {{site.prodname}} Manager UI is already running then updating the secret 
 
 ### Above and beyond
 
-Additional documentation is available for securing [{{site.prodname}} manager connections](/{{page.version}}/security/comms/crypto-auth#calico-enterprise-manager-connections).
+Additional documentation is available for securing [{{site.prodname}} manager connections]({{site.baseurl}}/security/comms/crypto-auth#calico-enterprise-manager-connections).

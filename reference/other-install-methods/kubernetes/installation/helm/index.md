@@ -8,5 +8,5 @@ This article describes how to install and configure Calico Enterprise using Helm
 
 ## Next steps
 
-Consult the {{site.prodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
+Consult the {{site.prodname}} for Kubernetes [demo]({{site.baseurl}}/security/simple-policy-cnx), which
 demonstrates the main features.

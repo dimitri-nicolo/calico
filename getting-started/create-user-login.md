@@ -8,8 +8,8 @@ Configure an authentication method, create a user with access to the manager UI,
 
 ### Before you begin...
 
-Make sure you have installed {{site.prodname}} using one of the [installation guides](/{{page.version}}/getting-started/) and have setup
-[access to the Manager UI](/{{page.version}}/getting-started/access-the-manager)
+Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/) and have setup
+[access to the Manager UI]({{site.baseurl}}/getting-started/access-the-manager)
 
 ### Concepts
 

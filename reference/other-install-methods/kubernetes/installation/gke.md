@@ -49,8 +49,8 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 - Ensure your cluster has sufficient RAM to install {{site.prodname}}.  The datastore and indexing components pre-allocate significant resources.  At least 10GB is required.
 
-- Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
 
 - To follow the TLS certificate and key creation instructions below you'll need openssl.
 

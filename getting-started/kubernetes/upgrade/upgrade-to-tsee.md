@@ -15,7 +15,7 @@ release. If not, follow the {% unless old_vers contains calico_minor_version %}
 [Calico upgrade documentation](https://docs.projectcalico.org/{{ calico_minor_version }}/getting-started/kubernetes/upgrade/upgrade) before continuing.
 {% endunless %}
 
-If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide](/{{page.version}}/maintenance/kubernetes-upgrade-tsee)
+If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee)
 instead.
 
 ## Upgrading Calico to {{site.prodname}}
@@ -24,9 +24,9 @@ If you used the manifests provided on the [Calico documentation site](https://do
 to install Calico, complete the {{site.prodname}} installation procedure that
 corresponds to your Calico installation method.
 
-- [Installing {{site.prodname}} for policy and networking](/{{page.version}}/reference/other-install-methods/kubernetes/installation/calico)
+- [Installing {{site.prodname}} for policy and networking]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/calico)
 
-- [Installing {{site.prodname}} for policy](/{{page.version}}/reference/other-install-methods/kubernetes/installation/other)
+- [Installing {{site.prodname}} for policy]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/other)
 
 If you modified the manifests or used the
 [Integration Guide](https://docs.projectcalico.org/latest/getting-started/kubernetes/installation/integration)

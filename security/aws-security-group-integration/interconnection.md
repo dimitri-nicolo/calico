@@ -16,7 +16,7 @@ Adding this annotation does not remove the pod from the default pod security gro
 This allows you to establish fine-grained control over communications from pods to
 VPC members.
 
-See [Enabling pods to access VPC members](/{{page.version}}/security/aws-security-group-integration/pod-access) for more information.
+See [Enabling pods to access VPC members]({{site.baseurl}}/security/aws-security-group-integration/pod-access) for more information.
 
 
 ## Connecting VPC members to the Kubernetes cluster
@@ -31,7 +31,7 @@ security group automatically.
 
 
 See
-[Enabling VPC members to access pods](/{{page.version}}/security/aws-security-group-integration/vpc-member-access) for more information.
+[Enabling VPC members to access pods]({{site.baseurl}}/security/aws-security-group-integration/vpc-member-access) for more information.
 
 
 
