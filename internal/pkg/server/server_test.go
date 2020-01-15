@@ -821,6 +821,65 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 })
 
+var _ = Describe("Creating an HTTP server that proxies traffic", func() {
+	var k8sAPI = test.NewK8sSimpleFakeClient(nil, nil)
+	var srv *server.Server
+	var address string
+	var certFile string
+	var keyFile string
+	var listener net.Listener
+
+	JustBeforeEach(func() {
+		By("Creating a server that only serves HTTPS traffic")
+		var err error
+		listener, err = net.Listen("tcp", "localhost:0")
+		address = listener.Addr().String()
+		Expect(err).NotTo(HaveOccurred())
+
+		var opts = []server.Option{
+			server.WithDefaultAddr(address),
+			server.WithKeepAliveSettings(true, 100),
+			server.WithCredsFiles(certFile, keyFile),
+		}
+
+		srv, err = server.New(
+			k8sAPI,
+			opts...,
+		)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	JustAfterEach(func() {
+		By("Closing the server")
+		var err = srv.Close()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Context("Using self signed certs", func() {
+		BeforeEach(func() {
+			certFile = "testdata/self-signed-cert.pem"
+			keyFile = "testdata/self-signed-key.pem"
+		})
+
+		It("Does not initiate a tunnel server when the tunnel destination doesn't have tls certificates", func() {
+			var err = srv.ServeTunnelsTLS(listener)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Context("Using certs", func() {
+		BeforeEach(func() {
+			certFile = "testdata/cert.pem"
+			keyFile = "testdata/key.pem"
+		})
+
+		It("Does not initiate a tunnel server when the tunnel destination doesn't have tls certificates", func() {
+			var err = srv.ServeTunnelsTLS(listener)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+})
+
 func requestToClusterA(address string) *http.Request {
 	defer GinkgoRecover()
 	req, err := http.NewRequest("GET",

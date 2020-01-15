@@ -172,7 +172,9 @@ func (s *Server) ServeHTTPS(lis net.Listener) error {
 // Close stop the server
 func (s *Server) Close() error {
 	s.cancel()
-	s.tunSrv.Stop()
+	if s.tunSrv != nil {
+		s.tunSrv.Stop()
+	}
 	return s.http.Close()
 }
 
@@ -189,6 +191,9 @@ func (s *Server) ServeTunnels(lis net.Listener) error {
 // ServeTunnelsTLS start serving TLS secured tunnels using the provided listener and
 // the TLS configuration of the Server
 func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
+	if s.tunSrv == nil {
+		return errors.Errorf("No tunnel server was initiated")
+	}
 	err := s.tunSrv.ServeTLS(lis)
 	if err != nil {
 		return errors.WithMessage(err, "ServeTunnels")
