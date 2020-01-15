@@ -33,15 +33,3 @@ def parse_versions(versions_yml)
   end
   return versionsYml
 end
-
-
-def gen_values(vs, imageNames, imageRegistry, chart, forDocs)
-  # Use the gen_values function for this version
-  begin
-    require_relative "#{version}/values"
-  rescue LoadError
-    raise "tried to load base values for #{version} but _plugins/#{version}/values.rb does not exist"
-  end
-  gen_func_name = "gen_values_#{version.tr(".", "_")}"
-  return send(gen_func_name, vs, imageNames, imageRegistry, chart, forDocs)
-end
