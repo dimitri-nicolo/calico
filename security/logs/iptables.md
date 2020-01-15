@@ -1,6 +1,6 @@
 ---
 title: iptables logs
-canonical_url: /usage/logs/iptables
+canonical_url: /security/logs/iptables
 ---
 
 ## About iptables logs

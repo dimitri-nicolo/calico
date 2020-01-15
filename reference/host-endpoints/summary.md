@@ -1,6 +1,6 @@
 ---
 title: Summary
-canonical_url: '/getting-started/bare-metal/policy/summary'
+canonical_url: '/reference/host-endpoints/summary'
 ---
 
 

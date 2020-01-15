@@ -1,6 +1,6 @@
 ---
 title: Untracked policy
-canonical_url: '/getting-started/bare-metal/policy/donottrack'
+canonical_url: '/reference/host-endpoints/donottrack'
 ---
 
 

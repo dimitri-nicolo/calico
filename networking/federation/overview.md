@@ -1,6 +1,6 @@
 ---
 title: Overview
-canonical_url: /usage/federation/
+canonical_url: /networking/federation/
 ---
 
 ## About federation

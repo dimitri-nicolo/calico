@@ -1,6 +1,6 @@
 ---
 title: Creating policy for basic connectivity
-canonical_url: '/getting-started/bare-metal/policy/'
+canonical_url: '/reference/host-endpoints/connectivity'
 ---
 
 

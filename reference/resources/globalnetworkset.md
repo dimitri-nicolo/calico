@@ -1,6 +1,6 @@
 ---
 title: Global network set
-canonical_url: /reference/calicoctl/resources/globalnetworkset
+canonical_url: /reference/resources/globalnetworkset
 ---
 
 A global network set resource (GlobalNetworkSet) represents an arbitrary set of IP subnetworks/CIDRs,

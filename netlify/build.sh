@@ -7,10 +7,6 @@ set -e
 # - master
 # - legacy-release
 # - each archive release
-if [ -z "$DEPLOY_KEY" ]; then
-
-fi
-
 
 if [ -z "$CURRENT_RELEASE" ]; then
     echo "must set \$CURRENT_RELEASE"

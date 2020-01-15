@@ -1,6 +1,6 @@
 ---
 title: Audit logs
-canonical_url: /usage/logs/elastic/ee-audit
+canonical_url: /security/logs/elastic/ee-audit
 ---
 
 ### Default audit logs sent to Elasticsearch

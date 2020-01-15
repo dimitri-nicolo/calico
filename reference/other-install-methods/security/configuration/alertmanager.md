@@ -1,6 +1,6 @@
 ---
 title: Configuring Alertmanager
-canonical_url: /security/configuration/alertmanager
+canonical_url: /reference/other-install-methods/security/configuration/alertmanager
 ---
 
 Alertmanager is used by {{site.prodname}} to route alerts from Prometheus to the administrators.

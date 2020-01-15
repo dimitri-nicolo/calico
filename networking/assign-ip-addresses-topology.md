@@ -2,7 +2,7 @@
 title: Assign IP addresses based on topology
 Description: Configure Calico Enterprise to use specific IP pools for different topologies including zone, rack, or region. 
 redirect_from: latest/networking/assigning-ip-addresses-topology
-canonical_url: '/v2.6/networking/assign-ip-addresses-topology'
+canonical_url: '/networking/assign-ip-addresses-topology'
 ---
 
 ### Big picture

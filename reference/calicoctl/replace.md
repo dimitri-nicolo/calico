@@ -1,6 +1,6 @@
 ---
 title: calicoctl replace
-canonical_url: /reference/calicoctl/commands/replace
+canonical_url: /reference/calicoctl/replace
 ---
 
 This sections describes the `calicoctl replace` command.

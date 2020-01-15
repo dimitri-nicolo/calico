@@ -1,6 +1,6 @@
 ---
 title: Calico Enterprise for Kubernetes Demo
-canonical_url: /getting-started/cnx/simple-policy-cnx/
+canonical_url: /security/simple-policy-cnx
 ---
 
 This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.prodname}} to people already familiar with Project Calico for Kubernetes.

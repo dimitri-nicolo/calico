@@ -1,6 +1,6 @@
 ---
 title: Overview
-canonical_url: /usage/aws-security-group-integration/
+canonical_url: /security/aws-security-group-integration/
 ---
 
 

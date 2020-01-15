@@ -1,6 +1,6 @@
 ---
 title: Custom BGP Configuration
-canonical_url: /usage/custom-bgp-config
+canonical_url: /networking/custom-bgp-config
 ---
 
 ### Big picture

@@ -1,6 +1,6 @@
 ---
 title: Felix configuration
-canonical_url: /reference/calicoctl/resources/felixconfig
+canonical_url: /reference/resources/felixconfig
 ---
 
 A [Felix]({{ site.baseurl }}/reference/architecture/overview#felix) configuration resource (`FelixConfiguration`) represents Felix configuration options for the cluster.

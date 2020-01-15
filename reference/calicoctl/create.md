@@ -1,6 +1,6 @@
 ---
 title: calicoctl create
-canonical_url: /reference/calicoctl/commands/create
+canonical_url: /reference/calicoctl/create
 ---
 
 This sections describes the `calicoctl create` command.

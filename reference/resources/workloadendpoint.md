@@ -1,6 +1,6 @@
 ---
 title: Workload endpoint
-canonical_url: /reference/calicoctl/resources/workloadendpoint
+canonical_url: /reference/resources/workloadendpoint
 ---
 
 A workload endpoint resource (`WorkloadEndpoint`) represents an interface

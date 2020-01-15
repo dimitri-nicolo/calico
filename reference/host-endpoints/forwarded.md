@@ -1,6 +1,6 @@
 ---
 title: Apply on forwarded traffic
-canonical_url: '/getting-started/bare-metal/policy/forwarded'
+canonical_url: '/reference/host-endpoints/forwarded'
 ---
 
 If `applyOnForward` is `false`, the host endpoint policy applies to traffic to/from

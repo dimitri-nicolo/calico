@@ -1,6 +1,6 @@
 ---
 title: Configure Elasticsearch
-canonical_url: /usage/logs/configure-elastic
+canonical_url: /security/logs/configure-elastic
 ---
 
 {{site.prodname}} uses ElasticSearch to store and manage certain logs.

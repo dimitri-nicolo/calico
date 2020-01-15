@@ -1,6 +1,6 @@
 ---
 title: Generating certificates
-canonical_url: '/reference/advanced/etcd-rbac/certificate-generation'
+canonical_url: '/reference/etcd-rbac/certificate-generation'
 ---
 
 The etcd datastore has the concept of users that are linked to roles, where

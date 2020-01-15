@@ -1,6 +1,6 @@
 ---
 title: Decommissioning a node
-canonical_url: '/usage/decommissioning-a-node'
+canonical_url: '/maintenance/decommissioning-a-node'
 ---
 
 ### About decommissioning nodes

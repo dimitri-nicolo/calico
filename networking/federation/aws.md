@@ -1,6 +1,6 @@
 ---
 title: Example AWS configuration
-canonical_url: /usage/federation/aws
+canonical_url: /networking/federation/aws
 ---
 
 ## Overview

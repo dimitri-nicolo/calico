@@ -1,6 +1,6 @@
 ---
 title: calicoctl node checksystem
-canonical_url: /reference/calicoctl/commands/node/checksystem
+canonical_url: /reference/calicoctl/node/checksystem
 ---
 
 This section describes the `calicoctl node checksystem` command.

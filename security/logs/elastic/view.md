@@ -1,6 +1,6 @@
 ---
 title: Access logs
-canonical_url: /usage/logs/elastic/view
+canonical_url: /security/logs/elastic/view
 ---
 
 ## About accessing logs

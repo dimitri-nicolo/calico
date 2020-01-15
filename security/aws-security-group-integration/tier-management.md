@@ -1,6 +1,6 @@
 ---
 title: Manage the tiers associated with security group integration
-canonical_url: /usage/aws-security-group-integration/tier-management
+canonical_url: /security/aws-security-group-integration/tier-management
 ---
 
 

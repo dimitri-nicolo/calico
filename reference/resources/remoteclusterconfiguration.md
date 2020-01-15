@@ -1,6 +1,6 @@
 ---
 title: Remote cluster configuration
-canonical_url: /reference/calicoctl/resources/remoteclusterconfiguration
+canonical_url: /reference/resources/remoteclusterconfiguration
 ---
 
 A remote cluster configuration resource (RemoteClusterConfiguration) represents a cluster in a federation of clusters.

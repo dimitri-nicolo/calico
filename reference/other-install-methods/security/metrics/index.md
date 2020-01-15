@@ -1,6 +1,6 @@
 ---
 title: Overview
-canonical_url: /usage/metrics/
+canonical_url: /reference/other-install-methods/security/metrics/
 ---
 
 {{site.prodname}} uses a Prometheus operator to deploy a Prometheus and Alertmanager instance.

@@ -1,6 +1,6 @@
 ---
 title: Creating host endpoint objects
-canonical_url: '/getting-started/bare-metal/policy/objects'
+canonical_url: '/reference/host-endpoints/objects'
 ---
 
 

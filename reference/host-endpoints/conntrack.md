@@ -1,6 +1,6 @@
 ---
 title: Connection tracking
-canonical_url: '/getting-started/bare-metal/policy/conntrack'
+canonical_url: '/reference/host-endpoints/conntrack'
 ---
 
 

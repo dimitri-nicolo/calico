@@ -1,6 +1,6 @@
 ---
 title: Installing calicoq
-canonical_url: /usage/calicoq/
+canonical_url: /getting-started/calicoq/
 ---
 
 ## About installing calicoq

@@ -1,6 +1,6 @@
 ---
 title: Tier
-canonical_url: /reference/calicoctl/resources/tier
+canonical_url: /reference/resources/tier
 no_canonical: true
 ---
 

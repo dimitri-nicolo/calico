@@ -1,6 +1,6 @@
 ---
 title: License key
-canonical_url: /reference/calicoctl/resources/licensekey
+canonical_url: /reference/resources/licensekey
 ---
 
 A License Key resource (`LicenseKey`) represents a user's license to use {{site.prodname}}. Keys are

@@ -1,6 +1,6 @@
 ---
 title: Enabling integration with AWS security groups (optional)
-canonical_url: /getting-started/kubernetes/installation/aws-sg-integration
+canonical_url: /reference/other-install-methods/kubernetes/installation/aws-sg-integration
 ---
 
 

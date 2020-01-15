@@ -1,6 +1,6 @@
 ---
 title: Selector-based policies
-canonical_url: '/getting-started/bare-metal/policy/selector'
+canonical_url: '/reference/host-endpoints/selector'
 ---
 
 

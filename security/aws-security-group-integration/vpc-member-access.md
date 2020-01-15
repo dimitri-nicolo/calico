@@ -1,6 +1,6 @@
 ---
 title: Enable VPC members to access pods
-canonical_url: /usage/aws-security-group-integration/vpc-member-access
+canonical_url: /security/aws-security-group-integration/vpc-member-access
 ---
 
 > **Note**: For pods in the Kubernetes cluster to be available to VPC member resources those

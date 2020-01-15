@@ -1,6 +1,6 @@
 ---
 title: Configuring calicoq
-canonical_url: /usage/calicoq/configure/
+canonical_url: /getting-started/calicoq/configure/
 no_canonical: true
 ---
 

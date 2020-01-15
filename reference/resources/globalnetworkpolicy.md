@@ -1,6 +1,6 @@
 ---
 title: Global network policy
-canonical_url: /reference/calicoctl/resources/globalnetworkpolicy
+canonical_url: /reference/resources/globalnetworkpolicy
 ---
 
 A global network policy resource (`GlobalNetworkPolicy`) represents an ordered set of rules which are applied

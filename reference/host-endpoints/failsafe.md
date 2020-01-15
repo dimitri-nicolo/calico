@@ -1,6 +1,6 @@
 ---
 title: Failsafe rules
-canonical_url: '/getting-started/bare-metal/policy/failsafe'
+canonical_url: '/reference/host-endpoints/failsafe'
 ---
 
 

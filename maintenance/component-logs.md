@@ -1,6 +1,6 @@
 ---
 title: Component logs
-canonical_url: '/usage/troubleshooting/logging'
+canonical_url: '/maintenance/component-logs'
 ---
 
 ## The {{site.nodecontainer}} container

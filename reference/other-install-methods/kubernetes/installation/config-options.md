@@ -1,6 +1,6 @@
 ---
 title: Customizing the manifests
-canonical_url: /getting-started/kubernetes/installation/config-options
+canonical_url: /reference/other-install-methods/kubernetes/installation/config-options
 ---
 
 ## About customizing manifests

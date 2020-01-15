@@ -1,6 +1,6 @@
 ---
 title: Interconnect your VPC and cluster
-canonical_url: /usage/aws-security-group-integration/interconnection
+canonical_url: /security/aws-security-group-integration/interconnection
 ---
 
 

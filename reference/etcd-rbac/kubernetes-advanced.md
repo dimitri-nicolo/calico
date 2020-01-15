@@ -1,6 +1,6 @@
 ---
 title: Segmenting etcd on Kubernetes (advanced)
-canonical_url: '/reference/advanced/etcd-rbac/kubernetes-advanced'
+canonical_url: '/reference/etcd-rbac/kubernetes-advanced'
 ---
 
 This document describes advanced segmentation of the etcd roles to limit

@@ -1,6 +1,6 @@
 ---
 title: Create kubeconfig files
-canonical_url: /usage/federation/kubeconfig
+canonical_url: /networking/federation/kubeconfig
 ---
 
 Before installing {{site.prodname}}, you must complete the following steps on each cluster in the federation.

@@ -1,6 +1,6 @@
 ---
 title: Filter out flow logs
-canonical_url: /usage/logs/elastic/filtering
+canonical_url: /security/logs/elastic/filtering
 ---
 
 {{site.prodname}} supports filtering out flow logs based on user provided

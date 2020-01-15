@@ -1,6 +1,6 @@
 ---
 title: Tutorial
-canonical_url: '/getting-started/bare-metal/policy/tutorial'
+canonical_url: '/reference/host-endpoints/tutorial'
 ---
 
 Imagine that the administrator of a Kubernetes cluster wants to secure it as much as

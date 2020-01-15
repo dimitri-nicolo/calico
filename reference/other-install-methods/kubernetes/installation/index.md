@@ -1,6 +1,6 @@
 ---
 title: Installing Calico Enterprise on Kubernetes
-canonical_url: /getting-started/kubernetes/installation/
+canonical_url: /reference/other-install-methods/kubernetes/installation/
 ---
 
 We provide a number of manifests to get you up and running with {{site.prodname}} in

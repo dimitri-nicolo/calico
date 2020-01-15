@@ -3,7 +3,7 @@ title: Upgrading from Calico to Calico Enterprise
 canonical_url: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 ---
 
-{% assign calico_minor_version = site.data.versions[page.version].first["calico"].minor_version %}
+{% assign calico_minor_version = site.data.versions.first["calico"].minor_version %}
 
 ## Prerequisite
 {% assign old_vers = "v3.1,v3.2,v3.4,v3.5" | split: "," %}

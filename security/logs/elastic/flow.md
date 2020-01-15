@@ -1,6 +1,6 @@
 ---
 title: Flow logs
-canonical_url: /usage/logs/elastic/flow
+canonical_url: /security/logs/elastic/flow
 ---
 
 {{site.prodname}} pushes the following data up to Elasticsearch. The following table

@@ -1,6 +1,6 @@
 ---
 title: Calico key and path prefixes
-canonical_url: '/reference/advanced/etcd-rbac/calico-etcdv3-paths'
+canonical_url: '/reference/etcd-rbac/calico-etcdv3-paths'
 ---
 
 The paths listed here are the key or path prefixes that a particular {{site.prodname}}

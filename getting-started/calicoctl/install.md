@@ -1,6 +1,6 @@
 ---
 title: Installing calicoctl
-canonical_url: '/usage/calicoctl/install'
+canonical_url: '/getting-started/calicoctl/install'
 ---
 
 ## About installing calicoctl

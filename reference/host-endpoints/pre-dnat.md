@@ -1,6 +1,6 @@
 ---
 title: Pre-DNAT policy
-canonical_url: '/getting-started/bare-metal/policy/pre-dnat'
+canonical_url: '/reference/host-endpoints/pre-dnat'
 ---
 
 

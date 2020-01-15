@@ -1,6 +1,6 @@
 ---
 title: Configure federated services
-canonical_url: /usage/federation/services-controller
+canonical_url: /networking/federation/services-controller
 ---
 
 Federated Services is a feature that provides cross-cluster service discovery for your local cluster. It uses the

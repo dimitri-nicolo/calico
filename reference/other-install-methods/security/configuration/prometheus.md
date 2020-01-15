@@ -1,6 +1,6 @@
 ---
 title: Configuring Prometheus
-canonical_url: /security/configuration/prometheus
+canonical_url: /reference/other-install-methods/security/configuration/prometheus
 ---
 
 #### Updating Denied Packets Rules

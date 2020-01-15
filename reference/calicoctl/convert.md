@@ -1,6 +1,6 @@
 ---
 title: calicoctl convert
-canonical_url: /reference/calicoctl/commands/convert
+canonical_url: /reference/calicoctl/convert
 ---
 
 This sections describes the `calicoctl convert` command.
