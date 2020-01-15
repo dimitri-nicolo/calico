@@ -10,7 +10,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 - Ensure that you have an EKS cluster without Calico installed and with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html) at least eks.2 (for aggregated API server support).
 
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 

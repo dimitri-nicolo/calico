@@ -24,8 +24,8 @@ Install Calico Enterprise in a Docker Enterprise deployed Kubernetes cluster.
 
 #### Gather required resources
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/calico-enterprise#obtain-the-private-registry-credentials)
+  and a [license key](../../../getting-started/calico-enterprise#obtain-a-license-key).
 
 - Download and install the UCP client bundle for accessing the cluster, instructions can be
   found at [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).

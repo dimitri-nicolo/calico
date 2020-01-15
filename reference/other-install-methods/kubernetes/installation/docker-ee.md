@@ -21,8 +21,8 @@ For a test environment, a minimum of 3 nodes is required. For a production envir
 
 - Ensure that your Docker Enterprise cluster also meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements).
 
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials)
-  and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials)
+  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
 
 ## Install the Kubectl CLI Tool
 Install the Kubernetes command-line tool, kubectl, to deploy and manage applications on Kubernetes.

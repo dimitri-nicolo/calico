@@ -21,7 +21,7 @@ An **image pull secret** is used in Kubernetes to deploy container images from a
 ### Before you begin...
 
 - Configure pull access to your private registry
-- [Configure pull access to Tigera's private container registry]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials).
+- [Configure pull access to Tigera's private container registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials).
 
 ### How to
 

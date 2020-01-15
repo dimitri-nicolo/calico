@@ -1,6 +1,6 @@
 ## Installing {{include.cli}} as a container on a single host
 
-1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials).
+1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials).
 
 1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
 

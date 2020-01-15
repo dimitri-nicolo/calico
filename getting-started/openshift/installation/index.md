@@ -17,8 +17,8 @@ to install {{site.prodname}}.
 
 - Ensure that your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements).
 
-- Ensure that you have the [private registry credentials]({{site.baseurl}}/getting-started/#obtain-the-private-registry-credentials)
-  and a [license key]({{site.baseurl}}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [private registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials)
+  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
 
 - **If installing on AWS**, ensure that you have [configured an AWS account](https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-account.html) appropriate for OpenShift v4,
   and have [set up your AWS credentials](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html).
