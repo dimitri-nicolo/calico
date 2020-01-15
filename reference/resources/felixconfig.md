@@ -10,7 +10,7 @@ aliases are supported (all case insensitive): `felixconfiguration`, `felixconfig
 
 This resource is not supported in `kubectl`.
 
-See [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration) for more details.
+See [Configuring Felix]({{site.baseurl}}/reference/felix/configuration) for more details.
 
 ### Sample YAML
 
@@ -100,7 +100,7 @@ spec:
 | flowLogsFileIncludeLabels | When set to `true`, include source and destination endpoint labels in the aggregated flow log. Note that only Kubernetes endpoints or network sets are included; arbitrary networks do not contain labels. | `true`, `false` | boolean | `false` |
 | flowLogsFileIncludePolicies | When set to `true`, include all policies in the aggregated flow logs that acted upon and matches the flow log traffic. | `true`, `false` | boolean | `false` |
 | flowLogsEnableNetworkSets | When set to `true`, include an arbitrary network set in the aggregated flow log that matches the IP address of the flow log endpoint. | `true`, `false` | boolean | `false` |
-| sidecarAccelerationEnabled         | Enable experimental acceleration between application and proxy sidecar when using [application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy). [Default: `false`] | `true`, `false` | boolean | `false` |
+| sidecarAccelerationEnabled         | Enable experimental acceleration between application and proxy sidecar when using [application layer policy]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy). [Default: `false`] | `true`, `false` | boolean | `false` |
 | vxlanEnabled                       | Automatically set when needed, you shouldn't need to change this setting: whether Felix should create the VXLAN tunnel device for VXLAN networking. | `true`, `false` | boolean | `false` |
 | vxlanMTU                           | MTU to use for the VXLAN tunnel device. | int | int | `1410` |
 | vxlanPort                          | Port to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4789` |

@@ -12,7 +12,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 - Ensure that you have the [credentials for the Tigera private registry](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials) and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
 ### How to
 

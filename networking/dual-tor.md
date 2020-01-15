@@ -207,15 +207,15 @@ other plane.
 #### Install Kubernetes and {{site.prodname}}
 
 Now you can follow your preferred method for deploying Kubernetes, and [our documentation
-for installing {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started).
+for installing {{site.prodname}}]({{site.baseurl}}/getting-started).
 
 > **Note**: {{site.prodname}} installs by default with
-> [IP-in-IP]({{site.baseurl}}/{{page.version}}/networking/vxlan-ipip) enabled, but for
+> [IP-in-IP]({{site.baseurl}}/networking/vxlan-ipip) enabled, but for
 > on-prem deployments as imagined here IP-in-IP is not needed and should be disabled.
 > With our [operator-based
-> install]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes), you can do that
+> install]({{site.baseurl}}/getting-started/kubernetes), you can do that
 > by setting `encapsulation: None`; see the [install
-> reference]({{site.baseurl}}/{{page.version}}/reference/installation/api) for details.
+> reference]({{site.baseurl}}/reference/installation/api) for details.
 {: .alert .alert-info}
 
 When you reach the point of configuring a Tigera-specific resource - typically, the
@@ -288,7 +288,7 @@ resource.  The following settings are recommended for dual ToR configurations.
 To do that, you will need to:
 
 1. Install and configure
-   [calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
+   [calicoctl]({{site.baseurl}}/getting-started/calicoctl/install).
 
 2. Set the correct AS number on each {{site.prodname}} node.
 
@@ -299,7 +299,7 @@ To do that, you will need to:
 
 Your details will be deployment-specific, but here we show those steps for our example
 cluster and addressing scheme, following an [AS per
-rack]({{site.baseurl}}/{{page.version}}/reference/architecture/design/l3-interconnect-fabric#the-as-per-rack-model)
+rack]({{site.baseurl}}/reference/architecture/design/l3-interconnect-fabric#the-as-per-rack-model)
 model with AS 65001 for the first rack, 65002 for the second, and so on.
 
 To set the correct AS number of each {{site.prodname}} node:

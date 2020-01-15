@@ -10,7 +10,7 @@ Install {{site.prodname}} on a GKE managed Kubernetes cluster.
 
 - [Create a compatible GKE cluster](#create-a-compatible-gke-cluster)
 - [Gather the necessary resources](#gather-required-resources)
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
 #### Create a compatible GKE cluster
 

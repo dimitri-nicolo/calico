@@ -4,21 +4,21 @@ title: Staged Network policy
 
 A staged network policy resource (`StagedNetworkPolicy`) represents an ordered set of rules which are applied
 to a collection of endpoints that match a [label selector](#selector). These rules are used to preview network behavior and do
-not to enforce network traffic. For enforcing network traffic, see [network policy resource]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy).
+not to enforce network traffic. For enforcing network traffic, see [network policy resource]({{site.baseurl}}/reference/resources/networkpolicy).
 
 `StagedNetworkPolicy` is a namespaced resource. `StagedNetworkPolicy` in a specific namespace
-only applies to [workload endpoint resources]({{site.baseurl}}/{{page.version}}/reference/resources/workloadendpoint)
+only applies to [workload endpoint resources]({{site.baseurl}}/reference/resources/workloadendpoint)
 in that namespace. Two resources are in the same namespace if the `namespace`
 value is set the same on both.
-See [staged global network policy resource]({{site.baseurl}}/{{page.version}}/reference/resources/stagedglobalnetworkpolicy) for staged non-namespaced network policy.
+See [staged global network policy resource]({{site.baseurl}}/reference/resources/stagedglobalnetworkpolicy) for staged non-namespaced network policy.
 
 `StagedNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
-take precedence over [profile resources]({{site.baseurl}}/{{page.version}}/reference/resources/profile) if any are defined.
+take precedence over [profile resources]({{site.baseurl}}/reference/resources/profile) if any are defined.
 
-StagedNetworkPolicies are organized into [tiers]({{site.baseurl}}/{{page.version}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
-next [tier]({{site.baseurl}}/{{page.version}}/reference/resources/tier), to enable hierarchical security policy.
+StagedNetworkPolicies are organized into [tiers]({{site.baseurl}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+next [tier]({{site.baseurl}}/reference/resources/tier), to enable hierarchical security policy.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `stagednetworkpolicy`, `stagednetworkpolicies`, `stagedpolicy`, `snp`, `stagedpolicies`, `spol`, `spols`.
 
@@ -71,7 +71,7 @@ spec:
 | Field    | Description                                                                                         | Accepted Values | Schema                | Default |
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order    | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first. |                 | float                 |         |
-| tier     | Name of the [tier]({{site.baseurl}}/{{page.version}}/reference/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
+| tier     | Name of the [tier]({{site.baseurl}}/reference/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector | Selects the endpoints to which this policy applies.                                                 |                 | [selector](#selector) | all()   |
 | types    | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress` | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress  | Ordered list of ingress rules applied by policy.                                                    |                 | List of [Rule](#rule) |         |
@@ -115,7 +115,7 @@ spec:
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.

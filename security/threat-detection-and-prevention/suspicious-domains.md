@@ -113,4 +113,4 @@ Use the push method if your threat feeds that are not in newline-delimited forma
 
 ### Above and beyond
 
-See [GlobalThreatFeed]({{site.baseurl}}/{{page.version}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
+See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.

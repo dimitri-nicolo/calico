@@ -25,7 +25,7 @@ Privileges to manage GlobalAlert
 
 **Recommended**
 
-We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, {{site.prodname}} aggregates over the external IPs for allowed traffic, and alerts will not provide pod-specific results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**.
+We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, {{site.prodname}} aggregates over the external IPs for allowed traffic, and alerts will not provide pod-specific results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/reference/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**.
 
 ### How To
 
@@ -107,8 +107,8 @@ spec:
 
 ### Above and beyond
 
-For all global alert options, see [GlobalAlert]({{site.baseurl}}/{{page.version}}/reference/resources/globalalert)
-To troubleshoot alerts, see [Troubleshooting]({{site.baseurl}}/{{page.version}}/maintenance/troubleshooting)
+For all global alert options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
+To troubleshoot alerts, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshooting)
 
 [flow]: ../logs/elastic/flow
 [dns]: ../logs/elastic/dns

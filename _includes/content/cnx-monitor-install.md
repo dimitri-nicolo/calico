@@ -333,9 +333,9 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 1. Optionally enable either or both of the following:
    * To enforce application layer policies and secure workload-to-workload
     communications with mutually-authenticated TLS, continue to
-    [Enabling application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
+    [Enabling application layer policy]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy).
 
    * If you are using the AWS CNI plugin and want to enforce granular access
     control between pods and AWS VPC resources, continue to
-    [Enabling integration with AWS security groups]({{site.baseurl}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration).
+    [Enabling integration with AWS security groups]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration).
 {% endif %}

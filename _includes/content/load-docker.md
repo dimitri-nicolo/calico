@@ -128,7 +128,7 @@
      ```
 
      > **Note**: You can also
-     > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}.
+     > [view the YAML in a new tab]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}.
      {: .alert .alert-info}
 
    - **Kubernetes API datastore**
@@ -139,7 +139,7 @@
      ```
 
      > **Note**: You can also
-     > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
+     > [view the YAML in a new tab]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
      {: .alert .alert-info}
 
 {% include content/cnx-cred-sed.md yaml=include.yaml %}

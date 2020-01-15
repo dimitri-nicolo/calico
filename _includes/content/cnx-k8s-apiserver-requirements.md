@@ -6,7 +6,7 @@ for details.
 
 #### Authentication method configured
 
-[Select a supported authentication method]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication)
+[Select a supported authentication method]({{site.baseurl}}/reference/cnx/authentication)
 and [configure kube-apiserver](https://kubernetes.io/docs/admin/authentication/) accordingly.
   
 #### TLS communications enabled

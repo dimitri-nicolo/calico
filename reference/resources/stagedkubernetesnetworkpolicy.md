@@ -6,9 +6,9 @@ A staged kubernetes network policy resource (`StagedKubernetesNetworkPolicy`) re
 of [Kubernetes network policy](https://kubernetes.io/docs/concepts/services-networking/network-policies).
 This is used to preview network behavior before actually enforcing the network policy. Once persisted, this
 will create a Kubernetes network policy backed by a {{site.prodname}}
-[network policy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy).
+[network policy]({{site.baseurl}}/reference/resources/networkpolicy).
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `stagedkubernetesnetworkpolicy`, `stagedkubernetesnetworkpolicies`, `stagedkubernetespolicy`, `sknp`, `stagedkubernetespolicies`, `skpol`, `skpols`.
 

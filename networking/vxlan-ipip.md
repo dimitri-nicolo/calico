@@ -120,4 +120,4 @@ spec:
 
 ### Above and beyond
 
-For details on IP pool resource options, see [IP pool]({{site.baseurl}}/{{page.version}}/reference/resources/ippool).
+For details on IP pool resource options, see [IP pool]({{site.baseurl}}/reference/resources/ippool).

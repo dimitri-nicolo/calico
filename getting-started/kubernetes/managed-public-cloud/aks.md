@@ -11,7 +11,7 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 - [Create a compatible AKS cluster](#create-a-compatible-aks-cluster)
 - [Gather the necessary resources](#gather-required-resources)
 - [Enable transparent mode](#enable-transparent-mode)
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/{{page.version}}/getting-started/private-registry).
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
 #### Create a compatible AKS cluster
 

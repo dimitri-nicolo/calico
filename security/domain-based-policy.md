@@ -165,10 +165,10 @@ spec:
 
 ### Above and beyond
 
-To change the default DNS trusted servers, use the [DNSTrustedServers parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
+To change the default DNS trusted servers, use the [DNSTrustedServers parameter]({{site.baseurl}}/reference/felix/configuration).
 
 For more detail about the relevant resources, see
-[GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset),
-[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+[GlobalNetworkSet]({{site.baseurl}}/reference/resources/globalnetworkset),
+[GlobalNetworkPolicy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
 and
-[NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy).
+[NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy).

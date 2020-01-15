@@ -36,7 +36,7 @@ Privileges to manage GlobalThreatFeed and GlobalNetworkPolicy.
 
 #### Recommended
 
-We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Calico Enterprise aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**.
+We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Calico Enterprise aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/reference/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**.
 
 ### How to
 
@@ -181,7 +181,7 @@ If you haven’t already adjusted your [aggregation flows](#before-you-begin), w
          url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
    ```
 
-   This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/resources/globalthreatfeed) for all configuration options.
+   This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/reference/resources/globalthreatfeed) for all configuration options.
 
 2. Add the feed to your cluster.
 
@@ -312,4 +312,4 @@ We will verify the policy from the test workload that we created earlier.
 
 ### Above and beyond
 
-See [GlobalThreatFeed]({{site.baseurl}}/{{page.version}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
+See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.

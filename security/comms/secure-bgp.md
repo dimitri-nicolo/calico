@@ -115,7 +115,7 @@ EOF
 
 #### Specify secret and key name on the BGPPeer resource
 
-Then, when [configuring a BGP peer]({{site.baseurl}}/{{page.version}}/networking/bgp),
+Then, when [configuring a BGP peer]({{site.baseurl}}/networking/bgp),
 include the secret and key name in the specification of the BGPPeer resource, like this:
 
 ```
@@ -135,7 +135,7 @@ spec:
 ### Above and beyond
 
 For more detail about the BGPPeer resource, see
-[BGPPeer]({{site.baseurl}}/{{page.version}}/reference/resources/bgppeer).
+[BGPPeer]({{site.baseurl}}/reference/resources/bgppeer).
 
 For more on configuring BGP peers, see [configuring BGP
-peers]({{site.baseurl}}/{{page.version}}/networking/bgp).
+peers]({{site.baseurl}}/networking/bgp).
