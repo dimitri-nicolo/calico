@@ -15,6 +15,10 @@ By default, the manager UI is not exposed outside of the cluster. This article e
 
 Make sure you have installed {{site.prodname}} using one of the [installation guides](/{{page.version}}/getting-started/).
 
+{: .alert .alert-info}
+
+These instructions only apply to the operator-based installation of {{site.prodname}}.
+
 ### How to
 
 Choose one of the following methods for accessing the manager UI:
