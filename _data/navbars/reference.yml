@@ -173,8 +173,8 @@ section:
       path: /reference/cnx/policy-editor
     - title: Deploying Calico Enterprise Manager
       path: /reference/cnx/recommendations
-- title: REST API Reference
-  path: /reference/cnx/apidocs
+# - title: REST API Reference
+#   path: /reference/cnx/apidocs
 - title: Configuration on public clouds
   path: /reference/public-cloud/
   section:
