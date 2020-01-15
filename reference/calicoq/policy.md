@@ -109,8 +109,8 @@ Policy "namespace1/policy1" applies to these endpoints:
 
 ## See also
 
--  [calicoq eval]({{site.url}}/{{page.version}}/reference/calicoq/eval) for
+-  [calicoq eval]({{site.baseurl}}/reference/calicoq/eval) for
    more detail about the related `calico eval` command.
--  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and
-   [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+-  [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy) and
+   [GlobalNetworkPolicy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
    for more information about the {{site.prodname}} selector-based policy model.

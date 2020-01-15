@@ -9,7 +9,7 @@ Ensure that your Kubernetes cluster is already running version 2.3 of {{site.pro
 earlier than 2.3, [first upgrade to 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee), then follow these instructions
 to upgrade to {{page.version}}.
 
-If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide]({{site.url}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
+If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide]({{site.baseurl}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
 instead.
 
 ## Upgrading to {{page.version}} {{site.prodname}}

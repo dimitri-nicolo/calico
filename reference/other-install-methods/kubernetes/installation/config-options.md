@@ -38,18 +38,18 @@ The sections that follow discuss the configurable parameters in greater depth.
 
 ### Configuring the pod IP range
 
-{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.url}}/{{page.version}}/reference/resources/ippool).
+{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.baseurl}}/reference/resources/ippool).
 
 To change the default IP range used for pods, modify the `CALICO_IPV4POOL_CIDR`
 section of the `calico.yaml` manifest.  For more information, see
-[Configuring {{site.nodecontainer}}]({{site.url}}/{{page.version}}/reference/node/configuration).
+[Configuring {{site.nodecontainer}}]({{site.baseurl}}/reference/node/configuration).
 
 ### Configuring IP-in-IP
 
 By default, the manifests enable IP-in-IP encapsulation across subnets. Many users may
 want to disable IP-in-IP encapsulation, such as under the following circumstances.
 
-- Their cluster is [running in a properly configured AWS VPC]({{site.url}}/{{page.version}}/reference/public-cloud/aws).
+- Their cluster is [running in a properly configured AWS VPC]({{site.baseurl}}/reference/public-cloud/aws).
 - All their Kubernetes nodes are connected to the same layer 2 network.
 - They intend to use BGP peering to make their underlying infrastructure aware of
   pod IP addresses.

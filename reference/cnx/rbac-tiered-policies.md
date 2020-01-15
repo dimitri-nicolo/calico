@@ -84,9 +84,9 @@ a user using the UI.
 
 ### Associating a resource with a tier
 
-For details on creating a [tier]({{site.url}}/{{page.version}}/reference/resources/tier)
+For details on creating a [tier]({{site.baseurl}}/reference/resources/tier)
 resource and adding a Global/NetworkPolicy to that tier, refer to the
-[Tiered Policy Demo]({{site.url}}/{{page.version}}/security/tiered-policy).
+[Tiered Policy Demo]({{site.baseurl}}/security/tiered-policy).
 
 ### Permissions required for {{site.prodname}} UI
 

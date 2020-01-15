@@ -3,7 +3,7 @@ title: DNS logs
 canonical_url: /security/logs/elastic/dns
 ---
 
-{{site.prodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.url}}/{{page.version}}/security/domain-based-policy#trusted-dns-servers). The following table
+{{site.prodname}} pushes DNS activity logs to Elasticsearch, for DNS information that is obtained from [trusted DNS servers]({{site.baseurl}}/security/domain-based-policy#trusted-dns-servers). The following table
 details the key/value pairs in the JSON blob, including their
 [Elasticsearch datatype](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html).
 This information should assist you in constructing queries.
@@ -12,8 +12,8 @@ This information should assist you in constructing queries.
 | --------------------- | ----------------- | ----------- |
 | `start_time`          | date              | When the collection of the log began in UNIX timestamp format. |
 | `end_time`            | date              | When the collection of the log concluded in UNIX timestamp format. |
-| `type`                | keyword           | This field contains one of the following values:<br>&#x25cf;&nbsp;<code>LOG</code>: Indicates that this is a normal DNS activity log.<br>&#x25cf;&nbsp;<code>UNLOGGED</code>: Indicates that this log is reporting DNS activity that could not be logged in detail because of [DNSLogsFilePerNodeLimit]({{site.url}}/{{page.version}}/reference/resources/felixconfig#spec). |
-| `count`               | long              | When `type` is:<br>&#x25cf;&nbsp;<code>LOG</code>: How many DNS lookups there were, during the log collection interval, with details matching this log.<br>&#x25cf;&nbsp;<code>UNLOGGED</code>: The number of DNS responses that could not be logged in detail because of [DNSLogsFilePerNodeLimit]({{site.url}}/{{page.version}}/reference/resources/felixconfig#spec).  In this case none of the following fields are provided. |
+| `type`                | keyword           | This field contains one of the following values:<br>&#x25cf;&nbsp;<code>LOG</code>: Indicates that this is a normal DNS activity log.<br>&#x25cf;&nbsp;<code>UNLOGGED</code>: Indicates that this log is reporting DNS activity that could not be logged in detail because of [DNSLogsFilePerNodeLimit]({{site.baseurl}}/reference/resources/felixconfig#spec). |
+| `count`               | long              | When `type` is:<br>&#x25cf;&nbsp;<code>LOG</code>: How many DNS lookups there were, during the log collection interval, with details matching this log.<br>&#x25cf;&nbsp;<code>UNLOGGED</code>: The number of DNS responses that could not be logged in detail because of [DNSLogsFilePerNodeLimit]({{site.baseurl}}/reference/resources/felixconfig#spec).  In this case none of the following fields are provided. |
 | `client_ip`           | ip                | The IP address of the client pod. A null value indicates aggregation. |
 | `client_name`         | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the client pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated. Check <code>client_name_aggr</code> for the pod name prefix.</p>{:/} |
 | `client_name_aggr`    | keyword           | The aggregated name of the client pod. |

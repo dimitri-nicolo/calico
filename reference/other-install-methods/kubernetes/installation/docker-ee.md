@@ -156,7 +156,7 @@ kubectl get pods --all-namespaces
     > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
     > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
     > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-    > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+    > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/reference/cnx/rbac-tiered-policies) documentation
     > for more details.
     {: .alert .alert-info}
 
@@ -175,7 +175,7 @@ kubectl get pods --all-namespaces
 
     - Edit the cnx.yaml file and modify the `ConfigMap` named `tigera-cnx-manager-config`
       by setting the value of `tigera.cnx-manager.authentication-type` to `Token`.
-      Refer to [Bearer tokens]({{site.url}}/{{page.version}}/reference/cnx/authentication#bearer-tokens)
+      Refer to [Bearer tokens]({{site.baseurl}}/reference/cnx/authentication#bearer-tokens)
       for more information. Also refer to Kubernetes' [Putting a bearer token in a request](https://kubernetes.io/docs/admin/authentication/#putting-a-bearer-token-in-a-request){:target="_blank"}
       for further details.<br>
 
@@ -205,7 +205,7 @@ kubectl get pods --all-namespaces
 
      > **Note**: Web browsers will warn end users about self-signed certificates.
      > To stop the warnings by using valid certificates
-     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
+     > instead, refer to [{{site.prodname}} Manager connections]({{site.baseurl}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
 1. Apply the manifest to install the {{site.prodname}} Manager.

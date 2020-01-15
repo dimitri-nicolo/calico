@@ -133,4 +133,4 @@ Description:
 -  [Installing calicoctl]({{ site.baseurl }}/getting-started/calicoctl/install)
 -  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

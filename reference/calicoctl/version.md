@@ -40,4 +40,4 @@ Use `calicoctl version` to obtain the following data.
 
 ## See also
 
--  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install).
+-  [Installing calicoctl]({{site.baseurl}}/getting-started/calicoctl/install).

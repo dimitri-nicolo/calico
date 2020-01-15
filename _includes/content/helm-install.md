@@ -2,9 +2,9 @@
 
 Ensure that you have the following:
 
-- [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials), (`config.json`)
+- [credentials for the Tigera private registry]({{ site.baseurl }}/getting-started/calico-enterprise#obtain-the-private-registry-credentials), (`config.json`)
 
-- A [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key) (`license.yaml`)
+- A [license key]({{ site.baseurl }}/getting-started/calico-enterprise#obtain-a-license-key) (`license.yaml`)
 
 {%- if include.method == "full" %}
 
@@ -143,7 +143,7 @@ initialPool:
   cidr: 10.0.0.0/8
 ```
 
->**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/migrate-pools)
+>**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.baseurl}}/networking/migrate-pools)
 {: .alert .alert-warning}
 
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
@@ -236,7 +236,7 @@ manager:
    kubectl apply -f {{ "/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml" | absolute_url }}
    ```
 
-   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
+   >[Click to view this manifest directly]({{ site.baseurl }}/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml)
 
 1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 

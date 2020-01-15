@@ -188,7 +188,7 @@ To set the autodetection method for IPv6, use the `--ip6-autodetection-method` o
 > **Note**: If you are starting the `{{site.nodecontainer}}` container directly (and not using the
 > `calicoctl run` helper command), the options are passed in environment
 > variables. These are described in
-> [Configuring `{{site.nodecontainer}}`]({{site.url}}/{{page.version}}/reference/node/configuration).
+> [Configuring `{{site.nodecontainer}}`]({{site.baseurl}}/reference/node/configuration).
 {: .alert .alert-info}
 
 **first-found**
@@ -366,4 +366,4 @@ terminating `,` character does not need to be specified for those cases.
 -  [Installing calicoctl]({{ site.baseurl }}/getting-started/calicoctl/install)
 -  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
--  [Policy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [Policy]({{site.baseurl}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

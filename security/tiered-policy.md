@@ -18,7 +18,7 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [{{site.prodname}}]({{site.url}}/{{page.version}}/getting-started/)
+- A Kubernetes cluster configured with [{{site.prodname}}]({{site.baseurl}}/getting-started/)
 - [calicoctl installed and set up]({{site.baseurl}}/getting-started/calicoctl/configure/) to work properly with your cluster
 - [calicoq installed and set up]({{site.baseurl}}/reference/calicoq/) to work with your cluster
 
@@ -265,7 +265,7 @@ Notice that the order value of the netops tier is lower than the value of the
 a higher precedence.
 
 > **Note**: Read more about order values in the
-> [calicoctl reference section]({{site.url}}/{{page.version}}/reference/calicoctl/).
+> [calicoctl reference section]({{site.baseurl}}/reference/calicoctl/).
 {: .alert .alert-info}
 
 Launch a pod in the `policy-demo` Namespace to test DNS connectivity to 8.8.8.8 .

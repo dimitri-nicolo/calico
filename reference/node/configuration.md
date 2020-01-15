@@ -89,7 +89,7 @@ The IP (for IPv4) and IP6 (for IPv6) environment variables are used to set,
 force autodetection, or disable auto detection of the address for the
 appropriate IP version for the node. When the environment variable is set,
 the address is saved in the
-[node resource configuration]({{site.url}}/{{page.version}}/reference/resources/node)
+[node resource configuration]({{site.baseurl}}/reference/resources/node)
 for this host, overriding any previously configured value.
 
 #### IP setting special case values

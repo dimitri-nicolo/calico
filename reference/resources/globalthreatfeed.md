@@ -16,7 +16,7 @@ allowing you to use them as a dynamically-updating blacklist by incorporating th
 
 For each DomainNameSet threat feed, {{site.prodname}} automatically monitors DNS logs for queries (QNAME) or answers (RR NAME or RDATA) that contain members of the set.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `globalthreatfeed`, `globalthreatfeeds`.
 

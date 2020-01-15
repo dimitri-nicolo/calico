@@ -104,8 +104,8 @@ Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
 
 ## See also
 
--  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and
-   [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+-  [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy) and
+   [GlobalNetworkPolicy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
    for more information about the {{site.prodname}} policy model.
--  [Untracked policy]({{site.url}}/{{page.version}}/reference/host-endpoints/) for
+-  [Untracked policy]({{site.baseurl}}/reference/host-endpoints/) for
    more information about untracked policy.

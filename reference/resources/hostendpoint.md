@@ -17,12 +17,12 @@ interfaces.
 
 Each host endpoint may include a set of labels and list of profiles that {{site.prodname}}
 will use to apply
-[policy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy)
+[policy]({{site.baseurl}}/reference/resources/networkpolicy)
 to the interface.  If no profiles or labels are applied, {{site.prodname}} will not apply
 any policy.
 
 > **Note**: Currently, for host endpoints with `interfaceName: *`, only [pre-DNAT
-> policy]({{site.url}}/{{page.version}}/reference/host-endpoints/pre-dnat) is
+> policy]({{site.baseurl}}/reference/host-endpoints/pre-dnat) is
 > implemented.
 {: .alert .alert-info}
 

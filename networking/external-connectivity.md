@@ -67,7 +67,7 @@ container hosts.
 
 ![hosts-on-layer-2-network]({{site.url}}/images/hosts-on-layer-2-network.png)
 
-See the [BGP peering document]({{site.url}}/{{page.version}}/networking/bgp)
+See the [BGP peering document]({{site.baseurl}}/networking/bgp)
 for information on how to set up the `{{site.nodecontainer}}` sides of the sessions.
 Consult the documentation for your BGP capable switch/router to set up the
 switch sides of the sessions.
@@ -84,4 +84,4 @@ to discuss your environment.
 {{site.prodname}} supports a number of orchestrator specific options for inbound
 connectivity, such as Kubernetes service IPs.
 
-Consult the [documentation for your orchestrator]({{site.url}}/{{page.version}}/getting-started/) for more information.
+Consult the [documentation for your orchestrator]({{site.baseurl}}/getting-started/) for more information.

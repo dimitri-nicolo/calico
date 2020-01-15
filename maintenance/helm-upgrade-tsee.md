@@ -27,7 +27,7 @@ steps to upgrade.
 > your cluster.
 >
 > **Note**: For additional helm documentation, please refer to our
-> [**helm installation docs**]({{site.url}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/helm/).
+> [**helm installation docs**]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/helm/).
 {: .alert .alert-info}
 
 1. Find the helm installation names. We will use these names in the following

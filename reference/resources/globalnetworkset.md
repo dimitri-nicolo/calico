@@ -20,7 +20,7 @@ Allow.
 
 The metadata for each network set includes a set of labels.  When {{site.prodname}} is calculating the set of
 IPs that should match a source/destination selector within a
-[global network policy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy) rule, it includes
+[global network policy]({{site.baseurl}}/reference/resources/globalnetworkpolicy) rule, it includes
 the CIDRs from any network sets that match the selector.
 
 > **Important**: Since {{site.prodname}} matches packets based on their source/destination IP addresses,
@@ -30,7 +30,7 @@ the CIDRs from any network sets that match the selector.
 > policy will see the kube-proxy's host's IP as the source instead of the real source.
 {: .alert .alert-danger}
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `globalnetworkset`, `globalnetworksets`.
 

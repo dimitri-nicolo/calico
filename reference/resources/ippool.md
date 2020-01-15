@@ -60,7 +60,7 @@ subnet. The subnet of each node is configured on the node resource (which may be
 determined when running the `{{site.nodecontainer}}` service).
 
 For details on configuring IP-in-IP on your deployment, please refer to
-[Configuring IP-in-IP]({{site.url}}/{{page.version}}/networking/vxlan-ipip).
+[Configuring IP-in-IP]({{site.baseurl}}/networking/vxlan-ipip).
 
 > **Note**: Setting `natOutgoing` is recommended on any IP Pool with `ipip` enabled.
 When `ipip` is enabled without `natOutgoing` routing between Workloads and

@@ -16,13 +16,13 @@ Your Kubernetes cluster must meet the following specifications:
 - Exists within a single VPC.
 - The Kubernetes AWS cloud provider is enabled.
 - Networking provider is
-  [Amazon VPC Networking]({{site.url}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
+  [Amazon VPC Networking]({{site.baseurl}}/reference/public-cloud/aws#using-aws-networking).
   (You must be using the [AWS CNI Plugin](https://github.com/aws/amazon-vpc-cni-k8s).)
 - You have already installed
-  [Calico Enterprise for policy]({{site.url}}/{{page.version}}/reference/other-install-methods/kubernetes/installation/other#installing-calico-enterprise-for-policy-only)
+  [Calico Enterprise for policy]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/other#installing-calico-enterprise-for-policy-only)
   on your cluster. The AWS security group integration requires the Kubernetes API datastore.
 - You have not created any
-  [host endpoints]({{site.url}}/{{page.version}}/reference/resources/hostendpoint)
+  [host endpoints]({{site.baseurl}}/reference/resources/hostendpoint)
   that have a `spec.node` value that matches any of your Kubernetes nodes. See the [AWS security group integration guide]({{site.baseurl}}/security/aws-security-group-integration/host-endpoints) for more information.
 
 
@@ -253,7 +253,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
    * Directly update the DaemonSet using the following command:
      `kubectl -n kube-system edit daemonset calico-node`
 
-   > **Note:** See [Configuring Felix]({{site.url}}/{{page.version}}/reference/felix/configuration)
+   > **Note:** See [Configuring Felix]({{site.baseurl}}/reference/felix/configuration)
    > for more information on the configuration options.
    {: .alert .alert-info}
 

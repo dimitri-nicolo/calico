@@ -14,7 +14,7 @@ satisfy a condition.
  * [DNS logs]
  * [Flow logs]
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 can be used to specify the resource type on the CLI:
 `globalalert`, `globalalerts`.
 

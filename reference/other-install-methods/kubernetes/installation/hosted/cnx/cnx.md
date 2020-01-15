@@ -105,7 +105,7 @@ spec:
 The **[cnx.yaml]({{site.baseurl}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
-are described [here]({{site.url}}/{{page.version}}/reference/cnx/authentication).
+are described [here]({{site.baseurl}}/reference/cnx/authentication).
 
 1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field
    in the `tigera-cnx-manager-config` ConfigMap.

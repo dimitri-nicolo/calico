@@ -84,4 +84,4 @@ An endpoints CSV file that includes per-endpoint information.
    If you want per-endpoint detail you should turn down the level of aggregation.  To do so,
    set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConfiguration][felixconfig]
 
-[felixconfig]: /{{page.version}}/reference/resources/felixconfig
+[felixconfig]: {{ site.baseurl }}/reference/resources/felixconfig

@@ -28,9 +28,9 @@ Customization of BGP templates should be done only with the help of your Tigera 
 Using the directions provided with the templates, set the correct values 
 for the BGP configuration using these resources:
 
-- [BGP Configuration]({{site.url}}/{{page.version}}/reference/resources/bgpconfig)
-- [BGP Peer]({{site.url}}/{{page.version}}/reference/resources/bgppeer)
-- [calicoctl]({{site.url}}/{{page.version}}/reference/calicoctl)
+- [BGP Configuration]({{site.baseurl}}/reference/resources/bgpconfig)
+- [BGP Peer]({{site.baseurl}}/reference/resources/bgppeer)
+- [calicoctl]({{site.baseurl}}/reference/calicoctl)
 
 #### Tigera operator
 

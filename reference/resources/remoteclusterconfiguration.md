@@ -19,9 +19,9 @@ allow access to these resources.
 
 For more details on the federation feature refer to the [Overview]({{site.baseurl}}/networking/federation).
 
-The meaning of the fields matches the configuration used for configuring `calicoctl`, see the [etcd]({{site.url}}/{{page.version}}/getting-started/calicoctl/configure/etcd) and [kubernetes]({{site.url}}/{{page.version}}/getting-started/calicoctl/configure/kdd) instructions for more details.
+The meaning of the fields matches the configuration used for configuring `calicoctl`, see the [etcd]({{site.baseurl}}/getting-started/calicoctl/configure/etcd) and [kubernetes]({{site.baseurl}}/getting-started/calicoctl/configure/kdd) instructions for more details.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `remoteclusterconfiguration`, `remoteclusterconfigurations`, `remoteclusterconfig`,
 `remoteclusterconfigs`, `rcc`.

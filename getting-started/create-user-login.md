@@ -30,7 +30,7 @@ Users must have appropriate RBAC to access resources in the UI. We provide the f
 - **tigera-ui-user**: Allows basic UI access.
 - **tigera-network-admin**: Allows UI access, plus the ability to create and modify resources, view compliance reports, and more.
 
-If you would like additional roles, see this [document]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions).
+If you would like additional roles, see this [document]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions).
 
 ### How to
 
@@ -45,7 +45,7 @@ If you would like additional roles, see this [document]({{site.url}}/{{page.vers
 
 #### Configure the Calico Enterprise authentication method
 
-The {{site.prodname}} authentication method can be configured through the [Manager API resource]({{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager) named `tigera-secure`.
+The {{site.prodname}} authentication method can be configured through the [Manager API resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Manager) named `tigera-secure`.
 If the authentication type is not specified, the default authentication method is `Token`.
 
 Run one of the following commands to configure authentication for {{site.prodname}}.
@@ -163,4 +163,4 @@ It has significant limitations—notably the Kubernetes API server must be resta
 
 ### Above and beyond
 
-- [Fine-grained RBAC permissions]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions)
+- [Fine-grained RBAC permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions)

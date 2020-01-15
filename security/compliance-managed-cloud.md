@@ -26,9 +26,9 @@ This how-to guide uses the following {{site.prodname}} features:
 ### Before you begin...
 
 **Required**
-- Install {{site.prodname}} for your managed cloud provider using [Managed public cloud]({{site.url}}/{{page.version}}/getting-started/kubernetes/managed-public-cloud/eks)
-- Configure access to the [Calico Enterprise Manager UI]({{site.url}}/{{page.version}}/getting-started/access-the-manager)
-- Create a [user login]({{site.url}}/{{page.version}}/getting-started/create-user-login)
+- Install {{site.prodname}} for your managed cloud provider using [Managed public cloud]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
+- Configure access to the [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+- Create a [user login]({{site.baseurl}}/getting-started/create-user-login)
 
 **Support**
 
@@ -122,5 +122,5 @@ data:
 
 ### Above and beyond
 
-- [Inventory auditing]({{site.url}}/{{page.version}}/security/compliance-reports)
-- [CIS benchmarks]({{site.url}}/{{page.version}}/security/compliance-reports-cis)
+- [Inventory auditing]({{site.baseurl}}/security/compliance-reports)
+- [CIS benchmarks]({{site.baseurl}}/security/compliance-reports-cis)

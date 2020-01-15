@@ -6,17 +6,17 @@ canonical_url: /reference/calicoctl/resources/globalnetworkpolicy
 A global network policy resource (`GlobalNetworkPolicy`) represents an ordered set of rules which are applied
 to a collection of endpoints that match a [label selector](#selector).
 
-`GlobalNetworkPolicy` is not a namespaced resource. `GlobalNetworkPolicy` applies to [workload endpoint resources]({{site.url}}/{{page.version}}/reference/resources/workloadendpoint) in all namespaces, and to [host endpoint resources]({{site.url}}/{{page.version}}/reference/resources/hostendpoint).
+`GlobalNetworkPolicy` is not a namespaced resource. `GlobalNetworkPolicy` applies to [workload endpoint resources]({{site.baseurl}}/reference/resources/workloadendpoint) in all namespaces, and to [host endpoint resources]({{site.baseurl}}/reference/resources/hostendpoint).
 Select a namespace in a `GlobalNetworkPolicy` in the standard selector by using
 `projectcalico.org/namespace` as the label name and a `namespace` name as the
 value to compare against, e.g., `projectcalico.org/namespace == "default"`.
-See [network policy resource]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) for namespaced network policy.
+See [network policy resource]({{site.baseurl}}/reference/resources/networkpolicy) for namespaced network policy.
 
 `GlobalNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
-take precedence over [Profile resources]({{site.url}}/{{page.version}}/reference/resources/profile) if any are defined.
+take precedence over [Profile resources]({{site.baseurl}}/reference/resources/profile) if any are defined.
 
-GlobalNetworkPolicies are organized into [tiers]({{site.url}}/{{page.version}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
-next [tier]({{site.url}}/{{page.version}}/reference/resources/tier), to enable hierarchical security policy.
+GlobalNetworkPolicies are organized into [tiers]({{site.baseurl}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+next [tier]({{site.baseurl}}/reference/resources/tier), to enable hierarchical security policy.
 
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `globalnetworkpolicy`, `globalnetworkpolicies`, `gnp`, `gnps`.
@@ -67,7 +67,7 @@ spec:
 | Field              | Description                                                                                                                                           | Accepted Values | Schema                | Default |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order              | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first.                                                   |                 | float                 |         |
-| tier               | Name of the [tier]({{site.url}}/{{page.version}}/reference/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
+| tier               | Name of the [tier]({{site.baseurl}}/reference/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector           | Selects the endpoints to which this policy applies.                                                                                                   |                 | [selector](#selector) | all()   |
 | types              | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress`  | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress            | Ordered list of ingress rules applied by policy.                                                                                                      |                 | List of [Rule](#rule) |         |
@@ -88,17 +88,17 @@ spec:
  | Yes                   | Yes                  | `Ingress, Egress`   |
 
 \*\* The `doNotTrack` and `preDNAT` and `applyOnForward` fields are meaningful
-only when applying policy to a [host endpoint]({{site.url}}/{{page.version}}/reference/resources/hostendpoint).
+only when applying policy to a [host endpoint]({{site.baseurl}}/reference/resources/hostendpoint).
 
 Only one of `doNotTrack` and `preDNAT` may be set to `true` (in a given policy). If they are both `false`, or when applying the policy to a
-[workload endpoint]({{site.url}}/{{page.version}}/reference/resources/workloadendpoint),
+[workload endpoint]({{site.baseurl}}/reference/resources/workloadendpoint),
 the policy is enforced after connection tracking and any DNAT.
 
 `applyOnForward` must be set to `true` if either `doNotTrack` or `preDNAT` is
 `true` because for a given policy, any untracked rules or rules before DNAT will
  in practice apply to forwarded traffic.
 
-See [Using {{site.prodname}} to Secure Host Interfaces]({{site.url}}/{{page.version}}/reference/host-endpoints/)
+See [Using {{site.prodname}} to Secure Host Interfaces]({{site.baseurl}}/reference/host-endpoints/)
 for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host endpoints.
 
 #### Rule
@@ -128,7 +128,7 @@ for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host e
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.
