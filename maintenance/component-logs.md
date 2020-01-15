@@ -1,6 +1,6 @@
 ---
 title: Component logs
-canonical_url: 'https://docs.tigera.io/v2.3/usage/troubleshooting/logging'
+canonical_url: '/usage/troubleshooting/logging'
 ---
 
 ## The {{site.nodecontainer}} container

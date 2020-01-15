@@ -1,6 +1,6 @@
 ---
 title: Frequently asked questions
-canonical_url: https://docs.tigera.io/v2.6/reference/faq
+canonical_url: /reference/faq
 ---
 
 * TOC

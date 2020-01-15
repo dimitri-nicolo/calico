@@ -1,6 +1,6 @@
 ---
 title: Upgrading Calico Enterprise from an earlier release using Helm
-canonical_url: https://docs.tigera.io/master/maintenance/helm-upgrade-tsee
+canonical_url: /maintenance/helm-upgrade-tsee
 ---
 
 ## Prerequisites

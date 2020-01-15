@@ -1,6 +1,6 @@
 ---
 title: Filter out DNS logs
-canonical_url: https://docs.tigera.io/master/security/logs/elastic/filtering-dns
+canonical_url: /security/logs/elastic/filtering-dns
 ---
 
 {{site.prodname}} supports filtering out DNS logs based on user provided

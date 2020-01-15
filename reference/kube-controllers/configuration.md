@@ -1,6 +1,6 @@
 ---
 title: Configuring the Calico Enterprise Kubernetes controllers
-canonical_url: https://docs.tigera.io/v2.3/reference/kube-controllers/configuration
+canonical_url: /reference/kube-controllers/configuration
 ---
 
 The {{site.prodname}} Kubernetes controllers are deployed in a Kubernetes cluster. The different controllers monitor the Kubernetes API

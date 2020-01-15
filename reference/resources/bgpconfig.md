@@ -1,6 +1,6 @@
 ---
 title: BGP configuration
-canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/bgpconfig
+canonical_url: /reference/calicoctl/resources/bgpconfig
 ---
 
 A BGP configuration resource (`BGPConfiguration`) represents BGP specific configuration options for the cluster or a

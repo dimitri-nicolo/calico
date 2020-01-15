@@ -1,6 +1,6 @@
 ---
 title: Host endpoints
-canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/host-endpoints
+canonical_url: /usage/aws-security-group-integration/host-endpoints
 ---
 
 User host endpoints are not supported.

@@ -1,6 +1,6 @@
 ---
 title: Installing Calico Enterprise on OpenShift with a dedicated etcd cluster
-canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation/dedicated-etcd
+canonical_url: /getting-started/openshift/installation/dedicated-etcd
 ---
 
 {{site.prodname}}'s OpenShift-ansible integration supports connection to a custom etcd which

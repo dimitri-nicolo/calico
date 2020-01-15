@@ -1,7 +1,7 @@
 ---
 title: Configure BGP peering
 description: Configure BGP peering for public cloud and on-premises deployments with full mesh, node-specific peering, ToR and/or Calico route reflectors.
-canonical_url: 'https://docs.tigera.io/v2.6/networking/bgp'
+canonical_url: '/networking/bgp'
 ---
 
 ### Big picture

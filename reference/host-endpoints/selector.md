@@ -1,6 +1,6 @@
 ---
 title: Selector-based policies
-canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/selector'
+canonical_url: '/getting-started/bare-metal/policy/selector'
 ---
 
 

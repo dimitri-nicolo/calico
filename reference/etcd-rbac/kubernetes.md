@@ -1,6 +1,6 @@
 ---
 title: Segmenting etcd on Kubernetes (basic)
-canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/kubernetes'
+canonical_url: '/reference/advanced/etcd-rbac/kubernetes'
 ---
 
 When using etcd with RBAC, all components that access etcd must be configured

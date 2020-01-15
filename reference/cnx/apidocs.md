@@ -1,6 +1,6 @@
 ---
 title: Calico Enterprise API endpoints
-canonical_url: https://docs.tigera.io/v2.3/reference/cnx/apidocs
+canonical_url: /reference/cnx/apidocs
 layout: swagger
 ---
 

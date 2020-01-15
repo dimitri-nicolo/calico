@@ -1,6 +1,6 @@
 ---
 title: Configure federated services
-canonical_url: https://docs.tigera.io/v2.3/usage/federation/services-controller
+canonical_url: /usage/federation/services-controller
 ---
 
 Federated Services is a feature that provides cross-cluster service discovery for your local cluster. It uses the

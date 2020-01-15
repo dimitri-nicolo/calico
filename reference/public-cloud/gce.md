@@ -1,6 +1,6 @@
 ---
 title: Deploying Calico Enterprise on GCE
-canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/gce
+canonical_url: /reference/public-cloud/gce
 ---
 
 To deploy {{site.prodname}} in [Google Compute Engine (GCE)][GCE], you must ensure

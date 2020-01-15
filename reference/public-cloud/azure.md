@@ -1,6 +1,6 @@
 ---
 title: Deploying Calico Enterprise on Azure
-canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/azure
+canonical_url: /reference/public-cloud/azure
 ---
 
 ## About {{site.prodname}} on Azure

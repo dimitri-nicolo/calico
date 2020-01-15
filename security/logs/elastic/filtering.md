@@ -1,6 +1,6 @@
 ---
 title: Filter out flow logs
-canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/filtering
+canonical_url: /usage/logs/elastic/filtering
 ---
 
 {{site.prodname}} supports filtering out flow logs based on user provided

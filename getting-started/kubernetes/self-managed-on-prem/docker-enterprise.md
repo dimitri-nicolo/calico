@@ -1,6 +1,6 @@
 ---
 title: Installing Calico Enterprise on Docker Enterprise
-canonical_url: https://docs.tigera.io/master/getting-started/kubernetes/self-managed-on-prem/docker-enterprise
+canonical_url: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
 ---
 
 ### Big picture

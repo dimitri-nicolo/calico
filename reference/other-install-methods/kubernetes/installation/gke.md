@@ -1,6 +1,6 @@
 ---
 title: Installing Calico Enterprise on Google GKE
-canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/other
+canonical_url: /getting-started/kubernetes/installation/other
 ---
 
 ## Overview

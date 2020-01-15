@@ -1,6 +1,6 @@
 ---
 title: Configuring user authentication to Calico Enterprise Manager
-canonical_url: https://docs.tigera.io/v2.3/reference/cnx/authentication
+canonical_url: /reference/cnx/authentication
 ---
 
 This document describes the authentication methods supported by {{site.prodname}}

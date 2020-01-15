@@ -1,6 +1,6 @@
 ---
 title: Container install
-canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/container
+canonical_url: /getting-started/bare-metal/installation/container
 ---
 
 ## Running under Docker

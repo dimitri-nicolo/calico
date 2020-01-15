@@ -1,7 +1,7 @@
 ---
 title: Configure workload access outside the cluster
 description: Enable and disable internet access for your workloads.
-canonical_url: 'https://docs.tigera.io/v2.6/networking/workloads-outside-cluster'
+canonical_url: '/networking/workloads-outside-cluster'
 ---
 
 ### Big picture

@@ -1,6 +1,6 @@
 ---
 title: Amazon Web Services (AWS)
-canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/aws
+canonical_url: /reference/public-cloud/aws
 ---
 
 {{site.prodname}} provides the following advantages when running in Amazon Web Services (AWS):

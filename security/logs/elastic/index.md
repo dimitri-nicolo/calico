@@ -1,6 +1,6 @@
 ---
 title: Overview
-canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/
+canonical_url: /usage/logs/elastic/
 ---
 
 {{site.prodname}} uses an Elasticsearch operator to deploy an Elasticsearch cluster and a Kibana instance. The 

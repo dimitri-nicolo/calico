@@ -1,6 +1,6 @@
 ---
 title: Overview
-canonical_url: https://docs.tigera.io/v2.3/usage/metrics/
+canonical_url: /usage/metrics/
 ---
 
 {{site.prodname}} uses a Prometheus operator to deploy a Prometheus and Alertmanager instance.

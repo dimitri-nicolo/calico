@@ -1,6 +1,6 @@
 ---
 title: Deploying Calico Enterprise Manager
-canonical_url: https://docs.tigera.io/v2.3/reference/cnx/recommendations
+canonical_url: /reference/cnx/recommendations
 ---
 
 This document contains recommendations and limits for deploying {{site.prodname}} Manager in production, particularly at high scale.

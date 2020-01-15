@@ -1,6 +1,6 @@
 ---
 title: Customizing the Calico Enterprise manifests (advanced)
-canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/hosted/cnx/cnx
+canonical_url: /getting-started/kubernetes/installation/hosted/cnx/cnx
 ---
 
 ## About the manifests

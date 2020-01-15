@@ -1,6 +1,6 @@
 ---
 title: Profile
-canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/profile
+canonical_url: /reference/calicoctl/resources/profile
 ---
 
 A profile resource (`Profile`) represents a set of rules which are applied

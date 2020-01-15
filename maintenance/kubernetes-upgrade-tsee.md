@@ -1,6 +1,6 @@
 ---
 title: Upgrading Calico Enterprise from an earlier release on Kubernetes
-canonical_url: https://docs.tigera.io/v2.4/maintenance/kubernetes-upgrade-tsee
+canonical_url: /maintenance/kubernetes-upgrade-tsee
 ---
 
 ## Prerequisite

@@ -1,6 +1,6 @@
 ---
 title: Enable pods to access VPC members
-canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/pod-access
+canonical_url: /usage/aws-security-group-integration/pod-access
 ---
 
 > **Note**: For VPC member resources to be available to pods in the Kubernetes cluster those

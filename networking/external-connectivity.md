@@ -1,7 +1,7 @@
 ---
 title: External connectivity
 description: Connect Calico endpoints and hosts outside the cluster.
-canonical_url: 'https://docs.tigera.io/v2.3/usage/external-connectivity'
+canonical_url: '/usage/external-connectivity'
 ---
 
 {{site.prodname}} creates a routed network on which your containers look like normal IP

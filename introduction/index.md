@@ -1,6 +1,6 @@
 ---
 title: About Calico Enterprise (EE)
-canonical_url: https://docs.tigera.io/v2.3/introduction/
+canonical_url: /introduction/
 description: Home
 layout: docwithnav
 ---

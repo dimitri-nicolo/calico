@@ -1,6 +1,6 @@
 ---
 title: Enabling integration with AWS security groups (optional)
-canonical_url: https://docs.tigera.io/v2.5/getting-started/kubernetes/installation/aws-sg-integration
+canonical_url: /getting-started/kubernetes/installation/aws-sg-integration
 ---
 
 

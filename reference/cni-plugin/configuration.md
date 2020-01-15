@@ -1,6 +1,6 @@
 ---
 title: Configuring the Calico Enterprise CNI plugins
-canonical_url: https://docs.tigera.io/v2.3/reference/cni-plugin/configuration
+canonical_url: /reference/cni-plugin/configuration
 ---
 
 The {{site.prodname}} CNI plugin is configured through the standard CNI

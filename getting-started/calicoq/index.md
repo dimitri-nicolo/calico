@@ -1,6 +1,6 @@
 ---
 title: Installing calicoq
-canonical_url: https://docs.tigera.io/v2.3/usage/calicoq/
+canonical_url: /usage/calicoq/
 ---
 
 ## About installing calicoq

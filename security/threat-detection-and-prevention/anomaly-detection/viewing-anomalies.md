@@ -1,6 +1,6 @@
 ---
 title: View anomalies
-canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
+canonical_url: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
 ---
 
 ### Running Anomaly Detection Jobs

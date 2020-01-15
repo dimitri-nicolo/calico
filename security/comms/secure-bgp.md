@@ -1,6 +1,6 @@
 ---
 title: Secure BGP sessions
-canonical_url: 'https://docs.tigera.io/master/security/comms/secure-bgp'
+canonical_url: '/security/comms/secure-bgp'
 ---
 
 ### Big picture

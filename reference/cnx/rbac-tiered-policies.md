@@ -1,6 +1,6 @@
 ---
 title: Configuring Calico Enterprise RBAC for tiered policies
-canonical_url: https://docs.tigera.io/v2.3/reference/cnx/rbac-tiered-policies
+canonical_url: /reference/cnx/rbac-tiered-policies
 ---
 
 The {{site.prodname}} API server adds the ability to manage tiered

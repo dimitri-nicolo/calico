@@ -1,6 +1,6 @@
 ---
 title: Archive logs to S3
-canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/s3-archive
+canonical_url: /usage/logs/elastic/s3-archive
 ---
 
 {{site.prodname}} supports archiving flow and audit logs to Amazon S3.  This provides

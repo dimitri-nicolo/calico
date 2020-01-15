@@ -1,6 +1,6 @@
 ---
 title: Configuring Felix
-canonical_url: https://docs.tigera.io/v2.3/reference/felix/configuration
+canonical_url: /reference/felix/configuration
 ---
 
 Configuration for Felix is read from one of four possible locations, in

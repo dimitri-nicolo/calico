@@ -1,7 +1,7 @@
 ---
 title: Configuring calicoctl
 description: Configure calicoctl for datastore access
-canonical_url: 'https://docs.tigera.io/v2.6/getting-started/calicoctl/configure/'
+canonical_url: '/getting-started/calicoctl/configure/'
 ---
 
 ### About configuring calicoctl

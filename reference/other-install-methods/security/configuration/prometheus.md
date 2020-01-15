@@ -1,6 +1,6 @@
 ---
 title: Configuring Prometheus
-canonical_url: https://docs.tigera.io/v2.5/security/configuration/prometheus
+canonical_url: /security/configuration/prometheus
 ---
 
 #### Updating Denied Packets Rules

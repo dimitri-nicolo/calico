@@ -1,7 +1,7 @@
 ---
 title: Use IPVS kube-proxy
 description: Use IPVS kube-proxy for performance improvements 
-canonical_url: 'https://docs.tigera.io/v2.6/networking/use-ipvs'
+canonical_url: '/networking/use-ipvs'
 ---
 
 ### Big picture
