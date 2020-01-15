@@ -18,8 +18,8 @@ its connections as follows.
   - [{{site.nodecontainer}}](../../reference/node/configuration)
   - [`calicoctl`](../../getting-started/calicoctl/configure/etcd)
   - [CNI plugin](../../reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
-  - [Kubernetes controllers](../../reference/kube-controllers/configuration#etcdv3) (Kubernetes and OpenShift only)
-  - [Felix](../../reference/felix/configuration#etcd-datastore-configuration) (on [bare metal hosts](../../getting-started/bare-metal/installation/))
+  - [Kubernetes controllers](../../reference/kube-controllers/configuration#configuring-datastore-access) (Kubernetes and OpenShift only)
+  - [Felix](../../reference/felix/configuration#etcd-datastore-configuration) (on [bare metal hosts](../../getting-started/bare-metal/installation/overview))
   - [Typha](../../reference/typha/configuration#etcd-datastore-configuration) (often deployed in
     larger Kubernetes deployments)
 

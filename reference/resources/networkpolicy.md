@@ -18,9 +18,8 @@ take precedence over [profile resources]({{site.url}}/{{page.version}}/reference
 NetworkPolicies are organized into [tiers]({{site.url}}/{{page.version}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
 next [tier]({{site.url}}/{{page.version}}/reference/resources/tier), to enable hierarchical security policy.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
-may be used to specify the resource type on the CLI:
-`networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
+For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
+aliases are supported (all case insensitive): `networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
 
 For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:

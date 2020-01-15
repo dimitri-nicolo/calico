@@ -105,7 +105,7 @@ After your Zero Trust Network is established, you will need to maintain it.
 
 #### Install {{site.prodname}}
 
-Follow the [install instructions]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/) to get {{site.prodname}} software running in your cluster.
+Follow the [install instructions]({{ site.baseurl }}/getting-started/kubernetes/installation/overview) to get {{site.prodname}} software running in your cluster.
 
 #### Install Istio and enable {{site.prodname}} integration
 

@@ -1,16 +1,16 @@
 bigheader: "Getting started"
-path: /getting-started
+path: /getting-started/
 order: 1
-toc:
-- title: Getting started
-  path: /getting-started/
+section:
 - title: Kubernetes
+  path: /getting-started/kubernetes/
   section:
   - title: Quickstart
-    path: /getting-started/kubernetes/
+    path: /getting-started/kubernetes/quickstart
   - title: System requirements
     path: /getting-started/kubernetes/requirements
   - title: Managed public cloud
+    path: /getting-started/kubernetes/managed-public-cloud/
     section:
     - title: Amazon Elastic Kubernetes Service (EKS)
       path: /getting-started/kubernetes/managed-public-cloud/eks
@@ -25,9 +25,10 @@ toc:
   - title: Enabling application layer policy (optional)
     path: /getting-started/kubernetes/installation/app-layer-policy
   # - title: Calico Enterprise the hard way
+  #   path: /getting-started/kubernetes/hardway/
   #   section:
   #   - title: Introduction
-  #     path: /getting-started/kubernetes/hardway/
+  #     path: /getting-started/kubernetes/hardway/overview
   #   - title: Standing up Kubernetes
   #     path: /getting-started/kubernetes/hardway/standing-up-kubernetes
   #   - title: The Calico datastore
@@ -52,24 +53,23 @@ toc:
   #     path: /getting-started/kubernetes/hardway/istio-integration
   - title: Upgrade from Calico to Calico Enterprise
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
-
 - title: OpenShift
+  path: /getting-started/openshift/
   section:
   - title: System requirements
     path: /getting-started/openshift/requirements
   - title: Installation
-    section:
-    - title: Installing Calico Enterprise on OpenShift v4
-      path: /getting-started/openshift/installation/
-
+    path: /getting-started/openshift/installation
 - title: Bare metal hosts
+  path: /getting-started/bare-metal/
   section:
   - title: System requirements
     path: /getting-started/bare-metal/requirements
   - title: Installation
+    path: /getting-started/bare-metal/installation/
     section:
     - title: Overview
-      path: /getting-started/bare-metal/installation/
+      path: /getting-started/bare-metal/installation/overview
     - title: Container install
       path: /getting-started/bare-metal/installation/container
     - title: Binary install
@@ -79,13 +79,15 @@ toc:
   path: /getting-started/as-service
 
 - title: calicoctl
+  path: /getting-started/calicoctl/
   section:
   - title: Installing calicoctl
     path: /getting-started/calicoctl/install
   - title: Configuring calicoctl
+    path: /getting-started/calicoctl/configure/
     section:
     - title: Overview
-      path: /getting-started/calicoctl/configure/
+      path: /getting-started/calicoctl/configure/overview
     - title: Configuring calicoctl to connect to an etcd datastore
       path: /getting-started/calicoctl/configure/etcd
     - title: Configuring calicoctl to connect to the Kubernetes API datastore

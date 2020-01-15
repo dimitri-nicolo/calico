@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/sho
 
 This section describes the `calicoctl ipam show` command.
 
-Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl/) for a full list of calicoctl commands.
+Read the [calicoctl Overview]({{ site.baseurl }}/reference/calicoctl/overview) for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl ipam show' command
 

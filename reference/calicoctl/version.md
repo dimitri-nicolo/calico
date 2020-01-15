@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/version
 
 This section describes the `calicoctl version` command.
 
-Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl/)
+Read the [calicoctl Overview]({{ site.baseurl }}/reference/calicoctl/overview)
 for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl version' commands
@@ -35,7 +35,7 @@ Use `calicoctl version` to obtain the following data.
 {% include content/calicoctl-version.md %}
 
 \* To obtain these values, you must configure `calicoctl`
-   [to connect to your datastore](/{{page.version}}/getting-started/calicoctl/configure/).
+   [to connect to your datastore](/getting-started/calicoctl/configure/overview).
 
 
 ## See also

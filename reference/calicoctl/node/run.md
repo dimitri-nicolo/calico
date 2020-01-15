@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/run
 
 This sections describes the `calicoctl node run` command.
 
-Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl)
+Read the [calicoctl Overview]({{ site.baseurl }}/reference/calicoctl/overview)
 for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl node run' command
@@ -363,7 +363,7 @@ terminating `,` character does not need to be specified for those cases.
 
 ## See also
 
--  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)
--  [Resources]({{site.url}}/{{page.version}}/reference/resources/) for details on all valid resources, including file format
+-  [Installing calicoctl]({{ site.baseurl }}/getting-started/calicoctl/install)
+-  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
 -  [Policy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

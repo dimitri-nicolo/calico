@@ -1,15 +1,14 @@
 bigheader: "Reference"
-path: /reference
+path: /reference/
 order: 5
-toc:
-- title: Reference
-  path: /reference/
+section:
 - title: Installation
   path: /reference/installation/api
 - title: calicoctl
+  path: /reference/calicoctl/
   section:
   - title: Overview
-    path: /reference/calicoctl/
+    path: /reference/calicoctl/overview
   - title: create
     path: /reference/calicoctl/create
   - title: replace
@@ -27,17 +26,19 @@ toc:
   - title: convert
     path: /reference/calicoctl/convert
   - title: ipam
+    path: /reference/calicoctl/ipam/
     section:
     - title: Overview
-      path: /reference/calicoctl/ipam/
+      path: /reference/calicoctl/ipam/overview
     - title: release
       path: /reference/calicoctl/ipam/release
     - title: show
       path: /reference/calicoctl/ipam/show
   - title: node
+    path: /reference/calicoctl/node/
     section:
     - title: Overview
-      path: /reference/calicoctl/node/
+      path: /reference/calicoctl/node/overview
     - title: run
       path: /reference/calicoctl/node/run
     - title: status
@@ -49,9 +50,10 @@ toc:
   - title: version
     path: /reference/calicoctl/version
 - title: Resource definitions
+  path: /reference/resources/
   section:
     - title: Overview
-      path: /reference/resources/
+      path: /reference/resources/overview
     - title: BGP configuration
       path: /reference/resources/bgpconfig
     - title: BGP peer
@@ -95,9 +97,10 @@ toc:
     - title: Workload endpoint
       path: /reference/resources/workloadendpoint
 - title: Configuring etcd RBAC
+  path: /reference/etcd-rbac/
   section:
   - title: Overview
-    path: /reference/etcd-rbac/
+    path: /reference/etcd-rbac/overview
   - title: Generating certificates
     path: /reference/etcd-rbac/certificate-generation
   - title: Creating users and roles
@@ -127,15 +130,17 @@ toc:
   - title: Version
     path: /reference/calicoq/version
 - title: Felix
+  path: /reference/felix/
   section:
   - title: Configuration
     path: /reference/felix/configuration
   - title: Prometheus statistics
     path: /reference/felix/prometheus
 - title: Typha
+  path: /reference/typha/
   section:
   - title: Overview
-    path: /reference/typha/
+    path: /reference/typha/overview
   - title: Configuration
     path: /reference/typha/configuration
 - title: Dikastes
@@ -171,6 +176,7 @@ toc:
 - title: REST API Reference
   path: /reference/cnx/apidocs
 - title: Configuration on public clouds
+  path: /reference/public-cloud/
   section:
   - title: Amazon Web Services
     path: /reference/public-cloud/aws
@@ -178,15 +184,38 @@ toc:
     path: /reference/public-cloud/azure
   - title: Google Compute Engine
     path: /reference/public-cloud/gce
+- title: Host endpoints
+  path: /reference/host-endpoints/
+  section:
+    - title: Overview
+      path: /reference/host-endpoints/overview
+    - title: Creating policy for basic connectivity
+      path: /reference/host-endpoints/connectivity
+    - title: Creating host endpoint objects
+      path: /reference/host-endpoints/objects
+    - title: Selector-based policies
+      path: /reference/host-endpoints/selector
+    - title: Failsafe rules
+      path: /reference/host-endpoints/failsafe
+    - title: Pre-DNAT policy
+      path: /reference/host-endpoints/pre-dnat
+    - title: Apply on forwarded traffic
+      path: /reference/host-endpoints/forwarded
+    - title: Summary
+      path: /reference/host-endpoints/summary
+    - title: Connection tracking
+      path: /reference/host-endpoints/conntrack
 - title: Architecture
+  path: /reference/architecture/
   section:
   - title: Introduction
-    path: /reference/architecture/
+    path: /reference/architecture/overview
   - title: cnx-node
     path: /reference/architecture/components
   - title: Data path
     path: /reference/architecture/data-path
   - title: Network design
+    path: /reference/architecture/design/
     section: 
     - title: Calico Enterprise over Ethernet fabrics
       path: /reference/architecture/design/l2-interconnect-fabric

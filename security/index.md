@@ -1,5 +1,12 @@
 ---
 title: Security
-description: Secure nodes and hosts using Calico Enterprise network policy
-canonical_url: 'https://docs.tigera.io/v2.6/security/'
+description: Calico Enterprise Network Policy and Global Network Policy are key to securing workloads and hosts and adopting a zero trust security model. 
+canonical_url: '/security/index'
+show_read_time: false
+show_toc: false
 ---
+
+{{ page.description }}
+
+{% capture content %}{% include index.html %}{% endcapture %}
+{{ content | replace: "    ", "" }}
