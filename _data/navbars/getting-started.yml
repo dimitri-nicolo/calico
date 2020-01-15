@@ -2,6 +2,8 @@ bigheader: "Getting started"
 path: /getting-started/
 order: 1
 section:
+- title: Calico Enterprise
+  path: /getting-started/calico-enterprise
 - title: Kubernetes
   path: /getting-started/kubernetes/
   section:
