@@ -35,7 +35,7 @@ function build() {
     echo "[DEBUG] building branch $1 into dir $2"
     TEMP_DIR=$(mktemp -d)
 
-    git clone --depth=1 https://github.com/projectcalico/calico -b $1 $TEMP_DIR
+    git clone --depth=1 https://$GH_DEPLOY_TOKEN@github.com/tigera/calico-private -b $1 $TEMP_DIR
 
     pushd $TEMP_DIR
     jekyll build --config $JEKYLL_CONFIG --baseurl=$2 --destination _site/$2
