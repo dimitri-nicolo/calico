@@ -21,6 +21,7 @@ section:
     - title: Microsoft Azure Kubernetes Service (AKS)
       path: /getting-started/kubernetes/managed-public-cloud/aks
   - title: Self-managed on-prem
+    path: /getting-started/kubernetes/self-managed-on-prem/
     section:
     - title: Docker Enterprise
       path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
@@ -96,10 +97,12 @@ section:
       path: /getting-started/calicoctl/configure/kdd
 
 - title: calicoq
+  path: /getting-started/calicoq/
   section:
   - title: Installing calicoq
     path: /getting-started/calicoq/installing
   - title: Configuring calicoq
+    path: /getting-started/calicoq/configure/
     section:
     - title: Overview
       path: /getting-started/calicoq/configure/overview

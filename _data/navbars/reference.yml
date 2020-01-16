@@ -114,6 +114,7 @@ section:
 - title: cnx-node
   path: /reference/node/configuration
 - title: calicoq
+  path: /reference/calicoq/
   section:
   - title: Overview
     path: /reference/calicoq/overview
@@ -146,6 +147,7 @@ section:
 - title: Dikastes
   path: /reference/dikastes/configuration
 - title: Calico Enterprise Compliance Reports
+  title: /reference/compliance-reports/
   section:
     - title: Overview
       path: /reference/compliance-reports/overview
@@ -162,6 +164,7 @@ section:
 - title: Calico Enterprise Kubernetes controllers
   path: /reference/kube-controllers/configuration
 - title: Calico Enterprise Manager
+  path: /reference/cnx/
   section:
     - title: Configuring user authentication
       path: /reference/cnx/authentication
@@ -224,6 +227,7 @@ section:
 - title: Frequently asked questions
   path: /reference/faq
 - title: Other installation methods
+  path: /reference/other-install-methods/
   section:
   - title: Helm
     section:
@@ -231,6 +235,7 @@ section:
       path: /reference/other-install-methods/kubernetes/installation/helm/
   # TODO: This is old content that needs refreshing in order to work with the operator.
   - title: Configure Metrics 
+    path: /reference/other-install-methods/security/metrics/
     section:
     - title: Overview
       path: /reference/other-install-methods/security/metrics/overview

@@ -82,6 +82,7 @@ section:
   - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx      
   - title: Policy for AWS security groups
+    path: /security/aws-security-group-integration/
     section:
     - title: Overview
       path: /security/aws-security-group-integration/overview
@@ -98,8 +99,10 @@ section:
     - title: Host endpoints
       path: /security/aws-security-group-integration/host-endpoints
 - title: Logs
+  path: /security/logs/
   section:
   - title: Elasticsearch logs
+    path: /security/logs/elastic/
     section:
     - title: Overview
       path: /security/logs/elastic/overview
@@ -128,10 +131,12 @@ section:
   - title: iptables logs
     path: /security/logs/iptables
 - title: Threat detection and prevention
+  path: /security/threat-detection-and-prevention/
   section:
   - title: Alerts
     path: /security/threat-detection-and-prevention/alerts
   - title: Anomaly detection
+    path: /security/threat-detection-and-prevention/anomaly-detection/
     section:
     - title: Overview
       path: /security/threat-detection-and-prevention/anomaly-detection/overview
@@ -148,6 +153,7 @@ section:
   - title: Trace and block suspicious domains
     path: /security/threat-detection-and-prevention/suspicious-domains
 - title: Compliance reports
+  path: /security/compliance-reports/
   section:
   - title: Configure compliance reports
     path: /security/compliance-reports/overview
@@ -156,6 +162,7 @@ section:
   - title: Configure CIS benchmark reports
     path: /security/compliance-reports-cis 
 - title: Secure Calico Enterprise component communications
+  path: /security/comms/
   section:
   - title: Provide TLS certificates for the manager UI
     path: /security/comms/manager-tls
