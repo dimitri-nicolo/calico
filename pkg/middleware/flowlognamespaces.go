@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"net/http"
-	"strings"
 )
 
 const (
@@ -21,6 +23,7 @@ type FlowLogNamespaceParams struct {
 	Actions     []string `json:"actions"`
 	ClusterName string   `json:"cluster"`
 	Prefix      string   `json:"prefix"`
+	Unprotected bool     `json:"unprotected"`
 }
 
 type Namespace struct {
@@ -77,11 +80,19 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	actions := lowerCaseParams(url["actions"])
 	cluster := strings.ToLower(url.Get("cluster"))
 	prefix := strings.ToLower(url.Get("prefix"))
+	unprotected := false
+	if unprotectedValue := url.Get("unprotected"); unprotectedValue != "" {
+		if unprotected, err = strconv.ParseBool(unprotectedValue); err != nil {
+			return nil, errParseRequest
+		}
+	}
+
 	params := &FlowLogNamespaceParams{
 		Actions:     actions,
 		Limit:       limit,
 		ClusterName: cluster,
 		Prefix:      prefix,
+		Unprotected: unprotected,
 	}
 
 	// Check whether the params are provided in the request and set default values if not
@@ -95,6 +106,10 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	if !valid {
 		return nil, errInvalidAction
 	}
+	valid = validateActionsAndUnprotected(params.Actions, params.Unprotected)
+	if !valid {
+		return nil, errInvalidActionUnprotected
+	}
 
 	return params, nil
 }
@@ -105,10 +120,16 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 	if len(params.Actions) == 0 {
 		return query
 	}
+
 	for _, action := range params.Actions {
 		termFilterValues = append(termFilterValues, action)
 	}
 	query = query.Filter(elastic.NewTermsQuery("action", termFilterValues...))
+
+	if params.Unprotected {
+		query = query.Filter(UnprotectedQuery())
+	}
+
 	return query
 }
 

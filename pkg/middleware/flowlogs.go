@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/olivere/elastic/v7"
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
 	pippkg "github.com/tigera/es-proxy/pkg/pip"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"net/http"
-	"strings"
-	"time"
 )
 
 type FlowLogsParams struct {
@@ -27,6 +29,7 @@ type FlowLogsParams struct {
 	Namespace            string          `json:"namespace"`
 	SourceDestNamePrefix string          `json:"srcDstNamePrefix"`
 	PolicyPreview        *PolicyPreview  `json:"policyPreview"`
+	Unprotected          bool            `json:"unprotected"`
 }
 
 type LabelSelector struct {
@@ -67,7 +70,6 @@ func FlowLogsHandler(esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
 			}
 			return
 		}
-
 		response, err := getFLowLogsFromElastic(params, esClient, pip)
 		if err != nil {
 			log.WithError(err).Info("Error getting search results from elastic")
@@ -129,6 +131,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		log.WithError(err).Info("Error extracting policyPreview")
 		return nil, errParseRequest
 	}
+	unprotected := false
+	if unprotectedValue := url.Get("unprotected"); unprotectedValue != "" {
+		if unprotected, err = strconv.ParseBool(unprotectedValue); err != nil {
+			return nil, errParseRequest
+		}
+	}
 	params := &FlowLogsParams{
 		ClusterName:          cluster,
 		Limit:                limit,
@@ -142,6 +150,7 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		Namespace:            namespace,
 		SourceDestNamePrefix: srcDstNamePrefix,
 		PolicyPreview:        policyPreview,
+		Unprotected:          unprotected,
 	}
 
 	if params.ClusterName == "" {
@@ -168,6 +177,10 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	actionsValid := validateActions(params.Actions)
 	if !actionsValid {
 		return nil, errInvalidAction
+	}
+	valid := validateActionsAndUnprotected(params.Actions, params.Unprotected)
+	if !valid {
+		return nil, errInvalidActionUnprotected
 	}
 	if params.PolicyPreview != nil {
 		policyPreviewValid := validatePolicyPreview(*policyPreview)
@@ -212,6 +225,11 @@ func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
 		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime.Unix())
 		filters = append(filters, endFilter)
 	}
+
+	if params.Unprotected {
+		filters = append(filters, UnprotectedQuery())
+	}
+
 	if params.Namespace != "" {
 		namespaceFilter := elastic.NewBoolQuery().
 			Should(
@@ -279,6 +297,7 @@ func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, terms
 // otherwise just perform a regular ES query and return the results
 func getFLowLogsFromElastic(params *FlowLogsParams, esClient lmaelastic.Client, pip pippkg.PIP) (interface{}, error) {
 	query := buildFlowLogsQuery(params)
+
 	index := getClusterFlowIndex(params.ClusterName)
 
 	if params.PolicyPreview == nil {

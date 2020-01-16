@@ -54,6 +54,28 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params).To(BeNil())
 		})
 
+		It("should return an errParseRequest when passed a request an invalid unprotected param", func() {
+			req, err := newTestRequestWithParam(http.MethodGet, "unprotected", "xvz")
+			Expect(err).NotTo(HaveOccurred())
+			params, err := validateFlowLogsRequest(req)
+			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(params).To(BeNil())
+		})
+
+		It("should return an errParseRequest when passed a request with an invalid combination of actions and unprotected param", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("actions", "allow")
+			q.Add("actions", "deny")
+			q.Add("unprotected", "true")
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamesRequest(req)
+			Expect(err).To(BeEquivalentTo(errInvalidActionUnprotected))
+			Expect(params).To(BeNil())
+		})
+
 		It("should return an errParseRequest when passed a request an invalid srcLabels param", func() {
 			req, err := newTestRequestWithParams(http.MethodGet, "srcLabels", invalidSelectors)
 			Expect(err).NotTo(HaveOccurred())

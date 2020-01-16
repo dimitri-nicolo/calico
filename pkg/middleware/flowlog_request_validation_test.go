@@ -292,6 +292,36 @@ var _ = Describe("Test flowlog request validation functions", func() {
 		})
 	})
 
+	Context("Test that the validateActionsAndUnprotected function behaves as expected", func() {
+		It("should return an error when passed a invalid combination of actions and uprotected", func() {
+			actions := []string{"allow", "deny", "unknown"}
+			unprotected := true
+			valid := validateActionsAndUnprotected(actions, unprotected)
+			Expect(valid).To(BeFalse())
+		})
+
+		It("should not return an error when passed a valid combination of actions and uprotected (no deny)", func() {
+			actions := []string{"allow", "unknown"}
+			unprotected := true
+			valid := validateActionsAndUnprotected(actions, unprotected)
+			Expect(valid).To(BeTrue())
+		})
+
+		It("should not return an error when passed a valid combination of actions and uprotected (unprotected false)", func() {
+			actions := []string{"allow", "deny", "unknown"}
+			unprotected := false
+			valid := validateActionsAndUnprotected(actions, unprotected)
+			Expect(valid).To(BeTrue())
+		})
+
+		It("should not return an error when passed a valid combination of actions and uprotected (empty actions)", func() {
+			actions := []string{}
+			unprotected := true
+			valid := validateActionsAndUnprotected(actions, unprotected)
+			Expect(valid).To(BeTrue())
+		})
+	})
+
 })
 
 func newTestRequestWithParam(method string, key string, value string) (*http.Request, error) {
