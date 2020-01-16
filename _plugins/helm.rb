@@ -45,26 +45,13 @@ module Jekyll
       t.write(text)
       t.close
 
-      version = context.registers[:page]["version"]
       imageRegistry = context.registers[:page]["registry"]
       imageNames = context.registers[:site].config["imageNames"]
       versions = context.registers[:site].data["versions"]
 
-      # If versions.yml doesn't contain component version info for the requested version,
-      # only log a warning if 'ignoreMissingVersions' is set 'true' in their _config.yaml.
-      @ignoreMissingVersions = context.registers[:site].config["ignoreMissingVersions"]
-      begin
-        vs = parse_versions(versions, version)
-      rescue IndexError
-        if !@ignoreMissingVersions
-          raise
-        else
-          puts "ignoring missing version '#{version}'"
-          return
-        end
-      end
+      vs = parse_versions(versions)
 
-      versionsYml = gen_values(version, vs, imageNames, imageRegistry, @chart, true)
+      versionsYml = gen_values(vs, imageNames, imageRegistry, @chart, true)
 
       tv = Tempfile.new("temp_versions.yml")
       tv.write(versionsYml)
@@ -72,7 +59,7 @@ module Jekyll
 
       # Execute helm.
       # Set the default etcd endpoint placeholder for rendering in the docs.
-      cmd = """helm template _includes/#{version}/charts/#{@chart} \
+      cmd = """helm template _includes/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path} \
         --set imagePullSecrets.cnx-pull-secret='' \

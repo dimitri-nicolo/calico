@@ -4,6 +4,8 @@
 # Make our URLs look nice. We're not a blog with dated posts, we just want the title.
 permalink:     /:title.html
 
+archive: false
+
 plugins:
   - jekyll-redirect-from
   - jekyll-seo-tag
@@ -82,6 +84,11 @@ exclude:
   - hack
   - vendor
 
+breadcrumbs:
+  root:
+    hide: false  # show breadcrumbs on root/home page
+    image: false # Show image or title text
+
 defaults:
   -
     scope:
@@ -89,6 +96,8 @@ defaults:
     values:
       layout: docwithnav
       show_title: true
+      show_read_time: true
+      show_toc: true
       version: master
       sitemap: true
       registry: quay.io/
@@ -138,50 +147,3 @@ defaults:
         cpHorizontalAutoscaler: k8s.gcr.io/cluster-proportional-autoscaler-amd64
         cpVerticalAutoscaler: k8s.gcr.io/cpvpa-amd64
 
-  -
-    scope:
-      path: master
-    values:
-      version: master
-      # Master builds are pulled from GCR.
-      registry: gcr.io/unique-caldron-775/cnx/
-  -
-    scope:
-      path: v2.0
-    values:
-      version: v2.0
-      sitemap: false
-  -
-    scope:
-      path: v2.1
-    values:
-      version: v2.1
-      sitemap: false
-  -
-    scope:
-      path: v2.2
-    values:
-      version: v2.2
-      sitemap: false
-  -
-    scope:
-      path: v2.3
-    values:
-      version: v2.3
-      sitemap: false
-  -
-    scope:
-      path: v2.4
-    values:
-      version: v2.4
-      sitemap: false
-  -
-    scope:
-      path: v2.5
-    values:
-      version: v2.5
-  -
-    scope:
-      path: v2.6
-    values:
-      version: v2.6

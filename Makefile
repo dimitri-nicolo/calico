@@ -45,15 +45,15 @@ REGISTRY?=gcr.io/unique-caldron-775/cnx/
 DOCS_TEST_CONTAINER?=tigera/docs-test
 
 # Use := so that these V_ variables are computed only once per make run.
-CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
-NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-node.version')
-CTL_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
-CNI_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/cni.version')
-KUBE_CONTROLLERS_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/kube-controllers.version')
-POD2DAEMON_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.flexvol.version')
-DIKASTES_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/dikastes.version')
-FLANNEL_MIGRATION_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/flannel-migration-controller.version')
-TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
+CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title')
+NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.cnx-node.version')
+CTL_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calicoctl.version')
+CNI_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/cni.version')
+KUBE_CONTROLLERS_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/kube-controllers.version')
+POD2DAEMON_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.flexvol.version')
+DIKASTES_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/dikastes.version')
+FLANNEL_MIGRATION_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/flannel-migration-controller.version')
+TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.typha.version')
 
 ##############################################################################
 
@@ -187,7 +187,6 @@ dev-versions-yaml:
 	export APP_POLICY_VER=`cd ../app-policy && $(TAG_COMMAND)`-amd64; \
 	export POD2DAEMON_VER=`cd ../pod2daemon && $(TAG_COMMAND)`-amd64; \
 	/bin/echo -e \
-"master:\\n"\
 "- title: \"dev-build\"\\n"\
 "  note: \"Developer build\"\\n"\
 "  components:\\n"\
@@ -537,7 +536,7 @@ endif
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(@F) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(@F)/values.yaml
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(@F) > _includes/charts/$(@F)/values.yaml
 
 # The following chunk of conditionals sets the Version of the helm chart. 
 # Helm requires strict semantic versioning.
@@ -566,11 +565,8 @@ endif
 
 charts: values.yaml chart/tigera-secure-ee-core chart/tigera-secure-ee
 chart/%:
-ifndef RELEASE_STREAM
-	$(error Must set RELEASE_STREAM to build charts)
-endif
 	mkdir -p bin
-	helm package ./_includes/$(RELEASE_STREAM)/charts/$(@F) \
+	helm package ./_includes/charts/$(@F) \
 	--save=false \
 	--destination ./bin/ \
 	--version $(chartVersion) \

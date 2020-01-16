@@ -1,0 +1,121 @@
+bigheader: "Getting started"
+path: /getting-started/
+order: 1
+section:
+- title: Calico Enterprise
+  path: /getting-started/calico-enterprise
+- title: Kubernetes
+  path: /getting-started/kubernetes/
+  section:
+  - title: Quickstart
+    path: /getting-started/kubernetes/quickstart
+  - title: System requirements
+    path: /getting-started/kubernetes/requirements
+  - title: Managed public cloud
+    path: /getting-started/kubernetes/managed-public-cloud/
+    section:
+    - title: Amazon Elastic Kubernetes Service (EKS)
+      path: /getting-started/kubernetes/managed-public-cloud/eks
+    - title: Google Kubernetes Engine (GKE)
+      path: /getting-started/kubernetes/managed-public-cloud/gke
+    - title: Microsoft Azure Kubernetes Service (AKS)
+      path: /getting-started/kubernetes/managed-public-cloud/aks
+  - title: Self-managed on-prem
+    path: /getting-started/kubernetes/self-managed-on-prem/
+    section:
+    - title: Docker Enterprise
+      path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
+  - title: Enabling application layer policy (optional)
+    path: /getting-started/kubernetes/installation/app-layer-policy
+  # - title: Calico Enterprise the hard way
+  #   path: /getting-started/kubernetes/hardway/
+  #   section:
+  #   - title: Introduction
+  #     path: /getting-started/kubernetes/hardway/overview
+  #   - title: Standing up Kubernetes
+  #     path: /getting-started/kubernetes/hardway/standing-up-kubernetes
+  #   - title: The Calico datastore
+  #     path: /getting-started/kubernetes/hardway/the-calico-datastore
+  #   - title: Configure IP pools
+  #     path: /getting-started/kubernetes/hardway/configure-ip-pools
+  #   - title: Install CNI plugin
+  #     path: /getting-started/kubernetes/hardway/install-cni-plugin
+  #   - title: Install Typha
+  #     path: /getting-started/kubernetes/hardway/install-typha
+  #   - title: Install calico/node
+  #     path: /getting-started/kubernetes/hardway/install-node
+  #   - title: Configure BGP peering
+  #     path: /getting-started/kubernetes/hardway/configure-bgp-peering
+  #   - title: Test networking
+  #     path: /getting-started/kubernetes/hardway/test-networking
+  #   - title: Test network policy
+  #     path: /getting-started/kubernetes/hardway/test-network-policy
+  #   - title: End user RBAC
+  #     path: /getting-started/kubernetes/hardway/end-user-rbac
+  #   - title: Istio integration
+  #     path: /getting-started/kubernetes/hardway/istio-integration
+  - title: Upgrade from Calico to Calico Enterprise
+    path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
+- title: OpenShift
+  path: /getting-started/openshift/
+  section:
+  - title: System requirements
+    path: /getting-started/openshift/requirements
+  - title: Installation
+    path: /getting-started/openshift/installation
+- title: Bare metal hosts
+  path: /getting-started/bare-metal/
+  section:
+  - title: System requirements
+    path: /getting-started/bare-metal/requirements
+  - title: Installation
+    path: /getting-started/bare-metal/installation/
+    section:
+    - title: Overview
+      path: /getting-started/bare-metal/installation/overview
+    - title: Container install
+      path: /getting-started/bare-metal/installation/container
+    - title: Binary install
+      path: /getting-started/bare-metal/installation/binary
+
+- title: Running cnx/node with an init system
+  path: /getting-started/as-service
+
+- title: calicoctl
+  path: /getting-started/calicoctl/
+  section:
+  - title: Installing calicoctl
+    path: /getting-started/calicoctl/install
+  - title: Configuring calicoctl
+    path: /getting-started/calicoctl/configure/
+    section:
+    - title: Overview
+      path: /getting-started/calicoctl/configure/overview
+    - title: Configuring calicoctl to connect to an etcd datastore
+      path: /getting-started/calicoctl/configure/etcd
+    - title: Configuring calicoctl to connect to the Kubernetes API datastore
+      path: /getting-started/calicoctl/configure/kdd
+
+- title: calicoq
+  path: /getting-started/calicoq/
+  section:
+  - title: Installing calicoq
+    path: /getting-started/calicoq/installing
+  - title: Configuring calicoq
+    path: /getting-started/calicoq/configure/
+    section:
+    - title: Overview
+      path: /getting-started/calicoq/configure/overview
+    - title: etcd datastore options
+      path: /getting-started/calicoq/configure/etcd
+    - title: Kubernetes API datastore options
+      path: /getting-started/calicoq/configure/kdd
+
+- title: Install from a private registry
+  path: /getting-started/private-registry
+- title: Configure storage for logs and reports
+  path: /getting-started/create-storage
+- title: Configure access to the manager UI
+  path: /getting-started/access-the-manager
+- title: Log in to the manager UI
+  path: /getting-started/create-user-login

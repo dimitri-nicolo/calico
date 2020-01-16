@@ -191,14 +191,14 @@ To link to a page not named `index.md`, omit the closing slash. To link to a pag
 | `/getting-started/kubernetes/troubleshooting` | `/getting-started/kubernetes/troubleshooting.md`  |
 
 
-### `site.url`, `site.baseurl`, and the `page.version` variable
+### `site.url`, `site.baseurl`, and `absolute_url`
 
 **`site.baseurl`**
 
 To create clickable links to other doc site content, use links prefixed with: `{{ site.baseurl }}`. For example:
 
 ```
-[Get started]({{ site.baseurl }}/{{ page.version }}/getting-started/)
+[Get started]({{ site.baseurl }}/getting-started/)
 ```
 
 Will render as:
@@ -207,16 +207,14 @@ Will render as:
 <a href="/v3.8/getting-started/">Getting started</a>
 ```
 
-The `site.baseurl` prefix is not strictly required, but allows greater portability if our docs move in the future.
+**`absolute_url`**
 
-**`site.url`**
+The `absolute_url` filter must be used whenever you are not creating a clickable `<a href='...'>` element, but instead are showing the user a URL to copy locally. A common example is downloading manifests or showing a user how to `kubectl apply -f https://...` them.
 
-The `site.url` prefix must be used whenever you are not creating a clickable `<a href='...'>` element, but instead are showing the user a URL to copy locally. A common example is downloading manifests or showing a user how to `kubectl apply -f https://...` them.
-
-For absolute links, use `{{ site.url }}`. For example:
+For absolute links, use `{{ "/path" | absolute_url }}`. For example:
 
 ```
-kubectl apply -f `{{ site.url }}/{{ page.version }}/manifests/calicoctl.yaml`
+kubectl apply -f `{{ "/manifests/calicoctl.yaml" | absolute_url }}`
 ```
 
 Will render as:
@@ -225,11 +223,19 @@ Will render as:
 kubectl apply -f `https://docs.tigera.io/v3.8/manifests/calicoctl.yaml`
 ```
 
-**page.version**
+**`site.url`**
 
-Most links should include the prefix `{{ page.version }}`, as seen in the above examples. This allows the content to port across multiple versions without link breakage.
+This renders as the top-level site authority string, without any version prefixes.  Use this when you are showing the user a URL to copy, but want to specify the path portion verbatim, without Jekyll adding any page version information.  For example, if you need to link to a hard-coded version of a page:
 
-`page.version` is automatically inherited from `_config.yml` for the current page's directory.
+```
+kubectl apply -f `{{site.url}}/v3.4/manifests/calicoctl.yaml`
+```
+
+Will render as:
+
+```
+kubectl apply -f `https://docs.tigera.io/v3.4/manifests/calicoctl.yaml`
+```
 
 ### Case sensitivity
 

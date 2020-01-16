@@ -1,4 +1,0 @@
----
-layout: null
----
-{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore="etcd" %}
