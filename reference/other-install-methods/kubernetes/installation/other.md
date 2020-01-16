@@ -10,7 +10,7 @@ You can use {{site.prodname}} just for policy enforcement and achieve networking
 with another solution, such as:
 
 - [Amazon Web Services (AWS) VPC CNI plugin]({{site.baseurl}}/reference/public-cloud/aws#using-aws-networking)
-  (recommended for those on AWS who wish to [federate clusters]({{site.baseurl}}/networking/federation/index))
+  (recommended for those on AWS who wish to [federate clusters]({{site.baseurl}}/networking/federation/overview))
 - Static routes
 - Kubernetes cloud provider integration
 
@@ -32,7 +32,7 @@ with another solution, such as:
 ### About installing for policy only
 
 The installation procedure differs according to whether or not you want to
-[federate clusters]({{site.baseurl}}/networking/federation/index). Refer to the section that matches your
+[federate clusters]({{site.baseurl}}/networking/federation/overview). Refer to the section that matches your
 configuration.
 
 - [Without federation](#install-ee-typha-nofed)
@@ -88,8 +88,8 @@ The following procedure describes how to install {{site.prodname}} on a single c
 Kubernetes API datastore.
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files]({{site.baseurl}}/networking/federation/kubeconfig)
-for each [remote cluster]({{site.baseurl}}/networking/federation/index#terminology). Ensure that the
-[local cluster]({{site.baseurl}}/networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+for each [remote cluster]({{site.baseurl}}/networking/federation/overview#terminology). Ensure that the
+[local cluster]({{site.baseurl}}/networking/federation/overview#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
