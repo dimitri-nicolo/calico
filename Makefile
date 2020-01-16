@@ -1,83 +1,39 @@
-# Shortcut targets
-default: build
+PACKAGE_NAME    ?= github.com/tigera/ingress-collector
+GO_BUILD_VER    ?= v0.32
+GIT_USE_SSH     := true
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
-## Build binary for current platform
-all: build
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH ?= $(GO_BUILD_VER)
+MAKE_REPO   ?= https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
-## Run the tests for the current platform/architecture
-test: ut fv
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-###############################################################################
-# Both native and cross architecture builds are supported.
-# The target architecture is select by setting the ARCH variable.
-# When ARCH is undefined it is set to the detected host architecture.
-# When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
-
-# BUILDARCH is the host architecture
-# ARCH is the target architecture
-# we need to keep track of them separately
-BUILDARCH ?= $(shell uname -m)
-
-# canonicalized names for host architecture
-ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
-endif
-ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
 endif
 
-# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
-ARCH ?= $(BUILDARCH)
+include Makefile.common
 
-# canonicalized names for target architecture
-ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
-endif
-ifeq ($(ARCH),x86_64)
-        override ARCH=amd64
-endif
-
-# we want to be able to run the same recipe on multiple targets keyed on the image name
-# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
-# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
-# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
-# in the target, we then unescape them back
-escapefs = $(subst :,---,$(subst /,___,$(1)))
-unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
-
-# these macros create a list of valid architectures for pushing manifests
-space :=
-space +=
-comma := ,
-prefix_linux = $(addprefix linux/,$(strip $1))
-join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
-
-# list of arches *not* to build when doing *-all
-#    until s390x works correctly
-EXCLUDEARCH ?= s390x
-VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
-
-###############################################################################
-GO_BUILD_VER?=v0.30
-CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
-PROTOC_VER?=v0.1
-PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
-
-#### temp changes from common Makefile #####
-BUILD_OS ?= $(shell uname -s | tr A-Z a-z)
-
-EXTRA_DOCKER_ARGS += -e GO111MODULE=on
-
-GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-##### temp changes from common Makefile #####
-
+##############################################################################
+PROTOC_VER ?= v0.1
+PROTOC_CONTAINER ?= calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
 # Get version from git - used for releases.
-INGRESS_GIT_VERSION?=$(shell git describe --tags --dirty --always)
-INGRESS_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-INGRESS_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-INGRESS_GIT_DESCRIPTION?=$(shell git describe --tags)
+INGRESS_GIT_VERSION ?= $(shell git describe --tags --dirty --always)
+INGRESS_BUILD_DATE ?= $(shell date -u +'%FT%T%z')
+INGRESS_GIT_REVISION ?= $(shell git rev-parse --short HEAD)
+INGRESS_GIT_DESCRIPTION ?= $(shell git describe --tags)
 
 ifeq ($(LOCAL_BUILD),true)
 	INGRESS_GIT_VERSION = $(shell git describe --tags --dirty --always)-dev-build
@@ -87,26 +43,18 @@ VERSION_FLAGS=-X main.VERSION=$(INGRESS_GIT_VERSION) \
 	-X main.BUILD_DATE=$(INGRESS_BUILD_DATE) \
 	-X main.GIT_DESCRIPTION=$(INGRESS_GIT_DESCRIPTION) \
 	-X main.GIT_REVISION=$(INGRESS_GIT_REVISION)
-BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
-RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
-
-# Figure out the users UID/GID.  These are needed to run docker containers
-# as the current user and ensure that files built inside containers are
-# owned by the current user.
-LOCAL_USER_ID:=$(shell id -u)
-MY_GID:=$(shell id -g)
+BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
 
-############################################################################
-BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/ingress-collector
-PUSH_IMAGES?=$(BUILD_IMAGE)
-RELEASE_IMAGES?=quay.io/tigera/ingress-collector
-PACKAGE_NAME?=github.com/tigera/ingress-collector
+BUILD_IMAGE ?= gcr.io/unique-caldron-775/cnx/tigera/ingress-collector
+PUSH_IMAGES ?= $(BUILD_IMAGE)
+RELEASE_IMAGES ?= quay.io/tigera/ingress-collector
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
-PUSH_IMAGES+=$(RELEASE_IMAGES)
+	PUSH_IMAGES+=$(RELEASE_IMAGES)
 endif
 
 # remove from the list to push to manifest any registries that do not support multi-arch
@@ -117,59 +65,13 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-
-DOCKER_RUN := mkdir -p .go-pkg-cache bin && \
-                  docker run --rm \
-                      --net=host \
-                      $(EXTRA_DOCKER_ARGS) \
-                      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                      -e GOCACHE=/go-cache \
-                      -e GOPATH=/go \
-                      -e OS=$(BUILD_OS) \
-                      -e GOOS=$(BUILD_OS) \
-                      -e GOARCH=$(ARCH) \
-                      -e GOFLAGS=$(GOFLAGS) \
-                      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                      -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-                      -w /go/src/$(PACKAGE_NAME)
-
-DOCKER_RUN_RO := mkdir -p .go-pkg-cache bin && \
-                  docker run --rm \
-                      --net=host \
-                      $(EXTRA_DOCKER_ARGS) \
-                      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                      -e GOCACHE=/go-cache \
-                      -e GOPATH=/go \
-                      -e OS=$(BUILD_OS) \
-                      -e GOOS=$(BUILD_OS) \
-                      -e GOARCH=$(ARCH) \
-                      -e GOFLAGS=$(GOFLAGS) \
-                      -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
-                      -v $(CURDIR)/report:/go/src/$(PACKAGE_NAME)/report:rw \
-                      -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-                      -w /go/src/$(PACKAGE_NAME)
-
- # Pre-configured docker run command that runs as this user with the repo
- # checked out to /code, uses the --rm flag to avoid leaving the container
- # around afterwards.
-DOCKER_RUN_RM:=docker run --rm \
-               $(EXTRA_DOCKER_ARGS) \
-               --user $(LOCAL_USER_ID):$(MY_GID) -v $(CURDIR):/code
-
 ENVOY_API=deps/github.com/envoyproxy/data-plane-api
 EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
 ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
 V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
 HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
 
+############################################################################
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
 
@@ -185,6 +87,7 @@ ifeq ($(ARCH),amd64)
 	-docker rmi $(BUILD_IMAGE):latest
 	-docker rmi $(BUILD_IMAGE):$(VERSION)
 endif
+
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -206,7 +109,7 @@ ifndef VERSION
 else
 	$(eval LDFLAGS:=$(BUILD_LD_FLAGS))
 endif
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go build $(LDFLAGS) -v -o bin/ingress-collector-$(ARCH) \
 	   	./cmd/ingress-collector'
 
@@ -247,21 +150,21 @@ proto-download:
 proto: $(EXT_AUTH)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go
 
 $(EXT_AUTH)external_auth.pb.go $(EXT_AUTH)attribute_context.pb.go: $(EXT_AUTH)external_auth.proto $(EXT_AUTH)attribute_context.proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
 	              $(PROTOC_CONTAINER) \
 	              $(PROTOC_IMPORTS) \
 	              $(EXT_AUTH)*.proto \
 	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(ADDRESS).pb.go $(V2_BASE).pb.go: $(ADDRESS).proto $(V2_BASE).proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
 	              $(PROTOC_CONTAINER) \
 	              $(PROTOC_IMPORTS) \
 	              $(ADDRESS).proto $(V2_BASE).proto \
 	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
 	              $(PROTOC_CONTAINER) \
 	              $(PROTOC_IMPORTS) \
 	              $(HTTP_STATUS).proto \
@@ -270,7 +173,7 @@ $(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
 $(EXT_AUTH)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(EXT_AUTH)attribute_context.proto:
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
-	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
 	              $(PROTOC_CONTAINER) \
 	              $(PROTOC_IMPORTS) \
 	              proto/*.proto \
@@ -348,13 +251,6 @@ sub-tag-images-%:
 # Managing the upstream library pins
 ###############################################################################
 
-## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin
-
-## deprecated target alias
-update-libcalico: update-pins
-	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
-
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
@@ -363,46 +259,19 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
-		echo "ERROR: LIBCALICO version could not be determined"; \
-		exit 1; \
-	fi;
-
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_BRANCH?=$(PIN_BRANCH)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-
-update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
-	$(call update_replace_pin,github.com/projectcalico/libcalico-go,$(LIBCALICO_REPO),$(LIBCALICO_BRANCH))
+## Update dependency pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 ###############################################################################
-# Static checks
-###############################################################################
-## Perform static checks on the code.
-.PHONY: static-checks
-static-checks: guard-ssh-forwarding-bug
+## Perform static checks
+# We need a custom static-checks to mount `.empty` instead of `deps` folder.
+# Without this, golangci-lint fails to load
+
+LINT_ARGS := --max-issues-per-linter 0 --max-same-issues 0 --timeout 5m --disable govet
+.PHONY: static-checks-custom
+static-checks-custom:
 	$(DOCKER_RUN) -v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/deps \
-	    -v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/fv \
-	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
-	    golangci-lint run --max-issues-per-linter 0 --max-same-issues 0 --timeout 5m --skip-dirs "deps$\" --disable govet'
-
-.PHONY: fix
-## Fix static checks
-fix:
-	goimports -w $(SRC_FILES)
-
-foss-checks:
-	@echo Running $@...
-	$(DOCKER_RUN_RO) \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && /usr/local/bin/fossa'
+	    $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
 
 ###############################################################################
 # UTs
@@ -416,7 +285,7 @@ ut: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN_RO) \
 	    $(LOCAL_BUILD_MOUNTS) \
-	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) && \
+	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
 	    ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
@@ -424,7 +293,7 @@ fv: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN_RO) \
 	    $(LOCAL_BUILD_MOUNTS) \
-	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) && \
+	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
 	    ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 ###############################################################################
@@ -432,7 +301,7 @@ fv: proto bin/ingress-collector-$(ARCH)
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean build-all static-checks ut
+ci: clean build-all static-checks-custom ut
 
 ###############################################################################
 # CD
@@ -536,25 +405,10 @@ ifdef LOCAL_BUILD
 endif
 
 ###############################################################################
-# Developer helper scripts (not used by build or test)
+# Utils
 ###############################################################################
-.PHONY: help
-## Display this help text
-help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
-			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=20                                                            \
-	$(MAKEFILE_LIST)
-
-.PHONY: install-git-hooks
-## Install Git hooks
-install-git-hooks:
-	./install-git-hooks
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go mod tidy'

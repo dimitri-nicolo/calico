@@ -153,7 +153,7 @@ func (cth *CollectorTestHandler) StartPolicySyncServer() {
 	if err != nil {
 		panic(err)
 	}
-	cth.grpcServer.Serve(unixListener)
+	_ = cth.grpcServer.Serve(unixListener)
 }
 
 func (cth *CollectorTestHandler) Timeout() string {
