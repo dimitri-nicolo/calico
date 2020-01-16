@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-  {% helm tigera-operator --execute templates/crds/01-crd-managementclusterconnection.yaml %}
+{% helm tigera-operator --execute templates/crds/01-crd-managementclusterconnection.yaml %}
 openshift: true
-  {% endhelm %}
+{% endhelm %}
