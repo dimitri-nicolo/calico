@@ -126,6 +126,7 @@ var _ = Describe("Policy Recommendation Engine", func() {
 				flowWithError{flowPod1RedToPod3Allow8080ReporterDestination, false},
 				flowWithError{flowPod2ToPod3Allow5432ReporterSource, true},
 				flowWithError{flowPod2ToPod3Allow5432ReporterDestination, false},
+				flowWithError{flowGlobalNetworkSet1ToPod3Allow5432ReporterDestination, false},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod3}),
 	)
