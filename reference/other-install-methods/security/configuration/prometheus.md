@@ -262,7 +262,7 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       team: network-operators
-  version: {{site.data.versions[page.version].first.components["prometheus"].version}}
+  version: {{site.data.versions.first.components["prometheus"].version}}
   retention: 1h
   resources:
     requests:

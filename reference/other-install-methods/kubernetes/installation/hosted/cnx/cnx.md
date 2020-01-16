@@ -90,7 +90,7 @@ spec:
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
+        image: quay.io/coreos/prometheus-operator:{{site.data.versions.first.components["prometheus-operator"].version}}
         resources:
           requests:
             cpu: 100m

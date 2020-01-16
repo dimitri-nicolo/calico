@@ -1,4 +1,4 @@
-# {{site.prodname}} Version {{site.data.versions[page.version].first.title}}
+# {{site.prodname}} Version {{site.data.versions.first.title}}
 # This file contains Calico Enterprise tiered security policy to control connectivity to Calico Enterprise Manager and Calico Enterprise API Server.
 # See the documentation for a full reference on tiered security policy.
 
