@@ -10,8 +10,6 @@ for instructions.
 
 - [Installing {{site.prodname}} for policy and networking (recommended)](calico)
 
-- [Installing {{site.prodname}} for policy and flannel for networking](flannel)
-
 - [Installing {{site.prodname}} for policy (advanced)](other)
 
 After installing {{site.prodname}}, you can [enable application layer policy](app-layer-policy).
