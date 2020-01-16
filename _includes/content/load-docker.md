@@ -40,7 +40,7 @@
 1. Use the following commands to pull the required {{site.prodname}} images.
 
    ```bash
-   {% for component in site.data.versions[page.version].first.components -%}
+   {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%}{% endif -%}
    docker pull {{ registry }}{{ component[1].image }}:{{component[1].version}}
@@ -52,7 +52,7 @@
 1. Retag the images with the name of your private registry.
 
    ```bash
-   {% for component in site.data.versions[page.version].first.components -%}
+   {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%}{% endif -%}
    docker tag {{ registry }}{{ component[1].image }}:{{component[1].version}} <YOUR-REGISTRY>/{{ component[1].image }}:{{component[1].version}}
@@ -67,7 +67,7 @@
 1. Push the images to your private registry.
 
    ```bash
-   {% for component in site.data.versions[page.version].first.components -%}
+   {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
    docker push <YOUR-REGISTRY>/{{ component[1].image }}:{{component[1].version}}
    {% endif -%}
@@ -84,14 +84,14 @@
    registry.
 
    ```bash
-   docker pull {{page.registry}}{{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   docker pull {{page.registry}}{{site.imageNames[include.yaml]}}:{{site.data.versions.first.components[include.yaml].version}}
    ```
    {: #load-docker-pull-cmds}
 
 1. Retag the image with the name of your private registry.
 
    ```bash
-   docker tag {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}} <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   docker tag {{site.imageNames[include.yaml]}}:{{site.data.versions.first.components[include.yaml].version}} <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions.first.components[include.yaml].version}}
    ```
    {: #load-docker-tag-cmds}
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`),
@@ -101,7 +101,7 @@
 1. Push the images to your private registry.
 
    ```bash
-   docker push <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   docker push <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions.first.components[include.yaml].version}}
    ```
    {: #load-docker-push-cmds}
 
