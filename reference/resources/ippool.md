@@ -1,6 +1,7 @@
 ---
 title: IP pool
-canonical_url: /reference/resources/ippool
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/ippool'
 ---
 
 An IP pool resource (`IPPool`) represents a collection of IP addresses from which {{site.prodname}} expects

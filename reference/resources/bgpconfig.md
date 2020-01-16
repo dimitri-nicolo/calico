@@ -1,6 +1,7 @@
 ---
 title: BGP configuration
-canonical_url: /reference/resources/bgpconfig
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/bgpconfig'
 ---
 
 A BGP configuration resource (`BGPConfiguration`) represents BGP specific configuration options for the cluster or a

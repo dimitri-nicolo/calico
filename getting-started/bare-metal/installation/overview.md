@@ -1,6 +1,6 @@
 ---
 title: Installing Calico Enterprise on host endpoints
-description: Choose a method to install Calico on hosts
+description: Choose a method to install Calico Enterprise on hosts.
 canonical_url: '/getting-started/bare-metal/installation/index'
 ---
 

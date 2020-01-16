@@ -1,6 +1,7 @@
 ---
 title: System requirements
-canonical_url: /getting-started/openshift/requirements
+description: Review the requirements for using OpenShift with Calico Enterprise.
+canonical_url: '/getting-started/openshift/requirements'
 ---
 
 {% include content/reqs-sys.md orch="OpenShift" %}

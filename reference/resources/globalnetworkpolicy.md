@@ -1,6 +1,7 @@
 ---
 title: Global network policy
-canonical_url: /reference/resources/globalnetworkpolicy
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/globalnetworkpolicy'
 ---
 
 A global network policy resource (`GlobalNetworkPolicy`) represents an ordered set of rules which are applied

@@ -1,6 +1,7 @@
 ---
 title: BGP peer
-canonical_url: /reference/resources/bgppeer
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/bgppeer'
 ---
 
 A BGP peer resource (`BGPPeer`) represents a remote BGP peer with

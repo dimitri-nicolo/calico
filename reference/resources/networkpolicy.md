@@ -1,6 +1,7 @@
 ---
 title: Network policy
-canonical_url: /reference/resources/networkpolicy
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/networkpolicy'
 ---
 
 A network policy resource (`NetworkPolicy`) represents an ordered set of rules which are applied

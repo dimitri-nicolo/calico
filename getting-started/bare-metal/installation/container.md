@@ -1,6 +1,7 @@
 ---
 title: Container install
-canonical_url: /getting-started/bare-metal/installation/container
+description: Install Calico Enterprise on hosts using Docker.
+canonical_url: '/getting-started/bare-metal/installation/container'
 ---
 
 ## Running under Docker

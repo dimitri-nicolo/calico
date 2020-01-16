@@ -1,6 +1,7 @@
 ---
 title: Global network set
-canonical_url: /reference/resources/globalnetworkset
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/globalnetworkset'
 ---
 
 A global network set resource (GlobalNetworkSet) represents an arbitrary set of IP subnetworks/CIDRs,

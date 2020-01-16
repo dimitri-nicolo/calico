@@ -1,5 +1,6 @@
 ---
 title: Running tigera/cnx-node with an init system
+description: Install Calico Enterprise on a host in Docker or other container type. 
 canonical_url: '/getting-started/as-service'
 ---
 

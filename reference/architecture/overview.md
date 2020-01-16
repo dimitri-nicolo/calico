@@ -1,6 +1,6 @@
 ---
 title: Calico Enterprise architecture
-description: Understand the Calico Enterprise components and the basics of BGP networking
+description: Understand the Calico Enterprise components and the basics of BGP networking.
 canonical_url: '/reference/architecture/index'
 ---
 

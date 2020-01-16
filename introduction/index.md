@@ -1,8 +1,9 @@
 ---
-title: About Calico Enterprise (EE)
-canonical_url: /introduction/
-description: Home
-layout: docwithnav
+title: About Calico Enterprise
+description: The value of using Calico Enterprise for networking and network policy for workloads and hosts.
+show_title: false
+canonical_url: '/introduction/index'
+custom_css: css/intro.css
 ---
 
 <div id="why-use-calico-1" class="row">

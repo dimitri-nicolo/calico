@@ -1,5 +1,6 @@
 ---
 title: Protect hosts
+description: Calico Enterprise network policy not only protects workloads, but also hosts. Create a Calico Enterprise network policies to restrict traffic to/from hosts.
 ---
 
 ### Big picture

@@ -1,6 +1,7 @@
 ---
 title: Prometheus statistics
-canonical_url: /reference/felix/prometheus
+description: Review metrics for the Felix component if you are using Prometheus. 
+canonical_url: '/reference/felix/prometheus'
 ---
 
 Felix can be configured to report a number of metrics through Prometheus.  See the

@@ -1,6 +1,7 @@
 ---
 title: Configuring the Calico Enterprise CNI plugins
-canonical_url: /reference/cni-plugin/configuration
+description: Details for configuring the Calico Enterprise CNI plugins.
+canonical_url: '/reference/cni-plugin/configuration'
 ---
 
 The {{site.prodname}} CNI plugin is configured through the standard CNI

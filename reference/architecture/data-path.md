@@ -1,6 +1,7 @@
 ---
-title: 'The Calico Enterprise Data Path: IP Routing and iptables'
-canonical_url: /reference/architecture/data-path
+title: 'The Calico Enterprise data path: IP routing and iptables'
+description: Learn how packets flow between workloads in a datacenter, or between a workload and the internet.
+canonical_url: '/reference/architecture/data-path'
 ---
 
 One of {{site.prodname}}’s key features is how packets flow between workloads in a

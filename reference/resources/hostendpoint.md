@@ -1,6 +1,7 @@
 ---
 title: Host endpoint
-canonical_url: /reference/resources/hostendpoint
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/hostendpoint'
 ---
 
 A host endpoint resource (`HostEndpoint`) represents one or more real or virtual interfaces

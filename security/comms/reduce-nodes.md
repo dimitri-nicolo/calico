@@ -1,7 +1,7 @@
 ---
 title: Schedule to well-known nodes
-description: Learn how to configure the Calico Enterprise Typha TCP port.
-canonical_url: /security/comms/reduce-nodes
+description: Configure the Calico Enterprise Typha TCP port.
+canonical_url: '/security/comms/reduce-nodes'
 ---
 
 The following {{site.prodname}} components must accept connections on
