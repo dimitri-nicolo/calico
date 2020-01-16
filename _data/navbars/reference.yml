@@ -230,9 +230,7 @@ section:
   path: /reference/other-install-methods/
   section:
   - title: Helm
-    section:
-    - title: Installing Calico Enterprise using Helm
-      path: /reference/other-install-methods/kubernetes/installation/helm/
+    path: /reference/other-install-methods/kubernetes/installation/helm/
   # TODO: This is old content that needs refreshing in order to work with the operator.
   - title: Configure Metrics 
     path: /reference/other-install-methods/security/metrics/
