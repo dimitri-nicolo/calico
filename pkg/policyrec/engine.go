@@ -25,16 +25,12 @@ var labelKeysToIgnore = set.FromArray([]string{
 	"app.kubernetes.io/instance",
 })
 
-const noNamespace = ""
-
-// Special selector for working with cross namespaced traffic.
-// TODO(doublek): This should be moved into selectorBuilder once
-// we get nicer namespaceSelector behavior.
-type crossNamespaceSelector string
-
 const (
-	allNamespacedEndpointsSelector    = "all()"
-	allNonNamespacedEndpointsSelector = "!all()"
+	noNamespace = ""
+
+	// TODO(doublek): Import these from libcalico-go when we bump pins.
+	namespaceByNameLabel    = "projectcalico.org/name"
+	globalNamespaceSelector = "global()"
 )
 
 // The rules for recommend policy are aggregated per endpoint + protocol with
@@ -136,6 +132,10 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 	}
 	ere.constructRulesFromTraffic()
 
+	if len(ere.ingressRules) == 0 && len(ere.egressRules) == 0 {
+		return nil, fmt.Errorf("Could not calculate any rules for namespace/name %v/%v", ere.endpointNamespace, ere.endpointName)
+	}
+
 	policyTypes := []v3.PolicyType{}
 	if len(ere.ingressRules) > 0 {
 		policyTypes = append(policyTypes, v3.PolicyTypeIngress)
@@ -150,7 +150,7 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 		gnp.ObjectMeta = metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s.%s", ere.policyTier, ere.policyName),
 		}
-		policySelector := ere.policySelector.Expression(noNamespace)
+		policySelector := ere.policySelector.Expression()
 		if policySelector == "" {
 			log.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
 			return nil, fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
@@ -170,7 +170,7 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 			Name:      fmt.Sprintf("%s.%s", ere.policyTier, ere.policyName),
 			Namespace: ere.policyNamespace,
 		}
-		policySelector := ere.policySelector.Expression(noNamespace)
+		policySelector := ere.policySelector.Expression()
 		if policySelector == "" {
 			log.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
 			return nil, fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
@@ -298,33 +298,29 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 		// TODO(doublek): Fix this when we have nicer namespaced selectors.
 		switch policyType {
 		case v3.PolicyTypeEgress:
-			namespaceName := ""
 			if erpp.endpointNamespace == noNamespace {
 				// Only include the !all() selector if we want to actually select a Calico
 				// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
 				// out all selectors.
 				if !rule.selector.IsEmpty() {
-					newRule.Destination.NamespaceSelector = allNonNamespacedEndpointsSelector
+					newRule.Destination.NamespaceSelector = globalNamespaceSelector
 				}
 			} else if erpp.endpointNamespace != ere.endpointNamespace {
-				newRule.Destination.NamespaceSelector = allNamespacedEndpointsSelector
-				namespaceName = erpp.endpointNamespace
+				newRule.Destination.NamespaceSelector = selectNamespaceByName(erpp.endpointNamespace)
 			}
-			newRule.Destination.Selector = rule.selector.Expression(namespaceName)
+			newRule.Destination.Selector = rule.selector.Expression()
 		case v3.PolicyTypeIngress:
-			namespaceName := ""
 			if erpp.endpointNamespace == noNamespace {
 				// Only include the !all() selector if we want to actually select a Calico
 				// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
 				// out all selectors.
 				if !rule.selector.IsEmpty() {
-					newRule.Source.NamespaceSelector = allNonNamespacedEndpointsSelector
+					newRule.Source.NamespaceSelector = globalNamespaceSelector
 				}
 			} else if erpp.endpointNamespace != ere.endpointNamespace {
-				newRule.Source.NamespaceSelector = allNamespacedEndpointsSelector
-				namespaceName = erpp.endpointNamespace
+				newRule.Source.NamespaceSelector = selectNamespaceByName(erpp.endpointNamespace)
 			}
-			newRule.Source.Selector = rule.selector.Expression(namespaceName)
+			newRule.Source.Selector = rule.selector.Expression()
 		}
 		rules = append(rules, newRule)
 	}
@@ -336,14 +332,16 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 func (ere *endpointRecommendationEngine) matchesSourceEndpoint(flow api.Flow) bool {
 	return flow.Source.Name == ere.endpointName &&
 		flow.Source.Namespace == ere.endpointNamespace &&
-		flow.Source.Type == api.EndpointTypeWep
+		flow.Source.Type == api.EndpointTypeWep &&
+		flow.Reporter == api.ReporterTypeSource
 }
 
 // Check if the flow matches the destination endpoint.
 func (ere *endpointRecommendationEngine) matchesDestinationEndpoint(flow api.Flow) bool {
 	return flow.Destination.Name == ere.endpointName &&
 		flow.Destination.Namespace == ere.endpointNamespace &&
-		flow.Destination.Type == api.EndpointTypeWep
+		flow.Destination.Type == api.EndpointTypeWep &&
+		flow.Reporter == api.ReporterTypeDestination
 }
 
 // selectorBuilder wraps a map to provide convenience methods selector construction.
@@ -381,7 +379,7 @@ func (sb selectorBuilder) IntersectLabels(labels map[string]string) {
 
 // Expression constructs a selector expression for the labels stored in the
 // selectorBuilder. Currently only "&&"-ed selector expressions are supported.
-func (sb selectorBuilder) Expression(namespace string) string {
+func (sb selectorBuilder) Expression() string {
 	if len(sb) == 0 {
 		return ""
 	}
@@ -392,13 +390,17 @@ func (sb selectorBuilder) Expression(namespace string) string {
 		}
 		expressionParts = append(expressionParts, fmt.Sprintf("%s == '%s'", k, v))
 	}
-	if namespace != "" {
-		expressionParts = append(expressionParts, fmt.Sprintf("%s == '%s'", v3.LabelNamespace, namespace))
-	}
 	return strings.Join(expressionParts, " && ")
 }
 
 // IsEmpty returns if there are no labels present in the label map.
 func (sb selectorBuilder) IsEmpty() bool {
 	return len(sb) == 0
+}
+
+// selectNamespaceByName constructs a selector of the form
+// "projectcalico.org/name == 'passed-in-namespace'". This is suitable for use
+// in a namespaceSelector to select a namespace by name.
+func selectNamespaceByName(namespace string) string {
+	return fmt.Sprintf("%s == '%s'", namespaceByNameLabel, namespace)
 }
