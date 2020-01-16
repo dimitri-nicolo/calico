@@ -1,6 +1,6 @@
 ---
 title: Create tiered policies
-canonical_url: /security/tiered-policy-cnx
+canonical_url: /security/tiered-policy
 ---
 
 This guide will introduce tiered policies and walk through a simple example
