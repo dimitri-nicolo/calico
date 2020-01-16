@@ -1,6 +1,7 @@
 ---
 title: Installing Calico Enterprise on Google GKE
 canonical_url: /reference/other-install-methods/kubernetes/installation/other
+show_toc: false
 ---
 
 ## Overview

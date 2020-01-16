@@ -1,6 +1,7 @@
 ---
 title: Installing Calico Enterprise on Docker Enterprise
 canonical_url: /reference/other-install-methods/kubernetes/installation/other
+show_toc: false
 ---
 
 ## Overview
