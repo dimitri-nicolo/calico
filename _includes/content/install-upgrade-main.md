@@ -19,7 +19,7 @@
 
 ### Selecting your cluster configuration
 
-The procedure differs according to whether or not you want to [federate clusters]({{site.baseurl}}/networking/federation/index)
+The procedure differs according to whether or not you want to [federate clusters]({{site.baseurl}}/networking/federation/overview)
 and your datastore type. Refer to the section that matches your configuration.
 
 - **Without federation**:
@@ -93,11 +93,11 @@ and your datastore type. Refer to the section that matches your configuration.
 ### Installing with federation, using etcd
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses an
-etcd datastore (the [local cluster]({{site.baseurl}}/networking/federation/index#terminology)).
+etcd datastore (the [local cluster]({{site.baseurl}}/networking/federation/overview#terminology)).
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files]({{site.baseurl}}/networking/federation/kubeconfig)
-for each [remote cluster]({{site.baseurl}}/networking/federation/index#terminology). Ensure that the
-[local cluster]({{site.baseurl}}/networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+for each [remote cluster]({{site.baseurl}}/networking/federation/overview#terminology). Ensure that the
+[local cluster]({{site.baseurl}}/networking/federation/overview#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
@@ -149,11 +149,11 @@ for each [remote cluster]({{site.baseurl}}/networking/federation/index#terminolo
 ### Installing with federation, using Kubernetes API datastore
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
-Kubernetes API datastore (the [local cluster]({{site.baseurl}}/networking/federation/index#terminology)).
+Kubernetes API datastore (the [local cluster]({{site.baseurl}}/networking/federation/overview#terminology)).
 
 **Prerequisite**: Complete the steps in [Creating kubeconfig files]({{site.baseurl}}/networking/federation/kubeconfig)
-for each [remote cluster]({{site.baseurl}}/networking/federation/index#terminology). Ensure that the
-[local cluster]({{site.baseurl}}/networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+for each [remote cluster]({{site.baseurl}}/networking/federation/overview#terminology). Ensure that the
+[local cluster]({{site.baseurl}}/networking/federation/overview#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
