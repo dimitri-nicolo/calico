@@ -136,6 +136,10 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 	}
 	ere.constructRulesFromTraffic()
 
+	if len(ere.ingressRules) == 0 && len(ere.egressRules) == 0 {
+		return nil, fmt.Errorf("Could not calculate any rules for namespace/name %v/%v", ere.endpointNamespace, ere.endpointName)
+	}
+
 	policyTypes := []v3.PolicyType{}
 	if len(ere.ingressRules) > 0 {
 		policyTypes = append(policyTypes, v3.PolicyTypeIngress)
@@ -336,14 +340,16 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 func (ere *endpointRecommendationEngine) matchesSourceEndpoint(flow api.Flow) bool {
 	return flow.Source.Name == ere.endpointName &&
 		flow.Source.Namespace == ere.endpointNamespace &&
-		flow.Source.Type == api.EndpointTypeWep
+		flow.Source.Type == api.EndpointTypeWep &&
+		flow.Reporter == api.ReporterTypeSource
 }
 
 // Check if the flow matches the destination endpoint.
 func (ere *endpointRecommendationEngine) matchesDestinationEndpoint(flow api.Flow) bool {
 	return flow.Destination.Name == ere.endpointName &&
 		flow.Destination.Namespace == ere.endpointNamespace &&
-		flow.Destination.Type == api.EndpointTypeWep
+		flow.Destination.Type == api.EndpointTypeWep &&
+		flow.Reporter == api.ReporterTypeDestination
 }
 
 // selectorBuilder wraps a map to provide convenience methods selector construction.

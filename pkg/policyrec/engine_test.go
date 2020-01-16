@@ -19,6 +19,13 @@ import (
 
 const defaultTier = "default"
 
+// flowWithError is a convenience type for passing in a flow along
+// with whether it is processed successfully or not.
+type flowWithError struct {
+	flow        api.Flow
+	shouldError bool
+}
+
 var _ = Describe("Policy Recommendation Engine", func() {
 	var (
 		re  policyrec.RecommendationEngine
@@ -30,15 +37,19 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		// matchingFlows is the input flows that are passed to ProcessFlows.
 		// expectedPolicies is a slice of StagedNetworkPolicy or StagedGlobalNetworkPolicy.
 		func(endpointName, endpointNamespace, policyName, policyTier string, policyOrder *float64,
-			matchingFlows []api.Flow, expectedPolicies interface{}) {
+			matchingFlows []flowWithError, expectedPolicies interface{}) {
 
 			By("Initializing a recommendation engine with namespace and name")
 			re = policyrec.NewEndpointRecommendationEngine(endpointName, endpointNamespace, policyName, policyTier, policyOrder)
 
 			for _, flow := range matchingFlows {
 				By("Processing matching flow")
-				err = re.ProcessFlow(flow)
-				Expect(err).To(BeNil())
+				err = re.ProcessFlow(flow.flow)
+				if flow.shouldError {
+					Expect(err).ToNot(BeNil())
+				} else {
+					Expect(err).To(BeNil())
+				}
 			}
 
 			By("Once all matched flows have been input for matching endpoint and getting recommended flows")
@@ -64,39 +75,57 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		},
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
-			[]api.Flow{flowPod1BlueToPod2Allow443ReporterSource, flowPod1BlueToPod2Allow443ReporterDestination},
+			[]flowWithError{
+				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
+				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
+			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1BlueToPod2}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints with a non overlapping label - and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
-			[]api.Flow{flowPod1BlueToPod2Allow443ReporterSource, flowPod1BlueToPod2Allow443ReporterDestination,
-				flowPod1RedToPod2Allow443ReporterSource, flowPod1RedToPod2Allow443ReporterDestination},
+			[]flowWithError{
+				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
+				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				flowWithError{flowPod1RedToPod2Allow443ReporterSource, false},
+				flowWithError{flowPod1RedToPod2Allow443ReporterDestination, true},
+			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1ToPod2}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and external network and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
-			[]api.Flow{flowPod1BlueToPod2Allow443ReporterSource, flowPod1BlueToPod2Allow443ReporterDestination,
-				flowPod1BlueToExternalAllow53ReporterSource},
+			[]flowWithError{
+				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
+				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				flowWithError{flowPod1BlueToExternalAllow53ReporterSource, false},
+			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1BlueToPod2AndExternalNet}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
-			[]api.Flow{
-				flowPod1BlueToPod2Allow443ReporterSource, flowPod1BlueToPod2Allow443ReporterDestination,
-				flowPod1BlueToPod3Allow5432ReporterSource, flowPod1BlueToPod3Allow5432ReporterDestination,
-				flowPod1RedToPod3Allow8080ReporterSource, flowPod1RedToPod3Allow8080ReporterDestination,
+			[]flowWithError{
+				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
+				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				flowWithError{flowPod1BlueToPod3Allow5432ReporterSource, false},
+				flowWithError{flowPod1BlueToPod3Allow5432ReporterDestination, true},
+				flowWithError{flowPod1RedToPod3Allow8080ReporterSource, false},
+				flowWithError{flowPod1RedToPod3Allow8080ReporterDestination, true},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1ToPod2AndPod3}),
 		Entry("recommend a policy with ingress and egress rules for a flow betwen 2 endpoints and matching source and destination endpoint",
 			pod2Aggr, namespace1, pod2, defaultTier, nil,
-			[]api.Flow{
-				flowPod1BlueToPod2Allow443ReporterSource, flowPod1BlueToPod2Allow443ReporterDestination,
-				flowPod2ToPod3Allow5432ReporterSource, flowPod2ToPod3Allow5432ReporterDestination,
+			[]flowWithError{
+				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, true},
+				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, false},
+				flowWithError{flowPod2ToPod3Allow5432ReporterSource, false},
+				flowWithError{flowPod2ToPod3Allow5432ReporterDestination, true},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod2}),
 		Entry("recommend a policy with ingress rule for flows and matching destination endpoint",
 			pod3Aggr, namespace2, pod3, defaultTier, nil,
-			[]api.Flow{
-				flowPod1BlueToPod3Allow5432ReporterSource, flowPod1BlueToPod3Allow5432ReporterDestination,
-				flowPod1RedToPod3Allow8080ReporterSource, flowPod1RedToPod3Allow8080ReporterDestination,
-				flowPod2ToPod3Allow5432ReporterSource, flowPod2ToPod3Allow5432ReporterDestination,
+			[]flowWithError{
+				flowWithError{flowPod1BlueToPod3Allow5432ReporterSource, true},
+				flowWithError{flowPod1BlueToPod3Allow5432ReporterDestination, false},
+				flowWithError{flowPod1RedToPod3Allow8080ReporterSource, true},
+				flowWithError{flowPod1RedToPod3Allow8080ReporterDestination, false},
+				flowWithError{flowPod2ToPod3Allow5432ReporterSource, true},
+				flowWithError{flowPod2ToPod3Allow5432ReporterDestination, false},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod3}),
 	)
@@ -116,6 +145,19 @@ var _ = Describe("Policy Recommendation Engine", func() {
 
 		By("Processing flow that don't match")
 		err = re.ProcessFlow(flowPod2ToNs1Allow80ReporterSource)
+		Expect(err).ToNot(BeNil())
+	})
+	It("should not produce any policies for flows that match endpoint name and namaespace but not direction reported", func() {
+		By("Initializing a recommendationengine with namespace and name")
+		re = policyrec.NewEndpointRecommendationEngine(pod2Aggr, namespace1, pod2, defaultTier, nil)
+
+		By("Processing flow that don't match")
+		err = re.ProcessFlow(flowPod1BlueToPod2Allow443ReporterSource)
+		Expect(err).ToNot(BeNil())
+		err = re.ProcessFlow(flowPod1RedToPod2Allow443ReporterSource)
+		Expect(err).ToNot(BeNil())
+
+		_, err = re.Recommend()
 		Expect(err).ToNot(BeNil())
 	})
 })
