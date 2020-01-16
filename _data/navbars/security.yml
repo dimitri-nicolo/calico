@@ -84,7 +84,7 @@ section:
   - title: Policy for AWS security groups
     section:
     - title: Overview
-      path: /security/aws-security-group-integration/
+      path: /security/aws-security-group-integration/overview
     - title: Interconnect your VPC and cluster
       path: /security/aws-security-group-integration/interconnection
     - title: Enable pods to access VPC members
@@ -102,7 +102,7 @@ section:
   - title: Elasticsearch logs
     section:
     - title: Overview
-      path: /security/logs/elastic/
+      path: /security/logs/elastic/overview
     - title: Flow logs
       path: /security/logs/elastic/flow
     - title: Audit logs
@@ -134,7 +134,7 @@ section:
   - title: Anomaly detection
     section:
     - title: Overview
-      path: /security/threat-detection-and-prevention/anomaly-detection/
+      path: /security/threat-detection-and-prevention/anomaly-detection/overview
     - title: Enable anomaly detection
       path: /security/threat-detection-and-prevention/anomaly-detection/enabling
     - title: View anomalies
@@ -150,7 +150,7 @@ section:
 - title: Compliance reports
   section:
   - title: Configure compliance reports
-    path: /security/compliance-reports
+    path: /security/compliance-reports/overview
   - title: Configure compliance reports for managed cloud providers
     path: /security/compliance-managed-cloud 
   - title: Configure CIS benchmark reports

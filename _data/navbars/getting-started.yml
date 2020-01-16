@@ -98,11 +98,11 @@ section:
 - title: calicoq
   section:
   - title: Installing calicoq
-    path: /getting-started/calicoq/
+    path: /getting-started/calicoq/installing
   - title: Configuring calicoq
     section:
     - title: Overview
-      path: /getting-started/calicoq/configure/
+      path: /getting-started/calicoq/configure/overview
     - title: etcd datastore options
       path: /getting-started/calicoq/configure/etcd
     - title: Kubernetes API datastore options

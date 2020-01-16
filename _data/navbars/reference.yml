@@ -116,7 +116,7 @@ section:
 - title: calicoq
   section:
   - title: Overview
-    path: /reference/calicoq/
+    path: /reference/calicoq/overview
   - title: Selectors
     path: /reference/calicoq/selectors
   - title: Endpoint
@@ -148,7 +148,7 @@ section:
 - title: Calico Enterprise Compliance Reports
   section:
     - title: Overview
-      path: /reference/compliance-reports/
+      path: /reference/compliance-reports/overview
     - title: Inventory Report
       path: /reference/compliance-reports/inventory
     - title: Network Access Report
@@ -233,7 +233,7 @@ section:
   - title: Configure Metrics 
     section:
     - title: Overview
-      path: /reference/other-install-methods/security/metrics/
+      path: /reference/other-install-methods/security/metrics/overview
     - title: Policy metrics in Prometheus
       path: /reference/other-install-methods/security/metrics/metrics
     - title: Configuring Prometheus
