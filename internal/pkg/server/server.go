@@ -69,8 +69,6 @@ type Server struct {
 
 	// Creds to be used for the tunnel endpoints and to generate creds for the
 	// tunnel clients a.k.a guardians
-	//
-	// If not set, will be populated from certFile and keyFile
 	tunnelCert *x509.Certificate
 	tunnelKey  crypto.Signer
 
@@ -129,7 +127,7 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 
 	var tunOpts []tunnel.ServerOption
 
-	if srv.tunnelCert != nil {
+	if srv.tunnelCert != nil && srv.tunnelKey != nil {
 		tunOpts = append(tunOpts, tunnel.WithCreds(srv.tunnelCert, srv.tunnelKey))
 		var err error
 		srv.tunSrv, err = tunnel.NewServer(tunOpts...)

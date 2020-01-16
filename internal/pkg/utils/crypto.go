@@ -8,50 +8,42 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
+
+	"golang.org/x/crypto/ssh"
 
 	"github.com/pkg/errors"
 )
 
-// LoadPEMFromFile returns decoded PEM from a file as []byte
-func LoadPEMFromFile(f string) ([]byte, error) {
-	bytes, err := ioutil.ReadFile(f)
-	if err != nil {
-		return nil, errors.Errorf("could not read file %s: %s", f, err)
-	}
-
-	block, _ := pem.Decode(bytes)
-	if block == nil {
-		return nil, errors.Errorf("no block in file %s", f)
-	}
-
-	return block.Bytes, nil
-}
-
-// LoadX509FromFile returns a x509 certificate from a file
-func LoadX509FromFile(f string) (*x509.Certificate, error) {
-	bytes, err := LoadPEMFromFile(f)
-	if err != nil {
-		return nil, errors.WithMessage(err, "LoadPEMFromFile")
-	}
-
-	return x509.ParseCertificate(bytes)
-}
-
-// LoadX509KeyPairFromPEM parse PEM blocks and returns the cert and key (as a
+// LoadX509Pair reads certificates and private keys from file and returns the cert and key (as a
 // crypto.Signer)
-func LoadX509KeyPairFromPEM(cert []byte, key []byte) (*x509.Certificate, crypto.Signer, error) {
-	xCert, err := x509.ParseCertificate(cert)
+func LoadX509Pair(certFile, keyFile string) (*x509.Certificate, crypto.Signer, error) {
+	certPEMBlock, err := ioutil.ReadFile(certFile)
 	if err != nil {
-		return nil, nil, errors.Errorf("parsing cert PEM failed: %s", err)
+		return nil, nil, errors.WithMessage(err, fmt.Sprintf("Could not read cert %s", certFile))
+	}
+	keyPEMBlock, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, fmt.Sprintf("Could not read key %s", keyFile))
 	}
 
-	signer, err := x509.ParsePKCS1PrivateKey(key)
+	key, err := ssh.ParseRawPrivateKey(keyPEMBlock)
 	if err != nil {
-		return nil, nil, errors.Errorf("parsing key PEM failed: %s", err)
+		return nil, nil, errors.WithMessage(err, "Could not parse key")
 	}
 
-	return xCert, signer, nil
+	block, _ := pem.Decode(certPEMBlock)
+	if block == nil {
+		return nil, nil, errors.WithMessage(err, "Could not decode cert")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "Could not parse cert")
+	}
+
+	return cert, key.(crypto.Signer), nil
+
 }
 
 // KeyPEMEncode encodes a crypto.Signer as a PEM block

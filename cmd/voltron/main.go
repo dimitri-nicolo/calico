@@ -92,17 +92,7 @@ func main() {
 	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
 
 	if cfg.EnableMultiClusterManagement {
-		pemCert, err := utils.LoadPEMFromFile(cfg.TunnelCert)
-		if err != nil {
-			log.WithError(err).Fatal("couldn't load tunnel cert from file")
-		}
-
-		pemKey, err := utils.LoadPEMFromFile(cfg.TunnelKey)
-		if err != nil {
-			log.WithError(err).Fatal("couldn't load tunnel key from file")
-		}
-
-		tunnelX509Cert, tunnelX509Key, err := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
+		tunnelX509Cert, tunnelX509Key, err := utils.LoadX509Pair(cfg.TunnelCert, cfg.TunnelKey)
 		if err != nil {
 			log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
 		}
