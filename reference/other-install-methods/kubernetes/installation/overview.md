@@ -42,7 +42,7 @@ environments.
 
 [acs-engine]: https://github.com/Azure/acs-engine/blob/master/docs/kubernetes.md
 [gke]: https://cloud.google.com/kubernetes-engine/docs/how-to/network-policy
-[heptio]: https://s3.amazonaws.com/quickstart-reference/heptio/latest/doc/heptio-kubernetes-on-the-aws-cloud.pdf
+[heptio]: https://aws-quickstart.s3.amazonaws.com/quickstart-heptio/doc/heptio-kubernetes-on-the-aws-cloud.pdf
 [ibmk]: https://www.ibm.com/cloud/container-service/
 [kops]: https://github.com/kubernetes/kops/blob/master/docs/networking.md#calico-example-for-cni-and-network-policy
 [kubespray]: https://github.com/kubernetes-incubator/kubespray
