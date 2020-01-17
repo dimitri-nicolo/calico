@@ -26,13 +26,14 @@ const (
 )
 
 var (
-	errInvalidMethod        = errors.New("Invalid http method")
-	errParseRequest         = errors.New("Error parsing request parameters")
-	errInvalidAction        = errors.New("Invalid action specified")
-	errInvalidFlowType      = errors.New("Invalid flow type specified")
-	errInvalidLabelSelector = errors.New("Invalid label selector specified")
-	errGeneric              = errors.New("Something went wrong")
-	errInvalidPolicyPreview = errors.New("Invalid policy preview specified")
+	errInvalidMethod            = errors.New("Invalid http method")
+	errParseRequest             = errors.New("Error parsing request parameters")
+	errInvalidAction            = errors.New("Invalid action specified")
+	errInvalidFlowType          = errors.New("Invalid flow type specified")
+	errInvalidLabelSelector     = errors.New("Invalid label selector specified")
+	errGeneric                  = errors.New("Something went wrong")
+	errInvalidPolicyPreview     = errors.New("Invalid policy preview specified")
+	errInvalidActionUnprotected = errors.New("Action deny and unprotected true is an invalid combination")
 )
 
 func extractLimitParam(url url.Values) (int32, error) {
@@ -69,6 +70,21 @@ func validateActions(actions []string) bool {
 			continue
 		default:
 			return false
+		}
+	}
+	return true
+}
+
+func validateActionsAndUnprotected(actions []string, unprotected bool) bool {
+	if unprotected == true {
+		for _, action := range actions {
+			switch action {
+			case actionDeny:
+				//unprotected true and action deny cannot be both set
+				return false
+			default:
+				continue
+			}
 		}
 	}
 	return true
