@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
@@ -19,11 +20,13 @@ const (
 )
 
 type FlowLogNamespaceParams struct {
-	Limit       int32    `json:"limit"`
-	Actions     []string `json:"actions"`
-	ClusterName string   `json:"cluster"`
-	Prefix      string   `json:"prefix"`
-	Unprotected bool     `json:"unprotected"`
+	Limit         int32     `json:"limit"`
+	Actions       []string  `json:"actions"`
+	ClusterName   string    `json:"cluster"`
+	Prefix        string    `json:"prefix"`
+	Unprotected   bool      `json:"unprotected"`
+	StartDateTime time.Time `json:"startDateTime"`
+	EndDateTime   time.Time `json:"endDateTime"`
 }
 
 type Namespace struct {
@@ -87,12 +90,25 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 		}
 	}
 
+	startDateTime, err := parseAndValidateTime(url.Get("startDateTime"))
+	if err != nil {
+		log.WithError(err).Info("Error parsing startDateTime")
+		return nil, errParseRequest
+	}
+	endDateTime, err := parseAndValidateTime(url.Get("endDateTime"))
+	if err != nil {
+		log.WithError(err).Info("Error parsing endDateTime")
+		return nil, errParseRequest
+	}
+
 	params := &FlowLogNamespaceParams{
-		Actions:     actions,
-		Limit:       limit,
-		ClusterName: cluster,
-		Prefix:      prefix,
-		Unprotected: unprotected,
+		Actions:       actions,
+		Limit:         limit,
+		ClusterName:   cluster,
+		Prefix:        prefix,
+		Unprotected:   unprotected,
+		StartDateTime: startDateTime,
+		EndDateTime:   endDateTime,
 	}
 
 	// Check whether the params are provided in the request and set default values if not
@@ -128,6 +144,15 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 
 	if params.Unprotected {
 		query = query.Filter(UnprotectedQuery())
+	}
+
+	if !params.StartDateTime.IsZero() {
+		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime.Unix())
+		query = query.Filter(startFilter)
+	}
+	if !params.EndDateTime.IsZero() {
+		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime.Unix())
+		query = query.Filter(endFilter)
 	}
 
 	return query

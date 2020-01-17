@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -456,6 +457,26 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(params.ClusterName).To(BeEquivalentTo("cluster"))
 			Expect(params.Prefix).To(BeEquivalentTo("tigera-.*"))
 		})
+
+		It("should return a valid FlowLogNamespaceParams when passed a request with valid start/end time", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("actions", "allow")
+			q.Add("actions", "deny")
+			startTimeObject, endTimeObject, err := getTestStartAndEndTime()
+			Expect(err).To(Not(HaveOccurred()))
+			q.Add("startDateTime", startTimeTest)
+			q.Add("endDateTime", endTimeTest)
+
+			Expect(err).To(Not(HaveOccurred()))
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamesRequest(req)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(params.StartDateTime).To(BeEquivalentTo(startTimeObject))
+			Expect(params.EndDateTime).To(BeEquivalentTo(endTimeObject))
+		})
 	})
 
 	Context("Test that the getNamespacesFromElastic function behaves as expected", func() {
@@ -549,6 +570,46 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				Actions:     []string{"allow", "deny", "unknown"},
 				Prefix:      "",
 				ClusterName: "cluster",
+			}
+
+			namespaces, err := getNamespacesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(namespaces)).To(BeNumerically("==", 0))
+		})
+
+		It("should return an empty response when the endDateTime is in the past", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingAggregations})
+
+			_, endTimeObject, err := getTestStartAndEndTime()
+			Expect(err).To(Not(HaveOccurred()))
+
+			params := &FlowLogNamespaceParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "cluster",
+				EndDateTime: endTimeObject,
+			}
+
+			namespaces, err := getNamespacesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(namespaces)).To(BeNumerically("==", 0))
+		})
+
+		It("should return an empty response when the startDateTime is in the future", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingAggregations})
+
+			startTimeObject, err := time.Parse(time.RFC3339, "2029-12-03T21:45:57-08:00")
+			Expect(err).To(Not(HaveOccurred()))
+
+			params := &FlowLogNamespaceParams{
+				Limit:         2000,
+				Actions:       []string{"allow", "deny", "unknown"},
+				Prefix:        "",
+				ClusterName:   "cluster",
+				StartDateTime: startTimeObject,
 			}
 
 			namespaces, err := getNamespacesFromElastic(params, esClient)
