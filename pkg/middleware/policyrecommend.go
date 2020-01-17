@@ -2,7 +2,6 @@
 package middleware
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,8 +20,6 @@ const (
 // The response that we return
 type PolicyRecommendationResponse struct {
 	*policyrec.Recommendation
-
-	ErrorMessage string `json:"errorMessage"`
 }
 
 // PolicyRecommendationHandler returns a handler that writes a json response containing recommended policies.
@@ -33,7 +30,7 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		// Extract the recommendation parameters
 		params, err := policyrec.ExtractPolicyRecommendationParamsFromRequest(req)
 		if err != nil {
-			log.Infof("Error extracting policy recommendation parameters: %v", err)
+			log.WithError(err).Info("Error extracting policy recommendation parameters")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -46,41 +43,41 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		}
 
 		// Query elasticsearch with the parameters provided
-		flows, err := policyrec.QueryElasticsearchFlows(context.TODO(), c, params)
+		flows, err := policyrec.QueryElasticsearchFlows(req.Context(), c, params)
 		if err != nil {
-			log.Infof("Error querying elasticsearch: %v", err)
+			log.WithError(err).Errorf("Error querying elasticsearch")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		var (
-			recommendation *policyrec.Recommendation
-			recErr         error
-		)
 		if len(flows) == 0 {
 			log.WithField("params", params).Info("No matching flows found")
-			recErr = fmt.Errorf("No matching flows found for endpoint name '%v' in namespace '%v' within the time range '%v:%v'", params.EndpointName, params.Namespace, params.StartTime, params.EndTime)
-		} else {
+			err = fmt.Errorf("No matching flows found for endpoint name '%v' in namespace '%v' within the time range '%v:%v'", params.EndpointName, params.Namespace, params.StartTime, params.EndTime)
+			log.WithError(err).Info("No matching flows found")
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 
-			policyName := policyrec.GeneratePolicyName(k8sClient, params)
-			// Setup the recommendation engine. We specify the default tier as the flows that we are fetching
-			// is at the end of the default tier. Similarly we set the recommended policy order to nil as well.
-			// TODO(doublek): Tier and policy order should be obtained from the observation point policy.
-			recEngine := policyrec.NewEndpointRecommendationEngine(params.EndpointName, params.Namespace, policyName, defaultTierName, nil)
-			for _, flow := range flows {
-				log.WithField("flow", flow).Debug("Calling recommendation engine with flow")
-				err := recEngine.ProcessFlow(*flow)
-				if err != nil {
-					log.WithError(err).WithField("flow", flow).Debug("Error processing flow")
-				}
+		policyName := policyrec.GeneratePolicyName(k8sClient, params)
+		// Setup the recommendation engine. We specify the default tier as the flows that we are fetching
+		// is at the end of the default tier. Similarly we set the recommended policy order to nil as well.
+		// TODO(doublek): Tier and policy order should be obtained from the observation point policy.
+		recEngine := policyrec.NewEndpointRecommendationEngine(params.EndpointName, params.Namespace, policyName, defaultTierName, nil)
+		for _, flow := range flows {
+			log.WithField("flow", flow).Debug("Calling recommendation engine with flow")
+			err := recEngine.ProcessFlow(*flow)
+			if err != nil {
+				log.WithError(err).WithField("flow", flow).Debug("Error processing flow")
 			}
-			recommendation, recErr = recEngine.Recommend()
+		}
+		recommendation, err := recEngine.Recommend()
+		if err != nil {
+			log.WithError(err).Error("Error when generating recommended policy")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		response := &PolicyRecommendationResponse{
 			Recommendation: recommendation,
-		}
-		if recErr != nil {
-			response.ErrorMessage = recErr.Error()
 		}
 		log.WithField("recommendation", recommendation).Debug("Policy recommendation response")
 		recJson, err := json.Marshal(response)
