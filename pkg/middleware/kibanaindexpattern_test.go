@@ -19,7 +19,7 @@ var _ = Describe("Test extracting resource from kibana request", func() {
 			req, err := http.NewRequest("POST", ".kibana/_search", bodyReader)
 			Expect(err).NotTo(HaveOccurred())
 
-			resultFlow, err := getResourceNameFromKibanaIndexPatern(req)
+			resultFlow, err := getResourceNameFromKibanaIndexPattern(req)
 
 			if expectSuccess {
 				Expect(err).NotTo(HaveOccurred())

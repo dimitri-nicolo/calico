@@ -92,7 +92,7 @@ func Start(cfg *Config) error {
 		sm.Handle("/recommend",
 			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
 		sm.Handle("/.kibana/_search",
-			middleware.KibanaIndexPatern(
+			middleware.KibanaIndexPattern(
 				k8sAuth.KubernetesAuthnAuthz(proxy)))
 		sm.Handle("/",
 			middleware.RequestToResource(
@@ -114,7 +114,7 @@ func Start(cfg *Config) error {
 		sm.Handle("/recommend",
 			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
 		sm.Handle("/.kibana/_search",
-			middleware.KibanaIndexPatern(
+			middleware.KibanaIndexPattern(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
 		sm.Handle("/",

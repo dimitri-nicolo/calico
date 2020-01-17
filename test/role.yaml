@@ -4,7 +4,7 @@ metadata:
   name: tigera-elasticsearch-access-all
 rules:
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: ["flows", "audit*", "audit_kube", "audit_ee", "events"]
   verbs: ["get"]
 ---
@@ -15,7 +15,7 @@ metadata:
   name: tigera-elasticsearch-access-flowonly
 rules:
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: ["flows"]
   verbs: ["get"]
 ---
@@ -26,7 +26,7 @@ metadata:
   name: tigera-elasticsearch-access-auditonly
 rules:
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: ["audit*", "audit_kube", "audit_ee"]
   verbs: ["get"]
 ---
@@ -37,7 +37,7 @@ metadata:
   name: tigera-elasticsearch-access-audit_kube-only
 rules:
 - apiGroups: ["lma.tigera.io"]
-  resources: ["index"]
+  resources: ["cluster"]
   resourceNames: ["audit_kube"]
   verbs: ["get"]
 

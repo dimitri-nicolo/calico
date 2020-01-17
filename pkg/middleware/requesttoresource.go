@@ -4,11 +4,45 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	authzv1 "k8s.io/api/authorization/v1"
-	"net/http"
-	"regexp"
 )
+
+// Request properties to indicate the cluster used for proxying and RBAC.
+const (
+	clusterParam       = "cluster"
+	clusterIdHeader    = "x-cluster-id"
+	defaultClusterName = "cluster"
+)
+
+var legacyURLPath, extractIndexPattern *regexp.Regexp
+
+var queryResourceMap map[string]string
+
+func init() {
+	// This regexp matches legacy queries, for example: "/tigera-elasticsearch/tigera_secure_ee_flows.cluster.*/_search"
+	legacyURLPath = regexp.MustCompile(`^.*/tigera_secure_ee_.*/_search$`)
+	// This regexp extracts the index from a legacy query URL path
+	extractIndexPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z]*)[.*]?.*/_search`)
+
+	queryResourceMap = map[string]string{
+		"tigera_secure_ee_flows":      "flows",
+		"tigera_secure_ee_audit_":     "audit*", // support both audit_*
+		"tigera_secure_ee_audit":      "audit*", // and audit*
+		"tigera_secure_ee_audit_ee":   "audit_ee",
+		"tigera_secure_ee_audit_kube": "audit_kube",
+		"tigera_secure_ee_events":     "events",
+		"tigera_secure_ee_dns":        "dns",
+		"flowLogNames":                "flows",
+		"flowLogNamespaces":           "flows",
+		"flowLogs":                    "flows",
+	}
+}
 
 // The handler returned by this will add a ResourceAttribute to the context
 // of the request based on the request.URL.Path. The ResourceAttribute
@@ -19,14 +53,16 @@ import (
 // status and a message with details.
 func RequestToResource(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		name, err := getResourceNameFromReq(req)
+		cluster, resourceName, urlPath, err := getResourcesFromReq(req)
 		if err != nil {
 			log.WithError(err).Debugf("Unable to convert request URL '%+v' to resource", req.URL)
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-
-		h.ServeHTTP(w, req.WithContext(NewContextWithReviewResource(req.Context(), getResourceAttributes(name))))
+		newReq := req.WithContext(NewContextWithReviewResource(req.Context(), getResourceAttributes(cluster, resourceName)))
+		newReq.URL.Path = urlPath
+		newReq.URL.RawPath = urlPath
+		h.ServeHTTP(w, newReq)
 	})
 }
 
@@ -61,60 +97,112 @@ func FromContextGetReviewNonResource(ctx context.Context) (*authzv1.NonResourceA
 	return nra, ok
 }
 
-func getResourceAttributes(resourceName string) *authzv1.ResourceAttributes {
+func getResourceAttributes(cluster, resourceName string) *authzv1.ResourceAttributes {
 	return &authzv1.ResourceAttributes{
 		Verb:     "get",
 		Group:    "lma.tigera.io",
-		Resource: "index",
+		Resource: cluster,
 		Name:     resourceName,
 	}
 }
 
-// getResourceNameFromReq parses the req.URL.Path, returns the name used in RBAC
-func getResourceNameFromReq(req *http.Request) (string, error) {
+// getResourcesFromReq parses the req.URL.Path, returns the cluster and resourceName used for RBAC
+func getResourcesFromReq(req *http.Request) (string, string, string, error) {
+	var resource string
+	var cluster string
+
 	if req.URL == nil {
-		return "", fmt.Errorf("No URL in request")
+		return cluster, resource, "", fmt.Errorf("no URL in request")
 	}
 
-	// This regex matches any index leading up to "/_search" or anything up to "/"
-	re := regexp.MustCompile(`/([_a-z]*)[.*].*/_search|/([^/]*)$`)
+	urlPath := req.URL.Path
+	if legacyURLPath.MatchString(req.URL.Path) {
+		// This is a legacy Elasticsearch query
+		cluster, resource, urlPath = parseLegacyURLPath(req)
+	} else {
+		// This must be a query according to the flowLog api spec
+		var err error
+		cluster, resource, err = parseFlowLogURLPath(req)
+		if err != nil {
+			return cluster, resource, urlPath, err
+		}
+	}
 
-	match := re.FindStringSubmatch(req.URL.Path)
-	if len(match) != 3 {
-		return "", fmt.Errorf("Invalid resource in path, '%s' had %d matches", req.URL.Path, len(match))
+	if resource == "" {
+		return cluster, resource, urlPath, fmt.Errorf("invalid resource in path '%s'", req.URL.Path)
 	}
-	if match[1] == "" && match[2] == "" {
-		return "", fmt.Errorf("No resource found in path")
+
+	if cluster == "" {
+		cluster = defaultClusterName
 	}
-	var matchString string
-	if match[1] != "" {
-		matchString = match[1]
-	} else if match[2] != "" {
-		matchString = match[2]
+
+	return cluster, resource, urlPath, nil
+}
+
+// FlogLog api, see: https://docs.google.com/document/d/1kUPDVn_tcehRrHn_nhm8GFILCaeOZ7u7pLm68Zv3Yng
+// A request might look like /flowLogs?cluster=my-cluster
+// returns <cluster>, <index>, err
+func parseFlowLogURLPath(req *http.Request) (string, string, error) {
+	path := req.URL.Path
+	pathSlice := strings.Split(path, "/")
+	pathSliceLen := len(pathSlice)
+
+	if pathSliceLen < 2 {
+		return "", "", nil
 	}
-	resource, ok := queryToResource(matchString)
-	if !ok {
-		return "", fmt.Errorf("Invalid resource '%s' in path", matchString)
+
+	path = pathSlice[pathSliceLen-1] // Keep only the last part of the path
+
+	values, err := url.ParseQuery(req.URL.RawQuery)
+	if err != nil {
+		return "", "", fmt.Errorf("unable to parse query parameters of request %s", req.URL.RawQuery)
 	}
-	return resource, nil
+	clusters := values[clusterParam]
+	res, _ := queryToResource(path)
+	if len(clusters) > 0 {
+		return clusters[0], res, nil
+	}
+	return defaultClusterName, res, nil
+}
+
+// This is a legacy request with a path such as: "some/path/<index>.<cluster>.*/_search".
+// We return a (corrected) url path that does not query unauthorized clusters.
+// returns <cluster>, <index>, urlPath, err
+func parseLegacyURLPath(req *http.Request) (string, string, string) {
+	// Extract groups such that:
+	// - group 0 would match "/<index>.<cluster>.*/_search"
+	// - group 1 would match "<index>"
+	match := extractIndexPattern.FindStringSubmatch(req.URL.Path)
+	if len(match) != 2 {
+		return "", "", ""
+	}
+	idx := match[1]
+	res, _ := queryToResource(idx)
+
+	clu := defaultClusterName
+	if req.Header != nil {
+		xclusterid := req.Header.Get(clusterIdHeader)
+		if xclusterid != "" {
+			clu = xclusterid
+		}
+	}
+
+	// path would be a replacement for match[1]
+	// This lets us create the actual ES query that always includes the cluster name.
+	var path string
+	if strings.Contains(match[0], "*") {
+		path = fmt.Sprintf("/%s.%s.*/_search", idx, clu)
+	} else {
+		path = fmt.Sprintf("/%s.%s/_search", idx, clu)
+	}
+
+	return clu, res, strings.Replace(req.URL.Path, match[0], path, 1)
 }
 
 // queryToResource maps indexes into resource names used in RBAC
 // implements the table located in
 // https://docs.google.com/document/d/1wFrbjLydsdz0NfxVk-_iW7eqx4ZIZWfgj5SzcsRmTwo/edit#heading=h.pva3ex6ffysc
 func queryToResource(query string) (string, bool) {
-	queryResourceMap := map[string]string{
-		"tigera_secure_ee_flows":      "flows",
-		"tigera_secure_ee_audit_":     "audit*", // support both audit_*
-		"tigera_secure_ee_audit":      "audit*", // and audit*
-		"tigera_secure_ee_audit_ee":   "audit_ee",
-		"tigera_secure_ee_audit_kube": "audit_kube",
-		"tigera_secure_ee_events":     "events",
-		"tigera_secure_ee_dns":        "dns",
-		"flowLogNames":                "flows",
-		"flowLogNamespaces":           "flows",
-		"flowLogs":                    "flows",
-	}
 	str, ok := queryResourceMap[query]
 	return str, ok
 }

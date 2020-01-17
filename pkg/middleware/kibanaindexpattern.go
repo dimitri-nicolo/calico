@@ -14,23 +14,23 @@ import (
 // The handler returned by this will add a ResourceAttribute to the context
 // of the request based on the content of the kibana query index-pattern
 // (query.bool.filter.match.index-pattern.title)
-func KibanaIndexPatern(h http.Handler) http.Handler {
+func KibanaIndexPattern(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-		name, err := getResourceNameFromKibanaIndexPatern(req)
+		name, err := getResourceNameFromKibanaIndexPattern(req)
 		if err != nil {
-			log.WithError(err).Debugf("Unable to extract kibana index patern as resource")
+			log.WithError(err).Debugf("Unable to extract kibana index pattern as resource")
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 
-		h.ServeHTTP(w, req.WithContext(NewContextWithReviewResource(req.Context(), getResourceAttributes(name))))
+		h.ServeHTTP(w, req.WithContext(NewContextWithReviewResource(req.Context(), getResourceAttributes("cluster", name))))
 	})
 }
 
-// getResourceNameFromKibanaIndexPatern parses the query.bool.filter.match.index-pattern.title
+// getResourceNameFromKibanaIndexPattern parses the query.bool.filter.match.index-pattern.title
 // from a kibana query request body and returns the RBAC resource
-func getResourceNameFromKibanaIndexPatern(req *http.Request) (string, error) {
+func getResourceNameFromKibanaIndexPattern(req *http.Request) (string, error) {
 
 	// Read the body data
 	b, err := ioutil.ReadAll(req.Body)
