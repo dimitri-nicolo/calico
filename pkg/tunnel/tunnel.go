@@ -45,7 +45,7 @@ func (d *dialer) Dial() (*Tunnel, error) {
 	for i := 0; i < d.retryAttempts; i++ {
 		t, err := d.dialerFun()
 		if err != nil {
-			log.Debugf("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
+			log.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
 			time.Sleep(d.retryInterval)
 			continue
 		}
