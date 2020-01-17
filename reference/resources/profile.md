@@ -1,6 +1,7 @@
 ---
 title: Profile
-canonical_url: /reference/resources/profile
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/profile'
 ---
 
 A profile resource (`Profile`) represents a set of rules which are applied

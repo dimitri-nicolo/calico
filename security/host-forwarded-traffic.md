@@ -1,5 +1,6 @@
 ---
 title: Apply policy to forwarded traffic
+description: Apply Calico Enterprise network policy to traffic being forward by hosts acting as routers or NAT gateways.
 ---
 
 ### Big picture

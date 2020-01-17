@@ -1,6 +1,7 @@
 ---
 title: Workload endpoint
-canonical_url: /reference/resources/workloadendpoint
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/workloadendpoint'
 ---
 
 A workload endpoint resource (`WorkloadEndpoint`) represents an interface

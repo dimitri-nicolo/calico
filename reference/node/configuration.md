@@ -1,6 +1,7 @@
 ---
 title: Configuring cnx-node
-canonical_url: /reference/node/configuration
+description: Customize cnx-node using environment variables.
+canonical_url: '/reference/node/configuration'
 ---
 
 The `{{site.nodecontainer}}` container is primarily configured through environment variables.

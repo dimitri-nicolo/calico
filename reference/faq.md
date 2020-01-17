@@ -1,6 +1,7 @@
 ---
 title: Frequently asked questions
-canonical_url: /reference/faq
+description: Common questions that users ask about Calico Enterprise.
+canonical_url: '/reference/faq'
 ---
 
 * TOC

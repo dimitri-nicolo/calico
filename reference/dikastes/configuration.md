@@ -1,6 +1,7 @@
 ---
 title: Configuring Dikastes
-canonical_url: /reference/dikastes/configuration
+description: Details on configuring Dikastes used in application layer policy. 
+canonical_url: '/reference/dikastes/configuration'
 ---
 
 Configuration for Dikastes is read from the command line arguments passed. The command line options

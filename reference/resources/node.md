@@ -1,6 +1,7 @@
 ---
 title: Node
-canonical_url: /reference/resources/node
+description: API for this Calico Enterprise resource.
+canonical_url: '/reference/resources/node'
 ---
 
 A node resource (`Node`) represents a node running {{site.prodname}}.  When adding a host

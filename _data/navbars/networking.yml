@@ -11,7 +11,7 @@ section:
     path: /networking/bgp 
   - title: Deploy a dual ToR cluster
     path: /networking/dual-tor
-  - title: Connect workloads across networks that you do not control
+  - title: Configure overlay networking
     path: /networking/vxlan-ipip 
   - title: Configure MTU to maximize network performance
     path: /networking/mtu

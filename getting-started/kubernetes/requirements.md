@@ -1,6 +1,7 @@
 ---
 title: System requirements
-canonical_url: /getting-started/kubernetes/requirements
+description: Review requirements before installing Calico Enterprise on nodes to ensure success. 
+canonical_url: '/getting-started/kubernetes/requirements'
 ---
 
 {% include content/reqs-sys.md orch="Kubernetes" %}

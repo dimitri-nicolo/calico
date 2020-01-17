@@ -1,6 +1,6 @@
 ---
 title: Configuring the Calico Enterprise Kubernetes controllers
-canonical_url: /reference/kube-controllers/configuration
+description: Calico Enterprise Kubernetes controllers monitor the Kubernetes API and perform actions based on cluster state.
 ---
 
 The {{site.prodname}} Kubernetes controllers are deployed in a Kubernetes cluster. The different controllers monitor the Kubernetes API

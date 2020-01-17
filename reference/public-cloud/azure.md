@@ -1,6 +1,7 @@
 ---
-title: Deploying Calico Enterprise on Azure
-canonical_url: /reference/public-cloud/azure
+title: Azure
+description: Support for Calico Enterprise in Azure.
+canonical_url: '/reference/public-cloud/azure'
 ---
 
 ## About {{site.prodname}} on Azure

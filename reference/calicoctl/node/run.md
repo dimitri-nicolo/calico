@@ -1,6 +1,7 @@
 ---
 title: calicoctl node run
-canonical_url: /reference/calicoctl/node/run
+description: Command and options for running a Calico node.
+canonical_url: '/reference/calicoctl/node/run'
 ---
 
 This sections describes the `calicoctl node run` command.

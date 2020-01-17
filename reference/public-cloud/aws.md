@@ -1,6 +1,7 @@
 ---
-title: Amazon Web Services (AWS)
-canonical_url: /reference/public-cloud/aws
+title: Amazon Web Services
+description: Advantages of using Calico Enterprise in AWS.
+canonical_url: '/reference/public-cloud/aws'
 ---
 
 {{site.prodname}} provides the following advantages when running in Amazon Web Services (AWS):

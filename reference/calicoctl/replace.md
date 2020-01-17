@@ -1,6 +1,7 @@
 ---
 title: calicoctl replace
-canonical_url: /reference/calicoctl/replace
+description: Command to replace an existing policy with a different one.
+canonical_url: '/reference/calicoctl/replace'
 ---
 
 This sections describes the `calicoctl replace` command.

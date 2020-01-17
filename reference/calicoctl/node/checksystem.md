@@ -1,6 +1,7 @@
 ---
 title: calicoctl node checksystem
-canonical_url: /reference/calicoctl/node/checksystem
+description: Command to check compatibility of host to run a Calico node instance.
+canonical_url: '/reference/calicoctl/node/checksystem'
 ---
 
 This section describes the `calicoctl node checksystem` command.

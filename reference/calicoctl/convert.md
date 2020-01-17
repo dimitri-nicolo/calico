@@ -1,6 +1,7 @@
 ---
 title: calicoctl convert
-canonical_url: /reference/calicoctl/convert
+description: Command to convert contents of policy.yaml to v3 policy.
+canonical_url: '/reference/calicoctl/convert'
 ---
 
 This sections describes the `calicoctl convert` command.

@@ -1,6 +1,7 @@
 ---
 title: Customizing the manifests
-canonical_url: /reference/other-install-methods/kubernetes/installation/config-options
+description: Customize manifests prior to installing Calico Enterprise (recommended).
+canonical_url: '/reference/other-install-methods/kubernetes/installation/config-options'
 ---
 
 ## About customizing manifests
