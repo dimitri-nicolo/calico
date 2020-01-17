@@ -14,7 +14,7 @@ canonical_url: '/getting-started/bare-metal/installation/binary'
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
-{%- assign n = site.data.versions[page.version].first.components["cnx-node"] %}
+{%- assign n = site.data.versions.first.components["cnx-node"] %}
 
    ```
    REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
