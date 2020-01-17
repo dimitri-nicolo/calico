@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -439,6 +440,32 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			Expect(params.Prefix).To(BeEquivalentTo("tigera-.*"))
 			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
 		})
+
+		It("should return a valid FlowLogNamespaceParams when passed a request with valid start/end time", func() {
+			req, err := newTestRequest(http.MethodGet)
+			Expect(err).NotTo(HaveOccurred())
+			q := req.URL.Query()
+			q.Add("actions", "ALLOW")
+			q.Add("cluster", "CLUSTER")
+			q.Add("prefix", "TIGERA-")
+			q.Add("namespace", "TIGERA-ELASTICSEARCH")
+			startTimeObject, endTimeObject, err := getTestStartAndEndTime()
+			Expect(err).To(Not(HaveOccurred()))
+			q.Add("startDateTime", startTimeTest)
+			q.Add("endDateTime", endTimeTest)
+
+			Expect(err).To(Not(HaveOccurred()))
+			req.URL.RawQuery = q.Encode()
+
+			params, err := validateFlowLogNamesRequest(req)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(params.Actions[0]).To(BeEquivalentTo("allow"))
+			Expect(params.ClusterName).To(BeEquivalentTo("cluster"))
+			Expect(params.Prefix).To(BeEquivalentTo("tigera-.*"))
+			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
+			Expect(params.StartDateTime).To(BeEquivalentTo(startTimeObject))
+			Expect(params.EndDateTime).To(BeEquivalentTo(endTimeObject))
+		})
 	})
 
 	Context("Test that the getNamesFromElastic function behaves as expected", func() {
@@ -533,6 +560,48 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				Prefix:      "",
 				ClusterName: "cluster",
 				Namespace:   "tigera-compliance",
+			}
+
+			names, err := getNamesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(names)).To(BeNumerically("==", 0))
+		})
+
+		It("should return an empty response when the EndDateTime is in the past", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
+
+			_, endTimeObject, err := getTestStartAndEndTime()
+			Expect(err).To(Not(HaveOccurred()))
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "cluster",
+				Namespace:   "tigera-compliance",
+				EndDateTime: endTimeObject,
+			}
+
+			names, err := getNamesFromElastic(params, esClient)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(names)).To(BeNumerically("==", 0))
+		})
+
+		It("should return an empty response when the StartDateTime is in the future", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
+
+			startTimeObject, err := time.Parse(time.RFC3339, "2029-12-03T21:45:57-08:00")
+			Expect(err).To(Not(HaveOccurred()))
+
+			params := &FlowLogNamesParams{
+				Limit:         2000,
+				Actions:       []string{"allow", "deny", "unknown"},
+				Prefix:        "",
+				ClusterName:   "cluster",
+				Namespace:     "tigera-compliance",
+				StartDateTime: startTimeObject,
 			}
 
 			names, err := getNamesFromElastic(params, esClient)
