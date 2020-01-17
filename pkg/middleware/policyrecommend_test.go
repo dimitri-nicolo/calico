@@ -261,7 +261,7 @@ var _ = Describe("Policy Recommendation", func() {
 	DescribeTable("Recommend policies for matching flows and endpoint",
 		func(queryResults []*elastic.CompositeAggregationBucket, queryError error,
 			query *policyrec.PolicyRecommendationParams,
-			expectedResponse *PolicyRecommendationResponse, expectedError error) {
+			expectedResponse *PolicyRecommendationResponse, statusCode int) {
 
 			By("Initializing the engine") // Tempted to say "Start your engines!"
 			hdlr := PolicyRecommendationHandler(fakeAuthz, fakeKube, ec)
@@ -281,11 +281,10 @@ var _ = Describe("Policy Recommendation", func() {
 			hdlr.ServeHTTP(w, req)
 			Expect(err).To(BeNil())
 
-			if expectedError != nil {
-				Expect(w.Code).ToNot(Equal(http.StatusOK))
+			Expect(w.Code).To(Equal(statusCode))
+			if statusCode != http.StatusOK {
 				return
 			}
-			Expect(w.Code).To(Equal(http.StatusOK))
 			recResponse, err := ioutil.ReadAll(w.Body)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -309,8 +308,7 @@ var _ = Describe("Policy Recommendation", func() {
 					},
 					GlobalNetworkPolicies: []*v3.StagedGlobalNetworkPolicy{},
 				},
-				ErrorMessage: "",
-			}, nil),
+			}, http.StatusOK),
 		Entry("for destination endpoint", app1ToNginxFlows, nil,
 			nginxQuery,
 			&PolicyRecommendationResponse{
@@ -320,15 +318,21 @@ var _ = Describe("Policy Recommendation", func() {
 					},
 					GlobalNetworkPolicies: []*v3.StagedGlobalNetworkPolicy{},
 				},
-				ErrorMessage: "",
-			}, nil),
-		Entry("for unknown endpoint", nil, fmt.Errorf("No results"),
+			}, http.StatusOK),
+		Entry("for unknown endpoint", []*elastic.CompositeAggregationBucket{}, nil,
 			&policyrec.PolicyRecommendationParams{
 				StartTime:    "now-1h",
 				EndTime:      "now",
 				EndpointName: "idontexist-*",
 				Namespace:    "default",
-			}, nil, fmt.Errorf("No results")),
+			}, nil, http.StatusNotFound),
+		Entry("for query that errors out - invalid time parameters", nil, fmt.Errorf("Elasticsearch error"),
+			&policyrec.PolicyRecommendationParams{
+				StartTime:    "now",
+				EndTime:      "now-1h",
+				EndpointName: "someendpoint-*",
+				Namespace:    "default",
+			}, nil, http.StatusInternalServerError),
 	)
 
 })
