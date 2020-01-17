@@ -1,5 +1,6 @@
 ---
 title: Archive logs to S3
+description: Configure Amazon S3 for archiving flow and audit logs. 
 canonical_url: /security/logs/elastic/s3-archive
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Configuring Prometheus
+description: Configure rules for alerts and denied packets, for persistent storage.
 canonical_url: /reference/other-install-methods/security/configuration/prometheus
 ---
 

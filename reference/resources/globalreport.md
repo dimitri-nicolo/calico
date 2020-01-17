@@ -1,5 +1,6 @@
 ---
 title: Global report
+description: API for this Calico Enterprise resource. 
 ---
 
 A global report resource is a configuration for generating compliance reports. A global report configuration in {{ site.prodname }} lets you:

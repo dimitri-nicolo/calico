@@ -1,5 +1,6 @@
 ---
 title: DNS logs
+description: Key/value pairs of DNS activity logs and how to construct queries. 
 canonical_url: /security/logs/elastic/dns
 ---
 

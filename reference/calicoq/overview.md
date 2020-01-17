@@ -1,5 +1,6 @@
 ---
 title: calicoq
+description: CLI to verify that your security policies are configured as intended.
 canonical_url: /reference/calicoq/
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Query remote clusters with calicoq
+description: Use CLI to check if remote cluster endpoints are accessible. 
 canonical_url: /networking/federation/calicoq
 ---
 

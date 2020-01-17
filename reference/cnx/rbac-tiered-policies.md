@@ -1,5 +1,6 @@
 ---
 title: Configuring Calico Enterprise RBAC for tiered policies
+description: Configure RBAC to control access to policies and tiers. 
 canonical_url: /reference/cnx/rbac-tiered-policies
 show_toc: false
 ---

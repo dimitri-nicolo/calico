@@ -1,5 +1,6 @@
 ---
 title: Anatomy of a cnx-node container
+description: Learn about the Felix, Bird, and confd components for networking containers.
 canonical_url: /reference/architecture/components
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Overview
+description: How Prometheus is used for policy and storage metrics.
 canonical_url: /reference/other-install-methods/security/metrics/
 ---
 

@@ -25,6 +25,8 @@ section:
       path: /security/tutorials/kubernetes-policy-basic
     - title: Kubernetes policy, advanced tutorial
       path: /security/tutorials/kubernetes-policy-advanced
+  - title: Get started with Calico Enterprise policy 
+    path: /security/comms/    
 - title: Policy rules
   path: /security/policy-rules
   section:
@@ -70,8 +72,6 @@ section:
     path: /security/high-connection-workloads
   - title: Defend against DoS attacks
     path: /security/defend-dos-attack
-- title: Get started with Calico Enterprise policy 
-  path: /security/comms/
   section:
   - title: Create tiered policy
     path: /security/tiered-policy
@@ -106,14 +106,14 @@ section:
     section:
     - title: Overview
       path: /security/logs/elastic/overview
+    - title: Access Elasticsearchlogs
+      path: /security/logs/elastic/view  
     - title: Flow logs
       path: /security/logs/elastic/flow
     - title: Audit logs
       path: /security/logs/elastic/ee-audit
     - title: DNS logs
       path: /security/logs/elastic/dns
-    - title: Access logs
-      path: /security/logs/elastic/view
     - title: Configure data retention
       path: /security/logs/retention
     - title: Configure Elasticsearch

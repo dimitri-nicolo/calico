@@ -2,7 +2,7 @@ bigheader: "Getting started"
 path: /getting-started/
 order: 1
 section:
-- title: Calico Enterprise
+- title: Get a license
   path: /getting-started/calico-enterprise
 - title: Kubernetes
   path: /getting-started/kubernetes/
@@ -20,7 +20,7 @@ section:
       path: /getting-started/kubernetes/managed-public-cloud/gke
     - title: Microsoft Azure Kubernetes Service (AKS)
       path: /getting-started/kubernetes/managed-public-cloud/aks
-  - title: Self-managed on-prem
+  - title: Self-managed on-premises
     path: /getting-started/kubernetes/self-managed-on-prem/
     section:
     - title: Docker Enterprise

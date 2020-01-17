@@ -1,5 +1,6 @@
 ---
 title: Enabling integration with AWS security groups (optional)
+description: Calico Enterprise lets you combine AWS security groups with network policy to enforce access control between Kubernetes pods and AWS VPC resources. 
 canonical_url: /reference/other-install-methods/kubernetes/installation/aws-sg-integration
 ---
 

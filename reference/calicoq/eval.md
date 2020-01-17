@@ -1,5 +1,6 @@
 ---
 title: calicoq eval
+description: Command to list endpoints matched by a selector.
 canonical_url: /reference/calicoq/eval
 ---
 

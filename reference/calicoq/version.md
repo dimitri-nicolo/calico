@@ -1,5 +1,6 @@
 ---
 title: calicoq version
+description: List version of the calicoq CLI.
 canonical_url: /reference/calicoq/version
 ---
 

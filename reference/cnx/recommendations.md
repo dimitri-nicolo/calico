@@ -1,5 +1,6 @@
 ---
 title: Deploying Calico Enterprise Manager
+description: Recommendations for securing the UI in production environments. 
 canonical_url: /reference/cnx/recommendations
 ---
 

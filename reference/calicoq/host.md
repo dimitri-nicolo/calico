@@ -1,5 +1,6 @@
 ---
 title: calicoq host
+description: Command to list endpoints, policies, and profiles on the selected host.
 canonical_url: /reference/calicoq/host
 ---
 

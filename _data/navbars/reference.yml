@@ -60,21 +60,21 @@ section:
       path: /reference/resources/bgppeer
     - title: Felix configuration
       path: /reference/resources/felixconfig
-    - title: Global Alert
+    - title: Global alert
       path: /reference/resources/globalalert
     - title: Global network policy
       path: /reference/resources/globalnetworkpolicy
     - title: Global network set
       path: /reference/resources/globalnetworkset
-    - title: Global Report
+    - title: Global report
       path: /reference/resources/globalreport
-    - title: Global Threat Feed
+    - title: Global threat feed
       path: /reference/resources/globalthreatfeed
     - title: Host endpoint
       path: /reference/resources/hostendpoint
     - title: IP pool
       path: /reference/resources/ippool
-    - title: License Key
+    - title: License key
       path: /reference/resources/licensekey
     - title: Network policy
       path: /reference/resources/networkpolicy
@@ -84,13 +84,13 @@ section:
       path: /reference/resources/node
     - title: Profile
       path: /reference/resources/profile
-    - title: Remote Cluster Configuration
+    - title: Remote cluster configuration
       path: /reference/resources/remoteclusterconfiguration
-    - title: Staged Global Network Policy
+    - title: Staged global network policy
       path: /reference/resources/stagedglobalnetworkpolicy
-    - title: Staged Kubernetes Network Policy
+    - title: Staged Kubernetes network policy
       path: /reference/resources/stagedkubernetesnetworkpolicy
-    - title: Staged Network Policy
+    - title: Staged network policy
       path: /reference/resources/stagednetworkpolicy
     - title: Tier
       path: /reference/resources/tier
@@ -146,16 +146,16 @@ section:
     path: /reference/typha/configuration
 - title: Dikastes
   path: /reference/dikastes/configuration
-- title: Calico Enterprise Compliance Reports
-  title: /reference/compliance-reports/
+- title: Compliance reports
+  path: /reference/compliance-reports/
   section:
     - title: Overview
       path: /reference/compliance-reports/overview
-    - title: Inventory Report
+    - title: Inventory report
       path: /reference/compliance-reports/inventory
-    - title: Network Access Report
+    - title: Network access report
       path: /reference/compliance-reports/network-access
-    - title: Policy Audit Report
+    - title: Policy audit report
       path: /reference/compliance-reports/policy-audit
     - title: CIS Benchmark
       path: /reference/compliance-reports/cis-benchmark
@@ -168,7 +168,7 @@ section:
   section:
     - title: Configuring user authentication
       path: /reference/cnx/authentication
-    - title: Configuring Calico Enterprise RBAC for Tiered Policies
+    - title: Configuring Calico Enterprise RBAC for tiered policies
       path: /reference/cnx/rbac-tiered-policies
     - title: Configuring Calico Enterprise RBAC for Elasticsearch
       path: /reference/cnx/rbac-elasticsearch

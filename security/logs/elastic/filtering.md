@@ -1,5 +1,6 @@
 ---
 title: Filter out flow logs
+description: Suppress logs using filtering. 
 canonical_url: /security/logs/elastic/filtering
 ---
 

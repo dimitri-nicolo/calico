@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise on OpenShift v4.x
+description: Steps to install Calico Enterprise for OpenShift.
 ---
 
 ### Big picture

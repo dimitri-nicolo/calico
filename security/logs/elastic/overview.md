@@ -1,5 +1,6 @@
 ---
 title: Overview
+description: The default deployment for data collection and visualization for Calico Enterprise. 
 canonical_url: /security/logs/elastic/
 ---
 

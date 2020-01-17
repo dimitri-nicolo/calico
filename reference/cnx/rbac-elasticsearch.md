@@ -1,5 +1,6 @@
 ---
 title: Configuring Calico Enterprise RBAC for Elasticsearch
+description: Use RBAC to control access to Elasticsearch indices.
 ---
 
 The {{site.prodname}} allows administrators the ability to manage access to Elasticsearch indices from the UI.

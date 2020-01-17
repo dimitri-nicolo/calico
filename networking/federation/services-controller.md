@@ -1,5 +1,6 @@
 ---
 title: Configure federated services
+description: Configure a federated service for cross-cluster service discovery for local clusters.
 canonical_url: /networking/federation/services-controller
 ---
 

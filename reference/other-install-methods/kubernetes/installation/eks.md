@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise on Amazon EKS
+description: Enable Calico Enterprise policy enforcement on Amazon EKS.
 canonical_url: /reference/other-install-methods/kubernetes/installation/other
 show_toc: false
 ---

@@ -1,5 +1,6 @@
 ---
 title: Global Alert
+description: API for this Calico Enterprise resource. 
 ---
 
 A global alert resource represents a query that is periodically run

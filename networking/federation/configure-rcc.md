@@ -1,5 +1,6 @@
 ---
 title: Configure access to remote clusters
+description: Steps to allow a local cluster to pull endpoint data from a remove cluster.
 canonical_url: /networking/federation/configure-rcc
 ---
 

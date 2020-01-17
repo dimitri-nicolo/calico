@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise for policy only
+description: Steps for installing only network policy.
 canonical_url: /reference/other-install-methods/kubernetes/installation/other
 show_toc: false
 ---

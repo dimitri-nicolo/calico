@@ -1,5 +1,6 @@
 ---
 title: Staged Kubernetes Network policy
+description: API for this Calico Enterprise resource. 
 ---
 
 A staged kubernetes network policy resource (`StagedKubernetesNetworkPolicy`) represents a staged version
