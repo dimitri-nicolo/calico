@@ -1,6 +1,6 @@
 ---
 title: Upgrading Calico Enterprise from an earlier release using Helm
-description: Upgrade from an earlier release of Calico Enterprise using Helm
+description: Upgrade from an earlier release of Calico Enterprise using Helm.
 canonical_url: /maintenance/helm-upgrade-tsee
 ---
 

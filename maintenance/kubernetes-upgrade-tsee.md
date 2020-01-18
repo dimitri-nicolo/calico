@@ -1,6 +1,6 @@
 ---
 title: Upgrading Calico Enterprise from an earlier release on Kubernetes
-description: Upgrading from an earlier release of Calico Enterprise on Kubernetes
+description: Upgrading from an earlier release of Calico Enterprise on Kubernetes.
 canonical_url: /maintenance/kubernetes-upgrade-tsee
 show_toc: false
 ---
