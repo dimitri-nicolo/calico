@@ -57,7 +57,7 @@ section:
   - title: Upgrade from Calico to Calico Enterprise
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 - title: OpenShift
-  path: /getting-started/openshift/installation
+  path: /getting-started/openshift/
   section:
   - title: System requirements
     path: /getting-started/openshift/requirements

@@ -122,7 +122,7 @@ section:
       path: /security/logs/elastic/s3-archive
     - title: Archive logs to syslog
       path: /security/logs/elastic/syslog
-    - title: Filter out flow logs
+    - title: Filter flow logs
       path: /security/logs/elastic/filtering
     - title: Filter out DNS logs
       path: /security/logs/elastic/filtering-dns

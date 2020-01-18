@@ -1,5 +1,5 @@
 ---
-description: Calico Enterprise installs an instance of Prometheus and Alertmanager for policy metrics. 
+description: Configure Prometheus and Alertmanager for policy metrics. 
 show_read_time: false
 show_toc: false
 ---

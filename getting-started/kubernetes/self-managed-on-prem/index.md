@@ -1,5 +1,5 @@
 ---
-description: Install Calico Enterprise for on-premises deployments.
+description: Install Calico Enterprise forself-managed on-premises deployments.
 canonical_url: '/getting-started/kubernetes/self-managed-on-prem/'
 show_read_time: false
 show_toc: false
