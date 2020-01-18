@@ -1,5 +1,6 @@
 ---
 title: Getting started with Calico Enterprise
+description: Get a license to instal Calico Enterprise.
 canonical_url: /getting-started/calico-enterprise
 ---
 

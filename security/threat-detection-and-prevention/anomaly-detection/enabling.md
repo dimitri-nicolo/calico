@@ -1,5 +1,6 @@
 ---
 title: Enable anomaly detection
+description: Review the default behavior for flow log aggregation and anomaly detection. 
 canonical_url: /security/threat-detection-and-prevention/anomaly-detection/enabling
 ---
 

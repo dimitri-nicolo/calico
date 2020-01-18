@@ -1,5 +1,6 @@
 ---
 title: Anomaly detection
+description: What is anomaly detection?
 canonical_url: /security/threat-detection-and-prevention/anomaly-detection
 ---
 

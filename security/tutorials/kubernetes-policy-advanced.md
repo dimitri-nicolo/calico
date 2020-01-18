@@ -1,5 +1,6 @@
 ---
 title: Kubernetes policy, advanced tutorial
+description: Learn how to create more advanced Kubernetes network policies (namespace, allow and deny all ingress and egress).
 canonical_url: '/security/tutorials/kubernetes-policy-advanced'
 ---
 

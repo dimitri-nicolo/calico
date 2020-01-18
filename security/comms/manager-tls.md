@@ -1,5 +1,6 @@
 ---
-title: Provide TLS certificates for the manager UI
+title: Provide TLS certificates for Calico Enterprise Manager
+description: Add TLS certificates to secure access to Calico Enterprise Manager user interface. 
 ---
 
 ### Big picture

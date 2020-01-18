@@ -1,5 +1,6 @@
 ---
 title: Secure BGP sessions
+description: Configure BGP passwords to prevent attackers from injecting false routing information. 
 canonical_url: '/security/comms/secure-bgp'
 ---
 

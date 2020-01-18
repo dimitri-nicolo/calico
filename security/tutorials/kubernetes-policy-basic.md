@@ -1,5 +1,6 @@
 ---
 title: Kubernetes policy, basic tutorial
+description: Learn how to use basic Kubernetes network policy to securely restrict traffic to/from pods.
 canonical_url: '/security/tutorials/kubernetes-policy-basic'
 show_toc: false
 ---

@@ -1,5 +1,6 @@
 ---
 title: Enable VPC members to access pods
+description: Learn the default behavior for pods selected by a network olicy. 
 canonical_url: /security/aws-security-group-integration/vpc-member-access
 ---
 
@@ -20,8 +21,7 @@ Modify the manifest YAML or edit the network policy directly with  `kubectl edit
  - Annotate the NetworkPolicy with `rules.networkpolicy.tigera.io/match-security-groups: "true"`
  - Add a selector for the security group of the VPC member.
 
-The following  example allows members of security group `sg-01010101010101010` to access pods with the label `role = frontend`
-
+The following example allows members of security group `sg-01010101010101010` to access pods with the label `role = frontend`
 
 ````
 apiVersion: networking.k8s.io/v1
@@ -43,5 +43,3 @@ spec:
           matchLabels:
                sg.aws.tigera.io/sg-01010101010101010: ""
 ````
-
-

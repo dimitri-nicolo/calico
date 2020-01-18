@@ -1,5 +1,6 @@
 ---
 title: Configure compliance reports
+description: Get the reports you need for regulatory compliance on Kubernetes workloads and environments.
 ---
 
 ### Big picture
