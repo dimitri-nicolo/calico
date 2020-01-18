@@ -1,5 +1,6 @@
 ---
-title: Policy Audit report (policy-audit)
+title: Policy audit report
+description: API for this resource. 
 ---
 
 To create a Policy Audit report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`

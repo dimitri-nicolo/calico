@@ -1,5 +1,6 @@
 ---
 title: Compliance reports
+description: Schedule reports and configure report scope. 
 ---
 
 The {{ site.prodname }} compliance reporting feature provides the following compliance reports:

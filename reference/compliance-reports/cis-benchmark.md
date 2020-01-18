@@ -1,5 +1,6 @@
 ---
 title: CIS benchmark report
+description: API for this resource. 
 ---
 
 To create a CIS benchmark report, create a `GlobalReport` with the `reportType` set to `cis-benchmark`.
