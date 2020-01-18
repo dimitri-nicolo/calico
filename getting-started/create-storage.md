@@ -1,5 +1,6 @@
 ---
 title: Configure storage for logs and reports
+description: Configure persistent storage for flow logs, DNS logs, audit logs, and compliance reports. 
 ---
 
 ### Big picture

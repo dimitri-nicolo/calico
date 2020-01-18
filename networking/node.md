@@ -1,6 +1,6 @@
 ---
 title: Configuring a node IP address and subnet
-description: Configure IP autodetection
+description: Configure IP autodetection.
 canonical_url: '/networking/node'
 ---
 

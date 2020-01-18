@@ -1,6 +1,6 @@
 ---
 title: Configuring Alertmanager
-description: Alertmanager is a Prometheus feature used by Calico Enterprise to route alerts to administrators. 
+description: Configure Alertmanager, a Prometheus feature that routes alerts. 
 canonical_url: /reference/other-install-methods/security/configuration/alertmanager
 ---
 

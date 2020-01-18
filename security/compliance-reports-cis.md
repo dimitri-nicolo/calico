@@ -1,5 +1,6 @@
 ---
 title: Configure CIS benchmark reports 
+description: Configure reports to assess compliance for all assets in a Kubernetes cluster.
 ---
 
 ### Big picture

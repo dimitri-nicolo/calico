@@ -25,7 +25,7 @@ section:
       path: /security/tutorials/kubernetes-policy-basic
     - title: Kubernetes policy, advanced tutorial
       path: /security/tutorials/kubernetes-policy-advanced
-  - title: Get started with Calico Enterprise policy 
+  - title: Calico Enterprise policy 
     path: /security/calico-enterprise-policy
     section: 
     - title: Create tiered policy

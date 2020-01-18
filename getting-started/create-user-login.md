@@ -1,5 +1,6 @@
 ---
 title: Log in to Calico Enterprise Manager UI
+description: Create a user login using an authentication method, and log in to Calico Enterprise Manager with default roles. 
 ---
 
 ### Big picture
