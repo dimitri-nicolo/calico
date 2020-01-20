@@ -940,6 +940,11 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.kibana.port
+          - name: CLUSTER_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-es-config
+                key: tigera.elasticsearch.cluster-name
         volumeMounts:
           - mountPath: /certs/es-ca.pem
             subPath: es-ca.pem
