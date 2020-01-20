@@ -399,7 +399,8 @@ dual-tor-setup: cnx-node.tar calico_test.created
 	cd tests/kind && make
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup tests/k8st/dual-tor/dualtor.sh
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
+	ROUTER_IMAGE=$(BIRD_IMAGE) tests/k8st/dual-tor/dualtor.sh
 
 DUAL_TOR_ST_TO_RUN=dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture
 .PHONY: dual-tor-run-test
