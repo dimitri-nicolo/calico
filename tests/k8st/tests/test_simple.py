@@ -89,7 +89,7 @@ class TestSimplePolicy(TestBase):
                     },
                 }
             )
-            client.ExtensionsV1beta1Api().create_namespaced_network_policy(
+            client.NetworkingV1Api().create_namespaced_network_policy(
                 body=policy,
                 namespace="policy-demo",
             )
@@ -124,7 +124,7 @@ class TestSimplePolicy(TestBase):
                     }
                 }
             )
-            client.ExtensionsV1beta1Api().create_namespaced_network_policy(
+            client.NetworkingV1Api().create_namespaced_network_policy(
                 body=policy,
                 namespace="policy-demo",
             )
