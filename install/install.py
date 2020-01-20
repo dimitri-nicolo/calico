@@ -71,7 +71,7 @@ if __name__ == '__main__':
     password = os.getenv("PASSWORD", None)
     es_ca_cert = os.getenv("ES_CA_CERT", None)
     kb_ca_cert = os.getenv("KB_CA_CERT", es_ca_cert) # Fall back on default behavior where kb and es use the same cert.
-    os.putenv("CLUSTER_NAME", os.getenv("CLUSTER_NAME", DEFAULT_CLUSTER)) # set default cluster name if needed
+    os.environ["CLUSTER_NAME"] = os.getenv("CLUSTER_NAME", DEFAULT_CLUSTER) # set default cluster name if needed
 
     elastic = RESTClient(elastic_url, username=user, password=password, ca_cert=es_ca_cert, verify=verify)
 
