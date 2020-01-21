@@ -15,6 +15,8 @@ type PolicyRecommendationParams struct {
 	EndpointName string `json:"endpoint_name"`
 	// Namespace should correspond to the endpoint referenced by EndpointName.
 	Namespace string `json:"namespace"`
+	// Unprotected specifies whether results should be restricted to Calico Profiles
+	Unprotected bool `json:"unprotected"`
 
 	// Helper values
 	// DocumentIndex represents the elasticsearch index to search through.

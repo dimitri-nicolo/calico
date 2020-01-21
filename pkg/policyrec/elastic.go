@@ -3,7 +3,7 @@ package policyrec
 
 import (
 	"context"
-	"strings"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
@@ -11,6 +11,8 @@ import (
 	"github.com/tigera/lma/pkg/api"
 	pelastic "github.com/tigera/lma/pkg/elastic"
 )
+
+const defaultTier = "default"
 
 const (
 	FlowlogBuckets = "flog_buckets"
@@ -118,12 +120,110 @@ var (
 	}
 )
 
+/*{
+  "bool": {
+    "must": [
+      {"range": {"start_time": { "gte": "{{.StartTime}}"}}},
+      {"range": {"end_time": { "lte": "{{.EndTime}}"}}},
+      {"terms":{"source_type":["net","ns","wep","hep"]}},
+      {"terms":{"dest_type":["net","ns","wep","hep"]}},
+      {"nested": {
+        "path": "policies",
+        "query": {
+          "wildcard": {
+            "policies.all_policies": {
+              "value": "*|__PROFILE__|__PROFILE__.kns.{{.Namespace}}|allow"
+            }
+          }
+        }
+      }},
+      {"bool": {
+        "should": [
+          {"bool": {
+            "must": [
+              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
+              {"term": {"source_namespace": "{{.Namespace}}"}}
+            ]
+          }},
+          {"bool": {
+            "must": [
+              {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
+              {"term": {"dest_namespace": "{{.Namespace}}"}}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }
+}*/
 func BuildElasticQuery(params *PolicyRecommendationParams) elastic.Query {
-	qs := strings.ReplaceAll(flowQuery, "{{.StartTime}}", params.StartTime)
-	qs = strings.ReplaceAll(qs, "{{.EndTime}}", params.EndTime)
-	qs = strings.ReplaceAll(qs, "{{.EndpointName}}", params.EndpointName)
-	qs = strings.ReplaceAll(qs, "{{.Namespace}}", params.Namespace)
-	return elastic.NewRawStringQuery(qs)
+	query := elastic.NewBoolQuery()
+
+	startQuery := elastic.NewRangeQuery("start_time").Gte(params.StartTime)
+	endQuery := elastic.NewRangeQuery("end_time").Lte(params.EndTime)
+	sourceTermsQuery := elastic.NewTermsQuery("source_type", "net", "ns", "wep", "hep")
+	destTermsQuery := elastic.NewTermsQuery("dest_type", "net", "ns", "wep", "hep")
+
+	nameAndNamespaceQuery := buildNameAndNamespaceQuery(params.Namespace, params.EndpointName)
+
+	unprotectedWildcardQuery := buildUnprotectedQuery(params.Namespace)
+
+	// If the request is only for unprotected flows then return a query that will
+	// specifically only pick flows that are allowed by a profile.
+	if params.Unprotected {
+		unprotectedQuery := elastic.NewNestedQuery("policies", unprotectedWildcardQuery)
+		return query.Must(
+			startQuery,
+			endQuery,
+			sourceTermsQuery,
+			destTermsQuery,
+			unprotectedQuery,
+			nameAndNamespaceQuery,
+		)
+	}
+
+	// Otherwise fetch all flows seen (allow, deny, and pass) by the default tier
+	// and allowed by profiles.
+	defaultTierWildcardQuery := buildTierQuery(defaultTier)
+
+	matchingTiers := elastic.NewBoolQuery()
+	matchingTiers.Should(defaultTierWildcardQuery, unprotectedWildcardQuery)
+	nestedTiersQuery := elastic.NewNestedQuery("policies", matchingTiers)
+
+	return query.Must(
+		startQuery,
+		endQuery,
+		nestedTiersQuery,
+		nameAndNamespaceQuery,
+	)
+}
+
+// buildTierQuery builds a wildcarded nested query that will match a policy hit in the
+// default tier.
+func buildTierQuery(tierName string) elastic.Query {
+	tier := fmt.Sprintf("*|%s|*|*", tierName)
+	return elastic.NewWildcardQuery("policies.all_policies", tier)
+}
+
+func buildUnprotectedQuery(namespace string) elastic.Query {
+	namespaceProfile := fmt.Sprintf("*|__PROFILE__|__PROFILE__.kns.%s|allow", namespace)
+	return elastic.NewWildcardQuery("policies.all_policies", namespaceProfile)
+}
+
+func buildNameAndNamespaceQuery(namespace, name string) elastic.Query {
+	nameAndNamespaceQuery := elastic.NewBoolQuery()
+	sourceQuery := elastic.NewBoolQuery()
+	sourceQuery = sourceQuery.Must(
+		elastic.NewTermQuery("source_namespace", namespace),
+		elastic.NewTermQuery("source_name_aggr", name),
+	)
+	destQuery := elastic.NewBoolQuery()
+	destQuery = destQuery.Must(
+		elastic.NewTermQuery("dest_namespace", namespace),
+		elastic.NewTermQuery("dest_name_aggr", name),
+	)
+	return nameAndNamespaceQuery.Should(sourceQuery, destQuery)
+
 }
 
 // CompositeAggregator is an interface to provide composite aggregation via Elasticsearch.
@@ -136,9 +236,9 @@ type CompositeAggregator interface {
 // TODO: Add special error handling for elastic queries that are rejected because elastic permissions are bad.
 func SearchFlows(ctx context.Context, c CompositeAggregator, query elastic.Query, params *PolicyRecommendationParams) ([]*api.Flow, error) {
 	aggQuery := &pelastic.CompositeAggregationQuery{
-		DocumentIndex: params.DocumentIndex,
-		Query:         query,
-		Name:          FlowlogBuckets,
+		DocumentIndex:           params.DocumentIndex,
+		Query:                   query,
+		Name:                    FlowlogBuckets,
 		AggCompositeSourceInfos: CompositeSources,
 		AggNestedTermInfos:      AggregatedTerms,
 	}
