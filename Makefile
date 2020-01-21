@@ -71,6 +71,9 @@ ifdef CONFIRM
 	git config --global user.email "marvin@tigera.io"
 endif
 
+git-commit:
+	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update: [skip ci]" go.mod go.sum
+
 update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 #############################################################################
