@@ -70,27 +70,23 @@ func ValidatePolicyRecommendationParams(params *PolicyRecommendationParams) erro
 }
 
 func ValidatePermissions(req *http.Request, k8sAuth auth.K8sAuthInterface) (int, error) {
+	// Retrieve the cluster name from the "x-cluster-id" header. If it does not exist, this is
+	// in a single cluster environment and the cluster name is defaulted to "cluster".
+	clusterName := "cluster"
+	if val := req.Header.Get("x-cluster-id"); val != "" {
+		clusterName = val
+	}
+
 	// Check permissions against our custom resource for verifying the appropriate permissions
 	resAtr := &authzv1.ResourceAttributes{
 		Verb:     "get",
 		Group:    lmaGroup,
-		Resource: "index",
+		Resource: clusterName,
 		Name:     "flows",
 	}
 
 	if stat, err := checkAuthorized(req, *resAtr, k8sAuth); err != nil {
 		return stat, fmt.Errorf("Not authorized to get flow logs")
-	}
-
-	// Check permissions against our custom resource for verifying the appropriate permissions
-	resAtr = &authzv1.ResourceAttributes{
-		Verb:     "create",
-		Group:    lmaGroup,
-		Resource: "policyrecommendation",
-	}
-
-	if stat, err := checkAuthorized(req, *resAtr, k8sAuth); err != nil {
-		return stat, fmt.Errorf("Not authorized to create policies through policyrecommendation")
 	}
 
 	// Authorized for all actions on all resources required
