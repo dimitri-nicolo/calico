@@ -7,7 +7,7 @@ package internalclientset
 import (
 	"fmt"
 
-	projectcalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion"
+	projectcalicointernalversion "github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

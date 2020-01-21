@@ -3,7 +3,7 @@
 package apiserver
 
 import (
-	calicorest "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/rest"
+	calicorest "github.com/tigera/apiserver/pkg/registry/projectcalico/rest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -11,8 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
+	"github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/apiserver/pkg/apis/projectcalico/install"
 )
 
 var (
@@ -79,7 +79,7 @@ func (cfg *Config) Complete() CompletedConfig {
 
 // New returns a new instance of ProjectCalicoServer from the given config.
 func (c completedConfig) New() (*ProjectCalicoServer, error) {
-	genericServer, err := c.GenericConfig.New("calico-k8sapiserver", genericapiserver.NewEmptyDelegate())
+	genericServer, err := c.GenericConfig.New("apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}

@@ -31,11 +31,11 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	restclient "k8s.io/client-go/rest"
 
-	"github.com/tigera/calico-k8sapiserver/cmd/apiserver/server"
-	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
-	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/apiserver/cmd/apiserver/server"
+	_ "github.com/tigera/apiserver/pkg/apis/projectcalico/install"
+	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/apiserver/pkg/apiserver"
+	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
 )
 
 const defaultEtcdPathPrefix = ""

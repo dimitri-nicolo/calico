@@ -13,5 +13,5 @@
 # limitations under the License.
 
 FROM fedora
-ADD calico-k8sapiserver /
-ENTRYPOINT ["/calico-k8sapiserver"]
+ADD apiserver /
+ENTRYPOINT ["/apiserver"]

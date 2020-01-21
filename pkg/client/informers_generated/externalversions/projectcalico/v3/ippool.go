@@ -7,10 +7,10 @@ package v3
 import (
 	time "time"
 
-	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	clientset "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	internalinterfaces "github.com/tigera/apiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
+	v3 "github.com/tigera/apiserver/pkg/client/listers_generated/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -5,7 +5,7 @@
 package internalversion
 
 import (
-	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/scheme"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

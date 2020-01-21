@@ -5,7 +5,7 @@
 package fake
 
 import (
-	internalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion"
+	internalversion "github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

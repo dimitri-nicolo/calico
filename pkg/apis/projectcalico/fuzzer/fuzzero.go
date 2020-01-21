@@ -15,10 +15,11 @@ package fuzzer
 
 import (
 	fuzz "github.com/google/gofuzz"
+	"github.com/tigera/apiserver/pkg/apis/projectcalico"
+	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 func createSourceEntityRule() apiv3.EntityRule {

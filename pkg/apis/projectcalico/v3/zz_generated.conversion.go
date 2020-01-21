@@ -9,7 +9,7 @@ package v3
 import (
 	unsafe "unsafe"
 
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )

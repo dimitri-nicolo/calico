@@ -5,10 +5,6 @@ package calico
 import (
 	"reflect"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
-	"github.com/projectcalico/libcalico-go/lib/watch"
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -16,7 +12,12 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 )
 
 // NewClusterInformationStorage creates a new libcalico-based storage.Interface implementation for ClusterInformation

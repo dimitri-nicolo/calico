@@ -5,12 +5,13 @@ import (
 
 	"golang.org/x/net/context"
 
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-	"k8s.io/apiserver/pkg/registry/generic/registry"
+
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"

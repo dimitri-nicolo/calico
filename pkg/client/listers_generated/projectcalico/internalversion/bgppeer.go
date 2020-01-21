@@ -5,7 +5,7 @@
 package internalversion
 
 import (
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"

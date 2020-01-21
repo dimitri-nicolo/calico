@@ -5,8 +5,8 @@
 package projectcalico
 
 import (
-	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
-	internalversion "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/internalversion/projectcalico/internalversion"
+	internalinterfaces "github.com/tigera/apiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
+	internalversion "github.com/tigera/apiserver/pkg/client/informers_generated/internalversion/projectcalico/internalversion"
 )
 
 // Interface provides access to each of this group's versions.

@@ -9,9 +9,9 @@ import (
 	sync "sync"
 	time "time"
 
-	internalclientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset"
-	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/internalversion/projectcalico"
+	internalclientset "github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset"
+	internalinterfaces "github.com/tigera/apiserver/pkg/client/informers_generated/internalversion/internalinterfaces"
+	projectcalico "github.com/tigera/apiserver/pkg/client/informers_generated/internalversion/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -5,8 +5,8 @@
 package v3
 
 import (
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
+	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	scheme "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

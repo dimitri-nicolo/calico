@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
+	"github.com/tigera/apiserver/pkg/storage/calico"
+	"github.com/tigera/apiserver/pkg/storage/etcd"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"

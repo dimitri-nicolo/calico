@@ -27,8 +27,8 @@ import (
 
 	"github.com/go-openapi/spec"
 	"github.com/spf13/pflag"
-	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
-	"github.com/tigera/calico-k8sapiserver/pkg/openapi"
+	"github.com/tigera/apiserver/pkg/apiserver"
+	"github.com/tigera/apiserver/pkg/openapi"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"

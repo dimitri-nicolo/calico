@@ -14,7 +14,7 @@ limitations under the License.
 package apiserver
 
 import (
-	//projectcalicofuzzer "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/fuzzer"
+	//projectcalicofuzzer "github.com/tigera/apiserver/pkg/apis/projectcalico/fuzzer"
 	//"k8s.io/apimachinery/pkg/api/apitesting/roundtrip"
 	"testing"
 )

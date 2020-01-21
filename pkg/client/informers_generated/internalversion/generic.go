@@ -7,7 +7,7 @@ package internalversion
 import (
 	"fmt"
 
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )

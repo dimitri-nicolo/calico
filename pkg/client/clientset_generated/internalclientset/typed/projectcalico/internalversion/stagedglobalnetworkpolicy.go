@@ -7,8 +7,8 @@ package internalversion
 import (
 	"time"
 
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/scheme"
+	projectcalico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	scheme "github.com/tigera/apiserver/pkg/client/clientset_generated/internalclientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -5,8 +5,8 @@
 package v3
 
 import (
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
+	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
