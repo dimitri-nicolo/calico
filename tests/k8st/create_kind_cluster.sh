@@ -3,6 +3,9 @@
 # test directory.
 TEST_DIR=./tests/k8st
 
+# gcr.io pull secrect credential file.
+: ${GCR_IO_PULL_SECRET:=./docker_auth.json}
+
 # kubectl binary.
 : ${kubectl:=./kubectl}
 
@@ -24,9 +27,9 @@ function checkModule(){
 
 function load_image() {
     local node=$1
-    docker cp ./calico-node.tar ${node}:/calico-node.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /calico-node.tar
-    docker exec -t ${node} rm /calico-node.tar
+    docker cp ./cnx-node.tar ${node}:/cnx-node.tar
+    docker exec -t ${node} ctr -n=k8s.io images import /cnx-node.tar
+    docker exec -t ${node} rm /cnx-node.tar
 }
 
 function enable_dual_stack() {
@@ -48,6 +51,9 @@ EOF
 EOF
   # update FELIX_IPV6SUPPORT=true
   sed -i '/FELIX_IPV6SUPPORT/!b;n;c\              value: "true"' "${yaml}"
+
+  # update calico/node image
+  sed -i 's,image: .*calico/node:.*,image: tigera/cnx-node:latest-amd64,' "${yaml}"
 }
 
 echo "kubernetes dualstack requires ipvs mode kube-proxy for the moment."
@@ -114,11 +120,20 @@ load_image kind-worker
 load_image kind-worker2
 load_image kind-worker3
 
+# Install pull secret so we can pull the right calicoctl.
+${kubectl} -n kube-system create secret generic cnx-pull-secret \
+   --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
+   --type=kubernetes.io/dockerconfigjson
+
 echo "Install Calico and Calicoctl for dualstack"
-cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml
+${kubectl} apply -f $TEST_DIR/infra/etcd.yaml
+cp $TEST_DIR/infra/calico-etcd.yaml $TEST_DIR/infra/calico.yaml
 enable_dual_stack $TEST_DIR/infra/calico.yaml
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml
-${kubectl} apply -f $TEST_DIR/infra/calicoctl.yaml
+# Install Calicoctl on master node, avoid network disruption during bgp configuration.
+cat ${TEST_DIR}/infra/calicoctl-etcd.yaml | \
+    sed 's,hostNetwork: true,hostNetwork: true\n  nodeName: kind-control-plane,' | \
+    ${kubectl} apply -f -
 echo
 
 echo "Wait Calico to be ready..."
