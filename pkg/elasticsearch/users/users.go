@@ -1,0 +1,228 @@
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+
+// package users contains the current elasticsearch users that can be used in a k8s cluster
+
+package users
+
+import (
+	"fmt"
+
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+)
+
+type ElasticsearchUserName string
+
+const (
+	ElasticsearchUserNameFluentd               ElasticsearchUserName = "tigera-fluentd"
+	ElasticsearchUserNameEKSLogForwarder       ElasticsearchUserName = "tigera-eks-log-forwarder"
+	ElasticsearchUserNameComplianceBenchmarker ElasticsearchUserName = "tigera-ee-compliance-benchmarker"
+	ElasticsearchUserNameComplianceController  ElasticsearchUserName = "tigera-ee-compliance-controller"
+	ElasticsearchUserNameComplianceReporter    ElasticsearchUserName = "tigera-ee-compliance-reporter"
+	ElasticsearchUserNameComplianceSnapshotter ElasticsearchUserName = "tigera-ee-compliance-snapshotter"
+	ElasticsearchUserNameComplianceServer      ElasticsearchUserName = "tigera-ee-compliance-server"
+	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
+	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
+	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
+)
+
+// ElasticsearchUsers returns a map of ElasticsearchUserNames as keys and elasticsearch.Users as values. The clusterName
+// is used to format the username / role names for the elasticsearch.User (format is <name>-<clusterName>). If management
+// is true, the return map will contain the elasticsearch users needed for a management cluster, and the usernames and
+// role names will not be formatted with the clusterName.
+//
+// Note that the clusterName parameter is also used to format the index names, allowing the user to have access to only
+// specific cluster indices
+func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUserName]elasticsearch.User {
+	users := map[ElasticsearchUserName]elasticsearch.User{
+		ElasticsearchUserNameFluentd: {
+			Username: formatName(ElasticsearchUserNameFluentd, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameFluentd, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, "*")},
+						Privileges: []string{"create_index", "write"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameEKSLogForwarder: {
+			Username: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameEKSLogForwarder, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_audit_kube", clusterName, "*")},
+						Privileges: []string{"create_index", "read", "write"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameComplianceBenchmarker: {
+			Username: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameComplianceBenchmarker, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_benchmark_results", clusterName, "*")},
+						Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameComplianceController: {
+			Username: formatName(ElasticsearchUserNameComplianceController, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameComplianceController, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_compliance_reports", clusterName, "*")},
+						Privileges: []string{"read"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameComplianceReporter: {
+			Username: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameComplianceReporter, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_audit_*", clusterName, "*")},
+							Privileges: []string{"read"},
+						},
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_snapshots", clusterName, "*")},
+							Privileges: []string{"read"},
+						},
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_benchmark_results", clusterName, "*")},
+							Privileges: []string{"read"},
+						},
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_compliance_reports", clusterName, "*")},
+							Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+						},
+					},
+				},
+			}},
+		},
+		ElasticsearchUserNameComplianceSnapshotter: {
+			Username: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameComplianceSnapshotter, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_snapshots", clusterName, "*")},
+						Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameIntrusionDetection: {
+			Username: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNameIntrusionDetection, clusterName, management),
+					Definition: &elasticsearch.RoleDefinition{
+						Cluster: []string{"monitor", "manage_index_templates"},
+						Indices: []elasticsearch.RoleIndex{
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, "*")},
+								Privileges: []string{"read"},
+							},
+							{
+								Names: []string{
+									indexPattern(".tigera.ipset.*", clusterName, "*"),
+									indexPattern("tigera_secure_ee_events.*", clusterName, "*"),
+									indexPattern(".tigera.domainnameset.*", clusterName, "*")},
+								Privileges: []string{"all"},
+							},
+						},
+					},
+				},
+				{
+					// TODO look into this role, it may give managed clusters abilities we don't want them to have (SAAS-626)
+					Name: "watcher_admin",
+				},
+			},
+		},
+		ElasticsearchUserNameInstaller: {
+			Username: formatName(ElasticsearchUserNameInstaller, clusterName, management),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameInstaller, clusterName, management),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"manage_ml", "manage_watcher", "manage"},
+					Indices: []elasticsearch.RoleIndex{
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, "*")},
+							Privileges: []string{"read", "write"},
+						},
+					},
+					Applications: []elasticsearch.Application{{
+						Application: "kibana-.kibana",
+						Privileges:  []string{"all"},
+						Resources:   []string{"*"},
+					}},
+				},
+			}},
+		},
+	}
+
+	if management {
+		for k, v := range managementOnlyElasticsearchUsers(clusterName) {
+			users[k] = v
+		}
+	}
+
+	return users
+}
+
+func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserName]elasticsearch.User {
+	return map[ElasticsearchUserName]elasticsearch.User{
+		ElasticsearchUserNameComplianceServer: {
+			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, false),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameComplianceServer, clusterName, false),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_compliance_reports", clusterName, "*")},
+						Privileges: []string{"read"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameManager: {
+			Username: formatName(ElasticsearchUserNameManager, clusterName, false),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameManager, clusterName, false),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor"},
+					Indices: []elasticsearch.RoleIndex{{
+						Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, "*"), ".kibana"},
+						Privileges: []string{"read"},
+					}},
+				},
+			}},
+		},
+	}
+}
+
+func indexPattern(prefix string, cluster string, suffix string) string {
+	return fmt.Sprintf("%s.%s.%s", prefix, cluster, suffix)
+}
+
+func formatName(name ElasticsearchUserName, clusterName string, management bool) string {
+	if management {
+		return string(name)
+	}
+	return fmt.Sprintf("%s-%s", string(name), clusterName)
+}

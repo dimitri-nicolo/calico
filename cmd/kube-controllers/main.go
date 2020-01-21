@@ -24,6 +24,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/kube-controllers/pkg/resource"
+
+	"k8s.io/client-go/rest"
+
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/pkg/srv"
 	"github.com/coreos/etcd/pkg/transport"
@@ -41,15 +45,19 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/flannelmigration"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/namespace"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/networkpolicy"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/node"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/serviceaccount"
+	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+
 	"github.com/projectcalico/kube-controllers/pkg/status"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
@@ -63,6 +71,35 @@ const (
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
 type backendClientAccessor interface {
 	Backend() bapi.Client
+}
+
+// addHeaderRoundTripper implements the http.RoundTripper interface and inserts the headers in headers field
+// into the request made with an http.Client that uses this RoundTripper
+type addHeaderRoundTripper struct {
+	headers map[string][]string
+	rt      http.RoundTripper
+}
+
+func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	r2 := new(http.Request)
+	*r2 = *r
+
+	// To set extra headers, we must make a copy of the Request so
+	// that we don't modify the Request we were given. This is required by the
+	// specification of http.RoundTripper.
+	//
+	// Since we are going to modify only req.Header here, we only need a deep copy
+	// of req.Header.
+	r2.Header = make(http.Header, len(r.Header))
+	for k, s := range r.Header {
+		r2.Header[k] = append([]string(nil), s...)
+	}
+
+	for key, values := range ha.headers {
+		r2.Header[key] = values
+	}
+
+	return ha.rt.RoundTrip(r2)
 }
 
 // VERSION is filled out during the build process (using git describe output)
@@ -190,6 +227,42 @@ func main() {
 				threadiness:    config.FederatedServicesWorkers,
 			}
 			controllerCtrl.needLicenseMonitoring = true
+		case "managedcluster":
+			// We only want these clients created if the managedcluster controller type is enabled
+			kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
+			if err != nil {
+				log.WithError(err).Fatal("failed to build kubernetes client config")
+			}
+
+			esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
+			if err != nil {
+				log.WithError(err).Fatal("failed to build elasticsearch rest client")
+			}
+
+			calicoV3Client, err := tigeraapi.NewForConfig(kubeconfig)
+			if err != nil {
+				log.WithError(err).Fatal("failed to build calico v3 clientset")
+			}
+
+			controllerCtrl.controllerStates["ManagedCluster"] = &controllerState{
+				threadiness: config.ManagedClusterWorkers,
+				controller: managedcluster.New(
+					func(clustername string) (kubernetes.Interface, error) {
+						kubeconfig.Host = config.VoltronServiceURL
+						kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+							return &addHeaderRoundTripper{
+								headers: map[string][]string{"x-cluster-id": {clustername}},
+								rt:      rt,
+							}
+						}
+						kubeconfig.TLSClientConfig = rest.TLSClientConfig{
+							Insecure: true,
+						}
+						return kubernetes.NewForConfig(kubeconfig)
+					},
+					resource.ElasticsearchServiceURL,
+					k8sClientset, calicoV3Client, esK8sREST, config.ManagedClusterElasticsearchConfigurationWorkers, config.ReconcilerPeriod),
+			}
 		case "flannelmigration":
 			// Attempt to load Flannel configuration.
 			flannelConfig := new(flannelmigration.Config)

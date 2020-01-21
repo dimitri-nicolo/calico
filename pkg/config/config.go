@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,12 +32,14 @@ type Config struct {
 	EnabledControllers string `default:"node,policy,namespace,workloadendpoint,serviceaccount" split_words:"true"`
 
 	// Number of workers to run for each controller.
-	WorkloadEndpointWorkers  int `default:"1" split_words:"true"`
-	ProfileWorkers           int `default:"1" split_words:"true"`
-	PolicyWorkers            int `default:"1" split_words:"true"`
-	ServiceWorkers           int `default:"1" split_words:"true"`
-	NodeWorkers              int `default:"1" split_words:"true"`
-	FederatedServicesWorkers int `default:"1" split_words:"true"`
+	WorkloadEndpointWorkers                         int `default:"1" split_words:"true"`
+	ProfileWorkers                                  int `default:"1" split_words:"true"`
+	PolicyWorkers                                   int `default:"1" split_words:"true"`
+	ServiceWorkers                                  int `default:"1" split_words:"true"`
+	NodeWorkers                                     int `default:"1" split_words:"true"`
+	FederatedServicesWorkers                        int `default:"1" split_words:"true"`
+	ManagedClusterWorkers                           int `default:"1" split_words:"true"`
+	ManagedClusterElasticsearchConfigurationWorkers int `default:"1" split_words:"true"`
 
 	// Path to a kubeconfig file to use for accessing the k8s API.
 	Kubeconfig string `default:"" split_words:"false"`
@@ -57,6 +59,8 @@ type Config struct {
 
 	// Option used for testing and debugging to set the license polling interval to a shorter period.
 	DebugUseShortPollIntervals bool `default:"false" split_words:"true"`
+
+	VoltronServiceURL string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct
