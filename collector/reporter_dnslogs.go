@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -53,7 +53,7 @@ const (
 
 // NewDNSLogReporter constructs a DNSLogReporter using a dispatcher and aggregator.
 func NewDNSLogReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *DNSLogReporter {
-	return NewDNSLogReporterWithShims(dispatchers, jitter.NewTicker(flushInterval, flushInterval/10).C, healthAggregator)
+	return NewDNSLogReporterWithShims(dispatchers, jitter.NewTicker(flushInterval, flushInterval/10).Channel(), healthAggregator)
 }
 
 func NewDNSLogReporterWithShims(dispatchers map[string]LogDispatcher, flushTrigger <-chan time.Time, healthAggregator *health.HealthAggregator) *DNSLogReporter {

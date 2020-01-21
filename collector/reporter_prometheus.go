@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -35,7 +35,7 @@ type PrometheusReporter struct {
 	registry        *prometheus.Registry
 	reportChan      chan MetricUpdate
 	retentionTime   time.Duration
-	retentionTicker *jitter.Ticker
+	retentionTicker jitter.JitterTicker
 	aggregators     []PromAggregator
 
 	// Allow the time function to be mocked for test purposes.
@@ -100,7 +100,7 @@ func (pr *PrometheusReporter) startReporter() {
 			for _, agg := range pr.aggregators {
 				agg.OnUpdate(mu)
 			}
-		case <-pr.retentionTicker.C:
+		case <-pr.retentionTicker.Channel():
 			//TODO: RLB: Maybe improve this processing using a linked-list (ordered by time)
 			now := pr.timeNowFn()
 			for _, agg := range pr.aggregators {

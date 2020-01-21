@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package windataplane
 
@@ -226,7 +226,7 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 	d.reportHealth()
 
 	// Fill the apply throttle leaky bucket.
-	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).C
+	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).Channel()
 	beingThrottled := false
 
 	datastoreInSync := false

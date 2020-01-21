@@ -903,7 +903,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.config.IPSetsRefreshInterval,
 			d.config.IPSetsRefreshInterval/10,
 		)
-		ipSetsRefreshC = refreshTicker.C
+		ipSetsRefreshC = refreshTicker.Channel()
 	}
 	var routeRefreshC <-chan time.Time
 	if d.config.RouteRefreshInterval > 0 {
@@ -913,7 +913,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.config.RouteRefreshInterval,
 			d.config.RouteRefreshInterval/10,
 		)
-		routeRefreshC = refreshTicker.C
+		routeRefreshC = refreshTicker.Channel()
 	}
 	var xdpRefreshC <-chan time.Time
 	if d.config.XDPRefreshInterval > 0 && d.xdpState != nil {
@@ -923,7 +923,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.config.XDPRefreshInterval,
 			d.config.XDPRefreshInterval/10,
 		)
-		xdpRefreshC = refreshTicker.C
+		xdpRefreshC = refreshTicker.Channel()
 	}
 	var ipSecRefreshC <-chan time.Time
 	if d.config.IPSecPolicyRefreshInterval > 0 {
@@ -933,11 +933,11 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.config.IPSecPolicyRefreshInterval,
 			d.config.IPSecPolicyRefreshInterval/10,
 		)
-		ipSecRefreshC = refreshTicker.C
+		ipSecRefreshC = refreshTicker.Channel()
 	}
 
 	// Fill the apply throttle leaky bucket.
-	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).C
+	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).Channel()
 	beingThrottled := false
 
 	datastoreInSync := false

@@ -3,6 +3,8 @@ module github.com/projectcalico/felix
 go 1.12
 
 require (
+	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.8.1 // indirect
 	github.com/Microsoft/go-winio v0.0.0-20190408173621-84b4ab48a507 // indirect
 	github.com/Microsoft/hcsshim v0.0.0-20190408221605-063ae4a83d78
 	github.com/aws/aws-sdk-go v1.13.54
@@ -66,8 +68,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200103165626-2c83fde7c5ce
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200103211238-4018e3107793
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200114235712-f97e1facc0f2
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200116225455-f50dea08c513
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )

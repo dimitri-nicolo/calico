@@ -15,6 +15,7 @@ import (
 // LogOffset determines whether the logs are being stalled in the external processing pipeline
 type LogOffset interface {
 	IsBehind() bool
+	GetIncreaseFactor() int
 }
 
 // Offsets type is a (key,value) pair set as the log file name and the offset
@@ -32,6 +33,10 @@ type NoOpLogOffset struct{}
 
 func (noOp *NoOpLogOffset) IsBehind() bool {
 	return false
+}
+
+func (noOp *NoOpLogOffset) GetIncreaseFactor() int {
+	return 0
 }
 
 type rangeLogOffset struct {
@@ -81,9 +86,31 @@ func (fluentD *rangeLogOffset) IsBehind() bool {
 	return false
 }
 
+func (fluentD *rangeLogOffset) GetIncreaseFactor() int {
+	var offsets = fluentD.reader.Read()
+	var maxFactor = int(MinAggregationLevel)
+
+	for _, v := range offsets {
+		if v < 0 {
+			return int(MaxAggregationLevel)
+		}
+		if v >= fluentD.threshold {
+			var factor = int(v / fluentD.threshold)
+			if factor > maxFactor {
+				factor = maxFactor
+			}
+		}
+	}
+
+	if maxFactor > int(MaxAggregationLevel) {
+		maxFactor = int(MaxAggregationLevel)
+	}
+	return maxFactor
+}
+
 func (fluentD *fluentDLogOffsetReader) Read() Offsets {
 	var offsets = Offsets{}
-	log.Infof("Reading last position from %s", fluentD.positionFile)
+	log.Debugf("Reading last position from %s", fluentD.positionFile)
 	fi, err := os.Open(fluentD.positionFile)
 	if err != nil {
 		log.Warnf("Could not open file %s due to %s", fluentD.positionFile, err)
@@ -131,7 +158,7 @@ func offset(hexOffset string, filePath string) (int64, bool) {
 	}
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		log.Errorf("Could not stat find file %s due to %s", filePath, err)
+		log.Warnf("Could not stat find file %s due to %s", filePath, err)
 		return 0, false
 	}
 	currentSize = fi.Size()

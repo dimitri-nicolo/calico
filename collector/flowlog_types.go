@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -145,6 +145,17 @@ func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
 	f.aggregateFlowPolicies(mu)
 	f.aggregateFlowStats(mu)
 	f.aggregateFlowExtrasRef(mu)
+}
+
+// mergeWith merges two flow specs. This means copying the flowRefsActive that contains a reference
+// to the original tuple that identifies the traffic. This help keeping the same numFlows counts while
+// changing aggregation levels
+func (f *FlowSpec) mergeWith(other FlowSpec) {
+	for tuple, _ := range other.flowsRefsActive {
+		f.flowsRefsActive.Add(tuple)
+		f.flowsRefs.Add(tuple)
+	}
+	f.NumFlows = f.flowsRefs.Len()
 }
 
 // FlowSpec has FlowStats that are stats assocated with a given FlowMeta

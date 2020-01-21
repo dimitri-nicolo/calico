@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -467,13 +467,13 @@ var _ = Describe("Non-mocked EndpointStatusReporter", func() {
 	})
 	It("correctly initialises resync ticker", func() {
 		resyncTicker := esr.resyncTicker.(*jitter.Ticker)
-		Expect(esr.resyncTickerC).To(Equal(resyncTicker.C))
+		Expect(esr.resyncTickerC).To(Equal(resyncTicker.Channel()))
 		Expect(resyncTicker.MinDuration).To(Equal(100 * time.Second))
 		Expect(resyncTicker.MaxJitter).To(Equal(10 * time.Second))
 	})
 	It("correctly initialises rate-limit ticker", func() {
 		rateLimitTicker := esr.rateLimitTicker.(*jitter.Ticker)
-		Expect(esr.rateLimitTickerC).To(Equal(rateLimitTicker.C))
+		Expect(esr.rateLimitTickerC).To(Equal(rateLimitTicker.Channel()))
 		Expect(rateLimitTicker.MinDuration).To(Equal(10 * time.Second))
 		Expect(rateLimitTicker.MaxJitter).To(Equal(1 * time.Second))
 	})

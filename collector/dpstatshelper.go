@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -150,6 +150,8 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 
 // configureFlowAggregation adds appropriate aggregators to the FlowLogsReporter, depending on configuration.
 func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter) {
+	var offsetReader LogOffset = &NoOpLogOffset{}
+
 	addedFileAllow := false
 	addedFileDeny := false
 	if configParams.CloudWatchLogsReporterEnabled {
@@ -169,11 +171,11 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
 				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies {
 				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
+				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName}, offsetReader)
 				addedFileAllow = true
 			} else {
 				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
+				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName}, offsetReader)
 			}
 		}
 		if configParams.CloudWatchLogsEnabledForDenied {
@@ -191,11 +193,11 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
 				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies {
 				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
+				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName}, offsetReader)
 				addedFileDeny = true
 			} else {
 				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
+				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName}, offsetReader)
 			}
 		}
 	}
@@ -210,7 +212,11 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
-			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
+			if configParams.FlowLogsDynamicAggregationEnabled {
+				offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.FlowLogsPositionFilePath),
+					int64(configParams.FlowLogsAggregationThresholdBytes))
+			}
+			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName}, offsetReader)
 		}
 		if !addedFileDeny && configParams.FlowLogsFileEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
@@ -221,7 +227,11 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
-			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
+			if configParams.FlowLogsDynamicAggregationEnabled {
+				offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.FlowLogsPositionFilePath),
+					int64(configParams.FlowLogsAggregationThresholdBytes))
+			}
+			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName}, offsetReader)
 		}
 	}
 }

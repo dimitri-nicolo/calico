@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -76,7 +76,7 @@ func (c *cloudWatchMetricReporter) Report(mu MetricUpdate) error {
 }
 
 func (c *cloudWatchMetricReporter) run() {
-	tickerC := jitter.NewTicker(c.updateFrequency, c.updateFrequency/10).C
+	tickerC := jitter.NewTicker(c.updateFrequency, c.updateFrequency/10).Channel()
 	for {
 		select {
 		case <-tickerC:

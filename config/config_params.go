@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -265,6 +265,9 @@ type Config struct {
 	FlowLogsFileIncludePolicies           bool   `config:"bool;false"`
 	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
 	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
+	FlowLogsDynamicAggregationEnabled     bool   `config:"bool;false"`
+	FlowLogsPositionFilePath              string `config:"string;/var/log/calico/flows.log.pos"`
+	FlowLogsAggregationThresholdBytes     int    `config:"int;8192"`
 
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
 	DNSLogsFileEnabled         bool          `config:"bool;false"`

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -16,7 +16,7 @@ import (
 )
 
 type FlowLogGetter interface {
-	Get() []*FlowLog
+	GetAndCalibrate(newLevel FlowAggregationKind) []*FlowLog
 }
 
 type FlowLogAggregator interface {
@@ -27,6 +27,10 @@ type FlowLogAggregator interface {
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
+	HasAggregationLevelChanged() bool
+	GetCurrentAggregationLevel() FlowAggregationKind
+	GetDefaultAggregationLevel() FlowAggregationKind
+	AdjustLevel(newLevel FlowAggregationKind)
 }
 
 type LogDispatcher interface {
@@ -37,6 +41,7 @@ type LogDispatcher interface {
 type aggregatorRef struct {
 	a FlowLogAggregator
 	d []LogDispatcher
+	o LogOffset
 }
 
 var FlowLogAvg *FlowLogAverage
@@ -52,7 +57,7 @@ type FlowLogsReporter struct {
 	dispatchers   map[string]LogDispatcher
 	aggregators   []aggregatorRef
 	flushInterval time.Duration
-	flushTicker   *jitter.Ticker
+	flushTicker   jitter.JitterTicker
 	hepEnabled    bool
 
 	healthAggregator *health.HealthAggregator
@@ -113,9 +118,28 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 	}
 }
 
-func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string) {
+func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggregator *health.HealthAggregator, hepEnabled bool, flushTicker jitter.JitterTicker) *FlowLogsReporter {
+	if healthAggregator != nil {
+		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
+	}
+
+	// Initialize FlowLogAverage struct
+	FlowLogAvg.ResetFlowLogs()
+
+	return &FlowLogsReporter{
+		dispatchers:      dispatchers,
+		flushTicker:      flushTicker,
+		flushInterval:    time.Millisecond,
+		timeNowFn:        monotime.Now,
+		healthAggregator: healthAggregator,
+		hepEnabled:       hepEnabled,
+	}
+}
+
+func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string, reader LogOffset) {
 	var ref aggregatorRef
 	ref.a = agg
+	ref.o = reader
 	for _, d := range dispatchers {
 		dis, ok := c.dispatchers[d]
 		if !ok {
@@ -155,14 +179,24 @@ func (c *FlowLogsReporter) run() {
 	for {
 		// TODO(doublek): Stop and flush cases.
 		select {
-		case <-c.flushTicker.C:
+		case <-c.flushTicker.Done():
+			log.Debugf("Stopping flush ticker")
+			healthTicks.Stop()
+			return
+		case <-c.flushTicker.Channel():
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
 			log.Debug("Flow log flush tick")
 			for _, agg := range c.aggregators {
-				fl := agg.a.Get()
+				// Evaluate if the external pipeline is stalled
+				// and increase / decrease the aggregation level if needed
+				newLevel := c.estimateLevel(agg)
+
+				// Retrieve values from cache and calibrate the cache to the new aggregation level
+				fl := agg.a.GetAndCalibrate(newLevel)
 				FlowLogAvg.updateFlowLogs(len(fl))
 				if len(fl) > 0 {
+					// Dispatch logs
 					for _, d := range agg.d {
 						log.WithFields(log.Fields{
 							"size":       len(fl),
@@ -177,6 +211,20 @@ func (c *FlowLogsReporter) run() {
 			c.reportHealth()
 		}
 	}
+}
+
+func (c *FlowLogsReporter) estimateLevel(agg aggregatorRef) FlowAggregationKind {
+	var isBehind = agg.o.IsBehind()
+	log.Debugf("Evaluate aggregation level. Logs are marked as behind = %v", isBehind)
+
+	var newLevel = agg.a.GetCurrentAggregationLevel()
+	if isBehind {
+		newLevel = agg.a.GetCurrentAggregationLevel() + FlowAggregationKind(agg.o.GetIncreaseFactor())
+	} else if agg.a.HasAggregationLevelChanged() {
+		newLevel = agg.a.GetDefaultAggregationLevel()
+	}
+	log.Debugf("Estimate aggregation level to %d", newLevel)
+	return newLevel
 }
 
 func (c *FlowLogsReporter) canPublishFlowLogs() bool {

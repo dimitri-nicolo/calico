@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -66,8 +66,8 @@ type collector struct {
 	nfIngressDoneC chan struct{}
 	nfEgressDoneC  chan struct{}
 	epStats        map[Tuple]*Data
-	poller         *jitter.Ticker
-	ticker         *jitter.Ticker
+	poller         jitter.JitterTicker
+	ticker         jitter.JitterTicker
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
@@ -132,13 +132,13 @@ func (c *collector) startStatsCollectionAndReporting() {
 	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
-		case <-c.poller.C:
+		case <-c.poller.Channel():
 			_ = nfnetlink.ConntrackList(c.handleCtEntry)
 		case nflogPacketAggr := <-c.nfIngressC:
 			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
 			c.convertNflogPktAndApplyUpdate(rules.RuleDirEgress, nflogPacketAggr)
-		case <-c.ticker.C:
+		case <-c.ticker.Channel():
 			c.checkEpStats()
 		case <-c.sigChan:
 			c.dumpStats()
