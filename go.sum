@@ -446,6 +446,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible h1:CnjILlLeLzSapuAg4jY1go7ICAmeiPuU6xNRWQY5kW8=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
+github.com/tigera/libcalico-go-private v0.0.0-20200114235712-f97e1facc0f2 h1:ZnV5rIYGUuDmADWIXuI5l6LULHVxoWU3K0Q+hECVPgQ=
+github.com/tigera/libcalico-go-private v0.0.0-20200114235712-f97e1facc0f2/go.mod h1:y4IBhanJZXJSHFZ6vZx6Fz//lbB97t5bL8VdYCANYyA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200103165626-2c83fde7c5ce h1:YYvinWRP6kuDLjuk+mbdxgYlUbYSpZ5OEpyx6Yoxylk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200103165626-2c83fde7c5ce/go.mod h1:8xH67i9QG7H9cs6dw//iI7+dOn1o0UulZqGOZbfzt/o=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
