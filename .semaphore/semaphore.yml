@@ -23,7 +23,7 @@ blocks:
           - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
           # Checkout the code and run the Kubernetes tests.
           - checkout
-          # - make dual-tor-test
+          - make dual-tor-test
           # Semaphore is doing shallow clone on a commit without tags.
           # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
           - git fetch --unshallow

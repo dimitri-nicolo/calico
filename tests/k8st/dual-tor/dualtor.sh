@@ -60,7 +60,7 @@ function install_tsee() {
 
     # Install Calicoctl on master node, avoid network disruption during bgp configuration.
     cat ${manifest_base}/calicoctl-etcd.yaml | \
-        sed 's,hostNetwork: true,hostNetwork: true\n  nodeName: kind-control-plane,' | \
+        sed 's,beta.kubernetes.io/os: linux,beta.kubernetes.io/os: linux\n  nodeName: kind-control-plane,' | \
         ${kubectl} apply -f -
 }
 
