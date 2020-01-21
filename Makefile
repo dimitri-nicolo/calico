@@ -422,7 +422,7 @@ k8s-test:
 	$(MAKE) kind-k8st-cleanup
 
 .PHONY: kind-k8st-setup
-kind-k8st-setup: calico-node.tar
+kind-k8st-setup: cnx-node.tar
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
