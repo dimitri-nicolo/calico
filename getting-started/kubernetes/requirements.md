@@ -11,14 +11,10 @@ canonical_url: '/getting-started/kubernetes/requirements'
 #### Supported versions
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
-- v1.11
-- v1.12
-- v1.13
-- v1.14
+
 - v1.15
 - v1.16
-
-Helm installation requires Kubernetes v1.12 or later.
+- v1.17
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
