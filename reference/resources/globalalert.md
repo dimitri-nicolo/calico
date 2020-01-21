@@ -164,6 +164,7 @@ metadata:
   name: frequent-dns-responses
 spec:
   description: "Observed ${sum} NXDomain responses for ${qname}"
+  severity: 100
   dataSet: dns
   query: rcode = NXDomain AND (rtype = A or rtype = AAAA)
   aggregateBy: qname
@@ -245,6 +246,35 @@ With no aggregations the alert will generate one event per record
 returned by the query. The record will be included in its entirety
 in the record field of the event. This should only be used with very
 narrow and specific queries.
+
+
+### Templates
+
+{{site.prodname}} supports the `GlobalAlertTemplate` resource type.
+These are used in the {{site.prodname}} Manager to create alerts
+with prepopulated fields that can be modified to suit your needs.
+The `GlobalAlertTemplate` resource is configured identically to the
+`GlobalAlert` resource. {{site.prodname}} includes some sample Alert
+templates; add your own templates as needed.
+
+#### Sample YAML
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: GlobalAlertTemplate
+metadata:
+  name: http.connections
+spec:
+  description: "HTTP connections from ${source_namespace}/${source_name_aggr} to <desired_namespace>/${dest_name_aggr}"
+  severity: 50
+  dataSet: flows 
+  query: dest_namespace="<desired namespace>" AND dest_port=80
+  aggregateBy: [source_namespace, dest_name_aggr, source_name_aggr]
+  field: count
+  metric: sum
+  condition: gte
+  threshold: 1
+```
 
 ### Appendix: Valid fields for queries
 

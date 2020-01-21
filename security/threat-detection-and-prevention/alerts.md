@@ -105,9 +105,15 @@ spec:
   threshold: 1000000
 ```
 
+### Templates
+
+{{site.prodname}} includes a set of Alert templates. These are used
+by the {{site.prodname}} Manager to create alerts
+for common tasks that can then be modified to suit your needs.
+
 ### Above and beyond
 
-For all global alert options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
+For all global alert and template options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
 To troubleshoot alerts, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshooting)
 
 [flow]: ../logs/elastic/flow
