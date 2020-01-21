@@ -7,10 +7,14 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/tigera/lma/pkg/util"
+
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8suser "k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 )
@@ -34,13 +38,24 @@ func NewK8sAuth(k k8s.Interface, cfg *restclient.Config) K8sAuthInterface {
 // ResourceAttribute on the context of the request. Upon successful authn/authz
 // the handler passed in will be called, otherwise the ResponseWriter will be
 // updated with the appropriate status and a message with details.
+//
+// If the user has already been authenticated (indicated by the context containing a user info) then this performs
+// authorization. Note that basic auth will never have the user info context since we are unable to determine that
+// information - in this case this handler will always perform Authn and Authz using a SelfSubjectAccessReview.
+//
+// For token auth, the request will be updated with the user info so that subsequent handlers will not need to
+// re-authenticate.
 func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		stat, err := ka.Authorize(req)
+		user, stat, err := ka.authorize(req)
 		if err != nil {
 			log.WithError(err).Debug("Kubernetes auth failure")
 			http.Error(w, err.Error(), stat)
 			return
+		}
+		if user != nil {
+			// If we determined a user, update the request to include the user in the context.
+			req = req.WithContext(request.WithUser(req.Context(), user))
 		}
 		h.ServeHTTP(w, req)
 	})
@@ -53,20 +68,47 @@ func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 // and then issue a SelfSubjectAccessReview, this is because there is not a way
 // to obtain the groups needed for a SubjectAccessReview.
 
-// Authorize a request and return status and error, if error is nil then the
+// Authenticate and authorize a request and return status and error, if error is nil then the
 // request is authorized, otherwise an http Status code is returned and an error
 // describing the cause.
+//
+// If a user info is attached to the context then the user has already been authenticated and this method
+// will just authorize the request for the attached user.
 func (ka *k8sauth) Authorize(req *http.Request) (status int, err error) {
-	token := getAuthToken(req)
-	if token != "" {
-		log.Debugf("Will authorize user based on bearer token")
-		return ka.TokenAuthorize(req)
-	} else if _, _, found := req.BasicAuth(); found {
-		log.Debugf("Will authorize user based on basic token")
-		return ka.BasicAuthorize(req)
+	_, stat, err := ka.authorize(req)
+	return stat, err
+}
+
+// Authorize a request and return user, status and error, if error is nil then the
+// request is authorized, otherwise an http Status code is returned and an error
+// describing the cause.
+//
+// -  If a user info is attached to the context then the user has already been authenticated, we just
+//    need to authorize.
+// -  For token auth, the user will be authenticated using TokenReview. The user info will be returned if authenticated.
+// -  For basic auth, the returned user info will be nil, even if the request is authorized.
+func (ka *k8sauth) authorize(req *http.Request) (user k8suser.Info, status int, err error) {
+	if ui, ok := request.UserFrom(req.Context()); ok {
+		// User info was present in request context. This means the user has already been authenticated and we just
+		// need to authorize.
+		log.Debugf("User authenticated, just perform authorization")
+		status, err := ka.authorizeUser(req, ui)
+		return ui, status, err
 	}
 
-	return http.StatusUnauthorized, fmt.Errorf("invalid or no user authentication credentials")
+	// User info was not present in context and so we need to authenticate and authorize. Process here depends on
+	// whether token auth or not.
+	token := getAuthToken(req)
+	if token != "" {
+		log.Debugf("Will authenticate user based on bearer token, and then authorize")
+		return ka.TokenAuthorize(req)
+	} else if _, _, found := req.BasicAuth(); found {
+		log.Debugf("Will authenticate and authorize user based on basic token")
+		status, err := ka.BasicAuthorize(req)
+		return nil, status, err
+	}
+
+	return nil, http.StatusUnauthorized, fmt.Errorf("invalid or no user authentication credentials")
 }
 
 func getAuthToken(req *http.Request) string {
@@ -94,23 +136,23 @@ func getAuthToken(req *http.Request) string {
 // ResourceAttribute that is in the context of the request.
 // If either of the above is not successful then an appropriate status and error
 // message is returned, with both successful err will be nil.
-func (ka *k8sauth) TokenAuthorize(req *http.Request) (status int, err error) {
-	var user *authnv1.UserInfo
+func (ka *k8sauth) TokenAuthorize(req *http.Request) (user k8suser.Info, status int, err error) {
 	user, status, err = ka.authenticateToken(req)
 	if err != nil {
-		return status, err
+		return user, status, err
 	}
 
-	return ka.authorizeUser(req, user)
+	status, err = ka.authorizeUser(req, user)
+	return user, status, err
 }
 
 // authenticateToken will take the token from the req Header and issue a
 // TokenReview against the K8s apiserver and return the user info and err of nil,
 // if there is a failure status will be set and an appropriate error.
-func (ka *k8sauth) authenticateToken(req *http.Request) (user *authnv1.UserInfo, status int, err error) {
+func (ka *k8sauth) authenticateToken(req *http.Request) (u k8suser.Info, status int, err error) {
 	tok := getAuthToken(req)
 	if tok == "" {
-		return nil, http.StatusUnauthorized, fmt.Errorf("No token in request")
+		return nil, http.StatusUnauthorized, fmt.Errorf("no token in request")
 	}
 	tr := &authnv1.TokenReview{
 		Spec: authnv1.TokenReviewSpec{
@@ -123,46 +165,46 @@ func (ka *k8sauth) authenticateToken(req *http.Request) (user *authnv1.UserInfo,
 	}
 
 	if result.Status.Authenticated {
-		return &result.Status.User, 0, nil
+		return UserInfoToInfo(&result.Status.User), 0, nil
 	}
 
-	return nil, http.StatusUnauthorized, fmt.Errorf("Token review did not authenticate user: %v", result)
+	return nil, http.StatusUnauthorized, fmt.Errorf("token review did not authenticate user: %v", result)
 }
 
 // authorizeUser will check that the user passed in is authorized to access the
 // ResourceAttributes attached to the context of the request.
 // If there is a failure status will be set and an appropriate error, otherwise
 // err is nil.
-func (ka *k8sauth) authorizeUser(req *http.Request, user *authnv1.UserInfo) (status int, err error) {
+func (ka *k8sauth) authorizeUser(req *http.Request, user k8suser.Info) (status int, err error) {
 	res, resOK := util.FromContextGetReviewResource(req.Context())
 	nonRes, nonResOK := util.FromContextGetReviewNonResource(req.Context())
 	// Continue only if we have at least one resource or non-resource attribute to check.
 	if !resOK && !nonResOK {
-		return http.StatusForbidden, fmt.Errorf("No resource available to authorize")
+		return http.StatusForbidden, fmt.Errorf("no resource available to authorize")
 	}
 	return ka.subjectAccessReview(res, nonRes, user)
 }
 
 // subjectAccessReview authorizes that the user has permission to access the resource.
-func (ka *k8sauth) subjectAccessReview(resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes, user *authnv1.UserInfo) (status int, err error) {
+func (ka *k8sauth) subjectAccessReview(resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes, user k8suser.Info) (status int, err error) {
 	sar := authzv1.SubjectAccessReview{
 		Spec: authzv1.SubjectAccessReviewSpec{
 			ResourceAttributes:    resource,
 			NonResourceAttributes: nonResource,
-			User:                  user.Username,
-			Groups:                user.Groups,
+			User:                  user.GetName(),
+			Groups:                user.GetGroups(),
 			Extra:                 make(map[string]authzv1.ExtraValue),
-			UID:                   user.UID,
+			UID:                   user.GetUID(),
 		},
 	}
-	for k, v := range user.Extra {
+	for k, v := range user.GetExtra() {
 		sar.Spec.Extra[k] = authzv1.ExtraValue(v)
 	}
 	var res *authzv1.SubjectAccessReview
 	res, err = ka.k8sApi.AuthorizationV1().SubjectAccessReviews().Create(&sar)
 
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Error performing AccessReview %v", err)
+		return http.StatusInternalServerError, fmt.Errorf("error performing AccessReview: %v", err)
 	}
 
 	if res.Status.Allowed {
@@ -193,7 +235,7 @@ func (ka *k8sauth) BasicAuthorize(req *http.Request) (status int, err error) {
 	nonRes, nonResOK := util.FromContextGetReviewNonResource(req.Context())
 	// Continue only if we have at least one resource or non-resource attribute to check.
 	if !resOK && !nonResOK {
-		return http.StatusForbidden, fmt.Errorf("No resource available to authorize")
+		return http.StatusForbidden, fmt.Errorf("no resource available to authorize")
 	}
 
 	return ka.selfSubjectAccessReview(client, res, nonRes)
@@ -207,7 +249,7 @@ func (ka *k8sauth) getUserPw(req *http.Request) (user, pw string, status int, er
 		return user, pw, 0, nil
 	}
 
-	return "", "", http.StatusUnauthorized, fmt.Errorf("Basic authentication not valid format")
+	return "", "", http.StatusUnauthorized, fmt.Errorf("basic authentication not valid format")
 }
 
 // getUserK8sClient takes the config passed in, copies it, and adds the user
@@ -236,15 +278,30 @@ func (ka *k8sauth) selfSubjectAccessReview(client k8s.Interface, resource *authz
 	res, err = client.AuthorizationV1().SelfSubjectAccessReviews().Create(&ssar)
 
 	if apierrors.IsUnauthorized(err) {
-		return http.StatusUnauthorized, fmt.Errorf("Error performing AccessReview %v", err)
+		return http.StatusUnauthorized, fmt.Errorf("error performing AccessReview: %v", err)
 	}
 
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Error performing AccessReview %v", err)
+		return http.StatusInternalServerError, fmt.Errorf("error performing AccessReview: %v", err)
 	}
 
 	if res.Status.Allowed {
 		return 0, nil
 	}
 	return http.StatusForbidden, fmt.Errorf("AccessReview %#v", res.Status)
+}
+
+// UserInfoToInfo converts the UserInfo struct found in the k8s APIs to the user.Info interface that is passed around
+// in the request contexts.
+func UserInfoToInfo(ui *authnv1.UserInfo) k8suser.Info {
+	extra := make(map[string][]string)
+	for k, v := range ui.Extra {
+		extra[k] = authzv1.ExtraValue(v)
+	}
+
+	return &k8suser.DefaultInfo{
+		Name:   ui.Username,
+		Groups: ui.Groups,
+		Extra:  extra,
+	}
 }

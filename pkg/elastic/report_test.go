@@ -10,8 +10,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/lma/pkg/api"
 	. "github.com/tigera/lma/pkg/elastic"

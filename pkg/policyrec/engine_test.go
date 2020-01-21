@@ -6,10 +6,11 @@ import (
 	"reflect"
 	"strings"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/policyrec"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

@@ -136,9 +136,9 @@ type CompositeAggregator interface {
 // TODO: Add special error handling for elastic queries that are rejected because elastic permissions are bad.
 func SearchFlows(ctx context.Context, c CompositeAggregator, query elastic.Query, params *PolicyRecommendationParams) ([]*api.Flow, error) {
 	aggQuery := &pelastic.CompositeAggregationQuery{
-		DocumentIndex: params.DocumentIndex,
-		Query:         query,
-		Name:          FlowlogBuckets,
+		DocumentIndex:           params.DocumentIndex,
+		Query:                   query,
+		Name:                    FlowlogBuckets,
 		AggCompositeSourceInfos: CompositeSources,
 		AggNestedTermInfos:      AggregatedTerms,
 	}

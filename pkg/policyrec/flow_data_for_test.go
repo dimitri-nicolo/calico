@@ -2,10 +2,11 @@
 package policyrec_test
 
 import (
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/tigera/lma/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 var (
