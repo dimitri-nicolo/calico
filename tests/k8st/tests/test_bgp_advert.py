@@ -24,8 +24,6 @@ _log = logging.getLogger(__name__)
 
 attempts = 10
 
-cluster_ip_annotation = "projectcalico.org/AdvertiseClusterIP"
-
 bird_conf = """
 # Template for all BGP clients
 template bgp bgp_template {
@@ -49,7 +47,6 @@ template bgp bgp_template {
 protocol bgp Mesh_with_master_node from bgp_template {
   neighbor %s as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
-  password "very-secret";
 }
 
 protocol bgp Mesh_with_node_1 from bgp_template {
@@ -60,13 +57,11 @@ protocol bgp Mesh_with_node_1 from bgp_template {
 protocol bgp Mesh_with_node_2 from bgp_template {
   neighbor %s as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
-  password "very-secret";
 }
 
 protocol bgp Mesh_with_node_3 from bgp_template {
   neighbor %s as 64512;
   passive on; # Mesh is unidirectional, peer will connect to us.
-  password "very-secret";
 }
 """
 
@@ -109,7 +104,7 @@ class _TestBGPAdvert(TestBase):
         self.nodes, self.ips, _ = node_info()
         self.external_node_ip = start_external_node_with_bgp(
             "kube-node-extra",
-            bird_peer_config=bird_conf % (self.ips[0], self.ips[1], self.ips[2], self.ips[3])
+            bird_peer_config=self.get_bird_conf(),
         )
 
         # Enable debug logging
@@ -123,44 +118,9 @@ class _TestBGPAdvert(TestBase):
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
-  name: node-extra.peer
-spec:
-  peerIP: %s
-  asNumber: 64512
+  name: node-extra.peer%s
 EOF
-""" % self.external_node_ip)
-
-    def setUpRR(self):
-        super(TestBGPAdvert, self).setUp()
-
-        # Create bgp test namespace
-        self.ns = "bgp-test"
-        self.create_namespace(self.ns)
-
-        self.nodes, self.ips, _ = node_info()
-        self.external_node_ip = start_external_node_with_bgp(
-            "kube-node-extra",
-            bird_peer_config=bird_conf_rr % self.ips[2]
-        )
-
-        # Enable debug logging
-        self.update_ds_env("calico-node",
-                           "kube-system",
-                           "BGP_LOGSEVERITYSCREEN",
-                           "debug")
-
-        # Establish BGPPeer from cluster nodes to node-extra using calicoctl
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: node-extra.peer
-spec:
-  node: %s
-  peerIP: %s
-  asNumber: 64512
-EOF
-""" % (self.nodes[2], self.external_node_ip))
+""" % self.get_extra_peer_spec())
 
     def tearDown(self):
         super(_TestBGPAdvert, self).tearDown()
@@ -216,103 +176,31 @@ EOF
         patchStr = "{\"spec\": {\"externalIPs\": [%s]}}" % (ipsStr)
         return kubectl("patch svc %s -n %s --patch '%s'" % (svc, ns, patchStr)).strip()
 
-    def test_rr(self):
-        self.tearDown()
-        self.setUpRR()
 
-        # Create ExternalTrafficPolicy Local service with one endpoint on node-1
-        kubectl("""apply -f - << EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-rr
-  namespace: bgp-test
-  labels:
-    app: nginx
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nginx
-      run: nginx-rr
-  template:
-    metadata:
-      labels:
-        app: nginx
-        run: nginx-rr
-    spec:
-      containers:
-      - name: nginx-rr
-        image: nginx:1.7.9
-        ports:
-        - containerPort: 80
-      nodeSelector:
-        beta.kubernetes.io/os: linux
-        kubernetes.io/hostname: %s
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-rr
-  namespace: bgp-test
-  labels:
-    app: nginx
-    run: nginx-rr
-spec:
-  externalIPs:
-  - 175.200.1.1
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-    run: nginx-rr
-  type: NodePort
-  externalTrafficPolicy: Local
-EOF
-""" % self.nodes[1])
-
-        calicoctl("get nodes -o yaml")
-        calicoctl("get bgppeers -o yaml")
-        calicoctl("get bgpconfigs -o yaml")
-
-        # Update the node-2 to behave as a route-reflector
-        json_str = calicoctl("get node %s -o json" % self.nodes[2])
-        node_dict = json.loads(json_str)
-        node_dict['metadata']['labels']['i-am-a-route-reflector'] = 'true'
-        node_dict['spec']['bgp']['routeReflectorClusterID'] = '224.0.0.1'
-        calicoctl("""apply -f - << EOF
-%s
-EOF
-""" % json.dumps(node_dict))
+class TestBGPAdvert(_TestBGPAdvert):
 
     # In the tests of this class we have a full BGP mesh between the
-    # cluster nodes (kube-master, kube-node-1 and kube-node-2) and the
-    # external node (kube-node-extra):
+    # cluster nodes (kube-control-plane, kube-node-1 and kube-node-2)
+    # and the external node (kube-node-extra):
     #
     # - The full mesh between the cluster nodes is configured by
     #   nodeToNodeMeshEnabled: true.
     #
     # - The peerings from each cluster node to the external node are
-    #   configured by NODE_EXTRA_PEER_SPEC.
+    #   configured by self.get_extra_peer_spec().
     #
     # - The peerings from the external node to each cluster node are
-    #   configured in bird_conf above.
+    #   configured by self.get_bird_conf().
 
-    BIRD_CONF = bird_conf
-    NODE_EXTRA_PEER_SPEC = """
+    def get_bird_conf(self):
+        return bird_conf % (self.ips[0], self.ips[1], self.ips[2], self.ips[3])
+
+    def get_extra_peer_spec(self):
+        return """
 spec:
-  node: %s
   peerIP: %s
   asNumber: 64512
-EOF
-""" % (self.nodes[1], self.ips[2]))
-        svc_json = kubectl("get svc nginx-rr -n bgp-test -o json")
-        svc_dict = json.loads(svc_json)
-        cluster_ip = svc_dict['spec']['clusterIP']
-        external_ip = svc_dict['spec']['externalIPs'][0]
-        retry_until_success(lambda: self.assertIn(cluster_ip, self.get_routes()))
-        retry_until_success(lambda: self.assertIn(external_ip, self.get_routes()))
+""" % self.external_node_ip
 
     def test_cluster_ip_advertisement(self):
         """
@@ -503,74 +391,6 @@ EOF
             # Assert that external IP is no longer an advertised route.
             retry_until_success(lambda: self.assertNotIn(local_svc_externalips_route, self.get_routes()))
 
-    def test_clusterip_service(self):
-        """
-        Run ClusterIP service test for service ip advertisement
-        """
-        with DiagsCollector():
-
-            calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: BGPConfiguration
-metadata:
-  name: default
-spec:
-  serviceClusterIPs:
-  - cidr: 10.96.0.0/12
-EOF
-""")
-
-            # Assert that a route to the service IP range is present.
-            retry_until_success(lambda: self.assertIn("10.96.0.0/12", self.get_routes()))
-
-            # Create two ClusterIP services: one with the service advertisement annotation and one without.
-            svc = "test-clusterip"
-            annotated_svc = "test-clusterip-annotated"
-            self.deploy("nginx:1.7.9", svc, self.ns, 80, svc_type="ClusterIP", traffic_policy=None)
-            self.deploy("nginx:1.7.9", annotated_svc, self.ns, 80, svc_type="ClusterIP", traffic_policy=None)
-            self.wait_until_exists(svc, "svc", self.ns)
-            self.wait_until_exists(annotated_svc, "svc", self.ns)
-
-            self.annotate_resource("service", annotated_svc, self.ns, cluster_ip_annotation, "true")
-
-            # Get clusterIPs.
-            svc_ip = self.get_svc_cluster_ip(svc, self.ns)
-            annotated_svc_ip = self.get_svc_cluster_ip(annotated_svc, self.ns)
-
-            # Wait for the deployments to roll out.
-            self.wait_for_deployment(svc, self.ns)
-            self.wait_for_deployment(annotated_svc, self.ns)
-
-            # Assert that the services can be curled from the external node. This just validates the services are up.
-            retry_until_success(curl, function_args=[svc_ip])
-            retry_until_success(curl, function_args=[annotated_svc_ip])
-
-            # Assert that the cluster IP of "svc" is not advertised but the one for the annotated service is.
-            retry_until_success(lambda: self.assertNotIn(svc_ip, self.get_routes()))
-            retry_until_success(lambda: self.assertIn(annotated_svc_ip, self.get_routes()))
-
-            # Get the IP of the one node with a local pod backing the annotated_svc.
-            local_node_ips = self.get_node_ips_with_local_pods(self.ns, "app=%s" % annotated_svc)
-            self.assertEquals(len(local_node_ips), 1)
-
-            # Verify that we have a non-ecmp route to the node with the backing pod for the annotated svc.
-            expected_route = "%s via %s dev eth0 proto bird" % (annotated_svc_ip, local_node_ips[0])
-            retry_until_success(lambda: self.assertIn(expected_route, self.get_routes()))
-
-            # Annotate the first service.
-            self.annotate_resource("service", svc, self.ns, cluster_ip_annotation, "doesnotmatter")
-
-            # Assert that its cluster IP is an advertised route.
-            retry_until_success(lambda: self.assertIn(svc_ip, self.get_routes()))
-
-            # Delete both services, assert only service CIDR route is advertised.
-            self.delete_and_confirm(svc, "svc", self.ns)
-            self.delete_and_confirm(annotated_svc, "svc", self.ns)
-
-            # Assert that cluster IP's are no longer advertised.
-            retry_until_success(lambda: self.assertNotIn(svc_ip, self.get_routes()))
-            retry_until_success(lambda: self.assertNotIn(annotated_svc_ip, self.get_routes()))
-
     def test_many_services(self):
         """
         Creates a lot of services quickly
@@ -642,17 +462,20 @@ class TestBGPAdvertRR(_TestBGPAdvert):
     #        |                |         | |    |         |
     #        |                +---------+ |    +---------+
     #        +----------------------------+   Peering -> is configured
-    #           These peerings are            by NODE_EXTRA_PEER_SPEC.
+    #           These peerings are            by get_extra_peer_spec().
     #           configured by BGPPeer         Peering <- is configured
-    #           peer-with-rr                  in bird_conf_rr above.
+    #           peer-with-rr                  in get_bird_conf().
 
-    BIRD_CONF = bird_conf_rr
-    NODE_EXTRA_PEER_SPEC = """
+    def get_bird_conf(self):
+        return bird_conf_rr % self.ips[2]
+
+    def get_extra_peer_spec(self):
+        return """
 spec:
-  node: kube-node-2
-  peerIP: 10.192.0.5
+  node: %s
+  peerIP: %s
   asNumber: 64512
-"""
+""" % (self.nodes[2], self.external_node_ip)
 
     def test_rr(self):
         # Create ExternalTrafficPolicy Local service with one endpoint on node-1
@@ -683,7 +506,7 @@ spec:
         - containerPort: 80
       nodeSelector:
         beta.kubernetes.io/os: linux
-        kubernetes.io/hostname: kube-node-1
+        kubernetes.io/hostname: %s
 ---
 apiVersion: v1
 kind: Service
@@ -705,14 +528,14 @@ spec:
   type: NodePort
   externalTrafficPolicy: Local
 EOF
-""")
+""" % self.nodes[1])
 
         calicoctl("get nodes -o yaml")
         calicoctl("get bgppeers -o yaml")
         calicoctl("get bgpconfigs -o yaml")
 
         # Update the node-2 to behave as a route-reflector
-        json_str = calicoctl("get node kube-node-2 -o json")
+        json_str = calicoctl("get node %s -o json" % self.nodes[2])
         node_dict = json.loads(json_str)
         node_dict['metadata']['labels']['i-am-a-route-reflector'] = 'true'
         node_dict['spec']['bgp']['routeReflectorClusterID'] = '224.0.0.1'
@@ -739,15 +562,16 @@ spec:
   - cidr: 175.200.0.0/16
 EOF
 """)
+
         calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata: {name: peer-with-rr}
 spec:
-  peerIP: 10.192.0.4
+  peerIP: %s
   asNumber: 64512
 EOF
-""")
+""" % self.ips[2])
         svc_json = kubectl("get svc nginx-rr -n bgp-test -o json")
         svc_dict = json.loads(svc_json)
         cluster_ip = svc_dict['spec']['clusterIP']
