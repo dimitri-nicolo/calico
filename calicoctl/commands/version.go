@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docopt/docopt-go"
-
+	docopt "github.com/docopt/docopt-go"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -55,7 +54,7 @@ Description:
 	}
 
 	fmt.Println("Client Version:   ", VERSION)
-	fmt.Println("Release:          ", "CNX")
+	fmt.Println("Release:          ", "Calico Enterprise")
 	fmt.Println("Git commit:       ", GIT_REVISION)
 
 	// Load the client config and connect.
@@ -85,9 +84,9 @@ Description:
 		t = "unknown"
 	}
 
-	fmt.Println("Cluster Calico Version: ", calicoVersion)
-	fmt.Println("Cluster CNX Version:    ", cnxVersion)
-	fmt.Println("Cluster Type:           ", t)
+	fmt.Println("Cluster Calico Version:              ", calicoVersion)
+	fmt.Println("Cluster Calico Enterprise Version:   ", cnxVersion)
+	fmt.Println("Cluster Type:                        ", t)
 
 	return nil
 }
