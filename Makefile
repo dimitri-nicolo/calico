@@ -5,10 +5,12 @@ GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
 
-build: ut
+build: ut-containerized
 
 ##############################################################################
 # Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
 MAKE_BRANCH?=$(GO_BUILD_VER)
 MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
@@ -19,6 +21,13 @@ Makefile.common.$(MAKE_BRANCH):
 	# Clean up any files downloaded from other branches so they don't accumulate.
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+# Allow local libcalico-go to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
 
 include Makefile.common
 
@@ -50,8 +59,6 @@ TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
 	touch $@
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 vendor: go.mod mod-download
 	$(DOCKER_RUN) $(CALICO_BUILD) \
@@ -171,7 +178,6 @@ push-image: imagetag tag-image
 ###############################################################################
 # Updating pins
 ###############################################################################
-
 # Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
@@ -194,11 +200,11 @@ replace-logrus-pin:
 	$(call update_replace_pin,$(LOGRUS_REPO_ORIG),$(LOGRUS_REPO),$(LOGRUS_BRANCH))
 
 update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin update-licensing-pin replace-logrus-pin
+
 ###############################################################################
-
-
 # TODO: re-enable these linters!
 LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
+LINT_ARGS += --timeout 5m
 
 ###############################################################################
 # CI/CD
