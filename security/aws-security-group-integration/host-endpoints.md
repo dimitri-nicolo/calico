@@ -1,5 +1,6 @@
 ---
 title: Host endpoints
+description: Host endpoints are not supported. Learn why.
 canonical_url: /security/aws-security-group-integration/host-endpoints
 ---
 

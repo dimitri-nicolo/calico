@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for the API server
+description: Add TLS certificates to secure access to the Calico Enterprise API server.
 ---
 
 ### Big picture

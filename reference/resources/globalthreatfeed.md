@@ -1,5 +1,6 @@
 ---
-title: Global thread feed
+title: Global threat feed
+description: API for this Calico Enterprise resource. 
 ---
 
 A global threat feed resource (GlobalThreatFeed) represents a feed of threat intelligence used for

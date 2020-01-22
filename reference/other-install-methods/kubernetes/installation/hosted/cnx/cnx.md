@@ -1,5 +1,6 @@
 ---
 title: Customizing the Calico Enterprise manifests (advanced)
+description: Customize Calico Enterprise manifests during installation for on-premises deployments. 
 canonical_url: /reference/other-install-methods/kubernetes/installation/hosted/cnx/cnx
 ---
 

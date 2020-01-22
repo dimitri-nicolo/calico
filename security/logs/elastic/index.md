@@ -1,4 +1,5 @@
 ---
+description: Manage Elasticsearch logs for Calico Enterprise. 
 show_read_time: false
 show_toc: false
 ---

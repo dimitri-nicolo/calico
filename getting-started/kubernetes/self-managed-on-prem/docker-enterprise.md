@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise on Docker Enterprise
+description: Install Calico Enterprise using Docker EE for self-managed on-premises deployments.
 canonical_url: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
 ---
 

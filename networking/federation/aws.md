@@ -1,5 +1,6 @@
 ---
 title: Example AWS configuration
+description: Example of AWS cluster running Calico Enterprise with federated identity configured.
 canonical_url: /networking/federation/aws
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Configuring Alertmanager
+description: Configure Alertmanager, a Prometheus feature that routes alerts. 
 canonical_url: /reference/other-install-methods/security/configuration/alertmanager
 ---
 

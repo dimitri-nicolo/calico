@@ -1,5 +1,6 @@
 ---
 title: Anomaly detection job descriptions
+description: Summary of all anomaly detection jobs.
 canonical_url: /security/threat-detection-and-prevention/anomaly-detection/job-descriptions
 ---
 

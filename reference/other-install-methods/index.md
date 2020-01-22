@@ -1,4 +1,5 @@
 ---
+description: Alternative methods to install Calico Enterprise.
 show_read_time: false
 show_toc: false
 ---

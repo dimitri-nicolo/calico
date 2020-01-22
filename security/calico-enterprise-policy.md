@@ -1,5 +1,5 @@
 ---
-description: Install and configure the required CLI for managing Calico Enterprise resources. 
+description: Calico Enterprise network policy provides more security and threat protection features than open source Calico network policy.
 show_read_time: false
 show_toc: false
 ---

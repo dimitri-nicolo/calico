@@ -1,5 +1,6 @@
 ---
 title:  Customize anomaly detection jobs
+description: Review your options for customizing anomaly detections jobs. 
 canonical_url: /security/threat-detection-and-prevention/anomaly-detection/customizing
 
 ---

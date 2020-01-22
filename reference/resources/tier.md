@@ -1,5 +1,6 @@
 ---
 title: Tier
+description: API for this Calico Enterprise resource. 
 canonical_url: /reference/resources/tier
 no_canonical: true
 ---

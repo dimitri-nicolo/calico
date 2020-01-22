@@ -1,5 +1,6 @@
 ---
 title: Overview
+description: Summary of Calico Enterprise support for AWS security group integration.
 canonical_url: /security/aws-security-group-integration/
 ---
 

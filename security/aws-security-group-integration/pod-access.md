@@ -1,5 +1,6 @@
 ---
 title: Enable pods to access VPC members
+description: Restrict pod access to VPC members.
 canonical_url: /security/aws-security-group-integration/pod-access
 ---
 

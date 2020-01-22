@@ -1,5 +1,6 @@
 ---
 title: Installing calicoq
+description: Install the CLI for Calico Enterprise.
 canonical_url: /getting-started/calicoq/
 ---
 

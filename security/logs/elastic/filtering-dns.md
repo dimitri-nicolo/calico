@@ -1,5 +1,6 @@
 ---
 title: Filter out DNS logs
+description: Suppress DNS logs of low significance using filters. 
 canonical_url: /security/logs/elastic/filtering-dns
 ---
 

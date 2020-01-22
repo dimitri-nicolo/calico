@@ -1,5 +1,6 @@
 ---
 title: Configuring user authentication to Calico Enterprise Manager
+description: Configure RBAC to control user access to Calico Enterprise resources.
 canonical_url: /reference/cnx/authentication
 ---
 

@@ -1,8 +1,8 @@
 ---
 title: Interconnect your VPC and cluster
+description: Connect VPC members to your Kubernetes cluster. 
 canonical_url: /security/aws-security-group-integration/interconnection
 ---
-
 
 ## About pod and VPC connections
 
@@ -18,22 +18,16 @@ VPC members.
 
 See [Enabling pods to access VPC members]({{site.baseurl}}/security/aws-security-group-integration/pod-access) for more information.
 
-
 ## Connecting VPC members to the Kubernetes cluster
 
 Add VPC members that interoperate with your Kubernetes
 cluster to the `tigera-trust-host-enforcement` security group.
 
-
 > **Note**: {{site.prodname}} adds __EC2__ and __RDS__ instances to the tigera-trust-host-enforcement
 security group automatically.
 {: .alert .alert-info}
 
-
-See
-[Enabling VPC members to access pods]({{site.baseurl}}/security/aws-security-group-integration/vpc-member-access) for more information.
-
-
+See [Enabling VPC members to access pods]({{site.baseurl}}/security/aws-security-group-integration/vpc-member-access) for more information.
 
 ## Internal cluster connections
 
@@ -41,10 +35,6 @@ By default, every pod in your Kubernetes cluster belongs to the `TIGERA_POD_SECU
 this allows pod to pod communication regardless of Security Group policies.
 
 To manage pod to pod communication use regular network policies.
-
-
-
-
 
 > **Important** {{site.prodname}} creates and uses three security groups internally:
 >
@@ -54,5 +44,3 @@ To manage pod to pod communication use regular network policies.
 >
 > Do not modify these security groups or reference them in any inbound or outbound rules.
 {: .alert .alert-danger}
-
-

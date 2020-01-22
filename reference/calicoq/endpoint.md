@@ -1,5 +1,6 @@
 ---
 title: calicoq endpoint
+description: Command to list policies and profiles for selected endpoints. 
 canonical_url: /reference/calicoq/endpoint
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Overview
+description: Learn the interaction between local and remote clusters in a federated implementation.  
 canonical_url: /networking/federation/
 ---
 

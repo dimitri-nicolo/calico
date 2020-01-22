@@ -1,5 +1,6 @@
 ---
 title: Audit logs
+description: Enable and change default audit logs sent to Elasticsearch. 
 canonical_url: /security/logs/elastic/ee-audit
 ---
 

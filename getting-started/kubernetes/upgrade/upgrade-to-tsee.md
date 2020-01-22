@@ -1,5 +1,6 @@
 ---
 title: Upgrading from Calico to Calico Enterprise
+description: Steps to upgrade from open source Calico to Calico Enterprise.
 canonical_url: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 ---
 

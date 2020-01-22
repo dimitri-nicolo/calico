@@ -1,5 +1,6 @@
 ---
-title: Configure access to the manager UI
+title: Configure access to Calico Enterprise Manager.
+description: Configure user access to the Calico Enterprise Manager user interface. 
 ---
 
 ### Big picture

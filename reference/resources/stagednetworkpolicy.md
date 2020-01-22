@@ -1,5 +1,6 @@
 ---
-title: Staged Network policy
+title: Staged network policy
+description: API for this Calico Enterprise resource. 
 ---
 
 A staged network policy resource (`StagedNetworkPolicy`) represents an ordered set of rules which are applied

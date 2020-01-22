@@ -29,7 +29,7 @@ section:
    - title: Configure default IP pools
      path: /networking/initial-ippool
    - title: Configure IP autodetection
-     path: /networking/node
+     path: /networking/ip-autodetection
    - title: Enable IPv6
      path: /networking/ipv6  
    - title: Advertise Kubernetes service IP addresses

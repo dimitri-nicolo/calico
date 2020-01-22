@@ -1,5 +1,6 @@
 ---
 title: Configure compliance reporting for managed cloud providers
+description: Configure compliance reporting and audit logs for your managed Kubernetes cloud provider.
 ---
 
 ### Big picture

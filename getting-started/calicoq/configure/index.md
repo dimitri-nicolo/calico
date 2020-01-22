@@ -1,5 +1,5 @@
 ---
-description: The recommended installation is to install both Calico policy and networking for your Kubernetes deployment.  
+description: Configure calicoq for etcd or Kubernetes API datastore.  
 show_read_time: false
 show_toc: false
 ---

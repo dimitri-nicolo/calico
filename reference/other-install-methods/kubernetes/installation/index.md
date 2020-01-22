@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise on Kubernetes
+description: Summary of steps to install Calico Enterprise on Kubernetes for on-premises deployments.
 canonical_url: /reference/other-install-methods/kubernetes/installation/
 ---
 

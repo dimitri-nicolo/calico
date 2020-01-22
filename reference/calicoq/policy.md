@@ -1,5 +1,6 @@
 ---
 title: calicoq policy
+description: Command to list endpoints for a policy.
 canonical_url: /reference/calicoq/policy
 ---
 

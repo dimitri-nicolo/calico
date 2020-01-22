@@ -1,5 +1,5 @@
 ---
-title: Adjust the log storage size
+title: Adjust log storage size
 ---
 
 ### Big picture

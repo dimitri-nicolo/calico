@@ -1,5 +1,6 @@
 ---
 title: iptables logs
+description: Learn how policy audit mode rules can affect the number of iptable logs.
 canonical_url: /security/logs/iptables
 ---
 

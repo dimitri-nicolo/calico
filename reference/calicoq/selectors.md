@@ -1,5 +1,6 @@
 ---
 title: calicoq and selectors
+description: Use selectors to match criteria in endpoints, policies, or profiles . 
 canonical_url: /reference/calicoq/selectors
 ---
 

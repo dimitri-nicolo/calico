@@ -1,5 +1,6 @@
 ---
 title: Archive logs to syslog
+description: Archive flow and audit logs to syslgo for maintaining compliance data.
 ---
 
 ## Archiving logs to syslog

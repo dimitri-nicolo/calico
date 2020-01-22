@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise on Docker Enterprise
+description: Steps to install Calico Enterprise if you are using Docker EE and Docker UCP. 
 canonical_url: /reference/other-install-methods/kubernetes/installation/other
 show_toc: false
 ---

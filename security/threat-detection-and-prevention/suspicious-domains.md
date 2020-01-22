@@ -1,5 +1,6 @@
 ---
 title: Trace and block suspicious domains
+description: Add threat intelligence feeds to trace DNS queries that involve suspicious domains. 
 canonical_url: /security/threat-detection-and-prevention/suspicious-domains
 ---
 

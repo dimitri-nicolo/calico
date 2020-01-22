@@ -1,5 +1,6 @@
 ---
-title: Access logs
+title: Access Elasticsearch logs
+description: Ways to view Elasticsearch logs.
 canonical_url: /security/logs/elastic/view
 show_toc: false
 ---

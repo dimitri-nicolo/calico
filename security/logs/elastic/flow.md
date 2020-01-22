@@ -1,5 +1,6 @@
 ---
 title: Flow logs
+description: Flow logs key/value pairs for creating queries.
 canonical_url: /security/logs/elastic/flow
 ---
 

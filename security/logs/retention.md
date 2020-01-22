@@ -1,5 +1,6 @@
 ---
 title: Configure data retention
+description: Configure how long to retain logs and compliance reports.
 ---
 
 ### Big picture

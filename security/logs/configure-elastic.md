@@ -1,5 +1,6 @@
 ---
 title: Configure Elasticsearch
+description: Configure RBAC to control access to Elasticsearch logs. 
 canonical_url: /security/logs/configure-elastic
 ---
 

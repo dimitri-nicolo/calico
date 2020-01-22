@@ -1,5 +1,6 @@
 ---
 title: Create kubeconfig files
+description: Required pre-installation steps for each cluster in the federation. 
 canonical_url: /networking/federation/kubeconfig
 ---
 

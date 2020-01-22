@@ -2,7 +2,7 @@ bigheader: "Maintenance"
 path: /maintenance/
 order: 4
 section:
-- title: Adjust the log storage size
+- title: Adjust log storage size
   path: /maintenance/adjust-log-storage-size
 - title: Upgrading
   path: /maintenance/upgrading
@@ -11,7 +11,7 @@ section:
     path: /maintenance/kubernetes-upgrade-tsee
   - title: Helm
     path: /maintenance/helm-upgrade-tsee
-- title: Decommissioning a node
+- title: Decommission a node
   path: /maintenance/decommissioning-a-node
 - title: Monitor Calico component metrics
   path: /maintenance/monitor-component-metrics  

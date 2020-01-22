@@ -1,5 +1,6 @@
 ---
 title: Create tiered policies
+description: Group policies together in a tier and apply RBAC to control user access.
 canonical_url: /security/tiered-policy
 ---
 

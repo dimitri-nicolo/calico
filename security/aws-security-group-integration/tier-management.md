@@ -1,5 +1,6 @@
 ---
 title: Manage the tiers associated with security group integration
+description: Learn about the integration tiers that are enabled for AWS security groups, and why they should not be modified. 
 canonical_url: /security/aws-security-group-integration/tier-management
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for log storage
+description: Add TLS certificate to secure access to log storage. 
 ---
 
 ### Big picture

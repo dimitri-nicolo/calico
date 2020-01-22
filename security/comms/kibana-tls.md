@@ -1,5 +1,6 @@
 ---
 title: Provide TLS certificates for Kibana
+description: Add TLS certificates to secure access to Calico Enterprise Kibana. 
 ---
 
 ### Big picture

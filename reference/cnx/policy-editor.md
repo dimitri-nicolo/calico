@@ -1,5 +1,6 @@
 ---
-title: Calico Enterprise Manager Policy Editor
+title: Calico Enterprise Manager policy editor
+description: User authentication, access model, and minimum requirements for all users.
 canonical_url: /reference/cnx/policy-editor
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Policy metrics in Prometheus
+description: Monitor the effects of policy in your cluster and received alerts by defining rules and thresholds.
 canonical_url: /reference/other-install-methods/security/metrics/metrics
 ---
 

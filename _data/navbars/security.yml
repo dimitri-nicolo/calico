@@ -25,6 +25,34 @@ section:
       path: /security/tutorials/kubernetes-policy-basic
     - title: Kubernetes policy, advanced tutorial
       path: /security/tutorials/kubernetes-policy-advanced
+  - title: Calico Enterprise network policy 
+    path: /security/calico-enterprise-policy
+    section: 
+    - title: Create tiered policy
+      path: /security/tiered-policy
+    - title: Create staged policy
+      path: /security/staged-network-policies
+    - title: Preview policy impacts
+      path: /security/policy-impact-preview
+    - title: Calico Enterprise policy tutorial
+      path: /security/simple-policy-cnx      
+    - title: Policy for AWS security groups
+      path: /security/aws-security-group-integration/
+      section:
+      - title: Overview
+        path: /security/aws-security-group-integration/overview
+      - title: Interconnect your VPC and cluster
+        path: /security/aws-security-group-integration/interconnection
+      - title: Enable pods to access VPC members
+        path: /security/aws-security-group-integration/pod-access
+      - title: Enable VPC members to access pods
+        path: /security/aws-security-group-integration/vpc-member-access
+      - title: Enable access to AWS metadata
+        path: /security/aws-security-group-integration/metadata-access
+      - title: Manage tiers associated with security group integration
+        path: /security/aws-security-group-integration/tier-management
+      - title: Host endpoints
+        path: /security/aws-security-group-integration/host-endpoints
 - title: Policy rules
   path: /security/policy-rules
   section:
@@ -70,34 +98,6 @@ section:
     path: /security/high-connection-workloads
   - title: Defend against DoS attacks
     path: /security/defend-dos-attack
-- title: Get started with Calico Enterprise policy 
-  path: /security/comms/
-  section:
-  - title: Create tiered policy
-    path: /security/tiered-policy
-  - title: Create staged policy
-    path: /security/staged-network-policies
-  - title: Preview policy impacts
-    path: /security/policy-impact-preview
-  - title: Calico Enterprise policy tutorial
-    path: /security/simple-policy-cnx      
-  - title: Policy for AWS security groups
-    path: /security/aws-security-group-integration/
-    section:
-    - title: Overview
-      path: /security/aws-security-group-integration/overview
-    - title: Interconnect your VPC and cluster
-      path: /security/aws-security-group-integration/interconnection
-    - title: Enable pods to access VPC members
-      path: /security/aws-security-group-integration/pod-access
-    - title: Enable VPC members to access pods
-      path: /security/aws-security-group-integration/vpc-member-access
-    - title: Enable access to AWS metadata
-      path: /security/aws-security-group-integration/metadata-access
-    - title: Manage tiers associated with security group integration
-      path: /security/aws-security-group-integration/tier-management
-    - title: Host endpoints
-      path: /security/aws-security-group-integration/host-endpoints
 - title: Logs
   path: /security/logs/
   section:
@@ -106,14 +106,14 @@ section:
     section:
     - title: Overview
       path: /security/logs/elastic/overview
+    - title: Access Elasticsearchlogs
+      path: /security/logs/elastic/view  
     - title: Flow logs
       path: /security/logs/elastic/flow
     - title: Audit logs
       path: /security/logs/elastic/ee-audit
     - title: DNS logs
       path: /security/logs/elastic/dns
-    - title: Access logs
-      path: /security/logs/elastic/view
     - title: Configure data retention
       path: /security/logs/retention
     - title: Configure Elasticsearch
@@ -122,7 +122,7 @@ section:
       path: /security/logs/elastic/s3-archive
     - title: Archive logs to syslog
       path: /security/logs/elastic/syslog
-    - title: Filter out flow logs
+    - title: Filter flow logs
       path: /security/logs/elastic/filtering
     - title: Filter out DNS logs
       path: /security/logs/elastic/filtering-dns

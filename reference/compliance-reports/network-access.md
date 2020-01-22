@@ -1,5 +1,6 @@
 ---
-title: Network Access report (network-access)
+title: Network Access report
+description: API for this resource. 
 ---
 
 To create an Inventory report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`

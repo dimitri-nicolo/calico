@@ -1,5 +1,6 @@
 ---
 title: Enable access to AWS metadata
+description: Enable pods to access the AWS metadate endpoint. 
 canonical_url: /security/aws-security-group-integration/metadata-access
 ---
 

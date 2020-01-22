@@ -1,5 +1,6 @@
 ---
-title: Inventory report (inventory)
+title: Inventory report
+description: API for this resource. 
 ---
 
 To create an Inventory report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`

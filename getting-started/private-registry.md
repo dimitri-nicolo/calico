@@ -1,12 +1,13 @@
 ---
 title: Installing from a private registry
+description: Install and configure Calico Enterprise in a private registry. 
 ---
 
 {% assign operator = site.data.versions.first.tigera-operator %}
 
 ### Big picture
 
-Move Tigera container images to a private registry and configure {{ site.prodname }} to pull images from it.
+Move Calico Enterprise container images to a private registry and configure {{ site.prodname }} to pull images from it.
 
 ### Value
 

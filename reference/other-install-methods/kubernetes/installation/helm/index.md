@@ -1,5 +1,6 @@
 ---
 title: Installing Calico Enterprise using Helm
+description: Use Helm application package manager to install Calico Enterprise. 
 ---
 
 This article describes how to install and configure Calico Enterprise using Helm. After completing the steps you will have a functioning Calico Enterprise cluster.
