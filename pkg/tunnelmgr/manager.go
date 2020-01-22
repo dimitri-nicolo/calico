@@ -69,11 +69,19 @@ func NewManager() Manager {
 
 // RunWithTunnel sets the tunnel for the manager, and returns an error if it's already running
 func (m *manager) RunWithTunnel(t *tunnel.Tunnel) error {
+	if m.isClosed() {
+		return ErrManagerClosed
+	}
+
 	return state.InterfaceToError(state.Send(m.setTunnel, t))
 }
 
 // RunWithDialer sets the tunnel dialer for the manager, and returns an error if it's already running with a tunnel
 func (m *manager) RunWithDialer(d tunnel.Dialer) error {
+	if m.isClosed() {
+		return ErrManagerClosed
+	}
+
 	return state.InterfaceToError(state.Send(m.setDialer, d))
 }
 
@@ -264,37 +272,61 @@ func (m *manager) handleAddListener(tunnel *tunnel.Tunnel, addListener state.Sen
 
 // Open opens a connection over the tunnel
 func (m *manager) Open() (net.Conn, error) {
+	if m.isClosed() {
+		return nil, ErrManagerClosed
+	}
 	return state.InterfaceToConnOrError(state.Send(m.openConnection, nil))
 }
 
 // OpenTLS opens a tls connection over the tunnel
 func (m *manager) OpenTLS(cfg *tls.Config) (net.Conn, error) {
+	if m.isClosed() {
+		return nil, ErrManagerClosed
+	}
 	return state.InterfaceToConnOrError(state.Send(m.openConnection, cfg))
 }
 
 // Listener retrieves a listener listening on the tunnel for connections
 func (m *manager) Listener() (net.Listener, error) {
+	if m.isClosed() {
+		return nil, ErrManagerClosed
+	}
 	return state.InterfaceToListenerOrError(state.Send(m.addListener, nil))
 }
 
 // ListenForErrors allows the user to register a channel to listen to errors on
 func (m *manager) ListenForErrors() chan error {
+	if m.isClosed() {
+		errChan := make(chan error, 1)
+		errChan <- ErrManagerClosed
+		close(errChan)
+		return errChan
+	}
 	return state.InterfaceToErrorChan(state.Send(m.addErrorListener, nil))
 }
 
 // CloseTunnel closes the managers tunnel. The tunnel can be reopened with one of the Run functions
 func (m *manager) CloseTunnel() error {
+	if m.isClosed() {
+		return ErrManagerClosed
+	}
+	return state.InterfaceToError(state.Send(m.closeTunnel, true))
+}
+
+func (m *manager) isClosed() bool {
 	select {
 	case <-m.close:
-		return ErrManagerClosed
+		return true
 	default:
-		return state.InterfaceToError(state.Send(m.closeTunnel, true))
+		return false
 	}
 }
 
 // Close closes the manager. A closed manager cannot be reused.
 func (m *manager) Close() error {
 	m.closeOnce.Do(func() {
+		close(m.setTunnel)
+		close(m.setDialer)
 		close(m.openConnection)
 		close(m.addListener)
 		close(m.addErrorListener)
