@@ -14,9 +14,6 @@ import (
 // ErrManagerClosed is returned when a closed manager is used
 var ErrManagerClosed = fmt.Errorf("manager closed")
 
-// ErrTunnelNotReady is returned when a closed manager is used
-var ErrTunnelNotReady = fmt.Errorf("tunnel not ready")
-
 // ErrTunnelSet is returned when the tunnel has already been set and you try to set it again with one of the Run functions
 var ErrTunnelSet = fmt.Errorf("tunnel already set")
 
@@ -226,7 +223,7 @@ func handleSetDialer(tun *tunnel.Tunnel, dialer tunnel.Dialer, setDialer state.S
 // handleOpenConnection is used by the state loop to handle a request to open a connection over the tunnel
 func (*manager) handleOpenConnection(tun *tunnel.Tunnel, openConnection state.SendInterface) error {
 	if tun == nil {
-		openConnection.Return(ErrTunnelNotReady)
+		openConnection.Return(tunnel.ErrTunnelClosed)
 		openConnection.Close()
 		return nil
 	}
@@ -251,19 +248,19 @@ func (*manager) handleOpenConnection(tun *tunnel.Tunnel, openConnection state.Se
 }
 
 // handleAddListener is used by the request loop to handle a request to retrieve a listener listening over the tunnel
-func (m *manager) handleAddListener(tunnel *tunnel.Tunnel, addListener state.SendInterface) error {
-	if tunnel == nil {
-		addListener.Return(ErrTunnelNotReady)
+func (m *manager) handleAddListener(tun *tunnel.Tunnel, addListener state.SendInterface) error {
+	if tun == nil {
+		addListener.Return(tunnel.ErrTunnelClosed)
 		addListener.Close()
 		return nil
 	}
 
 	conResults := make(chan interface{})
-	done := tunnel.AcceptWithChannel(conResults)
+	done := tun.AcceptWithChannel(conResults)
 	addListener.Return(&listener{
 		conns: conResults,
 		done:  done,
-		addr:  tunnel.Addr(),
+		addr:  tun.Addr(),
 		close: m.close,
 	})
 

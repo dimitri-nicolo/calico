@@ -295,7 +295,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			var err error
 			msg, err = ui.doRequest(clusterID)
 			return err
-		}).ShouldNot(HaveOccurred())
+		}, "10s", "1s").ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
 	})
 
@@ -305,7 +305,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			var err error
 			msg, err = ui.doRequest(clusterID2)
 			return err
-		}).ShouldNot(HaveOccurred())
+		}, "10s", "1s").ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts2.msg))
 	})
 
@@ -354,7 +354,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			var err error
 			msg, err = ui.doRequest(clusterID)
 			return err
-		}).ShouldNot(HaveOccurred())
+		}, "10s", "1s").ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
 	})
 

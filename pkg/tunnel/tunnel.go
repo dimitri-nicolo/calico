@@ -164,6 +164,12 @@ func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 	a := acceptChan
 	done := make(chan bool)
 	go func() {
+		log.Debug("tunnel writing connections to new channel")
+		defer func() {
+			log.Debug("tunnel finished writing connections to new channel")
+			close(a)
+		}()
+
 		for {
 			conn, err := t.mux.Accept()
 			select {
@@ -174,7 +180,13 @@ func (t *Tunnel) AcceptWithChannel(acceptChan chan interface{}) chan bool {
 			if err == nil {
 				a <- conn
 			} else {
-				a <- convertYAMUXErr(err)
+				err = convertYAMUXErr(err)
+				// if the tunnel is closed we're done
+				if err == ErrTunnelClosed {
+					return
+				}
+
+				a <- err
 			}
 		}
 	}()
@@ -301,6 +313,8 @@ func DialTLS(target string, config *tls.Config, opts ...Option) (*Tunnel, error)
 func convertYAMUXErr(err error) error {
 	switch err {
 	case yamux.ErrSessionShutdown:
+		return ErrTunnelClosed
+	case io.EOF:
 		return ErrTunnelClosed
 	}
 

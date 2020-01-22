@@ -422,7 +422,7 @@ var _ = Describe("tunnel tests", func() {
 
 				wg.Wait()
 			})
-			It("receives a ConnectionResult with an error when the server side connection is closed", func() {
+			It("channel is closed when the tunnel is closed", func() {
 				cliConn, srvConn := net.Pipe()
 				tun, err := tunnel.NewClientTunnel(cliConn)
 				Expect(err).ToNot(HaveOccurred())
@@ -435,9 +435,8 @@ var _ = Describe("tunnel tests", func() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					conn, err := state.InterfaceToConnOrError(<-connResults)
-					Expect(err).To(HaveOccurred())
-					Expect(conn).NotTo(HaveOccurred())
+					_, ok := <-connResults
+					Expect(ok).ShouldNot(BeTrue())
 				}()
 
 				Expect(srvConn.Close()).ToNot(HaveOccurred())

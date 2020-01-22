@@ -560,6 +560,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 
 	if c.forwardingEnabled {
 		go func() {
+			log.Debugf("server has started listening for connections from cluster %s", c.ID)
 			// This loop only stops trying to listen if the tunnel or manager was closed
 			for {
 				shouldStop := false
@@ -571,6 +572,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 							return
 						}
 						log.WithError(err).Error("failed to listen over the tunnel")
+						return
 					}
 					defer listener.Close()
 					if err = listenAndForward(
@@ -587,7 +589,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 				}
 				time.Sleep(1 * time.Second)
 			}
-
+			log.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
