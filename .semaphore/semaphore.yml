@@ -24,4 +24,7 @@ blocks:
           # Checkout the code and run the Kubernetes tests.
           - checkout
           - make dual-tor-test
+          # Semaphore is doing shallow clone on a commit without tags.
+          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+          - git fetch --unshallow
           - make k8s-test

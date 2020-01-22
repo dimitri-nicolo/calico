@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.32
+GO_BUILD_VER?=v0.34
 
 GIT_USE_SSH = true
 
@@ -49,7 +49,7 @@ PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
 RELEASE_IMAGES?=
 
 # Versions and location of dependencies used in the build.
-BIRD_VERSION=v0.3.3-147-g1c33c691
+BIRD_VERSION=v0.3.3-151-g767b5389
 BIRD_IMAGE ?= calico/bird:$(BIRD_VERSION)-$(ARCH)
 
 # Versions and locations of dependencies used in tests.
@@ -373,6 +373,9 @@ st-checks:
 	# running on the host.
 	iptables-save | grep -q 'calico-st-allow-etcd' || iptables $(IPT_ALLOW_ETCD)
 
+GCR_IO_PULL_SECRET?=${HOME}/.docker/config.json
+TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
+
 .PHONY: dual-tor-test
 dual-tor-test: cnx-node.tar calico_test.created
 	$(MAKE) dual-tor-setup
@@ -405,49 +408,6 @@ dual-tor-cleanup:
 	STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
 	rm ./kubectl
 
-## Get the kubeadm-dind-cluster script
-K8ST_VERSION?=v1.12
-DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh
-GCR_IO_PULL_SECRET?=${HOME}/.docker/config.json
-TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
-
-.PHONY: k8s-test
-## Run the k8s tests
-k8s-test: cnx-node.tar $(NODE_CONTAINER_CREATED)
-	$(MAKE) k8s-stop
-	$(MAKE) k8s-start
-	$(MAKE) k8s-check-setup
-	$(MAKE) k8s-run-test
-	#$(MAKE) k8s-stop
-
-.PHONY: k8s-start
-## Start k8s cluster
-k8s-start: $(NODE_CONTAINER_CREATED) tests/k8st/$(DIND_SCR)
-	CNI_PLUGIN=calico \
-	CALICO_VERSION=master \
-	CALICO_NODE_IMAGE=$(BUILD_IMAGE):latest-$(ARCH) \
-	POD_NETWORK_CIDR=192.168.0.0/16 \
-	SKIP_SNAPSHOT=y \
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
-	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
-	tests/k8st/$(DIND_SCR) up
-
-.PHONY: k8s-check-setup
-k8s-check-setup:
-	ls -l ${HOME}/.kubeadm-dind-cluster/
-	${HOME}/.kubeadm-dind-cluster/kubectl get no -o wide
-	${HOME}/.kubeadm-dind-cluster/kubectl get po -o wide --all-namespaces
-	${HOME}/.kubeadm-dind-cluster/kubectl get svc -o wide --all-namespaces
-	${HOME}/.kubeadm-dind-cluster/kubectl get deployments -o wide --all-namespaces
-	${HOME}/.kubeadm-dind-cluster/kubectl get ds -o wide --all-namespaces
-
-.PHONY: k8s-stop
-## Stop k8s cluster
-k8s-stop: tests/k8st/$(DIND_SCR)
-	tests/k8st/$(DIND_SCR) down
-	tests/k8st/$(DIND_SCR) clean
-
-.PHONY: k8s-run-test
 ## Run k8st in an existing k8s cluster
 ##
 ## Note: if you're developing and want to see test output as it
@@ -455,21 +415,38 @@ k8s-stop: tests/k8st/$(DIND_SCR)
 ## --nocapture --nologcapture" to K8ST_TO_RUN.  For example:
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
-k8s-run-test: calico_test.created
-## Only execute remove-go-build-image if flag is set
-ifeq ($(REMOVE_GOBUILD_IMG),true)
-	$(MAKE) remove-go-build-image
-endif
-	docker run -t \
+.PHONY: k8s-test
+k8s-test:
+	$(MAKE) kind-k8st-setup
+	$(MAKE) kind-k8st-run-test
+	$(MAKE) kind-k8st-cleanup
+
+.PHONY: kind-k8st-setup
+kind-k8st-setup: cnx-node.tar
+	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl
+	chmod +x ./kubectl
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
+	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
+	tests/k8st/create_kind_cluster.sh
+
+.PHONY: kind-k8st-run-test
+kind-k8st-run-test: calico_test.created
+	docker run -t --rm \
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
-	    -v /home/$(USER)/.kube/config:/root/.kube/config \
-	    -v /home/$(USER)/.kubeadm-dind-cluster:/root/.kubeadm-dind-cluster \
+	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
+	    -v $(CURDIR)/kubectl:/bin/kubectl \
+	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
 	    --privileged \
 	    --net host \
-	$(TEST_CONTAINER_NAME) \
-	    sh -c 'cp /root/.kubeadm-dind-cluster/kubectl /bin/kubectl && ls -ltr /bin/kubectl && which kubectl && cd /code/tests/k8st && \
-		   nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+	${TEST_CONTAINER_NAME} \
+	    sh -c 'echo "container started.." && \
+	     cd /code/tests/k8st && nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+
+.PHONY: kind-k8st-cleanup
+kind-k8st-cleanup:
+	tests/k8st/delete_kind_cluster.sh
+	rm -f ./kubectl
 
 # Needed for Semaphore CI (where disk space is a real issue during k8s-test)
 .PHONY: remove-go-build-image
