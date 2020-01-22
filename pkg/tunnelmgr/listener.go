@@ -4,6 +4,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/tigera/voltron/pkg/tunnel"
+
 	"github.com/tigera/voltron/pkg/state"
 )
 
@@ -20,7 +22,11 @@ type listener struct {
 // Accept waits for a connection to be opened from the other side of the connection and returns it.
 func (l *listener) Accept() (net.Conn, error) {
 	select {
-	case inf := <-l.conns:
+	case inf, ok := <-l.conns:
+		// a closed channel signals that the tunnel has been closed
+		if !ok {
+			return nil, tunnel.ErrTunnelClosed
+		}
 		return state.InterfaceToConnOrError(inf)
 	case <-l.close:
 		return nil, ErrManagerClosed
