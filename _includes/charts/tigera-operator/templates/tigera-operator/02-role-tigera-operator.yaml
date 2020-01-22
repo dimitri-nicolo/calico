@@ -125,6 +125,7 @@ rules:
     resources:
       - globalreporttypes
       - licensekeys
+      - globalalerttemplates
     verbs:
       - '*'
   - apiGroups:
