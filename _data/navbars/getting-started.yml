@@ -62,7 +62,7 @@ section:
   - title: System requirements
     path: /getting-started/openshift/requirements
   - title: Installation
-    path: /getting-started/openshift/installation
+    path: /getting-started/openshift/installation/
 - title: Bare metal hosts
   path: /getting-started/bare-metal/
   section:
