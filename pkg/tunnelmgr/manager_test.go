@@ -2,6 +2,7 @@ package tunnelmgr_test
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -16,6 +17,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+type mockDialer struct {
+	tun *tunnel.Tunnel
+	err error
+}
+
+func (m *mockDialer) Dial() (*tunnel.Tunnel, error) {
+	return m.tun, m.err
+}
 
 type ConnOpener interface {
 	Open() (net.Conn, error)
@@ -216,6 +226,28 @@ var _ = Describe("Manager", func() {
 				Expect(len(filter([]string{"Response1", "Response2"}, readResponseBody(response1), readResponseBody(response2)))).To(Equal(0))
 
 				wg.Wait()
+			})
+		})
+		Context("Manager closed", func() {
+			It("returns errors", func() {
+				m := tunnelmgr.NewManager()
+				Expect(m.Close()).ShouldNot(HaveOccurred())
+				_, err := m.Listener()
+				Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+				_, err = m.Open()
+				Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+				_, err = m.OpenTLS(&tls.Config{})
+				Expect(err).Should(Equal(tunnelmgr.ErrManagerClosed))
+
+				errChan := m.ListenForErrors()
+				Expect(<-errChan).Should(Equal(tunnelmgr.ErrManagerClosed))
+				cliConn, srvConn := net.Pipe()
+				defer cliConn.Close()
+				defer srvConn.Close()
+				tun, err := tunnel.NewClientTunnel(srvConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
+				Expect(err).ShouldNot(Equal(tunnelmgr.ErrManagerClosed))
+				Expect(m.RunWithTunnel(tun)).Should(Equal(tunnelmgr.ErrManagerClosed))
+				Expect(m.RunWithDialer(&mockDialer{tun: tun})).Should(Equal(tunnelmgr.ErrManagerClosed))
 			})
 		})
 	})

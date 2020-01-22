@@ -1,4 +1,4 @@
-package tunnelmgr_test
+package tunnelmgr
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestTunnel(t *testing.T) {
+func TestTunnelManager(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Tunnel Manager Suite")
 }
