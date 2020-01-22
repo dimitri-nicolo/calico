@@ -1,103 +1,64 @@
+PACKAGE_NAME            ?= github.com/tigera/compliance
+GO_BUILD_VER            ?= v0.32
+GOMOD_VENDOR             = false
+GIT_USE_SSH              = true
+LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
+FELIX_REPO               = github.com/tigera/felix-private
+LIBCALICO_GO_VERSION    ?= v0.0.0-20191113215606-944388dd8364
 
-# Shortcut targets
-default: build
+build: ut
 
-## Build binary for current platform
-all: build
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
-## Run the tests for the current platform/architecture
-test: ut
-
-# Define some constants
-#############################
-ELASTIC_VERSION ?= 7.3.2
-K8S_VERSION      ?= v1.11.3
-ETCD_VERSION     ?= v3.3.7
-KUBE_BENCH_VERSION ?= b649588f46c54c84cd9c88510680b5a651f12d46
-LIBCALICO_GO_VERSION ?= v0.0.0-20191113215606-944388dd8364
-
-###############################################################################
-# Both native and cross architecture builds are supported.
-# The target architecture is select by setting the ARCH variable.
-# When ARCH is undefined it is set to the detected host architecture.
-# When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst docker-image/server/Dockerfile.%,%,$(wildcard docker-image/server/Dockerfile.*))
-
-# BUILDARCH is the host architecture
-# ARCH is the target architecture
-# we need to keep track of them separately
-BUILDARCH ?= $(shell uname -m)
-BUILDOS ?= $(shell uname -s | tr A-Z a-z)
-
-# canonicalized names for host architecture
-ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
-endif
-ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
-endif
-
-# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
-ARCH ?= $(BUILDARCH)
-
-# canonicalized names for target architecture
-ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
-endif
-ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
-endif
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 # Build mounts for running in "local build" mode. Developers will need to make sure they have the correct local version
 # otherwise the build will fail.
 PHONY:local_build
-
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/github.com/tigera/libcalico-go:ro
+endif
 ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
 local_build:
 	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
 local_build:
 	-go mod edit -replace=github.com/projectcalico/libcalico-go=github.com/tigera/libcalico-go-private@$(LIBCALICO_GO_VERSION)
 endif
-
-# we want to be able to run the same recipe on multiple targets keyed on the image name
-# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
-# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
-# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
-# in the target, we then unescape them back
-escapefs = $(subst :,---,$(subst /,___,$(1)))
-unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
-
-# these macros create a list of valid architectures for pushing manifests
-space :=
-space +=
-comma := ,
-prefix_linux = $(addprefix linux/,$(strip $1))
-join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
-
-# Targets used when cross building.
-.PHONY: register
-# Enable binfmt adding support for miscellaneous binary formats.
-# This is only needed when running non-native binaries.
-register:
-ifneq ($(BUILDARCH),$(ARCH))
-	docker run --rm --privileged multiarch/qemu-user-static:register || true
+ifdef GOPATH
+EXTRA_DOCKER_ARGS += -v $(GOPATH)/pkg/mod:/go/pkg/mod:rw
 endif
 
-# list of arches *not* to build when doing *-all
-#    until s390x works correctly
-EXCLUDEARCH ?= s390x
-VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
-###############################################################################
+include Makefile.common
+
+##############################################################################
+# Define some constants
+##############################################################################
+ELASTIC_VERSION			?= 7.3.2
+K8S_VERSION     		?= v1.11.3
+ETCD_VERSION			?= v3.3.7
+KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
+
 BUILD_IMAGE_SERVER=tigera/compliance-server
 BUILD_IMAGE_CONTROLLER=tigera/compliance-controller
 BUILD_IMAGE_SNAPSHOTTER=tigera/compliance-snapshotter
 BUILD_IMAGE_REPORTER=tigera/compliance-reporter
 BUILD_IMAGE_SCALELOADER=tigera/compliance-scaleloader
 BUILD_IMAGE_BENCHMARKER=tigera/compliance-benchmarker
-PACKAGE_NAME?=github.com/tigera/compliance
 GCR_REPO?=gcr.io/unique-caldron-775/cnx
 
 PUSH_IMAGE_PREFIXES?=$(GCR_REPO)/
@@ -107,35 +68,12 @@ ifeq ($(RELEASE),true)
 PUSH_IMAGE_PREFIXES+=$(RELEASE_IMAGES)
 endif
 
-# remove from the list to push to manifest any registries that do not support multi-arch
-EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
-PUSH_MANIFEST_IMAGE_PREFIXES=$(PUSH_IMAGE_PREFIXES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGE_PREFIXES=$(filter-out $(PUSH_MANIFEST_IMAGE_PREFIXES),$(PUSH_IMAGE_PREFIXES))
-
-# location of docker credentials to push manifests
-DOCKER_CONFIG ?= $(HOME)/.docker/config.json
-
-GO_BUILD_VER?=v0.24
-# For building, we use the go-build image for the *host* architecture, even if the target is different
-# the one for the host should contain all the necessary cross-compilation tools
-# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
-
-# This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.24
-
-# For fetching private repos
-GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
-
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
 PKG_VERSION?=$(shell git describe --tags --dirty --always || echo '<unknown>')
 PKG_VERSION_BUILD_DATE?=$(shell date -u +'%FT%T%z' || echo '<unknown>')
 PKG_VERSION_GIT_DESCRIPTION?=$(shell git describe --tags 2>/dev/null || echo '<unknown>')
 PKG_VERSION_GIT_REVISION?=$(shell git rev-parse --short HEAD || echo '<unknown>')
-
-# Calculate a timestamp for any build artefacts.
-DATE:=$(shell date -u +'%FT%T%z')
 
 # Linker flags for building Compliance Server.
 #
@@ -154,49 +92,6 @@ LDFLAGS:=-ldflags "\
 NON_SRC_DIRS = test
 # All Compliance Server go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print)
-
-# Figure out the users UID/GID.  These are needed to run docker containers
-# as the current user and ensure that files built inside containers are
-# owned by the current user.
-LOCAL_USER_ID:=$(shell id -u)
-LOCAL_GROUP_ID:=$(shell id -g)
-
-# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
-# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
-ifneq ($(GOPATH),)
-    # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
-    # is the default one used by go modules.
-    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
-else
-    # If gopath is empty, default to $(HOME)/go.
-    GOMOD_CACHE = $$HOME/go/pkg/mod
-endif
-
-EXTRA_DOCKER_ARGS += -e GO111MODULE=on -v $(GOMOD_CACHE):/go/pkg/mod:rw
-
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/github.com/tigera/libcalico-go:ro
-endif
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-ifdef GOPATH
-	EXTRA_DOCKER_ARGS += -v $(GOPATH)/pkg/mod:/go/pkg/mod:rw
-endif
-
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -e GOCACHE=/go-cache \
-                              -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                              -v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-                              -w /go/src/$(PACKAGE_NAME) \
-                              -e GOARCH=$(ARCH) \
-                              -e GOPATH=/go
 
 .PHONY: clean
 clean:
@@ -230,7 +125,7 @@ bin/server: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance-server...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -242,7 +137,7 @@ bin/controller: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance controller...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -254,7 +149,7 @@ bin/snapshotter: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance snapshotter...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/snapshotter" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -266,7 +161,7 @@ bin/reporter: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance reporter...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/reporter" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -278,7 +173,7 @@ bin/report-type-gen: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES) local_build
 	@echo Building report type generator...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/report-type-gen" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -290,7 +185,7 @@ bin/scaleloader: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES) local_build
 	@echo Building scaleloader...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/mockdata-scaleloader" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -302,7 +197,7 @@ bin/benchmarker: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES) local_build
 	@echo Building benchmarker...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/benchmarker" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -403,6 +298,14 @@ ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
 endif
 
+# we want to be able to run the same recipe on multiple targets keyed on the image name
+# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
+# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
+# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
+# in the target, we then unescape them back
+escapefs = $(subst :,---,$(subst /,___,$(1)))
+unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
+
 ## push one arch
 push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGE_PREFIXES)))
 
@@ -483,25 +386,35 @@ sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ###############################################################################
+# Updating pins
+###############################################################################
+
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+
+LMA_REPO=github.com/tigera/lma
+LMA_BRANCH=$(PIN_BRANCH)
+
+update-lma-pin:
+	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin update-lma-pin
+###############################################################################
+
+###############################################################################
 # Static checks
 ###############################################################################
-.PHONY: static-checks
-static-checks:
-	$(MAKE) golangci-lint
-
+#TODO: enable linters
 LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
-ifneq ($(CI),)
-	# govet uses too much memory for CI
-	LINT_ARGS += --disable govet
-endif
+LINT_ARGS += --timeout 5m
 
-.PHONY: golangci-lint
-golangci-lint:
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
-
-foss-checks:
-	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
-
+#TODO: Shoud gometalinter be deleted in favor of golangci-lint?
 .PHONY: go-meta-linter
 go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 	# Run staticcheck stand-alone since gometalinter runs concurrent copies, which
@@ -513,11 +426,6 @@ go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 		--enable=goimports \
 		--enable=errcheck \
 		--vendor ./...
-
-# Run go fmt on all our go files.
-.PHONY: go-fmt goimports fix
-go-fmt goimports fix:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'find . -iname "*.go" ! -wholename "./vendor/*" | xargs goimports -w -local github.com/tigera/'
 
 ###############################################################################
 # Tests
@@ -538,7 +446,6 @@ run-elastic: stop-elastic
 
 	# Wait until ES is accepting requests.
 	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
-
 
 ## Stop elasticsearch with name tigera-elastic
 stop-elastic:
@@ -850,13 +757,9 @@ help:
 	@echo "Tests:"
 	@echo
 	@echo "  make ut                Run UTs."
-	@echo "  make go-cover-browser  Display go code coverage in browser."
 	@echo
 	@echo "Maintenance:"
 	@echo
-	@echo "  make update-vendor  Update the vendor directory with new "
-	@echo "                      versions of upstream packages.  Record results"
-	@echo "                      in glide.lock."
 	@echo "  make go-fmt        Format our go code."
 	@echo "  make clean         Remove binary files."
 	@echo "-----------------------------------------"
