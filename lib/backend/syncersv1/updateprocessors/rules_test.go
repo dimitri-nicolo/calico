@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,6 +72,8 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 				Methods: []string{"GET", "PUT"},
 				Paths:   []apiv3.HTTPPath{{Exact: "/bar"}, {Prefix: "/foo1"}},
 			},
+			Metadata: &apiv3.RuleMetadata{
+				Annotations: map[string]string{"fizz": "buzz"}},
 		}
 		// Correct inbound rule
 		rulev1 := updateprocessors.RuleAPIV2ToBackend(irule, "namespace2", false)
@@ -112,6 +114,8 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 
 		Expect(rulev1.HTTPMatch.Methods).To(Equal([]string{"GET", "PUT"}))
 		Expect(rulev1.HTTPMatch.Paths).To(Equal([]apiv3.HTTPPath{{Exact: "/bar"}, {Prefix: "/foo1"}}))
+
+		Expect(rulev1.Metadata.Annotations).To(Equal(map[string]string{"fizz": "buzz"}))
 
 		etype := 2
 		entype := 7
@@ -220,6 +224,8 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 
 		Expect(rulev1.HTTPMatch.Methods).To(Equal([]string{"GET", "PUT"}))
 		Expect(rulev1.HTTPMatch.Paths).To(Equal([]apiv3.HTTPPath{{Exact: "/bar"}, {Prefix: "/foo1"}}))
+
+		Expect(rulev1.Metadata.Annotations).To(Equal(map[string]string{"fizz": "buzz"}))
 
 		rulev1 = rulesv1[1]
 		Expect(rulev1.IPVersion).To(Equal(&v4))

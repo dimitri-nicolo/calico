@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2410,6 +2410,7 @@ var _ = Describe("Test Namespace conversion", func() {
 
 		// Check labels.
 		labels := p.Value.(*apiv3.Profile).Spec.LabelsToApply
+		Expect(labels["pcns.projectcalico.org/name"]).To(Equal("default"))
 		Expect(labels["pcns.foo"]).To(Equal("bar"))
 		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
 	})
@@ -2436,9 +2437,10 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(Ingress[0]).To(Equal(apiv3.Rule{Action: apiv3.Allow}))
 		Expect(Egress[0]).To(Equal(apiv3.Rule{Action: apiv3.Allow}))
 
-		// Check labels.
+		// Check labels. It should only have one - the projectcalico.org/name label.
 		labels := p.Value.(*apiv3.Profile).Spec.LabelsToApply
-		Expect(len(labels)).To(Equal(0))
+		Expect(len(labels)).To(Equal(1))
+		Expect(labels["pcns.projectcalico.org/name"]).To(Equal("default"))
 	})
 
 	It("should ignore the network-policy Namespace annotation", func() {
@@ -2588,6 +2590,7 @@ var _ = Describe("Test ServiceAccount conversion", func() {
 
 		// Check labels.
 		labels := p.Value.(*apiv3.Profile).Spec.LabelsToApply
+		Expect(labels["pcsa.projectcalico.org/name"]).To(Equal("sa-test"))
 		Expect(labels["pcsa.foo"]).To(Equal("bar"))
 		Expect(labels["pcsa.roger"]).To(Equal("rabbit"))
 	})
@@ -2624,9 +2627,10 @@ var _ = Describe("Test ServiceAccount conversion", func() {
 		Expect(len(Ingress)).To(Equal(0))
 		Expect(len(Egress)).To(Equal(0))
 
-		// Check labels.
+		// Check labels. It should have only one - the projectcalico.org/name label.
 		labels := p.Value.(*apiv3.Profile).Spec.LabelsToApply
-		Expect(len(labels)).To(Equal(0))
+		Expect(len(labels)).To(Equal(1))
+		Expect(labels["pcsa.projectcalico.org/name"]).To(Equal("sa-test"))
 	})
 
 	It("should handle ServiceAccount resource versions", func() {

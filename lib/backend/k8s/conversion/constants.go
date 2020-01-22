@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,4 +30,8 @@ const (
 	AnnotationPodIPs         = "cni.projectcalico.org/podIPs"
 	AnnotationSecurityGroups = "aws.tigera.io/security-groups"
 	SecurityGroupLabelPrefix = "sg.aws.tigera.io"
+
+	// NameLabel is a label that can be used to match a serviceaccount or namespace
+	// name exactly.
+	NameLabel = "projectcalico.org/name"
 )

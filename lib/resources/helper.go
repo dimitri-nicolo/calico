@@ -29,10 +29,10 @@ const (
 	grpVersionProjectcalico = "projectcalico.org/v3"
 	grpVersionK8sNetworking = "networking.k8s.io/v1"
 	grpVersionExtensions    = "extensions/v1beta1"
-	isNamespaced = true
-	isNotNamespaced = false
-	isTieredPolicy = true
-	isNotTieredPolicy = false
+	isNamespaced            = true
+	isNotNamespaced         = false
+	isTieredPolicy          = true
+	isNotTieredPolicy       = false
 )
 
 var (
@@ -131,12 +131,12 @@ func NewResourceList(tm metav1.TypeMeta) ResourceList {
 }
 
 type resourceHelper struct {
-	tm           metav1.TypeMeta
-	resource     Resource
-	resourceList ResourceList
-	deprecated   []metav1.TypeMeta
-	plural       string
-	isNamespaced bool
+	tm             metav1.TypeMeta
+	resource       Resource
+	resourceList   ResourceList
+	deprecated     []metav1.TypeMeta
+	plural         string
+	isNamespaced   bool
 	isTieredPolicy bool
 }
 

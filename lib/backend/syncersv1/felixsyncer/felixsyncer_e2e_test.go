@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,56 +39,56 @@ import (
 
 // Kubernetes will have a profile for each of the namespaces that is configured.
 // We expect:  default, kube-system, kube-public, namespace-1, namespace-2, kube-node-lease.
-var defaultKubernetesResource = []model.KVPair{
-	{
-		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.default"}},
-		Value: &model.ProfileRules{
-			InboundRules:  []model.Rule{{Action: "allow"}},
-			OutboundRules: []model.Rule{{Action: "allow"}},
-		},
-	},
-	{
-		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-public"}},
-		Value: &model.ProfileRules{
-			InboundRules:  []model.Rule{{Action: "allow"}},
-			OutboundRules: []model.Rule{{Action: "allow"}},
-		},
-	},
-	{
-		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-system"}},
-		Value: &model.ProfileRules{
-			InboundRules:  []model.Rule{{Action: "allow"}},
-			OutboundRules: []model.Rule{{Action: "allow"}},
-		},
-	},
-	{
-		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-1"}},
-		Value: &model.ProfileRules{
-			InboundRules:  []model.Rule{{Action: "allow"}},
-			OutboundRules: []model.Rule{{Action: "allow"}},
-		},
-	},
-	{
-		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-2"}},
-		Value: &model.ProfileRules{
-			InboundRules:  []model.Rule{{Action: "allow"}},
-			OutboundRules: []model.Rule{{Action: "allow"}},
-		},
-	},
-	{
-		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-node-lease"}},
-		Value: &model.ProfileRules{
-			InboundRules:  []model.Rule{{Action: "allow"}},
-			OutboundRules: []model.Rule{{Action: "allow"}},
-		},
-	},
-	{
+func defaultKubernetesResource() []model.KVPair {
+	var out []model.KVPair
+	// Add resources for the namespaces we expect in the cluster.
+	for _, ns := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
+		// Expect profile rules for each namespace providing default allow behavior.
+		out = append(out, model.KVPair{
+			Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns." + ns}},
+			Value: &model.ProfileRules{
+				InboundRules:  []model.Rule{{Action: "allow"}},
+				OutboundRules: []model.Rule{{Action: "allow"}},
+			},
+		})
+
+		// Expect profile labels for each namespace as well. The labels should include the name
+		// of the namespace.
+		out = append(out, model.KVPair{
+			Key: model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: "kns." + ns}},
+			Value: map[string]string{
+				"pcns.projectcalico.org/name": ns,
+			},
+		})
+
+		// Expect profile rules for the default serviceaccount in each namespace.
+		out = append(out, model.KVPair{
+			Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + ns + ".default"}},
+			Value: &model.ProfileRules{
+				InboundRules:  nil,
+				OutboundRules: nil,
+			},
+		})
+
+		// Expect profile labels for each default serviceaccount as well. The labels should include the name
+		// of the service account.
+		out = append(out, model.KVPair{
+			Key: model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: "ksa." + ns + ".default"}},
+			Value: map[string]string{
+				"pcsa.projectcalico.org/name": "default",
+			},
+		})
+	}
+
+	// in addition, there is a hard-coded default profile that allows everything.
+	out = append(out, model.KVPair{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "default"}},
 		Value: &model.ProfileRules{
 			InboundRules:  []model.Rule{{Action: "allow"}},
 			OutboundRules: []model.Rule{{Action: "allow"}},
 		},
-	},
+	})
+	return out
 }
 
 var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
@@ -142,27 +142,15 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectStatusUpdate(api.InSync)
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment.
-				expectedCacheSize += len(defaultKubernetesResource)
+				expectedCacheSize += len(defaultKubernetesResource())
 
 				// Add 1 for the Node resource passed over the felix syncer.
 				expectedCacheSize += 1
 				syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/nodes/127.0.0.1")
 
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					syncTester.ExpectData(r)
 				}
-				expectedCacheSize += func(syncTester *testutils.SyncerTester, namespaces []string) int {
-					for _, n := range namespaces {
-						syncTester.ExpectData(model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						})
-					}
-					return len(namespaces)
-				}(syncTester, []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"})
 				syncTester.ExpectCacheSize(expectedCacheSize)
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ var (
 	poolUnstictCIDR     = "IP pool CIDR is not strictly masked"
 	overlapsV4LinkLocal = "IP pool range overlaps with IPv4 Link Local range 169.254.0.0/16"
 	overlapsV6LinkLocal = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
-	protocolPortsMsg    = "rules that specify ports must set protocol to TCP or UDP"
+	protocolPortsMsg    = "rules that specify ports must set protocol to TCP or UDP or SCTP"
 
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
@@ -425,7 +425,7 @@ func validateICMPFields(structLevel validator.StructLevel) {
 func validateRule(structLevel validator.StructLevel) {
 	rule := structLevel.Current().Interface().(api.Rule)
 
-	// If the protocol is neither tcp (6) nor udp (17) check that the port values have not
+	// If the protocol does not support ports, check that the port values have not
 	// been specified.
 	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
 		if len(rule.Source.Ports) > 0 {
@@ -494,7 +494,7 @@ func validateRule(structLevel validator.StructLevel) {
 func validateBackendRule(structLevel validator.StructLevel) {
 	rule := structLevel.Current().Interface().(model.Rule)
 
-	// If the protocol is neither tcp (6) nor udp (17) check that the port values have not
+	// If the protocol does not support ports check that the port values have not
 	// been specified.
 	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
 		if len(rule.SrcPorts) > 0 {
@@ -550,12 +550,12 @@ func validateBGPPeerMeta(structLevel validator.StructLevel) {
 func validateBackendEndpointPort(structLevel validator.StructLevel) {
 	port := structLevel.Current().Interface().(model.EndpointPort)
 
-	if port.Protocol.String() != "tcp" && port.Protocol.String() != "udp" {
+	if port.Protocol.String() != "tcp" && port.Protocol.String() != "udp" && port.Protocol.String() != "sctp" {
 		structLevel.ReportError(
 			reflect.ValueOf(port.Protocol),
 			"EndpointPort.Protocol",
 			"",
-			reason("EndpointPort protocol must be 'tcp' or 'udp'."),
+			reason("EndpointPort protocol must be 'tcp' or 'udp' or 'sctp'."),
 			"",
 		)
 	}
@@ -564,12 +564,12 @@ func validateBackendEndpointPort(structLevel validator.StructLevel) {
 func validateEndpointPort(structLevel validator.StructLevel) {
 	port := structLevel.Current().Interface().(api.EndpointPort)
 
-	if port.Protocol.String() != "tcp" && port.Protocol.String() != "udp" {
+	if port.Protocol.String() != "tcp" && port.Protocol.String() != "udp" && port.Protocol.String() != "sctp" {
 		structLevel.ReportError(
 			reflect.ValueOf(port.Protocol),
 			"EndpointPort.Protocol",
 			"",
-			reason("EndpointPort protocol must be 'tcp' or 'udp'."),
+			reason("EndpointPort protocol must be 'tcp' or 'udp' or 'sctp'."),
 			"",
 		)
 	}

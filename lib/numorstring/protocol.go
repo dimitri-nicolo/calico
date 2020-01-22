@@ -1,4 +1,4 @@
-// Copyright (c) 2016,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016,2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,8 +29,9 @@ const (
 	ProtocolSCTP    = "SCTP"
 	ProtocolUDPLite = "UDPLite"
 
-	ProtocolUDPV1 = "udp"
-	ProtocolTCPV1 = "tcp"
+	ProtocolUDPV1  = "udp"
+	ProtocolTCPV1  = "tcp"
+	ProtocolSCTPV1 = "sctp"
 )
 
 var (
@@ -124,14 +125,14 @@ func (p Protocol) NumValue() (uint8, error) {
 }
 
 // SupportsProtocols returns whether this protocol supports ports.  This returns true if
-// the numerical or string verion of the protocol indicates TCP (6) or UDP (17).
+// the numerical or string version of the protocol indicates TCP (6), UDP (17), or SCTP (132).
 func (p Protocol) SupportsPorts() bool {
 	num, err := p.NumValue()
 	if err == nil {
-		return num == 6 || num == 17
+		return num == 6 || num == 17 || num == 132
 	} else {
 		switch p.StrVal {
-		case ProtocolTCP, ProtocolUDP, ProtocolTCPV1, ProtocolUDPV1:
+		case ProtocolTCP, ProtocolUDP, ProtocolTCPV1, ProtocolUDPV1, ProtocolSCTP, ProtocolSCTPV1:
 			return true
 		}
 		return false

@@ -13,3 +13,4 @@ checkouts
 /report/*.xml
 /release
 cscope.*
+Makefile.common*
