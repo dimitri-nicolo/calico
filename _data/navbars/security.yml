@@ -7,7 +7,12 @@ section:
 - title: Get started
   path: /security/get-started
   section:
-  - title: Kubernetes network policy
+  - title: Calico policy
+    path: /security/calico-policy
+    section:
+    - title: Get started with Calico network policy
+      path: /security/calico-network-policy
+  - title: Kubernetes policy
     path: /security/kubernetes-policy
     section:
     - title: Get started with Kubernetes network policy
@@ -20,11 +25,6 @@ section:
       path: /security/tutorials/kubernetes-policy-basic
     - title: Kubernetes policy, advanced tutorial
       path: /security/tutorials/kubernetes-policy-advanced
-  - title: Calico network policy
-    path: /security/calico-policy
-    section:
-    - title: Get started with Calico network policy
-      path: /security/calico-network-policy
   - title: Calico Enterprise network policy 
     path: /security/calico-enterprise-policy
     section: 
