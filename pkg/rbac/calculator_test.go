@@ -17,8 +17,9 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
 	projectcalico_v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/libcalico-go/lib/resources"
 )
 
 var (
@@ -52,7 +53,7 @@ var (
 	}, {
 		APIGroup: "networking.k8s.io",
 		Resource: "networkpolicies",
-	},  {
+	}, {
 		APIGroup: "extensions",
 		Resource: "networkpolicies",
 	}, {

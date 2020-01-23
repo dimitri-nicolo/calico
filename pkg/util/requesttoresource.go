@@ -32,6 +32,7 @@ func RequestToResource(h http.Handler) http.Handler {
 	})
 }
 
+// The key type is unexported to prevent collisions.
 type contextKey int
 
 const (

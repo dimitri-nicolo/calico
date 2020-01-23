@@ -2,8 +2,9 @@
 package policyrec
 
 import (
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/lma/pkg/api"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type PolicyRecommendationParams struct {
