@@ -109,6 +109,8 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 		}
 	}
 
+	srv.clusters.k8sCLI = srv.k8s
+
 	srv.proxyMux = http.NewServeMux()
 	srv.http.Handler = srv.proxyMux
 
@@ -198,32 +200,6 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 	}
 
 	return nil
-}
-
-func (s *Server) autoRegister(id string, ident tunnel.Identity) (*cluster, error) {
-	cert, ok := ident.(*x509.Certificate)
-	if !ok {
-		return nil, errors.Errorf("unexpected identity type: %T", ident)
-	}
-
-	c := &cluster{
-		ManagedCluster: jclust.ManagedCluster{
-			ID: id,
-		},
-		cert: cert,
-	}
-
-	s.clusters.Lock()
-	err := s.clusters.add(id, c)
-	s.clusters.Unlock()
-
-	if err != nil {
-		return nil, err
-	}
-
-	c.RLock()
-
-	return c, nil
 }
 
 func (s *Server) acceptTunnels(opts ...tunnel.Option) {
@@ -472,5 +448,5 @@ func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 		return errors.Errorf("no k8s interface")
 	}
 
-	return s.clusters.watchK8s(s.ctx, s.k8s, syncC)
+	return s.clusters.watchK8s(s.ctx, syncC)
 }
