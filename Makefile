@@ -1,7 +1,11 @@
 PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER=v0.32
+GO_BUILD_VER=v0.34
 
 GIT_USE_SSH = true
+
+# This needs to be evaluated before the common makefile is included.
+# This var contains some default values that the common makefile may append to.
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cni
 
 ###############################################################################
 # Download and include Makefile.common
@@ -55,7 +59,6 @@ CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
 BUILD_IMAGE?=tigera/cni
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
 
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cni
 RELEASE_IMAGES?=
 
 ETCD_CONTAINER ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)

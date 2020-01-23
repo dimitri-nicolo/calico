@@ -28,11 +28,15 @@ require (
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
+	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/rakelkar/gonetsh v0.0.0-20180118190048-758b1f7c9d1c
 	github.com/safchain/ethtool v0.0.0-20170622225139-7ff1ba29eca2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
+	github.com/tinylib/msgp v1.1.0 // indirect
+	github.com/ugorji/go v0.0.0-20171019201919-bdcc60b419d1 // indirect
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
@@ -54,6 +58,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200110190915-9fa812d46e44
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200122232750-1851029e46c5
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
