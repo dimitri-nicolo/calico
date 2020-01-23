@@ -36,6 +36,9 @@ endif
 
 include Makefile.common
 
+# Override K8S_VERSION
+K8S_VERSION=v1.17.0
+
 ###############################################################################
 
 test: ut test-kdd test-etcd
@@ -209,8 +212,9 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd tests/confd_kubeconfig
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
 	gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
-		  /hyperkube apiserver --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
-		  --service-cluster-ip-range=10.101.0.0/16 --insecure-bind-address=$(LOCAL_IP_ENV)
+		  kube-apiserver --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
+		  --feature-gates IPv6DualStack=true \
+		  --service-cluster-ip-range=10.101.0.0/16,fd00:96::/112 --insecure-bind-address=$(LOCAL_IP_ENV)
 	# Wait until the apiserver is accepting requests.
 	docker cp tests/confd_kubeconfig calico-k8s-apiserver:/kubeconfig
 	while ! docker exec calico-k8s-apiserver kubectl --kubeconfig=/kubeconfig get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
@@ -278,7 +282,7 @@ fv st:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download static-checks test
+ci: mod-download static-checks test
 
 ###############################################################################
 # Release

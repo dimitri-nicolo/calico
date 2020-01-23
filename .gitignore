@@ -10,3 +10,4 @@ etc/calico/confd/config
 /dist/*.zip
 *.exe
 /tests/confd_kubeconfig
+Makefile.common*
