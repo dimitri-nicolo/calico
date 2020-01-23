@@ -1,7 +1,11 @@
 PACKAGE_NAME?=github.com/projectcalico/typha
-GO_BUILD_VER=v0.32
+GO_BUILD_VER=v0.34
 
 GIT_USE_SSH = true
+
+# This needs to be evaluated before the common makefile is included.
+# This var contains some default values that the common makefile may append to.
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/typha
 
 ###############################################################################
 # Download and include Makefile.common
@@ -37,10 +41,6 @@ include Makefile.common
 ###############################################################################
 BUILD_IMAGE=tigera/typha
 
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/typha
-RELEASE_IMAGES?=
-
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/typha
 RELEASE_IMAGES?=
 
 # Linker flags for building Typha.
