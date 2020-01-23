@@ -13,11 +13,11 @@ spec:
       labels:
         app: tigera-internal-1
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
       - name: tigera-internal-1
-        image: alpine:latest
-        command: ["/bin/sh"]
-        args: ["-c", "while true;do sleep 5; done"]
+        image: gcr.io/tigera-dev/cnx/tigera/honeypod/tigera-internal-1:1.0.0
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert

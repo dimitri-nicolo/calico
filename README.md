@@ -18,11 +18,15 @@ Honeypod may be used to detect resources enumeration, privilege escalation, data
 ## Demo Installation
 0. Ensure Calico Enterprise version 2.6+ is installed
 1. `kubectl apply -f honeypod\_sample\_setup.yaml`
+2. `kubectl create secret -n tigera-internal generic tigera-pull-secret \
+    --from-file=.dockerconfigjson=<PATH/TO/PULL/SECRET> --type=kubernetes.io/dockerconfigjson'
 
 ## Installation
 0. Ensure Calico Enterprise version 2.6+ is installed
 1. `kubectl apply -f common/common.yaml`
-2. Navigate to relevant scenarios folder and apply the YAMLs (Modify naming if needed)
+2. `kubectl create secret -n tigera-internal generic tigera-pull-secret \
+    --from-file=.dockerconfigjson=<PATH/TO/PULL/SECRET> --type=kubernetes.io/dockerconfigjson'
+3. Navigate to relevant scenarios folder and apply the YAMLs (Modify naming if needed)
 
 ## Testing
 To test, run the 'attacker' pod on the k8s cluster, the pod will periodically nmap/scan the network 

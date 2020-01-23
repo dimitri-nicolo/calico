@@ -10,8 +10,8 @@ metadata:
   name: tigera-internal-role
 rules:
   - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "watch", "list"]
+    resources: [""]
+    verbs: [""]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -41,11 +41,11 @@ spec:
       labels:
         app: tigera-internal-1
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
       - name: tigera-internal-1
-        image: alpine:latest
-        command: ["/bin/sh"]
-        args: ["-c", "while true;do sleep 5; done"]
+        image: gcr.io/tigera-dev/cnx/tigera/honeypod/tigera-internal-1:1.0.0
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -87,9 +87,11 @@ spec:
       labels:
         app: tigera-internal-3
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
       - name: tigera-internal-dashboard
-        image: gcr.io/tigera-security-research/tigera-internal-dashboard:1.0.0
+        image: gcr.io/tigera-dev/cnx/tigera/honeypod/tigera-internal-dashboard:1.0.0
         ports:
         - containerPort: 8888
         - containerPort: 443
@@ -105,7 +107,7 @@ spec:
   ports:
     - port: 8888
       protocol: TCP
-      targetPort: 80
+      targetPort: 8080
   selector:
     app: tigera-internal-3
 ---

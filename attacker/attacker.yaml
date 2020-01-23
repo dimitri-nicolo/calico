@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: attacker-app
@@ -13,7 +13,9 @@ spec:
       labels:
         app: attacker-app
     spec:
+      imagePullSecrets:
+        - name: tigera-pull-secret
       containers:
         - name: attacker-app
-          image: gcr.io/tigera-security-research/attacker-pod:1.0.0
+          image: gcr.io/tigera-demo/attacker-pod:1.0.1
 ---
