@@ -4,7 +4,7 @@ GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
-LIBCALICO_GO_VERSION    ?= v0.0.0-20191113215606-944388dd8364
+LIBCALICO_GO_VERSION    ?= v0.0.0-20200110190915-9fa812d46e44
 
 build: ut
 

@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	certutil "k8s.io/client-go/util/cert"
+	keyutil "k8s.io/client-go/util/keyutil"
 )
 
 // GenerateSelfSignedCertsIfNeeded is a minimal copy of the version in the kubernetes apiserver in order to avoid versioning issues.
@@ -25,7 +26,7 @@ func GenerateSelfSignedCertsIfNeeded(publicAddress string, alternateDNS []string
 				return err
 			}
 
-			if err := certutil.WriteKey(keypath, key); err != nil {
+			if err := keyutil.WriteKey(keypath, key); err != nil {
 				return err
 			}
 			log.Infof("Generated self-signed cert (%s, %s)", certpath, keypath)

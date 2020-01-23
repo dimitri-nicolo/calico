@@ -5,18 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/set"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
@@ -383,7 +384,9 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 		}
 
 		// Check if an IP address is available, if not then it won't be possible to convert the Pod.
-		podIPs, ipErr := c.converter.GetPodIPs(in)
+		// TODO: revert line below to use the method in libcalico-go-private:
+		// podIPs, ipErr := c.converter.GetPodIPs(in)
+		podIPs, ipErr := getPodIPs(in)
 		validIP := true
 		if ipErr != nil || len(podIPs) == 0 {
 			// There is no valid IP. In this case we need to sneak in an IP address in order to get the conversion
@@ -435,6 +438,39 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 	}
 
 	return nil, nil
+}
+
+// TODO: Remove method and use the method in libcalico-go-private:
+func getPodIPs(pod *corev1.Pod) ([]*cnet.IPNet, error) {
+	var podIPs []string
+	if ips := pod.Status.PodIPs; len(ips) != 0 {
+		log.WithField("ips", ips).Debug("PodIPs field filled in")
+		for _, ip := range ips {
+			podIPs = append(podIPs, ip.IP)
+		}
+	} else if ip := pod.Status.PodIP; ip != "" {
+		log.WithField("ip", ip).Debug("PodIP field filled in")
+		podIPs = append(podIPs, ip)
+	} else if ips := pod.Annotations[conversion.AnnotationPodIPs]; ips != "" {
+		log.WithField("ips", ips).Debug("No PodStatus IPs, use Calico plural annotation")
+		podIPs = append(podIPs, strings.Split(ips, ",")...)
+	} else if ip := pod.Annotations[conversion.AnnotationPodIP]; ip != "" {
+		log.WithField("ip", ip).Debug("No PodStatus IPs, use Calico singular annotation")
+		podIPs = append(podIPs, ip)
+	} else {
+		log.Debug("Pod has no IP")
+		return nil, nil
+	}
+	var podIPNets []*cnet.IPNet
+	for _, ip := range podIPs {
+		_, ipNet, err := cnet.ParseCIDROrIP(ip)
+		if err != nil {
+			log.WithFields(log.Fields{"ip": ip, "pod": pod.Name}).WithError(err).Error("Failed to parse pod IP")
+			return nil, err
+		}
+		podIPNets = append(podIPNets, ipNet)
+	}
+	return podIPNets, nil
 }
 
 // resourceAdded implements the resourceHandler interface.

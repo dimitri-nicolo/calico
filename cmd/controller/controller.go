@@ -29,18 +29,10 @@ const (
 var ver bool
 
 func init() {
-	// Tell glog (used by client-go) to log into STDERR. Otherwise, we risk
-	// certain kinds of API errors getting logged into a directory not
-	// available in a `FROM scratch` Docker container, causing glog to abort
-	err := flag.Set("logtostderr", "true")
-	if err != nil {
-		log.WithError(err).Fatal("Failed to set logging configuration")
-	}
-
-	// Also tell klog to log to STDERR.
-	var flags flag.FlagSet
-	klog.InitFlags(&flags)
-	err = flags.Set("logtostderr", "true")
+	// Tell klog to log into STDERR.
+	var sflags flag.FlagSet
+	klog.InitFlags(&sflags)
+	err := sflags.Set("logtostderr", "true")
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set logging configuration")
 	}
