@@ -108,21 +108,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
@@ -300,21 +288,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
@@ -430,7 +406,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
 						UpdateType: api.UpdateTypeKVNew,
@@ -455,18 +431,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 					},
 				})
 
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						},
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
@@ -737,21 +701,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
@@ -901,21 +853,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
@@ -1104,21 +1044,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
-				for _, r := range defaultKubernetesResource {
+				for _, r := range defaultKubernetesResource() {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
-							Value: &model.ProfileRules{
-								InboundRules:  nil,
-								OutboundRules: nil,
-							},
-						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}

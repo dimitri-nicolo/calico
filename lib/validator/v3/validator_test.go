@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,6 +64,7 @@ func init() {
 
 	protoTCP := numorstring.ProtocolFromString("TCP")
 	protoUDP := numorstring.ProtocolFromString("UDP")
+	protoSCTP := numorstring.ProtocolFromString("SCTP")
 	protoNumeric := numorstring.ProtocolFromInt(123)
 
 	as61234, _ := numorstring.ASNumberFromString("61234")
@@ -139,6 +140,11 @@ func init() {
 		Entry("should accept EndpointPort with udp protocol", api.EndpointPort{
 			Name:     "a-valid-port",
 			Protocol: protoUDP,
+			Port:     1234,
+		}, true),
+		Entry("should accept EndpointPort with sctp protocol", api.EndpointPort{
+			Name:     "a-valid-port",
+			Protocol: protoSCTP,
 			Port:     1234,
 		}, true),
 		Entry("should reject EndpointPort with empty name", api.EndpointPort{
@@ -484,6 +490,7 @@ func init() {
 		// (API) ProtoPort.
 		Entry("should accept ProtoPort.Protocol: UDP", api.ProtoPort{Protocol: "UDP", Port: 0}, true),
 		Entry("should accept ProtoPort.Protocol: TCP", api.ProtoPort{Protocol: "TCP", Port: 20}, true),
+		Entry("should accept ProtoPort.Protocol: SCTP", api.ProtoPort{Protocol: "SCTP", Port: 20}, true),
 		Entry("should reject random ProtoPort.Protocol", api.ProtoPort{Protocol: "jolly-UDP", Port: 0}, false),
 
 		// (API) Selectors.  Selectors themselves are thoroughly UT'd so only need to test simple
@@ -1177,14 +1184,14 @@ func init() {
 					NotPorts: []numorstring.Port{numorstring.SinglePort(1)},
 				},
 			}, false),
-		Entry("should reject Rule with dest ports and protocol type tcp",
+		Entry("should allow Rule with dest ports and protocol type sctp",
 			api.Rule{
 				Action:   "Allow",
 				Protocol: protocolFromString("SCTP"),
 				Destination: api.EntityRule{
 					Ports: []numorstring.Port{numorstring.SinglePort(1)},
 				},
-			}, false),
+			}, true),
 		Entry("should reject Rule with dest !ports and protocol type udp",
 			api.Rule{
 				Action:    "Allow",
@@ -1439,6 +1446,16 @@ func init() {
 				Destination: api.EntityRule{
 					Domains: []string{"*example.com"},
 				},
+			}, false),
+		Entry("should accept Rule with valid annotations",
+			api.Rule{
+				Action:   "Allow",
+				Metadata: &api.RuleMetadata{Annotations: map[string]string{"foo": "bar"}},
+			}, true),
+		Entry("should reject Rule with invalid annotations",
+			api.Rule{
+				Action:   "Allow",
+				Metadata: &api.RuleMetadata{Annotations: map[string]string{"...": "bar"}},
 			}, false),
 
 		// (API) BGPPeerSpec

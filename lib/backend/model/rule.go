@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,11 +81,17 @@ type Rule struct {
 	HTTPMatch *HTTPMatch `json:"http,omitempty" validate:"omitempty"`
 
 	LogPrefix string `json:"log_prefix,omitempty" validate:"omitempty"`
+
+	Metadata *RuleMetadata `json:"metadata,omitempty" validate:"omitempty"`
 }
 
 type HTTPMatch struct {
 	Methods []string         `json:"methods,omitempty" validate:"omitempty"`
 	Paths   []apiv3.HTTPPath `json:"paths,omitempty" validate:"omitempty"`
+}
+
+type RuleMetadata struct {
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 func combineNets(n *net.IPNet, nets []*net.IPNet) []*net.IPNet {

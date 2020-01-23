@@ -1,4 +1,4 @@
-// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -290,11 +290,8 @@ var _ = testutils.E2eDatastoreDescribe("Node tests (etcdv3)", testutils.Datastor
 			Expect(err).ShouldNot(HaveOccurred())
 
 			nodeConfigName := fmt.Sprintf("node.%s", name1)
-			pTrue := true
 			felixConf := apiv3.FelixConfiguration{
-				Spec: apiv3.FelixConfigurationSpec{
-					IgnoreLooseRPF: &pTrue,
-				},
+				Spec: apiv3.FelixConfigurationSpec{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: nodeConfigName,
 				},

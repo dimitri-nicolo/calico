@@ -194,6 +194,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec":                    schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                        schema_libcalico_go_lib_apis_v3_ResourceID(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                              schema_libcalico_go_lib_apis_v3_Rule(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata":                      schema_libcalico_go_lib_apis_v3_RuleMetadata(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch":               schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock":             schema_libcalico_go_lib_apis_v3_ServiceClusterIPBlock(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock":            schema_libcalico_go_lib_apis_v3_ServiceExternalIPBlock(ref),
@@ -3994,12 +3995,6 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						},
 					},
 					"ipv6Support": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
-						},
-					},
-					"ignoreLooseRPF": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"boolean"},
 							Format: "",
@@ -8725,12 +8720,45 @@ func schema_libcalico_go_lib_apis_v3_Rule(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch"),
 						},
 					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Metadata contains additional information for this rule",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata"),
+						},
+					},
 				},
 				Required: []string{"action"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_RuleMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a set of key value pairs that give extra information about the rule",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -220,6 +220,14 @@ func RuleAPIV2ToBackend(ar apiv3.Rule, ns string, matchSGs bool) model.Rule {
 	}
 	if ar.HTTP != nil {
 		r.HTTPMatch = &model.HTTPMatch{Methods: ar.HTTP.Methods, Paths: ar.HTTP.Paths}
+	}
+	if ar.Metadata != nil {
+		if ar.Metadata.Annotations != nil {
+			r.Metadata = &model.RuleMetadata{Annotations: make(map[string]string)}
+			for k, v := range ar.Metadata.Annotations {
+				r.Metadata.Annotations[k] = v
+			}
+		}
 	}
 	return r
 }

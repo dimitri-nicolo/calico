@@ -1,6 +1,6 @@
 module github.com/projectcalico/libcalico-go
 
-go 1.13
+go 1.12
 
 require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
@@ -19,7 +19,7 @@ require (
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/gopacket v1.1.17
 	github.com/gorilla/websocket v1.4.1 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.1 // indirect
 	github.com/huandu/xstrings v0.0.0-20180906151751-8bbcf2f9ccb5 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
@@ -29,7 +29,6 @@ require (
 	github.com/mailru/easyjson v0.7.0 // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v1.0.0
@@ -38,13 +37,10 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
-	go.uber.org/atomic v1.3.2 // indirect
-	go.uber.org/multierr v1.1.0 // indirect
-	go.uber.org/zap v1.10.0 // indirect
+	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
