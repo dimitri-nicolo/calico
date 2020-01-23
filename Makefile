@@ -53,6 +53,11 @@ K8S_VERSION     		?= v1.11.3
 ETCD_VERSION			?= v3.3.7
 KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 
+# Override VALIDARCHES inferenced in common Makefile.
+#   This repo differs in how ARCHES are determined compared to common logic.
+#   overriding the value with the only platform supported ATM.
+VALIDARCHES = amd64
+
 BUILD_IMAGE_SERVER=tigera/compliance-server
 BUILD_IMAGE_CONTROLLER=tigera/compliance-controller
 BUILD_IMAGE_SNAPSHOTTER=tigera/compliance-snapshotter
