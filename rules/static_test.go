@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -208,6 +208,10 @@ var _ = Describe("Static", func() {
 							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&Chain{
 								Name: "cali-INPUT",
 								Rules: []Rule{
+									//DNS response capture.
+									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+
 									// Forward check chain.
 									{Action: ClearMarkAction{Mark: conf.IptablesMarkEndpoint}},
 									{Action: JumpAction{Target: ChainForwardCheck}},
@@ -239,6 +243,10 @@ var _ = Describe("Static", func() {
 							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&Chain{
 								Name: "cali-INPUT",
 								Rules: []Rule{
+									//DNS response capture.
+									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+
 									// Per-prefix workload jump rules.  Note use of goto so that we
 									// don't return here.
 									{Match: Match().InInterface("cali+"),
