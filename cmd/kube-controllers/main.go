@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
+
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 
 	"k8s.io/client-go/rest"
@@ -227,6 +229,21 @@ func main() {
 				threadiness:    config.FederatedServicesWorkers,
 			}
 			controllerCtrl.needLicenseMonitoring = true
+		case "elasticsearchconfiguration":
+			kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
+			if err != nil {
+				log.WithError(err).Fatal("failed to build kubernetes client config")
+			}
+
+			esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
+			if err != nil {
+				log.WithError(err).Fatal("failed to build elasticsearch rest client")
+			}
+
+			controllerCtrl.controllerStates["ElasticsearchConfiguration"] = &controllerState{
+				threadiness: config.ManagedClusterWorkers,
+				controller:  elasticsearchconfiguration.New("cluster", resource.ElasticsearchServiceURL, k8sClientset, k8sClientset, esK8sREST, true),
+			}
 		case "managedcluster":
 			// We only want these clients created if the managedcluster controller type is enabled
 			kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
