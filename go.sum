@@ -486,6 +486,7 @@ github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.0 h1:XPnZz8VVBHjVsy1vzJmRwIcSwiUO+JFfrv/xGiigmME=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/onsi/gomega v1.7.1 h1:K0jcRCwNQM3vFGh1ppMtDh/+7ApJrjldlX8fA0jDTLQ=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
 github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/opencontainers/image-spec v1.0.1/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
@@ -636,6 +637,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364 h1:HG5
 github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364/go.mod h1:UOFusdYkBaG14sNhTTB+PIa69AjFBE15rJ1XLnoqr8E=
 github.com/tigera/libcalico-go-private v0.0.0-20200110190915-9fa812d46e44 h1:3C0j9dQBeNKmS/SAhE8auqOAF/uX5dlGmQ/VkdO7sRE=
 github.com/tigera/libcalico-go-private v0.0.0-20200110190915-9fa812d46e44/go.mod h1:y4IBhanJZXJSHFZ6vZx6Fz//lbB97t5bL8VdYCANYyA=
+github.com/tigera/libcalico-go-private v0.0.0-20200123005450-6c8457330ec4 h1:vuTNoTZdrjjfHBSOcSBRFrHy8OTO53U6D1yiGW1W0Gw=
+github.com/tigera/libcalico-go-private v0.0.0-20200123005450-6c8457330ec4/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac h1:QrcDEIylqNTKsjVMeRxvU9YyyxNMc6CKHH+MWRHCKcU=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
@@ -649,6 +652,8 @@ github.com/tigera/lma v0.0.0-20191120195944-af590c01bfe8 h1:1Cttl4FnWfROFN1cTTh1
 github.com/tigera/lma v0.0.0-20191120195944-af590c01bfe8/go.mod h1:XXPshLkLWp66xn4bPtkvc9pv3HNgN1JZqfl9Tdf0p6I=
 github.com/tigera/lma v0.0.0-20200121231925-5e7b0ccdd0b0 h1:gQK8Oym3oMx/QkJlKQsMdn04N9tIC9s1PE1niAk1qcY=
 github.com/tigera/lma v0.0.0-20200121231925-5e7b0ccdd0b0/go.mod h1:6VP1bacOKX0O9mrz1ONW4VBcimgIMHY9a62sfzqUKQo=
+github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8 h1:035F6xYUd786wnylIEsdiMzaKVhZ17k5pWtVONXD34c=
+github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8/go.mod h1:OHcY7YcS7IXUd2hTFGqAUns2qzyfe7V4lNUbjfR+CLg=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
@@ -685,10 +690,14 @@ go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.uber.org/atomic v0.0.0-20181018215023-8dc6146f7569/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
+go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
 go.uber.org/multierr v0.0.0-20180122172545-ddea229ff1df/go.mod h1:wR5kodmAFQ0UK8QlbwjlSNy0Z68gJhDJUG5sjR94q/0=
 go.uber.org/multierr v1.1.0/go.mod h1:wR5kodmAFQ0UK8QlbwjlSNy0Z68gJhDJUG5sjR94q/0=
+go.uber.org/multierr v1.3.0/go.mod h1:VgVr7evmIr6uPjLBxg28wmKNXyqE9akIJ5XnfpiKl+4=
+go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee/go.mod h1:vJERXedbb3MVM5f9Ejo0C68/HhF8uaILCdgjnY+goOA=
 go.uber.org/zap v0.0.0-20180814183419-67bc79d13d15/go.mod h1:vwi/ZaCAaUcBkycHslxD9B2zi4UTXhF60s6SWpuDF0Q=
 go.uber.org/zap v1.10.0/go.mod h1:vwi/ZaCAaUcBkycHslxD9B2zi4UTXhF60s6SWpuDF0Q=
+go.uber.org/zap v1.13.0/go.mod h1:zwrFLgMcdUuIBviXEYEH1YKNaOBnKXsx2IPda5bBwHM=
 golang.org/x/crypto v0.0.0-20180426230345-b49d69b5da94/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
@@ -717,6 +726,7 @@ golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvx
 golang.org/x/lint v0.0.0-20190301231843-5614ed5bae6f/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
 golang.org/x/lint v0.0.0-20190409202823-959b441ac422/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
+golang.org/x/lint v0.0.0-20190930215403-16217165b5de/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
 golang.org/x/mobile v0.0.0-20190312151609-d3739f865fa6/go.mod h1:z+o9i4GpDbdi3rU15maQ/Ox0txvL9dWGYEHz965HBQE=
 golang.org/x/mod v0.0.0-20190513183733-4bf6d317e70e/go.mod h1:mXi4GBBbnImb6dmsKGUJ2LatrhH/nqhxcFungHvyanc=
 golang.org/x/net v0.0.0-20170114055629-f2499483f923/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
@@ -819,6 +829,8 @@ golang.org/x/tools v0.0.0-20190614205625-5aca471b1d59/go.mod h1:/rFqwRUd4F7ZHNgw
 golang.org/x/tools v0.0.0-20190617190820-da514acc4774/go.mod h1:/rFqwRUd4F7ZHNgwSSTFct+R/Kf4OFW1sUzUTQQTgfc=
 golang.org/x/tools v0.0.0-20190621195816-6e04913cbbac/go.mod h1:/rFqwRUd4F7ZHNgwSSTFct+R/Kf4OFW1sUzUTQQTgfc=
 golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+golang.org/x/tools v0.0.0-20191029041327-9cc4af7d6b2c/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+golang.org/x/tools v0.0.0-20191029190741-b9c20aec41a5/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/tools v0.0.0-20191211233649-dfebd2802ad3/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 gonum.org/v1/gonum v0.0.0-20190331200053-3d26580ed485/go.mod h1:2ltnJ7xHfj0zHS40VVPYEAAMTa3ZGguvHGBSJeRWqE0=
@@ -906,6 +918,7 @@ honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.2/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
+honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 k8s.io/api v0.0.0-20180628040859-072894a440bd h1:HzgYeLDS1jLxw8DGr68KJh9cdQ5iZJizG0HZWstIhfQ=
 k8s.io/api v0.0.0-20180628040859-072894a440bd/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/api v0.0.0-20191114100352-16d7abae0d2a h1:86XISgFlG7lPOWj6wYLxd+xqhhVt/WQjS4Tf39rP09s=
