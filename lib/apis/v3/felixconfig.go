@@ -410,9 +410,11 @@ type FelixConfigurationSpec struct {
 	// This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.
 	FlowLogsAggregationThresholdBytes *int `json:"flowLogsAggregationThresholdBytes,omitempty"`
 
-	// The DNS servers that Felix should trust. Each entry here must be an IP, or "k8s-service:<name>",
-	// where <name> is the name of a Kubernetes Service in the "kube-system" namespace. [Default:
-	// "k8s-service:kube-dns"].
+	// The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an
+	// explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS
+	// service. `<port>` defaults to the first service port, or 53 for an IP, and `<namespace>` to
+	// `kube-system`. Note that Felix (calico-node) will need RBAC permission to read the details of each
+	// service specified by a `k8s-service:...` form. [Default: "k8s-service:kube-dns"].
 	DNSTrustedServers *[]string `json:"dnsTrustedServers,omitempty"`
 	// The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default:
 	// "/var/run/calico/felix-dns-cache.txt"].
