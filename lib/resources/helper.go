@@ -67,6 +67,7 @@ type ResourceHelper interface {
 	GetAuditEventsSelection() *apiv3.AuditEventsSelection
 	IsNamespaced() bool
 	IsTieredPolicy() bool
+	Group() string
 }
 
 // GetTypeMeta extracts the group version kind from the resource unless
@@ -175,6 +176,11 @@ func (h *resourceHelper) RbacPlural() string {
 		return "tier." + h.plural
 	}
 	return h.plural
+}
+
+func (h *resourceHelper) Group() string {
+	tm := &h.tm
+	return tm.GroupVersionKind().Group
 }
 
 func (h *resourceHelper) getAuditResources() []apiv3.AuditResource {
