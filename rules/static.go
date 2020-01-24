@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -207,6 +207,15 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *Chai
 
 func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
+
+	// Snoop DNS responses to a client directly on this host (e.g. bare metal, or a
+	// host-networked workload).  Place this first as it only snoops and does not accept or
+	// drop.  There are cases where we can snoop some DNS info and the packet is then dropped,
+	// e.g. because of host endpoint ingress policy.  However we are still filtering on trusted
+	// DNS servers, so the DNS info is trustworthy even if the packet gets dropped later by
+	// policy.  Also, if we placed this after host endpoint policy processing, we might be too
+	// late because of the packet already having been accepted.
+	inputRules = append(inputRules, r.dnsSnoopingRules("", ipVersion)...)
 
 	if ipVersion == 4 && r.IPIPEnabled {
 		// IPIP is enabled, filter incoming IPIP packets to ensure they come from a
@@ -572,9 +581,17 @@ func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint
 		if (ipVersion == 6) && !strings.Contains(serverIP, ":") {
 			continue
 		}
+		var baseMatch MatchCriteria
+		if ifaceMatch != "" {
+			// Forwarding to a local workload: match on workload prefix.
+			baseMatch = Match().OutInterface(ifaceMatch)
+		} else {
+			// Response directly to the local host, so there is no outgoing interface.
+			baseMatch = Match()
+		}
 		rules = append(rules,
 			Rule{
-				Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
+				Match: baseMatch.Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
 				Action: NflogAction{
 					Group:       NFLOGDomainGroup,
 					Prefix:      "DNS",
