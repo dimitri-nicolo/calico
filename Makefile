@@ -400,7 +400,7 @@ define update_replace_pin
 
 	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
 		if [ ! -z "$(new_ver)" ]; then \
-			$(GIT_CONFIG_SSH) \
+			$(GIT_CONFIG_SSH); \
 			go mod edit -replace $(1)=$(2)@$(new_ver); \
 			go mod download; \
 		fi'
