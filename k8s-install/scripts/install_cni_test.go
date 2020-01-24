@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -182,6 +182,7 @@ var _ = Describe("install-cni.sh tests", func() {
 		It("should use CNI_NETWORK_CONFIG", func() {
 			err := runCniContainer(
 				"-e", "CNI_NETWORK_CONFIG=filecontents",
+				"-e", "SKIP_DATASTORE_CONNECTION_CHECK=true",
 			)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -194,6 +195,7 @@ var _ = Describe("install-cni.sh tests", func() {
 			err := runCniContainer(
 				"-e", "CNI_NETWORK_CONFIG='oops, I used the CNI_NETWORK_CONFIG'",
 				"-e", "CNI_NETWORK_CONFIG_FILE=/template/calico.conf.alternate",
+				"-e", "SKIP_DATASTORE_CONNECTION_CHECK=true",
 			)
 			Expect(err).NotTo(HaveOccurred())
 
