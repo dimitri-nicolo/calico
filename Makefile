@@ -489,7 +489,15 @@ st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd ca
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download static-checks ut fv image-all build-windows-archive st
+ci: clean mod-download static-checks ut fv check-dirty image-all build-windows-archive
+
+## Check if generated image is dirty
+.PHONY: check-dirty
+check-dirty:
+	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty."; \
+	  false; \
+	fi
 
 ## Deploys images to registry
 cd:
