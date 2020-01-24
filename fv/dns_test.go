@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -85,6 +85,26 @@ var _ = Describe("DNS Policy", func() {
 		Consistently(wgetMicrosoftErr, "4s", "1s").Should(HaveOccurred())
 	}
 
+	hostWgetMicrosoftErr := func() error {
+		// Need to allow a timeout of more than 1 second here so that wget has time for the
+		// initial TCP connection packet at t=0s and the first retry packet at t=1s.  Note
+		// that wget on the host needs "-t 1" to prevent it from retrying for a long time
+		// (around 10 minutes!).
+		out, err := felix.ExecCombinedOutput("wget", "-T", "2", "-t", "1", "microsoft.com")
+		log.WithError(err).Infof("wget said:\n%v", out)
+		return err
+	}
+
+	hostCanWgetMicrosoft := func() {
+		Eventually(hostWgetMicrosoftErr, "10s", "1s").ShouldNot(HaveOccurred())
+		Consistently(hostWgetMicrosoftErr, "4s", "1s").ShouldNot(HaveOccurred())
+	}
+
+	hostCannotWgetMicrosoft := func() {
+		Eventually(hostWgetMicrosoftErr, "10s", "1s").Should(HaveOccurred())
+		Consistently(hostWgetMicrosoftErr, "4s", "1s").Should(HaveOccurred())
+	}
+
 	Context("with save file in initially non-existent directory", func() {
 		BeforeEach(func() {
 			saveFile = "/a/b/c/d/e/dnsinfo.txt"
@@ -100,6 +120,32 @@ var _ = Describe("DNS Policy", func() {
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()
+		})
+
+		It("should emit DNS logs", func() {
+			logFile := path.Join(dnsDir, "dns.log")
+			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
+			logs, err := ioutil.ReadFile(logFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
+			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
+		})
+
+		Context("with DNS logs disabled", func() {
+			BeforeEach(func() {
+				enableLogs = false
+			})
+
+			It("should not emit DNS logs", func() {
+				Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
+			})
+		})
+	})
+
+	Context("after host wget microsoft.com", func() {
+		JustBeforeEach(func() {
+			time.Sleep(time.Second)
+			hostCanWgetMicrosoft()
 		})
 
 		It("should emit DNS logs", func() {
@@ -186,6 +232,10 @@ var _ = Describe("DNS Policy", func() {
 		canWgetMicrosoft()
 	})
 
+	It("host can wget microsoft.com", func() {
+		hostCanWgetMicrosoft()
+	})
+
 	Context("with default-deny egress policy", func() {
 		JustBeforeEach(func() {
 			policy := api.NewGlobalNetworkPolicy()
@@ -202,30 +252,60 @@ var _ = Describe("DNS Policy", func() {
 			cannotWgetMicrosoft()
 		})
 
-		Context("with domain-allow egress policy", func() {
+		// There's no HostEndpoint yet, so the policy doesn't affect the host.
+		It("host can wget microsoft.com", func() {
+			hostCanWgetMicrosoft()
+		})
+
+		configureGNPAllowToMicrosoft := func() {
+			policy := api.NewGlobalNetworkPolicy()
+			policy.Name = "allow-microsoft"
+			order := float64(20)
+			policy.Spec.Order = &order
+			policy.Spec.Selector = "all()"
+			udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+			policy.Spec.Egress = []api.Rule{
+				{
+					Action:      api.Allow,
+					Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+				},
+				{
+					Action:   api.Allow,
+					Protocol: &udp,
+					Destination: api.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(53)},
+					},
+				},
+			}
+			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		Context("with HostEndpoint", func() {
 			JustBeforeEach(func() {
-				policy := api.NewGlobalNetworkPolicy()
-				policy.Name = "allow-microsoft"
-				order := float64(20)
-				policy.Spec.Order = &order
-				policy.Spec.Selector = "all()"
-				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
-					{
-						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &udp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
-						},
-					},
-				}
-				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				hep := api.NewHostEndpoint()
+				hep.Name = "hep-1"
+				hep.Spec.Node = felix.Hostname
+				hep.Spec.InterfaceName = "eth0"
+				_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			It("host cannot wget microsoft.com", func() {
+				hostCannotWgetMicrosoft()
+			})
+
+			Context("with domain-allow egress policy", func() {
+				JustBeforeEach(configureGNPAllowToMicrosoft)
+
+				It("host can wget microsoft.com", func() {
+					hostCanWgetMicrosoft()
+				})
+			})
+		})
+
+		Context("with domain-allow egress policy", func() {
+			JustBeforeEach(configureGNPAllowToMicrosoft)
 
 			It("can wget microsoft.com", func() {
 				canWgetMicrosoft()

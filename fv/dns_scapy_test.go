@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -159,6 +159,8 @@ var _ = Describe("DNS Policy", func() {
 		// Establish conntrack state, in Felix, as though the workload just sent a DNS
 		// request to the specified scapy.
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+		// Wait a second here to allow time for the conntrack state to be established.
+		time.Sleep(time.Second)
 
 		// Allow scapy to route back to the workload.
 		io.WriteString(scapy.Stdin,
@@ -624,8 +626,11 @@ var _ = Describe("DNS Policy with server on host", func() {
 
 	dnsServerSetup := func(scapy *containers.Container) {
 		// Establish conntrack state, in Felix, as though the workload just sent a DNS
-		// request to the specified scapy.
+		// request to the specified scapy.  Note that for this group of tests, scapy shares
+		// Felix's namespace and so has the same IP as Felix.
 		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+		// Wait a second here to allow time for the conntrack state to be established.
+		time.Sleep(time.Second)
 	}
 
 	sendDNSResponses := func(scapy *containers.Container, dnsSpecs []string) {
