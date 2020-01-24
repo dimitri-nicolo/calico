@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ func (r *requestCache) GetIPSet(ipset string) policystore.IPSet {
 func parseSpiffeID(id string) (peer peer, err error) {
 	if id == "" {
 		log.Debug("empty spiffe/plain text request.")
-		//assume this is plain text.
+		// Assume this is plain text.
 		return peer, nil
 	}
 	// Init the regexp the first time this is called, and store it in the package namespace.
