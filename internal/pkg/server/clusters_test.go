@@ -29,6 +29,7 @@ var _ = Describe("Clusters", func() {
 			return nil
 		},
 		watchAdded: true,
+		k8sCLI:     k8sAPI,
 	}
 
 	var wg sync.WaitGroup
@@ -42,7 +43,7 @@ var _ = Describe("Clusters", func() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				clusters.watchK8s(ctx, k8sAPI, nil)
+				clusters.watchK8s(ctx, nil)
 			}()
 		})
 
@@ -70,7 +71,7 @@ var _ = Describe("Clusters", func() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				clusters.watchK8s(ctx, k8sAPI, nil)
+				clusters.watchK8s(ctx, nil)
 			}()
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
@@ -89,7 +90,7 @@ var _ = Describe("Clusters", func() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				clusters.watchK8s(ctx, k8sAPI, nil)
+				clusters.watchK8s(ctx, nil)
 			}()
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(0))
 		})

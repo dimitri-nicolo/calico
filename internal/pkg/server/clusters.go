@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"github.com/pkg/errors"
@@ -28,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	apiv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/pkg/tunnel"
 )
@@ -47,6 +48,8 @@ type cluster struct {
 	cert *x509.Certificate
 	key  crypto.Signer
 
+	k8sCLI K8sInterface
+
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool
 	defaultForwardServerName        string
@@ -64,6 +67,8 @@ type clusters struct {
 	renderManifest manifestRenderer
 
 	watchAdded bool
+
+	k8sCLI K8sInterface
 
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool
@@ -88,12 +93,23 @@ func returnManifests(w http.ResponseWriter, manifest io.Reader) error {
 	return err
 }
 
-func (cs *clusters) add(id string, c *cluster) error {
-	if cs.clusters[id] != nil {
-		return errors.Errorf("cluster id %q already exists", id)
+func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
+	if cs.clusters[mc.ID] != nil {
+		return nil, errors.Errorf("cluster id %q already exists", mc.ID)
 	}
-	cs.clusters[id] = c
-	return nil
+
+	c := &cluster{
+		ManagedCluster:                  *mc,
+		forwardingEnabled:               cs.forwardingEnabled,
+		defaultForwardServerName:        cs.defaultForwardServerName,
+		defaultForwardDialRetryAttempts: cs.defaultForwardDialRetryAttempts,
+		defaultForwardDialRetryInterval: cs.defaultForwardDialRetryInterval,
+		tunnelManager:                   tunnelmgr.NewManager(),
+		k8sCLI:                          cs.k8sCLI,
+	}
+
+	cs.clusters[mc.ID] = c
+	return c, nil
 }
 
 // List all clusters in sorted order by ID field (which is the resource name)
@@ -131,20 +147,16 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 		return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
 	}
 
-	c := &cluster{
-		ManagedCluster:                  *mc,
-		cert:                            cert,
-		forwardingEnabled:               cs.forwardingEnabled,
-		defaultForwardServerName:        cs.defaultForwardServerName,
-		defaultForwardDialRetryAttempts: cs.defaultForwardDialRetryAttempts,
-		defaultForwardDialRetryInterval: cs.defaultForwardDialRetryInterval,
-		tunnelManager:                   tunnelmgr.NewManager(),
+	c, err := cs.add(mc)
+	if err != nil {
+		return nil, err
 	}
+
+	c.cert = cert
 	if cs.keepKeys {
 		c.key = key
 	}
 
-	cs.add(mc.ID, c)
 	err = cs.renderManifest(resp, cert, key)
 	if err != nil {
 		return nil, errors.WithMessage(err, "could not renderer manifest")
@@ -155,18 +167,9 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 
 func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
 	log.Infof("Recovering cluster ID: %q", mc.ID)
-	c := &cluster{
-		ManagedCluster:                  *mc,
-		forwardingEnabled:               cs.forwardingEnabled,
-		defaultForwardServerName:        cs.defaultForwardServerName,
-		defaultForwardDialRetryAttempts: cs.defaultForwardDialRetryAttempts,
-		defaultForwardDialRetryInterval: cs.defaultForwardDialRetryInterval,
-		tunnelManager:                   tunnelmgr.NewManager(),
-	}
 
-	cs.add(mc.ID, c)
-
-	return nil
+	_, err := cs.add(mc)
+	return err
 }
 
 func (cs *clusters) update(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
@@ -386,9 +389,8 @@ func (cs *clusters) get(id string) *cluster {
 	return cs.clusters[id]
 }
 
-func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
-	syncC chan<- error, last string) error {
-	watcher, err := k8s.ManagedClusters().Watch(metav1.ListOptions{
+func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
+	watcher, err := cs.k8sCLI.ManagedClusters().Watch(metav1.ListOptions{
 		ResourceVersion: last,
 	})
 	if err != nil {
@@ -444,8 +446,8 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
 	}
 }
 
-func (cs *clusters) resyncWithK8s(ctx context.Context, k8s K8sInterface) (string, error) {
-	list, err := k8s.ManagedClusters().List(metav1.ListOptions{})
+func (cs *clusters) resyncWithK8s(ctx context.Context) (string, error) {
+	list, err := cs.k8sCLI.ManagedClusters().List(metav1.ListOptions{})
 	if err != nil {
 		return "", errors.Errorf("failed to get k8s list: %s", err)
 	}
@@ -485,11 +487,11 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, k8s K8sInterface) (string
 	return list.ListMeta.ResourceVersion, nil
 }
 
-func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<- error) error {
+func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
 	for {
-		last, err := cs.resyncWithK8s(ctx, k8s)
+		last, err := cs.resyncWithK8s(ctx)
 		if err == nil {
-			err = cs.watchK8sFrom(ctx, k8s, syncC, last)
+			err = cs.watchK8sFrom(ctx, syncC, last)
 			if err != nil {
 				err = errors.WithMessage(err, "k8s watch failed")
 			}
@@ -516,6 +518,9 @@ func (c *cluster) checkTunnelState() {
 		log.WithError(err).Error("an error occurred closing the tunnel")
 	}
 
+	if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueFalse); err != nil {
+		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
+	}
 	log.Errorf("Cluster %s tunnel is broken (%s), deleted", c.ID, err)
 }
 
@@ -592,8 +597,47 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 			log.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
+	if err := c.setConnectedStatus(calicov3.ManagedClusterStatusValueTrue); err != nil {
+		log.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
+	}
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
 	go c.checkTunnelState()
+
+	return nil
+}
+
+// setConnectedStatus updates the MangedClusterConnected condition of this cluster's ManagedCluster CR.
+func (c *cluster) setConnectedStatus(status calicov3.ManagedClusterStatusValue) error {
+	mc, err := c.k8sCLI.ManagedClusters().Get(c.ID, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	var updatedConditions []calicov3.ManagedClusterStatusCondition
+
+	connectedConditionFound := false
+	for _, c := range mc.Status.Conditions {
+		if c.Type == calicov3.ManagedClusterStatusTypeConnected {
+			c.Status = status
+			connectedConditionFound = true
+		}
+		updatedConditions = append(updatedConditions, c)
+	}
+
+	if !connectedConditionFound {
+		updatedConditions = append(updatedConditions, calicov3.ManagedClusterStatusCondition{
+			Type:   calicov3.ManagedClusterStatusTypeConnected,
+			Status: status,
+		})
+	}
+
+	mc.Status.Conditions = updatedConditions
+
+	_, err = c.k8sCLI.ManagedClusters().Update(mc)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
