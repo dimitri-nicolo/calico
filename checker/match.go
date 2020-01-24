@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -134,10 +134,10 @@ func matchServiceAccounts(saMatch *proto.ServiceAccountMatch, p peer) bool {
 		log.Debug("nil ServiceAccountMatch.  Return true.")
 		return true
 	}
-	//in case of plain text, Dikastes falls back on IP addresses. In such a case
-	//service account is empty as there is no such information in the authorization header.
-	//In case of plain text so Dikastes only matches if the IP addresses are part of
-	//IP sets of a policy rule. So empty service account is considered a match in such a case.
+	// In case of plain text, Dikastes falls back on IP addresses. In such a case
+	// service account is empty as there is no such information in the authorization header.
+	// In case of plain text so Dikastes only matches if the IP addresses are part of
+	// IP sets of a policy rule. So empty service account is considered a match in such a case.
 	return p.Name == "" ||
 		(matchName(saMatch.GetNames(), p.Name) &&
 			matchLabels(saMatch.GetSelector(), p.Labels))
@@ -180,10 +180,10 @@ func matchNamespace(nsMatch *namespaceMatch, ns namespace) bool {
 		"labels":    ns.Labels,
 		"rule":      nsMatch},
 	).Debug("Matching namespace.")
-	//in case of plain text, Dikastes falls back on IP addresses. In such a case
-	//namespace is empty as there is no such information in the authorization header.
-	//In case of plain text so Dikastes only matches if the IP addresses are part of
-	//IP sets of a policy rule. So empty namespace is considered a match in such a case.
+	// In case of plain text, Dikastes falls back on IP addresses. In such a case
+	// namespace is empty as there is no such information in the authorization header.
+	// In case of plain text so Dikastes only matches if the IP addresses are part of
+	// IP sets of a policy rule. So empty namespace is considered a match in such a case.
 	return ns.Name == "" ||
 		(matchName(nsMatch.Names, ns.Name) &&
 			matchLabels(nsMatch.Selector, ns.Labels))
