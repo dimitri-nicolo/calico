@@ -15,14 +15,16 @@ Honeypod may be used to detect resources enumeration, privilege escalation, data
 * Clusterolebinding: tigera-internal-binding
 * Clusterole: tigera-internal-role
 
-## Demo Installation
+## Prerequisite
 0. Ensure Calico Enterprise version 2.6+ is installed
+1. Access to gcr.io/tigera-dev pull secret file
+
+## Demo Installation
 1. `kubectl apply -f honeypod\_sample\_setup.yaml`
 2. `kubectl create secret -n tigera-internal generic tigera-pull-secret \
     --from-file=.dockerconfigjson=<PATH/TO/PULL/SECRET> --type=kubernetes.io/dockerconfigjson'
 
 ## Installation
-0. Ensure Calico Enterprise version 2.6+ is installed
 1. `kubectl apply -f common/common.yaml`
 2. `kubectl create secret -n tigera-internal generic tigera-pull-secret \
     --from-file=.dockerconfigjson=<PATH/TO/PULL/SECRET> --type=kubernetes.io/dockerconfigjson'
@@ -39,5 +41,5 @@ We currently have several Honeypod deployments that can be used to detect differ
   * By not setting a service, the pod can only be reach locally (adjecant pods within same subnet).
 * Exposed Service (nginx)
   * Expose a nginx service that serves a generic page. The pod can be discovered via clusterip or DNS lookup.
-* Vulnerable Service (mysql)
+* Vulnerable Service (MySQL)
   * Expose a SQL service that contains an empty database with easy (root, no password) access. The pod can be discovered via clusterip or DNS lookup.

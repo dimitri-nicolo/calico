@@ -8,7 +8,7 @@ while true; do
 	# We nmap the ports of the running hosts
 	export PORT_LIST=$(nmap -Pn $HOST_LIST)
 	echo $PORT_LIST
-        curl https://tigera-dashboard-internal-service.tigera-internal.svc.cluster.local -kL
+	curl https://tigera-dashboard-internal-service.tigera-internal.svc.cluster.local -kL
 	curl http://tigera-dashboard-internal-debug.tigera-internal.svc.cluster.local:8888
 	curl http://tigera-internal-backend.tigera-internal.svc.cluster.local:3306
 	nmap -Pn --script=mysql-enum tigera-internal-backend.tigera-internal.svc.cluster.local

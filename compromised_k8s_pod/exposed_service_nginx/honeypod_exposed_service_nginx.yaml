@@ -56,7 +56,7 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-3
 spec:
-  description: "[Honeypod] Fake Debug Service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
+  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
