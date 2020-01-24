@@ -257,7 +257,15 @@ tests/fv/fv.test: $(LOCAL_BUILD_DEP) $(shell find ./tests -type f -name '*.go' -
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download image-all static-checks ut fv
+ci: clean mod-download static-checks ut fv check-dirty image-all
+
+## Check if generated image is dirty
+.PHONY: check-dirty
+check-dirty:
+	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty."; \
+	  false; \
+	fi
 
 ###############################################################################
 # CD

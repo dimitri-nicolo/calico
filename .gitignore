@@ -17,3 +17,5 @@ dist/kube-controllers
 st-kubeconfig.yaml
 *.coverprofile
 /report/*.xml
+Makefile.common*
+tests/crds.yaml
