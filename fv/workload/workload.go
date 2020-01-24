@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,15 +115,17 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 
 	// Start the workload.
 	log.WithField("workload", w).Info("About to run workload")
-	var udpArg string
+	var protoArg string
 	if protocol == "udp" {
-		udpArg = "--udp"
+		protoArg = "--udp"
+	} else if protocol == "sctp" {
+		protoArg = "--sctp"
 	}
 	w.runCmd = utils.Command("docker", "exec", w.C.Name,
 		"sh", "-c",
 		fmt.Sprintf("echo $$ > /tmp/%v; exec /test-workload %v '%v' '%v' '%v'",
 			w.Name,
-			udpArg,
+			protoArg,
 			w.InterfaceName,
 			w.IP,
 			w.Ports))
@@ -487,31 +489,52 @@ func startPermanentConnection(w *Workload, ip string, port, sourcePort int) (*Pe
 	}, nil
 }
 
+type SpoofedWorkload struct {
+	*Workload
+	SpoofedSourceIP string
+}
+
+func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+	return canConnectTo(s.Workload, ip, port, s.SpoofedSourceIP, "", protocol, duration)
+}
+
 // Return if a connection is good and packet loss string "PacketLoss[xx]".
 // If it is not a packet loss test, packet loss string is "".
 func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+	srcPort := strconv.Itoa(int(p.Port))
+	return canConnectTo(p.Workload, ip, port, "", srcPort, protocol, duration)
+}
 
+func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, duration time.Duration) (bool, string) {
 	// Ensure that the host has the 'test-connection' binary.
-	p.C.EnsureBinary("test-connection")
+	w.C.EnsureBinary("test-connection")
 
-	if protocol == "udp" {
+	if protocol == "udp" || protocol == "sctp" {
 		// If this is a retry then we may have stale conntrack entries and we don't want those
-		// to influence the connectivity check.  Only an issue for UDP due to the lack of a
-		// sequence number.
-		_ = p.C.ExecMayFail("conntrack", "-D", "-p", "udp", "-s", p.Workload.IP, "-d", ip)
+		// to influence the connectivity check.  UDP lacks a sequence number, so conntrack operates
+		// on a simple timer. In the case of SCTP, conntrack appears to match packets even when
+		// the conntrack entry is in the CLOSED state.
+		_ = w.C.ExecMayFail("conntrack", "-D", "-p", protocol, "-s", w.IP, "-d", ip)
 	}
+
+	logMsg := "Connection test"
 
 	// Run 'test-connection' to the target.
 	args := []string{
-		"exec", p.C.Name, "/test-connection", p.namespacePath, ip, port, "--protocol=" + protocol, fmt.Sprintf("--duration=%d", int(duration.Seconds())),
+		"exec", w.C.Name, "/test-connection", w.namespacePath, ip, port, "--protocol=" + protocol, fmt.Sprintf("--duration=%d", int(duration.Seconds())),
 	}
-	if p.Port != 0 {
+	if srcIp != "" {
+		args = append(args, fmt.Sprintf("--source-ip=%s", srcIp))
+		logMsg += " (spoofed)"
+	}
+	if srcPort != "" {
 		// If we are using a particular source port, fill it in.
-		args = append(args, fmt.Sprintf("--source-port=%d", p.Port))
+		args = append(args, fmt.Sprintf("--source-port=%s", srcPort))
+		logMsg += " (with source port)"
 	}
 	connectionCmd := utils.Command("docker", args...)
 
-	return utils.RunConnectionCmd(connectionCmd)
+	return utils.RunConnectionCmd(connectionCmd, logMsg)
 }
 
 // ToMatcher implements the connectionTarget interface, allowing this port to be used as

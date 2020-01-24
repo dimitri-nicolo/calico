@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -289,7 +289,7 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 		rootSetMarkRules = append(rootSetMarkRules, Rule{
 			Match:   Match().InInterface(ifaceMatch),
 			Action:  DropAction{},
-			Comment: "Unknown endpoint",
+			Comment: []string{"Unknown endpoint"},
 		})
 	}
 
@@ -299,7 +299,7 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 		Action: SetMaskedMarkAction{
 			Mark: r.IptablesMarkNonCaliEndpoint,
 			Mask: epMarkMapper.GetMask()},
-		Comment: "Non-Cali endpoint mark",
+		Comment: []string{"Non-Cali endpoint mark"},
 	})
 
 	// start rendering from mark rules for workload and host endpoints.
@@ -336,7 +336,7 @@ func (r *DefaultRuleRenderer) endpointMarkDispatchChains(
 	rootFromMarkRules = append(rootFromMarkRules, Rule{
 		Match:   Match(),
 		Action:  DropAction{},
-		Comment: "Unknown interface",
+		Comment: []string{"Unknown interface"},
 	})
 
 	// return set mark and from mark chains.

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -567,6 +567,8 @@ func memberToProto(member labelindex.IPSetMember) string {
 		return fmt.Sprintf("%s,tcp:%d", member.CIDR.Addr(), member.PortNumber)
 	case labelindex.ProtocolUDP:
 		return fmt.Sprintf("%s,udp:%d", member.CIDR.Addr(), member.PortNumber)
+	case labelindex.ProtocolSCTP:
+		return fmt.Sprintf("%s,sctp:%d", member.CIDR.Addr(), member.PortNumber)
 	}
 	log.WithField("member", member).Panic("Unknown IP set member type")
 	return ""

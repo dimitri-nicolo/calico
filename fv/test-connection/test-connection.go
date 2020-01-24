@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,17 +22,18 @@ import (
 	"math"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/containernetworking/cni/pkg/ns"
-	docopt "github.com/docopt/docopt-go"
+	"github.com/docopt/docopt-go"
+	"github.com/ishidawataru/sctp"
 	reuse "github.com/libp2p/go-reuseport"
-	log "github.com/sirupsen/logrus"
-
 	uuid "github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/utils"
 )
@@ -40,9 +41,10 @@ import (
 const usage = `test-connection: test connection to some target, for Felix FV testing.
 
 Usage:
-  test-connection <namespace-path> <ip-address> <port> [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>]
+  test-connection <namespace-path> <ip-address> <port> [--source-ip=<source_ip>] [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>]
 
 Options:
+  --source-ip=<source_ip>  Source IP to use for the connection [default: 0.0.0.0].
   --source-port=<source>  Source port to use for the connection [default: 0].
   --protocol=<protocol>  Protocol to test [default: tcp].
   --duration=<seconds>   Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
@@ -66,6 +68,9 @@ If connection is unsuccessful, test-connection panics and so exits with a failur
 // If the other process creates the file again, it will tell this
 // program to close the connection, remove the file and quit.
 
+const defaultIPv4SourceIP = "0.0.0.0"
+const defaultIPv6SourceIP = "::"
+
 func main() {
 	log.SetLevel(log.DebugLevel)
 
@@ -79,6 +84,15 @@ func main() {
 	ipAddress := arguments["<ip-address>"].(string)
 	port := arguments["<port>"].(string)
 	sourcePort := arguments["--source-port"].(string)
+	sourceIpAddress := arguments["--source-ip"].(string)
+
+	// Set default for source IP. If we're using IPv6 as indicated by ipAddress
+	// and no --source-ip option was provided, set the source IP to the default
+	// IPv6 address.
+	if strings.Contains(ipAddress, ":") && sourceIpAddress == defaultIPv4SourceIP {
+		sourceIpAddress = defaultIPv6SourceIP
+	}
+
 	protocol := arguments["--protocol"].(string)
 	duration := arguments["--duration"].(string)
 	seconds, err := strconv.Atoi(duration)
@@ -91,7 +105,7 @@ func main() {
 		loopFile = arg.(string)
 	}
 
-	log.Infof("Test connection from %v:%v to IP %v port %v proto %v max duration %d seconds", namespacePath, sourcePort, ipAddress, port, protocol, seconds)
+	log.Infof("Test connection from namespace %v IP %v port %v to IP %v port %v proto %v max duration %d seconds", namespacePath, sourceIpAddress, sourcePort, ipAddress, port, protocol, seconds)
 
 	if loopFile == "" {
 		// I found that configuring the timeouts on all the network calls was a bit fiddly.  Since
@@ -104,8 +118,12 @@ func main() {
 	}
 
 	if namespacePath == "-" {
+		// Add the source IP (if set) to eth0.
+		err = maybeAddAddr(sourceIpAddress)
 		// Test connection from wherever we are already running.
-		err = tryConnect(ipAddress, port, sourcePort, protocol, seconds, loopFile)
+		if err == nil {
+			err = tryConnect(ipAddress, port, sourceIpAddress, sourcePort, protocol, seconds, loopFile)
+		}
 	} else {
 		// Get the specified network namespace (representing a workload).
 		var namespace ns.NetNS
@@ -117,13 +135,41 @@ func main() {
 
 		// Now, in that namespace, try connecting to the target.
 		err = namespace.Do(func(_ ns.NetNS) error {
-			return tryConnect(ipAddress, port, sourcePort, protocol, seconds, loopFile)
+			// Add an interface for the source IP if any.
+			e := maybeAddAddr(sourceIpAddress)
+			if e != nil {
+				return e
+			}
+			return tryConnect(ipAddress, port, sourceIpAddress, sourcePort, protocol, seconds, loopFile)
 		})
 	}
 
 	if err != nil {
 		panic(err)
 	}
+}
+
+func maybeAddAddr(sourceIP string) error {
+	if sourceIP != defaultIPv4SourceIP && sourceIP != defaultIPv6SourceIP {
+		if !strings.Contains(sourceIP, ":") {
+			sourceIP += "/32"
+		} else {
+			sourceIP += "/128"
+		}
+
+		// Check if the IP is already set on eth0.
+		out, err := exec.Command("ip", "a", "show", "dev", "eth0").Output()
+		if err != nil {
+			return err
+		}
+		if strings.Contains(string(out), sourceIP) {
+			log.Infof("IP addr %s already exists on eth0, skip adding IP", sourceIP)
+			return nil
+		}
+		cmd := exec.Command("ip", "addr", "add", sourceIP, "dev", "eth0")
+		return cmd.Run()
+	}
+	return nil
 }
 
 type statistics struct {
@@ -140,48 +186,74 @@ type testConn struct {
 	duration time.Duration
 }
 
-func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Duration) (*testConn, error) {
+func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol string, duration time.Duration) (*testConn, error) {
 	err := utils.RunCommand("ip", "r")
 	if err != nil {
 		return nil, err
 	}
 
-	// The reuse library implements a version of net.Dialer that can reuse UDP/TCP ports, which we
-	// need in order to make connection retries work.
-	var d reuse.Dialer
 	var localAddr string
 	var remoteAddr string
 	var conn net.Conn
-	if strings.Contains(ipAddress, ":") {
-		localAddr = "[::]:" + sourcePort
-		remoteAddr = "[" + ipAddress + "]:" + port
+	if strings.Contains(remoteIpAddr, ":") {
+		localAddr = "[" + sourceIpAddr + "]:" + sourcePort
+		remoteAddr = "[" + remoteIpAddr + "]:" + remotePort
 	} else {
-		localAddr = "0.0.0.0:" + sourcePort
-		remoteAddr = ipAddress + ":" + port
+		localAddr = sourceIpAddr + ":" + sourcePort
+		remoteAddr = remoteIpAddr + ":" + remotePort
 	}
 
 	log.Infof("Connecting from %v to %v over %s", localAddr, remoteAddr, protocol)
 	if protocol == "udp" {
-		d.D.LocalAddr, _ = net.ResolveUDPAddr("udp", localAddr)
-		log.WithFields(log.Fields{
-			"addr":     localAddr,
-			"resolved": d.D.LocalAddr,
-		}).Infof("Resolved udp addr")
-		conn, err = d.Dial("udp", remoteAddr)
+		// Since we specify the source port rather than use an ephemeral port, if
+		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
+		// another call to this program, the original port is in post-close wait
+		// state and bind fails.  The reuse library implements a Dial() that sets
+		// these options.
+		conn, err = reuse.Dial("udp", localAddr, remoteAddr)
 		log.Infof(`UDP "connection" established`)
 		if err != nil {
 			panic(err)
 		}
-	} else {
-		d.D.LocalAddr, err = net.ResolveTCPAddr("tcp", localAddr)
+	} else if protocol == "sctp" {
+		lip, err := net.ResolveIPAddr("ip", "::")
 		if err != nil {
 			return nil, err
 		}
-		log.WithFields(log.Fields{
-			"addr":     localAddr,
-			"resolved": d.D.LocalAddr,
-		}).Infof("Resolved tcp addr")
-		conn, err = d.Dial("tcp", remoteAddr)
+		lport, err := strconv.Atoi(sourcePort)
+		if err != nil {
+			return nil, err
+		}
+		laddr := &sctp.SCTPAddr{IPAddrs: []net.IPAddr{*lip}, Port: lport}
+		rip, err := net.ResolveIPAddr("ip", remoteIpAddr)
+		if err != nil {
+			return nil, err
+		}
+		rport, err := strconv.Atoi(remotePort)
+		if err != nil {
+			return nil, err
+		}
+		raddr := &sctp.SCTPAddr{IPAddrs: []net.IPAddr{*rip}, Port: rport}
+		// Since we specify the source port rather than use an ephemeral port, if
+		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
+		// another call to this program, the original port is in post-close wait
+		// state and bind fails. The reuse.Dial() does not support SCTP, but the
+		// SCTP library has a SocketConfig that accepts a Control function
+		// (provided by reuse) that sets these options.
+		sCfg := sctp.SocketConfig{Control: reuse.Control}
+		conn, err = sCfg.Dial("sctp", laddr, raddr)
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("SCTP connection established")
+	} else {
+
+		// Since we specify the source port rather than use an ephemeral port, if
+		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
+		// another call to this program, the original port is in post-close wait
+		// state and bind fails.  The reuse library implements a Dial() that sets
+		// these options.
+		conn, err = reuse.Dial("tcp", localAddr, remoteAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -208,8 +280,8 @@ func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Dur
 
 }
 
-func tryConnect(ipAddress, port, sourcePort, protocol string, seconds int, loopFile string) error {
-	tc, err := NewTestConn(ipAddress, port, sourcePort, protocol, time.Duration(seconds)*time.Second)
+func tryConnect(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol string, seconds int, loopFile string) error {
+	tc, err := NewTestConn(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol, time.Duration(seconds)*time.Second)
 	if err != nil {
 		panic(err)
 	}

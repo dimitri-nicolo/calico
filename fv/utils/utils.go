@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -211,7 +211,7 @@ func IPSetNameForSelector(ipVersion int, rawSelector string) string {
 
 // Run a connection test command.
 // Report if connection test is successful and packet loss string for packet loss test.
-func RunConnectionCmd(connectionCmd *exec.Cmd) (bool, string) {
+func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) (bool, string) {
 	outPipe, err := connectionCmd.StdoutPipe()
 	Expect(err).NotTo(HaveOccurred())
 	errPipe, err := connectionCmd.StderrPipe()
@@ -227,7 +227,7 @@ func RunConnectionCmd(connectionCmd *exec.Cmd) (bool, string) {
 
 	log.WithFields(log.Fields{
 		"stdout": string(wOut),
-		"stderr": string(wErr)}).WithError(err).Info("Connection test")
+		"stderr": string(wErr)}).WithError(err).Info(logMsg)
 
 	return (err == nil), extractPacketStatString(string(wErr))
 }

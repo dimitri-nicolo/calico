@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -94,6 +94,8 @@ func (p IPSetPortProtocol) MatchesModelProtocol(protocol numorstring.Protocol) b
 		return strings.ToLower(protocol.StrVal) == "tcp"
 	case ProtocolUDP:
 		return strings.ToLower(protocol.StrVal) == "udp"
+	case ProtocolSCTP:
+		return strings.ToLower(protocol.StrVal) == "sctp"
 	}
 	log.WithField("protocol", p).Panic("Unknown protocol")
 	return false
@@ -105,6 +107,8 @@ func (p IPSetPortProtocol) String() string {
 		return "tcp"
 	case ProtocolUDP:
 		return "udp"
+	case ProtocolSCTP:
+		return "sctp"
 	case ProtocolNone:
 		return "none"
 	default:
@@ -116,6 +120,7 @@ const (
 	ProtocolNone IPSetPortProtocol = 0
 	ProtocolTCP  IPSetPortProtocol = 6
 	ProtocolUDP  IPSetPortProtocol = 17
+	ProtocolSCTP IPSetPortProtocol = 132
 )
 
 type IPSetMember struct {

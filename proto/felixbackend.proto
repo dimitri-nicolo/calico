@@ -305,6 +305,8 @@ message Rule {
   // Pass through of the v3 datamodel HTTP match criteria.
   HTTPMatch http_match = 122;
 
+  RuleMetadata metadata = 123;
+
   string log_prefix = 200;
 
   // An opaque ID/hash for the rule.
@@ -325,6 +327,10 @@ message HTTPMatch {
     }
   }
   repeated PathMatch paths = 2;
+}
+
+message RuleMetadata {
+  map<string, string> annotations = 1;
 }
 
 message IcmpTypeAndCode {

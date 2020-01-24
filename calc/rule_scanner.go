@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -341,6 +341,8 @@ type ParsedRule struct {
 	HTTPMatch *model.HTTPMatch
 
 	LogPrefix string
+
+	Metadata *model.RuleMetadata
 }
 
 func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRule, allIPSets []*IPSetData) {
@@ -358,8 +360,12 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 	// Named ports on our endpoints have a protocol attached but our rules have the protocol at
 	// the top level.  Convert that to a protocol that we can use with the IP set calculation logic.
 	namedPortProto := labelindex.ProtocolTCP
-	if rule.Protocol != nil && labelindex.ProtocolUDP.MatchesModelProtocol(*rule.Protocol) {
-		namedPortProto = labelindex.ProtocolUDP
+	if rule.Protocol != nil {
+		if labelindex.ProtocolUDP.MatchesModelProtocol(*rule.Protocol) {
+			namedPortProto = labelindex.ProtocolUDP
+		} else if labelindex.ProtocolSCTP.MatchesModelProtocol(*rule.Protocol) {
+			namedPortProto = labelindex.ProtocolSCTP
+		}
 	}
 
 	// Convert each named port into an IP set definition.  As an optimization, if there's a selector
@@ -467,6 +473,9 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		HTTPMatch:                         rule.HTTPMatch,
 
 		LogPrefix: rule.LogPrefix,
+
+		// Pass through metadata (used by iptables backend)
+		Metadata: rule.Metadata,
 	}
 
 	allIPSets = append(allIPSets, srcNamedPortIPSets...)

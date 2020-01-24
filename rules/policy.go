@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package rules
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -309,6 +310,13 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 			Match:  match,
 			Action: action,
 		})
+	}
+
+	// Render rule annotations as comments on each rule.
+	for i := range rs {
+		for k, v := range pRule.GetMetadata().GetAnnotations() {
+			rs[i].Comment = append(rs[i].Comment, fmt.Sprintf("%s=%s", k, v))
+		}
 	}
 
 	return rs

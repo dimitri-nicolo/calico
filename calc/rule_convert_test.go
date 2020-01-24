@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -92,6 +92,8 @@ var fullyLoadedParsedRule = ParsedRule{
 	}},
 
 	LogPrefix: "foobar",
+
+	Metadata: &model.RuleMetadata{Annotations: map[string]string{"key": "value"}},
 }
 
 var fullyLoadedProtoRule = proto.Rule{
@@ -159,6 +161,8 @@ var fullyLoadedProtoRule = proto.Rule{
 		}},
 
 	LogPrefix: "foobar",
+
+	Metadata: &proto.RuleMetadata{Annotations: map[string]string{"key": "value"}},
 }
 
 var _ = DescribeTable("ParsedRulesToProtoRules",
