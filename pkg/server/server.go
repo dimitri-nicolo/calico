@@ -31,6 +31,15 @@ var (
 	wg     sync.WaitGroup
 )
 
+// Some constants that we pass to our elastic client library.
+// We don't need to define these because we don't ever create
+// indices or index patterns from here and these parameters are
+// only required in such cases.
+const (
+	shardsNotRequired   = 0
+	replicasNotRequired = 0
+)
+
 func Start(cfg *Config) error {
 	sm := http.NewServeMux()
 
@@ -59,7 +68,7 @@ func Start(cfg *Config) error {
 	// TODO(doublek): Tech debt. We have 2 copies of k8sauth and we aren't using the
 	// right one everywhere. For now, only use the lma one for policy recommendation
 	// and leave the rest to use the one in es-proxy.
-	lmaK8sAuth := lmaauth.NewK8sAuth(k8sClient, k8sConfig, cfg.DelegateAuthentication)
+	lmaK8sAuth := lmaauth.NewK8sAuth(k8sClient, k8sConfig)
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig, cfg.DelegateAuthentication)
 
 	// Install pip mutator
@@ -79,6 +88,8 @@ func Start(cfg *Config) error {
 		cfg.ElasticConnRetries,
 		cfg.ElasticConnRetryInterval,
 		cfg.ElasticEnableTrace,
+		replicasNotRequired,
+		shardsNotRequired,
 	)
 	if err != nil {
 		return err
