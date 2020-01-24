@@ -45,6 +45,7 @@ var _ = Describe("types", func() {
 		Expect(rh.RbacPlural()).To(Equal("pods"))
 		Expect(rh.IsNamespaced()).To(BeTrue())
 		Expect(rh.IsTieredPolicy()).To(BeFalse())
+		Expect(rh.Group()).To(Equal(""))
 
 		// Namespace
 		By("creating a Namespace instance using NewResource")
@@ -59,6 +60,7 @@ var _ = Describe("types", func() {
 		Expect(rh.RbacPlural()).To(Equal("namespaces"))
 		Expect(rh.IsNamespaced()).To(BeFalse())
 		Expect(rh.IsTieredPolicy()).To(BeFalse())
+		Expect(rh.Group()).To(Equal(""))
 
 		// Service Account
 		By("creating a Service Account instance using NewResource")
@@ -70,6 +72,7 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*corev1.ServiceAccountList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.Group()).To(Equal(""))
 
 		// Endpoints
 		By("creating a Endpoint instance using NewResource")
@@ -81,6 +84,7 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*corev1.EndpointsList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.Group()).To(Equal(""))
 
 		// Host Endpoints
 		By("creating a Host Endpoint instance using NewResource")
@@ -92,6 +96,7 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*apiv3.HostEndpointList)
 		Expect(ok).To(BeTrue())
+		Expect(rh.Group()).To(Equal("projectcalico.org"))
 
 		// Global Network Sets
 		By("creating a Global Network Set instance using NewResource")
