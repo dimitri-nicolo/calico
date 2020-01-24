@@ -34,7 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-GO_BUILD_VER?=v0.32
+GO_BUILD_VER?=v0.33
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins check-packr
@@ -111,7 +111,7 @@ FV_SLOW_SPEC_THRESH=90
 #
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
-LDFLAGS:=-ldflags "\
+LDFLAGS=-ldflags "\
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT) \

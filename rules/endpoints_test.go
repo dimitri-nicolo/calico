@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,12 +80,12 @@ var _ = Describe("Endpoints", func() {
 			Match: Match().ProtocolNum(ProtoUDP).
 				DestPorts(uint16(VXLANPort)),
 			Action:  DropAction{},
-			Comment: "Drop VXLAN encapped packets originating in pods",
+			Comment: []string{"Drop VXLAN encapped packets originating in pods"},
 		}
 		dropIPIPRule := Rule{
 			Match:   Match().ProtocolNum(ProtoIPIP),
 			Action:  DropAction{},
-			Comment: "Drop IPinIP encapped packets originating in pods",
+			Comment: []string{"Drop IPinIP encapped packets originating in pods"},
 		}
 
 		Context("with normal config", func() {
@@ -113,7 +113,7 @@ var _ = Describe("Endpoints", func() {
 							{Action: ClearMarkAction{Mark: 0x88}},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -130,7 +130,7 @@ var _ = Describe("Endpoints", func() {
 							dropIPIPRule,
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -153,14 +153,14 @@ var _ = Describe("Endpoints", func() {
 						Name: "cali-tw-cali1234",
 						Rules: []Rule{
 							{Action: DropAction{},
-								Comment: "Endpoint admin disabled"},
+								Comment: []string{"Endpoint admin disabled"}},
 						},
 					},
 					{
 						Name: "cali-fw-cali1234",
 						Rules: []Rule{
 							{Action: DropAction{},
-								Comment: "Endpoint admin disabled"},
+								Comment: []string{"Endpoint admin disabled"}},
 						},
 					},
 					{
@@ -195,36 +195,36 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/bi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 
 							{Action: JumpAction{Target: "cali-pri-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pri-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -240,36 +240,36 @@ var _ = Describe("Endpoints", func() {
 							dropVXLANRule,
 							dropIPIPRule,
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/be"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 
 							{Action: JumpAction{Target: "cali-pro-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pro-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -304,7 +304,7 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/staged:ai"}},
@@ -312,25 +312,25 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-pi-default/bi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 
 							{Action: JumpAction{Target: "cali-pri-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pri-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -346,33 +346,33 @@ var _ = Describe("Endpoints", func() {
 							dropVXLANRule,
 							dropIPIPRule,
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:be"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 
 							{Action: JumpAction{Target: "cali-pro-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pro-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -407,7 +407,7 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/staged:ai"}},
@@ -419,15 +419,15 @@ var _ = Describe("Endpoints", func() {
 							{Action: JumpAction{Target: "cali-pri-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pri-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -443,7 +443,7 @@ var _ = Describe("Endpoints", func() {
 							dropVXLANRule,
 							dropIPIPRule,
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:ae"}},
@@ -455,15 +455,15 @@ var _ = Describe("Endpoints", func() {
 							{Action: JumpAction{Target: "cali-pro-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pro-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -504,36 +504,36 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/be"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 
 							{Action: JumpAction{Target: "cali-pro-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pro-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -550,36 +550,36 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/bi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 
 							{Action: JumpAction{Target: "cali-pri-prof1"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 							{Action: JumpAction{Target: "cali-pri-prof2"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if profile accepted"},
+								Comment: []string{"Return if profile accepted"}},
 
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -593,23 +593,23 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/afe"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/bfe"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 						},
 					},
 					{
@@ -623,23 +623,23 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/afi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/bfi"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 							{Match: Match().MarkClear(0x10),
 								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
 							{Match: Match().MarkClear(0x10),
 								Action:  DropAction{},
-								Comment: "Drop if no policies passed packet"},
+								Comment: []string{"Drop if no policies passed packet"}},
 						},
 					},
 					{
@@ -667,7 +667,7 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/c"}},
@@ -676,7 +676,7 @@ var _ = Describe("Endpoints", func() {
 								Action: NoTrackAction{}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 
 							// No drop actions or profiles in raw table.
 						},
@@ -689,7 +689,7 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"}},
@@ -698,7 +698,7 @@ var _ = Describe("Endpoints", func() {
 								Action: NoTrackAction{}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 
 							// No drop actions or profiles in raw table.
 						},
@@ -730,13 +730,13 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 
 							// No drop actions or profiles in raw table.
 						},
@@ -773,7 +773,7 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -791,7 +791,7 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
-								Comment: "Drop if no profiles matched"},
+								Comment: []string{"Drop if no profiles matched"}},
 						},
 					},
 					{
@@ -823,13 +823,13 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
-							{Comment: "Start of tier default",
+							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"}},
 							{Match: Match().MarkSingleBitSet(0x8),
 								Action:  ReturnAction{},
-								Comment: "Return if policy accepted"},
+								Comment: []string{"Return if policy accepted"}},
 
 							// No drop actions or profiles in raw table.
 						},

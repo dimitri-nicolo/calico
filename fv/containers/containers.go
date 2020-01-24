@@ -519,5 +519,5 @@ func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Durati
 	connectionCmd := utils.Command("docker", "exec", c.Name,
 		"/test-connection", "--protocol="+protocol, "-", ip, port, fmt.Sprintf("--duration=%d", int(duration.Seconds())))
 
-	return utils.RunConnectionCmd(connectionCmd)
+	return utils.RunConnectionCmd(connectionCmd, "Connection test")
 }

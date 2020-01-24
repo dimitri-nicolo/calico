@@ -115,6 +115,7 @@ var knownProtoRuleFields = set.From(
 	"SrcIpSetIds",
 	"SrcServiceAccountMatch",
 	"HttpMatch",
+	"Metadata",
 
 	// Commercial fields
 	"LogPrefix",

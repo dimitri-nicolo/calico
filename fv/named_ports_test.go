@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,6 +51,13 @@ var _ = Context("UDP: Destination named ports: with initialized Felix, etcd data
 })
 var _ = Context("UDP: Source named ports: with initialized Felix, etcd datastore, 3 workloads, allow-all profile", func() {
 	describeNamedPortTests(true, "udp")
+})
+
+var _ = Context("SCTP: Destination named ports: with initialized Felix, etcd datastore, 3 workloads, allow-all profile", func() {
+	describeNamedPortTests(false, "sctp")
+})
+var _ = Context("SCTP: Source named ports: with initialized Felix, etcd datastore, 3 workloads, allow-all profile", func() {
+	describeNamedPortTests(true, "sctp")
 })
 
 // describeNamedPortTests describes tests for either source or destination named ports.

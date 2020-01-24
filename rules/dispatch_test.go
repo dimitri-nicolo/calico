@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ var _ = Describe("Dispatch chains", func() {
 
 		var expDropRule = iptables.Rule{
 			Action:  iptables.DropAction{},
-			Comment: "Unknown interface",
+			Comment: []string{"Unknown interface"},
 		}
 
 		var smNonCaliSetMarkRule = iptables.Rule{
@@ -57,7 +57,7 @@ var _ = Describe("Dispatch chains", func() {
 				Mark: rrConfigNormal.IptablesMarkNonCaliEndpoint,
 				Mask: rrConfigNormal.IptablesMarkEndpoint,
 			},
-			Comment: "Non-Cali endpoint mark",
+			Comment: []string{"Non-Cali endpoint mark"},
 		}
 
 		var epMarkMapper EndpointMarkMapper
@@ -905,7 +905,7 @@ func smUnknownEndpointDropRule(ifacePrefix string) iptables.Rule {
 	return iptables.Rule{
 		Match:   iptables.Match().InInterface(ifacePrefix + "+"),
 		Action:  iptables.DropAction{},
-		Comment: "Unknown endpoint",
+		Comment: []string{"Unknown endpoint"},
 	}
 }
 

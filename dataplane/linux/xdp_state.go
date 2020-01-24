@@ -1459,6 +1459,10 @@ func isValidRuleForXDP(rule *proto.Rule) bool {
 		rule.SrcServiceAccountMatch == nil &&
 		rule.DstServiceAccountMatch == nil &&
 		rule.LogPrefix == ""
+
+	// Note that XDP doesn't support writing rule.Metadata to the dataplane
+	// (as we do using -m comment in iptables), but the rule still can be
+	// rendered in XDP, so we place no constraints on rule.Metadata here.
 }
 
 func (s *xdpIPState) removeMembersIPSet(setID string, members set.Set) {

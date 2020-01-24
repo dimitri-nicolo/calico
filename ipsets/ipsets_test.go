@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,6 +66,14 @@ var _ = Describe("IPSetTypeHashIPPort", func() {
 			To(Equal(V4IPPort{
 				IP:       ip.FromString("10.0.0.1").(ip.V4Addr),
 				Protocol: labelindex.ProtocolTCP,
+				Port:     1234,
+			}))
+	})
+	It("should canonicalise an IPv4 SCTP IP,port", func() {
+		Expect(IPSetTypeHashIPPort.CanonicaliseMember("10.0.0.1,SCTP:1234")).
+			To(Equal(V4IPPort{
+				IP:       ip.FromString("10.0.0.1").(ip.V4Addr),
+				Protocol: labelindex.ProtocolSCTP,
 				Port:     1234,
 			}))
 	})

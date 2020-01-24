@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -135,19 +135,19 @@ var _ = Describe("Static", func() {
 									DestPortRanges(portRanges).
 									DestIPSet(ipSetThisHost),
 								Action:  GotoAction{Target: ChainDispatchSetEndPointMark},
-								Comment: "To kubernetes NodePort service",
+								Comment: []string{"To kubernetes NodePort service"},
 							},
 							{
 								Match: Match().Protocol("udp").
 									DestPortRanges(portRanges).
 									DestIPSet(ipSetThisHost),
 								Action:  GotoAction{Target: ChainDispatchSetEndPointMark},
-								Comment: "To kubernetes NodePort service",
+								Comment: []string{"To kubernetes NodePort service"},
 							},
 							{
 								Match:   Match().NotDestIPSet(ipSetThisHost),
 								Action:  JumpAction{Target: ChainDispatchSetEndPointMark},
-								Comment: "To kubernetes service",
+								Comment: []string{"To kubernetes service"},
 							},
 						},
 					}
@@ -172,7 +172,7 @@ var _ = Describe("Static", func() {
 							{
 								Match:   Match().MarkSingleBitSet(0x10),
 								Action:  AcceptAction{},
-								Comment: "Policy explicitly accepted packet.",
+								Comment: []string{"Policy explicitly accepted packet."},
 							},
 						},
 					}
@@ -198,7 +198,7 @@ var _ = Describe("Static", func() {
 								{
 									Match:   Match().MarkSingleBitSet(0x10),
 									Action:  AcceptAction{},
-									Comment: "Policy explicitly accepted packet.",
+									Comment: []string{"Policy explicitly accepted packet."},
 								},
 							},
 						}))
@@ -231,7 +231,7 @@ var _ = Describe("Static", func() {
 									{
 										Match:   Match().MarkSingleBitSet(0x10),
 										Action:  AcceptAction{},
-										Comment: "Host endpoint policy accepted packet.",
+										Comment: []string{"Host endpoint policy accepted packet."},
 									},
 								},
 							}))
@@ -255,7 +255,7 @@ var _ = Describe("Static", func() {
 									{
 										Match:   Match().MarkSingleBitSet(0x10),
 										Action:  AcceptAction{},
-										Comment: "Host endpoint policy accepted packet.",
+										Comment: []string{"Host endpoint policy accepted packet."},
 									},
 								},
 							}))
@@ -289,7 +289,7 @@ var _ = Describe("Static", func() {
 									{
 										Match:   Match().MarkSingleBitSet(0x10),
 										Action:  AcceptAction{},
-										Comment: "Host endpoint policy accepted packet.",
+										Comment: []string{"Host endpoint policy accepted packet."},
 									},
 								},
 							}))
@@ -315,7 +315,7 @@ var _ = Describe("Static", func() {
 									{
 										Match:   Match().MarkSingleBitSet(0x10),
 										Action:  AcceptAction{},
-										Comment: "Host endpoint policy accepted packet.",
+										Comment: []string{"Host endpoint policy accepted packet."},
 									},
 								},
 							}))
@@ -384,6 +384,8 @@ var _ = Describe("Static", func() {
 						{Action: ClearMarkAction{Mark: 0xf0}},
 						{Match: Match().InInterface("cali+"),
 							Action: SetMarkAction{Mark: 0x40}},
+						{Match: Match().MarkSingleBitSet(0x40).RPFCheckFailed(),
+							Action: DropAction{}},
 						{Match: Match().MarkClear(0x40),
 							Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						{Match: Match().MarkSingleBitSet(0x10),
@@ -419,7 +421,7 @@ var _ = Describe("Static", func() {
 						{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						{Match: Match().MarkSingleBitSet(0x10),
 							Action:  AcceptAction{},
-							Comment: "Host endpoint policy accepted packet."},
+							Comment: []string{"Host endpoint policy accepted packet."}},
 					},
 				}))
 			})
@@ -434,7 +436,7 @@ var _ = Describe("Static", func() {
 						{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						{Match: Match().MarkSingleBitSet(0x10),
 							Action:  AcceptAction{},
-							Comment: "Host endpoint policy accepted packet."},
+							Comment: []string{"Host endpoint policy accepted packet."}},
 					},
 				}))
 			})
@@ -445,7 +447,7 @@ var _ = Describe("Static", func() {
 					Rules: []Rule{
 						{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 						{Action: ReturnAction{},
-							Comment: "Configured DefaultEndpointToHostAction"},
+							Comment: []string{"Configured DefaultEndpointToHostAction"}},
 					},
 				}))
 			})
@@ -461,7 +463,7 @@ var _ = Describe("Static", func() {
 						{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(136), Action: AcceptAction{}},
 						{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 						{Action: ReturnAction{},
-							Comment: "Configured DefaultEndpointToHostAction"},
+							Comment: []string{"Configured DefaultEndpointToHostAction"}},
 					},
 				}))
 			})
@@ -528,10 +530,10 @@ var _ = Describe("Static", func() {
 						DestAddrType("LOCAL"),
 
 						Action:  AcceptAction{},
-						Comment: "Allow IPIP packets from Calico hosts"},
+						Comment: []string{"Allow IPIP packets from Calico hosts"}},
 					{Match: Match().ProtocolNum(4),
 						Action:  DropAction{},
-						Comment: "Drop IPIP packets from non-Calico hosts"},
+						Comment: []string{"Drop IPIP packets from non-Calico hosts"}},
 
 					// Forward check chain.
 					{Action: ClearMarkAction{Mark: epMark}},
@@ -555,7 +557,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -570,10 +572,10 @@ var _ = Describe("Static", func() {
 						DestAddrType("LOCAL"),
 
 						Action:  AcceptAction{},
-						Comment: "Allow IPIP packets from Calico hosts"},
+						Comment: []string{"Allow IPIP packets from Calico hosts"}},
 					{Match: Match().ProtocolNum(4),
 						Action:  DropAction{},
-						Comment: "Drop IPIP packets from non-Calico hosts"},
+						Comment: []string{"Drop IPIP packets from non-Calico hosts"}},
 
 					// Per-prefix workload jump rules.  Note use of goto so that we
 					// don't return here.
@@ -590,7 +592,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -621,7 +623,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -643,7 +645,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -669,7 +671,7 @@ var _ = Describe("Static", func() {
 							DestIPSet("cali40all-hosts-net").
 							SrcAddrType(AddrTypeLocal, false),
 						Action:  AcceptAction{},
-						Comment: "Allow IPIP packets to other Calico hosts",
+						Comment: []string{"Allow IPIP packets to other Calico hosts"},
 					},
 
 					// Non-workload traffic, send to host chains.
@@ -678,7 +680,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -699,7 +701,7 @@ var _ = Describe("Static", func() {
 							DestIPSet("cali40all-hosts-net").
 							SrcAddrType(AddrTypeLocal, false),
 						Action:  AcceptAction{},
-						Comment: "Allow IPIP packets to other Calico hosts",
+						Comment: []string{"Allow IPIP packets to other Calico hosts"},
 					},
 
 					// Non-workload traffic, send to host chains.
@@ -708,7 +710,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -735,7 +737,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -756,7 +758,7 @@ var _ = Describe("Static", func() {
 					{
 						Match:   Match().MarkSingleBitSet(0x10),
 						Action:  AcceptAction{},
-						Comment: "Host endpoint policy accepted packet.",
+						Comment: []string{"Host endpoint policy accepted packet."},
 					},
 				},
 			}
@@ -938,33 +940,33 @@ var _ = Describe("Static", func() {
 							DestPortRanges(portRanges1).
 							DestIPSet(ipSetThisHost),
 						Action:  GotoAction{Target: ChainDispatchSetEndPointMark},
-						Comment: "To kubernetes NodePort service",
+						Comment: []string{"To kubernetes NodePort service"},
 					},
 					{
 						Match: Match().Protocol("udp").
 							DestPortRanges(portRanges1).
 							DestIPSet(ipSetThisHost),
 						Action:  GotoAction{Target: ChainDispatchSetEndPointMark},
-						Comment: "To kubernetes NodePort service",
+						Comment: []string{"To kubernetes NodePort service"},
 					},
 					{
 						Match: Match().Protocol("tcp").
 							DestPortRanges(portRanges2).
 							DestIPSet(ipSetThisHost),
 						Action:  GotoAction{Target: ChainDispatchSetEndPointMark},
-						Comment: "To kubernetes NodePort service",
+						Comment: []string{"To kubernetes NodePort service"},
 					},
 					{
 						Match: Match().Protocol("udp").
 							DestPortRanges(portRanges2).
 							DestIPSet(ipSetThisHost),
 						Action:  GotoAction{Target: ChainDispatchSetEndPointMark},
-						Comment: "To kubernetes NodePort service",
+						Comment: []string{"To kubernetes NodePort service"},
 					},
 					{
 						Match:   Match().NotDestIPSet(ipSetThisHost),
 						Action:  JumpAction{Target: ChainDispatchSetEndPointMark},
-						Comment: "To kubernetes service",
+						Comment: []string{"To kubernetes service"},
 					},
 				},
 			}
@@ -1012,7 +1014,7 @@ var _ = Describe("Static", func() {
 
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{Action: ReturnAction{},
-					Comment: "Configured DefaultEndpointToHostAction"},
+					Comment: []string{"Configured DefaultEndpointToHostAction"}},
 			},
 		}
 
@@ -1034,7 +1036,7 @@ var _ = Describe("Static", func() {
 
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{Action: ReturnAction{},
-					Comment: "Configured DefaultEndpointToHostAction"},
+					Comment: []string{"Configured DefaultEndpointToHostAction"}},
 			},
 		}
 
@@ -1117,7 +1119,7 @@ var _ = Describe("Static", func() {
 
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{Action: ReturnAction{},
-					Comment: "Configured DefaultEndpointToHostAction"},
+					Comment: []string{"Configured DefaultEndpointToHostAction"}},
 			},
 		}
 
@@ -1139,7 +1141,7 @@ var _ = Describe("Static", func() {
 
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{Action: ReturnAction{},
-					Comment: "Configured DefaultEndpointToHostAction"},
+					Comment: []string{"Configured DefaultEndpointToHostAction"}},
 			},
 		}
 
@@ -1190,7 +1192,7 @@ var _ = Describe("Static", func() {
 						{
 							Match:   Match().MarkSingleBitSet(0x10),
 							Action:  ReturnAction{},
-							Comment: "Policy explicitly accepted packet.",
+							Comment: []string{"Policy explicitly accepted packet."},
 						},
 					},
 				}))
@@ -1214,7 +1216,7 @@ var _ = Describe("Static", func() {
 						{
 							Match:   Match().MarkSingleBitSet(0x10),
 							Action:  ReturnAction{},
-							Comment: "Host endpoint policy accepted packet.",
+							Comment: []string{"Host endpoint policy accepted packet."},
 						},
 					},
 				}))
@@ -1236,7 +1238,7 @@ var _ = Describe("Static", func() {
 						{
 							Match:   Match().MarkSingleBitSet(0x10),
 							Action:  ReturnAction{},
-							Comment: "Host endpoint policy accepted packet.",
+							Comment: []string{"Host endpoint policy accepted packet."},
 						},
 					},
 				}))
@@ -1280,7 +1282,7 @@ var _ = Describe("Static", func() {
 				{
 					Match:   Match().MarkSingleBitSet(0x10),
 					Action:  AcceptAction{},
-					Comment: "Policy explicitly accepted packet.",
+					Comment: []string{"Policy explicitly accepted packet."},
 				},
 			},
 		}
@@ -1304,7 +1306,7 @@ var _ = Describe("Static", func() {
 				{
 					Match:   Match().MarkSingleBitSet(0x10),
 					Action:  AcceptAction{},
-					Comment: "Host endpoint policy accepted packet.",
+					Comment: []string{"Host endpoint policy accepted packet."},
 				},
 			},
 		}
@@ -1326,7 +1328,7 @@ var _ = Describe("Static", func() {
 				{
 					Match:   Match().MarkSingleBitSet(0x10),
 					Action:  AcceptAction{},
-					Comment: "Host endpoint policy accepted packet.",
+					Comment: []string{"Host endpoint policy accepted packet."},
 				},
 			},
 		}
@@ -1336,7 +1338,7 @@ var _ = Describe("Static", func() {
 			Rules: []Rule{
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{Action: ReturnAction{},
-					Comment: "Configured DefaultEndpointToHostAction"},
+					Comment: []string{"Configured DefaultEndpointToHostAction"}},
 			},
 		}
 
@@ -1351,7 +1353,7 @@ var _ = Describe("Static", func() {
 				{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(136), Action: AcceptAction{}},
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{Action: ReturnAction{},
-					Comment: "Configured DefaultEndpointToHostAction"},
+					Comment: []string{"Configured DefaultEndpointToHostAction"}},
 			},
 		}
 
