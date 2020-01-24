@@ -189,7 +189,7 @@ endif
 tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
 
 sub-single-tag-images-arch-%:
-	@if echo $* | grep -q "flannel-migration"; then \
+	@if echo $* | grep -q "$(call escapefs,$(FLANNEL_MIGRATION_BUILD_IMAGE))"; then \
 		echo "docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
 		docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
 	else \
@@ -200,7 +200,7 @@ sub-single-tag-images-arch-%:
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	@if echo $* | grep -q "flannel-migration"; then \
+	@if echo $* | grep -q "$(call escapefs,$(FLANNEL_MIGRATION_BUILD_IMAGE))"; then \
 		echo "docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
 		docker tag $(FLANNEL_MIGRATION_BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
 	else \

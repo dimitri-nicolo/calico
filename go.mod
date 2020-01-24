@@ -9,9 +9,9 @@ require (
 	github.com/elastic/cloud-on-k8s v0.0.0-20190924084002-6ce4c9177aec
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
 	github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627
@@ -22,6 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
 	github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac
+	github.com/ugorji/go v1.1.7 // indirect
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 
 	// k8s.io/api v1.16.3 is at 16d7abae0d2a
@@ -40,10 +41,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200111003839-08326be6b392
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200121221038-9ac9af66e2d4
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200114235712-f97e1facc0f2
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200122171326-eddbe790a4a0
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200123185632-ed4939cb2d01
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200124192914-ef8963d7b98a
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200123005450-6c8457330ec4
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200123163727-3ee10066aa73
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
