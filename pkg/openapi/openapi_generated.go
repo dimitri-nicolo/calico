@@ -184,6 +184,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec":                        schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                            schema_libcalico_go_lib_apis_v3_ResourceID(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                                  schema_libcalico_go_lib_apis_v3_Rule(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata":                          schema_libcalico_go_lib_apis_v3_RuleMetadata(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch":                   schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock":                 schema_libcalico_go_lib_apis_v3_ServiceClusterIPBlock(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock":                schema_libcalico_go_lib_apis_v3_ServiceExternalIPBlock(ref),
@@ -4298,12 +4299,6 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format: "",
 						},
 					},
-					"ignoreLooseRPF": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
-						},
-					},
 					"routeRefreshInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RouterefreshInterval is the period at which Felix re-checks the routes in the dataplane to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable route refresh. [Default: 90s]",
@@ -5078,7 +5073,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"flowLogsFileAggregationKindForDenied": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+							Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggregation. 3 - No destination ports based aggregation",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -5095,6 +5090,27 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Description: "FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"flowLogsDynamicAggregationEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsDynamicAggregationEnabled is used to enable/disable dynamically changing aggregation levels. Default is true.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"flowLogsPositionFilePath": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsPositionFilePath is used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"flowLogsAggregationThresholdBytes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsAggregationThresholdBytes is used specify how far behind the external pipeline that reads flow logs can be. Default is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"dnsTrustedServers": {
@@ -9003,12 +9019,45 @@ func schema_libcalico_go_lib_apis_v3_Rule(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch"),
 						},
 					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Metadata contains additional information for this rule",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata"),
+						},
+					},
 				},
 				Required: []string{"action"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_RuleMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a set of key value pairs that give extra information about the rule",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
