@@ -81,7 +81,7 @@ rules:
     - poddisruptionbudgets
     verbs:
     - '*'
-{{- if .Values.openshift }}
+{{- if eq .Values.kubernetesProvider "openshift" }}
   # When running in OpenShift, we need to update networking config.
   - apiGroups:
       - config.openshift.io

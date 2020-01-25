@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm tigera-operator --execute templates/prometheus-operator/04-deployment-prometheus-operator.yaml %}
-openshift: true
+kubernetesProvider: openshift
 {% endhelm %}
