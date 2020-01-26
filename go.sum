@@ -440,6 +440,7 @@ github.com/tigera/typha-private v0.0.0-20200116225455-f50dea08c513 h1:zqd6j05Ff/
 github.com/tigera/typha-private v0.0.0-20200116225455-f50dea08c513/go.mod h1:bWEt6gU1DRLRtSFRFdjXZdcKXgR8oIbVNCZxvF4cNIs=
 github.com/tigera/typha-private v0.0.0-20200123163727-3ee10066aa73/go.mod h1:9klbptrQxbGStl8CYkvFcUotNhdJ942+LnLFI3cupg8=
 github.com/tigera/typha-private v0.0.0-20200125042003-c7d89063cef6/go.mod h1:BvCXOa7UhLhr2LhbEHCjP2l0RjyRyR+49peW9xAwP3o=
+github.com/tigera/typha-private v0.0.0-20200126042118-67bc0b1cd463/go.mod h1:BvCXOa7UhLhr2LhbEHCjP2l0RjyRyR+49peW9xAwP3o=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
