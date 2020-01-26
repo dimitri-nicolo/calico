@@ -220,7 +220,7 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 		erpp := endpointRulePerProtocol{
 			endpointName:      flow.Destination.Name,
 			endpointNamespace: flow.Destination.Namespace,
-			protocol:          numorstring.ProtocolFromInt(*flow.Proto),
+			protocol:          api.GetProtocol(*flow.Proto),
 		}
 		rule, ok := ere.egressTraffic[erpp]
 		if ok {
@@ -239,7 +239,7 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 		erpp := endpointRulePerProtocol{
 			endpointName:      flow.Source.Name,
 			endpointNamespace: flow.Source.Namespace,
-			protocol:          numorstring.ProtocolFromInt(*flow.Proto),
+			protocol:          api.GetProtocol(*flow.Proto),
 		}
 
 		rule, ok := ere.ingressTraffic[erpp]
