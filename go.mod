@@ -3,7 +3,7 @@ module github.com/tigera/lma
 go 1.12
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200123005450-6c8457330ec4 // indirect
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200124233200-fcf21602b6c6 // indirect
 	k8s.io/api => k8s.io/api v0.16.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.16.4
