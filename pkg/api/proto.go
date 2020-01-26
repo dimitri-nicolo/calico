@@ -31,6 +31,18 @@ var (
 		"sctp":    ProtoSCTP,
 		"udplite": ProtoUDPLite,
 	}
+
+	// These string values are the superset of FlowLog definitions and v3 API definitions.
+	protostrings = map[uint8]string{
+		ProtoICMP:    "icmp",
+		ProtoIPIP:    "ipip",
+		ProtoTCP:     "tcp",
+		ProtoUDP:     "udp",
+		ProtoESP:     "esp",
+		ProtoICMPv6:  "icmpv6",
+		ProtoSCTP:    "sctp",
+		ProtoUDPLite: "udplite",
+	}
 )
 
 func GetProtocolNumber(p *numorstring.Protocol) *uint8 {
@@ -44,4 +56,14 @@ func GetProtocolNumber(p *numorstring.Protocol) *uint8 {
 		return &num
 	}
 	return nil
+}
+
+// GetProtocol tries to convert a uint8 to a numorstring.Protocol.
+// It fills in a string value of a protocol where possible, otherwise
+// returns a numerical numorstring.Protocol.
+func GetProtocol(num uint8) numorstring.Protocol {
+	if str, ok := protostrings[num]; ok {
+		return numorstring.ProtocolFromString(str)
+	}
+	return numorstring.ProtocolFromInt(num)
 }

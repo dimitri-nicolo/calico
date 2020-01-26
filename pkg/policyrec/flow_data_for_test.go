@@ -17,9 +17,9 @@ var (
 	port53   = uint16(53)
 
 	protoTCP   = api.ProtoTCP
-	protoTCPNS = numorstring.ProtocolFromInt(api.ProtoTCP)
+	protoTCPNS = numorstring.ProtocolFromString("TCP")
 	protoUDP   = api.ProtoUDP
-	protoUDPNS = numorstring.ProtocolFromInt(api.ProtoUDP)
+	protoUDPNS = numorstring.ProtocolFromString("UDP")
 
 	// Namespaces
 	globalNamespace = ""

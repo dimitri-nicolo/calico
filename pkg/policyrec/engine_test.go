@@ -246,7 +246,7 @@ NEXTRULE:
 func matchSingleRule(actual, expected v3.Rule) bool {
 	return matchEntityRule(actual.Source, expected.Source) &&
 		matchEntityRule(actual.Destination, expected.Destination) &&
-		actual.Protocol.NumVal == expected.Protocol.NumVal
+		actual.Protocol.String() == expected.Protocol.String()
 }
 
 func matchEntityRule(actual, expected v3.EntityRule) bool {
