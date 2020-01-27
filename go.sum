@@ -32,8 +32,10 @@ github.com/Masterminds/sprig v2.19.0+incompatible h1:xTFLLXzR0JJGQe7M492jAOJ9F3j
 github.com/Masterminds/sprig v2.19.0+incompatible/go.mod h1:y6hNFY5UBTIWBxnzTeuNhlNS5hqE0NB0E6fgfo2Br3o=
 github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4/go.mod h1:f8+uWZKRD+e0kwDzXNJTvNVeQbSxk2DW2YkWxmmNJxQ=
 github.com/Microsoft/go-winio v0.0.0-20190408173621-84b4ab48a507/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
+github.com/Microsoft/go-winio v0.4.11 h1:zoIOcVf0xPN1tnMVbTtEdI+P8OofVk3NObnwOQ6nK2Q=
 github.com/Microsoft/go-winio v0.4.11/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Microsoft/hcsshim v0.0.0-20190402014724-5f3c4ba7af30/go.mod h1:Op3hHsoHPAvb6lceZHDtd9OkTew38wNoXnJs8iY7rUg=
+github.com/Microsoft/hcsshim v0.0.0-20190408221605-063ae4a83d78 h1:Vl06smBaCzEd2WW9GI6KFaN0mL/NdyklGGNrf8bp8Ps=
 github.com/Microsoft/hcsshim v0.0.0-20190408221605-063ae4a83d78/go.mod h1:Op3hHsoHPAvb6lceZHDtd9OkTew38wNoXnJs8iY7rUg=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
@@ -56,6 +58,7 @@ github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24
 github.com/beorn7/perks v1.0.0 h1:HWo1m869IqiPhD389kmkxeTalrjNbbJTC8LXupb+sl0=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/blang/semver v3.5.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
+github.com/buger/jsonparser v0.0.0-20180808090653-f4dd9f5a6b44 h1:y853v6rXx+zefEcjET3JuKAqvhj+FKflQijjeaSv2iA=
 github.com/buger/jsonparser v0.0.0-20180808090653-f4dd9f5a6b44/go.mod h1:bbYlZJ7hK1yFx9hf58LP0zeX7UjIGs20ufpu3evjr+s=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf h1:kkIwAmTZZ/QmiC6gs1so/nTTmZR73kESSLT8NrdbVx0=
@@ -231,9 +234,12 @@ github.com/json-iterator/go v1.1.8 h1:QiWkFLKq0T7mpzwOTu6BzNDbfTE8OLrYhVKYMLF46O
 github.com/json-iterator/go v1.1.8/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
+github.com/juju/clock v0.0.0-20180808021310-bab88fc67299 h1:K9nBHQ3UNqg/HhZkQnGG2AE4YxDyNmGS9FFT2gGegLQ=
 github.com/juju/clock v0.0.0-20180808021310-bab88fc67299/go.mod h1:nD0vlnrUjcjJhqN5WuCWZyzfd5AHZAC9/ajvbSx69xA=
+github.com/juju/errors v0.0.0-20180806074554-22422dad46e1 h1:wnhMXidtb70kDZCeLt/EfsVtkXS5c8zLnE9y/6DIRAU=
 github.com/juju/errors v0.0.0-20180806074554-22422dad46e1/go.mod h1:W54LbzXuIE0boCoNJfwqpmkKJ1O4TCTZMetAt6jGk7Q=
 github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8/go.mod h1:vgyd7OREkbtVEN/8IXZe5Ooef3LQePvuBm9UWj6ZL8U=
+github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf h1:2d3cilQly1OpAfZcn4QRuwDOdVoHsM4cDTkcKbmO760=
 github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf/go.mod h1:Y3oOzHH8CQ0Ppt0oCKJ2JFO81/EsWenH5AEqigLH+yY=
 github.com/juju/retry v0.0.0-20180821225755-9058e192b216/go.mod h1:OohPQGsr4pnxwD5YljhQ+TZnuVRYpa5irjugL1Yuif4=
 github.com/juju/testing v0.0.0-20190723135506-ce30eb24acd2/go.mod h1:63prj8cnj0tU0S9OHjGJn+b1h0ZghCndfnbQolrYTwA=
@@ -340,6 +346,7 @@ github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R
 github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.2 h1:6LJUbpNm42llc4HRCuvApCSWB/WfhuNo9K98Q9sNGfs=
 github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
+github.com/rakelkar/gonetsh v0.0.0-20180118190048-758b1f7c9d1c h1:phSg5KfNwWqJZHfiaIVT9OGXBHRVAWW0m5RvY+GoEFQ=
 github.com/rakelkar/gonetsh v0.0.0-20180118190048-758b1f7c9d1c/go.mod h1:4XHkfaUj+URzGO9sohoAgt2V9Y8nIW7fugpu0E6gShk=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
 github.com/robfig/cron v1.2.0 h1:ZjScXvvxeQ63Dbyxy76Fj3AT3Ut0aKsyd2/tl3DTMuQ=
@@ -382,6 +389,7 @@ github.com/tigera/confd-private v0.0.0-20200127042123-4683d8bfcd59 h1:nhxRS4xRRD
 github.com/tigera/confd-private v0.0.0-20200127042123-4683d8bfcd59/go.mod h1:OzJvln0nwz3NW1+xkB2ctGYPGYOycFcMxBorYIfgEHM=
 github.com/tigera/felix-private v0.0.0-20200127005029-341d45ce3050 h1:U6y6EyVF5LjNWIEgHlIuaKcRH1b9kqbm6XMr+XYb23c=
 github.com/tigera/felix-private v0.0.0-20200127005029-341d45ce3050/go.mod h1:r0vb5KBdMGXg3XlhgDxvehQL+PiH8PijqSgwKrgkUlk=
+github.com/tigera/felix-private v0.0.0-20200127175934-d4bb25390532/go.mod h1:r0vb5KBdMGXg3XlhgDxvehQL+PiH8PijqSgwKrgkUlk=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v0.0.0-20200124233200-fcf21602b6c6 h1:weVs0sVb+ZQzUH0AKw5ZODnRoLpqsm8IcO9bpIURpP0=
