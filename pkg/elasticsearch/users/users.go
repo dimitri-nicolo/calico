@@ -23,6 +23,7 @@ const (
 	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
 	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
+	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
 )
 
 // ElasticsearchUsers returns a map of ElasticsearchUserNames as keys and elasticsearch.Users as values. The clusterName
@@ -140,9 +141,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 							},
 							{
 								Names: []string{
-									indexPattern(".tigera.ipset.*", clusterName, "*"),
-									indexPattern("tigera_secure_ee_events.*", clusterName, "*"),
-									indexPattern(".tigera.domainnameset.*", clusterName, "*")},
+									indexPattern(".tigera.ipset", clusterName, "*"),
+									indexPattern("tigera_secure_ee_events", clusterName, "*"),
+									indexPattern(".tigera.domainnameset", clusterName, "*")},
 								Privileges: []string{"all"},
 							},
 						},
@@ -188,9 +189,9 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserName]elasticsearch.User {
 	return map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameComplianceServer: {
-			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, false),
+			Username: formatName(ElasticsearchUserNameComplianceServer, clusterName, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameComplianceServer, clusterName, false),
+				Name: formatName(ElasticsearchUserNameComplianceServer, clusterName, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
@@ -201,14 +202,28 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 			}},
 		},
 		ElasticsearchUserNameManager: {
-			Username: formatName(ElasticsearchUserNameManager, clusterName, false),
+			Username: formatName(ElasticsearchUserNameManager, clusterName, true),
 			Roles: []elasticsearch.Role{{
-				Name: formatName(ElasticsearchUserNameManager, clusterName, false),
+				Name: formatName(ElasticsearchUserNameManager, clusterName, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, "*"), ".kibana"},
 						Privileges: []string{"read"},
+					}},
+				},
+			}},
+		},
+		ElasticsearchUserNameCurator: {
+			Username: formatName(ElasticsearchUserNameCurator, clusterName, true),
+			Roles: []elasticsearch.Role{{
+				Name: formatName(ElasticsearchUserNameCurator, clusterName, true),
+				Definition: &elasticsearch.RoleDefinition{
+					Cluster: []string{"monitor", "manage_index_templates"},
+					Indices: []elasticsearch.RoleIndex{{
+						// Curator needs to trim all the logs, so we don't set the cluster name on the index pattern
+						Names:      []string{indexPattern("tigera_secure_ee_*", "*", "*")},
+						Privileges: []string{"all"},
 					}},
 				},
 			}},
