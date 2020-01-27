@@ -285,7 +285,7 @@ func Input(alert v3.GlobalAlert) (*elastic.Input, error) {
 	case libcalicov3.GlobalAlertDataSetDNS, libcalicov3.GlobalAlertDataSetFlows:
 		timeField = "start_time"
 	case libcalicov3.GlobalAlertDataSetAudit:
-		timeField = "timestamp"
+		timeField = "requestReceivedTimestamp"
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", alert.Spec.DataSet)
 	}
