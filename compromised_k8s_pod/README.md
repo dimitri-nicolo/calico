@@ -17,8 +17,8 @@ This scenario covers the situation where the attacker is able to compromise a Po
   * We expose an inetsim HTTP service to the cluster such that it can be found via ClusterIP or DNS lookup
 * Exposed Service (Nginx)
   * We expose an Nginx HTTP service to the cluster such that it can be found via ClusterIP or DNS lookup
-* Vulnerable Service (Mysql)
-  * We expose an empty Mysql service to the cluster such that it can be found via ClusterIP or DNS lookup
+* Vulnerable Service (MySQL)
+  * We expose an empty MySQL service to the cluster such that it can be found via ClusterIP or DNS lookup
 
 **Other Mitigations:**
 * Proper Namespacing, RBAC

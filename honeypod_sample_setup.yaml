@@ -45,7 +45,7 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: tigera-internal-1
-        image: gcr.io/tigera-dev/cnx/tigera/honeypod/tigera-internal-1:1.0.0
+        image: quay.io/tigera/honeypod:v2.7.0
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
@@ -91,7 +91,7 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: tigera-internal-dashboard
-        image: gcr.io/tigera-dev/cnx/tigera/honeypod/tigera-internal-dashboard:1.0.0
+        image: quay.io/tigera/honeypod-exp-service:v2.7.0
         ports:
         - containerPort: 8888
         - containerPort: 443
