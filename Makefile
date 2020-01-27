@@ -491,11 +491,18 @@ st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd ca
 .PHONY: ci
 ci: clean mod-download static-checks ut fv check-dirty image-all build-windows-archive
 
+## Avoid unplanned go.sum updates
+.PHONY: undo-go-sum
+undo-go-sum:
+	@echo "Undoing go.sum update..."
+	git checkout -- go.sum
+
 ## Check if generated image is dirty
 .PHONY: check-dirty
-check-dirty:
-	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated image is dirty."; \
+check-dirty: undo-go-sum
+	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty:"; \
+	  git status --porcelain; \
 	  false; \
 	fi
 
