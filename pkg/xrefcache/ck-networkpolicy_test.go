@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -574,8 +575,13 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		gnp := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(1))
 		Expect(gnp.SelectedPods.Len()).To(Equal(1))
+		Expect(len(gnp.ScheduledNodes)).To(Equal(1))
 		Expect(gnp.SelectedHostEndpoints.Contains(resources.GetResourceID(hep))).To(BeTrue())
 		Expect(gnp.SelectedPods.Contains(resources.GetResourceID(pod))).To(BeTrue())
+		thePod := pod.GetPrimary().(*corev1.Pod)
+		scheduledNodes, ok := gnp.ScheduledNodes[thePod.Spec.NodeName]
+		Expect(ok).To(BeTrue())
+		Expect(scheduledNodes.Contains(resources.GetResourceID(pod))).To(BeTrue())
 
 		By("updating GlobalNetworkPolicy to match Label1")
 		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
@@ -614,6 +620,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		gnp = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(0))
 		Expect(gnp.SelectedPods.Len()).To(Equal(0))
+		Expect(len(gnp.ScheduledNodes)).To(Equal(0))
 	})
 })
 

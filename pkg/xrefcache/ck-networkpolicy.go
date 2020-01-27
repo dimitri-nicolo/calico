@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -75,6 +76,9 @@ type CacheEntryNetworkPolicy struct {
 	// The pods matching this policy selector.
 	SelectedPods          resources.Set
 	SelectedHostEndpoints resources.Set
+
+	// The Kubernetes Nodes that a Pod is running on.
+	ScheduledNodes map[string]resources.Set
 
 	// --- Internal data ---
 	cacheEntryCommon
@@ -455,6 +459,7 @@ func (c *networkPolicyHandler) newCacheEntry() CacheEntry {
 		AllowRuleSelectors:    resources.NewSet(),
 		SelectedPods:          resources.NewSet(),
 		SelectedHostEndpoints: resources.NewSet(),
+		ScheduledNodes:        make(map[string]resources.Set),
 	}
 }
 
@@ -951,6 +956,23 @@ func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId apiv3.R
 		// data does not directly affect it.
 		x.clog.Debugf("Adding %s to pods for %s", endpointId, policyId)
 		x.SelectedPods.Add(endpointId)
+
+		// Track Nodes that a Pod is scheduled on.
+		pod, ok := c.GetFromXrefCache(endpointId).(*CacheEntryEndpoint)
+		thePod := pod.GetPrimary().(*corev1.Pod)
+		nodeName := thePod.Spec.NodeName
+		x.clog.Debugf("Tracking Node %+v for Pod %+v", nodeName, thePod)
+
+		var scheduledNodesRef resources.Set
+		scheduledNodesRef, ok = x.ScheduledNodes[nodeName]
+		if !ok {
+			scheduledNodesRef = resources.NewSet()
+			// If we are seeing this node for the first time
+			// then we queue an update.
+			c.QueueUpdate(policyId, x, EventNodeAssigned)
+		}
+		scheduledNodesRef.Add(endpointId)
+		x.ScheduledNodes[nodeName] = scheduledNodesRef
 	case resources.TypeCalicoHostEndpoints:
 		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
@@ -971,6 +993,25 @@ func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId apiv3.R
 		// data does not directly affect it.
 		x.clog.Debugf("Removing %s from pods for %s", endpointId, policyId)
 		x.SelectedPods.Discard(endpointId)
+
+		// Delete and reference check Nodes that Pods were scheduled on.
+		pod, ok := c.GetFromXrefCache(endpointId).(*CacheEntryEndpoint)
+		thePod := pod.GetPrimary().(*corev1.Pod)
+		nodeName := thePod.Spec.NodeName
+		x.clog.Debugf("Deleting Node %+v for Pod %+v", nodeName, thePod)
+
+		scheduledNodesRef, ok := x.ScheduledNodes[nodeName]
+		if !ok {
+			// Nothing to do here.
+			return
+		}
+		scheduledNodesRef.Discard(endpointId)
+		if scheduledNodesRef.Len() == 0 {
+			delete(x.ScheduledNodes, nodeName)
+			c.QueueUpdate(policyId, x, EventNodeRemoved)
+		} else {
+			x.ScheduledNodes[nodeName] = scheduledNodesRef
+		}
 	case resources.TypeCalicoHostEndpoints:
 		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.

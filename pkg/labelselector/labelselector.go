@@ -15,7 +15,7 @@ import (
 // provides automatic fanout based on registered listeners.
 //
 // This helper manages the links between selectors and labels. Callers register selectors and labels associated with a
-// specific resource and thie helper calls with match start and stop events between the linked and unlinked selector and
+// specific resource and this helper calls with match start and stop events between the linked and unlinked selector and
 // labels.
 
 // LabelSelector interface. Used for handling callbacks and managing resource label and selectors.
