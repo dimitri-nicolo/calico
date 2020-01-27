@@ -73,6 +73,11 @@ ifeq ($(RELEASE),true)
 PUSH_IMAGE_PREFIXES+=$(RELEASE_IMAGES)
 endif
 
+# remove from the list to push to manifest any registries that do not support multi-arch
+# EXCLUDE_MANIFEST_REGISTRIES defined in Makefile.comm
+PUSH_MANIFEST_IMAGE_PREFIXES=$(PUSH_IMAGE_PREFIXES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
+PUSH_NONMANIFEST_IMAGE_PREFIXES=$(filter-out $(PUSH_MANIFEST_IMAGE_PREFIXES),$(PUSH_IMAGE_PREFIXES))
+
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
 PKG_VERSION?=$(shell git describe --tags --dirty --always || echo '<unknown>')
