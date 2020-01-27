@@ -62,7 +62,9 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		// Setup the recommendation engine. We specify the default tier as the flows that we are fetching
 		// is at the end of the default tier. Similarly we set the recommended policy order to nil as well.
 		// TODO(doublek): Tier and policy order should be obtained from the observation point policy.
-		recEngine := policyrec.NewEndpointRecommendationEngine(params.EndpointName, params.Namespace, policyName, defaultTierName, nil)
+		// Set order to 1000 so that the policy is in the middle of the tier and can be moved up or down as necessary.
+		recommendedPolicyOrder := float64(1000)
+		recEngine := policyrec.NewEndpointRecommendationEngine(params.EndpointName, params.Namespace, policyName, defaultTierName, &recommendedPolicyOrder)
 		for _, flow := range flows {
 			log.WithField("flow", flow).Debug("Calling recommendation engine with flow")
 			err := recEngine.ProcessFlow(*flow)
