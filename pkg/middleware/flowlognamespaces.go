@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/olivere/elastic/v7"
+	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+
+	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
 
@@ -32,7 +34,7 @@ type Namespace struct {
 	Name string `json:"name"`
 }
 
-func FlowLogNamespaceHandler(esClient lmaelastic.Client) http.Handler {
+func FlowLogNamespaceHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamespacesRequest(req)

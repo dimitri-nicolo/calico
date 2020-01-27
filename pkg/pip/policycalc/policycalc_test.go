@@ -1,16 +1,18 @@
 package policycalc_test
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/syncer"
+
+	"github.com/tigera/lma/pkg/api"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
@@ -123,7 +125,7 @@ var (
 	namedPortSourceName      = "source-port"
 	namedPortSourcePort      = uint16(10)
 	namedPortProtocol        = "TCP"
-	namedPortProtocolNumber  = policycalc.ProtoTCP
+	namedPortProtocolNumber  = api.ProtoTCP
 	namedPortDestinationName = "destination-port"
 	namedPortDestinationPort = uint16(11)
 
@@ -240,101 +242,101 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow not in namespace ns1 is unaffected")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
 		By("Checking a flow with source in namespace ns1 is recalculated")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{},
-			ActionFlag:  policycalc.ActionFlagDeny,
+			Destination: api.FlowEndpointData{},
+			ActionFlag:  api.ActionFlagDeny,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagEndOfTierDeny))
 
 		By("Checking a flow from networkset in namespace1 to a dest not in namespace ns1 is unaffected")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeNs,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeNs,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
 		By("Checking a flow from source not in namespace ns1 to a networkset in namespace ns1 is unaffected")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeNs,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeNs,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
 		By("Checking a flow with destination in namespace ns1 is recalculated")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeDestination,
-			Source:   policycalc.FlowEndpointData{},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeDestination,
+			Source:   api.FlowEndpointData{},
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagDeny,
+			ActionFlag: api.ActionFlagDeny,
 		}
 
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagEndOfTierDeny))
 	})
 
 	It("handles: single policy selecting ns1 with no rules -> next policy ingress allows all for ns1", func() {
@@ -363,47 +365,47 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with source in ns1 is unaffected")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
 		By("Checking a flow with dest in namespace ns1 is recalculated")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeDestination,
-			Source:   policycalc.FlowEndpointData{},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeDestination,
+			Source:   api.FlowEndpointData{},
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagEndOfTierDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 	})
 
 	It("handles: single policy selecting ns1 with no rules -> next policy egress allows all for ns1", func() {
@@ -432,48 +434,48 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with dest in ns1 is unaffected")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
 		By("Checking a flow with source in namespace ns1 is recalculated")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{},
-			ActionFlag:  policycalc.ActionFlagAllow,
+			Destination: api.FlowEndpointData{},
+			ActionFlag:  api.ActionFlagAllow,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagEndOfTierDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 	})
 
 	It("handles: multiple tiers", func() {
@@ -503,118 +505,118 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		pc := policycalc.NewPolicyCalculator(cfgDontCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a red->red flow is allowed")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{"color": "red"},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{"color": "red"},
 			},
-			ActionFlag: policycalc.ActionFlagDeny,
+			ActionFlag: api.ActionFlagDeny,
 		}
 
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagDeny))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
-		Expect(before.Action).To(Equal(policycalc.ActionFlagDeny))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
+		Expect(before.Action).To(Equal(api.ActionFlagDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
 		By("Checking a red->blue flow is denied")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{"color": "red"},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{"color": "blue"},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagDeny))
 
 		By("Checking a blue->red flow is denied")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{"color": "blue"},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{"color": "red"},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagDeny))
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagDeny)
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagDeny)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlag(0)))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlag(0)))
 
 		By("Checking a net->purple flow is denied")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeDestination,
-			Source:   policycalc.FlowEndpointData{},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeDestination,
+			Source:   api.FlowEndpointData{},
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Labels:    map[string]string{"color": "purple"},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagsAllowAndDeny, policycalc.ActionFlagsAllowAndDeny)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagDeny))
 
 		By("Checking a purple->net flow is denied")
-		f = &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f = &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns2",
 				Labels:    map[string]string{"color": "purple"},
 			},
-			Destination: policycalc.FlowEndpointData{},
-			ActionFlag:  policycalc.ActionFlagDeny,
+			Destination: api.FlowEndpointData{},
+			ActionFlag:  api.ActionFlagDeny,
 		}
 
 		modified, before, after = pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagDeny))
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 	})
 
 	It("handles: pod source and destination info filled in from cache", func() {
@@ -695,37 +697,37 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		pc := policycalc.NewPolicyCalculator(cfgDontCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Creating a flow with all of the cached data missing and running through the policy calculator")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Namespace: "ns1",
 				Name:      "pod1-*",
 				Port:      &namedPortSourcePort,
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type: policycalc.EndpointTypeHep,
+			Destination: api.FlowEndpointData{
+				Type: api.EndpointTypeHep,
 				Name: "hostendpoint",
 				Port: &namedPortDestinationPort,
 			},
 			Proto:      &namedPortProtocolNumber,
-			ActionFlag: policycalc.ActionFlagDeny,
+			ActionFlag: api.ActionFlagDeny,
 		}
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
 
 		By("Checking before flow is unchanged")
-		Expect(before.Action).To(Equal(policycalc.ActionFlagDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagDeny))
 		Expect(before.Include).To(BeTrue())
 
 		By("Checking after flow source is allow and included")
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(after.Include).To(BeTrue())
 
 		By("Checking after flow destination is also allow and included - this has been added by policycalc")
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagDeny, policycalc.ActionFlagAllow)
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagDeny, api.ActionFlagAllow)
 		Expect(before.Include).To(BeFalse())
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(after.Include).To(BeTrue())
 	})
 })

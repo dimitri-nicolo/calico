@@ -5,10 +5,13 @@ import (
 	"sort"
 
 	log "github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
+	"github.com/tigera/lma/pkg/api"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
@@ -93,8 +96,8 @@ func (m ImpactedResources) UseStaged(r resources.Resource) bool {
 
 // PolicyCalculator is used to determine the calculated behavior from a configuration change for a given flow.
 type PolicyCalculator interface {
-	CalculateSource(source *Flow) (processed bool, before, after EndpointResponse)
-	CalculateDest(dest *Flow, srcActionBefore, srcActionAfter ActionFlag) (processed bool, before, after EndpointResponse)
+	CalculateSource(source *api.Flow) (processed bool, before, after EndpointResponse)
+	CalculateDest(dest *api.Flow, srcActionBefore, srcActionAfter api.ActionFlag) (processed bool, before, after EndpointResponse)
 }
 
 type EndpointResponse struct {
@@ -110,18 +113,18 @@ type EndpointResponse struct {
 	// The calculated action flags at the endpoint for the supplied flow.  This can be a combination of ActionFlagAllow
 	// and/or ActionFlagDeny with any of ActionFlagFlowLogMatchesCalculated, ActionFlagFlowLogRemovedUncertainty and
 	// ActionFlagFlowLogConflictsWithCalculated.
-	Action ActionFlag
+	Action api.ActionFlag
 
 	// The set of policies applied to this flow.
 	Policies OrderedPolicyHits
 }
 
-type OrderedPolicyHits []PolicyHit
+type OrderedPolicyHits []api.PolicyHit
 
 func (o OrderedPolicyHits) FlowLogPolicyStrings() []string {
 	s := make([]string, 0, len(o))
 	for i := range o {
-		s = append(s, o[i].ToEnforcedFlowLogPolicyStrings()...)
+		s = append(s, o[i].ToFlowLogPolicyStrings()...)
 	}
 	return s
 }
@@ -172,20 +175,20 @@ func NewPolicyCalculator(
 // This method may be called simultaneously from multiple go routines for different flows if required. If the source
 // action changes from deny to allow then we also have to calculate the destination action since we will not have flow
 // data to work from.
-func (fp *policyCalculator) CalculateSource(flow *Flow) (modified bool, before, after EndpointResponse) {
+func (fp *policyCalculator) CalculateSource(flow *api.Flow) (modified bool, before, after EndpointResponse) {
 	return fp.calculateBeforeAfterResponse(flow, &fp.Egress, 0, 0)
 }
 
 // Calculate calculates the action before and after the configuration change for a specific destination reported flow.
 // This method may be called simultaneously from multiple go routines for different flows if required.
-func (fp *policyCalculator) CalculateDest(flow *Flow, sourceActionBefore, sourceActionAfter ActionFlag) (modified bool, before, after EndpointResponse) {
+func (fp *policyCalculator) CalculateDest(flow *api.Flow, sourceActionBefore, sourceActionAfter api.ActionFlag) (modified bool, before, after EndpointResponse) {
 	return fp.calculateBeforeAfterResponse(flow, &fp.Ingress, sourceActionBefore, sourceActionAfter)
 }
 
 // calculateBeforeAfterResponse calculates the action before and after the configuration change for a specific reported
 // flow.
 func (fp *policyCalculator) calculateBeforeAfterResponse(
-	flow *Flow, changeset *CompiledTierAndPolicyChangeSet, beforeSrcAction, afterSrcAction ActionFlag,
+	flow *api.Flow, changeset *CompiledTierAndPolicyChangeSet, beforeSrcAction, afterSrcAction api.ActionFlag,
 ) (modified bool, before, after EndpointResponse) {
 	// Initialize logger for this flow, and initialize selector caches.
 	clog := log.WithFields(log.Fields{
@@ -207,10 +210,10 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	// If the flow is not impacted return the unmodified response.
 	if !changeset.FlowSelectedByImpactedPolicies(flow, cache) {
 		clog.Debug("Flow unaffected")
-		if beforeSrcAction != ActionFlagDeny {
+		if beforeSrcAction != api.ActionFlagDeny {
 			before = getUnchangedResponse(flow)
 		}
-		if afterSrcAction != ActionFlagDeny {
+		if afterSrcAction != api.ActionFlagDeny {
 			after = getUnchangedResponse(flow)
 		}
 		return beforeSrcAction != afterSrcAction, before, after
@@ -218,7 +221,7 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 
 	// Calculate the before impact. We don't necessarily use the calculated value, but it pre-populates the cache for
 	// the after response.
-	if beforeSrcAction != ActionFlagDeny {
+	if beforeSrcAction != api.ActionFlagDeny {
 		// We only bother calculating the before flow for the destination if the before source action is not deny.
 		clog.Debug("Calculate before impact")
 		before = changeset.Before.Calculate(flow, cache, true)
@@ -229,16 +232,16 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	// If we are requested to calculate the original action it's possible the verdict has changed from deny to
 	// allow or unknown. In that case if the destination is a calico-managed endpoint we'll need to add a fake
 	// destination and calculate the impact of that - this handles the fact that we won't have remote data to use.
-	if !fp.Config.CalculateOriginalAction && beforeSrcAction != ActionFlagDeny {
+	if !fp.Config.CalculateOriginalAction && beforeSrcAction != api.ActionFlagDeny {
 		clog.Debug("Keep original action from flow log")
 		before = getUnchangedResponse(flow)
 
 		// Sort the original set of flows so that we can compare to the "after" set to see if anything has actually
 		// changed. We don't need to sort the calculated policies since these will already be sorted.
-		sort.Sort(SortablePolicyHits(before.Policies))
+		sort.Sort(api.SortablePolicyHits(before.Policies))
 	}
 
-	if afterSrcAction != ActionFlagDeny {
+	if afterSrcAction != api.ActionFlagDeny {
 		// Calculate the after impact.
 		clog.Debug("Calculate after impact")
 		after = changeset.After.Calculate(flow, cache, false)
@@ -265,12 +268,12 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 
 	modified = before.Include != after.Include ||
 		before.Action != after.Action ||
-		(len(before.Policies) != 0 && PolicyHitsEqual(before.Policies, after.Policies))
+		(len(before.Policies) != 0 && api.PolicyHitsEqual(before.Policies, after.Policies))
 
 	return modified, before, after
 }
 
-func (fp *policyCalculator) initializeFlowForCalculations(flow *Flow) {
+func (fp *policyCalculator) initializeFlowForCalculations(flow *api.Flow) {
 	// If either source or destination are calico endpoints initialize the selector cache and use the datastore cache to
 	// augment the flow data (if some data is missing).
 	if flow.Source.IsCalicoManagedEndpoint() {
@@ -315,7 +318,7 @@ func (fp *policyCalculator) initializeFlowForCalculations(flow *Flow) {
 	}
 }
 
-func (fp *policyCalculator) newFlowCache(flow *Flow) *flowCache {
+func (fp *policyCalculator) newFlowCache(flow *api.Flow) *flowCache {
 	flowCache := &flowCache{}
 
 	// Initialize the caches if required.
@@ -325,7 +328,7 @@ func (fp *policyCalculator) newFlowCache(flow *Flow) *flowCache {
 	if flow.Destination.Labels != nil {
 		flowCache.destination.selectors = fp.CreateSelectorCache()
 	}
-	flowCache.policies = make(map[string]ActionFlag)
+	flowCache.policies = make(map[string]api.ActionFlag)
 	return flowCache
 }
 
@@ -336,9 +339,9 @@ func (fp *policyCalculator) CreateSelectorCache() []MatchType {
 }
 
 // getUnchangedSourceResponse returns a policy calculation Response based on the original source flow data.
-func getUnchangedResponse(f *Flow) EndpointResponse {
+func getUnchangedResponse(f *api.Flow) EndpointResponse {
 	// Filter out staged policies from the original data.
-	var filtered []PolicyHit
+	var filtered []api.PolicyHit
 	for _, p := range f.Policies {
 		if !p.Staged {
 			filtered = append(filtered, p)
@@ -364,6 +367,6 @@ type CompiledTierAndPolicyChangeSet struct {
 
 // FlowSelectedByImpactedPolicies returns whether the flow is selected by any of the impacted policies before or after
 // the change is applied.
-func (c CompiledTierAndPolicyChangeSet) FlowSelectedByImpactedPolicies(flow *Flow, cache *flowCache) bool {
+func (c CompiledTierAndPolicyChangeSet) FlowSelectedByImpactedPolicies(flow *api.Flow, cache *flowCache) bool {
 	return c.Before.FlowSelectedByImpactedPolicies(flow, cache) || c.After.FlowSelectedByImpactedPolicies(flow, cache)
 }

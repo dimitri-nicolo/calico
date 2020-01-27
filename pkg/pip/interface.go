@@ -4,18 +4,19 @@ import (
 	"context"
 	"time"
 
-	"github.com/olivere/elastic/v7"
+	elastic "github.com/olivere/elastic/v7"
+
+	pelastic "github.com/tigera/lma/pkg/elastic"
 
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 type PIP interface {
 	// This is the main entrypoint into PIP.
-	GetFlows(ctx context.Context, params *PolicyImpactParams) (*FlowLogResults, error)
+	GetFlows(ctx context.Context, params *PolicyImpactParams, flowFilter pelastic.FlowFilter) (*FlowLogResults, error)
 
 	// The following public interface methods are here more for convenience than anything else. The PIPHandler
-	// should just use GetFlows().
+	// should just use GetCompositeAggrFlows().
 	GetPolicyCalculator(ctx context.Context, r *PolicyImpactParams) (policycalc.PolicyCalculator, error)
 	SearchAndProcessFlowLogs(
 		ctx context.Context,
@@ -24,6 +25,7 @@ type PIP interface {
 		calc policycalc.PolicyCalculator,
 		limit int32,
 		impactedOnly bool,
+		flowFilter pelastic.FlowFilter,
 	) (<-chan ProcessedFlows, <-chan error)
 }
 

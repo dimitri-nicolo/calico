@@ -20,9 +20,9 @@
             "flow_impacted": false,
             "reporter": "dst",
             "source_action": "allow",
-            "source_name": "pvt",
+            "source_name": "hep1",
             "source_namespace": "-",
-            "source_type": "net"
+            "source_type": "hep"
           },
           "policies": {
             "by_tiered_policy": {
@@ -68,10 +68,6 @@
                 {
                   "doc_count": 1896,
                   "key": "k8s-app=kube-dns"
-                },
-                {
-                  "doc_count": 1896,
-                  "key": "pod-template-hash=5c98db65d4"
                 }
               ]
             },
@@ -95,7 +91,7 @@
               "buckets": [
                 {
                   "doc_count": 1896,
-                  "key": "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+                  "key": "0|tier1|tier1.gnp|allow"
                 }
               ]
             },
@@ -154,9 +150,9 @@
             "flow_impacted": false,
             "reporter": "dst",
             "source_action": "allow",
-            "source_name": "pvt",
+            "source_name": "hep1",
             "source_namespace": "-",
-            "source_type": "net"
+            "source_type": "hep"
           },
           "policies": {
             "by_tiered_policy": {
@@ -202,10 +198,6 @@
                 {
                   "doc_count": 1896,
                   "key": "pod-template-hash=5c98db65d4"
-                },
-                {
-                  "doc_count": 1896,
-                  "key": "k8s-app=kube-dns"
                 }
               ]
             },
@@ -229,7 +221,7 @@
               "buckets": [
                 {
                   "doc_count": 1896,
-                  "key": "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+                  "key": "0|tier1|tier1.gnp|allow"
                 }
               ]
             },

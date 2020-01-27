@@ -11,6 +11,7 @@ import (
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/policyrec"
+	"github.com/tigera/lma/pkg/rbac"
 )
 
 const (
@@ -35,8 +36,15 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 			return
 		}
 
-		// Check permissions for the namespaces and endpoint names requested
+		// Check that the user is allowed to access flow logs.
 		if stat, err := policyrec.ValidatePermissions(req, authz); err != nil {
+			log.Infof("Not permitting user actions (code=%d): %v", stat, err)
+			http.Error(w, err.Error(), stat)
+			return
+		}
+
+		// Check that user has sufficient permissions to list flows for the requested endpoint.
+		if stat, err := ValidateRecommendationPermissions(req, authz, params); err != nil {
 			log.Infof("Not permitting user actions (code=%d): %v", stat, err)
 			http.Error(w, err.Error(), stat)
 			return
@@ -95,4 +103,23 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 			return
 		}
 	})
+}
+
+// ValidateRecommendationPermissions checks that the user is able to list flows for the specified endpoint.
+func ValidateRecommendationPermissions(req *http.Request, k8sAuth lmaauth.K8sAuthInterface, params *policyrec.PolicyRecommendationParams) (int, error) {
+	fh := rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: k8sAuth, userReq: req})
+	if params.Namespace != "" {
+		if ok, err := fh.CanListPods(params.Namespace); err != nil {
+			return http.StatusInternalServerError, err
+		} else if !ok {
+			return http.StatusForbidden, fmt.Errorf("user cannot list flows for pods in namespace %s", params.Namespace)
+		}
+	} else {
+		if ok, err := fh.CanListHostEndpoints(); err != nil {
+			return http.StatusInternalServerError, err
+		} else if !ok {
+			return http.StatusForbidden, fmt.Errorf("user cannot list flows for hostendpoints")
+		}
+	}
+	return http.StatusOK, nil
 }

@@ -6,6 +6,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/lma/pkg/api"
+
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
@@ -86,7 +88,7 @@ type CompiledTiersAndImpactedPolicies struct {
 }
 
 // FlowSelectedByModifiedEgressPolicies returns whether the flow is selected by any of the impacted policies.
-func (c *CompiledTiersAndImpactedPolicies) FlowSelectedByImpactedPolicies(flow *Flow, cache *flowCache) bool {
+func (c *CompiledTiersAndImpactedPolicies) FlowSelectedByImpactedPolicies(flow *api.Flow, cache *flowCache) bool {
 	for i := range c.ImpactedPolicies {
 		if c.ImpactedPolicies[i].Applies(flow, cache) == MatchTypeTrue {
 			return true
@@ -96,15 +98,15 @@ func (c *CompiledTiersAndImpactedPolicies) FlowSelectedByImpactedPolicies(flow *
 }
 
 // Calculate determines the action and policy path for a specific flow on this compiled set of tiers and policies.
-func (c *CompiledTiersAndImpactedPolicies) Calculate(flow *Flow, cache *flowCache, before bool) (r EndpointResponse) {
+func (c *CompiledTiersAndImpactedPolicies) Calculate(flow *api.Flow, cache *flowCache, before bool) (r EndpointResponse) {
 	// If the source endpoint is a Calico endpoint and this is reported by source then calculate egress. If the
 	// action changes from deny in the original flow to either allow or unknown then we need to calculate for the
 	// destination ingress too.
-	if flow.Source.IsCalicoManagedEndpoint() && flow.Reporter == ReporterTypeSource {
+	if flow.Source.IsCalicoManagedEndpoint() && flow.Reporter == api.ReporterTypeSource {
 		// Calculate egress.
 		log.Debug("Calculating egress action")
 		r = c.Tiers.Calculate(flow, &flow.Source, cache, before)
-	} else if flow.Destination.IsCalicoManagedEndpoint() && flow.Reporter == ReporterTypeDestination {
+	} else if flow.Destination.IsCalicoManagedEndpoint() && flow.Reporter == api.ReporterTypeDestination {
 		log.Debug("Calculating ingress action")
 		r = c.Tiers.Calculate(flow, &flow.Destination, cache, before)
 	}
@@ -115,8 +117,8 @@ func (c *CompiledTiersAndImpactedPolicies) Calculate(flow *Flow, cache *flowCach
 type CompiledTiers []CompiledTier
 
 // Calculate determines the policy impact of the tiers for the supplied flow.
-func (ts CompiledTiers) Calculate(flow *Flow, ep *FlowEndpointData, cache *flowCache, before bool) EndpointResponse {
-	var af ActionFlag
+func (ts CompiledTiers) Calculate(flow *api.Flow, ep *api.FlowEndpointData, cache *flowCache, before bool) EndpointResponse {
+	var af api.ActionFlag
 	epr := EndpointResponse{Include: true}
 	for i := range ts {
 		// Calculate the set of action flags for the tier. The before/after calculation are handled separately so fan
@@ -135,7 +137,7 @@ func (ts CompiledTiers) Calculate(flow *Flow, ep *FlowEndpointData, cache *flowC
 			return epr
 		}
 
-		if af&ActionFlagNextTier == 0 {
+		if af&api.ActionFlagNextTier == 0 {
 			// The next tier flag was not set, so we are now done. Since the action is not unknown, then we should
 			// have a concrete allow or deny action at this point. Note that whilst the uncertain flag may be set
 			// all of the possible paths have resulted in the same action. Store the action in the response object.
@@ -145,20 +147,20 @@ func (ts CompiledTiers) Calculate(flow *Flow, ep *FlowEndpointData, cache *flowC
 		}
 
 		// Clear the pass and tier match flags before we skip to the next tier.
-		af &^= ActionFlagNextTier
+		af &^= api.ActionFlagNextTier
 	}
 
 	// -- END OF TIERS --
 	// This is Allow for Pods, and Deny for HEPs.
 	log.Debug("Hit end of tiers")
-	if ep.Type == EndpointTypeWep {
+	if ep.Type == api.EndpointTypeWep {
 		// End of tiers allow is handled by the namespace profile. Add the policy name for this and set the allow flag.
-		addPolicyToResponse("__PROFILE__", "__PROFILE__.kns."+ep.Namespace, ActionFlagAllow, &epr)
-		af |= ActionFlagAllow
+		addPolicyToResponse("__PROFILE__", "__PROFILE__.kns."+ep.Namespace, api.ActionFlagAllow, &epr)
+		af |= api.ActionFlagAllow
 	} else {
 		// End of tiers deny is handled implicitly by Felix and has a very specific pseudo-profile name.
-		addPolicyToResponse("__PROFILE__", "__PROFILE__.__NO_MATCH__", ActionFlagDeny, &epr)
-		af |= ActionFlagDeny
+		addPolicyToResponse("__PROFILE__", "__PROFILE__.__NO_MATCH__", api.ActionFlagDeny, &epr)
+		af |= api.ActionFlagDeny
 	}
 
 	// Store the action in the response object.
@@ -174,12 +176,12 @@ type CompiledTier []*CompiledPolicy
 // In this "before" processing, calculated flow hits are cross referenced against the flow log policy hits to provide
 // additional certainty, and in the cases where the the calculation was not possible to infer the result from the
 // measured data.
-func (tier CompiledTier) ActionBefore(flow *Flow, r *EndpointResponse, cache *flowCache) ActionFlag {
+func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache *flowCache) api.ActionFlag {
 	// In the before branch we track uncertain matches which we can convert to no-matches if we get an exact hit
 	// corroborated by the flow log.
 	var noMatchPolicies []string
 	var lastEnforcedPolicy *CompiledPolicy
-	var lastEnforcedActions ActionFlag
+	var lastEnforcedActions api.ActionFlag
 	for _, p := range tier {
 		log.Debugf("Process policy: %s", p.FlowLogName)
 
@@ -207,7 +209,7 @@ func (tier CompiledTier) ActionBefore(flow *Flow, r *EndpointResponse, cache *fl
 
 			// An end-of-tier deny flag actually means the policy was a no-match, so convert the flag to be no match
 			// since that's what we need to cache (in the after processing it may no longer be an end-of-tier drop).
-			if flagsFromFlowLog == ActionFlagEndOfTierDeny {
+			if flagsFromFlowLog == api.ActionFlagEndOfTierDeny {
 				log.Debug("Found end of tier drop matching policy - cache as no-match")
 				flagsFromFlowLog = ActionFlagNoMatch
 			}
@@ -248,7 +250,7 @@ func (tier CompiledTier) ActionBefore(flow *Flow, r *EndpointResponse, cache *fl
 	if lastEnforcedPolicy == nil {
 		// This flow didn't apply to any policy in this tier, so go to the next tier.
 		log.Debug("Did not match tier - enumerate next tier")
-		return ActionFlagNextTier
+		return api.ActionFlagNextTier
 	}
 
 	if lastEnforcedActions&(ActionFlagFlowLogMatchesCalculated|ActionFlagFlowLogRemovedUncertainty) != 0 {
@@ -274,7 +276,7 @@ func (tier CompiledTier) ActionBefore(flow *Flow, r *EndpointResponse, cache *fl
 	// the possible hits from this tier which may include multiple hits from the same policy and multiple policies. We
 	// do not include staged policies nor do we include the last enforced policy which we handle explicitly.
 	log.Debug("Final enforced policy action was not corroborated by the flow log policies")
-	var combinedPolicyActions ActionFlag
+	var combinedPolicyActions api.ActionFlag
 	for _, n := range noMatchPolicies {
 		if n == lastEnforcedPolicy.FlowLogName || strings.Contains(n, model.PolicyNamePrefixStaged) {
 			// This is either the last enforced policy (handled separately below), or a staged policy. In either case
@@ -302,7 +304,7 @@ func (tier CompiledTier) ActionBefore(flow *Flow, r *EndpointResponse, cache *fl
 		// we'd otherwise exit as soon as we get an exactly matched rule. We need to convert the no-match to an
 		// end-of-tier drop.
 		log.Debug("Final policy included a no-match, include the end of tier action")
-		lastEnforcedActions = (lastEnforcedActions | ActionFlagEndOfTierDeny) &^ ActionFlagNoMatch
+		lastEnforcedActions = (lastEnforcedActions | api.ActionFlagEndOfTierDeny) &^ ActionFlagNoMatch
 	}
 
 	// And add the final verdict policy.
@@ -315,11 +317,11 @@ func (tier CompiledTier) ActionBefore(flow *Flow, r *EndpointResponse, cache *fl
 // information. We supply the current action flags so that further enumeration can exit as soon as we either find
 // an identical action with confirmed match, or a different action (confirmed or unconfirmed) that means we cannot
 // determine the result with certainty.
-func (tier CompiledTier) ActionAfter(flow *Flow, r *EndpointResponse, cache *flowCache) ActionFlag {
+func (tier CompiledTier) ActionAfter(flow *api.Flow, r *EndpointResponse, cache *flowCache) api.ActionFlag {
 	var lastMatchedPolicy *CompiledPolicy
-	var lastMatchedActions ActionFlag
+	var lastMatchedActions api.ActionFlag
 	var uncertainNoMatchPolicies []string
-	uncertainNoMatchActions := make(map[string]ActionFlag)
+	uncertainNoMatchActions := make(map[string]api.ActionFlag)
 	for _, p := range tier {
 		log.Debugf("Process policy: %s", p.FlowLogName)
 
@@ -365,10 +367,10 @@ func (tier CompiledTier) ActionAfter(flow *Flow, r *EndpointResponse, cache *flo
 	if lastMatchedPolicy == nil {
 		// This flow didn't apply to any policy in this tier, so go to the next tier.
 		log.Debug("Did not match tier - enumerate next tier")
-		return ActionFlagNextTier
+		return api.ActionFlagNextTier
 	}
 
-	var combinedPolicyActions ActionFlag
+	var combinedPolicyActions api.ActionFlag
 	for _, n := range uncertainNoMatchPolicies {
 		if n == lastMatchedPolicy.FlowLogName {
 			// This is the last policy (handled separately below) so skip.
@@ -391,7 +393,7 @@ func (tier CompiledTier) ActionAfter(flow *Flow, r *EndpointResponse, cache *flo
 		// we'd otherwise exit as soon as we get an exactly matched rule. We need to convert the no-match to an
 		// end-of-tier drop.
 		log.Debug("Final policy included a no-match, include the end of tier action")
-		lastMatchedActions = (lastMatchedActions | ActionFlagEndOfTierDeny) &^ ActionFlagNoMatch
+		lastMatchedActions = (lastMatchedActions | api.ActionFlagEndOfTierDeny) &^ ActionFlagNoMatch
 	}
 
 	// And add the final verdict policy.
@@ -401,8 +403,8 @@ func (tier CompiledTier) ActionAfter(flow *Flow, r *EndpointResponse, cache *flo
 
 // addPolicyToResponse adds a policy to the endpoint response. This may add multiple entries for the same policy
 // if there is uncertainty in the match.
-func addPolicyToResponse(tier, name string, flags ActionFlag, r *EndpointResponse) {
-	r.Policies = append(r.Policies, PolicyHit{
+func addPolicyToResponse(tier, name string, flags api.ActionFlag, r *EndpointResponse) {
+	r.Policies = append(r.Policies, api.PolicyHit{
 		MatchIndex: len(r.Policies),
 		Tier:       tier,
 		Name:       name,
@@ -411,11 +413,11 @@ func addPolicyToResponse(tier, name string, flags ActionFlag, r *EndpointRespons
 }
 
 // getFlagsFromFlowLog extracts the policy action flag from the flow log data.
-func getFlagsFromFlowLog(flowLogName string, flow *Flow) (ActionFlag, bool) {
-	var flagsFromFlowLog ActionFlag
+func getFlagsFromFlowLog(flowLogName string, flow *api.Flow) (api.ActionFlag, bool) {
+	var flagsFromFlowLog api.ActionFlag
 	for _, p := range flow.Policies {
 		// We have a match if the policy name (which will include the staged: for staged policies) is the same.
-		if p.Name == flowLogName {
+		if p.FlowLogName() == flowLogName {
 			thisActionFlag := p.Action
 			log.Debugf("Policy %s in flow log has action flags %d", p.Name, thisActionFlag)
 			if flagsFromFlowLog != 0 && flagsFromFlowLog != thisActionFlag {

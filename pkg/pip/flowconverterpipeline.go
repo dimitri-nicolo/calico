@@ -3,38 +3,23 @@ package pip
 import (
 	"context"
 	"sort"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/elastic"
 
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	"github.com/tigera/lma/pkg/elastic"
 )
 
 var (
-	// This is the set of composite sources requested by the UI.
-	//TODO(rlb): Extract this from the UI query.
-	UICompositeSources = []elastic.AggCompositeSourceInfo{
-		{"source_type", "source_type"},
-		{"source_namespace", "source_namespace"},
-		{"source_name", "source_name_aggr"},
-		{"dest_type", "dest_type"},
-		{"dest_namespace", "dest_namespace"},
-		{"dest_name", "dest_name_aggr"},
-		{"action", "action"},
-		{"reporter", "reporter"},
-	}
-
 	// This is the full set of composite sources required by PIP.
 	// The order of this is important since ES orders its responses based on this source order - and PIP utilizes this
 	// to simplify the aggregation processing allowing us to pipeline the conversion.
 	PIPCompositeSources = []elastic.AggCompositeSourceInfo{
-		// This first set of fields matches the set requested by the UI and will never be modified by the policy
-		// calculation. These are non-aggregated and non-cached in the pipeline converter and a single set of these
-		// values represents a single flow.
+		// This first set of fields matches the set requested by the API (see elastic.FlowCompositeSources) and will never
+		// be modified by the policy calculation. These are non-aggregated and non-cached in the pipeline converter and
+		// a single set of these values represents a single flow.
 		{"source_type", "source_type"},
 		{"source_namespace", "source_namespace"},
 		{"source_name", "source_name_aggr"},
@@ -43,7 +28,7 @@ var (
 		{"dest_name", "dest_name_aggr"},
 
 		// These are additional fields that we require to do the policy calculation, but we aggregate out
-		// in the pipeline processing. These are before the reporter and action (which we don't aggregated out),
+		// in the pipeline processing. These are before the reporter and action (which we don't aggregate out),
 		// because we need to correlate source/dest flows - in particular when we are making use of archived policy
 		// data to fill in the gaps.
 		{"proto", "proto"},
@@ -99,49 +84,8 @@ var (
 	PIPCompositeSourcesNumSameFlow      = PIPCompositeSourcesRawIdxProto  // Up to, not including, the proto field (excludes reporter and action)
 	PIPCompositeSourcesNumSameConnGroup = PIPCompositeSourcesRawIdxAction // Up to, not including, the action field
 
-	// The composite source indexes that we reference directly, and the total number of sources for a PIP response.
-	PIPCompositeSourcesIdxReporter     = 6
-	PIPCompositeSourcesIdxAction       = 7
-	PIPCompositeSourcesIdxSourceAction = 8
-	PIPCompositeSourcesIdxImpacted     = 9
-	PIPCompositeSourcesNum             = 10
-
-	// The required aggregated terms that we need to run through PIP.
-	//TODO(rlb): Calculate/combine with the actual UI query.
-	AggregatedTerms = []elastic.AggNestedTermInfo{
-		{"policies", "policies", "by_tiered_policy", "policies.all_policies"},
-		{"dest_labels", "dest_labels", "by_kvpair", "dest_labels.labels"},
-		{"source_labels", "source_labels", "by_kvpair", "source_labels.labels"},
-	}
-
-	PIPAggregatedTermsNameSourceLabels = "source_labels"
-	PIPAggregatedTermsNameDestLabels   = "dest_labels"
-	PIPAggregatedTermsNamePolicies     = "policies"
-
-	// This should be parsed from the query.
-	//TODO(rlb): Extract this from the UI query.
-	UIAggregationSums = []elastic.AggSumInfo{
-		{"sum_num_flows_started", "num_flows_started"},
-		{"sum_num_flows_completed", "num_flows_completed"},
-		{"sum_packets_in", "packets_in"},
-		{"sum_bytes_in", "bytes_in"},
-		{"sum_packets_out", "packets_out"},
-		{"sum_bytes_out", "bytes_out"},
-		{"sum_http_requests_allowed_in", "http_requests_allowed_in"},
-		{"sum_http_requests_denied_in", "http_requests_denied_in"},
-	}
-
 	// The number of flows to return to the UI.
-	//TODO(rlb): Extract this from the UI query.
 	UINumAggregatedFlows = 1000
-)
-
-const (
-	FlowIndex          = "tigera_secure_ee_flows"
-	FlowlogBuckets     = "flog_buckets"
-	FlowNameAggregated = "-"
-	FlowNamespaceNone  = "-"
-	FlowIPNone         = "0.0.0.0"
 )
 
 // ProcessedFlows contains a set of related aggregated flows returned from the ProcessFlowLogs pipeline processor.
@@ -150,7 +94,7 @@ type ProcessedFlows struct {
 	After  []*elastic.CompositeAggregationBucket
 }
 
-// SearchAndProcessFlowLogs provides a pipeline to search elastic flow logs, translate the results based on PIP and
+// SearchAndFilterCompositeAggrFlows provides a pipeline to search elastic flow logs, translate the results based on PIP and
 // stream aggregated results through the returned channel.
 //
 // This will exit cleanly if the context is cancelled.
@@ -161,20 +105,19 @@ func (p *pip) SearchAndProcessFlowLogs(
 	calc policycalc.PolicyCalculator,
 	limit int32,
 	impactedOnly bool,
+	flowFilter elastic.FlowFilter,
 ) (<-chan ProcessedFlows, <-chan error) {
 	results := make(chan ProcessedFlows, UINumAggregatedFlows)
 	errs := make(chan error, 1)
 
 	// Modify the original query to include all of the required data.
-	//TODO(rlb): Should really calculate this based on the original query from the UI, but at the moment we don't
-	//           parse that.
 	modifiedQuery := &elastic.CompositeAggregationQuery{
 		DocumentIndex: query.DocumentIndex,
 		Query:         query.Query,
 		Name:          query.Name,
 		AggCompositeSourceInfos: PIPCompositeSources,
-		AggNestedTermInfos:      AggregatedTerms,
-		AggSumInfos:             UIAggregationSums,
+		AggNestedTermInfos:      elastic.FlowAggregatedTerms,
+		AggSumInfos:             elastic.FlowAggregationSums,
 	}
 
 	// Create a cancellable context so we can exit cleanly when we hit our target number of aggregated results.
@@ -202,12 +145,13 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 		// Obtain separately source allow/deny and dest allow/deny.  The destination allow/deny need to be married
 		// up to the source allow flow.
-		var srcAllowFlow, srcDenyFlow, dstAllowFlow, dstDenyFlow *policycalc.Flow
+		var srcAllowFlow, srcDenyFlow, dstAllowFlow, dstDenyFlow *api.Flow
 		var srcAllowRawBucket, srcDenyRawBucket, dstAllowRawBucket, dstDenyRawBucket *elastic.CompositeAggregationBucket
 
 		// Handler function to calculate the result for a given connection.
 		processConnectionGroup := func() {
 			log.Debug("Process connection group")
+
 			if srcDenyFlow != nil {
 				// We have a flow denied at source. Let's calculate the beforeSrc and afterSrc behavior of that flow at
 				// source. This may explicitly add some destination flows to account for the fact that we don't have
@@ -221,20 +165,20 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// beforeSrc information to remain as originally queried when we aggregate if the policies
 				// were not re-calculated.
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeSource, lastRawFlowKey, srcDenyRawBucket, beforeSrc.Action, beforeSrc, &cacheBefore,
+					api.ReporterTypeSource, lastRawFlowKey, srcDenyRawBucket, beforeSrc.Action, beforeSrc, &cacheBefore,
 				)
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeSource, lastRawFlowKey, srcDenyRawBucket, afterSrc.Action, afterSrc, &cacheAfter,
+					api.ReporterTypeSource, lastRawFlowKey, srcDenyRawBucket, afterSrc.Action, afterSrc, &cacheAfter,
 				)
 
 				// Denied source flows are interesting. If the remote dest is a Calico managed endpoint *and* the action
 				// has been modified from denied then we need to add some flow data for the remote. Since we won't have
 				// the actual data, all we can do is add a fake flow with minimal available data.
 				if srcDenyFlow.Destination.IsCalicoManagedEndpoint() &&
-					(afterSrc.Action != policycalc.ActionFlagDeny || beforeSrc.Action != policycalc.ActionFlagDeny) {
+					(afterSrc.Action != api.ActionFlagDeny || beforeSrc.Action != api.ActionFlagDeny) {
 					log.Debug("Including fake destination flow due to source flow changing from denied")
-					destFlow := policycalc.Flow{
-						Reporter:    policycalc.ReporterTypeDestination,
+					destFlow := api.Flow{
+						Reporter:    api.ReporterTypeDestination,
 						Source:      srcDenyFlow.Source,
 						Destination: srcDenyFlow.Destination,
 						ActionFlag:  0,
@@ -249,10 +193,10 @@ func (p *pip) SearchAndProcessFlowLogs(
 					// beforeSrc information to remain as originally queried when we aggregate if the policies
 					// were not re-calculated.
 					aggregateRawFlowBucket(
-						policycalc.ReporterTypeDestination, lastRawFlowKey, srcDenyRawBucket, beforeSrc.Action, beforeDest, &cacheBefore,
+						api.ReporterTypeDestination, lastRawFlowKey, srcDenyRawBucket, beforeSrc.Action, beforeDest, &cacheBefore,
 					)
 					aggregateRawFlowBucket(
-						policycalc.ReporterTypeDestination, lastRawFlowKey, srcDenyRawBucket, afterSrc.Action, afterDest, &cacheAfter,
+						api.ReporterTypeDestination, lastRawFlowKey, srcDenyRawBucket, afterSrc.Action, afterDest, &cacheAfter,
 					)
 				}
 
@@ -262,7 +206,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 			}
 
 			// Handle source allowed flow if present.
-			srcAllowActionBefore, srcAllowActionAfter := policycalc.ActionFlagAllow, policycalc.ActionFlagAllow
+			srcAllowActionBefore, srcAllowActionAfter := api.ActionFlagAllow, api.ActionFlagAllow
 			if srcAllowFlow != nil {
 				// We have a flow allowed at source. Let's calculate the before and after behavior of that flow at
 				// source. This will never add or remove destination flows - however the actions will instruct the
@@ -277,17 +221,17 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// before information to remain as originally queried when we aggregate if the policies
 				// were not re-calculated.
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeSource, lastRawFlowKey, srcAllowRawBucket, before.Action, before, &cacheBefore,
+					api.ReporterTypeSource, lastRawFlowKey, srcAllowRawBucket, before.Action, before, &cacheBefore,
 				)
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeSource, lastRawFlowKey, srcAllowRawBucket, after.Action, after, &cacheAfter,
+					api.ReporterTypeSource, lastRawFlowKey, srcAllowRawBucket, after.Action, after, &cacheAfter,
 				)
 
 				// Update the source action allow for before and after calculation. The source action before should
 				// still be "allow" unless  we were recalculating and a discrepancy was found between the flow logs and
 				// the policies.
 				//
-				// These are used as input into the recalculation of the destination flows.
+				// These are used as input into the recalculation of the destination api.
 				srcAllowActionBefore = before.Action
 				srcAllowActionAfter = after.Action
 
@@ -308,10 +252,10 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// before information to remain as originally queried when we aggregate if the policies
 				// were not re-calculated.
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeDestination, lastRawFlowKey, dstDenyRawBucket, srcAllowActionBefore, before, &cacheBefore,
+					api.ReporterTypeDestination, lastRawFlowKey, dstDenyRawBucket, srcAllowActionBefore, before, &cacheBefore,
 				)
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeDestination, lastRawFlowKey, dstDenyRawBucket, srcAllowActionAfter, after, &cacheAfter,
+					api.ReporterTypeDestination, lastRawFlowKey, dstDenyRawBucket, srcAllowActionAfter, after, &cacheAfter,
 				)
 
 				// Reset data so it is not counted again.
@@ -331,10 +275,10 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// before information to remain as originally queried when we aggregate if the policies
 				// were not re-calculated.
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeDestination, lastRawFlowKey, dstAllowRawBucket, srcAllowActionBefore, before, &cacheBefore,
+					api.ReporterTypeDestination, lastRawFlowKey, dstAllowRawBucket, srcAllowActionBefore, before, &cacheBefore,
 				)
 				aggregateRawFlowBucket(
-					policycalc.ReporterTypeDestination, lastRawFlowKey, dstAllowRawBucket, srcAllowActionAfter, after, &cacheAfter,
+					api.ReporterTypeDestination, lastRawFlowKey, dstAllowRawBucket, srcAllowActionAfter, after, &cacheAfter,
 				)
 
 				// Reset data so it is not counted again.
@@ -345,6 +289,13 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 		// Handler function to send the result.
 		sendResult := func() (exit bool) {
+			defer func() {
+				// Always reset the before/after sets of buckets ready for the next group. We can re-use the slice.
+				cacheBefore = cacheBefore[:0]
+				cacheAfter = cacheAfter[:0]
+				cacheImpacted = false
+			}()
+
 			// Check that we have data to send, if not exit.
 			if len(cacheBefore) == 0 && len(cacheAfter) == 0 {
 				log.Debug("No data to send")
@@ -356,15 +307,45 @@ func (p *pip) SearchAndProcessFlowLogs(
 				return false
 			}
 
-			// The the cache has been impacted by the resource update then we need to update all flows in the cache
-			// accordingly.
 			if cacheImpacted {
-				log.Debug("Cache impacted")
+				// The cache has been impacted by the resource update so we need to update all flows in the cache
+				// accordingly.
+				log.Debug("Cache impacted, include the flow")
 				for i := range cacheBefore {
-					cacheBefore[i].CompositeAggregationKey[PIPCompositeSourcesIdxImpacted].Value = true
+					cacheBefore[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxImpacted].Value = true
 				}
 				for i := range cacheAfter {
-					cacheAfter[i].CompositeAggregationKey[PIPCompositeSourcesIdxImpacted].Value = true
+					cacheAfter[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxImpacted].Value = true
+				}
+				// Based on the flow endpoints, check if the user has sufficient RBAC to see the flow. Note that we only
+				// need to look at the first original flow in the group since all flows in the group will between the same
+				// endpoints.
+			} else if include, err := flowFilter.IncludeFlow(cacheBefore[0]); err != nil {
+				// Unable to check RBAC permissions.
+				log.WithError(err).Info("Error determining RBAC for flow")
+				errs <- err
+				return true
+			} else if !include {
+				// RBAC indicates that the flow should not be included.  Note that we always include impacted api.
+				log.Debug("Users RBAC disallows flow")
+				return false
+			}
+
+			// We are including the api. We may need to obfuscate the policies - do that now.
+			for i := range cacheBefore {
+				if err := flowFilter.ModifyFlow(cacheBefore[i]); err != nil {
+					// Unable to check RBAC permissions.
+					log.WithError(err).Info("Error determining RBAC for policy obfuscation in original requests")
+					errs <- err
+					return true
+				}
+			}
+			for i := range cacheAfter {
+				if err := flowFilter.ModifyFlow(cacheAfter[i]); err != nil {
+					// Unable to check RBAC permissions.
+					log.WithError(err).Info("Error determining RBAC for policy obfuscation in processed requests")
+					errs <- err
+					return true
 				}
 			}
 
@@ -386,15 +367,10 @@ func (p *pip) SearchAndProcessFlowLogs(
 			}
 
 			if sent >= int(limit) {
-				// We reached or exceeded the maximum number of aggregated flows.
+				// We reached or exceeded the maximum number of aggregated api.
 				log.Debug("Reached or exceeded our limit of flows to return")
 				return true
 			}
-
-			// Reset the before/after sets of buckets. We can re-use the slice.
-			cacheBefore = cacheBefore[:0]
-			cacheAfter = cacheAfter[:0]
-			cacheImpacted = false
 
 			return false
 		}
@@ -445,28 +421,28 @@ func (p *pip) SearchAndProcessFlowLogs(
 			// Recorded flows can only have a reported action of allow or deny. No other bits in the action flags should
 			// be set.
 			switch flow.Reporter {
-			case policycalc.ReporterTypeSource:
+			case api.ReporterTypeSource:
 				switch flow.ActionFlag {
-				case policycalc.ActionFlagAllow:
+				case api.ActionFlagAllow:
 					srcAllowFlow = flow
 					srcAllowRawBucket = rawBucket
-				case policycalc.ActionFlagDeny:
+				case api.ActionFlagDeny:
 					srcDenyFlow = flow
 					srcDenyRawBucket = rawBucket
 				}
-			case policycalc.ReporterTypeDestination:
+			case api.ReporterTypeDestination:
 				switch flow.ActionFlag {
-				case policycalc.ActionFlagAllow:
+				case api.ActionFlagAllow:
 					dstAllowFlow = flow
 					dstAllowRawBucket = rawBucket
-				case policycalc.ActionFlagDeny:
+				case api.ActionFlagDeny:
 					dstDenyFlow = flow
 					dstDenyRawBucket = rawBucket
 				}
 			}
 		}
 
-		// We reached the end of the enumeration. We might have data to process and send so do that now.
+		// We reached the end of the enumeration. Process and send any data we have accumulated.
 		log.Debug("Exited main search loop - processing remaining cached entries")
 		processConnectionGroup()
 		if exit := sendResult(); exit {
@@ -492,10 +468,10 @@ func (p *pip) SearchAndProcessFlowLogs(
 // -  The rawBucket contains the full set of indices for the connection which, with the exception of reporter, action,
 //    and the rawFlowKey indices, will be filtered out.
 func aggregateRawFlowBucket(
-	reporter policycalc.ReporterType,
+	reporter api.ReporterType,
 	rawFlowKey []elastic.CompositeAggregationSourceValue,
 	rawBucket *elastic.CompositeAggregationBucket,
-	srcAction policycalc.ActionFlag,
+	srcAction api.ActionFlag,
 	resp policycalc.EndpointResponse,
 	cachePtr *sortedCache,
 ) {
@@ -507,7 +483,7 @@ func aggregateRawFlowBucket(
 
 		// Modify the policies to those calculated if policies were calculated.
 		if resp.Policies != nil {
-			rawBucket.SetAggregatedTermsFromStringSlice(PIPAggregatedTermsNamePolicies, resp.Policies.FlowLogPolicyStrings())
+			rawBucket.SetAggregatedTermsFromStringSlice(elastic.FlowAggregatedTermsNamePolicies, resp.Policies.FlowLogPolicyStrings())
 		}
 
 		// Aggregate the raw flow data into the cached aggregated flow.
@@ -527,25 +503,25 @@ func getOrCreateAggregatedBucketFromRawFlowBucket(
 	// is probably better that using a map.
 	cache := *cachePtr
 	for i := range cache {
-		if cache[i].CompositeAggregationKey[PIPCompositeSourcesIdxReporter].Value == reporter &&
-			cache[i].CompositeAggregationKey[PIPCompositeSourcesIdxAction].Value == action &&
-			cache[i].CompositeAggregationKey[PIPCompositeSourcesIdxSourceAction].Value == sourceAction {
+		if cache[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxReporter].Value == reporter &&
+			cache[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxAction].Value == action &&
+			cache[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].Value == sourceAction {
 			return cache[i]
 		}
 	}
 
 	// Cached entry does not exist for the UI-aggregated set of data, create the bucket for this aggregation.
-	key := make([]elastic.CompositeAggregationSourceValue, PIPCompositeSourcesNum)
+	key := make([]elastic.CompositeAggregationSourceValue, elastic.FlowCompositeSourcesNum)
 	copy(key, rawKey)
-	key[PIPCompositeSourcesIdxReporter] = elastic.CompositeAggregationSourceValue{
+	key[elastic.FlowCompositeSourcesIdxReporter] = elastic.CompositeAggregationSourceValue{
 		Name:  "reporter",
 		Value: reporter,
 	}
-	key[PIPCompositeSourcesIdxAction] = elastic.CompositeAggregationSourceValue{
+	key[elastic.FlowCompositeSourcesIdxAction] = elastic.CompositeAggregationSourceValue{
 		Name:  "action",
 		Value: action,
 	}
-	key[PIPCompositeSourcesIdxSourceAction] = elastic.CompositeAggregationSourceValue{
+	key[elastic.FlowCompositeSourcesIdxSourceAction] = elastic.CompositeAggregationSourceValue{
 		Name:  "source_action",
 		Value: sourceAction,
 	}
@@ -555,7 +531,7 @@ func getOrCreateAggregatedBucketFromRawFlowBucket(
 	//            I've agreed this API with AV, so let's run with this for now, but in future we may want to revisit this.
 	//            If we do revisit this then we should consider how this is weighted.  packets, flows etc - or perhaps we
 	//            have a set of changed packets/flows/bytes etc.
-	key[PIPCompositeSourcesIdxImpacted] = elastic.CompositeAggregationSourceValue{
+	key[elastic.FlowCompositeSourcesIdxImpacted] = elastic.CompositeAggregationSourceValue{
 		Name:  "flow_impacted",
 		Value: false,
 	}
@@ -578,8 +554,8 @@ func (s sortedCache) Len() int {
 
 // Less implements the Sort interface.
 func (s sortedCache) Less(i, j int) bool {
-	si := s[i].CompositeAggregationKey[PIPCompositeSourcesIdxReporter].String()
-	sj := s[j].CompositeAggregationKey[PIPCompositeSourcesIdxReporter].String()
+	si := s[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxReporter].String()
+	sj := s[j].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxReporter].String()
 	if si < sj {
 		return true
 	} else if si > sj {
@@ -587,8 +563,8 @@ func (s sortedCache) Less(i, j int) bool {
 	}
 
 	// Reporter index is equal, check action.
-	si = s[i].CompositeAggregationKey[PIPCompositeSourcesIdxAction].String()
-	sj = s[j].CompositeAggregationKey[PIPCompositeSourcesIdxAction].String()
+	si = s[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxAction].String()
+	sj = s[j].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxAction].String()
 	if si < sj {
 		return true
 	} else if si > sj {
@@ -596,8 +572,8 @@ func (s sortedCache) Less(i, j int) bool {
 	}
 
 	// Action index is equal, check source action.
-	si = s[i].CompositeAggregationKey[PIPCompositeSourcesIdxSourceAction].String()
-	sj = s[j].CompositeAggregationKey[PIPCompositeSourcesIdxSourceAction].String()
+	si = s[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
+	sj = s[j].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
 	if si < sj {
 		return true
 	}
@@ -619,33 +595,33 @@ func (s sortedCache) SortAndCopy() []*elastic.CompositeAggregationBucket {
 }
 
 // compositeAggregationBucketToFlow converts the raw aggregation bucket into the required policy calculator flow.
-func compositeAggregationBucketToFlow(b *elastic.CompositeAggregationBucket) *policycalc.Flow {
+func compositeAggregationBucketToFlow(b *elastic.CompositeAggregationBucket) *api.Flow {
 	if b == nil {
 		return nil
 	}
 
 	k := b.CompositeAggregationKey
-	flow := &policycalc.Flow{
-		Reporter: policycalc.ReporterType(k[PIPCompositeSourcesRawIdxReporter].String()),
-		Source: policycalc.FlowEndpointData{
-			Type:      getFlowEndpointType(k, PIPCompositeSourcesRawIdxSourceType),
-			Name:      getFlowEndpointName(k, PIPCompositeSourcesRawIdxSourceName, PIPCompositeSourcesRawIdxSourceNameAggr),
-			Namespace: getFlowEndpointNamespace(k, PIPCompositeSourcesRawIdxSourceNamespace),
-			Labels:    getFlowEndpointLabels(b.AggregatedTerms[PIPAggregatedTermsNameSourceLabels]),
-			IP:        getFlowEndpointIP(k, PIPCompositeSourcesRawIdxSourceIP),
-			Port:      getFlowEndpointPort(k, PIPCompositeSourcesRawIdxSourcePort),
+	flow := &api.Flow{
+		Reporter: api.ReporterType(k[PIPCompositeSourcesRawIdxReporter].String()),
+		Source: api.FlowEndpointData{
+			Type:      elastic.GetFlowEndpointTypeFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceType),
+			Name:      elastic.GetFlowEndpointNameFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceName, PIPCompositeSourcesRawIdxSourceNameAggr),
+			Namespace: elastic.GetFlowEndpointNamespaceFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceNamespace),
+			Labels:    elastic.GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[elastic.FlowAggregatedTermsNameSourceLabels]),
+			IP:        elastic.GetFlowEndpointIPFromCompAggKey(k, PIPCompositeSourcesRawIdxSourceIP),
+			Port:      elastic.GetFlowEndpointPortFromCompAggKey(k, PIPCompositeSourcesRawIdxSourcePort),
 		},
-		Destination: policycalc.FlowEndpointData{
-			Type:      getFlowEndpointType(k, PIPCompositeSourcesRawIdxDestType),
-			Name:      getFlowEndpointName(k, PIPCompositeSourcesRawIdxDestName, PIPCompositeSourcesRawIdxDestNameAggr),
-			Namespace: getFlowEndpointNamespace(k, PIPCompositeSourcesRawIdxDestNamespace),
-			Labels:    getFlowEndpointLabels(b.AggregatedTerms[PIPAggregatedTermsNameDestLabels]),
-			IP:        getFlowEndpointIP(k, PIPCompositeSourcesRawIdxDestIP),
-			Port:      getFlowEndpointPort(k, PIPCompositeSourcesRawIdxDestPort),
+		Destination: api.FlowEndpointData{
+			Type:      elastic.GetFlowEndpointTypeFromCompAggKey(k, PIPCompositeSourcesRawIdxDestType),
+			Name:      elastic.GetFlowEndpointNameFromCompAggKey(k, PIPCompositeSourcesRawIdxDestName, PIPCompositeSourcesRawIdxDestNameAggr),
+			Namespace: elastic.GetFlowEndpointNamespaceFromCompAggKey(k, PIPCompositeSourcesRawIdxDestNamespace),
+			Labels:    elastic.GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[elastic.FlowAggregatedTermsNameDestLabels]),
+			IP:        elastic.GetFlowEndpointIPFromCompAggKey(k, PIPCompositeSourcesRawIdxDestIP),
+			Port:      elastic.GetFlowEndpointPortFromCompAggKey(k, PIPCompositeSourcesRawIdxDestPort),
 		},
-		ActionFlag: getFlowAction(k, PIPCompositeSourcesRawIdxAction),
-		Proto:      getFlowProto(k, PIPCompositeSourcesRawIdxProto),
-		Policies:   getFlowPolicies(b.AggregatedTerms[PIPAggregatedTermsNamePolicies]),
+		ActionFlag: elastic.GetFlowActionFromCompAggKey(k, PIPCompositeSourcesRawIdxAction),
+		Proto:      elastic.GetFlowProtoFromCompAggKey(k, PIPCompositeSourcesRawIdxProto),
+		Policies:   elastic.GetFlowPoliciesFromAggTerm(b.AggregatedTerms[elastic.FlowAggregatedTermsNamePolicies]),
 	}
 
 	// Assume IP version is 4 unless otherwise determined from actual IPs in the flow.
@@ -658,104 +634,4 @@ func compositeAggregationBucketToFlow(b *elastic.CompositeAggregationBucket) *po
 	flow.IPVersion = &ipVersion
 
 	return flow
-}
-
-// ---- Helper methods to convert the raw flow data into the policycalc.Flow data. ----
-
-// getFlowAction extracts the flow action from the composite aggregation key.
-func getFlowAction(k elastic.CompositeAggregationKey, idx int) policycalc.ActionFlag {
-	return policycalc.ActionFlagFromString(k[idx].String())
-}
-
-// getFlowProto extracts the flow protocol from the composite aggregation key.
-func getFlowProto(k elastic.CompositeAggregationKey, idx int) *uint8 {
-	if s := k[idx].String(); s != "" {
-		proto := numorstring.ProtocolFromString(s)
-		return policycalc.GetProtocolNumber(&proto)
-	} else if f := k[idx].Float64(); f != 0 {
-		proto := uint8(f)
-		return &proto
-	}
-	return nil
-}
-
-// getFlowEndpointType extracts the flow endpoint type from the composite aggregation key.
-func getFlowEndpointType(k elastic.CompositeAggregationKey, idx int) policycalc.EndpointType {
-	return policycalc.EndpointType(k[idx].String())
-}
-
-// getFlowEndpointName extracts the flow endpoint name from the composite aggregation key.
-func getFlowEndpointName(k elastic.CompositeAggregationKey, nameIdx, nameAggrIdx int) string {
-	if name := k[nameIdx].String(); name != FlowNameAggregated {
-		return name
-	}
-	return k[nameAggrIdx].String()
-}
-
-// getFlowEndpointLabels extracts the flow endpoint labels from the composite aggregation key.
-func getFlowEndpointLabels(t *elastic.AggregatedTerm) map[string]string {
-	if t == nil {
-		return nil
-	}
-	l := make(map[string]string)
-	ranks := make(map[string]int64)
-	for k, rank := range t.Buckets {
-		s, _ := k.(string)
-		// Label bucket keys are of the format "<label-key>=<label-value>".
-		if parts := strings.SplitN(s, "=", 2); len(parts) == 2 {
-			// Extract the label key and label value parts of the bucket key.
-			key := parts[0]
-			value := parts[1]
-
-			// If the ranking of this key value is higher then store it off.
-			if rank > ranks[key] {
-				l[key] = value
-				ranks[key] = rank
-			}
-		}
-	}
-	return l
-}
-
-// getFlowPolicies extracts the flow policies that were applied reporter-side from the composite aggregation key.
-func getFlowPolicies(t *elastic.AggregatedTerm) []policycalc.PolicyHit {
-	if t == nil {
-		return nil
-	}
-	// Extract the policies from the raw data, protecting against multiple occurrences of the same policy with different
-	// actions.
-	var p []policycalc.PolicyHit
-	for k := range t.Buckets {
-		if s, ok := k.(string); !ok {
-			continue
-		} else if h, ok := policycalc.PolicyHitFromFlowLogPolicyString(s); ok {
-			p = append(p, h)
-		}
-	}
-	return p
-}
-
-// getFlowEndpointNamespace extracts the flow endpoint namespace from the composite aggregation key.
-func getFlowEndpointNamespace(k elastic.CompositeAggregationKey, idx int) string {
-	if ns := k[idx].String(); ns != FlowNamespaceNone {
-		return ns
-	}
-	return ""
-}
-
-// getFlowEndpointIP extracts the flow endpoint IP from the composite aggregation key.
-func getFlowEndpointIP(k elastic.CompositeAggregationKey, idx int) *net.IP {
-	if s := k[idx].String(); s != "" && s != FlowIPNone {
-		return net.ParseIP(s)
-	}
-	return nil
-}
-
-// getFlowEndpointPort extracts the flow endpoint port from the composite aggregation key.
-func getFlowEndpointPort(k elastic.CompositeAggregationKey, idx int) *uint16 {
-	if v := k[idx].Float64(); v != 0 {
-		u16 := uint16(v)
-		return &u16
-	}
-	return nil
 }

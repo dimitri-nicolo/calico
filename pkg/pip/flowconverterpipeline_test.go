@@ -5,13 +5,14 @@ import (
 	"context"
 	"text/template"
 
-	"github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	pelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/elastic"
+
+	"github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )
 
 // epData encapsulates endpoint data for these tests. It is not a full representation, merely enough to make the
@@ -208,168 +209,180 @@ func flow(reporter, action, protocol string, source, dest epData) string {
 // the after buckets.
 type alwaysAllowCalculator struct{}
 
-func (c alwaysAllowCalculator) CalculateSource(flow *policycalc.Flow) (bool, policycalc.EndpointResponse, policycalc.EndpointResponse) {
+func (c alwaysAllowCalculator) CalculateSource(flow *api.Flow) (bool, policycalc.EndpointResponse, policycalc.EndpointResponse) {
 	before := policycalc.EndpointResponse{
 		Include: true,
 		Action:  flow.ActionFlag,
-		Policies: []policycalc.PolicyHit{{
+		Policies: []api.PolicyHit{{
 			MatchIndex: 0,
 			Tier:       "tier1",
 			Name:       "tier1.policy1",
-			Action:     policycalc.ActionFlagNextTier,
+			Action:     api.ActionFlagNextTier,
 		}, {
 			MatchIndex: 1,
 			Tier:       "default",
 			Name:       "default.policy1",
-			Action:     policycalc.ActionFlagAllow,
+			Action:     api.ActionFlagAllow,
 		}},
 	}
 	after := policycalc.EndpointResponse{
 		Include: true,
-		Action:  policycalc.ActionFlagAllow,
-		Policies: []policycalc.PolicyHit{{
+		Action:  api.ActionFlagAllow,
+		Policies: []api.PolicyHit{{
 			MatchIndex: 0,
 			Tier:       "tier1",
 			Name:       "tier1.policy1",
-			Action:     policycalc.ActionFlagNextTier,
+			Action:     api.ActionFlagNextTier,
 		}, {
 			MatchIndex: 1,
 			Tier:       "default",
 			Name:       "default.policy1",
-			Action:     policycalc.ActionFlagAllow,
+			Action:     api.ActionFlagAllow,
 		}},
 	}
-	return flow.ActionFlag != policycalc.ActionFlagAllow, before, after
+	return flow.ActionFlag != api.ActionFlagAllow, before, after
 }
 
 func (_ alwaysAllowCalculator) CalculateDest(
-	flow *policycalc.Flow, beforeSourceAction, afterSourceAction policycalc.ActionFlag,
+	flow *api.Flow, beforeSourceAction, afterSourceAction api.ActionFlag,
 ) (modified bool, before, after policycalc.EndpointResponse) {
-	if beforeSourceAction != policycalc.ActionFlagDeny {
+	if beforeSourceAction != api.ActionFlagDeny {
 		before = policycalc.EndpointResponse{
 			Include: true,
 			Action:  flow.ActionFlag,
-			Policies: []policycalc.PolicyHit{{
+			Policies: []api.PolicyHit{{
 				MatchIndex: 0,
 				Tier:       "tier1",
 				Name:       "tier1.policy1",
-				Action:     policycalc.ActionFlagNextTier,
+				Action:     api.ActionFlagNextTier,
 			}, {
 				MatchIndex: 1,
 				Tier:       "default",
 				Name:       "default.policy1",
-				Action:     policycalc.ActionFlagAllow,
+				Action:     api.ActionFlagAllow,
 			}},
 		}
 	}
-	if afterSourceAction != policycalc.ActionFlagDeny {
+	if afterSourceAction != api.ActionFlagDeny {
 		after = policycalc.EndpointResponse{
 			// Add a destination flow if the original src flow was Deny and now we allow.
 			Include: true,
-			Action:  policycalc.ActionFlagAllow,
-			Policies: []policycalc.PolicyHit{{
+			Action:  api.ActionFlagAllow,
+			Policies: []api.PolicyHit{{
 				MatchIndex: 0,
 				Tier:       "tier1",
 				Name:       "tier1.policy1",
-				Action:     policycalc.ActionFlagNextTier,
+				Action:     api.ActionFlagNextTier,
 			}, {
 				MatchIndex: 1,
 				Tier:       "default",
 				Name:       "default.policy1",
-				Action:     policycalc.ActionFlagAllow,
+				Action:     api.ActionFlagAllow,
 			}},
 		}
 	}
-	return flow.ActionFlag != policycalc.ActionFlagAllow, before, after
+	return flow.ActionFlag != api.ActionFlagAllow, before, after
 }
 
 // alwaysDenyCalculator implements the policy calculator interface with an always deny source and dest response for the
 // after buckets.
 type alwaysDenyCalculator struct{}
 
-func (c alwaysDenyCalculator) CalculateSource(flow *policycalc.Flow) (bool, policycalc.EndpointResponse, policycalc.EndpointResponse) {
+func (c alwaysDenyCalculator) CalculateSource(flow *api.Flow) (bool, policycalc.EndpointResponse, policycalc.EndpointResponse) {
 	before := policycalc.EndpointResponse{
 		Include: true,
 		Action:  flow.ActionFlag,
-		Policies: []policycalc.PolicyHit{{
+		Policies: []api.PolicyHit{{
 			MatchIndex: 0,
 			Tier:       "tier1",
 			Name:       "tier1.policy1",
-			Action:     policycalc.ActionFlagNextTier,
+			Action:     api.ActionFlagNextTier,
 		}, {
 			MatchIndex: 1,
 			Tier:       "default",
 			Name:       "default.policy1",
-			Action:     policycalc.ActionFlagAllow,
+			Action:     api.ActionFlagAllow,
 		}},
 	}
 	after := policycalc.EndpointResponse{
 		Include: true,
-		Action:  policycalc.ActionFlagDeny,
-		Policies: []policycalc.PolicyHit{{
+		Action:  api.ActionFlagDeny,
+		Policies: []api.PolicyHit{{
 			MatchIndex: 0,
 			Tier:       "tier1",
 			Name:       "tier1.policy1",
-			Action:     policycalc.ActionFlagNextTier,
+			Action:     api.ActionFlagNextTier,
 		}, {
 			MatchIndex: 1,
 			Tier:       "default",
 			Name:       "default.policy1",
-			Action:     policycalc.ActionFlagAllow,
+			Action:     api.ActionFlagAllow,
 		}},
 	}
-	return flow.ActionFlag != policycalc.ActionFlagDeny, before, after
+	return flow.ActionFlag != api.ActionFlagDeny, before, after
 }
 
 func (_ alwaysDenyCalculator) CalculateDest(
-	flow *policycalc.Flow, beforeSourceAction, afterSourceAction policycalc.ActionFlag,
+	flow *api.Flow, beforeSourceAction, afterSourceAction api.ActionFlag,
 ) (modified bool, before, after policycalc.EndpointResponse) {
-	if beforeSourceAction != policycalc.ActionFlagDeny {
+	if beforeSourceAction != api.ActionFlagDeny {
 		before = policycalc.EndpointResponse{
 			Include: true,
 			Action:  flow.ActionFlag,
-			Policies: []policycalc.PolicyHit{{
+			Policies: []api.PolicyHit{{
 				MatchIndex: 0,
 				Tier:       "tier1",
 				Name:       "tier1.policy1",
-				Action:     policycalc.ActionFlagDeny,
+				Action:     api.ActionFlagDeny,
 			}, {
 				MatchIndex: 1,
 				Tier:       "default",
 				Name:       "default.policy1",
-				Action:     policycalc.ActionFlagDeny,
+				Action:     api.ActionFlagDeny,
 			}},
 		}
 	}
-	if afterSourceAction != policycalc.ActionFlagDeny {
+	if afterSourceAction != api.ActionFlagDeny {
 		before = policycalc.EndpointResponse{
 			Include: true,
-			Action:  policycalc.ActionFlagDeny,
-			Policies: []policycalc.PolicyHit{{
+			Action:  api.ActionFlagDeny,
+			Policies: []api.PolicyHit{{
 				MatchIndex: 0,
 				Tier:       "tier1",
 				Name:       "tier1.policy1",
-				Action:     policycalc.ActionFlagNextTier,
+				Action:     api.ActionFlagNextTier,
 			}, {
 				MatchIndex: 1,
 				Tier:       "default",
 				Name:       "default.policy1",
-				Action:     policycalc.ActionFlagDeny,
+				Action:     api.ActionFlagDeny,
 			}},
 		}
 	}
-	return flow.ActionFlag != policycalc.ActionFlagDeny, before, after
+	return flow.ActionFlag != api.ActionFlagDeny, before, after
 }
+
+var _ = Describe("Test relationship between PIP and API queries", func() {
+	It("has the same lower set of indexes", func() {
+		Expect(PIPCompositeSourcesRawIdxSourceType).To(Equal(elastic.FlowCompositeSourcesIdxSourceType))
+		Expect(PIPCompositeSourcesRawIdxSourceNamespace).To(Equal(elastic.FlowCompositeSourcesIdxSourceNamespace))
+		Expect(PIPCompositeSourcesRawIdxSourceNameAggr).To(Equal(elastic.FlowCompositeSourcesIdxSourceNameAggr))
+		Expect(PIPCompositeSourcesRawIdxDestType).To(Equal(elastic.FlowCompositeSourcesIdxDestType))
+		Expect(PIPCompositeSourcesRawIdxDestNamespace).To(Equal(elastic.FlowCompositeSourcesIdxDestNamespace))
+		Expect(PIPCompositeSourcesRawIdxDestNameAggr).To(Equal(elastic.FlowCompositeSourcesIdxDestNameAggr))
+
+	})
+})
 
 var _ = Describe("Test handling of aggregated ES response", func() {
 	It("handles simple aggregation of results where action does not change", func() {
 		By("Creating an ES client with a mocked out search results with all allow actions")
-		client := pelastic.NewMockSearchClient([]interface{}{
-			// Dest flows.
+		client := elastic.NewMockSearchClient([]interface{}{
+			// Dest api.
 			flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregate before and after
 			flow("dst", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // |
 			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // +
-			// Source flows.
+			// Source api.
 			flow("src", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregate before and after
 			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // |
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // +
@@ -378,18 +391,18 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 		})
 
 		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name: FlowlogBuckets,
+		q := &elastic.CompositeAggregationQuery{
+			Name: api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      AggregatedTerms,
-			AggSumInfos:             UIAggregationSums,
+			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
+			AggSumInfos:             elastic.FlowAggregationSums,
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, false)
-		var before []*pelastic.CompositeAggregationBucket
-		var after []*pelastic.CompositeAggregationBucket
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+		var before []*elastic.CompositeAggregationBucket
+		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
 			before = append(before, flow.Before...)
 			after = append(after, flow.After...)
@@ -397,7 +410,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		Expect(before).To(HaveLen(3))
 		Expect(before[0].DocCount).To(BeEquivalentTo(3))
-		Expect(before[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -410,7 +423,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", false},
 		}))
 		Expect(before[1].DocCount).To(BeEquivalentTo(3))
-		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -423,7 +436,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", false},
 		}))
 		Expect(before[2].DocCount).To(BeEquivalentTo(1))
-		Expect(before[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[2].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "wep"},
 			{"source_namespace", "ns1"},
 			{"source_name", "hep1"},
@@ -438,7 +451,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		Expect(after).To(HaveLen(3))
 		Expect(after[0].DocCount).To(BeEquivalentTo(3))
-		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -451,7 +464,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", false},
 		}))
 		Expect(after[1].DocCount).To(BeEquivalentTo(3))
-		Expect(after[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -464,7 +477,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", false},
 		}))
 		Expect(after[2].DocCount).To(BeEquivalentTo(1))
-		Expect(after[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[2].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "wep"},
 			{"source_namespace", "ns1"},
 			{"source_name", "hep1"},
@@ -480,13 +493,13 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 	It("handles source flows changing from deny to allow", func() {
 		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
-		client := pelastic.NewMockSearchClient([]interface{}{
-			// Dest flows.
+		client := elastic.NewMockSearchClient([]interface{}{
+			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
 			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
 			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), //                // +
-			// Source flows.
+			// Source api.
 			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
 			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregated   // |
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
@@ -495,18 +508,18 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 		})
 
 		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name: FlowlogBuckets,
+		q := &elastic.CompositeAggregationQuery{
+			Name: api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      AggregatedTerms,
-			AggSumInfos:             UIAggregationSums,
+			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
+			AggSumInfos:             elastic.FlowAggregationSums,
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, false)
-		var before []*pelastic.CompositeAggregationBucket
-		var after []*pelastic.CompositeAggregationBucket
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+		var before []*elastic.CompositeAggregationBucket
+		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
 			before = append(before, flow.Before...)
 			after = append(after, flow.After...)
@@ -514,7 +527,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		Expect(before).To(HaveLen(5))
 		Expect(before[0].DocCount).To(BeEquivalentTo(1))
-		Expect(before[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -527,7 +540,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[1].DocCount).To(BeEquivalentTo(1))
-		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -540,7 +553,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[2].DocCount).To(BeEquivalentTo(2))
-		Expect(before[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[2].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -553,7 +566,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[3].DocCount).To(BeEquivalentTo(1))
-		Expect(before[3].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[3].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -566,7 +579,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[4].DocCount).To(BeEquivalentTo(1))
-		Expect(before[4].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[4].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "wep"},
 			{"source_namespace", "ns1"},
 			{"source_name", "hep1"},
@@ -581,7 +594,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		Expect(after).To(HaveLen(3))
 		Expect(after[0].DocCount).To(BeEquivalentTo(3))
-		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -594,7 +607,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(after[1].DocCount).To(BeEquivalentTo(3))
-		Expect(after[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -607,7 +620,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(after[2].DocCount).To(BeEquivalentTo(1))
-		Expect(after[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[2].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "wep"},
 			{"source_namespace", "ns1"},
 			{"source_name", "hep1"},
@@ -623,7 +636,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 	It("handles source flows changing from allow to deny", func() {
 		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
-		client := pelastic.NewMockSearchClient([]interface{}{
+		client := elastic.NewMockSearchClient([]interface{}{
 			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),
 			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)),
 			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),
@@ -635,18 +648,18 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 		})
 
 		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name: FlowlogBuckets,
+		q := &elastic.CompositeAggregationQuery{
+			Name: api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      AggregatedTerms,
-			AggSumInfos:             UIAggregationSums,
+			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
+			AggSumInfos:             elastic.FlowAggregationSums,
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always deny after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysDenyCalculator{}, 1000, false)
-		var before []*pelastic.CompositeAggregationBucket
-		var after []*pelastic.CompositeAggregationBucket
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysDenyCalculator{}, 1000, false, elastic.NewFlowFilterIncludeAll())
+		var before []*elastic.CompositeAggregationBucket
+		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
 			before = append(before, flow.Before...)
 			after = append(after, flow.After...)
@@ -654,7 +667,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		Expect(before).To(HaveLen(5))
 		Expect(before[0].DocCount).To(BeEquivalentTo(1))
-		Expect(before[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -667,7 +680,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[1].DocCount).To(BeEquivalentTo(1))
-		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -680,7 +693,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[2].DocCount).To(BeEquivalentTo(2))
-		Expect(before[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[2].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -693,7 +706,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[3].DocCount).To(BeEquivalentTo(1))
-		Expect(before[3].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[3].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -706,7 +719,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[4].DocCount).To(BeEquivalentTo(1))
-		Expect(before[4].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[4].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "wep"},
 			{"source_namespace", "ns1"},
 			{"source_name", "hep1"},
@@ -721,7 +734,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		Expect(after).To(HaveLen(2))
 		Expect(after[0].DocCount).To(BeEquivalentTo(3))
-		Expect(after[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -734,7 +747,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(after[1].DocCount).To(BeEquivalentTo(1))
-		Expect(after[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(after[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "wep"},
 			{"source_namespace", "ns1"},
 			{"source_name", "hep1"},
@@ -750,13 +763,13 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 	It("Should return only impacted flows when impactedOnly parameter is set to true", func() {
 		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
-		client := pelastic.NewMockSearchClient([]interface{}{
-			// Dest flows.
+		client := elastic.NewMockSearchClient([]interface{}{
+			// Dest api.
 			// flow("dst", "allow", "tcp", hepd("hep1", 100), hepd("hep2", 200)), <- this flow is now deny at source,
 			//                                                                       but will reappear in "after flows"
 			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
 			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), //                // +
-			// Source flows.
+			// Source api.
 			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
 			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregated   // |
 			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
@@ -765,18 +778,18 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 		})
 
 		By("Creating a composite agg query")
-		q := &pelastic.CompositeAggregationQuery{
-			Name: FlowlogBuckets,
+		q := &elastic.CompositeAggregationQuery{
+			Name: api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      AggregatedTerms,
-			AggSumInfos:             UIAggregationSums,
+			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
+			AggSumInfos:             elastic.FlowAggregationSums,
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows (always allow after)")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, true)
-		var before []*pelastic.CompositeAggregationBucket
-		var after []*pelastic.CompositeAggregationBucket
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, alwaysAllowCalculator{}, 1000, true, elastic.NewFlowFilterIncludeAll())
+		var before []*elastic.CompositeAggregationBucket
+		var after []*elastic.CompositeAggregationBucket
 		for flow := range flowsChan {
 			before = append(before, flow.Before...)
 			after = append(after, flow.After...)
@@ -785,7 +798,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 		By("Checking the length of the response, if impactedOnly was set to false before would contain 5 results")
 		Expect(before).To(HaveLen(4))
 		Expect(before[0].DocCount).To(BeEquivalentTo(1))
-		Expect(before[0].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[0].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -798,7 +811,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[1].DocCount).To(BeEquivalentTo(1))
-		Expect(before[1].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[1].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -811,7 +824,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[2].DocCount).To(BeEquivalentTo(2))
-		Expect(before[2].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[2].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
@@ -824,7 +837,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 			{"flow_impacted", true},
 		}))
 		Expect(before[3].DocCount).To(BeEquivalentTo(1))
-		Expect(before[3].CompositeAggregationKey).To(Equal(pelastic.CompositeAggregationKey{
+		Expect(before[3].CompositeAggregationKey).To(Equal(elastic.CompositeAggregationKey{
 			{"source_type", "hep"},
 			{"source_namespace", "-"},
 			{"source_name", "hep1"},
