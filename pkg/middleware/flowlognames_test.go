@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -449,7 +448,7 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			q.Add("cluster", "CLUSTER")
 			q.Add("prefix", "TIGERA-")
 			q.Add("namespace", "TIGERA-ELASTICSEARCH")
-			startTimeObject, endTimeObject, err := getTestStartAndEndTime()
+			startTimeObject, endTimeObject := getTestStartAndEndTime()
 			Expect(err).To(Not(HaveOccurred()))
 			q.Add("startDateTime", startTimeTest)
 			q.Add("endDateTime", endTimeTest)
@@ -571,8 +570,7 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			By("Creating a mock ES client with a mocked out search results")
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
 
-			_, endTimeObject, err := getTestStartAndEndTime()
-			Expect(err).To(Not(HaveOccurred()))
+			_, endTimeObject := getTestStartAndEndTime()
 
 			params := &FlowLogNamesParams{
 				Limit:       2000,
@@ -592,8 +590,7 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			By("Creating a mock ES client with a mocked out search results")
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
 
-			startTimeObject, err := time.Parse(time.RFC3339, "2029-12-03T21:45:57-08:00")
-			Expect(err).To(Not(HaveOccurred()))
+			startTimeObject := "now + 20d"
 
 			params := &FlowLogNamesParams{
 				Limit:         2000,

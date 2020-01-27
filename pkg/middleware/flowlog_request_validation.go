@@ -3,11 +3,11 @@ package middleware
 import (
 	"encoding/json"
 	"errors"
-	log "github.com/sirupsen/logrus"
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -159,17 +159,6 @@ func validateLabelSelector(labelSelectors []LabelSelector) bool {
 		}
 	}
 	return true
-}
-
-func parseAndValidateTime(timeString string) (time.Time, error) {
-	if timeString == "" {
-		return time.Time{}, nil
-	}
-	parsedTime, err := time.Parse(time.RFC3339, timeString)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return parsedTime, nil
 }
 
 func getPolicyPreview(preview string) (*PolicyPreview, error) {

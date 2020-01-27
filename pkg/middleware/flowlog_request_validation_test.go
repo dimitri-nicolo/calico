@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"net/http"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -203,28 +204,6 @@ var _ = Describe("Test flowlog request validation functions", func() {
 			types := []string{"network", "networkSets", "weps", "heppp"}
 			valid := validateFlowTypes(types)
 			Expect(valid).To(BeFalse())
-		})
-	})
-
-	Context("Test that the parseAndValidateTime function behaves as expected", func() {
-		It("should return a valid RFC3339 time object", func() {
-			timeString := "2019-12-03T21:51:01-08:00"
-			time, err := parseAndValidateTime(timeString)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(time).To(Not(BeNil()))
-		})
-
-		It("should return an error and a zero time when passed a badly formatted time string", func() {
-			timeString := "20199-13-0321:51:01-08:00"
-			time, err := parseAndValidateTime(timeString)
-			Expect(err).To(HaveOccurred())
-			Expect(time.IsZero()).To(BeTrue())
-		})
-
-		It("should return a zero time and no error when passed an empty time string", func() {
-			time, err := parseAndValidateTime("")
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(time.IsZero()).To(BeTrue())
 		})
 	})
 

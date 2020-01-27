@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -23,8 +22,8 @@ type FlowLogsParams struct {
 	SourceLabels         []LabelSelector `json:"srcLabels"`
 	DestType             []string        `json:"dstType"`
 	DestLabels           []LabelSelector `json:"dstLabels"`
-	StartDateTime        time.Time       `json:"startDateTime"`
-	EndDateTime          time.Time       `json:"endDateTime"`
+	StartDateTime        string          `json:"startDateTime"`
+	EndDateTime          string          `json:"endDateTime"`
 	Actions              []string        `json:"actions"`
 	Namespace            string          `json:"namespace"`
 	SourceDestNamePrefix string          `json:"srcDstNamePrefix"`
@@ -113,16 +112,8 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		log.WithError(err).Info("Error extracting dstLabels")
 		return nil, errParseRequest
 	}
-	startDateTime, err := parseAndValidateTime(url.Get("startDateTime"))
-	if err != nil {
-		log.WithError(err).Info("Error parsing startDateTime")
-		return nil, errParseRequest
-	}
-	endDateTime, err := parseAndValidateTime(url.Get("endDateTime"))
-	if err != nil {
-		log.WithError(err).Info("Error parsing endDateTime")
-		return nil, errParseRequest
-	}
+	startDateTime := url.Get("startDateTime")
+	endDateTime := url.Get("endDateTime")
 	actions := lowerCaseParams(url["actions"])
 	namespace := strings.ToLower(url.Get("namespace"))
 	srcDstNamePrefix := strings.ToLower(url.Get("srcDstNamePrefix"))
@@ -217,12 +208,12 @@ func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
 		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
 		filters = append(filters, destLabelsFilter)
 	}
-	if !params.StartDateTime.IsZero() {
-		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime.Unix())
+	if params.StartDateTime != "" {
+		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime)
 		filters = append(filters, startFilter)
 	}
-	if !params.EndDateTime.IsZero() {
-		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime.Unix())
+	if params.EndDateTime != "" {
+		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime)
 		filters = append(filters, endFilter)
 	}
 
