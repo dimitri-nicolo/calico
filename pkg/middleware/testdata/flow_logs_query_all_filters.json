@@ -91,7 +91,7 @@
       {
         "range":{
           "start_time":{
-            "from":1575438357,
+            "from":"now-3h",
             "include_lower":false,
             "include_upper":true,
             "to":null
@@ -104,7 +104,7 @@
             "from":null,
             "include_lower":true,
             "include_upper":false,
-            "to":1575438661
+            "to":"now"
           }
         }
       },

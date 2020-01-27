@@ -2,6 +2,9 @@ package middleware
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"os"
+
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -9,16 +12,14 @@ import (
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"io/ioutil"
-	"os"
 
 	"net/http"
 	"time"
 )
 
 const (
-	startTimeTest          = "2019-12-03T21:45:57-08:00"
-	endTimeTest            = "2019-12-03T21:51:01-08:00"
+	startTimeTest          = "now-3h"
+	endTimeTest            = "now"
 	invalidFlowTypes       = `[network", "networkSSet", "wepp", "heppp"]`
 	invalidActions         = `["allowW", "deeny", "unknownn"]`
 	malformedFlowsResponse = `{badlyFormedNamesJson}`
@@ -92,22 +93,6 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request an badly formatted startDateTime param", func() {
-			req, err := newTestRequestWithParam(http.MethodGet, "startDateTime", "20199-13-0321:51:01-08:00")
-			Expect(err).NotTo(HaveOccurred())
-			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
-			Expect(params).To(BeNil())
-		})
-
-		It("should return an errParseRequest when passed a request an badly formatted endDateTime param", func() {
-			req, err := newTestRequestWithParam(http.MethodGet, "endDateTime", "20199-13-0321:51:01-08:00")
-			Expect(err).NotTo(HaveOccurred())
-			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
-			Expect(params).To(BeNil())
-		})
-
 		It("should return an errParseRequest when passed a request an badly formatted policyPreview param", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", invalidPreview)
 			Expect(err).NotTo(HaveOccurred())
@@ -169,8 +154,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		It("should return a valid FlowLogsParams object", func() {
 			req, err := http.NewRequest(http.MethodGet, "", nil)
 			Expect(err).NotTo(HaveOccurred())
-			startTimeObject, endTimeObject, err := getTestStartAndEndTime()
-			Expect(err).To(Not(HaveOccurred()))
+			startTimeObject, endTimeObject := getTestStartAndEndTime()
 			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			q := req.URL.Query()
@@ -238,8 +222,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 		It("should return a query without filters when passed a params object with zero start and end time", func() {
 			params := &FlowLogsParams{
-				StartDateTime: time.Time{},
-				EndDateTime:   time.Time{},
+				StartDateTime: "",
+				EndDateTime:   "",
 			}
 
 			query := buildFlowLogsQuery(params)
@@ -290,8 +274,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 		It("should return a query with all filters applied", func() {
 			By("Creating params object with all possible entries for filters")
-			startTime, endTime, err := getTestStartAndEndTime()
-			Expect(err).To(Not(HaveOccurred()))
+			startTime, endTime := getTestStartAndEndTime()
 			params := &FlowLogsParams{
 				Actions:              []string{"allow", "deny", "unknown"},
 				SourceType:           []string{"net", "ns", "wep", "hep"},
@@ -489,16 +472,8 @@ func newTestRequest(method string) (*http.Request, error) {
 	return req, err
 }
 
-func getTestStartAndEndTime() (time.Time, time.Time, error) {
-	startTimeObject, err := time.Parse(time.RFC3339, startTimeTest)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	endTimeObject, err := time.Parse(time.RFC3339, endTimeTest)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	return startTimeObject, endTimeObject, nil
+func getTestStartAndEndTime() (string, string) {
+	return startTimeTest, endTimeTest
 }
 
 func newTestRequestWithParams(method string, key string, values []string) (*http.Request, error) {
