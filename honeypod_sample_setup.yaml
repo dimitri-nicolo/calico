@@ -10,8 +10,8 @@ metadata:
   name: tigera-internal-role
 rules:
   - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "watch", "list"]
+    resources: [""]
+    verbs: [""]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -41,18 +41,18 @@ spec:
       labels:
         app: tigera-internal-1
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
       - name: tigera-internal-1
-        image: alpine:latest
-        command: ["/bin/sh"]
-        args: ["-c", "while true;do sleep 5; done"]
+        image: quay.io/tigera/honeypod:v2.7.0
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
   name: honeypod-alert-1-1
 spec:
-  description: "[Honeypod] Pod Subnet IP Enumeration by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
@@ -63,7 +63,7 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-1-2
 spec:
-  description: "[Honeypod] Pod Subnet Port Scan by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
@@ -87,9 +87,11 @@ spec:
       labels:
         app: tigera-internal-3
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
       - name: tigera-internal-dashboard
-        image: gcr.io/tigera-security-research/tigera-internal-dashboard:1.0.0
+        image: quay.io/tigera/honeypod-exp-service:v2.7.0
         ports:
         - containerPort: 8888
         - containerPort: 443
@@ -105,7 +107,7 @@ spec:
   ports:
     - port: 8888
       protocol: TCP
-      targetPort: 80
+      targetPort: 8080
   selector:
     app: tigera-internal-3
 ---
@@ -128,10 +130,10 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-3
 spec:
-  description: "[Honeypod] Fake Debug Service accessed by ${source_namespace}/${source_name_aggr} on port 80"
+  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="80"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
   aggregateBy: [source_namespace, source_name_aggr]
 ---
 apiVersion: apps/v1
@@ -181,7 +183,7 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-4
 spec:
-  description: "[Honeypod] Vulnerable Service (FTP) accessed by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'

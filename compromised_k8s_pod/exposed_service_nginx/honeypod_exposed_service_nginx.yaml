@@ -13,9 +13,11 @@ spec:
       labels:
         app: tigera-internal-3
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
       - name: tigera-internal-dashboard
-        image: gcr.io/tigera-security-research/tigera-internal-dashboard:1.0.0
+        image: quay.io/tigera/honeypod-exp-service:v2.7.0
         ports:
         - containerPort: 8888
         - containerPort: 443
@@ -31,7 +33,7 @@ spec:
   ports:
     - port: 8888
       protocol: TCP
-      targetPort: 80
+      targetPort: 8080
   selector:
     app: tigera-internal-3
 ---
@@ -54,9 +56,9 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-3
 spec:
-  description: "[Honeypod] Fake Debug Service accessed by ${source_namespace}/${source_name_aggr} on port 80"
+  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="80"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
   aggregateBy: [source_namespace, source_name_aggr]
 ---

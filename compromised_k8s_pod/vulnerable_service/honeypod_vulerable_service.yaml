@@ -45,7 +45,7 @@ kind: GlobalAlert
 metadata:
   name: honeypod-alert-4
 spec:
-  description: "[Honeypod] Vulnerable Service (FTP) accessed by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
