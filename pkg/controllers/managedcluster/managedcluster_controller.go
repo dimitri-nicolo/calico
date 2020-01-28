@@ -72,14 +72,18 @@ func New(
 		cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
 		&corev1.Secret{},
-		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+	)
+
+	mgmtChangeWorker.AddWatch(
+		cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.TigeraElasticsearchNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchUserSecret))),
+		&corev1.Secret{},
 	)
 
 	mgmtChangeWorker.AddWatch(
 		cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 		&corev1.ConfigMap{},
-		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 	)
 
 	return &managedClusterController{

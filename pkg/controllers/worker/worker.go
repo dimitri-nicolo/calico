@@ -147,7 +147,7 @@ func (w *worker) processNextItem() bool {
 	}
 
 	if err := w.reconciler.Reconcile(key.(types.NamespacedName)); err != nil {
-		if w.NumRequeues(key) > 5 {
+		if w.NumRequeues(key) < 5 {
 			w.AddRateLimited(key)
 			return true
 		}

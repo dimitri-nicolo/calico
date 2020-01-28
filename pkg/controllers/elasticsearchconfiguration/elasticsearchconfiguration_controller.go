@@ -94,18 +94,25 @@ func New(
 		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 	)
 
+	notifications := []worker.ResourceWatch{worker.ResourceWatchUpdate, worker.ResourceWatchDelete}
+	// if this is for a managed cluster this controller adds the public cert secret and the config map so we don't need
+	// to be notified when it's added
+	if management {
+		notifications = append(notifications, worker.ResourceWatchAdd)
+	}
+
 	w.AddWatch(
 		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
 		&corev1.Secret{},
-		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		notifications...,
 	)
 
 	w.AddWatch(
 		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 		&corev1.ConfigMap{},
-		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		notifications...,
 	)
 
 	if management {
@@ -115,6 +122,12 @@ func New(
 			cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
 			&esalpha1.Elasticsearch{},
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.TigeraElasticsearchNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchUserSecret))),
+			&corev1.Secret{},
 		)
 	}
 
