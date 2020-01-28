@@ -8,141 +8,122 @@ import requests
 # default vars
 PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = tests.RELEASE_STREAM
-S3_BASE_URL = tests.S3_BASE_URL
-EE_CORE_URL = tests.EE_CORE_URL
-EE_URL = tests.EE_URL
+REGISTRY = tests.REGISTRY
+HELM_CHARTS_BASE_URL = tests.HELM_CHARTS_BASE_URL
+HELM_CORE_BASE_NAME = tests.HELM_CORE_BASE_NAME
+HELM_EE_BASE_NAME = tests.HELM_EE_BASE_NAME
+HELM_CORE_URL = tests.HELM_CORE_URL
+HELM_EE_URL = tests.HELM_EE_URL
+VALUES_FILE_NAME = 'values.yaml'
 
 # we don't have a 1:1 naming scheme in values.yaml and versions.yml
-CORE_MAPPED_IMAGES = {'cnxApiserver': 'apiserver',
-                      'cnxQueryserver': 'queryserver',
-                      'node': 'node',
-                      'dikastes': 'dikastes',
-                      'calicoctl': 'calicoctl',
-                      'typha': 'typha',
-                      'kubeControllers': 'kubeControllers',
-                      'cloudControllers': 'cloudControllers'}
-
-VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
-                          'cloudControllers': 'cloud-controllers',
-                          'kubeControllers': 'cnx-kube-controllers',
-                          'cnxApiserver': 'cnx-apiserver',
-                          'cnxQueryserver': 'cnx-queryserver',
-                          'cnxManager': 'cnx-manager',
-                          'cnxManagerProxy': 'voltron'}
-
-EE_MAPPED_IMAGES = {'intrusion-detection-controller': 'intrusionDetectionController',
-                    'cnxManager': 'manager',
-                    'cnxManagerProxy': 'managerProxy',
-                    'es-proxy': 'esProxy',
-                    'fluentd': 'fluentd',
-                    'es-curator': 'esCurator',
-                    'elastic-tsee-installer': 'elasticTseeInstaller',
-                    'compliance-controller': 'complianceController',
-                    'compliance-server': 'complianceServer',
-                    'compliance-snapshotter': 'complianceSnapshotter',
-                    'compliance-reporter': 'complianceReporter',
-                    'compliance-benchmarker': 'complianceBenchmarker'}
-
-# This should by synced with other similar ones spread across various files.
-EXCLUDED_IMAGES_BY_VER = {
-    'v2.3': ['compliance-snapshotter',
-             'intrusion-detection-controller',
-             'compliance-server',
-             'compliance-controller',
-             'compliance-reporter',
-             'compliance-benchmarker',
-             'kibana'],
-    'v2.4': ['compliance-benchmarker'],
-    'v2.6': ['cnx-manager-proxy'],
+CORE_MAPPED_IMAGES = {
+    'cnx-node': 'node',
+    'cnx-kube-controllers': 'kubeControllers',
+    'typha': 'typha',
+    'cnx-apiserver': 'apiserver',
+    'cnx-queryserver': 'queryserver',
+    'calicoctl': 'calicoctl',
+    'dikastes': 'dikastes',
+    'cloud-controllers': 'cloudControllers',
 }
+
+EE_MAPPED_IMAGES = {
+    'cnx-manager': 'manager',
+    'voltron': 'voltron',
+    'es-proxy': 'esProxy',
+    'fluentd': 'fluentd',
+    'es-curator': 'esCurator',
+    'elastic-tsee-installer': 'elasticTseeInstaller',
+    'compliance-controller': 'complianceController',
+    'compliance-reporter': 'complianceReporter',
+    'compliance-snapshotter': 'complianceSnapshotter',
+    'compliance-server': 'complianceServer',
+    'compliance-benchmarker': 'complianceBenchmarker',
+    'kibana': 'kibana',
+    'intrusion-detection-controller': 'intrusionDetectionController',
+}
+
+EXCLUDED_IMAGES = [
+  'calicoq',
+  'ingress-collector',
+]
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
-    RELEASE_VERSION = versions[RELEASE_STREAM][0]['title']
-    HELM_RELEASE = versions[RELEASE_STREAM][0]['helmRelease']
+    release = versions[0]
+    RELEASE_VERSION = release['title']
+    HELM_RELEASE = release['helmRelease']
     print '[INFO] using _data/versions.yaml, discovered version: {0}-{1}'.format(RELEASE_VERSION, HELM_RELEASE)
 
+def test_all_images_are_mapped():
+  mapped_images = dict()
+  mapped_images.update(CORE_MAPPED_IMAGES)
+  mapped_images.update(EE_MAPPED_IMAGES)
+
+  release_components = release.get('components')
+  version_mapped_images = {k: v for k, v in release_components.items() if v.has_key(
+      'image') and not v.has_key('registry') and not k in EXCLUDED_IMAGES}
+
+  assert len(mapped_images.keys()) == len(version_mapped_images.keys())
+  assert set(mapped_images.keys()) == set(version_mapped_images.keys())
 
 def test_core_chart_values_updated():
-    req_url = EE_CORE_URL.format(S3_BASE_URL, RELEASE_VERSION, HELM_RELEASE)
+    req_url = HELM_CORE_URL.format(
+        charts_base_url=HELM_CHARTS_BASE_URL, release_version=RELEASE_VERSION, helm_release=HELM_RELEASE)
 
     if os.environ.get('HELM_CORE_TGZ_OVERRIDE'):
-        CORE_TGZ_FILE = os.environ.get('HELM_CORE_TGZ_OVERRIDE')
+        HELM_EE_TGZ_FILE = os.environ.get('HELM_CORE_TGZ_OVERRIDE')
     else:
         req = requests.get(req_url, stream=True)
         assert req.status_code == 200
 
         # download/create a .tgz locally
-        CORE_TGZ_FILE = 'core.tgz'
-        with open(CORE_TGZ_FILE, 'wb') as f:
+        HELM_CORE_TGZ_FILE = 'core.tgz'
+        with open(HELM_CORE_TGZ_FILE, 'wb') as f:
             f.write(req.raw.read())
 
     # load the values.yaml file
-    tar = tarfile.open(CORE_TGZ_FILE)
-    values = tar.extractfile('calico-enterprise-core/values.yaml').read()
+    tar = tarfile.open(HELM_CORE_TGZ_FILE)
+    values = tar.extractfile('{0}/{1}'.format(HELM_CORE_BASE_NAME, VALUES_FILE_NAME)).read()
     core_values = yaml.safe_load(values)
 
-    # compare expected/actual imageNames:tag in the chart values.yaml
-    with open('%s/../_config.yml' % PATH) as f:
-        config_images = yaml.safe_load(f)
-        for config_image in config_images['imageNames']:
-            if config_image in CORE_MAPPED_IMAGES:
-                if config_image in VERSIONS_MAPPED_IMAGES:
-                    expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[config_image]]['version']
-                else:
-                    expected_ver = versions[RELEASE_STREAM][0]['components'][config_image]['version']
-
-                expected_image = 'quay.io/' + config_images['imageNames'][config_image] + ':%s' % expected_ver
-                image_path = core_values[CORE_MAPPED_IMAGES[config_image]]['image']
-                image_tag = core_values[CORE_MAPPED_IMAGES[config_image]]['tag']
-
-                print expected_image
-                assert expected_image == image_path + ':' + image_tag
+    # compare expected/actual image &:tag in the chart values.yaml
+    mapped_images = CORE_MAPPED_IMAGES
+    for k, v in release.get('components').items():
+      if k in mapped_images.keys():
+        config = core_values.get(mapped_images[k])
+        assert config != None
+        assert config.get('image') == '{0}/{1}'.format(REGISTRY, v.get('image'))
+        assert config.get('tag') == RELEASE_VERSION
+        assert config.get('tag') == v.get('version')
 
 def test_ee_chart_values_updated():
-    req_url = EE_URL.format(S3_BASE_URL, RELEASE_VERSION, HELM_RELEASE)
+    req_url = HELM_EE_URL.format(
+        charts_base_url=HELM_CHARTS_BASE_URL, release_version=RELEASE_VERSION, helm_release=HELM_RELEASE)
 
     if os.environ.get('HELM_EE_TGZ_OVERRIDE'):
-        EE_TGZ_FILE = os.environ.get('HELM_EE_TGZ_OVERRIDE')
+        HELM_EE_TGZ_FILE = os.environ.get('HELM_EE_TGZ_OVERRIDE')
     else:
         req = requests.get(req_url, stream=True)
         assert req.status_code == 200
 
         # download/create a .tgz locally
-        EE_TGZ_FILE = 'ee.tgz'
-        with open(EE_TGZ_FILE, 'wb') as f:
+        HELM_EE_TGZ_FILE = 'ee.tgz'
+        with open(HELM_EE_TGZ_FILE, 'wb') as f:
             f.write(req.raw.read())
 
     # load the values.yaml file
-    tar = tarfile.open(EE_TGZ_FILE)
-    values = tar.extractfile('calico-enterprise/values.yaml').read()
-    core_values = yaml.safe_load(values)
+    tar = tarfile.open(HELM_EE_TGZ_FILE)
+    values = tar.extractfile('{0}/{1}'.format(HELM_EE_BASE_NAME, VALUES_FILE_NAME)).read()
+    ee_values = yaml.safe_load(values)
 
-    # Load all the image definitions and mappings from <repo-root>/_config.yaml
-    config_images = dict()
-    with open('%s/../_config.yml' % PATH) as f:
-        config_images = yaml.safe_load(f)
-    assert len(config_images) != 0
-
-    images_to_exclude = dict()
-    if RELEASE_STREAM in EXCLUDED_IMAGES_BY_VER:
-        images_to_exclude = EXCLUDED_IMAGES_BY_VER[RELEASE_STREAM]
-
-    # compare expected/actual imageNames:tag in the chart values.yaml
-    for config_image in config_images['imageNames']:
-        if config_image in EE_MAPPED_IMAGES:
-            if config_image in VERSIONS_MAPPED_IMAGES:
-                expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[config_image]]['version']
-            else:
-                expected_ver = versions[RELEASE_STREAM][0]['components'][config_image]['version']
-
-            image_name = config_images['imageNames'][config_image]
-            if image_name.split("/")[1] in images_to_exclude:
-                continue
-            print 'Checking {}'.format(image_name)
-            expected_image = 'quay.io/' + image_name + ':%s' % expected_ver
-            image_path = core_values[EE_MAPPED_IMAGES[config_image]]['image']
-            image_tag = core_values[EE_MAPPED_IMAGES[config_image]]['tag']
-
-            print expected_image
-            assert expected_image == image_path + ':' + image_tag
+    # compare expected/actual image &:tag in the chart values.yaml
+    mapped_images = EE_MAPPED_IMAGES
+    for k, v in release.get('components').items():
+      if k in mapped_images.keys():
+        config = ee_values.get(mapped_images[k])
+        assert config != None
+        assert config.get('image') == '{0}/{1}'.format(REGISTRY, v.get('image'))
+        assert config.get('tag') == RELEASE_VERSION
+        assert config.get('tag') == v.get('version')
