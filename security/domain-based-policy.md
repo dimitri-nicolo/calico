@@ -1,5 +1,6 @@
 ---
-title: Using domain names in policy rules
+title: Use domain names in policy rules
+description: Use domain names to allow traffic to destinations outside of a cluster by their DNS names instead of by their IP addresses.
 canonical_url: '/security/domain-based-policy'
 ---
 
