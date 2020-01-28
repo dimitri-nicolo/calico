@@ -570,6 +570,8 @@ github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac h1:QrcDEIylqNTKsj
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
 github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8 h1:035F6xYUd786wnylIEsdiMzaKVhZ17k5pWtVONXD34c=
 github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8/go.mod h1:OHcY7YcS7IXUd2hTFGqAUns2qzyfe7V4lNUbjfR+CLg=
+github.com/tigera/lma v0.0.0-20200126054456-bae6a3e2d087 h1:iHPRb/PDsEr6oW+9UrKUYdkpRQT+ifXW8yMD2f9QQoQ=
+github.com/tigera/lma v0.0.0-20200126054456-bae6a3e2d087/go.mod h1:zYkrAIKRU9xtKU7+y1yJBYZbxHPH/qCpYb6bnd6QVtI=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=

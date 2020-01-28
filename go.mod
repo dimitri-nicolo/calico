@@ -41,7 +41,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200107221211-591370b83580+incompatible
 	github.com/tigera/compliance v0.0.0-20200124090152-e695e0777a80
-	github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8
+	github.com/tigera/lma v0.0.0-20200126054456-bae6a3e2d087
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
