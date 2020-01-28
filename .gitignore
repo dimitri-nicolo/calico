@@ -15,6 +15,7 @@ _output/
 bin
 vendor
 backport*.patch
+docs_test.created
 
 pinned_versions.yml
 pinned_images.yml

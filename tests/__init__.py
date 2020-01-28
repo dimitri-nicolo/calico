@@ -4,9 +4,12 @@ import os
 RELEASE_STREAM = os.environ.get('RELEASE_STREAM') or 'master'
 DOCS_URL = os.environ.get('DOCS_URL') or 'https://docs.tigera.io'
 GIT_HASH = os.environ.get('GIT_HASH') or os.popen('git rev-parse --short=9 HEAD').read().strip()
-REGISTRY = os.environ.get('REGISTRY') or 'quay.io'
+
+QUAY_REGISTRY = 'quay.io'
+QUAY_API_URL = os.environ.get('QUAY_API_URL', 'https://{}/api/v1'.format(QUAY_REGISTRY))
 QUAY_API_TOKEN = os.environ.get('QUAY_API_TOKEN') or 'fake-token'
 
+REGISTRY = os.environ.get('REGISTRY', QUAY_REGISTRY)
 # helm
 S3_BASE_URL = os.environ.get('S3_BASE_URL') or "https://s3.amazonaws.com/tigera-public/ee/charts"
 EE_CORE_URL = os.environ.get('EE_CORE_URL') or "{0}/calico-enterprise-core-{1}-{2}.tgz"

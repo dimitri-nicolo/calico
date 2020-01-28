@@ -11,12 +11,12 @@ GIT_HASH = tests.GIT_HASH
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
-    RELEASE_VERSION = versions[RELEASE_STREAM][0]['title']
+    RELEASE_VERSION = versions[0].get('title')
     print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
 
 
 def test_updated_docs_deployed():
-    req = requests.get("%s/master/release-notes" % DOCS_URL)
+    req = requests.get('%s/%s/release-notes' % DOCS_URL, RELEASE_STREAM)
     assert req.status_code == 200
 
     git_hash = BeautifulSoup(req.content, features="html.parser").find("div", {"class":"git-hash"})
