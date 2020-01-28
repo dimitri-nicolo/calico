@@ -49,7 +49,7 @@ standard Kubernetes installs, so normally you won’t change them.
 
 #### Workload and host endpoints
 
-Policy with domain names can be enforced for workload or host endpoints.  When a policy with domain names applies to a workload endpoint, it
+Policy with domain names can be enforced on workload or host endpoints.  When a policy with domain names applies to a workload endpoint, it
 allows that workload to connect out to the specified domains.  When policy with domain names applies to a host endpoint, it allows clients
 directly on the relevant host (including any host-networked workloads) to connect out to the specified domains.
 
