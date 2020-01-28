@@ -15,9 +15,11 @@
 package config_test
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
+	v1 "k8s.io/api/core/v1"
 
 	. "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/testutils"
@@ -483,6 +485,68 @@ var _ = DescribeTable("Config parsing",
 		"DNSTrustedServers", "[fd10:25::2]:70000",
 		// Parse error -> default.
 		[]ServerPort{}),
+)
+
+var _ = DescribeTable("Config parsing with Kubernetes service lookup",
+	func(key, value string, expected interface{}, errorExpected ...bool) {
+		config := New()
+		config.GetKubernetesService = func(namespace, name string) (*v1.Service, error) {
+			if namespace == "openshift-dns" && name == "openshift-dns" {
+				return &v1.Service{Spec: v1.ServiceSpec{
+					ClusterIP: "10.96.0.12",
+					Ports:     []v1.ServicePort{{Port: 546}},
+				}}, nil
+			}
+			if namespace == "kube-system" && name == "kube-dns" {
+				return &v1.Service{Spec: v1.ServiceSpec{
+					ClusterIP: "10.96.0.45",
+					Ports:     []v1.ServicePort{{Port: 54}},
+				}}, nil
+			}
+			if namespace == "kube-system" && name == "kube-dns-v6" {
+				return &v1.Service{Spec: v1.ServiceSpec{
+					ClusterIP: "fd20:99::34",
+					Ports:     []v1.ServicePort{{Port: 5367}},
+				}}, nil
+			}
+			return nil, fmt.Errorf("No such service")
+		}
+		_, err := config.UpdateFrom(map[string]string{key: value},
+			EnvironmentVariable)
+		configPtr := reflect.ValueOf(config)
+		configElem := configPtr.Elem()
+		fieldRef := configElem.FieldByName(key)
+		newVal := fieldRef.Interface()
+		Expect(newVal).To(Equal(expected))
+		if len(errorExpected) > 0 && errorExpected[0] {
+			Expect(err).To(HaveOccurred())
+			Expect(config.Err).To(HaveOccurred())
+		} else {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.Err).NotTo(HaveOccurred())
+		}
+	},
+
+	Entry("Trust kube-dns service",
+		"DNSTrustedServers", "k8s-service:kube-dns",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]ServerPort{{IP: "10.96.0.45", Port: 54}}),
+	Entry("Trust kube-dns and an IP",
+		"DNSTrustedServers", "k8s-service:kube-dns,42.5.6.7",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]ServerPort{{IP: "10.96.0.45", Port: 54}, {IP: "42.5.6.7", Port: 53}}),
+	Entry("IPv6 service with port override",
+		"DNSTrustedServers", "k8s-service:kube-dns-v6:5369",
+		[]ServerPort{{IP: "fd20:99::34", Port: 5369}}),
+	Entry("IPv6 service with port specified by service",
+		"DNSTrustedServers", "k8s-service:kube-dns-v6",
+		[]ServerPort{{IP: "fd20:99::34", Port: 5367}}),
+	Entry("IPv4 service with port override",
+		"DNSTrustedServers", "k8s-service:kube-dns:51",
+		[]ServerPort{{IP: "10.96.0.45", Port: 51}}),
+	Entry("OpenShift settings",
+		"DNSTrustedServers", "k8s-service:openshift-dns/openshift-dns",
+		[]ServerPort{{IP: "10.96.0.12", Port: 546}}),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",
