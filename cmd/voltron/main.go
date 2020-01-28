@@ -42,6 +42,7 @@ type config struct {
 	KeepAliveInterval            int    `default:"100" split_words:"true"`
 	K8sEndpoint                  string `default:"https://kubernetes.default" split_words:"true"`
 	ComplianceEndpoint           string `default:"https://compliance.tigera-compliance.svc.cluster.local" split_words:"true"`
+	ComplianceCABundlePath       string `default:"/certs/compliance/tls.crt" split_words:"true"`
 	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
@@ -139,14 +140,16 @@ func main() {
 			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 		},
 		{
-			Path:        "/tigera-elasticsearch/",
-			Dest:        cfg.ElasticEndpoint,
-			PathRegexp:  []byte("^/tigera-elasticsearch/?"),
-			PathReplace: []byte("/"),
+			Path:             "/tigera-elasticsearch/",
+			Dest:             cfg.ElasticEndpoint,
+			PathRegexp:       []byte("^/tigera-elasticsearch/?"),
+			PathReplace:      []byte("/"),
+			AllowInsecureTLS: true,
 		},
 		{
-			Path: "/compliance/",
-			Dest: cfg.ComplianceEndpoint,
+			Path:         "/compliance/",
+			Dest:         cfg.ComplianceEndpoint,
+			CABundlePath: cfg.ComplianceCABundlePath,
 		},
 		{
 			Path:         cfg.KibanaBasePath,
@@ -154,8 +157,9 @@ func main() {
 			CABundlePath: cfg.KibanaCABundlePath,
 		},
 		{
-			Path: "/",
-			Dest: cfg.NginxEndpoint,
+			Path:             "/",
+			Dest:             cfg.NginxEndpoint,
+			AllowInsecureTLS: true,
 		},
 	})
 

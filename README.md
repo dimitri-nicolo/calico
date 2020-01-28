@@ -34,7 +34,6 @@ Name | Type | Default | Required
 GUARDIAN_LOGLEVEL | Environment | DEBUG | no
 GUARDIAN_CERT_PATH | Environment | /certs | no
 GUARDIAN_VOLTRON_URL | Environment | none | yes
-GUARDIAN_PROXY_TARGETS | Environment | `^/api:https://kubernetes.default`<br>`^/tigera-elasticsearch:http://localhost:8002` | yes
 GUARDIAN_KEEP_ALIVE_ENABLE | Environment | true | no
 GUARDIAN_KEEP_ALIVE_INTERVAL | Environment | 100 ms | no
 
@@ -77,6 +76,7 @@ VOLTRON_KEEP_ALIVE_ENABLE | Environment | true
 VOLTRON_KEEP_ALIVE_INTERVAL | Environment | 100 ms
 VOLTRON_K8S_ENDPOINT | Environment | https://kubernetes.default
 VOLTRON_COMPLIANCE_ENDPOINT | Environment | https://compliance.calico-monitoring.svc.cluster.local
+VOLTRON_COMPLIANCE_BUNDLE_PATH | Environment | /certs/compliance/tls.crt
 VOLTRON_ELASTIC_ENDPOINT | Environment | https://127.0.0.1:8443
 VOLTRON_NGINX_ENDPOINT | Environment | http://127.0.0.1:8080
 

@@ -25,13 +25,15 @@ const (
 
 // Config is a configuration used for Guardian
 type config struct {
-	LogLevel          string            `default:"INFO"`
-	CertPath          string            `default:"/certs" split_words:"true" json:"-"`
-	VoltronURL        string            `required:"true" split_words:"true"`
-	ProxyTargets      bootstrap.Targets `required:"true" split_words:"true"`
-	KeepAliveEnable   bool              `default:"true" split_words:"true"`
-	KeepAliveInterval int               `default:"100" split_words:"true"`
-	PProf             bool              `default:"false"`
+	LogLevel   string `default:"INFO"`
+	CertPath   string `default:"/certs" split_words:"true" json:"-"`
+	VoltronURL string `required:"true" split_words:"true"`
+
+	KeepAliveEnable   bool `default:"true" split_words:"true"`
+	KeepAliveInterval int  `default:"100" split_words:"true"`
+	PProf             bool `default:"false"`
+
+	K8sEndpoint string `default:"https://kubernetes.default" split_words:"true"`
 
 	TunnelDialRetryAttempts         int           `default:"20" split_words:"true"`
 	TunnelDialRetryInterval         time.Duration `default:"5s" split_words:"true"`
@@ -54,11 +56,6 @@ func main() {
 	cfg := config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
-	}
-
-	// Configure ProxyTarget
-	if len(cfg.ProxyTargets) == 0 {
-		log.Fatal("No targets configured")
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
@@ -91,21 +88,34 @@ func main() {
 		log.Fatalf("Cannot append the certificate to ca pool: %s", err)
 	}
 
-	tgts, err := bootstrap.ProxyTargets(cfg.ProxyTargets)
-	if err != nil {
-		log.Fatalf("Failed to fill targets: %s", err)
-	}
-
 	health, err := client.NewHealth()
 
 	if err != nil {
 		log.Fatalf("Failed to create health server: %s", err)
 	}
 
-	client, err := client.New(
+	targets, err := bootstrap.ProxyTargets([]bootstrap.Target{
+		{
+			Path:         "/api/",
+			Dest:         cfg.K8sEndpoint,
+			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+		{
+			Path:         "/apis/",
+			Dest:         cfg.K8sEndpoint,
+			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+	})
+	if err != nil {
+		log.Fatalf("Failed to parse default proxy targets: %s", err)
+	}
+
+	cli, err := client.New(
 		cfg.VoltronURL,
 		client.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
-		client.WithProxyTargets(tgts),
+		client.WithProxyTargets(targets),
 		client.WithTunnelCreds(pemCert, pemKey, ca),
 		client.WithTunnelDialRetryAttempts(cfg.TunnelDialRetryAttempts),
 		client.WithTunnelDialRetryInterval(cfg.TunnelDialRetryInterval),
@@ -127,7 +137,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := client.ServeTunnelHTTP(); err != nil {
+		if err := cli.ServeTunnelHTTP(); err != nil {
 			log.WithError(err).Fatal("Serving the tunnel exited with an error")
 		}
 	}()
@@ -144,7 +154,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 
-			if err := client.AcceptAndProxy(listener); err != nil {
+			if err := cli.AcceptAndProxy(listener); err != nil {
 				log.WithError(err).Error("AcceptAndProxy returned with an error")
 			}
 		}()

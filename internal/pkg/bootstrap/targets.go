@@ -26,6 +26,8 @@ type Target struct {
 	PathRegexp strAsByteSlice `json:"pathRegexp,omitempty"`
 	// PathReplace if not nil will be used to replace PathRegexp matches
 	PathReplace strAsByteSlice `json:"pathReplace,omitempty"`
+	// AllowInsecureTLS allows https with insecure tls settings
+	AllowInsecureTLS bool `json:"allowInsecureTLS,omitempty"`
 }
 
 // Targets allows unmarshal the json array
@@ -53,15 +55,29 @@ func (b *strAsByteSlice) UnmarshalJSON(j []byte) error {
 func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 	var ret []proxy.Target
 
+	// pathSet helps keep track of the paths we've seen so we don't have duplicates
+	pathSet := make(map[string]bool)
+
 	for _, t := range tgts {
+		if t.Path == "" {
+			return nil, errors.New("proxy target path cannot be empty")
+		} else if pathSet[t.Path] == true {
+			return nil, errors.Errorf("duplicate proxy target path %s", t.Path)
+		}
+
 		pt := proxy.Target{
-			Path: t.Path,
+			Path:             t.Path,
+			AllowInsecureTLS: t.AllowInsecureTLS,
 		}
 
 		var err error
 		pt.Dest, err = url.Parse(t.Dest)
 		if err != nil {
 			return nil, errors.Errorf("Incorrect URL %q for path %q: %s", t.Dest, t.Path, err)
+		}
+
+		if pt.Dest.Scheme == "https" && !t.AllowInsecureTLS && t.CABundlePath == "" {
+			return nil, errors.Errorf("target for path '%s' must specify the ca bundle if AllowInsecureTLS is false when the scheme is https", t.Path)
 		}
 
 		if t.TokenPath != "" {
@@ -91,6 +107,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 
 		pt.PathReplace = t.PathReplace
 
+		pathSet[pt.Path] = true
 		ret = append(ret, pt)
 	}
 
