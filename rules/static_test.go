@@ -63,7 +63,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkNonCaliEndpoint: 0x1000,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 					KubeNodePortRanges:          []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
-					DNSTrustedServers:           []string{"1.2.3.4", "fd5f:83a5::34:2"},
+					DNSTrustedServers:           []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
 				}
 			})
 

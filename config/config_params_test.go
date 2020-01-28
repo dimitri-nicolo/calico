@@ -147,7 +147,7 @@ func fieldsByName(example interface{}) map[string]reflect.StructField {
 	return fields
 }
 
-var nilStringSlice []string
+var nilServerPortSlice []ServerPort
 
 var _ = DescribeTable("Config parsing",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
@@ -436,34 +436,34 @@ var _ = DescribeTable("Config parsing",
 	Entry("DNSTrustedServers default",
 		"DNSTrustedServers", "",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]string{}),
+		[]ServerPort{}),
 	Entry("Trust 1 server IP",
 		"DNSTrustedServers", "1.2.3.4",
-		[]string{"1.2.3.4"}),
+		[]ServerPort{{IP: "1.2.3.4", Port: 53}}),
 	Entry("Trust 2 server IPs",
 		"DNSTrustedServers", "1.2.3.4,42.5.6.7",
-		[]string{"1.2.3.4", "42.5.6.7"}),
+		[]ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "42.5.6.7", Port: 53}}),
 	Entry("Trust kube-dns service",
 		"DNSTrustedServers", "k8s-service:kube-dns",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]string{}),
+		[]ServerPort{}),
 	Entry("Trust kube-dns and an IP",
 		"DNSTrustedServers", "k8s-service:kube-dns,42.5.6.7",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]string{"42.5.6.7"}),
+		[]ServerPort{{IP: "42.5.6.7", Port: 53}}),
 	Entry("Disable trusting DNS servers",
 		"DNSTrustedServers", "none",
-		nilStringSlice),
+		nilServerPortSlice),
 	Entry("DNSTrustedServers syntax error 1",
 		"DNSTrustedServers", "k8s-servce:kube-dns,42.5.6.7",
 		// Parse error -> default.
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]string{}),
+		[]ServerPort{}),
 	Entry("DNSTrustedServers syntax error 2",
 		"DNSTrustedServers", "4245.5.699.7",
 		// Parse error -> default.
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]string{}),
+		[]ServerPort{}),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",

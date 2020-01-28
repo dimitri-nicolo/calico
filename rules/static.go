@@ -574,11 +574,11 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 }
 
 func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
-	for _, serverIP := range r.DNSTrustedServers {
-		if (ipVersion == 4) && strings.Contains(serverIP, ":") {
+	for _, server := range r.DNSTrustedServers {
+		if (ipVersion == 4) && strings.Contains(server.IP, ":") {
 			continue
 		}
-		if (ipVersion == 6) && !strings.Contains(serverIP, ":") {
+		if (ipVersion == 6) && !strings.Contains(server.IP, ":") {
 			continue
 		}
 		var baseMatch MatchCriteria
@@ -591,7 +591,7 @@ func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint
 		}
 		rules = append(rules,
 			Rule{
-				Match: baseMatch.Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
+				Match: baseMatch.Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(server.Port).ConntrackOrigDst(server.IP),
 				Action: NflogAction{
 					Group:       NFLOGDomainGroup,
 					Prefix:      "DNS",
