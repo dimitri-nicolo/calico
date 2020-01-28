@@ -47,6 +47,12 @@ policy, prevents malicious workload from using IPs returned by a fake DNS server
 By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). These out-of-the-box defaults work with
 standard Kubernetes installs, so normally you won’t change them.
 
+#### Workload and host endpoints
+
+Policy with domain names can be enforced on workload or host endpoints.  When a policy with domain names applies to a workload endpoint, it
+allows that workload to connect out to the specified domains.  When policy with domain names applies to a host endpoint, it allows clients
+directly on the relevant host (including any host-networked workloads) to connect out to the specified domains.
+
 ### How to
 
 You can specify allowed domain names directly in a **global network policy** or **namespaced network policy**, or specify domain names in a **global network set** (and then
