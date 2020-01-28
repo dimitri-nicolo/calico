@@ -43,7 +43,8 @@ spec:
     # accepts time in golang duration format
     period: 24h
     http:
-      format: NewlineDelimited
+      format:
+        newlineDelimited: {}
       url: https://an.example.threat.feed/blacklist
       headers:
         - name: "Accept"
