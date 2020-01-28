@@ -229,7 +229,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(BUILD_IMAGE): $(NODE_CONTAINER_CREATED)
-$(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) remote-deps
+$(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) remote-deps check-dirty
 ifeq ($(LOCAL_BUILD),true)
 	# If doing a local build, copy in local confd templates in case there are changes.
 	rm -rf filesystem/etc/calico/confd/templates
@@ -489,16 +489,15 @@ st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd ca
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download static-checks ut fv check-dirty image-all build-windows-archive
+ci: clean mod-download static-checks ut fv image-all build-windows-archive
 
 ## Avoid unplanned go.sum updates
-.PHONY: undo-go-sum
+.PHONY: undo-go-sum check-dirty
 undo-go-sum:
 	@echo "Undoing go.sum update..."
 	git checkout -- go.sum
 
 ## Check if generated image is dirty
-.PHONY: check-dirty
 check-dirty: undo-go-sum
 	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
 	  echo "Generated image is dirty:"; \
@@ -716,7 +715,7 @@ $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt: ./vendor/github.com/Microsoft/SDN/
 windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
 	wget -O windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip https://nssm.cc/release/nssm-$(WINDOWS_NSSM_VERSION).zip
 
-build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip
+build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip check-dirty
 	# To be as atomic as possible, we re-do work like unpacking NSSM here.
 	-rm -f "$(WINDOWS_ARCHIVE)"
 	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)
