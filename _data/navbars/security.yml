@@ -34,6 +34,8 @@ section:
       path: /security/staged-network-policies
     - title: Preview policy impacts
       path: /security/policy-impact-preview
+    - title: Generate policy recommendation
+      path: /security/generate-policy-recommendation
     - title: Calico Enterprise policy tutorial
       path: /security/simple-policy-cnx
     - title: Policy for AWS security groups
