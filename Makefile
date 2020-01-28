@@ -527,7 +527,7 @@ bin/helm:
 ###############################################################################
 # Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml: values.yaml/tigera-secure-ee-core values.yaml/tigera-secure-ee
+values.yaml: values.yaml/tigera-secure-ee-core values.yaml/tigera-secure-ee values.yaml/tigera-operator
 values.yaml/%:
 ifndef RELEASE_STREAM
 	# Default the version to master if not set
@@ -600,3 +600,19 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	{ helpMsg = $$0 }'                                                  \
 	width=20                                                            \
 	$(MAKEFILE_LIST)
+
+DOCS_TEST_CONTAINER=projectcalico/release-test
+.PHONY: release-test-image
+release-test-image:
+	cd release-scripts/tests && docker build -t $(DOCS_TEST_CONTAINER) . && cd -
+
+.PHONY: release-test
+release-test: release-test-image
+	docker run --rm \
+	-v $(PWD):/docs \
+	-e RELEASE_STREAM=$(RELEASE_STREAM) \
+	$(DOCS_TEST_CONTAINER) sh -c \
+	"nosetests . -e "$(EXCLUDE_REGEX)" \
+	-s -v --with-xunit \
+	--xunit-file='/docs/nosetests.xml' \
+	--with-timer $(EXTRA_NOSE_ARGS)"

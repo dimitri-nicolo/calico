@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm tigera-operator --execute templates/tigera-operator/02-tigera-operator.yaml %}
-openshift: true
+kubernetesProvider: openshift
 {% endhelm %}

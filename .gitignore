@@ -8,6 +8,7 @@ _site
 .vagrant
 .jekyll-metadata
 .releasedata
+nosetests.xml
 Gemfile.lock
 publish-cnx-docs.yaml
 _output/

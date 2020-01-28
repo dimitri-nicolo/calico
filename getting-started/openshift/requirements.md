@@ -16,5 +16,6 @@ canonical_url: '/getting-started/openshift/requirements'
 Refer to the OpenShift documentation for additional requirements.
 
 - [OpenShift Container Platform](https://docs.openshift.com/container-platform/3.11/install/prerequisites.html)
+- [OpenShift Container Platform](https://docs.openshift.com/container-platform/4.2/welcome/index.html)
 
 {% include content/reqs-kernel.md %}

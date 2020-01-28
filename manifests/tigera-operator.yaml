@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm tigera-operator %}
-openshift: false
+kubernetesProvider: ""
 {% endhelm %}

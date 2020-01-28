@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm tigera-operator --execute templates/crds/01-crd-manager.yaml %}
-openshift: true
+kubernetesProvider: openshift
 {% endhelm %}
