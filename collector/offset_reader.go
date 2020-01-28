@@ -13,9 +13,12 @@ import (
 )
 
 // LogOffset determines whether the logs are being stalled in the external processing pipeline
+// It can read the offsets and determine if the pipeline is stalled and estimate the increase
+// factor for aggregation
 type LogOffset interface {
-	IsBehind() bool
-	GetIncreaseFactor() int
+	Read() Offsets
+	IsBehind(offsets Offsets) bool
+	GetIncreaseFactor(offsets Offsets) int
 }
 
 // Offsets type is a (key,value) pair set as the log file name and the offset
@@ -31,11 +34,15 @@ type OffsetReader interface {
 // NoOpLogOffset will never mark logs as being stalled
 type NoOpLogOffset struct{}
 
-func (noOp *NoOpLogOffset) IsBehind() bool {
+func (noOp *NoOpLogOffset) Read() Offsets {
+	return Offsets{}
+}
+
+func (noOp *NoOpLogOffset) IsBehind(offsets Offsets) bool {
 	return false
 }
 
-func (noOp *NoOpLogOffset) GetIncreaseFactor() int {
+func (noOp *NoOpLogOffset) GetIncreaseFactor(offsets Offsets) int {
 	return 0
 }
 
@@ -75,8 +82,11 @@ func NewFluentDLogOffsetReader(positionFile string) *fluentDLogOffsetReader {
 	return &fluentDLogOffsetReader{posFilePattern, positionFile}
 }
 
-func (fluentD *rangeLogOffset) IsBehind() bool {
-	var offsets = fluentD.reader.Read()
+func (fluentD *rangeLogOffset) Read() Offsets {
+	return fluentD.reader.Read()
+}
+
+func (fluentD *rangeLogOffset) IsBehind(offsets Offsets) bool {
 	for _, v := range offsets {
 		if v < 0 || v >= fluentD.threshold {
 			return true
@@ -86,8 +96,7 @@ func (fluentD *rangeLogOffset) IsBehind() bool {
 	return false
 }
 
-func (fluentD *rangeLogOffset) GetIncreaseFactor() int {
-	var offsets = fluentD.reader.Read()
+func (fluentD *rangeLogOffset) GetIncreaseFactor(offsets Offsets) int {
 	var maxFactor = int(MinAggregationLevel)
 
 	for _, v := range offsets {
@@ -97,7 +106,7 @@ func (fluentD *rangeLogOffset) GetIncreaseFactor() int {
 		if v >= fluentD.threshold {
 			var factor = int(v / fluentD.threshold)
 			if factor > maxFactor {
-				factor = maxFactor
+				maxFactor = factor
 			}
 		}
 	}

@@ -88,7 +88,12 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 	}
 	if len(dispatchers) > 0 {
 		log.Info("Creating Flow Logs Reporter")
-		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator, configParams.FlowLogsEnableHostEndpoint)
+		var offsetReader LogOffset = &NoOpLogOffset{}
+		if configParams.FlowLogsDynamicAggregationEnabled {
+			offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.FlowLogsPositionFilePath),
+				int64(configParams.FlowLogsAggregationThresholdBytes))
+		}
+		cw := NewFlowLogsReporter(dispatchers, configParams.FlowLogsFlushInterval, healthAggregator, configParams.FlowLogsEnableHostEndpoint, offsetReader)
 		configureFlowAggregation(configParams, cw)
 		rm.RegisterMetricsReporter(cw)
 	}
@@ -150,8 +155,6 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 
 // configureFlowAggregation adds appropriate aggregators to the FlowLogsReporter, depending on configuration.
 func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter) {
-	var offsetReader LogOffset = &NoOpLogOffset{}
-
 	addedFileAllow := false
 	addedFileDeny := false
 	if configParams.CloudWatchLogsReporterEnabled {
@@ -171,11 +174,11 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
 				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies {
 				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName}, offsetReader)
+				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileAllow = true
 			} else {
 				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName}, offsetReader)
+				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
 			}
 		}
 		if configParams.CloudWatchLogsEnabledForDenied {
@@ -193,11 +196,11 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
 				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies {
 				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName}, offsetReader)
+				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileDeny = true
 			} else {
 				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName}, offsetReader)
+				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
 			}
 		}
 	}
@@ -212,11 +215,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
-			if configParams.FlowLogsDynamicAggregationEnabled {
-				offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.FlowLogsPositionFilePath),
-					int64(configParams.FlowLogsAggregationThresholdBytes))
-			}
-			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName}, offsetReader)
+			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
 		}
 		if !addedFileDeny && configParams.FlowLogsFileEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
@@ -227,11 +226,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
-			if configParams.FlowLogsDynamicAggregationEnabled {
-				offsetReader = NewRangeLogOffset(NewFluentDLogOffsetReader(configParams.FlowLogsPositionFilePath),
-					int64(configParams.FlowLogsAggregationThresholdBytes))
-			}
-			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName}, offsetReader)
+			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
 		}
 	}
 }

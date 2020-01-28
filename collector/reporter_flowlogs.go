@@ -41,7 +41,6 @@ type LogDispatcher interface {
 type aggregatorRef struct {
 	a FlowLogAggregator
 	d []LogDispatcher
-	o LogOffset
 }
 
 var FlowLogAvg *FlowLogAverage
@@ -61,6 +60,7 @@ type FlowLogsReporter struct {
 	hepEnabled    bool
 
 	healthAggregator *health.HealthAggregator
+	logOffset        LogOffset
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
@@ -99,7 +99,7 @@ func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
 
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
 // a dispatcher and aggregator.
-func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *FlowLogsReporter {
+func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool, logOffset LogOffset) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
@@ -115,10 +115,11 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 		timeNowFn:        monotime.Now,
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
+		logOffset:        logOffset,
 	}
 }
 
-func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggregator *health.HealthAggregator, hepEnabled bool, flushTicker jitter.JitterTicker) *FlowLogsReporter {
+func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggregator *health.HealthAggregator, hepEnabled bool, flushTicker jitter.JitterTicker, logOffset LogOffset) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
@@ -133,13 +134,13 @@ func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggrega
 		timeNowFn:        monotime.Now,
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
+		logOffset:        logOffset,
 	}
 }
 
-func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string, reader LogOffset) {
+func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string) {
 	var ref aggregatorRef
 	ref.a = agg
-	ref.o = reader
 	for _, d := range dispatchers {
 		dis, ok := c.dispatchers[d]
 		if !ok {
@@ -187,10 +188,14 @@ func (c *FlowLogsReporter) run() {
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
 			log.Debug("Flow log flush tick")
+			var offsets = c.logOffset.Read()
+			var isBehind = c.logOffset.IsBehind(offsets)
+			var factor = c.logOffset.GetIncreaseFactor(offsets)
+
 			for _, agg := range c.aggregators {
 				// Evaluate if the external pipeline is stalled
 				// and increase / decrease the aggregation level if needed
-				newLevel := c.estimateLevel(agg)
+				newLevel := c.estimateLevel(agg, FlowAggregationKind(factor), isBehind)
 
 				// Retrieve values from cache and calibrate the cache to the new aggregation level
 				fl := agg.a.GetAndCalibrate(newLevel)
@@ -213,13 +218,12 @@ func (c *FlowLogsReporter) run() {
 	}
 }
 
-func (c *FlowLogsReporter) estimateLevel(agg aggregatorRef) FlowAggregationKind {
-	var isBehind = agg.o.IsBehind()
-	log.Debugf("Evaluate aggregation level. Logs are marked as behind = %v", isBehind)
+func (c *FlowLogsReporter) estimateLevel(agg aggregatorRef, factor FlowAggregationKind, isBehind bool) FlowAggregationKind {
+	log.Debugf("Evaluate aggregation level. Logs are marked as behind = %v for level %v", isBehind, agg.a.GetCurrentAggregationLevel())
 
 	var newLevel = agg.a.GetCurrentAggregationLevel()
 	if isBehind {
-		newLevel = agg.a.GetCurrentAggregationLevel() + FlowAggregationKind(agg.o.GetIncreaseFactor())
+		newLevel = agg.a.GetCurrentAggregationLevel() + factor
 	} else if agg.a.HasAggregationLevelChanged() {
 		newLevel = agg.a.GetDefaultAggregationLevel()
 	}

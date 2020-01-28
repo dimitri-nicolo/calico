@@ -71,8 +71,16 @@ func (c *flowLogAggregator) HasAggregationLevelChanged() bool {
 
 func (c *flowLogAggregator) AdjustLevel(newLevel FlowAggregationKind) {
 	if c.current != newLevel {
+		var value = newLevel
+		if newLevel > MaxAggregationLevel {
+			value = MaxAggregationLevel
+		}
+
+		if newLevel < MinAggregationLevel {
+			value = MinAggregationLevel
+		}
 		c.previous = c.current
-		c.current = newLevel
+		c.current = value
 		log.Debugf("New aggregation level for %v is set to %d from %d", c.handledAction, c.current, c.previous)
 	}
 }

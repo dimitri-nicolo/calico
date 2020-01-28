@@ -75,7 +75,7 @@ var _ = Describe("RangeLogOffset", func() {
 			mockReader.On("Read").Return(offsets)
 			var fluentDLogOffset = NewRangeLogOffset(mockReader, threshold)
 
-			var isBehind = fluentDLogOffset.IsBehind()
+			var isBehind = fluentDLogOffset.IsBehind(offsets)
 			Expect(isBehind).Should(Equal(expected))
 		},
 		Entry("[] outside [0,1)", Offsets{}, int64(1), false),
@@ -97,6 +97,35 @@ var _ = Describe("RangeLogOffset", func() {
 			Offsets{"anyFile": 1, "anotherFile": 1}, int64(2), false),
 		Entry("[anyFile: 1, anotherFile: -1, otherFile : 0] outside [0,1)",
 			Offsets{"anyFile": 1, "anotherFile": 1, "otherFile": 0}, int64(1), true),
+	)
+
+	DescribeTable("GetIncreaseFactor",
+		func(offsets Offsets, threshold int64, expectedLevel int) {
+			var mockReader = &readerMock{}
+			mockReader.On("Read").Return(offsets)
+			var fluentDLogOffset = NewRangeLogOffset(mockReader, threshold)
+
+			var level = fluentDLogOffset.GetIncreaseFactor(offsets)
+			Expect(level).Should(Equal(expectedLevel))
+		},
+		Entry("[] increases with 0", Offsets{}, int64(1), 0),
+		Entry("[anyFile: 0] increases with 0", Offsets{"anyFile": 0}, int64(1), int(MinAggregationLevel)),
+		Entry("[anyFile: -1] increases with max", Offsets{"anyFile": -1}, int64(1), int(MaxAggregationLevel)),
+		Entry("[anyFile: 1] increases with 1", Offsets{"anyFile": 1}, int64(1), 1),
+		Entry("[anyFile: 2] increases with 2", Offsets{"anyFile": 2}, int64(1), 2),
+		Entry("[anyFile: 3] increases with 0", Offsets{"anyFile": 2}, int64(100), 0),
+		Entry("[anyFile: -1, anotherFile: 0] increases with max",
+			Offsets{"anyFile": -1, "anotherFile": 0}, int64(1), int(MaxAggregationLevel)),
+		Entry("[anyFile: 1, anotherFile: -1] increases with max",
+			Offsets{"anyFile": 1, "anotherFile": -1}, int64(1), int(MaxAggregationLevel)),
+		Entry("[anyFile: 1, anotherFile: 0] increases with 1",
+			Offsets{"anyFile": 1, "anotherFile": 0}, int64(1), 1),
+		Entry("[anyFile: 0, anotherFile: 0] increases with 0",
+			Offsets{"anyFile": 0, "anotherFile": 0}, int64(1), int(MinAggregationLevel)),
+		Entry("[anyFile: 1, anotherFile: 1] increases with 1",
+			Offsets{"anyFile": 1, "anotherFile": 1}, int64(1), 1),
+		Entry("[anyFile: 10, anotherFile: 1] increases with 1",
+			Offsets{"anyFile": 10, "anotherFile": 1}, int64(10), 1),
 	)
 
 	DescribeTable("Invalid threshold",
