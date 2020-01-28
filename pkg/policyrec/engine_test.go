@@ -77,57 +77,57 @@ var _ = Describe("Policy Recommendation Engine", func() {
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
 			[]flowWithError{
-				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
-				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				{flowPod1BlueToPod2Allow443ReporterSource, false},
+				{flowPod1BlueToPod2Allow443ReporterDestination, true},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1BlueToPod2}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints with a non overlapping label - and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
 			[]flowWithError{
-				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
-				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
-				flowWithError{flowPod1RedToPod2Allow443ReporterSource, false},
-				flowWithError{flowPod1RedToPod2Allow443ReporterDestination, true},
+				{flowPod1BlueToPod2Allow443ReporterSource, false},
+				{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				{flowPod1RedToPod2Allow443ReporterSource, false},
+				{flowPod1RedToPod2Allow443ReporterDestination, true},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1ToPod2}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and external network and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
 			[]flowWithError{
-				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
-				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
-				flowWithError{flowPod1BlueToExternalAllow53ReporterSource, false},
+				{flowPod1BlueToPod2Allow443ReporterSource, false},
+				{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				{flowPod1BlueToExternalAllow53ReporterSource, false},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1BlueToPod2AndExternalNet}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
 			[]flowWithError{
-				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, false},
-				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, true},
-				flowWithError{flowPod1BlueToPod3Allow5432ReporterSource, false},
-				flowWithError{flowPod1BlueToPod3Allow5432ReporterDestination, true},
-				flowWithError{flowPod1RedToPod3Allow8080ReporterSource, false},
-				flowWithError{flowPod1RedToPod3Allow8080ReporterDestination, true},
+				{flowPod1BlueToPod2Allow443ReporterSource, false},
+				{flowPod1BlueToPod2Allow443ReporterDestination, true},
+				{flowPod1BlueToPod3Allow5432ReporterSource, false},
+				{flowPod1BlueToPod3Allow5432ReporterDestination, true},
+				{flowPod1RedToPod3Allow8080ReporterSource, false},
+				{flowPod1RedToPod3Allow8080ReporterDestination, true},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1ToPod2AndPod3}),
 		Entry("recommend a policy with ingress and egress rules for a flow betwen 2 endpoints and matching source and destination endpoint",
 			pod2Aggr, namespace1, pod2, defaultTier, nil,
 			[]flowWithError{
-				flowWithError{flowPod1BlueToPod2Allow443ReporterSource, true},
-				flowWithError{flowPod1BlueToPod2Allow443ReporterDestination, false},
-				flowWithError{flowPod2ToPod3Allow5432ReporterSource, false},
-				flowWithError{flowPod2ToPod3Allow5432ReporterDestination, true},
+				{flowPod1BlueToPod2Allow443ReporterSource, true},
+				{flowPod1BlueToPod2Allow443ReporterDestination, false},
+				{flowPod2ToPod3Allow5432ReporterSource, false},
+				{flowPod2ToPod3Allow5432ReporterDestination, true},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod2}),
 		Entry("recommend a policy with ingress rule for flows and matching destination endpoint",
 			pod3Aggr, namespace2, pod3, defaultTier, nil,
 			[]flowWithError{
-				flowWithError{flowPod1BlueToPod3Allow5432ReporterSource, true},
-				flowWithError{flowPod1BlueToPod3Allow5432ReporterDestination, false},
-				flowWithError{flowPod1RedToPod3Allow8080ReporterSource, true},
-				flowWithError{flowPod1RedToPod3Allow8080ReporterDestination, false},
-				flowWithError{flowPod2ToPod3Allow5432ReporterSource, true},
-				flowWithError{flowPod2ToPod3Allow5432ReporterDestination, false},
-				flowWithError{flowGlobalNetworkSet1ToPod3Allow5432ReporterDestination, false},
+				{flowPod1BlueToPod3Allow5432ReporterSource, true},
+				{flowPod1BlueToPod3Allow5432ReporterDestination, false},
+				{flowPod1RedToPod3Allow8080ReporterSource, true},
+				{flowPod1RedToPod3Allow8080ReporterDestination, false},
+				{flowPod2ToPod3Allow5432ReporterSource, true},
+				{flowPod2ToPod3Allow5432ReporterDestination, false},
+				{flowGlobalNetworkSet1ToPod3Allow5432ReporterDestination, false},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod3}),
 	)
@@ -184,7 +184,7 @@ func (pm *policyMatcher) Match(actual interface{}) (success bool, err error) {
 	switch actualPolicy := actual.(type) {
 	case *v3.StagedNetworkPolicy:
 		expectedPolicy := pm.expected.(*v3.StagedNetworkPolicy)
-		success = (expectedPolicy.GroupVersionKind().Kind == actualPolicy.GroupVersionKind().Kind &&
+		success = expectedPolicy.GroupVersionKind().Kind == actualPolicy.GroupVersionKind().Kind &&
 			expectedPolicy.GroupVersionKind().Version == actualPolicy.GroupVersionKind().Version &&
 			expectedPolicy.GetName() == actualPolicy.GetName() &&
 			expectedPolicy.GetNamespace() == actualPolicy.GetNamespace() &&
@@ -193,7 +193,7 @@ func (pm *policyMatcher) Match(actual interface{}) (success bool, err error) {
 			reflect.DeepEqual(expectedPolicy.Spec.Types, actualPolicy.Spec.Types) &&
 			matchSelector(expectedPolicy.Spec.Selector, actualPolicy.Spec.Selector) &&
 			matchRules(expectedPolicy.Spec.Ingress, actualPolicy.Spec.Ingress) &&
-			matchRules(expectedPolicy.Spec.Egress, actualPolicy.Spec.Egress))
+			matchRules(expectedPolicy.Spec.Egress, actualPolicy.Spec.Egress)
 	default:
 		// TODO(doublek): Remove this after testing the test.
 		log.Debugf("Default case")
