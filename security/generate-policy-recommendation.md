@@ -29,21 +29,21 @@ A typical scenario for using the policy recommendation feature is:
 - Clusters are successfully running, and workloads have been running long enough to gather traffic for applications
 - Developers want to secure their workloads, pods, and endpoints.
 
-Developers without any experience using {{site.prodname}} network policy, can simply specify a few parameters, click a button, and generate a valid Calico network policy to protect their workloads.
+Developers without any experience using {{site.prodname}} network policy, can simply specify a few parameters, click a button, and generate a valid {{site.prodname}} network policy to protect their workloads.
 
 #### Default tier and Kubernetes policies
 
-During installation, all Kubernetes network policies land in the **default tier** in Calico Enterprise Manager. This is perfect because the minimum permissions for non-Admin users include the default tier. Developers can run the policy recommendation feature in the default tier.
+During installation, all Kubernetes network policies land in the **default tier** in {{site.prodname}} Manager. This is perfect because the minimum permissions for non-Admin users include the default tier. Developers can run the policy recommendation feature in the default tier.
 
 #### Preview and stage the policy
 
-After developers get a recommended Calico network policy to secure the workload, they can **preview it**, and **stage it** to observe the impact of a recommended policy on network traffic before applying it (if they are granted permissions). Remember, the format of a recommended Calico network policy is valid and accurate; it is only totally “valid” when you validate the intended results during staging.
+After developers get a recommended {{site.prodname}} network policy to secure the workload, they can **preview it**, and **stage it** to observe the impact of a recommended policy on network traffic before applying it (if they are granted permissions). Remember, the format of a recommended {{site.prodname}} network policy is valid and accurate; it is only totally “valid” when you validate the intended results during staging.
 
 #### Tips for generating policy recommendations
 
 The policy recommendation feature does not look into existing policies, but into *historial flow log entries that match a request*. Because of this, developers should run their workloads for a reasonable amount of time so “typical network traffic” for their application can be gathered.
 
-### Before you begin
+### Before you begin...
 
 #### Flow logs
 
@@ -58,7 +58,7 @@ Ensure that flow logs are generated and sent to Elasticsearch.
 
 #### Generate a recommended network policy
 
-To generate a Calico Enterprise network policy recommendation, go the **Recommend Policy** page,
+To generate a {{site.prodname}} network policy recommendation, go the **Recommend Policy** page,
 
 ![Navigate to Policy Recommendation]({{site.baseurl}}/images/generate-policy-recommendation/recommend-policy-action-bar.png)
 
@@ -78,7 +78,6 @@ If relevant flow logs are found within the selected time range for the workload 
 ![Preview or Stage a Policy Recommendation]({{site.baseurl}}/images/generate-policy-recommendation/create-policy-action-buttons.png)
 
 Then, you can assess the impact of the recommended policy using **Preview** and/or **Stage** to observe the effect on traffic without impacting the actual traffic flows.
-
 
 ### Above and beyond
 
