@@ -464,6 +464,24 @@ var _ = DescribeTable("Config parsing",
 		// Parse error -> default.
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
 		[]ServerPort{}),
+	Entry("DNSTrustedServers IPv4 address with port",
+		"DNSTrustedServers", "10.25.3.4:536",
+		[]ServerPort{{IP: "10.25.3.4", Port: 536}}),
+	Entry("DNSTrustedServers IPv6 address with port",
+		"DNSTrustedServers", "[fd10:25::2]:536",
+		[]ServerPort{{IP: "fd10:25::2", Port: 536}}),
+	Entry("DNSTrustedServers IPv6 address with non-numeric port",
+		"DNSTrustedServers", "[fd10:25::2]:que",
+		// Parse error -> default.
+		[]ServerPort{}),
+	Entry("DNSTrustedServers IPv6 address with negative port",
+		"DNSTrustedServers", "[fd10:25::2]:-34",
+		// Parse error -> default.
+		[]ServerPort{}),
+	Entry("DNSTrustedServers IPv6 address with too large port",
+		"DNSTrustedServers", "[fd10:25::2]:70000",
+		// Parse error -> default.
+		[]ServerPort{}),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",
