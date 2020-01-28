@@ -35,7 +35,7 @@ var (
 	destPortInRule = numorstring.SinglePort(destPort)
 
 	proto       = uint8(6)
-	protoInRule = numorstring.ProtocolFromInt(proto)
+	protoInRule = numorstring.ProtocolFromString("TCP")
 
 	app1Dep = &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
