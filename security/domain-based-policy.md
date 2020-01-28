@@ -1,5 +1,5 @@
 ---
-title: Using domain names in policy rules
+title: Use domain names in policy rules
 canonical_url: '/security/domain-based-policy'
 ---
 

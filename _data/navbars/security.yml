@@ -3,7 +3,7 @@ path: /security/
 order: 3
 section:
 - title: Adopt a zero trust network model for security
-  path: /security/adopt-zero-trust   
+  path: /security/adopt-zero-trust
 - title: Get started
   path: /security/get-started
   section:
@@ -18,16 +18,16 @@ section:
     - title: Get started with Kubernetes network policy
       path: /security/kubernetes-network-policy
     - title: Enable default deny for Kubernetes pods
-      path: /security/kubernetes-default-deny 
+      path: /security/kubernetes-default-deny
     - title: Kubernetes policy, demo
       path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
     - title: Kubernetes policy, basic tutorial
       path: /security/tutorials/kubernetes-policy-basic
     - title: Kubernetes policy, advanced tutorial
       path: /security/tutorials/kubernetes-policy-advanced
-  - title: Calico Enterprise network policy 
+  - title: Calico Enterprise network policy
     path: /security/calico-enterprise-policy
-    section: 
+    section:
     - title: Create tiered policy
       path: /security/tiered-policy
     - title: Create staged policy
@@ -35,7 +35,7 @@ section:
     - title: Preview policy impacts
       path: /security/policy-impact-preview
     - title: Calico Enterprise policy tutorial
-      path: /security/simple-policy-cnx      
+      path: /security/simple-policy-cnx
     - title: Policy for AWS security groups
       path: /security/aws-security-group-integration/
       section:
@@ -61,11 +61,13 @@ section:
   - title: Use namespace in policy rules
     path: /security/namespace-policy
   - title: Use service accounts in policy rules
-    path: /security/service-accounts  
+    path: /security/service-accounts
   - title: Use external IPs or networks in policy rules
     path: /security/external-ips-policy
   - title: Use ICMP/ping in policy rules
-    path: /security/icmp-ping  
+    path: /security/icmp-ping
+  - title: Use domain names in policy rules
+    path: /security/domain-based-policy
 - title: Policy for hosts
   path: /security/hosts
   section:
@@ -77,18 +79,18 @@ section:
     path: /security/host-forwarded-traffic
 - title: Policy for services
   path: /security/services
-  section: 
+  section:
   - title: Apply policy to Kubernetes node ports
     path: /security/kubernetes-node-ports
   - title: Apply policy to services exposed externally as cluster IPs
-    path: /security/services-cluster-ips 
-- title: Policy for Istio 
+    path: /security/services-cluster-ips
+- title: Policy for Istio
   path: /security/istio
   section:
   - title: Enforce network policy using Istio
     path: /security/enforce-policy-istio
   - title: Use HTTP methods and paths in policy rules
-    path: /security/http-methods 
+    path: /security/http-methods
   - title: Enforce network policy using Istio tutorial
     path: /security/tutorials/app-layer-policy/enforce-policy-istio
 - title: Policy for extreme traffic
@@ -107,7 +109,7 @@ section:
     - title: Overview
       path: /security/logs/elastic/overview
     - title: Access Elasticsearchlogs
-      path: /security/logs/elastic/view  
+      path: /security/logs/elastic/view
     - title: Flow logs
       path: /security/logs/elastic/flow
     - title: Audit logs
@@ -158,9 +160,9 @@ section:
   - title: Configure compliance reports
     path: /security/compliance-reports/overview
   - title: Configure compliance reports for managed cloud providers
-    path: /security/compliance-managed-cloud 
+    path: /security/compliance-managed-cloud
   - title: Configure CIS benchmark reports
-    path: /security/compliance-reports-cis 
+    path: /security/compliance-reports-cis
 - title: Secure Calico Enterprise component communications
   path: /security/comms/
   section:
