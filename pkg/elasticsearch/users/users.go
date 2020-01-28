@@ -195,7 +195,8 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
-						Names:      []string{indexPattern("tigera_secure_ee_compliance_reports", clusterName, "*")},
+						// ComplianceServer needs access to all indices as it creates reports for all the clusters
+						Names:      []string{indexPattern("tigera_secure_ee_compliance_reports", "*", "*")},
 						Privileges: []string{"read"},
 					}},
 				},
