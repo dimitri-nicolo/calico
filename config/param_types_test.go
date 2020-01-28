@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ var _ = DescribeTable("Endpoint list parameter parsing",
 		p := EndpointListParam{Metadata{
 			Name: "Endpoints",
 		}}
-		actual, err := p.Parse(raw)
+		actual, err := p.Parse(raw, nil)
 		Expect(err).To(BeNil())
 		Expect(actual).To(Equal(expected))
 	},
@@ -44,7 +44,7 @@ var _ = DescribeTable("CIDR list parameter parsing",
 		p := CIDRListParam{Metadata{
 			Name: "CIDRs",
 		}}
-		actual, err := p.Parse(raw)
+		actual, err := p.Parse(raw, nil)
 		if expectSuccess {
 			Expect(err).To(BeNil())
 			Expect(actual).To(Equal(expected))

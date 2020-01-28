@@ -73,7 +73,7 @@ type BoolParam struct {
 	Metadata
 }
 
-func (p *BoolParam) Parse(raw string) (interface{}, error) {
+func (p *BoolParam) Parse(raw string, _ *Config) (interface{}, error) {
 	switch strings.ToLower(raw) {
 	case "true", "1", "yes", "y", "t":
 		return true, nil
@@ -93,7 +93,7 @@ type IntParam struct {
 	Ranges []MinMax
 }
 
-func (p *IntParam) Parse(raw string) (interface{}, error) {
+func (p *IntParam) Parse(raw string, _ *Config) (interface{}, error) {
 	value, err := strconv.ParseInt(raw, 0, 64)
 	if err != nil {
 		err = p.parseFailed(raw, "invalid int")
@@ -135,7 +135,7 @@ type Int32Param struct {
 	Metadata
 }
 
-func (p *Int32Param) Parse(raw string) (interface{}, error) {
+func (p *Int32Param) Parse(raw string, _ *Config) (interface{}, error) {
 	value, err := strconv.ParseInt(raw, 0, 32)
 	if err != nil {
 		err = p.parseFailed(raw, "invalid 32-bit int")
@@ -149,7 +149,7 @@ type FloatParam struct {
 	Metadata
 }
 
-func (p *FloatParam) Parse(raw string) (result interface{}, err error) {
+func (p *FloatParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	result, err = strconv.ParseFloat(raw, 64)
 	if err != nil {
 		err = p.parseFailed(raw, "invalid float")
@@ -164,7 +164,7 @@ type SecondsParam struct {
 	Max int
 }
 
-func (p *SecondsParam) Parse(raw string) (result interface{}, err error) {
+func (p *SecondsParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	seconds, err := strconv.ParseFloat(raw, 64)
 	if err != nil {
 		err = p.parseFailed(raw, "invalid float")
@@ -184,7 +184,7 @@ type MillisParam struct {
 	Metadata
 }
 
-func (p *MillisParam) Parse(raw string) (result interface{}, err error) {
+func (p *MillisParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	millis, err := strconv.ParseFloat(raw, 64)
 	if err != nil {
 		err = p.parseFailed(raw, "invalid float")
@@ -200,7 +200,7 @@ type RegexpParam struct {
 	Msg    string
 }
 
-func (p *RegexpParam) Parse(raw string) (result interface{}, err error) {
+func (p *RegexpParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	if !p.Regexp.MatchString(raw) {
 		err = p.parseFailed(raw, p.Msg)
 	} else {
@@ -219,7 +219,7 @@ type RegexpPatternParam struct {
 // Parse validates whether the given raw string contains a valid regex.
 // Validation is dictated by two regexp patterns: one for valid regular expression
 // values, another for non-regular expressions.
-func (p *RegexpPatternParam) Parse(raw string) (interface{}, error) {
+func (p *RegexpPatternParam) Parse(raw string, _ *Config) (interface{}, error) {
 	var result *regexp.Regexp
 	// Split into individual elements, then validate each one and compile to regexp
 	result, compileErr := regexp.Compile(raw)
@@ -243,7 +243,7 @@ type RegexpPatternListParam struct {
 // Parse validates whether the given raw string contains a list of valid values.
 // Validation is dictated by two regexp patterns: one for valid regular expression
 // values, another for non-regular expressions.
-func (p *RegexpPatternListParam) Parse(raw string) (interface{}, error) {
+func (p *RegexpPatternListParam) Parse(raw string, _ *Config) (interface{}, error) {
 	var result []*regexp.Regexp
 	// Split into individual elements, then validate each one and compile to regexp
 	tokens := strings.Split(raw, p.Delimiter)
@@ -277,7 +277,7 @@ type FileParam struct {
 	Executable bool
 }
 
-func (p *FileParam) Parse(raw string) (interface{}, error) {
+func (p *FileParam) Parse(raw string, _ *Config) (interface{}, error) {
 	if p.Executable {
 		// Special case: for executable files, we search our directory
 		// and the system path.
@@ -330,7 +330,7 @@ type Ipv4Param struct {
 	Metadata
 }
 
-func (p *Ipv4Param) Parse(raw string) (result interface{}, err error) {
+func (p *Ipv4Param) Parse(raw string, _ *Config) (result interface{}, err error) {
 	res := net.ParseIP(raw)
 	if res == nil {
 		err = p.parseFailed(raw, "invalid IP")
@@ -343,7 +343,7 @@ type PortListParam struct {
 	Metadata
 }
 
-func (p *PortListParam) Parse(raw string) (interface{}, error) {
+func (p *PortListParam) Parse(raw string, _ *Config) (interface{}, error) {
 	var result []ProtoPort
 	for _, portStr := range strings.Split(raw, ",") {
 		portStr = strings.Trim(portStr, " ")
@@ -386,7 +386,7 @@ type PortRangeParam struct {
 	Metadata
 }
 
-func (p *PortRangeParam) Parse(raw string) (interface{}, error) {
+func (p *PortRangeParam) Parse(raw string, _ *Config) (interface{}, error) {
 	portRange, err := numorstring.PortFromString(raw)
 	if err != nil {
 		return nil, p.parseFailed(raw, fmt.Sprintf("%s is not a valid port range", raw))
@@ -401,7 +401,7 @@ type PortRangeListParam struct {
 	Metadata
 }
 
-func (p *PortRangeListParam) Parse(raw string) (interface{}, error) {
+func (p *PortRangeListParam) Parse(raw string, _ *Config) (interface{}, error) {
 	var result []numorstring.Port
 	for _, rangeStr := range strings.Split(raw, ",") {
 		portRange, err := numorstring.PortFromString(rangeStr)
@@ -420,7 +420,7 @@ type EndpointListParam struct {
 	Metadata
 }
 
-func (p *EndpointListParam) Parse(raw string) (result interface{}, err error) {
+func (p *EndpointListParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	value := strings.Split(raw, ",")
 	scheme := ""
 	resultSlice := []string{}
@@ -464,7 +464,7 @@ type MarkBitmaskParam struct {
 	Metadata
 }
 
-func (p *MarkBitmaskParam) Parse(raw string) (interface{}, error) {
+func (p *MarkBitmaskParam) Parse(raw string, _ *Config) (interface{}, error) {
 	value, err := strconv.ParseUint(raw, 0, 32)
 	if err != nil {
 		log.Warningf("Failed to parse %#v as an int: %v", raw, err)
@@ -490,7 +490,7 @@ type OneofListParam struct {
 	lowerCaseOptionsToCanonical map[string]string
 }
 
-func (p *OneofListParam) Parse(raw string) (result interface{}, err error) {
+func (p *OneofListParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	result, ok := p.lowerCaseOptionsToCanonical[strings.ToLower(raw)]
 	if !ok {
 		err = p.parseFailed(raw, "unknown option")
@@ -502,7 +502,7 @@ type CIDRListParam struct {
 	Metadata
 }
 
-func (c *CIDRListParam) Parse(raw string) (result interface{}, err error) {
+func (c *CIDRListParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	log.WithField("CIDRs raw", raw).Info("CIDRList")
 	values := strings.Split(raw, ",")
 	resultSlice := []string{}
@@ -531,7 +531,7 @@ type ServerListParam struct {
 
 const k8sServicePrefix = "k8s-service:"
 
-func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
+func (c *ServerListParam) Parse(raw string, config *Config) (result interface{}, err error) {
 	log.WithField("raw", raw).Info("ServerList")
 	values := strings.Split(raw, ",")
 	resultSlice := []ServerPort{}
@@ -553,7 +553,7 @@ func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 				portStr = svcName[colon+1:]
 				svcName = svcName[:colon]
 			}
-			svc, e := GetKubernetesService(namespace, svcName)
+			svc, e := config.GetKubernetesService(namespace, svcName)
 			if e != nil {
 				// Warn but don't report parse failure, so that other trusted IPs
 				// can still take effect.
@@ -604,7 +604,7 @@ func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 	return resultSlice, nil
 }
 
-func GetKubernetesService(namespace, svcName string) (*v1.Service, error) {
+func realGetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	k8sconf, err := rest.InClusterConfig()
 	if err != nil {
 		log.WithError(err).Info("Unable to create Kubernetes config.")
@@ -626,7 +626,7 @@ type RegionParam struct {
 const regionNamespacePrefix = "openstack-region-"
 const maxRegionLength int = validation.DNS1123LabelMaxLength - len(regionNamespacePrefix)
 
-func (r *RegionParam) Parse(raw string) (result interface{}, err error) {
+func (r *RegionParam) Parse(raw string, _ *Config) (result interface{}, err error) {
 	log.WithField("raw", raw).Info("Region")
 	if len(raw) > maxRegionLength {
 		err = fmt.Errorf("The value of OpenstackRegion must be %v chars or fewer", maxRegionLength)

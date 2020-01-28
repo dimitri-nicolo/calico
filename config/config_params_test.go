@@ -71,6 +71,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"EnableNflogSize",
 
 		"loadClientConfigFromEnvironment",
+		"GetKubernetesService",
 
 		"loadClientConfigFromEnvironment",
 		"useNodeResourceUpdates",
