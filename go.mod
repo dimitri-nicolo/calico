@@ -28,7 +28,7 @@ replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200127042123-4683d8bfcd59
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200128042320-f758bea829f8
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200126041950-c83a270484cf
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200127175934-d4bb25390532
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200124233200-fcf21602b6c6
