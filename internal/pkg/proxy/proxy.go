@@ -5,6 +5,7 @@ package proxy
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -28,7 +29,8 @@ type Target struct {
 	PathReplace []byte
 
 	// Transport to use for this target. If nil, Proxy will provide one
-	Transport http.RoundTripper
+	Transport        http.RoundTripper
+	AllowInsecureTLS bool
 }
 
 // Proxy proxies HTTP based on the provided list of targets
@@ -42,37 +44,26 @@ func New(tgts []Target) (*Proxy, error) {
 		mux: http.NewServeMux(),
 	}
 
-	// Wrapped in a func to be able to recover from a possible panic in HandleFunc
-	err := func() (e error) {
-		defer func() {
-			if r := recover(); r != nil {
-				e = errors.Errorf("mux.HandleFunc panicked: %s", r)
-			}
-		}()
-
-		for i, t := range tgts {
-			if t.Dest == nil {
-				return errors.Errorf("bad target %d, no destination", i)
-			}
-			if len(t.CAPem) != 0 && t.Dest.Scheme != "https" {
-				log.Debugf("Configuring CA cert for secure communication %s for %s", t.CAPem, t.Dest.Scheme)
-				return errors.Errorf("CA configured for url scheme %q", t.Dest.Scheme)
-			}
-			p.mux.HandleFunc(t.Path, newTargetHandler(t))
-			log.Debugf("Proxy target %q -> %q", t.Path, t.Dest)
+	for i, t := range tgts {
+		if t.Dest == nil {
+			return nil, errors.Errorf("bad target %d, no destination", i)
 		}
-
-		return nil
-	}()
-
-	if err != nil {
-		p = nil
+		if len(t.CAPem) != 0 && t.Dest.Scheme != "https" {
+			log.Debugf("Configuring CA cert for secure communication %s for %s", t.CAPem, t.Dest.Scheme)
+			return nil, errors.Errorf("CA configured for url scheme %q", t.Dest.Scheme)
+		}
+		hdlr, err := newTargetHandler(t)
+		if err != nil {
+			return nil, err
+		}
+		p.mux.HandleFunc(t.Path, hdlr)
+		log.Debugf("Proxy target %q -> %q", t.Path, t.Dest)
 	}
 
-	return p, err
+	return p, nil
 }
 
-func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
+func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), error) {
 	p := httputil.NewSingleHostReverseProxy(tgt.Dest)
 	p.FlushInterval = -1
 
@@ -81,22 +72,28 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 	} else if tgt.Dest.Scheme == "https" {
 		var tlsCfg *tls.Config
 
-		if len(tgt.CAPem) == 0 {
+		if tgt.AllowInsecureTLS {
 			tlsCfg = &tls.Config{
 				InsecureSkipVerify: true,
 			}
 		} else {
+			if len(tgt.CAPem) == 0 {
+				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", tgt.Path)
+			}
+
 			log.Debugf("Detected secure transport for %s. Will pick up system cert pool", tgt.Dest)
 			var ca *x509.CertPool
 			ca, err := x509.SystemCertPool()
 			if err != nil {
-				log.Debugf("Creating a new cert pool due to %s", err)
+				log.WithError(err).Warn("failed to get system cert pool, creating a new one")
 				ca = x509.NewCertPool()
 			}
+
 			file, err := ioutil.ReadFile(tgt.CAPem)
 			if err != nil {
-				log.Fatalf("Could not read cert from file %s", tgt.CAPem)
+				return nil, errors.Wrap(err, fmt.Sprintf("could not read cert from file %s", tgt.CAPem))
 			}
+
 			ca.AppendCertsFromPEM(file)
 			tlsCfg = &tls.Config{
 				RootCAs: ca,
@@ -132,7 +129,7 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 		log.Debugf("Received request %s will proxy to %s", r.RequestURI, tgt.Dest)
 
 		p.ServeHTTP(w, r)
-	}
+	}, nil
 }
 
 // ServeHTTP knows how to proxy HTTP requests to different named targets

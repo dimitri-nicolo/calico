@@ -47,39 +47,6 @@ var _ = Describe("Proxy", func() {
 			_, err := proxy.New([]proxy.Target{{}})
 			Expect(err).To(HaveOccurred())
 		})
-
-		It("should fail to configure with a bad path", func() {
-			_, err := proxy.New([]proxy.Target{
-				{
-					Path: "",
-					Dest: &url.URL{
-						Scheme: "http",
-						Host:   "some",
-					},
-				},
-			})
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should fail to configure with the same path twice", func() {
-			_, err := proxy.New([]proxy.Target{
-				{
-					Path: "/",
-					Dest: &url.URL{
-						Scheme: "http",
-						Host:   "some",
-					},
-				},
-				{
-					Path: "/",
-					Dest: &url.URL{
-						Scheme: "http",
-						Host:   "other",
-					},
-				},
-			})
-			Expect(err).To(HaveOccurred())
-		})
 	})
 
 	Describe("When configured", func() {
@@ -407,10 +374,16 @@ var _ = Describe("Proxy", func() {
 			srvURL, err := url.Parse(server.URL)
 			Expect(err).NotTo(HaveOccurred())
 
+			certFile, err := ioutil.TempFile("", "path-cert")
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = certFile.Write(certPem)
+			Expect(err).ShouldNot(HaveOccurred())
+
 			p, err := proxy.New([]proxy.Target{
 				{
-					Path: "/path",
-					Dest: srvURL,
+					Path:  "/path",
+					Dest:  srvURL,
+					CAPem: certFile.Name(),
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
