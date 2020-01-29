@@ -118,21 +118,6 @@ To secure {{site.prodname}} component communications, install the following set 
 ```
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
-#### Log in to the {{site.prodname}} Manager UI
-
-```
-kubectl port-forward -n tigera-manager svc/tigera-manager 9443 &
-```
-
-Sign in by navigating to https://localhost:9443 and login.
-
-##### Kibana authentication
-
-Connect to Kibana with the `elastic` username. Use the following command to decode the password:
-
-```
-kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
-```
 
 ### Above and beyond
 
