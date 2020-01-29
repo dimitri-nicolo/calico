@@ -51,8 +51,11 @@ def test_all_images_are_mapped():
   assert set(mapped_images.keys()) == set(version_compoments.keys())
 
 @parameterized(MAPPED_COMPONENTS.items())
-def test_component_repo_has_release_branch(_, repo_name):
+def test_component_repo_has_release_branch(name, repo_name):
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
+
+    print '[INFO] checking {0} repo({1}) has release-{2} branch'.format(name, repo_name, RELEASE_STREAM)
+    
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
     req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
         base_url=GITHUB_API_URL, repo=repo_name, branch='release-{}'.format(RELEASE_STREAM))
@@ -60,8 +63,11 @@ def test_component_repo_has_release_branch(_, repo_name):
     assert res.status_code == 200
 
 @parameterized(MAPPED_COMPONENTS.items())
-def test_component_repo_has_release_tag(_, repo_name):
+def test_component_repo_has_release_tag(name, repo_name):
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
+
+    print '[INFO] checking {0} repo({1}) has {2} release tag'.format(name, repo_name, RELEASE_STREAM)
+    
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
     req_url = '{base_url}/repos/tigera/{repo}/git/refs/{ref}'.format(
         base_url=GITHUB_API_URL, repo=repo_name, ref='tags/{}'.format(RELEASE_VERSION))
@@ -70,6 +76,9 @@ def test_component_repo_has_release_tag(_, repo_name):
 
 def test_docs_repo_has_release_branch():
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
+
+    print '[INFO] checking calico-private repo has release-{} branch'.format(RELEASE_STREAM)
+    
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
     req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
         base_url=GITHUB_API_URL, repo='calico-private', branch='release-{}'.format(RELEASE_STREAM))

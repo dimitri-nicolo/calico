@@ -23,9 +23,11 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     
 
 @parameterized(VERSION_MAPPED_IMAGES.items())
-def test_release_tag_present(_, component):
+def test_release_tag_present(name, component):
     assert QUAY_API_TOKEN != 'fake-token', '[ERROR] need a real QUAY_API_TOKEN env value'
-
+    
+    print '[INFO] checking quay image posted for {0} with {1} tag'.format(name, RELEASE_VERSION)
+    
     headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer %s' % QUAY_API_TOKEN}
     repository = component.get('image')
     expected_ver = component.get('version')

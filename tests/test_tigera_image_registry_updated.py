@@ -25,6 +25,8 @@ def test_image_registry_updated():
     req = requests.get("%s/%s/getting-started/private-registry" % (DOCS_URL, RELEASE_STREAM))
     assert req.status_code == 200
 
+    print '[INFO] checking image registry update in docs uses {0} registry'
+
     page = BeautifulSoup(req.content, features="html.parser").find("p", text="Use the following commands to pull the required Calico Enterprise images.").find_next('code')
     images = [x.replace('docker pull ', '') for x in page.text.split('\n') if re.search('tigera', x)]
     for image in images:
@@ -33,5 +35,5 @@ def test_image_registry_updated():
         if ver_image[0] in EXCLUDED_IMAGES:
           continue
         else:
-          print '[INFO] checking registry image %s references %s version' % (ver_image[0], RELEASE_VERSION)
+          print '[INFO] checking registry image %s references %s' % (ver_image[0], RELEASE_VERSION)
           assert ver_image[1] == RELEASE_VERSION

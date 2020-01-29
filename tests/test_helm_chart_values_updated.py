@@ -103,7 +103,7 @@ def test_chart_values_updated(name, chart):
     values = tar.extractfile('{0}/{1}'.format(chart.get('name'), VALUES_FILE_NAME)).read()
     chart_values = yaml.safe_load(values)
 
-    # compare expected/actual image &:tag in the chart values.yaml
+    print '[INFO] compare expected/actual images & tags in the {} chart values.yaml'.format(name)
     mapped_images = chart.get('images')
     for k, v in release.get('components').items():
       if k in mapped_images.keys():

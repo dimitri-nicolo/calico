@@ -16,7 +16,7 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 
 
 def test_updated_docs_deployed():
-    req = requests.get('%s/%s/release-notes' % DOCS_URL, RELEASE_STREAM)
+    req = requests.get('%s/%s/release-notes' % (DOCS_URL, RELEASE_STREAM))
     assert req.status_code == 200
 
     git_hash = BeautifulSoup(req.content, features="html.parser").find("div", {"class":"git-hash"})
