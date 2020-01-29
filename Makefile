@@ -218,15 +218,16 @@ docs_test.created:
 
 test: docs_test.created
 	docker run --rm \
-        -v $(PWD):/code \
-        -e RELEASE_STREAM=$(RELEASE_STREAM) \
-	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
-	-e DOCS_URL=$(DOCS_URL) \
-	-e GIT_HASH=$(GIT_HASH) \
-	$(DOCS_TEST_CONTAINER) sh -c \
-	"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
-	--xunit-file='/code/tests/report/nosetests.xml' \
-	--with-timer"
+		-v $(PWD):/code \
+		-e RELEASE_STREAM=$(RELEASE_STREAM) \
+		-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
+		-e GITHUB_API_TOKEN=$(GITHUB_ACCESS_TOKEN) \
+		-e DOCS_URL=$(DOCS_URL) \
+		-e GIT_HASH=$(GIT_HASH) \
+		$(DOCS_TEST_CONTAINER) sh -c \
+		"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
+		--xunit-file='/code/tests/report/nosetests.xml' \
+		--with-timer"
 
 ci: clean htmlproofer kubeval helm-tests
 
