@@ -9,6 +9,8 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/selector"
+
+	"github.com/tigera/lma/pkg/api"
 )
 
 // NewNamespaceHandler creates a new NamespaceHandler.
@@ -66,7 +68,7 @@ func (n *NamespaceHandler) GetNamespaceSelectorEndpointMatcher(selStr string) En
 	}
 
 	// Create a closure to perform the match.
-	matcher := func(_ *Flow, ep *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+	matcher := func(_ *api.Flow, ep *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		// If the Endpoint namespace is one of the matched selectors then this matches.
 		for i := range namespaces {
 			if namespaces[i] == ep.Namespace {
@@ -123,8 +125,8 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 	}
 
 	// Create a closure to perform the match.
-	matcher := func(_ *Flow, ep *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
-		if ep.Type != EndpointTypeWep {
+	matcher := func(_ *api.Flow, ep *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+		if ep.Type != api.EndpointTypeWep {
 			log.Debugf("ServiceAccountMatch: %s (not valid for endpoint type)", MatchTypeFalse)
 			return MatchTypeFalse
 		}

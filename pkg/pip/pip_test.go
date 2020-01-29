@@ -3,20 +3,19 @@ package pip
 import (
 	"context"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+
+	pelastic "github.com/tigera/lma/pkg/elastic"
 
 	"github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 var _ = Describe("Test handling of flow splitting", func() {
@@ -164,15 +163,15 @@ var _ = Describe("Test handling of flow splitting", func() {
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
-			Name: FlowlogBuckets,
+			Name: pelastic.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
-			AggNestedTermInfos:      AggregatedTerms,
-			AggSumInfos:             UIAggregationSums,
+			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
+			AggSumInfos:             pelastic.FlowAggregationSums,
 		}
 
 		By("Creating a PIP instance with the mock client, and enumerating all aggregated flows")
 		pip := pip{esClient: client, cfg: config.MustLoadConfig()}
-		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false)
+		flowsChan, _ := pip.SearchAndProcessFlowLogs(context.Background(), q, nil, pc, 1000, false, pelastic.NewFlowFilterIncludeAll())
 		var before []*pelastic.CompositeAggregationBucket
 		var after []*pelastic.CompositeAggregationBucket
 		for flow := range flowsChan {

@@ -4,6 +4,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/selector"
+
+	"github.com/tigera/lma/pkg/api"
 )
 
 // NewEndpointSelectorHandler creates a new EndpointSelectorHandler used for enumerating Endpoint selectors and
@@ -43,7 +45,7 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 
 	// Create a closure to perform the selector matching and the caching.
 	cacheIdx := len(c.selectorMatchers)
-	matcher := func(_ *Flow, ep *FlowEndpointData, _ *flowCache, epCache *endpointCache) MatchType {
+	matcher := func(_ *api.Flow, ep *api.FlowEndpointData, _ *flowCache, epCache *endpointCache) MatchType {
 		val := epCache.selectors[cacheIdx]
 		if val == MatchTypeUnknown {
 			if isAll {

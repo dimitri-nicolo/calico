@@ -112,15 +112,15 @@ func Start(cfg *Config) error {
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamespaceHandler(esClient))))
+					middleware.FlowLogNamespaceHandler(lmaK8sAuth, esClient))))
 		sm.Handle("/flowLogNames",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamesHandler(esClient))))
+					middleware.FlowLogNamesHandler(lmaK8sAuth, esClient))))
 		sm.Handle("/flowLogs",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(esClient, p))))
+					middleware.FlowLogsHandler(lmaK8sAuth, esClient, p))))
 	case ServiceUserMode:
 		sm.Handle("/recommend",
 			middleware.PolicyRecommendationHandler(lmaK8sAuth, k8sClientSet, esClient))
@@ -136,15 +136,15 @@ func Start(cfg *Config) error {
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamespaceHandler(esClient))))
+					middleware.FlowLogNamespaceHandler(lmaK8sAuth, esClient))))
 		sm.Handle("/flowLogNames",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamesHandler(esClient))))
+					middleware.FlowLogNamesHandler(lmaK8sAuth, esClient))))
 		sm.Handle("/flowLogs",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(esClient, p))))
+					middleware.FlowLogsHandler(lmaK8sAuth, esClient, p))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:

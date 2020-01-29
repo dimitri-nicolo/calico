@@ -68,10 +68,6 @@
                 {
                   "doc_count": 1908,
                   "key": "k8s-app=kube-dns"
-                },
-                {
-                  "doc_count": 1908,
-                  "key": "pod-template-hash=5c98db65d4"
                 }
               ]
             },
@@ -202,10 +198,6 @@
                 {
                   "doc_count": 1908,
                   "key": "k8s-app=kube-dns"
-                },
-                {
-                  "doc_count": 1908,
-                  "key": "pod-template-hash=5c98db65d4"
                 }
               ]
             },

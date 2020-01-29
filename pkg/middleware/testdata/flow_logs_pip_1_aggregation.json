@@ -20,9 +20,9 @@
             "flow_impacted": false,
             "reporter": "dst",
             "source_action": "allow",
-            "source_name": "pvt",
+            "source_name": "hep1",
             "source_namespace": "-",
-            "source_type": "net"
+            "source_type": "hep"
           },
           "policies": {
             "by_tiered_policy": {
@@ -83,9 +83,9 @@
             "flow_impacted": false,
             "reporter": "dst",
             "source_action": "allow",
-            "source_name": "pvt",
+            "source_name": "hep1",
             "source_namespace": "-",
-            "source_type": "net"
+            "source_type": "hep"
           },
           "policies": {
             "by_tiered_policy": {

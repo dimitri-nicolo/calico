@@ -1,9 +1,12 @@
 package policycalc
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/lma/pkg/api"
 )
 
 // CompiledPolicy contains the compiled policy matchers for either ingress _or_ egress policy rules.
@@ -12,8 +15,12 @@ type CompiledPolicy struct {
 	Tier string
 
 	// Name of the policy in flow log format.
-	// -  <namespace>/<policy>
-	// -  <policy>
+	// -  <name>
+	// -  staged:<name>
+	// -  <namespace>/<name>
+	// -  <namespace>/staged:<name>
+	// -  <namespace>/knp.default.<name>
+	// -  <namespace>/staged:knp.default.<name>
 	FlowLogName string
 
 	// Flow matchers for the main selector of the policy.
@@ -34,7 +41,7 @@ type CompiledPolicy struct {
 }
 
 // Applies determines whether the policy applies to the flow.
-func (p *CompiledPolicy) Applies(flow *Flow, cache *flowCache) MatchType {
+func (p *CompiledPolicy) Applies(flow *api.Flow, cache *flowCache) MatchType {
 	mt := MatchTypeTrue
 	for i := range p.MainSelectorMatchers {
 		switch p.MainSelectorMatchers[i](flow, cache) {
@@ -52,9 +59,9 @@ func (p *CompiledPolicy) Applies(flow *Flow, cache *flowCache) MatchType {
 // -  It returns a set of possible actions for this policy - a combination of allow, deny, pass or no-match.
 // -  It also uses the flow log to validate or provide certainty with the calculation, so the response may contain
 //    additional bits that pertain to the flow log value.
-func (c *CompiledPolicy) Action(flow *Flow, cache *flowCache) ActionFlag {
+func (c *CompiledPolicy) Action(flow *api.Flow, cache *flowCache) api.ActionFlag {
 	var exact bool
-	var flagsThisPolicy ActionFlag
+	var flagsThisPolicy api.ActionFlag
 loop:
 	for i := range c.Rules {
 		log.Debugf("Processing rule %d, action flags %d", i, c.Rules[i].ActionFlag)
@@ -103,7 +110,7 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact) (ingressPol, egre
 	var name string
 	var tier string
 
-	// Flag the policy as staged if either the policy iteself is staged, or the impact indicates this was a staged
+	// Flag the policy as staged if either the policy itself is staged, or the impact indicates this was a staged
 	// policy that was converted to enforced.
 	staged := p.Staged || impact.UseStaged
 

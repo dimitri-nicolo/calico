@@ -33,9 +33,9 @@
             "dest_type": "net",
             "reporter": "dst",
             "source_action": "allow",
-            "source_name": "pvt",
+            "source_name": "hep1",
             "source_namespace": "-",
-            "source_type": "net",
+            "source_type": "hep",
             "proto": "udp",
             "source_ip": null,
             "dest_ip": null,
@@ -88,10 +88,6 @@
                 {
                   "doc_count": 2162,
                   "key": "k8s-app=kube-dns"
-                },
-                {
-                  "doc_count": 2162,
-                  "key": "pod-template-hash=5c98db65d4"
                 }
               ]
             },
@@ -165,18 +161,6 @@
                 {
                   "doc_count": 2166,
                   "key": "statefulset.kubernetes.io/pod-name=elastic-operator-0"
-                },
-                {
-                  "doc_count": 2166,
-                  "key": "control-plane=elastic-operator"
-                },
-                {
-                  "doc_count": 2166,
-                  "key": "controller-revision-hash=elastic-operator-54988f7b46"
-                },
-                {
-                  "doc_count": 2166,
-                  "key": "k8s-app=elastic-operator"
                 }
               ]
             },

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/olivere/elastic/v7"
+	elastic "github.com/olivere/elastic/v7"
 )
 
 // UnprotectedQuery returns an elastic nested query

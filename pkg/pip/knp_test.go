@@ -1,18 +1,21 @@
 package pip
 
 import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
+
+	"github.com/tigera/lma/pkg/api"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
@@ -150,45 +153,45 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with dest in ns1 is unaffected")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Name:      "wep1-*",
 				Namespace: "ns1",
 				Labels: map[string]string{
 					"any": "value",
 				},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
 				Labels: map[string]string{
 					"any": "value",
 				},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		processed, before, after := pc.CalculateSource(f)
 		Expect(processed).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Include).To(BeTrue())
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(after.Include).To(BeTrue())
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		f.Reporter = api.ReporterTypeDestination
+		processed, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
 		Expect(processed).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagEndOfTierDeny))
 		Expect(before.Include).To(BeTrue())
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(after.Include).To(BeTrue())
 
-		processed, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagDeny)
+		processed, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagDeny)
 		Expect(processed).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(before.Action).To(Equal(api.ActionFlagEndOfTierDeny))
 		Expect(before.Include).To(BeTrue())
 		Expect(after.Include).To(BeFalse())
 	})
@@ -233,40 +236,40 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with dest in ns1 is unaffected")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Name:      "wep1-*",
 				Namespace: "ns1",
 				Labels: map[string]string{
 					"any": "value",
 				},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
 				Labels: map[string]string{
 					"any": "value",
 				},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeFalse())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Include).To(BeTrue())
-		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(after.Include).To(BeTrue())
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagAllow)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Include).To(BeTrue())
-		Expect(after.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagEndOfTierDeny))
 		Expect(after.Include).To(BeTrue())
 	})
 
@@ -310,34 +313,34 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with src in ns1 goes allow->deny")
-		f := &policycalc.Flow{
-			Reporter: policycalc.ReporterTypeSource,
-			Source: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+		f := &api.Flow{
+			Reporter: api.ReporterTypeSource,
+			Source: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Name:      "wep1-*",
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			Destination: policycalc.FlowEndpointData{
-				Type:      policycalc.EndpointTypeWep,
+			Destination: api.FlowEndpointData{
+				Type:      api.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			ActionFlag: policycalc.ActionFlagAllow,
+			ActionFlag: api.ActionFlagAllow,
 		}
 
 		modified, before, after := pc.CalculateSource(f)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Include).To(BeTrue())
-		Expect(after.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(after.Action).To(Equal(api.ActionFlagEndOfTierDeny))
 		Expect(after.Include).To(BeTrue())
 
-		f.Reporter = policycalc.ReporterTypeDestination
-		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagDeny)
+		f.Reporter = api.ReporterTypeDestination
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagAllow, api.ActionFlagDeny)
 		Expect(modified).To(BeTrue())
-		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Action).To(Equal(api.ActionFlagAllow))
 		Expect(before.Include).To(BeTrue())
 		Expect(after.Action).To(BeEquivalentTo(0))
 		Expect(after.Include).To(BeFalse())

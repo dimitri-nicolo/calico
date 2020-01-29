@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tigera/lma/pkg/rbac"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-proxy/pkg/pip"
@@ -37,6 +39,9 @@ func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http
 			h.ServeHTTP(w, req)
 			return
 		}
+
+		// Create a flow flitler based on user rbac for this request.
+		flowFilter := elastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: authz, userReq: req}))
 
 		// Split the path by path separator. We expect a PIP URL to be an ES search query of the format:
 		//     /tigera_secure_ee_flows*/_search
@@ -73,7 +78,7 @@ func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http
 		// Use PIP to calculate the flows and package up the flows for the response. The child handler is not invoked
 		// as PIP takes over the processing of the request.
 		log.Debug("Policy Impact Permissions OK - getting flows")
-		if flows, err := p.GetFlows(context.TODO(), params); err != nil {
+		if flows, err := p.GetFlows(context.TODO(), params, flowFilter); err != nil {
 			log.WithError(err).Info("Error getting flows")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -180,7 +185,7 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 // checkPolicyActionsPermissions checks whether the action in each resource update is allowed.
 func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz K8sAuthInterface) (status int, err error) {
 	factory := NewStandardPolicyImpactRbacHelperFactory(authz)
-	rbac := factory.NewPolicyImpactRbacHelper(req)
+	rbacHelper := factory.NewPolicyImpactRbacHelper(req)
 	for _, action := range actions {
 		if action.Resource == nil {
 			return http.StatusBadRequest, fmt.Errorf("invalid resource actions syntax: resource is missing from request")
@@ -188,7 +193,7 @@ func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Reque
 		if err := validateAction(action.Action); err != nil {
 			return http.StatusBadRequest, err
 		}
-		if stat, err := rbac.CheckCanPreviewPolicyAction(action.Action, action.Resource); err != nil {
+		if stat, err := rbacHelper.CheckCanPreviewPolicyAction(action.Action, action.Resource); err != nil {
 			return stat, err
 		}
 	}
@@ -240,7 +245,7 @@ type endTime struct {
 
 // ParseElasticsearchTime parses the time string supplied in the ES query.
 func ParseElasticsearchTime(now time.Time, tstr *string) (*time.Time, error) {
-	if tstr == nil {
+	if tstr == nil || *tstr == "" {
 		return nil, nil
 	}
 	clog := log.WithField("time", *tstr)

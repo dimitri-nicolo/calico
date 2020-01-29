@@ -4,6 +4,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	"github.com/tigera/lma/pkg/api"
 )
 
 // CompiledRule is created from an API v3 Rule and has pre-calculated matcher functions to speed up computation.
@@ -12,14 +14,14 @@ type CompiledRule struct {
 	// - ActionFlagAllow
 	// - ActionFlagDeny, or
 	// - ActionFlagNextTier
-	ActionFlag ActionFlag
+	ActionFlag api.ActionFlag
 
 	// The matchers.
 	Matchers []FlowMatcher
 }
 
 // Match determines whether this rule matches the supplied flow.
-func (c *CompiledRule) Match(flow *Flow, cache *flowCache) MatchType {
+func (c *CompiledRule) Match(flow *api.Flow, cache *flowCache) MatchType {
 	mt := MatchTypeTrue
 	for i := range c.Matchers {
 		log.Debugf("Invoking matcher %d", i)
@@ -57,11 +59,11 @@ func compileRule(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) *Comp
 	// Set the action
 	switch in.Action {
 	case v3.Allow:
-		c.ActionFlag = ActionFlagAllow
+		c.ActionFlag = api.ActionFlagAllow
 	case v3.Deny:
-		c.ActionFlag = ActionFlagDeny
+		c.ActionFlag = api.ActionFlagDeny
 	case v3.Pass:
-		c.ActionFlag = ActionFlagNextTier
+		c.ActionFlag = api.ActionFlagNextTier
 	default:
 		return nil
 	}

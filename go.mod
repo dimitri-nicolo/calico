@@ -1,10 +1,11 @@
 module github.com/tigera/es-proxy
 
-go 1.13
+go 1.12
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200124152113-77403d9b428f
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200123005450-6c8457330ec4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200124233200-fcf21602b6c6
+	github.com/tigera/felix => github.com/tigera/felix-private v0.0.0-20200124152113-77403d9b428f
 	k8s.io/api => k8s.io/api v0.16.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.16.4
@@ -26,7 +27,6 @@ replace (
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.16.4
 	k8s.io/metrics => k8s.io/metrics v0.16.4
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.16.4
-
 )
 
 require (
@@ -41,7 +41,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200107221211-591370b83580+incompatible
 	github.com/tigera/compliance v0.0.0-20200124090152-e695e0777a80
-	github.com/tigera/lma v0.0.0-20200126054456-bae6a3e2d087
+	github.com/tigera/lma v0.0.0-20200129042927-1d93cc420737
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0

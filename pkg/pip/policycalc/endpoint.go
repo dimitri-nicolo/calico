@@ -9,8 +9,10 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/tigera/lma/pkg/api"
 )
 
 // New creates a new EndpointCache.
@@ -23,7 +25,7 @@ func NewEndpointCache() *EndpointCache {
 // EndpointData encapsulates data about a single or related set of endpoints.
 type EndpointData struct {
 	// The named ports configured in the endpoint.
-	NamedPorts []EndpointNamedPort
+	NamedPorts []api.EndpointNamedPort
 
 	// The service account configured in the endpoint. Only valid for Pods.
 	ServiceAccount *string
@@ -146,22 +148,22 @@ func (e *EndpointCache) populateEndpointDataHEP(meta *metav1.ObjectMeta, spec *v
 }
 
 // getPodPorts returns the set of endpoint ports scanned from the pod container configuration.
-func (e *EndpointCache) getPodPorts(pod *corev1.Pod) []EndpointNamedPort {
-	enp := make([]EndpointNamedPort, 0)
+func (e *EndpointCache) getPodPorts(pod *corev1.Pod) []api.EndpointNamedPort {
+	enp := make([]api.EndpointNamedPort, 0)
 	for _, c := range pod.Spec.Containers {
 		for _, kp := range c.Ports {
 			if kp.Name == "" || kp.ContainerPort == 0 {
 				continue
 			}
-			protocol := ProtoTCP
+			protocol := api.ProtoTCP
 			if kp.Protocol != "" {
 				pfs := numorstring.ProtocolFromString(string(kp.Protocol))
-				pnum := GetProtocolNumber(&pfs)
+				pnum := api.GetProtocolNumber(&pfs)
 				if pnum == nil {
 					continue
 				}
 			}
-			enp = append(enp, EndpointNamedPort{
+			enp = append(enp, api.EndpointNamedPort{
 				Name:     kp.Name,
 				Port:     uint16(kp.ContainerPort),
 				Protocol: protocol,
@@ -172,11 +174,11 @@ func (e *EndpointCache) getPodPorts(pod *corev1.Pod) []EndpointNamedPort {
 }
 
 // getHEPPorts returns the set of endpoint ports scanned from the HEP configuration.
-func (e *EndpointCache) getHEPPorts(spec *v3.HostEndpointSpec) []EndpointNamedPort {
-	enp := make([]EndpointNamedPort, 0, len(spec.Ports))
+func (e *EndpointCache) getHEPPorts(spec *v3.HostEndpointSpec) []api.EndpointNamedPort {
+	enp := make([]api.EndpointNamedPort, 0, len(spec.Ports))
 	for _, p := range spec.Ports {
-		if proto := GetProtocolNumber(&p.Protocol); proto != nil {
-			enp = append(enp, EndpointNamedPort{
+		if proto := api.GetProtocolNumber(&p.Protocol); proto != nil {
+			enp = append(enp, api.EndpointNamedPort{
 				Name:     p.Name,
 				Port:     p.Port,
 				Protocol: *proto,

@@ -5,6 +5,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/tigera/lma/pkg/api"
 )
 
 var _ = Describe("Selector handler tests", func() {
@@ -28,8 +30,8 @@ var _ = Describe("Selector handler tests", func() {
 		Expect(sh.selectorMatchers).To(HaveLen(2))
 
 		By("matching endpoint against the two selectors (both successfully)")
-		ed := &FlowEndpointData{
-			Type: EndpointTypeHep,
+		ed := &api.FlowEndpointData{
+			Type: api.EndpointTypeHep,
 			Labels: map[string]string{
 				"vegetable": "turnip",
 			},
@@ -53,8 +55,8 @@ var _ = Describe("Selector handler tests", func() {
 		Expect(epc.selectors[1]).To(Equal(MatchTypeTrue))
 
 		By("matching endpoint against the two selectors (only one successfully)")
-		ed = &FlowEndpointData{
-			Type: EndpointTypeNs,
+		ed = &api.FlowEndpointData{
+			Type: api.EndpointTypeNs,
 			Labels: map[string]string{
 				"vegetable": "parsnip",
 			},
@@ -78,8 +80,8 @@ var _ = Describe("Selector handler tests", func() {
 		Expect(epc.selectors[1]).To(Equal(MatchTypeFalse))
 
 		By("matching endpoint where labels are unknown")
-		ed = &FlowEndpointData{
-			Type:   EndpointTypeHep,
+		ed = &api.FlowEndpointData{
+			Type:   api.EndpointTypeHep,
 			Labels: nil,
 		}
 		epc = endpointCache{selectors: sh.CreateSelectorCache()}

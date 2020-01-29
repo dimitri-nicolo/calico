@@ -7,6 +7,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
+	"github.com/tigera/lma/pkg/api"
+
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
@@ -32,8 +34,8 @@ func (m MatchType) String() string {
 	}
 }
 
-type FlowMatcher func(*Flow, *flowCache) MatchType
-type EndpointMatcher func(*Flow, *FlowEndpointData, *flowCache, *endpointCache) MatchType
+type FlowMatcher func(*api.Flow, *flowCache) MatchType
+type EndpointMatcher func(*api.Flow, *api.FlowEndpointData, *flowCache, *endpointCache) MatchType
 
 // NewMatcherFactory creates a new MatcherFactory
 func NewMatcherFactory(
@@ -62,7 +64,7 @@ func (m *MatcherFactory) Not(fm FlowMatcher) FlowMatcher {
 	}
 
 	// Return a closure that invokes the matcher and negates the response.
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		mt := fm(flow, flowCache)
 		switch mt {
 		case MatchTypeTrue:
@@ -82,7 +84,7 @@ func (m *MatcherFactory) IPVersion(version *int) FlowMatcher {
 	}
 
 	// Create a closure that checks the IP version against the version of the IPs in the flow.
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		// Do the best match we can, by checking actual IPs if present.
 		if flow.IPVersion == nil {
 			log.Debugf("IPVersion: %s (unknown)", MatchTypeUncertain)
@@ -107,13 +109,13 @@ func (m *MatcherFactory) ICMP(icmp *v3.ICMPFields) FlowMatcher {
 
 	// Flows will not contain ICMP data, the best we can do is check the protocol and set match type to false if not
 	// ICMP.
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		if flow.Proto == nil {
 			log.Debugf("ICMP: %s (protocol unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
 		}
 		switch *flow.Proto {
-		case ProtoICMP, ProtoICMPv6:
+		case api.ProtoICMP, api.ProtoICMPv6:
 			log.Debugf("ICMP: %s (ICMP parameters unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
 		default:
@@ -131,7 +133,7 @@ func (m *MatcherFactory) HTTP(http *v3.HTTPMatch) FlowMatcher {
 	}
 
 	// Flows will not contain HTTP data.
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		log.Debugf("HTTP: %s (unknown)", MatchTypeUncertain)
 		return MatchTypeUncertain
 	}
@@ -139,12 +141,12 @@ func (m *MatcherFactory) HTTP(http *v3.HTTPMatch) FlowMatcher {
 
 // Protocol matcher
 func (m *MatcherFactory) Protocol(p *numorstring.Protocol) FlowMatcher {
-	protocol := GetProtocolNumber(p)
+	protocol := api.GetProtocolNumber(p)
 	if protocol == nil {
 		return nil
 	}
 
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		if flow.Proto == nil {
 			log.Debugf("Protocol: %s (unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
@@ -164,7 +166,7 @@ func (m *MatcherFactory) Src(em EndpointMatcher) FlowMatcher {
 		return nil
 	}
 
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		log.Debug("Source match")
 		return em(flow, &flow.Source, flowCache, &flowCache.source)
 	}
@@ -176,7 +178,7 @@ func (m *MatcherFactory) Dst(em EndpointMatcher) FlowMatcher {
 		return nil
 	}
 
-	return func(flow *Flow, flowCache *flowCache) MatchType {
+	return func(flow *api.Flow, flowCache *flowCache) MatchType {
 		log.Debug("Destination match")
 		return em(flow, &flow.Destination, flowCache, &flowCache.destination)
 	}
@@ -184,7 +186,7 @@ func (m *MatcherFactory) Dst(em EndpointMatcher) FlowMatcher {
 
 // CalicoEndpointSelector endpoints matcher
 func (m *MatcherFactory) CalicoEndpointSelector() EndpointMatcher {
-	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		if ed.IsCalicoManagedEndpoint() {
 			return MatchTypeTrue
 		}
@@ -216,7 +218,7 @@ func (m *MatcherFactory) Nets(nets []string) EndpointMatcher {
 	}
 
 	// Create a closure matching on the nets.
-	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		if ed.IP == nil {
 			// Endpoint IP is unknown. If this is a Calico endpoint then we either have a negative match or an uncertain
 			// match depending on configuration.
@@ -248,7 +250,7 @@ func (m *MatcherFactory) Ports(ports []numorstring.Port) EndpointMatcher {
 
 	// Create a closure matching on the numerical port values.
 	log.Debug("Ports matcher")
-	return func(f *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+	return func(f *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		// If the port is not specified in the endpoint data then return uncertain.
 		if ed.Port == nil {
 			log.Debugf("Ports: %s (unknown)", MatchTypeUncertain)
@@ -306,7 +308,7 @@ func (m *MatcherFactory) Domains(domains []string) EndpointMatcher {
 	if len(domains) == 0 {
 		return nil
 	}
-	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		log.Debugf("Domains: %s (unknown)", MatchTypeUncertain)
 		return MatchTypeUncertain
 	}
@@ -335,7 +337,7 @@ func (m *MatcherFactory) Namespace(namespace string) EndpointMatcher {
 	}
 
 	// Create a closure to match the endpoint namespace against the specified namespace.
-	return func(_ *Flow, ed *FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
 		if ed.Namespace == namespace {
 			log.Debugf("Namespace: %s (name matches %s)", MatchTypeTrue, ed.Namespace)
 			return MatchTypeTrue

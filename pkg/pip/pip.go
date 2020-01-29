@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/tigera/lma/pkg/api"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/list"
@@ -34,9 +36,9 @@ type FlowLogResults struct {
 	AggregationsPreview                  map[string]interface{} `json:"aggregations_preview"`
 }
 
-// GetFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
+// GetCompositeAggrFlows returns the set of PIP-processed flows based on the request parameters in `params`. The map is
 // JSON serializable
-func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams) (*FlowLogResults, error) {
+func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHelper pelastic.FlowFilter) (*FlowLogResults, error) {
 	// Create a context with timeout to ensure we don't block for too long with this calculation.
 	ctxWithTimeout, cancel := context.WithTimeout(ctxIn, p.cfg.MaxCalculationTime)
 	defer cancel() // Releases timer resources if the operation completes before the timeout.
@@ -48,21 +50,20 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams) (*Flow
 	}
 
 	// Construct the query.
-	// TODO(rlb): This should be fully parsed from the HTTP request.
 	q := &pelastic.CompositeAggregationQuery{
-		Name:          FlowlogBuckets,
+		Name:          api.FlowlogBuckets,
 		DocumentIndex: params.DocumentIndex,
 		Query:         params.Query,
-		AggCompositeSourceInfos: UICompositeSources,
-		AggNestedTermInfos:      AggregatedTerms,
-		AggSumInfos:             UIAggregationSums,
+		AggCompositeSourceInfos: pelastic.FlowCompositeSources,
+		AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
+		AggSumInfos:             pelastic.FlowAggregationSums,
 	}
 
 	// Enumerate the aggregation buckets until we have all we need. The channel will be automatically closed.
 	var before []*pelastic.CompositeAggregationBucket
 	var after []*pelastic.CompositeAggregationBucket
 	startTime := time.Now()
-	buckets, errs := p.SearchAndProcessFlowLogs(ctxWithTimeout, q, nil, calc, params.Limit, params.ImpactedOnly)
+	buckets, errs := p.SearchAndProcessFlowLogs(ctxWithTimeout, q, nil, calc, params.Limit, params.ImpactedOnly, rbacHelper)
 	for bucket := range buckets {
 		before = append(before, bucket.Before...)
 		after = append(after, bucket.After...)

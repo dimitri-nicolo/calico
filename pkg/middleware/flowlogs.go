@@ -7,12 +7,18 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/olivere/elastic/v7"
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	pippkg "github.com/tigera/es-proxy/pkg/pip"
+
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/rbac"
+
+	pippkg "github.com/tigera/es-proxy/pkg/pip"
 )
 
 type FlowLogsParams struct {
@@ -29,6 +35,10 @@ type FlowLogsParams struct {
 	SourceDestNamePrefix string          `json:"srcDstNamePrefix"`
 	PolicyPreview        *PolicyPreview  `json:"policyPreview"`
 	Unprotected          bool            `json:"unprotected"`
+
+	// Parsed timestamps
+	startDateTime *time.Time
+	endDateTime   *time.Time
 }
 
 type LabelSelector struct {
@@ -47,7 +57,7 @@ const esflowIndexPrefix = "tigera_secure_ee_flows"
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
+func FlowLogsHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -69,7 +79,9 @@ func FlowLogsHandler(esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
 			}
 			return
 		}
-		response, err := getFLowLogsFromElastic(params, esClient, pip)
+
+		flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req}))
+		response, err := getFlowLogsFromElastic(flowFilter, params, esClient, pip)
 		if err != nil {
 			log.WithError(err).Info("Error getting search results from elastic")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
@@ -112,8 +124,8 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		log.WithError(err).Info("Error extracting dstLabels")
 		return nil, errParseRequest
 	}
-	startDateTime := url.Get("startDateTime")
-	endDateTime := url.Get("endDateTime")
+	startDateTimeString := url.Get("startDateTime")
+	endDateTimeString := url.Get("endDateTime")
 	actions := lowerCaseParams(url["actions"])
 	namespace := strings.ToLower(url.Get("namespace"))
 	srcDstNamePrefix := strings.ToLower(url.Get("srcDstNamePrefix"))
@@ -128,6 +140,19 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 			return nil, errParseRequest
 		}
 	}
+
+	now := time.Now()
+	startDateTime, err := ParseElasticsearchTime(now, &startDateTimeString)
+	if err != nil {
+		log.WithError(err).Info("Error extracting start date time")
+		return nil, errParseRequest
+	}
+	endDateTime, err := ParseElasticsearchTime(now, &endDateTimeString)
+	if err != nil {
+		log.WithError(err).Info("Error extracting end date time")
+		return nil, errParseRequest
+	}
+
 	params := &FlowLogsParams{
 		ClusterName:          cluster,
 		Limit:                limit,
@@ -135,13 +160,15 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		SourceLabels:         srcLabels,
 		DestType:             dstType,
 		DestLabels:           dstLabels,
-		StartDateTime:        startDateTime,
-		EndDateTime:          endDateTime,
+		StartDateTime:        startDateTimeString,
+		EndDateTime:          endDateTimeString,
 		Actions:              actions,
 		Namespace:            namespace,
 		SourceDestNamePrefix: srcDstNamePrefix,
 		PolicyPreview:        policyPreview,
 		Unprotected:          unprotected,
+		startDateTime:        startDateTime,
+		endDateTime:          endDateTime,
 	}
 
 	if params.ClusterName == "" {
@@ -286,21 +313,15 @@ func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, terms
 
 // if a policy preview is provided use pip to perform the ES query and return flows with the policy applied
 // otherwise just perform a regular ES query and return the results
-func getFLowLogsFromElastic(params *FlowLogsParams, esClient lmaelastic.Client, pip pippkg.PIP) (interface{}, error) {
+func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client, pip pippkg.PIP) (interface{}, error) {
 	query := buildFlowLogsQuery(params)
 
 	index := getClusterFlowIndex(params.ClusterName)
 
 	if params.PolicyPreview == nil {
-		searchQuery := esClient.Backend().Search().
-			Index(index).
-			Query(query).
-			Size(int(params.Limit))
-		searchResult, err := esClient.Do(context.Background(), searchQuery)
-		if err != nil {
-			return nil, err
-		}
-		return searchResult, nil
+		return lmaelastic.GetCompositeAggrFlows(
+			context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit,
+		)
 	} else {
 		policyChange := pippkg.ResourceChange{
 			Action:   params.PolicyPreview.Verb,
@@ -313,9 +334,11 @@ func getFLowLogsFromElastic(params *FlowLogsParams, esClient lmaelastic.Client, 
 			ResourceActions: []pippkg.ResourceChange{policyChange},
 			Limit:           params.Limit,
 			ImpactedOnly:    params.PolicyPreview.ImpactedOnly,
+			FromTime:        params.startDateTime,
+			ToTime:          params.endDateTime,
 		}
 
-		pipResults, err := pip.GetFlows(context.TODO(), pipParams)
+		pipResults, err := pip.GetFlows(context.TODO(), pipParams, flowFilter)
 		if err != nil {
 			return nil, err
 		}
