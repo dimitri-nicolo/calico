@@ -41,7 +41,7 @@ use the Kubernetes API datastore.{% endif -%}
 For production you will likely want multiple
 nodes for greater performance and reliability.  If you don't already have an
 etcdv3 cluster to connect to, please refer to [the upstream etcd
-docs](https://coreos.com/etcd/) for detailed advice and setup.{% endif %}{% if include.orch == "host protection" %}The key/value store must be etcdv3.{% endif %}
+docs](https://https://etcd.io/) for detailed advice and setup.{% endif %}{% if include.orch == "host protection" %}The key/value store must be etcdv3.{% endif %}
 
 ## Network requirements
 

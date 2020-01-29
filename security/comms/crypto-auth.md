@@ -9,7 +9,7 @@ canonical_url: '/security/comms/crypto-auth'
 If you are using the etcd datastore, we recommend enabling mutual TLS authentication on
 its connections as follows.
 
-- [Configure etcd](https://coreos.com/etcd/docs/latest/op-guide/security.html) to encrypt its
+- [Configure etcd](https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/security.md) to encrypt its
   communications with TLS and require clients to present certificates signed by the etcd certificate
   authority.
 
