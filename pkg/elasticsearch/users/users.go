@@ -209,7 +209,8 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor"},
 					Indices: []elasticsearch.RoleIndex{{
-						Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, "*"), ".kibana"},
+						// Let the manager query elasticsearch for all clusters for multicluster mabagenent.
+						Names:      []string{indexPattern("tigera_secure_ee_*", "*", "*"), ".kibana"},
 						Privileges: []string{"read"},
 					}},
 				},

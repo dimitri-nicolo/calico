@@ -320,7 +320,7 @@ var _ = Describe("ElasticseachUsers", func() {
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor"},
 								Indices: []elasticsearch.RoleIndex{{
-									Names:      []string{"tigera_secure_ee_*.cluster.*", ".kibana"},
+									Names:      []string{"tigera_secure_ee_*.*.*", ".kibana"},
 									Privileges: []string{"read"},
 								}},
 							},
