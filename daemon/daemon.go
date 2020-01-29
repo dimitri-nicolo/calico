@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -287,7 +287,7 @@ configRetry:
 		numClientsCreated++
 
 		// If we're configured to discover Typha, do that now so we can retry if we fail.
-		typhaAddr, err = discoverTyphaAddr(configParams, configParams.GetKubernetesService)
+		typhaAddr, err = discoverTyphaAddr(configParams, config.GetKubernetesService)
 		if err != nil {
 			log.WithError(err).Error("Typha discovery enabled but discovery failed.")
 			time.Sleep(1 * time.Second)

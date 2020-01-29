@@ -27,7 +27,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -343,7 +342,6 @@ type Config struct {
 	GenericXDPEnabled          bool `config:"bool;false"`
 
 	loadClientConfigFromEnvironment func() (*apiconfig.CalicoAPIConfig, error)
-	GetKubernetesService            func(namespace, svcName string) (*v1.Service, error)
 
 	useNodeResourceUpdates bool
 }
@@ -488,7 +486,7 @@ func (config *Config) resolve() (changed bool, err error) {
 				log.Infof("Value set to 'none', replacing with zero-value: %#v.",
 					value)
 			} else {
-				value, err = param.Parse(rawValue, config)
+				value, err = param.Parse(rawValue)
 				if err != nil {
 					logCxt := log.WithError(err).WithField("source", source)
 					if metadata.DieOnParseFailure {
@@ -709,7 +707,7 @@ var knownParams map[string]param
 
 func loadParams() {
 	knownParams = make(map[string]param)
-	config := Config{GetKubernetesService: realGetKubernetesService}
+	config := Config{}
 	kind := reflect.TypeOf(config)
 	metaRegexp := regexp.MustCompile(`^([^;(]+)(?:\(([^)]*)\))?;` +
 		`([^;]*)(?:;` +
@@ -862,7 +860,7 @@ func loadParams() {
 			} else {
 				// Parse the default value and save it in the metadata. Doing
 				// that here ensures that we syntax-check the defaults now.
-				defaultVal, err := param.Parse(defaultStr, &config)
+				defaultVal, err := param.Parse(defaultStr)
 				if err != nil {
 					log.Panicf("Invalid default value: %v", err)
 				}
@@ -910,13 +908,12 @@ func New() *Config {
 	}
 	p.FelixHostname = hostname
 	p.loadClientConfigFromEnvironment = apiconfig.LoadClientConfigFromEnvironment
-	p.GetKubernetesService = realGetKubernetesService
 
 	return p
 }
 
 type param interface {
 	GetMetadata() *Metadata
-	Parse(raw string, config *Config) (result interface{}, err error)
+	Parse(raw string) (result interface{}, err error)
 	setDefault(*Config)
 }

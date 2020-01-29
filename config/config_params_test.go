@@ -73,7 +73,6 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"EnableNflogSize",
 
 		"loadClientConfigFromEnvironment",
-		"GetKubernetesService",
 
 		"loadClientConfigFromEnvironment",
 		"useNodeResourceUpdates",
@@ -490,7 +489,9 @@ var _ = DescribeTable("Config parsing",
 var _ = DescribeTable("Config parsing with Kubernetes service lookup",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
 		config := New()
-		config.GetKubernetesService = func(namespace, name string) (*v1.Service, error) {
+		saveGetKubernetesService := GetKubernetesService
+		defer func() { GetKubernetesService = saveGetKubernetesService }()
+		GetKubernetesService = func(namespace, name string) (*v1.Service, error) {
 			if namespace == "openshift-dns" && name == "openshift-dns" {
 				return &v1.Service{Spec: v1.ServiceSpec{
 					ClusterIP: "10.96.0.12",
