@@ -226,8 +226,22 @@ ifeq (,$(filter k8sfv-test, $(EXCEPT)))
 	@$(MAKE) k8sfv-test
 endif
 
+## Avoid unplanned go.sum updates
+.PHONY: undo-go-sum check-dirty
+undo-go-sum:
+	@echo "Undoing go.sum update..."
+	git checkout -- go.sum
+
+## Check if generated image is dirty
+check-dirty: undo-go-sum
+	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty:"; \
+	  git status --porcelain; \
+	  false; \
+	fi
+
 ## Deploys images to registry
-cd:
+cd: check-dirty
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
