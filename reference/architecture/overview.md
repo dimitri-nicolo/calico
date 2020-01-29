@@ -112,7 +112,7 @@ store or a lightweight mirror of a separate data store.
 [orchestrator plugin](#orchestrator-plugin) would have to rebuild the database.
 
 In larger deployments, the core cluster can be scaled up, as per the
-[etcd admin guide](https://coreos.com/etcd/docs/latest/admin_guide.html#optimal-cluster-size).
+[etcd runtime configuration](https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/runtime-configuration.md#cluster-reconfiguration-operations).
 
 Additionally, on each machine that hosts either a [Felix](#felix)
 or a [plugin](#orchestrator-plugin), we run an etcd proxy. This reduces the load
