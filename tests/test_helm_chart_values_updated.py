@@ -3,6 +3,7 @@ import yaml
 import tarfile
 import tests
 import requests
+from parameterized import parameterized
 
 
 # default vars
@@ -68,61 +69,45 @@ def test_all_images_are_mapped():
   assert len(mapped_images.keys()) == len(version_mapped_images.keys())
   assert set(mapped_images.keys()) == set(version_mapped_images.keys())
 
-def test_core_chart_values_updated():
-    req_url = HELM_CORE_URL.format(
+@parameterized({
+  'core': {
+    'name': HELM_CORE_BASE_NAME,
+    'url': HELM_CORE_URL,
+    'tgz_env_var': 'HELM_CORE_TGZ_OVERRIDE',
+    'images': CORE_MAPPED_IMAGES,
+  },
+  'ee': {
+    'name': HELM_EE_BASE_NAME,
+    'url': HELM_EE_URL,
+    'tgz_env_var': 'HELM_EE_TGZ_OVERRIDE',
+    'images': EE_MAPPED_IMAGES,
+  },
+}.items())
+def test_chart_values_updated(name, chart):
+    req_url = chart.get('url').format(
         charts_base_url=HELM_CHARTS_BASE_URL, release_version=RELEASE_VERSION, helm_release=HELM_RELEASE)
 
-    if os.environ.get('HELM_CORE_TGZ_OVERRIDE'):
-        HELM_EE_TGZ_FILE = os.environ.get('HELM_CORE_TGZ_OVERRIDE')
+    if os.environ.get(chart.get('tgz_env_var')):
+        TGZ_FILE = os.environ.get(chart.get('tgz_env_var'))
     else:
         req = requests.get(req_url, stream=True)
         assert req.status_code == 200
 
         # download/create a .tgz locally
-        HELM_CORE_TGZ_FILE = 'core.tgz'
-        with open(HELM_CORE_TGZ_FILE, 'wb') as f:
+        TGZ_FILE = '{}.tgz'.format(name)
+        with open(TGZ_FILE, 'wb') as f:
             f.write(req.raw.read())
 
     # load the values.yaml file
-    tar = tarfile.open(HELM_CORE_TGZ_FILE)
-    values = tar.extractfile('{0}/{1}'.format(HELM_CORE_BASE_NAME, VALUES_FILE_NAME)).read()
-    core_values = yaml.safe_load(values)
+    tar = tarfile.open(TGZ_FILE)
+    values = tar.extractfile('{0}/{1}'.format(chart.get('name'), VALUES_FILE_NAME)).read()
+    chart_values = yaml.safe_load(values)
 
     # compare expected/actual image &:tag in the chart values.yaml
-    mapped_images = CORE_MAPPED_IMAGES
+    mapped_images = chart.get('images')
     for k, v in release.get('components').items():
       if k in mapped_images.keys():
-        config = core_values.get(mapped_images[k])
-        assert config != None
-        assert config.get('image') == '{0}/{1}'.format(REGISTRY, v.get('image'))
-        assert config.get('tag') == RELEASE_VERSION
-        assert config.get('tag') == v.get('version')
-
-def test_ee_chart_values_updated():
-    req_url = HELM_EE_URL.format(
-        charts_base_url=HELM_CHARTS_BASE_URL, release_version=RELEASE_VERSION, helm_release=HELM_RELEASE)
-
-    if os.environ.get('HELM_EE_TGZ_OVERRIDE'):
-        HELM_EE_TGZ_FILE = os.environ.get('HELM_EE_TGZ_OVERRIDE')
-    else:
-        req = requests.get(req_url, stream=True)
-        assert req.status_code == 200
-
-        # download/create a .tgz locally
-        HELM_EE_TGZ_FILE = 'ee.tgz'
-        with open(HELM_EE_TGZ_FILE, 'wb') as f:
-            f.write(req.raw.read())
-
-    # load the values.yaml file
-    tar = tarfile.open(HELM_EE_TGZ_FILE)
-    values = tar.extractfile('{0}/{1}'.format(HELM_EE_BASE_NAME, VALUES_FILE_NAME)).read()
-    ee_values = yaml.safe_load(values)
-
-    # compare expected/actual image &:tag in the chart values.yaml
-    mapped_images = EE_MAPPED_IMAGES
-    for k, v in release.get('components').items():
-      if k in mapped_images.keys():
-        config = ee_values.get(mapped_images[k])
+        config = chart_values.get(mapped_images[k])
         assert config != None
         assert config.get('image') == '{0}/{1}'.format(REGISTRY, v.get('image'))
         assert config.get('tag') == RELEASE_VERSION

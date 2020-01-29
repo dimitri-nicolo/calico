@@ -2,6 +2,7 @@ import os
 import requests
 import yaml
 import tests
+from parameterized import parameterized
 
 PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = tests.RELEASE_STREAM
@@ -49,24 +50,23 @@ def test_all_images_are_mapped():
   assert len(mapped_images.keys()) == len(version_compoments.keys())
   assert set(mapped_images.keys()) == set(version_compoments.keys())
 
-def test_component_repo_has_release_branch():
+@parameterized(MAPPED_COMPONENTS.items())
+def test_component_repo_has_release_branch(_, repo_name):
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
-    for repo_name in set(MAPPED_COMPONENTS.values()):
-      req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
-          base_url=GITHUB_API_URL, repo=repo_name, branch='release-{}'.format(RELEASE_STREAM))
-      res = requests.head(req_url, headers=headers)
-      assert res.status_code == 200
+    req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
+        base_url=GITHUB_API_URL, repo=repo_name, branch='release-{}'.format(RELEASE_STREAM))
+    res = requests.head(req_url, headers=headers)
+    assert res.status_code == 200
 
-def test_component_repo_has_release_tag():
+@parameterized(MAPPED_COMPONENTS.items())
+def test_component_repo_has_release_tag(_, repo_name):
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
-    for repo_name in set(MAPPED_COMPONENTS.values()):
-      print repo_name
-      req_url = '{base_url}/repos/tigera/{repo}/git/refs/{ref}'.format(
-          base_url=GITHUB_API_URL, repo=repo_name, ref='tags/{}'.format(RELEASE_VERSION))
-      res = requests.head(req_url, headers=headers)
-      assert res.status_code == 200
+    req_url = '{base_url}/repos/tigera/{repo}/git/refs/{ref}'.format(
+        base_url=GITHUB_API_URL, repo=repo_name, ref='tags/{}'.format(RELEASE_VERSION))
+    res = requests.head(req_url, headers=headers)
+    assert res.status_code == 200
 
 def test_docs_repo_has_release_branch():
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
