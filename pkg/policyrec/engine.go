@@ -106,7 +106,7 @@ func NewEndpointRecommendationEngine(name, namespace, policyName, policyTier str
 // ProcessFlow takes a flow log and updates the recommendation engine policies.
 func (ere *endpointRecommendationEngine) ProcessFlow(flow api.Flow) error {
 	// We only support allowed flows.
-	if flow.Action != api.ActionAllow {
+	if flow.ActionFlag&api.ActionFlagAllow == 0 {
 		return fmt.Errorf("%v isn't an allowed flow", flow)
 	}
 
@@ -333,7 +333,7 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 func (ere *endpointRecommendationEngine) matchesSourceEndpoint(flow api.Flow) bool {
 	return flow.Source.Name == ere.endpointName &&
 		flow.Source.Namespace == ere.endpointNamespace &&
-		flow.Source.Type == api.EndpointTypeWep &&
+		flow.Source.Type == api.FlowLogEndpointTypeWEP &&
 		flow.Reporter == api.ReporterTypeSource
 }
 
@@ -341,7 +341,7 @@ func (ere *endpointRecommendationEngine) matchesSourceEndpoint(flow api.Flow) bo
 func (ere *endpointRecommendationEngine) matchesDestinationEndpoint(flow api.Flow) bool {
 	return flow.Destination.Name == ere.endpointName &&
 		flow.Destination.Namespace == ere.endpointNamespace &&
-		flow.Destination.Type == api.EndpointTypeWep &&
+		flow.Destination.Type == api.FlowLogEndpointTypeWEP &&
 		flow.Reporter == api.ReporterTypeDestination
 }
 

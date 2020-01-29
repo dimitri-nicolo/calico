@@ -27,8 +27,8 @@ var (
 	namespace2      = "namespace2"
 
 	// Profiles
-	namespace1DefaultAllowProfile = "0|__PROFILE__|__PROFILE__.kns.namespace1|allow"
-	namespace2DefaultAllowProfile = "0|__PROFILE__|__PROFILE__.kns.namespace2|allow"
+	namespace1DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace1|allow", 0)
+	namespace2DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace2|allow", 0)
 
 	// Endpoints
 	pod1Aggr = "pod-1-*"
@@ -75,31 +75,31 @@ var (
 
 	// Flow Endpoints - source
 	flowEndpointNamespace1Pod1BlueSource = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod1Aggr,
 		Namespace: namespace1,
 		Labels:    pod1LabelsBlue,
 	}
 	flowEndpointNamespace1Pod1RedSource = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod1Aggr,
 		Namespace: namespace1,
 		Labels:    pod1LabelsRed,
 	}
 	flowEndpointNamespace1Pod2Source = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod2Aggr,
 		Namespace: namespace1,
 		Labels:    pod2Labels,
 	}
 	flowEndpointNamespace2Pod3Source = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod3Aggr,
 		Namespace: namespace2,
 		Labels:    pod3Labels,
 	}
 	flowEndpointGlobalNamespaceGlobalNetworkSet1Source = api.FlowEndpointData{
-		Type:      api.EndpointTypeNs,
+		Type:      api.FlowLogEndpointTypeNetworkSet,
 		Name:      gns1Aggr,
 		Namespace: globalNamespace,
 		Labels:    gns1Labels,
@@ -107,33 +107,33 @@ var (
 
 	// Flow Endpoints - destination (and traffic)
 	flowEndpointNamespace1Pod2DestinationTCP443 = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod2Aggr,
 		Namespace: namespace1,
 		Labels:    pod2Labels,
 		Port:      &port443,
 	}
 	flowEndpointNamespace2Pod3DestinationTCP8080 = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod3Aggr,
 		Namespace: namespace2,
 		Labels:    pod3Labels,
 		Port:      &port8080,
 	}
 	flowEndpointNamespace2Pod3DestinationTCP5432 = api.FlowEndpointData{
-		Type:      api.EndpointTypeWep,
+		Type:      api.FlowLogEndpointTypeWEP,
 		Name:      pod3Aggr,
 		Namespace: namespace2,
 		Labels:    pod3Labels,
 		Port:      &port5432,
 	}
 	flowEndpointNetworkNoNamespaceDestination53 = api.FlowEndpointData{
-		Type: api.EndpointTypeNet,
+		Type: api.FlowLogEndpointTypeNetwork,
 		Name: api.FlowLogNetworkPrivate,
 		Port: &port53,
 	}
 	flowEndpointNamespace3NetworkSet1DestinationTCP80 = api.FlowEndpointData{
-		Type:      api.EndpointTypeNs,
+		Type:      api.FlowLogEndpointTypeNetworkSet,
 		Name:      ns1Aggr,
 		Namespace: namespace1,
 		Labels:    ns1Labels,
@@ -148,121 +148,121 @@ var (
 	// pod1-blue -> pod2 allow port 443
 	flowPod1BlueToPod2Allow443ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1BlueSource,
 		Destination: flowEndpointNamespace1Pod2DestinationTCP443,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 	flowPod1BlueToPod2Allow443ReporterDestination = api.Flow{
 		Reporter:    api.ReporterTypeDestination,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1BlueSource,
 		Destination: flowEndpointNamespace1Pod2DestinationTCP443,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 
 	// pod1-blue -> external udp port 53. Only source flow.
 	flowPod1BlueToExternalAllow53ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1BlueSource,
 		Destination: flowEndpointNetworkNoNamespaceDestination53,
 		Proto:       &protoUDP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 
 	// pod1-red -> pod2 allow port 443
 	flowPod1RedToPod2Allow443ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1RedSource,
 		Destination: flowEndpointNamespace1Pod2DestinationTCP443,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 	flowPod1RedToPod2Allow443ReporterDestination = api.Flow{
 		Reporter:    api.ReporterTypeDestination,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1RedSource,
 		Destination: flowEndpointNamespace1Pod2DestinationTCP443,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 
 	// pod1-red -> pod3 allow port 8080 - cross namespace
 	flowPod1RedToPod3Allow8080ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1RedSource,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP8080,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 	flowPod1RedToPod3Allow8080ReporterDestination = api.Flow{
 		Reporter:    api.ReporterTypeDestination,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1RedSource,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP8080,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace2DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace2DefaultAllowProfile},
 	}
 
 	// pod1-blue -> pod3 allow port 5432 - cross namespace
 	flowPod1BlueToPod3Allow5432ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1BlueSource,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 	flowPod1BlueToPod3Allow5432ReporterDestination = api.Flow{
 		Reporter:    api.ReporterTypeDestination,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod1BlueSource,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace2DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace2DefaultAllowProfile},
 	}
 
 	// pod2 -> pod3 allow port 5432 - cross namespace
 	flowPod2ToPod3Allow5432ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod2Source,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 	flowPod2ToPod3Allow5432ReporterDestination = api.Flow{
 		Reporter:    api.ReporterTypeDestination,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod2Source,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace2DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace2DefaultAllowProfile},
 	}
 
 	// pod2 -> ns1 allow port 80
 	flowPod2ToNs1Allow80ReporterSource = api.Flow{
 		Reporter:    api.ReporterTypeSource,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointNamespace1Pod2Source,
 		Destination: flowEndpointNamespace3NetworkSet1DestinationTCP80,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace1DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace1DefaultAllowProfile},
 	}
 
 	// gns1 -> pod3 allow port 5432 - global Namespace to namespace
 	flowGlobalNetworkSet1ToPod3Allow5432ReporterDestination = api.Flow{
 		Reporter:    api.ReporterTypeDestination,
-		Action:      api.ActionAllow,
+		ActionFlag:  api.ActionFlagAllow,
 		Source:      flowEndpointGlobalNamespaceGlobalNetworkSet1Source,
 		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
 		Proto:       &protoTCP,
-		Policies:    []string{namespace2DefaultAllowProfile},
+		Policies:    []api.PolicyHit{namespace2DefaultAllowProfile},
 	}
 )
 
@@ -286,7 +286,7 @@ var (
 			Selector: "name == 'pod-1' && namespace == 'namespace1' && color == 'blue'",
 			Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
@@ -313,7 +313,7 @@ var (
 			Selector: "name == 'pod-1' && namespace == 'namespace1'",
 			Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
@@ -340,7 +340,7 @@ var (
 			Selector: "name == 'pod-1' && namespace == 'namespace1' && color == 'blue'",
 			Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
@@ -348,7 +348,7 @@ var (
 						Ports:    []numorstring.Port{numorstring.SinglePort(port443)},
 					},
 				},
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoUDPNS,
 					Destination: v3.EntityRule{
@@ -374,7 +374,7 @@ var (
 			Selector: "name == 'pod-1' && namespace == 'namespace1'",
 			Types:    []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
@@ -382,7 +382,7 @@ var (
 						Ports:    []numorstring.Port{numorstring.SinglePort(port443)},
 					},
 				},
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
@@ -413,7 +413,7 @@ var (
 			Selector: "name == 'pod-2' && namespace == 'namespace1'",
 			Types:    []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
 			Ingress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{
@@ -425,7 +425,7 @@ var (
 				},
 			},
 			Egress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Destination: v3.EntityRule{
@@ -453,7 +453,7 @@ var (
 			Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
 			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
 			Ingress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{
@@ -467,7 +467,7 @@ var (
 						},
 					},
 				},
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{
@@ -478,7 +478,7 @@ var (
 						Ports: []numorstring.Port{numorstring.SinglePort(port5432)},
 					},
 				},
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{

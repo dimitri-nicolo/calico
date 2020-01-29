@@ -1,3 +1,4 @@
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 package elastic_test
 
 import (
