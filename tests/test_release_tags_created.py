@@ -52,9 +52,26 @@ def test_all_images_are_mapped():
 def test_component_repo_has_release_branch():
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
-    for repo_name in MAPPED_COMPONENTS.values():
+    for repo_name in set(MAPPED_COMPONENTS.values()):
       req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
           base_url=GITHUB_API_URL, repo=repo_name, branch='release-{}'.format(RELEASE_STREAM))
-      req = requests.head(req_url, headers=headers)
-      assert req.status_code == 200
+      res = requests.head(req_url, headers=headers)
+      assert res.status_code == 200
 
+def test_component_repo_has_release_tag():
+    assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
+    headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
+    for repo_name in set(MAPPED_COMPONENTS.values()):
+      print repo_name
+      req_url = '{base_url}/repos/tigera/{repo}/git/refs/{ref}'.format(
+          base_url=GITHUB_API_URL, repo=repo_name, ref='tags/{}'.format(RELEASE_VERSION))
+      res = requests.head(req_url, headers=headers)
+      assert res.status_code == 200
+
+def test_docs_repo_has_release_branch():
+    assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
+    headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
+    req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
+        base_url=GITHUB_API_URL, repo='calico-private', branch='release-{}'.format(RELEASE_STREAM))
+    res = requests.head(req_url, headers=headers)
+    assert res.status_code == 200
