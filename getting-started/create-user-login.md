@@ -162,6 +162,14 @@ It has significant limitations—notably the Kubernetes API server must be resta
 1. Enable Kubernetes basic authentication by passing a static password file to the Kubernetes API server as discussed in the Kubernetes documentation.
 1. Go to the {{site.prodname}} Manager UI and enter the username/password.
 
+#### Kibana authentication	
+
+Connect to Kibana with the `elastic` username. Use the following command to decode the password:	
+
+```	
+kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
+```
+
 ### Above and beyond
 
 - [Fine-grained RBAC permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions)
