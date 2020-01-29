@@ -166,9 +166,11 @@ It has significant limitations—notably the Kubernetes API server must be resta
 
 Connect to Kibana with the `elastic` username. Use the following command to decode the password:	
 
+{% raw %}
 ```	
 kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
 ```
+{% endraw %}
 
 ### Above and beyond
 
