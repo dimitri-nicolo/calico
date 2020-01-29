@@ -63,8 +63,7 @@ def test_all_images_are_mapped():
   mapped_images.update(EE_MAPPED_IMAGES)
 
   release_components = release.get('components')
-  version_mapped_images = {k: v for k, v in release_components.items() if v.has_key(
-      'image') and not v.has_key('registry') and not k in EXCLUDED_IMAGES}
+  version_mapped_images = {k: v for k, v in release_components.items() if v.has_key('image') and v.get('image').startswith('tigera/') and not k in EXCLUDED_IMAGES}
 
   assert len(mapped_images.keys()) == len(version_mapped_images.keys())
   assert set(mapped_images.keys()) == set(version_mapped_images.keys())

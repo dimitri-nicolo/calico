@@ -16,10 +16,8 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
     release = versions[0]
     RELEASE_VERSION = release.get('title')
-    print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
-    release_components = release.get('components')
-    ALL_IMAGES = release_components.keys()
-    VERSION_MAPPED_IMAGES = {k: v for k, v in release_components.items() if v.has_key('image') and  not v.has_key('registry')}
+    print '[INFO] using _data/versions.yaml, discovered version: {0}'.format(RELEASE_VERSION)
+    VERSION_MAPPED_IMAGES = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/')}
     
 
 @parameterized(VERSION_MAPPED_IMAGES.items())
@@ -28,7 +26,7 @@ def test_release_tag_present(name, component):
     
     print '[INFO] checking quay image posted for {0} with {1} tag'.format(name, RELEASE_VERSION)
     
-    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer %s' % QUAY_API_TOKEN}
+    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {}'.format(QUAY_API_TOKEN)}
     repository = component.get('image')
     expected_ver = component.get('version')
     assert expected_ver == RELEASE_VERSION

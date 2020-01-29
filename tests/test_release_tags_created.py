@@ -44,8 +44,7 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 def test_all_images_are_mapped():
   mapped_images = MAPPED_COMPONENTS
 
-  version_compoments = {k: v for k, v in release.get('components').items() if v.has_key(
-      'image') and not v.has_key('registry')}
+  version_compoments = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/')}
 
   assert len(mapped_images.keys()) == len(version_compoments.keys())
   assert set(mapped_images.keys()) == set(version_compoments.keys())
