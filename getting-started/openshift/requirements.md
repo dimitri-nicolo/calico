@@ -11,7 +11,7 @@ canonical_url: '/getting-started/openshift/requirements'
 {{site.prodname}} {{page.version}} supports:
 
 - OpenShift Container Platform 3.11
-- OpenShift Container Platform 4.2+
+- OpenShift Container Platform 4.2, 4.3
 
 Refer to the OpenShift documentation for additional requirements.
 
