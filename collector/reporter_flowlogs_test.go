@@ -601,6 +601,8 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			}
 		})
 
+		/* Temporary disable test- https://tigera.atlassian.net/browse/SAAS-647
+
 		It("increases the same aggregation level across multiple dispatchers", func() {
 			// mock log offset to mark that the log pipeline is stalled
 			var mockLogOffset = &logOffsetMock{}
@@ -647,7 +649,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			Expect(oneAggregator.GetCurrentAggregationLevel()).To(Equal(FlowNoDestPorts))
 			Expect(anotherAggregator.GetCurrentAggregationLevel()).To(Equal(FlowSourcePort))
 
-		})
+		})*/
 
 		It("increases only to the max level", func() {
 			var mockLogOffset = &logOffsetMock{}
