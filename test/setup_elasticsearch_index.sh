@@ -20,7 +20,7 @@ RETRY_TIMES=3
 function create_index()
 {
   local INDEX_NAME=$1
-
+  local NO_DATE=$2
   # Create the index template first if we have one. Do this before we create the corresponding index.
   if [ -f "/test/es-templates/$INDEX_NAME" ]; then
     TEMPLATE=$(cat "/test/es-templates/$INDEX_NAME")
@@ -29,9 +29,17 @@ function create_index()
       -H 'Content-Type: application/json' -d "$TEMPLATE"
   fi
 
+
+  if [[ $NO_DATE == 1 ]]
+  then
+    URL="${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/${INDEX_NAME}.${CLUSTER_NAME}"
+  else
+    URL="${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/${INDEX_NAME}.${CLUSTER_NAME}.${DATE_SUFFIX}"
+  fi
+
   # Create the index.
   curl --insecure -f --retry ${RETRY_TIMES} -X PUT \
-    "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/${INDEX_NAME}.${CLUSTER_NAME}.${DATE_SUFFIX}" ${EXTRA_CURL_ARGS}
+    "$URL" ${EXTRA_CURL_ARGS}
 
   # Create a document if there is one.
   if [ -f "/test/es-samples/$INDEX_NAME" ]; then
@@ -53,7 +61,7 @@ function create_index_pattern()
 create_index ${FLOW_INDEX}
 create_index ${AUDIT_KUBE_INDEX}
 create_index ${AUDIT_EE_INDEX}
-create_index ${EVENTS_INDEX}
+create_index ${EVENTS_INDEX} 1
 
 create_index_pattern ${FLOW_INDEX}
 create_index_pattern ${AUDIT_EE_INDEX}
