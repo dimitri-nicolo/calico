@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	v1 "k8s.io/api/core/v1"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	. "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/testutils"
