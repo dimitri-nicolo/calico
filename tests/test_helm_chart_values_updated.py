@@ -19,6 +19,7 @@ VALUES_FILE_NAME = 'values.yaml'
 
 # we don't have a 1:1 naming scheme in values.yaml and versions.yml
 CORE_MAPPED_IMAGES = {
+    # tigera components
     'cnx-node': 'node',
     'cnx-kube-controllers': 'kubeControllers',
     'typha': 'typha',
@@ -27,9 +28,15 @@ CORE_MAPPED_IMAGES = {
     'calicoctl': 'calicoctl',
     'dikastes': 'dikastes',
     'cloud-controllers': 'cloudControllers',
+    # non-tigera components
+    'calico/cni': 'cni',
+    'flexvol': 'flexvol',
+    'cpHorizontalAutoscaler': 'cpHorizontalAutoscaler',
+    'cpVerticalAutoscaler': 'cpVerticalAutoscaler',
 }
 
 EE_MAPPED_IMAGES = {
+    # tigera components
     'cnx-manager': 'manager',
     'voltron': 'voltron',
     'es-proxy': 'esProxy',
@@ -43,11 +50,24 @@ EE_MAPPED_IMAGES = {
     'compliance-benchmarker': 'complianceBenchmarker',
     'kibana': 'kibana',
     'intrusion-detection-controller': 'intrusionDetectionController',
+    # non-tigera components
+    'alertmanager': 'alertmanager',
+    'prometheus': 'prometheus',
+    'elasticsearch': 'elasticsearch',
+    'prometheus-operator': 'prometheusOperator',
+    'prometheus-config-reloader': 'prometheusConfigReloader',
+    'configmap-reload': 'configmapReload',
+    'elasticsearch-operator': 'elasticsearchOperator',
+    'busybox': 'busybox',
 }
 
 EXCLUDED_IMAGES = [
-  'calicoq',
-  'ingress-collector',
+    'calicoq',
+    'ingress-collector',
+]
+
+REGISTRY_EXCEPTION = [
+    'busybox',
 ]
 
 with open('%s/../_data/versions.yml' % PATH) as f:
@@ -63,7 +83,7 @@ def test_all_images_are_mapped():
   mapped_images.update(EE_MAPPED_IMAGES)
 
   release_components = release.get('components')
-  version_mapped_images = {k: v for k, v in release_components.items() if v.has_key('image') and v.get('image').startswith('tigera/') and not k in EXCLUDED_IMAGES}
+  version_mapped_images = {k: v for k, v in release_components.items() if v.has_key('image') and not k in EXCLUDED_IMAGES}
 
   assert len(mapped_images.keys()) == len(version_mapped_images.keys())
   assert set(mapped_images.keys()) == set(version_mapped_images.keys())
@@ -108,6 +128,7 @@ def test_chart_values_updated(name, chart):
       if k in mapped_images.keys():
         config = chart_values.get(mapped_images[k])
         assert config != None
-        assert config.get('image') == '{0}/{1}'.format(REGISTRY, v.get('image'))
-        assert config.get('tag') == RELEASE_VERSION
-        assert config.get('tag') == v.get('version')
+        expected_image = '{0}{1}'.format('' if k in REGISTRY_EXCEPTION else v.get('registry', REGISTRY) + '/', v.get('image'))
+        expected_version = v.get('version')
+        assert config.get('image') == expected_image
+        assert config.get('tag') == expected_version
