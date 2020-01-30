@@ -262,7 +262,7 @@ ci: clean mod-download image-all static-checks ut fv
 ## Avoid unplanned go.sum updates
 .PHONY: undo-go-sum check-dirty
 undo-go-sum:
-	@if (git status --porcelain go.num | grep -o 'go.sum'); then \
+	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
 	  @echo "Undoing go.sum update..."; \
 	  git checkout -- go.sum; \
 	fi
