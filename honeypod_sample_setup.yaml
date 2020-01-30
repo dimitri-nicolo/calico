@@ -27,7 +27,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: tigera-internal-1 
   namespace: tigera-internal
@@ -35,7 +35,6 @@ spec:
   selector:
     matchLabels:
       app: tigera-internal-1
-  replicas: 1
   template:
     metadata:
       labels:
