@@ -9448,7 +9448,6 @@ func schema_libcalico_go_lib_apis_v3_ThreatFeedFormatCSV(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"header", "columnDelimiter", "commentDelimiter", "recordSize", "disableRecordSizeValidation"},
 			},
 		},
 	}

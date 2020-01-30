@@ -88,11 +88,11 @@ type ThreatFeedFormatJSON struct {
 type ThreatFeedFormatCSV struct {
 	FieldNum                    *uint  `json:"fieldNum,omitempty" validate:"required_without=FieldName"`
 	FieldName                   string `json:"fieldName,omitempty" validate:"required_without=FieldNum"`
-	Header                      bool   `json:"header"`
-	ColumnDelimiter             string `json:"columnDelimiter"`
-	CommentDelimiter            string `json:"commentDelimiter"`
-	RecordSize                  int    `json:"recordSize" validate:"omitempty,gt=0"`
-	DisableRecordSizeValidation bool   `json:"disableRecordSizeValidation"`
+	Header                      bool   `json:"header,omitempty"`
+	ColumnDelimiter             string `json:"columnDelimiter,omitempty"`
+	CommentDelimiter            string `json:"commentDelimiter,omitempty"`
+	RecordSize                  int    `json:"recordSize,omitempty" validate:"omitempty,gt=0"`
+	DisableRecordSizeValidation bool   `json:"disableRecordSizeValidation,omitempty"`
 }
 
 const DefaultCSVDelimiter = ','
