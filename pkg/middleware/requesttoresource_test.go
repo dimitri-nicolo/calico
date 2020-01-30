@@ -135,8 +135,10 @@ var _ = Describe("Test url path modifications in parseLegacyURLPath()", func() {
 			req.URL.Path = urlPath
 			req.URL.RawPath = urlPath
 			Expect(fmt.Sprintf("%v", req.URL)).To(Equal(resultUri))
-
 		},
+		Entry("Dateless index",
+			"/tigera_secure_ee_events*/_search", "cluster", "/tigera_secure_ee_events.cluster/_search"),
+
 		Entry("Standard scenario",
 			"/tigera_secure_ee_flows.cluster.*/_search", "cluster", "/tigera_secure_ee_flows.cluster.*/_search"),
 		Entry("Standard scenario, different x-cluster-id",

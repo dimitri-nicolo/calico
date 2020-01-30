@@ -20,7 +20,7 @@ const (
 	defaultClusterName = "cluster"
 )
 
-var legacyURLPath, extractIndexPattern *regexp.Regexp
+var legacyURLPath, extractIndexPattern, datelessIndexPattern *regexp.Regexp
 
 var queryResourceMap map[string]string
 
@@ -29,6 +29,7 @@ func init() {
 	legacyURLPath = regexp.MustCompile(`^.*/tigera_secure_ee_.*/_search$`)
 	// This regexp extracts the index from a legacy query URL path
 	extractIndexPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z]*)[.*]?.*/_search`)
+	datelessIndexPattern = regexp.MustCompile(`^tigera_secure_ee_events\*?$`)
 
 	queryResourceMap = map[string]string{
 		"tigera_secure_ee_flows":      "flows",
@@ -191,7 +192,13 @@ func parseLegacyURLPath(req *http.Request) (string, string, string) {
 	// This lets us create the actual ES query that always includes the cluster name.
 	var path string
 	if strings.Contains(match[0], "*") {
-		path = fmt.Sprintf("/%s.%s.*/_search", idx, clu)
+		// certain indices don't have date suffix and adding .* to the end will not match the index we need,
+		// as the . is considered mandatory.
+		if datelessIndexPattern.MatchString(idx) {
+			path = fmt.Sprintf("/%s.%s/_search", idx, clu)
+		} else {
+			path = fmt.Sprintf("/%s.%s.*/_search", idx, clu)
+		}
 	} else {
 		path = fmt.Sprintf("/%s.%s/_search", idx, clu)
 	}
