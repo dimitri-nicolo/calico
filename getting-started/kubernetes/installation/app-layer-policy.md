@@ -44,8 +44,8 @@ To enable the application layer policy, you must enable the **Policy Sync API** 
 In the default **FelixConfiguration**, set the field, `policySyncPathPrefix` to `/var/run/nodeagent`:
 
 ```bash
-kubectl patch FelixConfiguration default --patch \
-   '{"spec": {"policySyncPathPrefix": "/var/run/nodeagent"}}'
+kubectl patch felixconfiguration default --type='merge' -p \
+    '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
 ```
 
 #### Install Istio
