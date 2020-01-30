@@ -335,7 +335,7 @@ type Config struct {
 	// Config for DNS policy.
 	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
-	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
+	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
 
 	SidecarAccelerationEnabled bool `config:"bool;false"`
 	XDPEnabled                 bool `config:"bool;false"`
@@ -349,6 +349,11 @@ type Config struct {
 type ProtoPort struct {
 	Protocol string
 	Port     uint16
+}
+
+type ServerPort struct {
+	IP   string
+	Port uint16
 }
 
 // Load parses and merges the rawData from one particular source into this config object.

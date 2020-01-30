@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -534,15 +534,26 @@ const k8sServicePrefix = "k8s-service:"
 func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 	log.WithField("raw", raw).Info("ServerList")
 	values := strings.Split(raw, ",")
-	resultSlice := []string{}
+	resultSlice := []ServerPort{}
 	for _, in := range values {
 		val := strings.TrimSpace(in)
 		if len(val) == 0 {
 			continue
 		}
+		port := 53
+		portStr := ""
 		if strings.HasPrefix(val, k8sServicePrefix) {
 			svcName := val[len(k8sServicePrefix):]
-			svc, e := GetKubernetesService("kube-system", svcName)
+			namespace := "kube-system"
+			if slash := strings.Index(svcName, "/"); slash >= 0 {
+				namespace = svcName[:slash]
+				svcName = svcName[slash+1:]
+			}
+			if colon := strings.Index(svcName, ":"); colon >= 0 {
+				portStr = svcName[colon+1:]
+				svcName = svcName[:colon]
+			}
+			svc, e := GetKubernetesService(namespace, svcName)
 			if e != nil {
 				// Warn but don't report parse failure, so that other trusted IPs
 				// can still take effect.
@@ -555,16 +566,45 @@ func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 				log.Warningf("Kubernetes service '%v' has no ClusterIP", svcName)
 				continue
 			}
-		} else if net.ParseIP(val) == nil {
-			err = c.parseFailed(in, "invalid server specification '"+val+"'")
-			return
+			if len(svc.Spec.Ports) > 0 {
+				port = int(svc.Spec.Ports[0].Port)
+			}
+		} else {
+			// 10.25.3.4
+			// 10.25.3.4:536
+			// [fd10:25::2]:536
+			// fd10:25::2
+			if colon := strings.Index(val, "]:"); colon >= 0 {
+				// IPv6 address with port number.
+				portStr = val[colon+2:]
+				val = val[1:colon]
+			} else if colon := strings.Index(val, ":"); colon >= 0 && strings.Count(val, ":") == 1 {
+				// IPv4 address with port number.
+				portStr = val[colon+1:]
+				val = val[:colon]
+			}
+			if net.ParseIP(val) == nil {
+				err = c.parseFailed(in, "invalid server IP '"+val+"'")
+				return
+			}
 		}
-		resultSlice = append(resultSlice, val)
+		if portStr != "" {
+			port, err = strconv.Atoi(portStr)
+			if err != nil {
+				err = c.parseFailed(in, "invalid port '"+portStr+"': "+err.Error())
+				return
+			}
+			if port < 0 || port > 65535 {
+				err = c.parseFailed(in, "invalid port '"+portStr+"': should be between 0 and 65535")
+				return
+			}
+		}
+		resultSlice = append(resultSlice, ServerPort{IP: val, Port: uint16(port)})
 	}
 	return resultSlice, nil
 }
 
-func GetKubernetesService(namespace, svcName string) (*v1.Service, error) {
+func realGetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	k8sconf, err := rest.InClusterConfig()
 	if err != nil {
 		log.WithError(err).Info("Unable to create Kubernetes config.")
@@ -578,6 +618,8 @@ func GetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	svcClient := clientset.CoreV1().Services(namespace)
 	return svcClient.Get(svcName, metav1.GetOptions{})
 }
+
+var GetKubernetesService = realGetKubernetesService
 
 type RegionParam struct {
 	Metadata
