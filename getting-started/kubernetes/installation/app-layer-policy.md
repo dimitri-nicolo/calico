@@ -24,8 +24,8 @@ For a tutorial on how application layer policy provides second-factor authentica
 
 **Required**
 
-- [Calico is installed]({{ site.baseurl }}/getting-started/)
-- [calicoctl is installed and configured]({{ site.baseurl }}/getting-started/calicoctl/install)
+- [{{site.prodname}} is installed]({{ site.baseurl }}/getting-started/)
+- Make sure that you've installed *kubectl*.
 - Kubernetes 1.15 or older (Istio 1.1.7 does not support Kubernetes 1.16+).
 See this [issue](https://github.com/projectcalico/calico/issues/2943) for details and workaround.
 
@@ -44,7 +44,7 @@ To enable the application layer policy, you must enable the **Policy Sync API** 
 In the default **FelixConfiguration**, set the field, `policySyncPathPrefix` to `/var/run/nodeagent`:
 
 ```bash
-calicoctl patch FelixConfiguration default --patch \
+kubectl patch FelixConfiguration default --patch \
    '{"spec": {"policySyncPathPrefix": "/var/run/nodeagent"}}'
 ```
 
