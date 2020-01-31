@@ -56,25 +56,34 @@ var _ = Describe("Benchmark elastic tests", func() {
 	)
 
 	BeforeEach(func() {
-		os.Setenv("LOG_LEVEL", "debug")
-		os.Setenv("ELASTIC_HOST", "localhost")
-		os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
-		os.Setenv("ELASTIC_SCHEME", "http")
+		err := os.Setenv("LOG_LEVEL", "debug")
+		Expect(err).NotTo(HaveOccurred())
+		err = os.Setenv("ELASTIC_HOST", "localhost")
+		Expect(err).NotTo(HaveOccurred())
+		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
+		Expect(err).NotTo(HaveOccurred())
+		err = os.Setenv("ELASTIC_SCHEME", "http")
+		Expect(err).NotTo(HaveOccurred())
 		elasticClient = MustGetElasticClient()
 		elasticClient.(Resetable).Reset()
 	})
 
 	It("should store and retrieve benchmarks properly", func() {
 		By("storing a benchmark before the interval")
-		elasticClient.StoreBenchmarks(context.Background(), b1)
-		elasticClient.StoreBenchmarks(context.Background(), b2)
-		elasticClient.StoreBenchmarks(context.Background(), b3)
-		elasticClient.StoreBenchmarks(context.Background(), b4)
+		err := elasticClient.StoreBenchmarks(context.Background(), b1)
+		Expect(err).NotTo(HaveOccurred())
+		err = elasticClient.StoreBenchmarks(context.Background(), b2)
+		Expect(err).NotTo(HaveOccurred())
+		err = elasticClient.StoreBenchmarks(context.Background(), b3)
+		Expect(err).NotTo(HaveOccurred())
+		err = elasticClient.StoreBenchmarks(context.Background(), b4)
+		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying that we can query each report - this gives ES time to index the benchmarks")
+		// Checking in reverse order, so first check should take the longest, others should finish quickly.
 		Eventually(func() (*api.Benchmarks, error) {
 			return elasticClient.GetBenchmarks(context.Background(), b4.UID())
-		}).ShouldNot(BeNil())
+		}, "2s").ShouldNot(BeNil())
 		Eventually(func() (*api.Benchmarks, error) {
 			return elasticClient.GetBenchmarks(context.Background(), b3.UID())
 		}).ShouldNot(BeNil())
