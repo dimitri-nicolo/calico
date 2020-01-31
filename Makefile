@@ -4,8 +4,10 @@ GOMOD_VENDOR     = true
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
+LOCAL_CHECKS     = vendor
+BINARY           = bin/calicoq
 
-build: ut-containerized
+build: $(BINARY)
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -37,7 +39,6 @@ include Makefile.common
 BUILD_VER?=latest
 BUILD_IMAGE:=tigera/calicoq
 REGISTRY_PREFIX?=gcr.io/unique-caldron-775/cnx/
-BINARY:=bin/calicoq
 
 CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
@@ -65,7 +66,7 @@ vendor: go.mod mod-download
 	    sh -c '$(GIT_CONFIG_SSH) go mod vendor -v'
 
 .PHONY: ut ut-containerized
-ut: bin/calicoq
+ut:
 	ginkgo -cover -r --skipPackage vendor calicoq/*
 
 	@echo
@@ -82,7 +83,7 @@ ut: bin/calicoq
 	@echo
 	@find ./calicoq/ -iname '*.coverprofile' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'
 
-ut-containerized: bin/calicoq
+ut-containerized: vendor
 	docker run --rm -t \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
@@ -134,7 +135,7 @@ scale-test-containerized: build-image
 
 # Build image for containerized testing
 .PHONY: build-image
-build-image: bin/calicoq
+build-image: binary-containerized
 	docker build -t $(BUILD_IMAGE):$(BUILD_VER) `pwd`
 
 # Clean up image from containerized testing
@@ -213,8 +214,24 @@ LINT_ARGS += --timeout 5m
 ## Run what CI runs
 ci: clean static-checks fv-containerized ut-containerized st-containerized
 
+## Avoid unplanned go.sum updates
+.PHONY: undo-go-sum check-dirty
+undo-go-sum:
+	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
+	  echo "Undoing go.sum update..."; \
+	  git checkout -- go.sum; \
+	fi
+
+## Check if generated image is dirty
+check-dirty: undo-go-sum
+	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty:"; \
+	  git status --porcelain; \
+	  false; \
+	fi
+
 ## Deploys images to registry
-cd:
+cd: check-dirty
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
@@ -315,3 +332,12 @@ clean:
 	-docker rmi $(CALICO_BUILD) -f
 	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
 	rm -f $(TOOLING_IMAGE_CREATED)
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' go modules.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'

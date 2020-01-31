@@ -1,4 +1,4 @@
 The following problems were encountered connecting to the remote clusters
 which may have resulted in incomplete data:
--  RemoteClusterConfiguration(bad-etcd-endpoint): connection to remote cluster failed: dial tcp: lookup foobarbaz on x.x.x.x:y: no such host
+-  RemoteClusterConfiguration(bad-etcd-endpoint): connection to remote cluster failed: context deadline exceeded
 -  RemoteClusterConfiguration(bad-etcd-file): connection to remote cluster failed: could not initialize etcdv3 client: open bar: no such file or directory
