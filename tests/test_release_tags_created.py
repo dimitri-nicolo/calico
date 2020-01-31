@@ -41,7 +41,7 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     RELEASE_VERSION = release.get('title')
     print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
 
-def test_all_images_are_mapped():
+def test_all_tigera_images_are_mapped():
   mapped_images = MAPPED_COMPONENTS
 
   version_compoments = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/')}
