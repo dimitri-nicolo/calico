@@ -6,8 +6,8 @@ canonical_url: '/networking/dual-stack'
 
 ### Big picture
 
-Arrange for each Kubernetes pod to get both IPv4 and IPv6 addresses, so that it can communicate over
-both IPv4 and IPv6.
+By default, pods are assigned only IPv4 addresses.  Dual stack means that each Kubernetes pod gets
+both an IPv4 and an IPv6 address, so that it can communicate over both IPv4 and IPv6.
 
 ### Value
 
@@ -19,7 +19,7 @@ is known as "dual stack", and Kubernetes has alpha-level support for this in ver
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- [**CNI plugin configuration**]({{ site.baseurl }}/reference/cni-plugin/configuration#ipam) with `assign_ipv6: true`
+- [**Installation API**]({{ site.baseurl }}/reference/installation/api)
 
 ### Before you begin...
 
@@ -49,8 +49,8 @@ for dual stack, except ignore mention of the Kubenet network plugin, because her
       ...
       calicoNetwork:
         ipPools:
-          - 10.244.0.0/16
-          - fd5f:1801::/112
+        - cidr: 10.244.0.0/16
+        - cidr: fd5f:1801::/112
       ...
     ```
 

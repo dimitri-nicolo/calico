@@ -32,7 +32,7 @@ section:
      path: /networking/ip-autodetection
    - title: Enable dual stack
      path: /networking/dual-stack
-   - title: Enable IPv6
+   - title: Enable IPv6-only addressing
      path: /networking/ipv6
    - title: Advertise Kubernetes service IP addresses
      path: /networking/advertise-service-ips
