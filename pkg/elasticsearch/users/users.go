@@ -163,7 +163,7 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 					Cluster: []string{"manage_ml", "manage_watcher", "manage"},
 					Indices: []elasticsearch.RoleIndex{
 						{
-							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*")},
+							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*"), indexPattern("tigera_secure_ee_events", clusterName, "")},
 							Privileges: []string{"read", "write"},
 						},
 					},
@@ -210,7 +210,7 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 					Cluster: []string{"monitor"},
 					Indices: []elasticsearch.RoleIndex{{
 						// Let the manager query elasticsearch for all clusters for multicluster management.
-						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), ".kibana"},
+						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), indexPattern("tigera_secure_ee_events", "*", ""), ".kibana"},
 						Privileges: []string{"read"},
 					}},
 				},
@@ -224,7 +224,7 @@ func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserN
 					Cluster: []string{"monitor", "manage_index_templates"},
 					Indices: []elasticsearch.RoleIndex{{
 						// Curator needs to trim all the logs, so we don't set the cluster name on the index pattern
-						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*")},
+						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), indexPattern("tigera_secure_ee_events", "*", "")},
 						Privileges: []string{"all"},
 					}},
 				},
