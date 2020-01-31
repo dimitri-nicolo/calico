@@ -141,7 +141,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"manage_ml", "manage_watcher", "manage"},
 								Indices: []elasticsearch.RoleIndex{
 									{
-										Names:      []string{"tigera_secure_ee_*.managed-cluster.*"},
+										Names:      []string{"tigera_secure_ee_*.managed-cluster.*", "tigera_secure_ee_events.managed-cluster"},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -288,7 +288,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"manage_ml", "manage_watcher", "manage"},
 								Indices: []elasticsearch.RoleIndex{
 									{
-										Names:      []string{"tigera_secure_ee_*.cluster.*"},
+										Names:      []string{"tigera_secure_ee_*.cluster.*", "tigera_secure_ee_events.cluster"},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -320,7 +320,7 @@ var _ = Describe("ElasticseachUsers", func() {
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor"},
 								Indices: []elasticsearch.RoleIndex{{
-									Names:      []string{"tigera_secure_ee_*.*.*", ".kibana"},
+									Names:      []string{"tigera_secure_ee_*.*.*", "tigera_secure_ee_events.*", ".kibana"},
 									Privileges: []string{"read"},
 								}},
 							},
@@ -334,7 +334,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{{
 									// Curator needs to trim all the logs, so we don't set the cluster name on the index pattern
-									Names:      []string{"tigera_secure_ee_*.*.*"},
+									Names:      []string{"tigera_secure_ee_*.*.*", "tigera_secure_ee_events.*"},
 									Privileges: []string{"all"},
 								}},
 							},
