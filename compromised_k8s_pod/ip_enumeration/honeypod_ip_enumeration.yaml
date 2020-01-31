@@ -19,7 +19,7 @@ spec:
         image: quay.io/tigera/honeypod:v2.7.0
 ---
 apiVersion: projectcalico.org/v3
-kind: GlobalAlert
+kind: GlobalAlertTemplate
 metadata:
   name: honeypod-alert-1-1
 spec:
@@ -30,7 +30,7 @@ spec:
   aggregateBy: [source_namespace, source_name_aggr]
 ---
 apiVersion: projectcalico.org/v3
-kind: GlobalAlert
+kind: GlobalAlertTemplate
 metadata:
   name: honeypod-alert-1-2
 spec:

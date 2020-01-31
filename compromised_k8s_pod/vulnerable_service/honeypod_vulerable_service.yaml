@@ -41,7 +41,7 @@ spec:
     app: tigera-internal-4
 ---
 apiVersion: projectcalico.org/v3
-kind: GlobalAlert
+kind: GlobalAlertTemplate
 metadata:
   name: honeypod-alert-4
 spec:
