@@ -13,7 +13,7 @@ var _ = Describe("RBAC handling", func() {
 	It("handles flow inclusion", func() {
 
 		By("allowing pod flows, disallowing hep flows")
-		r := rbac.NewMockFlowHelper(map[string]bool{"pods": true}, false)
+		r := rbac.NewMockFlowHelper(map[string][]string{"pods": {""}})
 		filter := elastic.NewFlowFilterUserRBAC(r)
 		flow := &elastic.CompositeAggregationBucket{
 			CompositeAggregationKey: elastic.CompositeAggregationKey{
@@ -57,7 +57,7 @@ var _ = Describe("RBAC handling", func() {
 		Expect(include).To(BeFalse())
 
 		By("allowing global network sets")
-		r = rbac.NewMockFlowHelper(map[string]bool{"globalnetworksets": true}, false)
+		r = rbac.NewMockFlowHelper(map[string][]string{"globalnetworksets": {""}})
 		filter = elastic.NewFlowFilterUserRBAC(r)
 		flow = &elastic.CompositeAggregationBucket{
 			CompositeAggregationKey: elastic.CompositeAggregationKey{
@@ -80,7 +80,7 @@ var _ = Describe("RBAC handling", func() {
 		Expect(include).To(BeTrue())
 
 		By("allowing network sets")
-		r = rbac.NewMockFlowHelper(map[string]bool{"networksets": true}, false)
+		r = rbac.NewMockFlowHelper(map[string][]string{"networksets": {""}})
 		filter = elastic.NewFlowFilterUserRBAC(r)
 		flow = &elastic.CompositeAggregationBucket{
 			CompositeAggregationKey: elastic.CompositeAggregationKey{
@@ -106,15 +106,15 @@ var _ = Describe("RBAC handling", func() {
 	It("handles policy obfuscation", func() {
 
 		By("allowing all policy types and checking for no obfuscation")
-		r := rbac.NewMockFlowHelper(map[string]bool{
-			"tiers":                            true,
-			"tier.networkpolicies":             true,
-			"tier.globalnetworkpolicies":       true,
-			"tier.stagednetworkpolicies":       true,
-			"tier.stagedglobalnetworkpolicies": true,
-			"networkpolicies":                  true,
-			"stagedkubernetesnetworkpolicies":  true,
-		}, false)
+		r := rbac.NewMockFlowHelper(map[string][]string{
+			"tiers":                            {""},
+			"tier.networkpolicies":             {""},
+			"tier.globalnetworkpolicies":       {""},
+			"tier.stagednetworkpolicies":       {""},
+			"tier.stagedglobalnetworkpolicies": {""},
+			"networkpolicies":                  {""},
+			"stagedkubernetesnetworkpolicies":  {""},
+		})
 		filter := elastic.NewFlowFilterUserRBAC(r)
 		flow := &elastic.CompositeAggregationBucket{
 			AggregatedTerms: map[string]*elastic.AggregatedTerm{
@@ -142,14 +142,14 @@ var _ = Describe("RBAC handling", func() {
 		}))
 
 		By("disallowing tier gets - checking staged policies removed and multiple passes contracted")
-		r = rbac.NewMockFlowHelper(map[string]bool{
-			"tier.networkpolicies":             true,
-			"tier.globalnetworkpolicies":       true,
-			"tier.stagednetworkpolicies":       true,
-			"tier.stagedglobalnetworkpolicies": true,
-			"networkpolicies":                  true,
-			"stagedkubernetesnetworkpolicies":  true,
-		}, false)
+		r = rbac.NewMockFlowHelper(map[string][]string{
+			"tier.networkpolicies":             {""},
+			"tier.globalnetworkpolicies":       {""},
+			"tier.stagednetworkpolicies":       {""},
+			"tier.stagedglobalnetworkpolicies": {""},
+			"networkpolicies":                  {""},
+			"stagedkubernetesnetworkpolicies":  {""},
+		})
 		filter = elastic.NewFlowFilterUserRBAC(r)
 		flow = &elastic.CompositeAggregationBucket{
 			AggregatedTerms: map[string]*elastic.AggregatedTerm{
@@ -174,12 +174,12 @@ var _ = Describe("RBAC handling", func() {
 		}))
 
 		By("disallowing staged policies - checking staged policies removed")
-		r = rbac.NewMockFlowHelper(map[string]bool{
-			"tiers":                      true,
-			"tier.networkpolicies":       true,
-			"tier.globalnetworkpolicies": true,
-			"networkpolicies":            true,
-		}, false)
+		r = rbac.NewMockFlowHelper(map[string][]string{
+			"tiers":                      {""},
+			"tier.networkpolicies":       {""},
+			"tier.globalnetworkpolicies": {""},
+			"networkpolicies":            {""},
+		})
 		filter = elastic.NewFlowFilterUserRBAC(r)
 		flow = &elastic.CompositeAggregationBucket{
 			AggregatedTerms: map[string]*elastic.AggregatedTerm{

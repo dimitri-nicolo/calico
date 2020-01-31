@@ -235,30 +235,38 @@ func (r flowHelper) authorized(rh resources.ResourceHelper, verb, namespace, nam
 }
 
 type mockAuthorizer struct {
-	resources map[string]bool
-	def       bool
+	authorizedNamespacesByResource map[string][]string
 }
 
 func (m *mockAuthorizer) Authorize(attr *authzv1.ResourceAttributes) (bool, error) {
-	if a, ok := m.resources[attr.Resource]; ok {
-		return a, nil
+	if ns, ok := m.authorizedNamespacesByResource[attr.Resource]; ok {
+		for _, n := range ns {
+			if n == "" || n == attr.Namespace {
+				return true, nil
+			}
+		}
 	}
-	return m.def, nil
+	return false, nil
+}
+
+type alwaysAllowAuthorizer struct{}
+
+func (m *alwaysAllowAuthorizer) Authorize(attr *authzv1.ResourceAttributes) (bool, error) {
+	return true, nil
 }
 
 // NewAlwaysAllowFlowHelper returns an flow helper that always authorizes a request.
 func NewAlwaysAllowFlowHelper() FlowHelper {
-	return NewCachedFlowHelper(&mockAuthorizer{
-		resources: make(map[string]bool),
-		def:       true,
-	})
+	return NewCachedFlowHelper(&alwaysAllowAuthorizer{})
 }
 
-// NewMockFlowHelper returns a mock flow helper that authorizes based on the supplied data. If the result is not
-// explicitly specified it uses a default value.
-func NewMockFlowHelper(resources map[string]bool, def bool) FlowHelper {
+// NewMockFlowHelper returns a mock flow helper that authorizes based on the supplied map. This is implemented to be
+// quick to use in tests rather than overly elaborate covering all scenarios.
+//
+// The map is keyed off resource type (e.g. pods, tiers) and the value is the slice of namespaces that are authorized.
+// Use an empty namespace to authorize all namespaces, or to authorize cluster scoped resources.
+func NewMockFlowHelper(resources map[string][]string) FlowHelper {
 	return NewCachedFlowHelper(&mockAuthorizer{
-		resources: resources,
-		def:       def,
+		authorizedNamespacesByResource: resources,
 	})
 }
