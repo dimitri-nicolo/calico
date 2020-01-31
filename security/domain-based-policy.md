@@ -39,19 +39,20 @@ Using domain names in policy rules is limited to only egress allow rules. {{site
 
 {% include content/domain-names.md %}
 
-#### Trusted DNS servers
-
-{{site.prodname}} trusts DNS information only from its list of DNS trusted servers. Using trusted DNS servers to back domain names in
-policy, prevents malicious workload from using IPs returned by a fake DNS server to hijack domain names in policy rules.
-
-By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). These out-of-the-box defaults work with
-standard Kubernetes installs, so normally you won’t change them.
-
 #### Workload and host endpoints
 
 Policy with domain names can be enforced on workload or host endpoints.  When a policy with domain names applies to a workload endpoint, it
 allows that workload to connect out to the specified domains.  When policy with domain names applies to a host endpoint, it allows clients
 directly on the relevant host (including any host-networked workloads) to connect out to the specified domains.
+
+#### Trusted DNS servers
+
+{{site.prodname}} trusts DNS information only from its list of DNS trusted servers. Using trusted DNS servers to back domain names in
+policy, prevents a malicious workload from using IPs returned by a fake DNS server to hijack domain names in policy rules.
+
+By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). For workload endpoints, these
+out-of-the-box defaults work with standard Kubernetes installs, so normally you won’t change them. For host endpoints you will need to add
+the IP addresses that the cluster nodes use for DNS resolution.
 
 ### How to
 
