@@ -5,7 +5,7 @@ agent:
     type: e1-standard-4
     os_image: ubuntu1804
 blocks:
-  - name: Run k8s-tests
+  - name: 'Testing'
     task:
       secrets:
         # Mount the github SSH secret for pulling private repositories.
@@ -13,7 +13,21 @@ blocks:
         # Moutn a secret for pulling images from GCR.
         - name: tigera-dev-ci-pull-credentials
       jobs:
-      - name: Download code and run tests
+      - name: 'K8ST (make k8s-test)'
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+          # Checkout the code and run the Kubernetes tests.
+          - checkout
+          # Semaphore is doing shallow clone on a commit without tags.
+          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+          - git fetch --unshallow
+          - make k8s-test
+      - name: 'Dual ToR (make dual-tor-test)'
         commands:
           # Correct permissions since they are too open by default:
           - chmod 0600 ~/.keys/*
@@ -24,7 +38,3 @@ blocks:
           # Checkout the code and run the Kubernetes tests.
           - checkout
           - make dual-tor-test
-          # Semaphore is doing shallow clone on a commit without tags.
-          # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-          - git fetch --unshallow
-          - make k8s-test
