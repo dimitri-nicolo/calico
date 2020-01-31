@@ -48,7 +48,7 @@ directly on the relevant host (including any host-networked workloads) to connec
 #### Trusted DNS servers
 
 {{site.prodname}} trusts DNS information only from its list of DNS trusted servers. Using trusted DNS servers to back domain names in
-policy, prevents malicious workload from using IPs returned by a fake DNS server to hijack domain names in policy rules.
+policy, prevents a malicious workload from using IPs returned by a fake DNS server to hijack domain names in policy rules.
 
 By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). For workload endpoints, these
 out-of-the-box defaults work with standard Kubernetes installs, so normally you won’t change them. For host endpoints you will need to add
