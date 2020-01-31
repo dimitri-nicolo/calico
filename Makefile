@@ -2,11 +2,14 @@ PACKAGE_NAME    ?= github.com/tigera/lma
 GO_BUILD_VER    ?= v0.32
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+LOCAL_CHECKS     = mod-download
 
 build: ut
 
 ##############################################################################
 # Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
 MAKE_BRANCH ?= $(GO_BUILD_VER)
 MAKE_REPO   ?= https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
@@ -17,6 +20,17 @@ Makefile.common.$(MAKE_BRANCH):
 	# Clean up any files downloaded from other branches so they don't accumulate.
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+ifdef LMA_PATH
+EXTRA_DOCKER_ARGS += -v $(LMA_PATH):/go/src/github.com/tigera/lma:ro
+endif
+
+# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys
+ifdef SSH_AUTH_DIR
+EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
+endif
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 include Makefile.common
 
@@ -35,25 +49,14 @@ TEST_DIRS       ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
 GO_FILES         = $(shell sh -c "find pkg cmd -name \\*.go")
 
 ifeq ($(shell uname -s),Darwin)
-	STAT = stat -f '%c %N'
+STAT = stat -f '%c %N'
 else
-	STAT = stat -c '%Y %n'
+STAT = stat -c '%Y %n'
 endif
 
 ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
-
-ifdef LMA_PATH
-	EXTRA_DOCKER_ARGS += -v $(LMA_PATH):/go/src/github.com/tigera/lma:ro
-endif
-
-# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys
-ifdef SSH_AUTH_DIR
-	EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
-endif
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 ##############################################################################
 # Updating pins
@@ -64,15 +67,6 @@ guard-ssh-forwarding-bug:
 		echo "$(MAKECMDGOALS)"; \
 		exit 1; \
 	fi;
-
-git-config:
-ifdef CONFIRM
-	git config --global user.name "Semaphore Automatic Update"
-	git config --global user.email "marvin@tigera.io"
-endif
-
-git-commit:
-	git diff --quiet HEAD || git commit -m "Semaphore Automatic Update: [skip ci]" go.mod go.sum
 
 update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
@@ -85,8 +79,7 @@ report-dir:
 .PHONY: ut
 ut: report-dir run-elastic
 	$(DOCKER_GO_BUILD) \
-		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
-			go test $(UNIT_TEST_FLAGS) \
+		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 ## Run elasticsearch as a container (tigera-elastic)
@@ -111,6 +104,18 @@ stop-elastic:
 ###############################################################################
 .PHONY: ci
 
+# TODO: enable these linters
+LINT_ARGS  = --disable "deadcode,errcheck,gosimple,govet,staticcheck,structcheck,gosimple,varcheck,unused,ineffassign"
+LINT_ARGS += --timeout 5m
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
-ci: ut
+ci: static-checks ut
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' go modules.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
