@@ -30,8 +30,8 @@ replace (
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200130042057-a55e985b0071
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200130042959-94c870dae46a
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200130101639-7c773376fade
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200129143451-54180472ac05
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200130194212-1ef07d41ddd9
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200130203734-85760318d620
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200129210737-4af3016a2e56
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
