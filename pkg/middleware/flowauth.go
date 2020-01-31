@@ -9,7 +9,7 @@ import (
 	lmautil "github.com/tigera/lma/pkg/util"
 )
 
-// userAuth implements the flows.RBACAuthorizer interface. This should created on a per-request basis as it uses the
+// userAuthorizer implements the flows.RBACAuthorizer interface. This should created on a per-request basis as it uses the
 // request authentication contexts to perform authorization.  It is a wrapper around the lma K8sAuthInterface to
 // encapsulate the originating user request and to handle adding the resource attributes to the request context.
 type userAuthorizer struct {

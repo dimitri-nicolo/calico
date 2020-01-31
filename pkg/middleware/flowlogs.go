@@ -37,8 +37,10 @@ type FlowLogsParams struct {
 	Unprotected          bool            `json:"unprotected"`
 
 	// Parsed timestamps
-	startDateTime *time.Time
-	endDateTime   *time.Time
+	startDateTime       *time.Time
+	endDateTime         *time.Time
+	startDateTimeESParm interface{}
+	endDateTimeESParm   interface{}
 }
 
 type LabelSelector struct {
@@ -142,12 +144,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	}
 
 	now := time.Now()
-	startDateTime, err := ParseElasticsearchTime(now, &startDateTimeString)
+	startDateTime, startDateTimeESParm, err := ParseElasticsearchTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
 		return nil, errParseRequest
 	}
-	endDateTime, err := ParseElasticsearchTime(now, &endDateTimeString)
+	endDateTime, endDateTimeESParm, err := ParseElasticsearchTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, errParseRequest
@@ -169,6 +171,8 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 		Unprotected:          unprotected,
 		startDateTime:        startDateTime,
 		endDateTime:          endDateTime,
+		startDateTimeESParm:  startDateTimeESParm,
+		endDateTimeESParm:    endDateTimeESParm,
 	}
 
 	if params.ClusterName == "" {
@@ -235,12 +239,12 @@ func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
 		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
 		filters = append(filters, destLabelsFilter)
 	}
-	if params.StartDateTime != "" {
-		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime)
+	if params.startDateTimeESParm != nil {
+		startFilter := elastic.NewRangeQuery("start_time").Gt(params.startDateTimeESParm)
 		filters = append(filters, startFilter)
 	}
-	if params.EndDateTime != "" {
-		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime)
+	if params.endDateTimeESParm != nil {
+		endFilter := elastic.NewRangeQuery("end_time").Lt(params.endDateTimeESParm)
 		filters = append(filters, endFilter)
 	}
 

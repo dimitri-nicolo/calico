@@ -163,7 +163,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 
 		By("Creating a composite agg query")
 		q := &pelastic.CompositeAggregationQuery{
-			Name: pelastic.FlowlogBuckets,
+			Name:                    pelastic.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
 			AggSumInfos:             pelastic.FlowAggregationSums,

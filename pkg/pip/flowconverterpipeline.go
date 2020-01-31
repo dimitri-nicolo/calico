@@ -112,9 +112,9 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 	// Modify the original query to include all of the required data.
 	modifiedQuery := &elastic.CompositeAggregationQuery{
-		DocumentIndex: query.DocumentIndex,
-		Query:         query.Query,
-		Name:          query.Name,
+		DocumentIndex:           query.DocumentIndex,
+		Query:                   query.Query,
+		Name:                    query.Name,
 		AggCompositeSourceInfos: PIPCompositeSources,
 		AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 		AggSumInfos:             elastic.FlowAggregationSums,
