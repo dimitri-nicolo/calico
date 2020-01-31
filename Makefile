@@ -212,10 +212,11 @@ dev-versions-yaml:
 ###############################################################################
 # CI / test targets
 ###############################################################################
+.PHONY: docs_test.created
 docs_test.created:
 	docker build -t $(DOCS_TEST_CONTAINER) -f docs_test/Dockerfile.python .
-	touch docs_test.created
 
+.PHONY: test
 test: docs_test.created
 	docker run --rm \
 		-v $(PWD):/code \
@@ -225,9 +226,10 @@ test: docs_test.created
 		-e DOCS_URL=$(DOCS_URL) \
 		-e GIT_HASH=$(GIT_HASH) \
 		$(DOCS_TEST_CONTAINER) sh -c \
-		"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
+		"nosetests . -e "$(EXCLUDE_REGEX)" \
+		-v -s --with-xunit \
 		--xunit-file='/code/tests/report/nosetests.xml' \
-		--with-timer"
+		--with-timer $(EXTRA_NOSE_ARGS)"
 
 ci: clean htmlproofer kubeval helm-tests
 
