@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
@@ -28,6 +29,10 @@ type FlowLogNamespaceParams struct {
 	Unprotected   bool     `json:"unprotected"`
 	StartDateTime string   `json:"startDateTime"`
 	EndDateTime   string   `json:"endDateTime"`
+
+	// Parsed parameters
+	startDateTimeESParm interface{}
+	endDateTimeESParm   interface{}
 }
 
 type Namespace struct {
@@ -91,17 +96,32 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 		}
 	}
 
-	startDateTime := url.Get("startDateTime")
-	endDateTime := url.Get("endDateTime")
+	startDateTimeString := url.Get("startDateTime")
+	endDateTimeString := url.Get("endDateTime")
+
+	// Parse the start/end time to validate the format. We don't need the resulting time struct.
+	now := time.Now()
+	_, startDateTimeESParm, err := ParseElasticsearchTime(now, &startDateTimeString)
+	if err != nil {
+		log.WithError(err).Info("Error extracting start date time")
+		return nil, errParseRequest
+	}
+	_, endDateTimeESParm, err := ParseElasticsearchTime(now, &endDateTimeString)
+	if err != nil {
+		log.WithError(err).Info("Error extracting end date time")
+		return nil, errParseRequest
+	}
 
 	params := &FlowLogNamespaceParams{
-		Actions:       actions,
-		Limit:         limit,
-		ClusterName:   cluster,
-		Prefix:        prefix,
-		Unprotected:   unprotected,
-		StartDateTime: startDateTime,
-		EndDateTime:   endDateTime,
+		Actions:             actions,
+		Limit:               limit,
+		ClusterName:         cluster,
+		Prefix:              prefix,
+		Unprotected:         unprotected,
+		StartDateTime:       startDateTimeString,
+		EndDateTime:         endDateTimeString,
+		startDateTimeESParm: startDateTimeESParm,
+		endDateTimeESParm:   endDateTimeESParm,
 	}
 
 	// Check whether the params are provided in the request and set default values if not

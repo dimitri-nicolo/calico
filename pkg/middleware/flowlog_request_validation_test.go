@@ -189,7 +189,7 @@ var _ = Describe("Test flowlog request validation functions", func() {
 
 	Context("Test that the validateFlowTypes function behaves as expected", func() {
 		It("should return true, indicating that types are valid", func() {
-			types := []string{"network", "networkset", "wep", "hep"}
+			types := []string{"net", "ns", "wep", "hep"}
 			valid := validateFlowTypes(types)
 			Expect(valid).To(BeTrue())
 		})
@@ -201,32 +201,11 @@ var _ = Describe("Test flowlog request validation functions", func() {
 		})
 
 		It("should return false when passed a slice with incorrect types", func() {
-			types := []string{"network", "networkSets", "weps", "heppp"}
+			types := []string{"net", "ns", "weps", "heppp"}
 			valid := validateFlowTypes(types)
 			Expect(valid).To(BeFalse())
 		})
 	})
-
-	Context("Test that the convertFlowTypes function behaves as expected", func() {
-		It("should return a slice of converted flow types", func() {
-			flowTypes := []string{"network", "networkset", "wep", "hep"}
-			convertedTypes := convertFlowTypes(flowTypes)
-			Expect(convertedTypes[0]).To(BeEquivalentTo("net"))
-			Expect(convertedTypes[1]).To(BeEquivalentTo("ns"))
-			Expect(convertedTypes[2]).To(BeEquivalentTo("wep"))
-			Expect(convertedTypes[3]).To(BeEquivalentTo("hep"))
-		})
-
-		It("should return a slice of unconverted flow types because they didn't match the accepted inputs", func() {
-			flowTypes := []string{"networks", "networksets", "wep", "hep"}
-			convertedTypes := convertFlowTypes(flowTypes)
-			Expect(convertedTypes[0]).To(BeEquivalentTo("networks"))
-			Expect(convertedTypes[1]).To(BeEquivalentTo("networksets"))
-			Expect(convertedTypes[2]).To(BeEquivalentTo("wep"))
-			Expect(convertedTypes[3]).To(BeEquivalentTo("hep"))
-		})
-	})
-
 	Context("Test that the validatePolicyPreview function behaves as expected", func() {
 		It("should return true when passed a PolicyPreview with the verb create", func() {
 			policyPreview := PolicyPreview{Verb: "create"}

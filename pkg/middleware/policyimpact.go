@@ -5,11 +5,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -143,11 +141,11 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 	now := time.Now()
 	var fromTime, toTime *time.Time
 	for _, e := range q.Bool.Must {
-		if e.Range.EndTime.GTE != nil && e.Range.EndTime.LTE != nil {
-			if fromTime, err = ParseElasticsearchTime(now, e.Range.EndTime.GTE); err != nil {
+		if e.Range.EndTime.GTE != nil || e.Range.EndTime.LTE != nil {
+			if fromTime, _, err = ParseElasticsearchTime(now, e.Range.EndTime.GTE); err != nil {
 				return nil, fmt.Errorf("invalid time format in query: %s", *e.Range.EndTime.GTE)
 			}
-			if toTime, err = ParseElasticsearchTime(now, e.Range.EndTime.LTE); err != nil {
+			if toTime, _, err = ParseElasticsearchTime(now, e.Range.EndTime.LTE); err != nil {
 				return nil, fmt.Errorf("invalid time format in query: %s", *e.Range.EndTime.LTE)
 			}
 
@@ -241,73 +239,4 @@ type mustRange struct {
 type endTime struct {
 	GTE *string `json:"gte"`
 	LTE *string `json:"lte"`
-}
-
-// ParseElasticsearchTime parses the time string supplied in the ES query.
-func ParseElasticsearchTime(now time.Time, tstr *string) (*time.Time, error) {
-	if tstr == nil || *tstr == "" {
-		return nil, nil
-	}
-	clog := log.WithField("time", *tstr)
-	// Expecting times in RFC3999 format, or now-<duration> format. Try the latter first.
-	parts := strings.SplitN(*tstr, "-", 2)
-	if strings.TrimSpace(parts[0]) == "now" {
-		clog.Debug("Time is relative to now")
-
-		// Make sure time is in UTC format.
-		now = now.UTC()
-
-		// Handle time string just being "now"
-		if len(parts) == 1 {
-			clog.Debug("Time is now")
-			return &now, nil
-		}
-
-		// Time string has section after the subtraction sign. We currently support minutes (m), hours (h) and days (d).
-		clog.Debugf("Time string in now-x format; x=%s", parts[1])
-		dur := strings.TrimSpace(parts[1])
-		if dur == "0" {
-			// 0 does not need units, so this also means now.
-			clog.Debug("Zero delta - time is now")
-			return &now, nil
-		} else if len(dur) < 2 {
-			// We need at least two values for the unit and the value
-			clog.Debug("Error parsing duration string, unrecognised unit of time")
-			return nil, errors.New("error parsing time in query - not a supported format")
-		}
-
-		// Last letter indicates the units.
-		var mul time.Duration
-		switch dur[len(dur)-1:] {
-		case "m":
-			mul = time.Minute
-		case "h":
-			mul = time.Hour
-		case "d":
-			// A day isn't necessarily 24hr, but this should be a good enough approximation for now.
-			//TODO(rlb): If we really want to support the ES date math format then this'll need more work.
-			mul = 24 * time.Hour
-		default:
-			clog.Debug("Error parsing duration string, unrecognised unit of time")
-			return nil, errors.New("error parsing time in query - not a supported format")
-		}
-
-		// First digits indicates the multiplier.
-		if val, err := strconv.ParseUint(strings.TrimSpace(dur[:len(dur)-1]), 10, 64); err != nil {
-			clog.WithError(err).Debug("Error parsing duration string")
-			return nil, err
-		} else {
-			t := now.Add(-(time.Duration(val) * mul))
-			return &t, nil
-		}
-	}
-
-	// Not now-X format, parse as RFC3339.
-	if t, err := time.Parse(time.RFC3339, *tstr); err == nil {
-		clog.Debug("Time is in valid RFC3339 format")
-		return &t, nil
-	} else {
-		clog.Debug("Time format is not recognized")
-		return nil, err
-	}
 }

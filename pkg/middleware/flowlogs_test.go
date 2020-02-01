@@ -162,8 +162,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			q := req.URL.Query()
 			q.Add("cluster", "cluster2")
 			q.Add("limit", "2000")
-			q.Add("srcType", "network")
-			q.Add("srcType", "networkSet")
+			q.Add("srcType", "net")
+			q.Add("srcType", "ns")
 			q.Add("dstType", "wep")
 			q.Add("dstType", "hep")
 			q.Add("srcLabels", validSelectors[0])
@@ -293,6 +293,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 					{Key: "key1", Operator: "=", Values: []string{"test", "test2"}},
 					{Key: "key2", Operator: "!=", Values: []string{"test", "test2"}},
 				},
+				startDateTimeESParm: startTime,
+				endDateTimeESParm:   endTime,
 			}
 
 			queryAllFilters, err := ioutil.ReadFile("testdata/flow_logs_query_all_filters.json")
@@ -458,8 +460,10 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit: 1,
 			}
 
-			// Disallow HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
-			flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewMockFlowHelper(map[string]bool{"hostendpoints": false, "tier.globalnetworkpolicies": false}, true))
+			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
+			flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewMockFlowHelper(map[string][]string{
+				"pods": {""}, "tier.networkpolicies": {""}, "networkpolicies": {""}, "networksets": {""}, "globalnetworksets": {""}},
+			))
 
 			searchResults, err := getFlowLogsFromElastic(flowFilter, params, esClient, pipClient)
 			Expect(err).To(Not(HaveOccurred()))
@@ -493,8 +497,10 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit:         1,
 			}
 
-			// Disallow HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
-			flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewMockFlowHelper(map[string]bool{"hostendpoints": false, "tier.globalnetworkpolicies": false}, true))
+			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
+			flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewMockFlowHelper(map[string][]string{
+				"pods": {""}, "tier.networkpolicies": {""}, "networkpolicies": {""}, "networksets": {""}, "globalnetworksets": {""}},
+			))
 
 			searchResults, err := getFlowLogsFromElastic(flowFilter, params, esClient, pipClient)
 			Expect(err).To(Not(HaveOccurred()))

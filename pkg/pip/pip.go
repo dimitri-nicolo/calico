@@ -51,9 +51,9 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 
 	// Construct the query.
 	q := &pelastic.CompositeAggregationQuery{
-		Name:          api.FlowlogBuckets,
-		DocumentIndex: params.DocumentIndex,
-		Query:         params.Query,
+		Name:                    api.FlowlogBuckets,
+		DocumentIndex:           params.DocumentIndex,
+		Query:                   params.Query,
 		AggCompositeSourceInfos: pelastic.FlowCompositeSources,
 		AggNestedTermInfos:      pelastic.FlowAggregatedTerms,
 		AggSumInfos:             pelastic.FlowAggregationSums,

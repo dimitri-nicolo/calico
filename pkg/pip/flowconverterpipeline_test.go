@@ -392,7 +392,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &elastic.CompositeAggregationQuery{
-			Name: api.FlowlogBuckets,
+			Name:                    api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
@@ -509,7 +509,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &elastic.CompositeAggregationQuery{
-			Name: api.FlowlogBuckets,
+			Name:                    api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
@@ -649,7 +649,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &elastic.CompositeAggregationQuery{
-			Name: api.FlowlogBuckets,
+			Name:                    api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
@@ -779,7 +779,7 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 
 		By("Creating a composite agg query")
 		q := &elastic.CompositeAggregationQuery{
-			Name: api.FlowlogBuckets,
+			Name:                    api.FlowlogBuckets,
 			AggCompositeSourceInfos: PIPCompositeSources,
 			AggNestedTermInfos:      elastic.FlowAggregatedTerms,
 			AggSumInfos:             elastic.FlowAggregationSums,
