@@ -182,12 +182,10 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	if !srcTypeValid {
 		return nil, errInvalidFlowType
 	}
-	params.SourceType = convertFlowTypes(params.SourceType)
 	dstTypeValid := validateFlowTypes(params.DestType)
 	if !dstTypeValid {
 		return nil, errInvalidFlowType
 	}
-	params.DestType = convertFlowTypes(params.DestType)
 	srcLabelsValid := validateLabelSelector(params.SourceLabels)
 	if !srcLabelsValid {
 		return nil, errInvalidLabelSelector

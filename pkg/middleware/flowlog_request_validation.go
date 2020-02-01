@@ -14,8 +14,8 @@ const (
 	actionAllow             = "allow"
 	actionDeny              = "deny"
 	actionUnknown           = "unknown"
-	flowTypeNetwork         = "network"
-	flowTypeNetworkSet      = "networkset"
+	flowTypeNetwork         = "net"
+	flowTypeNetworkSet      = "ns"
 	flowTypeWep             = "wep"
 	flowTypeHep             = "hep"
 	operatorEquals          = "="
@@ -123,23 +123,6 @@ func validateFlowTypes(flowTypes []string) bool {
 		}
 	}
 	return true
-}
-
-func convertFlowTypes(flowTypes []string) []string {
-	var convertedFlowTypes []string
-	for _, flowType := range flowTypes {
-		var convertedFlowType string
-		switch flowType {
-		case flowTypeNetwork:
-			convertedFlowType = "net"
-		case flowTypeNetworkSet:
-			convertedFlowType = "ns"
-		default:
-			convertedFlowType = flowType
-		}
-		convertedFlowTypes = append(convertedFlowTypes, convertedFlowType)
-	}
-	return convertedFlowTypes
 }
 
 func validateLabelSelector(labelSelectors []LabelSelector) bool {
