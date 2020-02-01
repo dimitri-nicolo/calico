@@ -212,21 +212,24 @@ dev-versions-yaml:
 ###############################################################################
 # CI / test targets
 ###############################################################################
+.PHONY: docs_test.created
 docs_test.created:
 	docker build -t $(DOCS_TEST_CONTAINER) -f docs_test/Dockerfile.python .
-	touch docs_test.created
 
+.PHONY: test
 test: docs_test.created
 	docker run --rm \
-        -v $(PWD):/code \
-        -e RELEASE_STREAM=$(RELEASE_STREAM) \
-	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
-	-e DOCS_URL=$(DOCS_URL) \
-	-e GIT_HASH=$(GIT_HASH) \
-	$(DOCS_TEST_CONTAINER) sh -c \
-	"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
-	--xunit-file='/code/tests/report/nosetests.xml' \
-	--with-timer"
+		-v $(PWD):/code \
+		-e RELEASE_STREAM=$(RELEASE_STREAM) \
+		-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
+		-e GITHUB_API_TOKEN=$(GITHUB_ACCESS_TOKEN) \
+		-e DOCS_URL=$(DOCS_URL) \
+		-e GIT_HASH=$(GIT_HASH) \
+		$(DOCS_TEST_CONTAINER) sh -c \
+		"nosetests . -e "$(EXCLUDE_REGEX)" \
+		-v -s --with-xunit \
+		--xunit-file='/code/tests/report/nosetests.xml' \
+		--with-timer $(EXTRA_NOSE_ARGS)"
 
 ci: clean htmlproofer kubeval helm-tests
 
