@@ -388,6 +388,7 @@ github.com/tigera/cni-plugin-private v0.0.0-20200126041950-c83a270484cf/go.mod h
 github.com/tigera/cni-plugin-private v0.0.0-20200129231937-f8ee5bd15aed/go.mod h1:A85ylBfeLizGtpue5zAF29oC/arDu4BwQYQ6/N0dczE=
 github.com/tigera/cni-plugin-private v0.0.0-20200130042959-94c870dae46a/go.mod h1:A85ylBfeLizGtpue5zAF29oC/arDu4BwQYQ6/N0dczE=
 github.com/tigera/cni-plugin-private v0.0.0-20200131043520-c21722bed5bb/go.mod h1:Nq49NkCH6wBy68L073SD8h8RAqqYUqa4J0Qtzy5mr6w=
+github.com/tigera/cni-plugin-private v0.0.0-20200201041529-6aab49284876/go.mod h1:Nq49NkCH6wBy68L073SD8h8RAqqYUqa4J0Qtzy5mr6w=
 github.com/tigera/confd-private v0.0.0-20200127042123-4683d8bfcd59 h1:nhxRS4xRRDqP1gyt9JbW3Jq84C0KorZIcgBCw33Sx2I=
 github.com/tigera/confd-private v0.0.0-20200127042123-4683d8bfcd59/go.mod h1:OzJvln0nwz3NW1+xkB2ctGYPGYOycFcMxBorYIfgEHM=
 github.com/tigera/confd-private v0.0.0-20200128042320-f758bea829f8 h1:tDiN8MrE0w56gJ6zloaq0dKhIQI7ip7Ovtfi3UsbYWI=
