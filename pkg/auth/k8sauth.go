@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -22,6 +23,7 @@ import (
 type K8sAuthInterface interface {
 	KubernetesAuthnAuthz(http.Handler) http.Handler
 	Authorize(*http.Request) (int, error)
+	KubernetesAuthn(http.Handler) http.Handler
 }
 
 type k8sauth struct {
@@ -54,11 +56,83 @@ func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 			return
 		}
 		if user != nil {
-			// If we determined a user, update the request to include the user in the context.
+			// If we were able to authenticate a user, update the request to include it in the context.
 			req = req.WithContext(request.WithUser(req.Context(), user))
 		}
 		h.ServeHTTP(w, req)
 	})
+}
+
+// The handler returned by this will authenticate the request passed
+// to the handler based off the Authorization header. Upon successful
+// auth the handler passed in will be called, otherwise the
+// ResponseWriter will be updated with the appropriate status and a
+// message with details.
+//
+// For token auth, the request will be updated with the user info so
+// that subsequent handlers will not need to re-authenticate.
+func (ka *k8sauth) KubernetesAuthn(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var user k8suser.Info
+		var err error
+		var stat int
+		token := getAuthToken(req)
+		if token != "" {
+			user, stat, err = ka.authenticateToken(req)
+		} else if usr, pw, found := req.BasicAuth(); found && usr != "" && pw != "" {
+			log.Debugf("Will authenticate and authorize user based on basic token")
+			user, stat, err = ka.basicAuthenticate(usr, pw)
+		}
+		if err != nil {
+			log.WithError(err).Debug("Kubernetes authn failure")
+			http.Error(w, err.Error(), stat)
+			return
+		}
+
+		if user != nil {
+			// If we were able to authenticate a user, update the request to include it in the context.
+			req = req.WithContext(request.WithUser(req.Context(), user))
+		}
+		h.ServeHTTP(w, req)
+	})
+}
+
+// Authenticate a request based on the basic auth header and return user, status and error,
+// if error is nil then the user can be authenticated, otherwise an http Status code is
+// returned and an error describing the cause.
+// The user groups that the authenticated user belong to cannot be derived by us, so only
+// "system:authenticated" will be returned as a group in the userInfo.
+func (ka *k8sauth) basicAuthenticate(user, pw string) (k8suser.Info, int, error) {
+	client, err := getUserK8sClient(ka.config, user, pw)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	// Create a self access review authn purposes only.
+	selfAccessReview := authzv1.SelfSubjectAccessReview{
+		Spec: authzv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authzv1.ResourceAttributes{},
+		},
+	}
+
+	log.Debug("Perform a call to Kube Api server to validate username and password")
+	response, err := client.AuthorizationV1().SelfSubjectAccessReviews().Create(&selfAccessReview)
+
+	// If a user's password and username do not match with the basic configuration on the kubelet, an error will occur.
+	if err != nil {
+		return nil, http.StatusUnauthorized, err
+	}
+
+	// We are not interested in status.Allowed, since we used an empty SSAR. However,
+	// if permission is Denied it means that the user is not authenticated.
+	if response.Status.Denied {
+		return nil, http.StatusUnauthorized, errors.New("user not authenticated")
+	}
+
+	return &k8suser.DefaultInfo{
+		Name:   user,
+		Groups: []string{"system:authenticated"},
+	}, http.StatusOK, nil
 }
 
 // For authentication and authorization we handle Token and Basic differently.

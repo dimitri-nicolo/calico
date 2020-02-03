@@ -1,2 +1,3 @@
 Makefile.common*
 .go-pkg-cache/
+.idea/
