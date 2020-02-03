@@ -10,12 +10,14 @@ calico-node
 cert: {{ .Values.manager.tls.cert | b64enc }}
 key: {{ .Values.manager.tls.key | b64enc }}
 {{- else -}}
-{{- /* Make certs generated automatically last 100 years. Why? We're doing this automatically for customers
+{{- /* Make certs generated automatically last 2 years. Why? We're doing this automatically for customers
        who haven't provided their own certificates, meaning they might be blissfully unaware that these certs
        are even in use. If we put it at a "recommended" value like 1 year, there is a reasonable chance that
        a year from when they install, they will not have reissued a new cert, and they will have an outage. That's
-       really bad. */ -}}
-{{- $ca := genSelfSignedCert "localhost" (list "127.0.0.1") (list) 36500 -}}
+       really bad.
+       However, MacOS Catalina rejects browser certs issued for >825 days. So use two years to fall
+       just within that range. */ -}}
+{{- $ca := genSelfSignedCert "localhost" (list "127.0.0.1") (list) 730 -}}
 cert: {{ $ca.Cert | b64enc }}
 key: {{ $ca.Key | b64enc }}
 {{- end }}
