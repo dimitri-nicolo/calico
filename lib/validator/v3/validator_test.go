@@ -108,6 +108,10 @@ func init() {
 			}, "error with field Port = '0' (port range invalid, port number must be between 1 and 65535)"),
 	)
 
+	felixCfgWithDNSTrustedServers := func(dnsTrustedServers ...string) *api.FelixConfigurationSpec {
+		return &api.FelixConfigurationSpec{DNSTrustedServers: &dnsTrustedServers}
+	}
+
 	// Perform basic validation of different fields and structures to test simple valid/invalid
 	// scenarios.  This does not test precise error strings - but does cover a lot of the validation
 	// code paths.
@@ -2591,6 +2595,50 @@ func init() {
 		),
 		Entry("should not accept a masked IP address",
 			api.FelixConfigurationSpec{DeviceRouteSourceAddress: netv4_1}, false,
+		),
+		Entry("valid DNS trusted servers",
+			*felixCfgWithDNSTrustedServers(
+				// Simple IPv4.
+				"169.254.169.254",
+				// Default: kube-dns service in kube-system namespace.
+				"k8s-service:kube-dns",
+				// IPv4 with explicit port.
+				"169.254.169.254:2987",
+				// Service in default namespace with explicit port.
+				"k8s-service:kube-dns:2988",
+				// Simple IPv6.
+				"fd00:89a3::12",
+				// IPv6 with explicit port.
+				"[fd00:89a3::12]:5353",
+				// Service in specified namespace.
+				"k8s-service:openshift-dns/openshift-dns",
+				// Service in specified namespace with specific port.
+				"k8s-service:openshift-dns/openshift-dns:5353",
+			), true,
+		),
+		Entry("invalid DNS trusted server: misspelt k8s-service",
+			*felixCfgWithDNSTrustedServers("k8s-servrce:kube-dns"), false,
+		),
+		Entry("invalid DNS trusted server: bad namespace chars",
+			*felixCfgWithDNSTrustedServers("k8s-service:jk()/kube-dns"), false,
+		),
+		Entry("invalid DNS trusted server: service with bad port chars",
+			*felixCfgWithDNSTrustedServers("k8s-service:kube-dns:56a"), false,
+		),
+		Entry("invalid DNS trusted server: service with negative port",
+			*felixCfgWithDNSTrustedServers("k8s-service:kube-dns:-53"), false,
+		),
+		Entry("invalid DNS trusted server: service with too large port",
+			*felixCfgWithDNSTrustedServers("k8s-service:kube-dns:70000"), false,
+		),
+		Entry("invalid DNS trusted server: IPv6 with too large port",
+			*felixCfgWithDNSTrustedServers("[fd10:25::2]:70000"), false,
+		),
+		Entry("invalid DNS trusted server: invalid IPv4",
+			*felixCfgWithDNSTrustedServers("10.11.12.13.14:53"), false,
+		),
+		Entry("invalid DNS trusted server: invalid IPv6",
+			*felixCfgWithDNSTrustedServers("[fd00:xyz::2]:5353"), false,
 		),
 	)
 

@@ -19,6 +19,7 @@ import (
 	"net"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -165,6 +166,7 @@ func init() {
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
 	registerFieldValidator("wildname", ValidateWildName)
+	registerFieldValidator("dnsTrustedServer", validateDNSTrustedServer)
 	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("labels", validateLabels)
@@ -268,6 +270,10 @@ func extractReason(e validator.FieldError) string {
 		return fmt.Sprintf("%s must be a domain name, optionally with one wildcard at the end (x.y.*), at the beginning (*.x.y), or in the middle (x.*.y)",
 			e.Field(),
 		)
+	case "dnsTrustedServer":
+		return fmt.Sprintf("%s must be <ip>[:<port>] (indicating an explicit DNS server IP) or k8s-service:[<namespace>/]<name>[:port] (indicating a Kubernetes DNS service); an IPv6 address with a port must use square brackets, for example \"[fd00:83a6::12]:5353\"",
+			e.Field(),
+		)
 	}
 	return fmt.Sprintf("%sfailed to validate Field: %s because of Tag: %s ",
 		reasonString,
@@ -333,6 +339,71 @@ func ValidateWildName(fl validator.FieldLevel) bool {
 		s = s[:p] + ".example." + s[p+3:]
 	}
 	return nameRegex.MatchString(s)
+}
+
+const k8sServicePrefix = "k8s-service:"
+
+func validateDNSTrustedServer(fl validator.FieldLevel) bool {
+	s := strings.ToLower(fl.Field().String())
+	log.Debugf("Validate DNS trusted server: %s", s)
+
+	checkPort := func(portStr string) bool {
+		if port, err := strconv.Atoi(portStr); err != nil {
+			log.Debugf("Invalid port '%v': %v", portStr, err.Error())
+			return false
+		} else if port < 0 || port > 65535 {
+			log.Debugf("Port '%v' should be between 0 and 65535", port)
+			return false
+		}
+		return true
+	}
+
+	if strings.HasPrefix(s, k8sServicePrefix) {
+		s := s[len(k8sServicePrefix):]
+		if slash := strings.Index(s, "/"); slash >= 0 {
+			if ok := nameRegex.MatchString(s[:slash]); !ok {
+				log.Debugf("Invalid chars in namespace '%v'", s[:slash])
+				return false
+			}
+			s = s[slash+1:]
+		}
+		if colon := strings.Index(s, ":"); colon >= 0 {
+			if !checkPort(s[colon+1:]) {
+				return false
+			}
+			s = s[:colon]
+		}
+		if ok := nameRegex.MatchString(s); !ok {
+			log.Debugf("Invalid chars in service name '%v'", s)
+			return false
+		}
+		// Valid.
+		return true
+	}
+
+	// 10.25.3.4
+	// 10.25.3.4:536
+	// [fd10:25::2]:536
+	// fd10:25::2
+	if colon := strings.Index(s, "]:"); colon >= 0 && strings.HasPrefix(s, "[") {
+		// IPv6 address with port number.
+		if !checkPort(s[colon+2:]) {
+			return false
+		}
+		s = s[1:colon]
+	} else if colon := strings.Index(s, ":"); colon >= 0 && strings.Count(s, ":") == 1 {
+		// IPv4 address with port number.
+		if !checkPort(s[colon+1:]) {
+			return false
+		}
+		s = s[:colon]
+	}
+	if net.ParseIP(s) == nil {
+		log.Debugf("Invalid IP address '%v'", s)
+		return false
+	}
+
+	return true
 }
 
 func validateContainerID(fl validator.FieldLevel) bool {
