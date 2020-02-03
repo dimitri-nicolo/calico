@@ -18,6 +18,7 @@ This self-service feature for developers allows network security teams to focus 
 This how-to guide uses the following {{site.prodname}} features:
 - **Flow logs**
 - **StagedNetworkPolicy** resource
+- **NetworkPolicy** resource (optional)
 
 ### Concepts
 
@@ -53,6 +54,7 @@ Ensure that flow logs are generated and sent to Elasticsearch.
 
 - To generate a policy recommendation, you must have permission to read flow logs.
 - To stage a policy recommendation, you must have permission to create a **StagedNetworkPolicy** in the namespace of the workload that is being secured.
+- To enforce a policy, you must have permission to create a **NetworkPolicy** in the namespace of the workload that is being secured. It is recommended to stage a policy to verify its impact before enforcing it.
 
 ### How to
 
@@ -78,6 +80,9 @@ If relevant flow logs are found within the selected time range for the workload 
 ![Preview or Stage a Policy Recommendation]({{site.baseurl}}/images/generate-policy-recommendation/create-policy-action-buttons.png)
 
 Then, you can assess the impact of the recommended policy using **Preview** and/or **Stage** to observe the effect on traffic without impacting the actual traffic flows.
+
+>**Note**: We do not recommend using **Enforce** without first assessing the impact of the recommended policy using **Preview** and/or **Stage**.
+{: .alert .alert-info}
 
 ### Above and beyond
 
