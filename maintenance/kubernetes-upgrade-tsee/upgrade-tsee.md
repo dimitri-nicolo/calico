@@ -1,7 +1,7 @@
 ---
-title: Upgrading Calico Enterprise from an earlier release on Kubernetes
-description: Upgrading from an earlier release of Calico Enterprise on Kubernetes.
-canonical_url: /maintenance/kubernetes-upgrade-tsee
+title: Upgrading Calico Enterprise installed from manifests
+description: Upgrading from an earlier release of Calico Enterprise installed from manifests.
+canonical_url: /maintenance/kubernetes-upgrade-tsee/upgrade-tsee
 show_toc: false
 ---
 
@@ -16,7 +16,7 @@ instead.
 
 ## Upgrading to {{page.version}} {{site.prodname}}
 
-If you used the manifests provided on the [Tigera documentation site](https://docs.tigera.io/)
+If you used the manifests provided on the [Tigera documentation site](https://docs.tigera.io/v2.6/reference/other-install-methods/kubernetes/installation/){: data-proofer-ignore="" }
 to install {{site.prodname}}, re-install using the instructions below. To avoid unneccessary service impact, ensure you modify the various
 manifests to include any changes that were previously made for your current deployment *prior* to applying the new
 manifests.
