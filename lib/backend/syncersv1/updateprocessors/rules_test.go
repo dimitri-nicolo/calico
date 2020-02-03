@@ -515,4 +515,38 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		Expect(outRules[0].DstDomains).To(HaveLen(2))
 		Expect(outRules[0].DstDomains).To(ConsistOf("docs.projectcalico.org", "k8s.io"))
 	})
+
+	It("should parse a set of rules and validates the namespaceselector with label and all()", func() {
+		rules := []apiv3.Rule{
+			{
+				Action: apiv3.Allow,
+				Destination: apiv3.EntityRule{
+					NamespaceSelector: "namespace == 'red'",
+					Selector:          "has(label1)",
+				},
+			},
+			{
+				Action: apiv3.Allow,
+				Destination: apiv3.EntityRule{
+					NamespaceSelector: "all()",
+					Selector:          "has(label2)",
+				},
+			},
+			{
+				Action: apiv3.Allow,
+				Destination: apiv3.EntityRule{
+					NamespaceSelector: "global()",
+					Selector:          "has(label3)",
+				},
+			},
+		}
+
+		// Parse, enabling security group selection.
+		outRules := updateprocessors.RulesAPIV2ToBackend(rules, "namespace", true)
+		// The first rule should select "namespace `red`, the second rule should have 'has(projectcalico.org/namespace)'
+		// and third rule should select '!has(projectcalico.org/namespace)'
+		Expect(outRules[0].DstSelector).To(Equal("(pcns.namespace == \"red\") && (has(label1))"))
+		Expect(outRules[1].DstSelector).To(Equal("(has(projectcalico.org/namespace)) && (has(label2))"))
+		Expect(outRules[2].DstSelector).To(Equal("(!has(projectcalico.org/namespace)) && (has(label3))"))
+	})
 })
