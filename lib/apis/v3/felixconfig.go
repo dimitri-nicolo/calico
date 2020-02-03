@@ -416,7 +416,7 @@ type FelixConfigurationSpec struct {
 	// `kube-system`. An IPv6 address with a port must use the square brackets convention, for example
 	// `[fd00:83a6::12]:5353`.Note that Felix (calico-node) will need RBAC permission to read the details of
 	// each service specified by a `k8s-service:...` form. [Default: "k8s-service:kube-dns"].
-	DNSTrustedServers *[]string `json:"dnsTrustedServers,omitempty" validate:"omitempty,dive,dnsTrustedServer"`
+	DNSTrustedServers *[]string `json:"dnsTrustedServers,omitempty" validate:"omitempty,dive,ipOrK8sService"`
 	// The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default:
 	// "/var/run/calico/felix-dns-cache.txt"].
 	DNSCacheFile string `json:"dnsCacheFile,omitempty"`

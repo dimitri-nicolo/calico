@@ -166,7 +166,7 @@ func init() {
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
 	registerFieldValidator("wildname", ValidateWildName)
-	registerFieldValidator("dnsTrustedServer", validateDNSTrustedServer)
+	registerFieldValidator("ipOrK8sService", validateIPOrK8sService)
 	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("labels", validateLabels)
@@ -270,8 +270,8 @@ func extractReason(e validator.FieldError) string {
 		return fmt.Sprintf("%s must be a domain name, optionally with one wildcard at the end (x.y.*), at the beginning (*.x.y), or in the middle (x.*.y)",
 			e.Field(),
 		)
-	case "dnsTrustedServer":
-		return fmt.Sprintf("%s must be <ip>[:<port>] (indicating an explicit DNS server IP) or k8s-service:[<namespace>/]<name>[:port] (indicating a Kubernetes DNS service); an IPv6 address with a port must use square brackets, for example \"[fd00:83a6::12]:5353\"",
+	case "ipOrK8sService":
+		return fmt.Sprintf("%s must be <ip>[:<port>] (indicating an explicit IP) or k8s-service:[<namespace>/]<name>[:port] (indicating a Kubernetes service); an IPv6 address with a port must use square brackets, for example \"[fd00:83a6::12]:5353\"",
 			e.Field(),
 		)
 	}
@@ -343,9 +343,9 @@ func ValidateWildName(fl validator.FieldLevel) bool {
 
 const k8sServicePrefix = "k8s-service:"
 
-func validateDNSTrustedServer(fl validator.FieldLevel) bool {
+func validateIPOrK8sService(fl validator.FieldLevel) bool {
 	s := strings.ToLower(fl.Field().String())
-	log.Debugf("Validate DNS trusted server: %s", s)
+	log.Debugf("Validate IP or Kubernetes service: %s", s)
 
 	checkPort := func(portStr string) bool {
 		if port, err := strconv.Atoi(portStr); err != nil {
