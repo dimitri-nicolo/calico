@@ -131,7 +131,7 @@ endif
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
-PHONY:local_build
+.PHONY:local_build
 
 ifdef LOCAL_BUILD
 EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw
@@ -430,7 +430,7 @@ git-push:
 update-pins: replace-libcalico-pin
 
 ## Update dependency pins to their latest changeset, committing and pushing it.
-commit-pin-updates: update-pins build git-status git-config git-commit ci git-push
+commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Static checks
@@ -466,12 +466,28 @@ mod-download:
 .PHONY: ci
 ci: clean mod-download build-all static-checks ut
 
+## Avoid unplanned go.sum updates
+.PHONY: undo-go-sum check-dirty
+undo-go-sum:
+	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
+	  echo "Undoing go.sum update..."; \
+	  git checkout -- go.sum; \
+	fi
+
+## Check if generated image is dirty
+check-dirty: undo-go-sum
+	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty:"; \
+	  git status --porcelain; \
+	  false; \
+	fi
+
 ###############################################################################
 # CD
 ###############################################################################
 .PHONY: cd
 ## Deploys images to registry
-cd: image-all
+cd: image-all check-dirty
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
@@ -590,3 +606,12 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' go modules.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod tidy'
