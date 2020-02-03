@@ -41,3 +41,6 @@ docker-image/voltron/templates
 test/st-kind/config.json
 test/st-kind/docker_auth.json
 test/st-kind/test-resources/**
+
+# IDE workspace files
+.idea/

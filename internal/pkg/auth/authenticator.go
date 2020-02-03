@@ -93,12 +93,15 @@ func (id BasicAuthenticator) Authenticate(token string) (*User, error) {
 	log.Debug("Perform a call to Kube Api server to validate username and password")
 	response, err := k8sAPI.AuthorizationV1().SelfSubjectAccessReviews().Create(&selfAccessReview)
 
+	// In any case where a basic auth header is supplied that is not recognized, there will be an error.
 	if err != nil {
 		return nil, err
 	}
 
-	if !response.Status.Allowed {
-		return nil, errors.New("User is not allowed to access resource")
+	// We are not interested in status.Allowed, since we used a SSAR with no intention of checking
+	// authz. However,if permission is Denied it means that the user is not authenticated.
+	if response.Status.Denied {
+		return nil, errors.New("user not authenticated")
 	}
 
 	user := &User{Name: slice[0], Groups: []string{"system:authenticated"}}

@@ -79,9 +79,15 @@ var _ = Describe("Authenticator", func() {
 				Expect(user.Groups).To(Equal([]string{"system:authenticated"}))
 			})
 
-			It("should not authenticate an unknown user bob", func() {
+			It("should authenticate a user bob if he is known, but has no privileges", func() {
 				apiGen.AddBobAccessReview()
 				_, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte(test.BobPassword)))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should not authenticate a nonexistent, but correctly formatted base64 auth header", func() {
+				usr, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte("jane:wrong-password")))
+				Expect(usr).To(BeNil())
 				Expect(err).To(HaveOccurred())
 			})
 

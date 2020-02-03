@@ -41,6 +41,8 @@ const (
 	BobPassword = "bob:password"
 	// AnyUserPassword is the password associated with AnyUser
 	AnyUserPassword = "anyUser:password"
+	// Password used for our test cases
+	defaultPassword = "password"
 )
 
 type k8sFake = fake.Clientset
@@ -60,19 +62,25 @@ type K8sFakeClient struct {
 // FakeK8sClientGenerator maps K8sFakeClients to usernames
 type FakeK8sClientGenerator struct {
 	sync.Mutex
-	apis map[string]*K8sFakeClient
+	ap map[string]apiPw
+}
+
+// Holds the k8s client and password of a user. Used as map value.
+type apiPw struct {
+	k8s *K8sFakeClient
+	pw  string
 }
 
 // NewFakeK8sClientGenerator generates K8sFakeClients to access K8s API
 func NewFakeK8sClientGenerator() *FakeK8sClientGenerator {
-	return &FakeK8sClientGenerator{apis: make(map[string]*K8sFakeClient)}
+	return &FakeK8sClientGenerator{ap: make(map[string]apiPw)}
 }
 
 // Generate returns a K8sFakeClient that maps to an user. If an user is not found an error will be returned
 func (apiGen *FakeK8sClientGenerator) Generate(user string, password string) (k8s.Interface, error) {
-	k8s, found := apiGen.get(user)
+	k8s, pw, found := apiGen.get(user)
 
-	if !found {
+	if !found || pw != password {
 		return nil, errors.New("Could not generate api")
 	}
 
@@ -89,7 +97,7 @@ func (apiGen *FakeK8sClientGenerator) AddJaneAccessReview() {
 		return true, accessReview, nil
 	})
 
-	apiGen.add(Jane, k8sFake)
+	apiGen.add(Jane, defaultPassword, k8sFake)
 }
 
 // AddBobAccessReview mocks k8s authentication response for Bob access to any resource.
@@ -102,7 +110,7 @@ func (apiGen *FakeK8sClientGenerator) AddBobAccessReview() {
 		return true, accessReview, nil
 	})
 
-	apiGen.add(Bob, k8sFake)
+	apiGen.add(Bob, defaultPassword, k8sFake)
 }
 
 // AddErrorAccessReview mocks k8s authentication response for AnyUser's access to any resource.
@@ -114,22 +122,21 @@ func (apiGen *FakeK8sClientGenerator) AddErrorAccessReview() {
 		return true, &authz.SelfSubjectAccessReview{}, errors.New("Any error")
 	})
 
-	apiGen.add(AnyUser, k8sFake)
+	apiGen.add(AnyUser, defaultPassword, k8sFake)
 }
 
-func (apiGen *FakeK8sClientGenerator) add(user string, api *K8sFakeClient) {
+func (apiGen *FakeK8sClientGenerator) add(user string, pw string, api *K8sFakeClient) {
+	apiGen.Lock()
+	defer apiGen.Unlock()
+	apiGen.ap[user] = apiPw{api, pw}
+}
+
+func (apiGen *FakeK8sClientGenerator) get(user string) (k8s.Interface, string, bool) {
 	apiGen.Lock()
 	defer apiGen.Unlock()
 
-	apiGen.apis[user] = api
-}
-
-func (apiGen *FakeK8sClientGenerator) get(user string) (k8s.Interface, bool) {
-	apiGen.Lock()
-	defer apiGen.Unlock()
-
-	k8s, found := apiGen.apis[user]
-	return k8s, found
+	ap, found := apiGen.ap[user]
+	return ap.k8s, ap.pw, found
 }
 
 // NewK8sSimpleFakeClient returns a new aggregated fake client that satisfies
