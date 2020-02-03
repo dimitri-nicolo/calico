@@ -303,6 +303,8 @@ spec:
             value: "9443"
           - name: VOLTRON_LOGLEVEL
             value: "info"
+          - name: VOLTRON_COMPLIANCE_INSECURE_TLS
+            value: "true"
 {{- if eq $elasticMode "operator" }}
           - name: VOLTRON_KIBANA_ENDPOINT
             value: "https://tigera-kibana-kb-http.calico-monitoring.svc:5601"
