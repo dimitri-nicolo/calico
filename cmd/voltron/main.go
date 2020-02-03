@@ -43,6 +43,7 @@ type config struct {
 	K8sEndpoint                  string `default:"https://kubernetes.default" split_words:"true"`
 	ComplianceEndpoint           string `default:"https://compliance.tigera-compliance.svc.cluster.local" split_words:"true"`
 	ComplianceCABundlePath       string `default:"/certs/compliance/tls.crt" split_words:"true"`
+	ComplianceInsecureTLS        bool   `default:"false" split_words:"true"`
 	ElasticEndpoint              string `default:"https://127.0.0.1:8443" split_words:"true"`
 	NginxEndpoint                string `default:"http://127.0.0.1:8080" split_words:"true"`
 	PProf                        bool   `default:"false"`
@@ -147,9 +148,10 @@ func main() {
 			AllowInsecureTLS: true,
 		},
 		{
-			Path:         "/compliance/",
-			Dest:         cfg.ComplianceEndpoint,
-			CABundlePath: cfg.ComplianceCABundlePath,
+			Path:             "/compliance/",
+			Dest:             cfg.ComplianceEndpoint,
+			CABundlePath:     cfg.ComplianceCABundlePath,
+			AllowInsecureTLS: cfg.ComplianceInsecureTLS,
 		},
 		{
 			Path:         cfg.KibanaBasePath,
