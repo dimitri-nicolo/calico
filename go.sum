@@ -403,6 +403,7 @@ github.com/tigera/felix-private v0.0.0-20200127175934-d4bb25390532/go.mod h1:r0v
 github.com/tigera/felix-private v0.0.0-20200128182826-9054984b67fd/go.mod h1:r0vb5KBdMGXg3XlhgDxvehQL+PiH8PijqSgwKrgkUlk=
 github.com/tigera/felix-private v0.0.0-20200130101639-7c773376fade/go.mod h1:r0vb5KBdMGXg3XlhgDxvehQL+PiH8PijqSgwKrgkUlk=
 github.com/tigera/felix-private v0.0.0-20200130194212-1ef07d41ddd9/go.mod h1:r0vb5KBdMGXg3XlhgDxvehQL+PiH8PijqSgwKrgkUlk=
+github.com/tigera/felix-private v0.0.0-20200204120446-715d8c607032/go.mod h1:r0vb5KBdMGXg3XlhgDxvehQL+PiH8PijqSgwKrgkUlk=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v0.0.0-20200124233200-fcf21602b6c6 h1:weVs0sVb+ZQzUH0AKw5ZODnRoLpqsm8IcO9bpIURpP0=
