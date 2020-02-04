@@ -35,7 +35,6 @@ const (
 	elasticConnRetriesEnv        = "ELASTIC_CONN_RETRIES"
 	elasticConnRetryIntervalEnv  = "ELASTIC_CONN_RETRY_INTERVAL"
 	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
-	enableMultiClusterClientEnv  = "ENABLE_MULTI_CLUSTER_CLIENT"
 )
 
 const (
@@ -44,11 +43,10 @@ const (
 	defaultKeepAlivePeriod = 30 * time.Second
 	defaultIdleConnTimeout = 90 * time.Second
 
-	defaultIndexSuffix              = "cluster"
-	defaultConnRetryInterval        = 500 * time.Millisecond
-	defaultConnRetries              = 30
-	defaultEnableTrace              = false
-	defaultEnableMultiClusterClient = false
+	defaultIndexSuffix       = "cluster"
+	defaultConnRetryInterval = 500 * time.Millisecond
+	defaultConnRetries       = 30
+	defaultEnableTrace       = false
 )
 
 type ElasticAccessMode string
@@ -123,8 +121,6 @@ type Config struct {
 	ProxyConnectTimeout  time.Duration
 	ProxyKeepAlivePeriod time.Duration
 	ProxyIdleConnTimeout time.Duration
-
-	DelegateAuthentication bool
 }
 
 func NewConfigFromEnv() (*Config, error) {
@@ -182,13 +178,6 @@ func NewConfigFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	delegateAuthentication, err := getEnvOrDefaultBool(enableMultiClusterClientEnv, defaultEnableMultiClusterClient)
-	if err != nil {
-		log.WithError(err).Error("Failed to parse " + enableMultiClusterClientEnv)
-		delegateAuthentication = false
-	}
-
 	config := &Config{
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
@@ -209,7 +198,6 @@ func NewConfigFromEnv() (*Config, error) {
 		ProxyConnectTimeout:       connectTimeout,
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
 		ProxyIdleConnTimeout:      idleConnTimeout,
-		DelegateAuthentication:    delegateAuthentication,
 	}
 	err = validateConfig(config)
 	return config, err

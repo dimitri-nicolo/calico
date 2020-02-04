@@ -69,7 +69,7 @@ func Start(cfg *Config) error {
 	// right one everywhere. For now, only use the lma one for policy recommendation
 	// and leave the rest to use the one in es-proxy.
 	lmaK8sAuth := lmaauth.NewK8sAuth(k8sClient, k8sConfig)
-	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig, cfg.DelegateAuthentication)
+	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
 
 	// Install pip mutator
 	k8sClientSet := datastore.MustGetClientSet()
