@@ -49,7 +49,18 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-1-1
+  name: honeypod-alert-ip-enum-tmpl
+spec:
+  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-ip-enum
 spec:
   description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -60,7 +71,21 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-1-2
+  name: honeypod-alert-port-scan-tmpl
+spec:
+  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+  metric: count
+  condition: gte
+  threshold: 4
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-port-scan
 spec:
   description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -127,7 +152,18 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-3
+  name: honeypod-alert-fake-svc-tmpl
+spec:
+  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-fake-svc
 spec:
   description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
@@ -180,7 +216,18 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-4
+  name: honeypod-alert-vuln-svc-tmpl
+spec:
+  description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod-alert-vuln-svc
 spec:
   description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
