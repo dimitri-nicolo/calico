@@ -67,6 +67,7 @@ github.com/envoyproxy/data-plane-api v0.0.0-20200122002336-4647ad5cedd8 h1:s7o5x
 github.com/envoyproxy/data-plane-api v0.0.0-20200128211108-65debda09522 h1:YINX5Ih+pOrWPcILBsRxTs8uSpa+uRMo+fz9zN0pjWs=
 github.com/envoyproxy/data-plane-api v0.0.0-20200129232643-c1fe5b9c6663 h1:zYAjTmmoqA0zD5DfgHOYfsMDCoHtAK9/c+VM996XgLY=
 github.com/envoyproxy/data-plane-api v0.0.0-20200131004622-14ffd9e1ee76 h1:juXzV7Bq+8Frf3ZJS6FLaO7Z0jKTrPSZhLXd3s0CUlQ=
+github.com/envoyproxy/data-plane-api v0.0.0-20200203203055-5f6f4e610713 h1:NaovO97xPieRKSIpfod38D4+oAx8W+aNLTXMrIb6Q18=
 github.com/evanphx/json-patch v0.0.0-20190203023257-5858425f7550/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/evanphx/json-patch v4.2.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
@@ -282,6 +283,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20200130020649-1e0d913b77f8 h1:f/Q
 github.com/tigera/libcalico-go-private v0.0.0-20200130020649-1e0d913b77f8/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/libcalico-go-private v0.0.0-20200130203734-85760318d620 h1:9dSnilB+yiiZHC3wrPJExPMfj9oQ699ncJHq7pmew/I=
 github.com/tigera/libcalico-go-private v0.0.0-20200130203734-85760318d620/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
+github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58 h1:hGYQ5vdp/BhntX/x/TJidzwergvO22mNKhJLCbK6kJE=
+github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
