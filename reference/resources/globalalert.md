@@ -353,6 +353,7 @@ See [Flow logs] for description of fields.
 | dest_name_aggr | domain
 | dest_namespace | domain
 | dest_port | int | 0 - 65535
+| dest_type | string | wep, hep, ns, net
 | dest_labels.labels | string | LABEL_NAME=LABEL_VALUE | application=intrusion-detection-controller
 | reporter | string | src, dst
 | num_flows | int | positive
