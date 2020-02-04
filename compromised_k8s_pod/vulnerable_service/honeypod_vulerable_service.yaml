@@ -43,7 +43,18 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-4
+  name: honeypod.vuln.svc
+spec:
+  description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.vuln.svc
 spec:
   description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100

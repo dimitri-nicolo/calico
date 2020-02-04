@@ -49,7 +49,18 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-1-1
+  name: honeypod.ip.enum
+spec:
+  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.ip.enum
 spec:
   description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -60,7 +71,21 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-1-2
+  name: honeypod.port.scan
+spec:
+  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+  metric: count
+  condition: gte
+  threshold: 4
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.port.scan
 spec:
   description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -127,7 +152,18 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-3
+  name: honeypod.fake.svc
+spec:
+  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.fake.svc
 spec:
   description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
@@ -136,55 +172,72 @@ spec:
   aggregateBy: [source_namespace, source_name_aggr]
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: tigera-internal-4
+  name: tigera-internal-1 
   namespace: tigera-internal
 spec:
   selector:
     matchLabels:
-      app: tigera-internal-4
-  replicas: 1
+      app: tigera-internal-1
   template:
     metadata:
       labels:
-        app: tigera-internal-4
+        app: tigera-internal-1
     spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
       containers:
-      - name: tigera-internal-4
-        image: mysql
-        ports:
-        - containerPort: 3306
-        env:
-        #- name: MYSQL_RANDOM_ROOT_PASSWORD
-        #- name: MYSQL_ROOT_PASSWORD 
-        - name: MYSQL_ALLOW_EMPTY_PASSWORD 
-          value: 'yes'
-        args: ["--default-authentication-plugin=mysql_native_password"]
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: tigera-internal-backend
-  namespace: tigera-internal
-  labels:
-    app: tigera-internal-backend
-spec:
-  ports:
-    - port: 3306
-      protocol: TCP
-      targetPort: 3306
-  selector:
-    app: tigera-internal-4
+      - name: tigera-internal-1
+        image: quay.io/tigera/honeypod:v2.7.0
 ---
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-4
+  name: honeypod.ip.enum
 spec:
-  description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
+  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
   aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.ip.enum
+spec:
+  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlertTemplate
+metadata:
+  name: honeypod.port.scan
+spec:
+  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+  metric: count
+  condition: gte
+  threshold: 4
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.port.scan
+spec:
+  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
+  aggregateBy: [source_namespace, source_name_aggr]
+  metric: count
+  condition: gte
+  threshold: 4
 ---
