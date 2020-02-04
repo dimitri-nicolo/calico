@@ -20,7 +20,7 @@ Makefile.common.$(MAKE_BRANCH):
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
 endif
 
 include Makefile.common
@@ -97,7 +97,13 @@ build-all: $(addprefix bin/ingress-collector-,$(VALIDARCHES))
 
 .PHONY: build
 ## Build the binary for the current architecture and platform
-build: bin/ingress-collector-$(ARCH)
+# Instead of adding a bin/ingress-collector as a dependency to build, we want
+# 'build' to recursively make bin/ingress-collector. This is intentional!
+# This doesn't affect CI (except slowing down binary building a little) AFIU.
+# The advantage being that it force Make to avoid pruning binary and its
+# dependencies because we are forcing Make to rebuild its internal DAG.
+build:
+	$(MAKE) bin/ingress-collector-$(ARCH)
 
 bin/ingress-collector-amd64: ARCH=amd64
 bin/ingress-collector-arm64: ARCH=arm64
@@ -269,7 +275,7 @@ update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 LINT_ARGS := --max-issues-per-linter 0 --max-same-issues 0 --timeout 5m --disable govet
 .PHONY: static-checks-custom
-static-checks-custom:
+static-checks-custom: mod-download
 	$(DOCKER_RUN) -v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/deps \
 	    $(CALICO_BUILD) golangci-lint run $(LINT_ARGS)
 
