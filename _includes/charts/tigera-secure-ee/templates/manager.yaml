@@ -483,6 +483,10 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["clusterinformations"]
   verbs: ["get","list"]
+# List and view the threat defense configuration
+- apiGroups: ["projectcalico.org","networking.k8s.io","extensions"]
+  resources: ["globalalerts", "globalalerts/status", "globalalerttemplates", "globalthreatfeeds", "globalthreatfeeds/status"]
+  verbs: ["get","watch","list"]
 
 ---
 
@@ -527,6 +531,10 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["clusterinformations"]
   verbs: ["get","list"]
+# Manage the threat defense configuration
+- apiGroups: ["projectcalico.org","networking.k8s.io","extensions"]
+  resources: ["globalalerts", "globalalerts/status", "globalalerttemplates", "globalthreatfeeds", "globalthreatfeeds/status"]
+  verbs: ["create","update","delete","patch","get","watch","list"]
 
 ---
 
