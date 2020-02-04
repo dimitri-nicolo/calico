@@ -64,9 +64,6 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
-#This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.24
-
 # Get version from git - used for releases.
 GIT_VERSION?=$(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
@@ -118,10 +115,10 @@ else
 endif
 
 EXTRA_DOCKER_ARGS	+= -v $(GOMOD_CACHE):/go/pkg/mod:rw
-BUILD_FLAGS		+= -mod=vendor
-GINKGO_ARGS		+= -mod=vendor
+BUILD_FLAGS			+= -mod=vendor
+GINKGO_ARGS			+= -mod=vendor
 
-EXTRA_DOCKER_ARGS       += -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
 GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Allow the ssh auth sock to be mapped into the build container.
@@ -217,6 +214,9 @@ vendor: go.mod go.sum
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
 		go mod download; \
 		go mod vendor; \
+		# We need to checkout go.mod and go.sum since the vendor command \
+		# can sometimes modify these files, causing a dirty tree. \
+		git checkout go.mod go.sum; \
 		mkdir -p vendor/github.com/envoyproxy; \
 		mkdir -p vendor/github.com/gogo; \
 		mkdir -p vendor/github.com/lyft; \
@@ -225,7 +225,7 @@ vendor: go.mod go.sum
 		cp -fr `go list -m -f "{{.Dir}}" github.com/envoyproxy/data-plane-api` vendor/github.com/envoyproxy/data-plane-api; \
 		cp -fr `go list -m -f "{{.Dir}}" github.com/lyft/protoc-gen-validate` vendor/github.com/lyft/protoc-gen-validate; \
 		cp -fr `go list -m -f "{{.Dir}}" github.com/golang/protobuf`/* vendor/github.com/golang/protobuf'
-	chmod -R +w vendor
+		chmod -R +w vendor/github.com
 
 bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64

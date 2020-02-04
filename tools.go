@@ -4,6 +4,5 @@
 package tools
 
 import (
-	_ "github.com/gogo/protobuf"
 	_ "golang.org/x/net/context"
 )
