@@ -43,7 +43,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-vuln-svc-tmpl
+  name: honeypod.vuln.svc
 spec:
   description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -54,7 +54,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: honeypod-alert-vuln-svc
+  name: honeypod.vuln.svc
 spec:
   description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100

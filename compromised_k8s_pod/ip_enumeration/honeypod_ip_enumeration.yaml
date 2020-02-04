@@ -21,7 +21,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-ip-enum-tmpl
+  name: honeypod.ip.enum
 spec:
   description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -32,7 +32,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: honeypod-alert-ip-enum
+  name: honeypod.ip.enum
 spec:
   description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -43,7 +43,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-port-scan-tmpl
+  name: honeypod.port.scan
 spec:
   description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
@@ -57,7 +57,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: honeypod-alert-port-scan
+  name: honeypod.port.scan
 spec:
   description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100

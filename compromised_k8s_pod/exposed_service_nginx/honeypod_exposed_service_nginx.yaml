@@ -54,7 +54,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlertTemplate
 metadata:
-  name: honeypod-alert-fake-svc-tmpl
+  name: honeypod.fake.svc
 spec:
   description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
@@ -65,7 +65,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: honeypod-alert-fake-svc
+  name: honeypod.fake.svc
 spec:
   description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
