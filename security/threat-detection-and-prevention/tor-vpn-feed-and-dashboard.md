@@ -1,45 +1,42 @@
 ---
 title: Tor-VPN feeds and Dashboard 
-description: Tor-VPN feeds and dashboard to detect and analyse the malicious masking activity.
+description: Detect and analyse malicious masking activity using Tor-VPN feeds.
 canonical_url: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard.md
 ---
 
 ### Big picture
 
-Use Tor-VPN feeds and dashboard to detect and analyse the malicious masking activity
+Detect and analyse malicious masking activity using Tor-VPN feeds.
 
 ### Value
 
-Once {{site.prodname}} is deployed on clusters and workloads are spun up. Network security team would want to know if any one of the workloads is compromised and talking to suspicious IPs.
-An attacker likes to hide his real identity behind the tor network or VPN infrastructure.
-Hence if the network security team detects tor network or VPN flows in the cluster, it could be a good indicator of malicious activity.
-With  {{site.prodname}}, we are providing Tor-VPN feeds which will help in detecting malicious masking activity. At the same time we have created a Tor-VPN Dashboard which will provide granular view over such activities clusterwide so that network security teams can investigate and efficiently respond to detected threats.
+Tor and VPN are both tools for privacy and anonymity, but they are also popular among malicious actors. Network security teams need visibility into workloads that are scanned, attacked, or compromised by attacker hiding behind such tools. {{site.prodname}} provides **Tor-VPN** feeds for detecting malicious masking activity, including a **Tor-VPN Dashboard** with a granular view of Tor-VPN activities clusterwide.
 
 ### Features
 
 This how-to guide uses the following {{site.prodname}} features:
-- **Tor-VPN Feeds
-- **Tor-VPN Dashboard
+- **Tor-VPN Feeds**
+- **Tor-VPN Dashboard**
 
 ### Concepts
 
-#### Tor-VPN Feeds: when and why
+#### About Tor and VPN threats
 
-The best time to use Tor-VPN feeds and Dashboard would be when the workloads are deployed on the cluster and network security teams have started day to day monitoring.
-Additionally when, 
-- Network security administrators want to secure and know any masking activity in their clusters
-- Organisation who has suffered an attack previously and want to know if there is any presence of malicious actors who may use VPN or Tor networks to access the cluster.
+**Tor** is a popular masking network on the internet used by attackers. It is popular among the malicious actors because the infrastructure hides their real identity.  Attackers can scan, attack, compromise targets, and access backdoors with anonymity. Because infrastructures like Tor have resources from the dark web, this further incentivizes attackers. 
 
-#### Tor-VPN feeds
+Along with tor, there are many individual and paid VPN providers that attackers can leverage. With EJR vpn feed, {{site.prodname}} can accurately detect all the major private and public VPN providers on the internet.
 
-Tor is a popular masking network on the internet, attackers commonly use to enumerate, attack and access backdoors on targets conveniently hiding it’s true identity. At the same time, using tor attacker has resources from the dark web to further his motive. The Tor and VPN feeds monitor and detect all the such tor exit nodes on the internet, if attacker uses on of the tor exit nodes then Tor bulk exit feed will be able to detect such activity
+#### Tor-VPN feed types
 
-Apart from tor, there are many many individual and paid VPN providers that attacker can leverage. With EJR vpn feed, we can detect all the major VPN providers on the internet.
+**Tor Bulk Exit feed**
+The Tor Bulk Exit feed lists all available tor exit nodes on the internet. It is continuously updated and maintained by the Tor project. An attacker wanting to mask his IP with tor network is likely to use one of the tor bulk exit nodes from this feed, so it’s easy to detect any tor related activity in your cluster. 
 
-#### Tor-VPN Dashboard
+**EJR VPN feed**
+EJR VPN feed targets major VPN providers and data centers used in masking activity. The feed comes up with bi-monthly updates.
 
-Tor-VPN dashboard makes it easy to analyse and respond to any detected activity from tor and EJR vpn feeds. Tor-VPN dashboard can pinpoint activity to a workload and show rate of detection in the cluster with options to filter artifacts related to the malicious activity. The dashboard shows flow logs, filtering controls, a tag cloud and line graph to analyse the activity. 
-The dashboard can be found at {{site.prodname}} manager, go to “kibana” and then go to “Dashboard”. Select “Tigera Secure EE Tor-VPN Logs”
+#### The {{site.prodname}} Tor-VPN dashboard
+
+Using the Tor-VPN dashboard, you can pinpoint activity to a workload within a cluster context, and show rate of detection in the cluster, and filter artifacts related to the malicious activity. The dashboard shows flow logs, filtering controls, a tag cloud, and line graph to analyse the activity.
 
 ### Before you begin...
 
@@ -55,7 +52,7 @@ We recommend that you turn down the aggregation of flow logs sent to Elasticsear
 
 In this section we will look at how to add Tor and VPN feeds to  {{site.prodname}}. Installation process is straightforward as below.
 
-1. Download tor-VPN manifests from [here]({{site.baseurl}}/ref).  
+1. Download tor-VPN manifests from [here]({{site.baseurl}}/manifests/threatdef/ejr-vpn.yaml) and [here]({{site.baseurl}}/manifests/threatdef/tor-exit-feed.yaml).  
 2. Add threat feed to the cluster
    For EJR VPN,
    ```shell
@@ -70,22 +67,13 @@ In this section we will look at how to add Tor and VPN feeds to  {{site.prodname
    ```shell
    Kubectl get globalthreatfeeds 
    ```
-If you need additional information w.r.t. blocking the IPs from these feed, please go through the concept documentation [here]({{site.baseurl}}/ref).
+If you need additional information w.r.t. blocking the feed IPs, please go through the concept documentation [here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips).
 
 ### Tutorial
 
 N/A
 
 ### Above and beyond
-
-#### Threat Feed details
-
-- **Tor Bulk Exit feed**
-Tor Bulk Exit feed is the list of all available tor exit nodes on the internet. It is continuously updated and maintained by the Tor project. An attacker wanting to mask his IP with tor network is likely to use one of the tor bulk exit nodes from this feed, hence it’s easy to detect any tor related activity in your cluster. 
-
-- **EJR VPN feed**
-EJR VPN feed targets major VPN providers and datacenters used in masking activity. The feed comes up with bi-monthly updates.
-
 
 See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
 
