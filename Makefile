@@ -4,7 +4,6 @@ GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
-LIBCALICO_GO_VERSION    ?= v0.0.0-20200110190915-9fa812d46e44
 
 build: ut
 
@@ -36,7 +35,6 @@ local_build:
 	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
 local_build:
-	-go mod edit -replace=github.com/projectcalico/libcalico-go=github.com/tigera/libcalico-go-private@$(LIBCALICO_GO_VERSION)
 endif
 ifdef GOPATH
 EXTRA_DOCKER_ARGS += -v $(GOPATH)/pkg/mod:/go/pkg/mod:rw
