@@ -147,11 +147,13 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 	fl, ok := c.flowStore[flowMeta]
 	if !ok {
 		fl = flowEntry{spec: NewFlowSpec(mu, c.maxOriginalIPsSize), aggregation: c.current, shouldExport: true}
-		for flowMeta, flowEntry := range c.flowStore {
-			//TODO: Instead of iterating through all the entries, we should store the reverse mappings
-			if !flowEntry.shouldExport && flowEntry.spec.flowsRefsActive.Contains(mu.tuple) {
-				fl.spec.mergeWith(flowEntry.spec)
-				delete(c.flowStore, flowMeta)
+		if c.HasAggregationLevelChanged() {
+			for flowMeta, flowEntry := range c.flowStore {
+				//TODO: Instead of iterating through all the entries, we should store the reverse mappings
+				if !flowEntry.shouldExport && flowEntry.spec.flowsRefsActive.Contains(mu.tuple) {
+					fl.spec.mergeWith(flowEntry.spec)
+					delete(c.flowStore, flowMeta)
+				}
 			}
 		}
 	} else {
