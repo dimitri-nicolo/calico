@@ -4,9 +4,8 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/tigera/lma/pkg/util"
-
+	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/lma/pkg/auth"
 	authzv1 "k8s.io/api/authorization/v1"
 )
 
@@ -25,7 +24,7 @@ type reportRbacHelper struct {
 	canGetReportTypeByName map[string]bool
 	canGetReportByName     map[string]bool
 	Request                *http.Request
-	k8sAuth                K8sAuthInterface
+	rcf                    datastore.RESTClientFactory
 }
 
 type K8sAuthInterface interface {
@@ -37,7 +36,7 @@ type RbacHelperFactory interface {
 }
 
 type standardRbacHelperFactory struct {
-	auth K8sAuthInterface
+	rcf datastore.RESTClientFactory
 }
 
 // newReportRbacHelper returns a new initialized reportRbacHelper.
@@ -46,12 +45,12 @@ func (f *standardRbacHelperFactory) NewReportRbacHelper(req *http.Request) Repor
 		canGetReportTypeByName: make(map[string]bool),
 		canGetReportByName:     make(map[string]bool),
 		Request:                req,
-		k8sAuth:                f.auth,
+		rcf:                    f.rcf,
 	}
 }
 
-func NewStandardRbacHelperFactory(auth K8sAuthInterface) RbacHelperFactory {
-	return &standardRbacHelperFactory{auth: auth}
+func NewStandardRbacHelperFactory(rcf datastore.RESTClientFactory) RbacHelperFactory {
+	return &standardRbacHelperFactory{rcf: rcf}
 }
 
 // CanViewReport returns true if the caller is allowed to view/download a specific report/report-type.
@@ -160,13 +159,15 @@ func (l *reportRbacHelper) canGetReportType(reportTypeName string) (bool, error)
 	return l.checkAuthorized(*resAtr)
 }
 
-// checkAuthorized returns true if the request is allowed for the resources decribed in provieded attributes
+// checkAuthorized returns true if the request is allowed for the resources described in provided attributes
 func (l *reportRbacHelper) checkAuthorized(atr authzv1.ResourceAttributes) (bool, error) {
 
-	ctx := util.NewContextWithReviewResource(l.Request.Context(), &atr)
+	ctx := auth.NewContextWithReviewResource(l.Request.Context(), &atr)
 	req := l.Request.WithContext(ctx)
 
-	stat, err := l.k8sAuth.Authorize(req)
+	clusterID := req.Header.Get(datastore.XClusterIDHeader)
+	stat, err := l.rcf.K8sAuth(clusterID).Authorize(req)
+
 	switch stat {
 	case 0:
 		log.WithField("stat", stat).Info("Request authorized")

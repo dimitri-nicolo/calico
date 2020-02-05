@@ -14,7 +14,7 @@ const (
 
 // getReportTypes returns a map of the ReportTypeSpec against the report name. If the cache is out of date or
 // has not yet been initialized, the map is updated from source. The returned map should not be modified.
-func (s *server) getReportTypes() (map[string]*v3.ReportTypeSpec, error) {
+func (s *server) getReportTypes(clusterID string) (map[string]*v3.ReportTypeSpec, error) {
 	if rt := s.getStoredReportTypes(); rt != nil {
 		return rt, nil
 	}
@@ -29,7 +29,7 @@ func (s *server) getReportTypes() (map[string]*v3.ReportTypeSpec, error) {
 	}
 
 	// Get the latest set of report types.
-	grt, err := s.rcg.GlobalReportTypes().List(v1.ListOptions{})
+	grt, err := s.rcf.CalicoClient(clusterID).GlobalReportTypes().List(v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

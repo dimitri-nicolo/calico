@@ -8,14 +8,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// handleListReports returns a json list of the reports available to the client
+// handleListReports returns a json list of the reports available to the credentials
 func (s *server) handleListReports(response http.ResponseWriter, request *http.Request) {
-	log.Info(request.URL)
+	clusterID := request.Header.Get(datastore.XClusterIDHeader)
+	log.Infof("Request url %v and x-cluster-id: %v ", request.URL, clusterID)
 
 	// Create an RBAC helper for determining which reports we should include in the returned list.
 	rbac := s.rhf.NewReportRbacHelper(request)
@@ -45,7 +47,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 	// Query elastic search to determine the set of reportTypeName/reportName that match the filter.
 	var filteredReportNameAndType []api.ReportTypeAndName
-	reportNameAndTypes, err := s.rr.RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
+	reportNameAndTypes, err := s.rcf.ESClient(clusterID).RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
 	if err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
@@ -74,9 +76,8 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 	// Update the query params to include the filtered set of report name and types.
 	qparams.Reports = filteredReportNameAndType
-
 	// Obtain the current set of configured ReportTypes.
-	rts, err := s.getReportTypes()
+	rts, err := s.getReportTypes(clusterID)
 	if err != nil {
 		log.WithError(err).Error("Unable to query report types")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
@@ -84,7 +85,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	}
 
 	// Pull the report summaries from elastic
-	reportSummaries, err := s.rr.RetrieveArchivedReportSummaries(request.Context(), *qparams)
+	reportSummaries, err := s.rcf.ESClient(clusterID).RetrieveArchivedReportSummaries(request.Context(), *qparams)
 	if err != nil {
 		errString := fmt.Sprintf("Unable to list reports: %v", err)
 		http.Error(response, errString, http.StatusServiceUnavailable)

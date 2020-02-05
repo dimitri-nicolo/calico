@@ -18,11 +18,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/api"
 )
 
 // handleDownloadReports sends one or multiple (via zip) reports to the client
 func (s *server) handleDownloadReports(response http.ResponseWriter, request *http.Request) {
+	clusterID := request.Header.Get(datastore.XClusterIDHeader)
 	// Determine the download formats and if there were none set then exit immediately.
 	formats := request.URL.Query()[QueryFormat]
 	log.WithField("Formats", formats).Info("Extracted download formats from URL")
@@ -57,7 +59,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	}
 
 	// Download the report.
-	r, err := s.rr.RetrieveArchivedReport(uid)
+	r, err := s.rcf.ESClient(clusterID).RetrieveArchivedReport(uid)
 	if err != nil {
 		if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
 			http.Error(response, "Report does not exist", http.StatusNotFound)
@@ -67,7 +69,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	}
 
 	// Obtain the current set of configured ReportTypes.
-	rts, err := s.getReportTypes()
+	rts, err := s.getReportTypes(clusterID)
 	if err != nil {
 		log.WithError(err).Error("Unable to query report types")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
@@ -230,8 +232,8 @@ func (d *downloadContent) zipContent() ([]byte, error) {
 
 		//create the fileheader
 		fh := zip.FileHeader{
-			Method: zip.Deflate,
-			Name:   generateFileName(d, f.outputFormat),
+			Method:   zip.Deflate,
+			Name:     generateFileName(d, f.outputFormat),
 			Modified: time.Now(),
 		}
 

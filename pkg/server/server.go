@@ -9,19 +9,17 @@ import (
 
 	"github.com/bmizerany/pat"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/compliance/pkg/datastore"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	"github.com/tigera/lma/pkg/api"
 )
 
 // New creates a new server.
-func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
+func New(rcf datastore.RESTClientFactory, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
 	s := &server{
 		key:  key,
 		cert: cert,
-		rr:   rr,
-		rcg:  rcg,
+		rcf:  rcf,
 		rhf:  rhf,
 	}
 
@@ -30,8 +28,13 @@ func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFa
 	mux.Get(UrlVersion, http.HandlerFunc(s.handleVersion))
 	// TODO(rlb): Should really handle get on a report too.
 	// mux.Get(urlGet, http.HandlerFunc(s.handleVersion))
-	mux.Get(UrlList, http.HandlerFunc(s.handleListReports))
-	mux.Get(UrlDownload, http.HandlerFunc(s.handleDownloadReports))
+
+	// We always authenticate in the local cluster (where server is running). This will add UserInfo to the context.
+	// The the UserInfo will be used for authz in the target cluster (which could be a different cluster in a multi-
+	// cluster setup.
+	auth := rcf.K8sAuth(datastore.DefaultCluster)
+	mux.Get(UrlList, auth.KubernetesAuthn(http.HandlerFunc(s.handleListReports)))
+	mux.Get(UrlDownload, auth.KubernetesAuthn(http.HandlerFunc(s.handleDownloadReports)))
 
 	// Create a new server using the MUX.
 	s.server = &http.Server{
@@ -49,8 +52,7 @@ type server struct {
 	key     string
 	cert    string
 	wg      sync.WaitGroup
-	rr      api.ReportRetriever
-	rcg     ReportConfigurationGetter
+	rcf     datastore.RESTClientFactory
 	rhf     RbacHelperFactory
 
 	// Track all of the reports and report types. We don't expect these to change too often, so we only need to

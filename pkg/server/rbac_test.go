@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	k8suser "k8s.io/apiserver/pkg/authentication/user"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
@@ -112,7 +113,8 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			req := &http.Request{Header: http.Header{"Authorization": authHeaders[user]}}
 
 			k8sauth := newMock(user, can, operation, name)
-			factory := server.NewStandardRbacHelperFactory(k8sauth)
+			creds := fakeRESTFactory{k8sauth: k8sauth}
+			factory := server.NewStandardRbacHelperFactory(&creds)
 			auth := factory.NewReportRbacHelper(req)
 
 			var stat bool
@@ -232,7 +234,8 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			req := &http.Request{Header: http.Header{"Authorization": authHeaders[user]}}
 
 			k8sauth := newMock(user, can, operation, reportName)
-			factory := server.NewStandardRbacHelperFactory(k8sauth)
+			creds := fakeRESTFactory{k8sauth: k8sauth}
+			factory := server.NewStandardRbacHelperFactory(&creds)
 			auth := factory.NewReportRbacHelper(req)
 
 			var stat bool
@@ -301,6 +304,10 @@ func newMock(user string, can bool, operation string, name string) *mock {
 	}
 }
 
+func (m *mock) KubernetesAuthn(handler http.Handler) http.Handler {
+	return handler
+}
+
 // KubernetesAuthnAuthz to satisfy K8sAuthInterface
 func (m *mock) KubernetesAuthnAuthz(handler http.Handler) http.Handler {
 	return handler
@@ -313,4 +320,12 @@ func (m *mock) Authorize(req *http.Request) (status int, err error) {
 	} else {
 		return http.StatusUnauthorized, fmt.Errorf("Error performing AccessReview")
 	}
+}
+
+func (m *mock) AuthenticateToken(req *http.Request) (u k8suser.Info, status int, err error) {
+	return nil, 0, nil
+}
+
+func (m *mock) AuthorizeUser(req *http.Request, user k8suser.Info) (status int, err error) {
+	return 0, nil
 }

@@ -12,7 +12,6 @@ import (
 
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
 	"github.com/tigera/compliance/pkg/list"
 )
 
@@ -84,6 +83,5 @@ func MustGetClientSet() ClientSet {
 
 type clientSet struct {
 	k8sInterface
-
 	calicoInterface
 }

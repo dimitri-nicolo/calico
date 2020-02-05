@@ -15,8 +15,6 @@ import (
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/compliance/pkg/tls"
 	"github.com/tigera/compliance/pkg/version"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/elastic"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"k8s.io/klog"
@@ -49,8 +47,7 @@ func main() {
 	cfg.InitializeLogging()
 
 	// Create the elastic and Calico clients.
-	ec := elastic.MustGetElasticClient()
-	clientSet := datastore.MustGetCalicoClient()
+	restClient := datastore.MustGetRESTClient()
 	// Set up tls certs
 	altIPs := []net.IP{net.ParseIP("127.0.0.1")}
 	if err := tls.GenerateSelfSignedCertsIfNeeded("localhost", nil, altIPs, *certPath, *keyPath); err != nil {
@@ -58,10 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create and start the server
-	auth := lmaauth.NewK8sAuth(datastore.MustGetKubernetesClient(), datastore.MustGetConfig())
-	rbhf := server.NewStandardRbacHelperFactory(auth)
-	s := server.New(ec, clientSet, rbhf, ":"+*apiPort, *keyPath, *certPath)
+	s := server.New(restClient, server.NewStandardRbacHelperFactory(restClient), ":"+*apiPort, *keyPath, *certPath)
 
 	s.Start()
 

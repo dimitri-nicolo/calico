@@ -26,6 +26,8 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/lma/pkg/api"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 // startTester starts and returns a server tester. This can be used to issue summary and report queries and to
@@ -38,7 +40,6 @@ func startTester() *tester {
 	t := &tester{
 		listRBACControl: "List",
 	}
-
 	// Choose an arbitrary port for the server to listen on.
 	By("Choosing an arbitrary available local port for the queryserver")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -48,7 +49,8 @@ func startTester() *tester {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Starting the compliance server")
-	s := server.New(t, t, t, t.addr, "", "")
+	fakeFactory := fakeRESTFactory{t: t}
+	s := server.New(&fakeFactory, t, t.addr, "", "")
 	s.Start()
 	t.server = s
 	t.client = &http.Client{Timeout: time.Second * 10}
@@ -87,6 +89,9 @@ type tester struct {
 	addr   string
 	server server.ServerControl
 	client *http.Client
+
+	elastic.Client
+	clientv3.ProjectcalicoV3Interface
 }
 
 type forecastFile struct {
@@ -344,4 +349,21 @@ func (t *tester) CanGetReportType(x string) (bool, error) {
 		return false, fmt.Errorf("cannot get report type")
 	}
 	return false, nil
+}
+
+type fakeRESTFactory struct {
+	k8sauth *mock
+	t       *tester
+}
+
+func (c *fakeRESTFactory) CalicoClient(clusterID string) clientv3.ProjectcalicoV3Interface {
+	return c.t
+}
+
+func (c *fakeRESTFactory) ESClient(clusterID string) elastic.Client {
+	return c.t
+}
+
+func (c *fakeRESTFactory) K8sAuth(clusterID string) lmaauth.K8sAuthInterface {
+	return c.k8sauth
 }
