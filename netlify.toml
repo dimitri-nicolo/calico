@@ -4,7 +4,8 @@
 
 [build.environment]
   RUBY_VERSION = "2.5.4"
-  CURRENT_RELEASE = "v3.11"
+  CANDIDATE_RELEASE = ""
+  CURRENT_RELEASE = ""
 
 [[headers]]
   for = "/*.yaml"

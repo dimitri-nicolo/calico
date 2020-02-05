@@ -24,6 +24,10 @@
   }
 }
 
+h4 {
+  font-weight: 700;
+}
+
 // Default blockquotes are too big in Bootstrap.
 // Shrink them down
 blockquote {
@@ -66,11 +70,13 @@ div.highlight {
 .code-snippet {
   max-height: 410px;
   overflow: auto;
-  overflow-x: hidden;
 
   &__toolbar {
     vertical-align: top;
-    float: right;
+    position: absolute;
+    top: 10px;
+    right: 1px;
+    background: rgba(245, 245, 245, 1);
   }
 
   &-toolbar {
@@ -86,6 +92,10 @@ div.highlight {
       &:hover {
         cursor: pointer;
       }
+    }
+
+    &__button:last-child {
+      margin-right: 10px;
     }
 
     &--visible {
@@ -339,4 +349,8 @@ $max-sidebar-height: calc(100vh - #{$wpfront-notification-bar-spacer-height + $h
   color: #999;
   float: right;
   padding: 8px 10px;
+}
+
+.breadcrumb-item {
+  font-size: 14px;
 }
