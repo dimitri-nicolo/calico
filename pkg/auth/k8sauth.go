@@ -81,6 +81,8 @@ func (ka *k8sauth) KubernetesAuthn(h http.Handler) http.Handler {
 		} else if usr, pw, found := req.BasicAuth(); found && usr != "" && pw != "" {
 			log.Debugf("Will authenticate and authorize user based on basic token")
 			user, stat, err = ka.basicAuthenticate(usr, pw)
+		} else {
+			err = fmt.Errorf("missing auth header")
 		}
 		if err != nil {
 			log.WithError(err).Debug("Kubernetes authn failure")
@@ -88,10 +90,8 @@ func (ka *k8sauth) KubernetesAuthn(h http.Handler) http.Handler {
 			return
 		}
 
-		if user != nil {
-			// If we were able to authenticate a user, update the request to include it in the context.
-			req = req.WithContext(request.WithUser(req.Context(), user))
-		}
+		// If we were able to authenticate a user, update the request to include it in the context.
+		req = req.WithContext(request.WithUser(req.Context(), user))
 		h.ServeHTTP(w, req)
 	})
 }
