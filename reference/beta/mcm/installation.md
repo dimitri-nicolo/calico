@@ -77,12 +77,6 @@ Intrusion detection is currently not supported in a multi-cluster configuration.
 - [Access log data in Kibana for a specific managed cluster](#access-log-data-in-kibana-for-a-specific-managed-cluster)
 - [Configure permissions to access log data per managed cluster](#configure-permissions-to-access-log-data-per-managed-cluster)
 
-#### Configure multi-cluster management using existing standalone clusters
-
-- Convert a standalone cluster to a management cluster
-- Add existing clusters in the management cluster
-- Convert a standalone cluster to a managed cluster
-
 ##### Install a management cluster
 
 The first step is to set up a management cluster. This will contain your centralized {{site.prodname}} Manager and Elasticsearch installation.
