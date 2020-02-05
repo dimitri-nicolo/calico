@@ -1,44 +1,42 @@
-# Shortcut targets
-default: build
+PACKAGE_NAME    ?= github.com/tigera/es-proxy
+GO_BUILD_VER    ?= v0.34
+GIT_USE_SSH      = true
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+FELIX_REPO       = github.com/tigera/felix-private
+LOCAL_CHECKS     = mod-download
+LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+FELIX_REPO       = github.com/tigera/felix-private
 
-## Build binary for current platform
-all: build
+build: es-proxy
 
-## Run the tests for the current platform/architecture
-test: ut fv
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+EXTRA_DOCKER_ARGS = -e GOPRIVATE=github.com/tigera/*
+# Allow local libcalico-go to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+# SSH_AUTH_DIR doesn't work with MacOS but we can optionally volume mount keys
+ifdef SSH_AUTH_DIR
+EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
+endif
+
+include Makefile.common
 
 ###############################################################################
-# Both native and cross architecture builds are supported.
-# The target architecture is select by setting the ARCH variable.
-# When ARCH is undefined it is set to the detected host architecture.
-# When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
-
-# BUILDARCH is the host architecture
-# ARCH is the target architecture
-# we need to keep track of them separately
-BUILDARCH ?= $(shell uname -m)
-BUILDOS ?= $(shell uname -s | tr A-Z a-z)
-
-# canonicalized names for host architecture
-ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
-endif
-ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
-endif
-
-# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
-ARCH ?= $(BUILDARCH)
-
-# canonicalized names for target architecture
-ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
-endif
-ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
-endif
-
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
 # however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
@@ -47,37 +45,11 @@ endif
 escapefs = $(subst :,---,$(subst /,___,$(1)))
 unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
 
-# these macros create a list of valid architectures for pushing manifests
-space :=
-space +=
-comma := ,
-prefix_linux = $(addprefix linux/,$(strip $1))
-join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
-
 ###############################################################################
+# Define some constants
 BUILD_IMAGE?=tigera/es-proxy
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
-PACKAGE_NAME?=github.com/tigera/es-proxy
-
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-PUSH_IMAGES+=$(RELEASE_IMAGES)
-endif
-
-# remove from the list to push to manifest any registries that do not support multi-arch
-EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
-PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
-
-# location of docker credentials to push manifests
-DOCKER_CONFIG ?= $(HOME)/.docker/config.json
-
-GO_BUILD_VER?=v0.24
-# For building, we use the go-build image for the *host* architecture, even if the target is different
-# the one for the host should contain all the necessary cross-compilation tools
-# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 ETCD_VERSION?=v3.3.7
 # If building on amd64 omit the arch in the container name.  Fixme!
@@ -89,16 +61,6 @@ HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 ELASTICSEARCH_VERSION?=7.3.2
 ELASTICSEARCH_IMAGE?=docker.elastic.co/elasticsearch/elasticsearch:$(ELASTICSEARCH_VERSION)
 
-# Disable make's implicit rules, which are not useful for golang, and slow down the build
-# considerably.
-.SUFFIXES:
-
-# Some env vars that devs might find useful:
-#  TEST_DIRS=   : only run the unit tests from the specified dirs
-#  UNIT_TESTS=  : only run the unit tests matching the specified regexp
-
-# Define some constants
-#######################
 K8S_VERSION    = v1.11.0
 BINDIR        ?= bin
 BUILD_DIR     ?= build
@@ -114,7 +76,7 @@ else
 STAT           = stat -c '%Y %n'
 endif
 ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
 ES_PROXY_VERSION?=$(shell git describe --tags --dirty --always)
@@ -129,42 +91,10 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(ES_PROXY_VERSION) \
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
-# Figure out the users UID/GID.  These are needed to run docker containers
-# as the current user and ensure that files built inside containers are
-# owned by the current user.
-MY_UID:=$(shell id -u)
-MY_GID:=$(shell id -g)
-
-
-# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys
-ifdef SSH_AUTH_DIR
-	EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
-endif
-
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-		   mkdir -p .go-build-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(MY_UID) \
-                              -e GOARCH=$(ARCH) \
-                              -v $(CURDIR):/$(PACKAGE_NAME):rw \
-                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -v $(CURDIR)/report:/report:rw \
-                              -w /$(PACKAGE_NAME) \
-                              $(CALICO_BUILD)
-
-
+###############################################################################
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "es-proxy" instead of "$(BINDIR)/es-proxy".
-#########################################################################
-build: $(BINDIR)/es-proxy
-
 es-proxy: $(BINDIR)/es-proxy
 
 $(BINDIR)/es-proxy: $(BINDIR)/es-proxy-amd64
@@ -178,15 +108,15 @@ else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
 	@echo Building es-proxy...
-	mkdir -p bin
 	# configure git to use ssh instead of https so that go mod can pull private libraries.
 	# note this will require the user have their SSH agent running and configured with valid private keys
 	# but the Makefile logic here will load the local SSH agent into the container automatically.
+	mkdir -p .go-build-cache && \
 	$(DOCKER_GO_BUILD) \
 		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
 			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-               ( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'
+				( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+				( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -282,6 +212,7 @@ fv-no-setup:
 		       PACKAGE_NAME=$(PACKAGE_NAME) \
 		       GINKGO_ARGS='$(GINKGO_ARGS)' \
 		       FV_ELASTICSEARCH_IMAGE=$(ELASTICSEARCH_IMAGE) \
+		       GOMOD_CACHE=$(GOMOD_CACHE) \
 		       ./test/run_test.sh
 
 .PHONY: clean
@@ -298,6 +229,12 @@ signpost:
 	@echo "------------------------------------------------------------------------------"
 
 ###############################################################################
+# Static checks
+###############################################################################
+#TODO: Enable these linters
+LINT_ARGS = --disable govet,gosimple,staticcheck,varcheck,errcheck,deadcode,ineffassign,unused
+
+###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci cd
@@ -305,7 +242,7 @@ signpost:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: ut image fv image-all
+ci: clean image-all static-checks ut fv
 
 ## Deploy images to registry
 cd:
@@ -364,40 +301,23 @@ ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
 
+###############################################################################
+# Update pins
+###############################################################################
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
 
-# Run fossa.io license checks
-foss-checks:
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR)/:/code/es-proxy:rw \
-	   -e LOCAL_USER_ID=$(MY_UID) \
-	   -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	    $(EXTRA_DOCKER_ARGS) \
-	   -w /code/es-proxy/ \
-	   $(CALICO_BUILD)  sh -c '\
-	   git config --global --add url."git@github.com:".insteadOf "https://github.com/"  &&\
-	   /usr/local/bin/fossa'
-
+## Update dependency pins
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin
 
 ###############################################################################
 # Utilities
 ###############################################################################
-.PHONY: help
-## Display this help text
-help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
-	$(info Available targets)
-	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
-		nb = sub( /^## /, "", helpMsg );                                \
-		if(nb == 0) {                                                   \
-			helpMsg = $$0;                                              \
-			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
-		}                                                               \
-		if (nb)                                                         \
-			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
-	}                                                                   \
-	{ helpMsg = $$0 }'                                                  \
-	width=20                                                            \
-	$(MAKEFILE_LIST)
-
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 # etcd is used by the FVs

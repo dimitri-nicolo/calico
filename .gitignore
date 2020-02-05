@@ -3,4 +3,4 @@
 report
 cmd/server/server
 bin/
-vendor/
+Makefile.common*

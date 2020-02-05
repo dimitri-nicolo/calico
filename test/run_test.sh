@@ -30,7 +30,7 @@ function run_fvs()
 	docker run \
 		--rm \
 		--net=host \
-		-v ${PACKAGE_ROOT}/.go-pkg-cache:/go/pkg:rw \
+		-v ${GOMOD_CACHE}/..:/go/pkg:rw \
 		-v ${PACKAGE_ROOT}/.go-build-cache:/home/user/.cache/go-build:rw \
 		-v ${PACKAGE_ROOT}:/${PACKAGE_NAME}:rw \
 		-v ${PACKAGE_ROOT}/report:/report:rw \
