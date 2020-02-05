@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-proxy/pkg/pip"
+	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
 )
 
@@ -29,7 +30,7 @@ const (
 // PolicyImpactHandler is a middleware http handler that extracts PIP arguments from the request
 // if they exist and uses them to execute a PIP request. It also checks that the user
 // has the necessary permissions to execute this PIP request.
-func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http.Handler {
+func PolicyImpactHandler(authz lmaauth.K8sAuthInterface, p pip.PIP, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// If it's not a post request no modifications to the request are needed. PIP requests are always post requests.
 		if req.Method != http.MethodPost {
@@ -181,7 +182,7 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 }
 
 // checkPolicyActionsPermissions checks whether the action in each resource update is allowed.
-func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz K8sAuthInterface) (status int, err error) {
+func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz lmaauth.K8sAuthInterface) (status int, err error) {
 	factory := NewStandardPolicyImpactRbacHelperFactory(authz)
 	rbacHelper := factory.NewPolicyImpactRbacHelper(req)
 	for _, action := range actions {

@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/lma/pkg/auth"
 )
 
 // The handler returned by this will add a ResourceAttribute to the context
@@ -24,7 +25,7 @@ func KibanaIndexPattern(h http.Handler) http.Handler {
 			return
 		}
 
-		h.ServeHTTP(w, req.WithContext(NewContextWithReviewResource(req.Context(), getResourceAttributes("cluster", name))))
+		h.ServeHTTP(w, req.WithContext(auth.NewContextWithReviewResource(req.Context(), getResourceAttributes("cluster", name))))
 	})
 }
 

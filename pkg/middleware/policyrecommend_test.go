@@ -392,6 +392,13 @@ func (fa *fakeAuthorizer) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 	panic("This method should be unused")
 	return nil
 }
+
+func (fa *fakeAuthorizer) KubernetesAuthn(h http.Handler) http.Handler {
+	// This is unused in this test.
+	panic("This method should be unused")
+	return nil
+}
+
 func (fa *fakeAuthorizer) Authorize(*http.Request) (int, error) {
 	return fa.nextResult, fa.nextError
 }

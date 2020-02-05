@@ -6,7 +6,6 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
-	lmautil "github.com/tigera/lma/pkg/util"
 )
 
 // userAuthorizer implements the flows.RBACAuthorizer interface. This should created on a per-request basis as it uses the
@@ -18,7 +17,7 @@ type userAuthorizer struct {
 }
 
 func (u *userAuthorizer) Authorize(res *authzv1.ResourceAttributes) (bool, error) {
-	req := u.userReq.WithContext(lmautil.NewContextWithReviewResource(u.userReq.Context(), res))
+	req := u.userReq.WithContext(lmaauth.NewContextWithReviewResource(u.userReq.Context(), res))
 	if status, err := u.k8sAuth.Authorize(req); err != nil {
 		// A Forbidden error should just be treated as unauthorized. Any other treat as an error which will terminate
 		// processing.

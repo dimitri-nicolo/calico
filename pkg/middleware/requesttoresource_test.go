@@ -26,7 +26,7 @@ func genRequestWithHeader(q, xclu string) *http.Request {
 var _ = Describe("Test request to resource name conversion", func() {
 	DescribeTable("successful conversion",
 		func(req *http.Request, expectedName string) {
-			clu, rn, _, err := getResourcesFromReq(req)
+			clu, rn, _, err := parseURLPath(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rn).To(Equal(expectedName))
 			Expect(clu).To(Equal("cluster"))
@@ -97,7 +97,7 @@ var _ = Describe("Test request to resource name conversion", func() {
 	)
 	DescribeTable("failed conversion",
 		func(req *http.Request) {
-			_, _, _, err := getResourcesFromReq(req)
+			_, _, _, err := parseURLPath(req)
 
 			Expect(err).To(HaveOccurred())
 		},

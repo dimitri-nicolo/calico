@@ -11,6 +11,8 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
+	lmaauth "github.com/tigera/lma/pkg/auth"
 )
 
 type PolicyImpactRbacHelperFactory interface {
@@ -18,7 +20,7 @@ type PolicyImpactRbacHelperFactory interface {
 }
 
 type standardPolicyImpactRbacHelperFactor struct {
-	auth K8sAuthInterface
+	auth lmaauth.K8sAuthInterface
 }
 
 func (s *standardPolicyImpactRbacHelperFactor) NewPolicyImpactRbacHelper(req *http.Request) PolicyImpactRbacHelper {
@@ -28,7 +30,7 @@ func (s *standardPolicyImpactRbacHelperFactor) NewPolicyImpactRbacHelper(req *ht
 	}
 }
 
-func NewStandardPolicyImpactRbacHelperFactory(auth K8sAuthInterface) PolicyImpactRbacHelperFactory {
+func NewStandardPolicyImpactRbacHelperFactory(auth lmaauth.K8sAuthInterface) PolicyImpactRbacHelperFactory {
 	return &standardPolicyImpactRbacHelperFactor{auth: auth}
 }
 
@@ -40,7 +42,7 @@ type PolicyImpactRbacHelper interface {
 // view and modify a policy
 type policyImpactRbacHelper struct {
 	Request *http.Request
-	k8sAuth K8sAuthInterface
+	k8sAuth lmaauth.K8sAuthInterface
 }
 
 // CheckCanPreviewPolicyAction returns true if the user can perform the preview action on the requested
@@ -160,7 +162,7 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 
 // isAuthorized returns true if the request is allowed for the resources decribed in the attributes
 func (h *policyImpactRbacHelper) isAuthorized(atr authzv1.ResourceAttributes) (int, error) {
-	ctx := NewContextWithReviewResource(h.Request.Context(), &atr)
+	ctx := lmaauth.NewContextWithReviewResource(h.Request.Context(), &atr)
 	req := h.Request.WithContext(ctx)
 
 	return h.k8sAuth.Authorize(req)

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/tigera/es-proxy/pkg/middleware"
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -17,7 +18,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/es-proxy/pkg/middleware"
+
+	lmaauth "github.com/tigera/lma/pkg/auth"
 )
 
 // HttpHandler to see that the 'next' handler was called or not
@@ -41,7 +43,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	var k8sConfig restclient.Config
 	var dhh *DummyHttpHandler
 	var rr *httptest.ResponseRecorder
-	var k8sAuth middleware.K8sAuthInterface
+	var k8sAuth lmaauth.K8sAuthInterface
 
 	BeforeEach(func() {
 		k8sConfig = restclient.Config{}
@@ -56,7 +58,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 		dhh = &DummyHttpHandler{serveCalled: false}
 		rr = httptest.NewRecorder()
-		k8sAuth = middleware.NewK8sAuth(k8sClient, &k8sConfig)
+		k8sAuth = lmaauth.NewK8sAuth(k8sClient, &k8sConfig)
 	})
 	AfterEach(func() {
 	})
@@ -364,7 +366,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 func dummyNonResourceMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		h.ServeHTTP(w, req.WithContext(middleware.NewContextWithReviewNonResource(req.Context(), getNonResourceAttributes(req.URL.Path))))
+		h.ServeHTTP(w, req.WithContext(lmaauth.NewContextWithReviewNonResource(req.Context(), getNonResourceAttributes(req.URL.Path))))
 	})
 }
 
