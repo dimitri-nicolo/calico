@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ import (
 
 	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	authnv1 "k8s.io/api/authentication/v1"
 )
 
 var (
@@ -148,11 +150,11 @@ var (
 		Stage:      "RequestReceived",
 		RequestURI: "/api/v1/foo/bar",
 		Verb:       "list",
-		User: audit.UserInfo{
+		User: authnv1.UserInfo{
 			Username: "userFoo",
 			Groups:   []string{"groupFoo"},
 		},
-		ImpersonatedUser: &audit.UserInfo{
+		ImpersonatedUser: &authnv1.UserInfo{
 			Username: "imporUserFoo",
 			Groups:   []string{"imperGroupFoo"},
 		},
