@@ -14,16 +14,12 @@ import (
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/rbac"
 )
 
 const (
-	sourceAggregationName = "source_namespace"
-	destAggregationName   = "dest_namespace"
-	compAggregationName   = "source_dest_namespaces"
+	sourceAggregationName = "source_namespaces"
+	destAggregationName   = "dest_namespaces"
 )
-
-var namespaceGatheringTimeout = 10 * time.Second
 
 type FlowLogNamespaceParams struct {
 	Limit         int32    `json:"limit"`
@@ -60,8 +56,7 @@ func FlowLogNamespaceHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.
 			return
 		}
 
-		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req})
-		response, err := getNamespacesFromElastic(params, esClient, rbacHelper)
+		response, err := getNamespacesFromElastic(params, esClient)
 		if err != nil {
 			log.WithError(err).Info("Error getting namespaces from elastic")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
@@ -79,7 +74,6 @@ func FlowLogNamespaceHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.
 	})
 }
 
-// TODO: Commonize this since this appears to be a copy of validateFlowLogNamesRequest
 func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParams, error) {
 	// Validate http method
 	if req.Method != http.MethodGet {
@@ -177,150 +171,72 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 	return query
 }
 
-func buildAggregation(params *FlowLogNamespaceParams, afterKey map[string]interface{}) *elastic.CompositeAggregation {
-	// Need to request double the limit in order to guarantee the number of unique terms
-	// e.g. Ep1 -> Ep2, Ep1 -> Ep3, Ep2 -> Ep1, Ep3 -> Ep1 has endpoints Ep1, Ep2, Ep3 for 4 flows.
-	// For X aggregated flows, the smallest amount of unique endpoints we can have is X/2 + 1
-	baseAgg := elastic.NewCompositeAggregation().Size(int(params.Limit) * 2).AggregateAfter(afterKey)
-
-	sourceNameAgg := elastic.NewCompositeAggregationTermsValuesSource(sourceAggregationName).Field(sourceAggregationName)
-	destNameAgg := elastic.NewCompositeAggregationTermsValuesSource(destAggregationName).Field(destAggregationName)
-
-	return baseAgg.Sources(sourceNameAgg, destNameAgg)
-}
-
-func validNamespaces(params *FlowLogNamespaceParams, name string, rbacHelper rbac.FlowHelper) bool {
-	// Filter out names based on the search prefix if it exists
+func buildAggregations(params *FlowLogNamespaceParams) (*elastic.TermsAggregation, *elastic.TermsAggregation) {
+	baseAgg := elastic.NewTermsAggregation().
+		Exclude("-").
+		Size(int(params.Limit))
 	if params.Prefix != "" {
-		return strings.HasPrefix(name, params.Prefix)
+		baseAgg = baseAgg.Include(params.Prefix)
 	}
 
-	// Filter out an empty namespace which signifies that
-	// this log was for the global namespace
-	if name == "-" {
-		return false
-	}
-
-	valid, err := validateNamespaceRBAC(name, rbacHelper)
-	if err != nil {
-		log.WithError(err).Debugf("Error attempting to validate namespace RBAC for namespace: %s", name)
-	}
-
-	return valid
+	sourceAggregation := *baseAgg.Field("source_namespace")
+	destAggregation := *baseAgg.Field("dest_namespace")
+	return &sourceAggregation, &destAggregation
 }
 
-func validateNamespaceRBAC(namespace string, rbacHelper rbac.FlowHelper) (bool, error) {
-	// Check if the user has access to all namespaces first
-	if allowed, err := rbacHelper.IncludeNamespace(""); err != nil {
-		return false, err
-	} else if allowed {
-		return true, nil
-	}
-
-	allowed, err := rbacHelper.IncludeNamespace(namespace)
-	if err != nil {
-		return false, err
-	}
-
-	return allowed, err
-}
-
-func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
-	uniqueNamespaces := make(map[string]struct{})
-	namespaces := make([]Namespace, 0)
-	var afterKey map[string]interface{}
-	filtered := make(map[string]struct{})
-
-	// Form the query
+func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client) ([]Namespace, error) {
+	// form query
 	query := buildESQuery(params)
+	sourceAggregation, destAggregation := buildAggregations(params)
+	index := getClusterFlowIndex(params.ClusterName)
 
-	// Set up the timeout
-	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), namespaceGatheringTimeout)
-	defer cancel()
+	// perform Aggregated ES query
+	searchQuery := esClient.Backend().Search().
+		Index(index).
+		Query(query).
+		Size(0)
+	searchQuery = searchQuery.Aggregation(sourceAggregationName, sourceAggregation).Aggregation(destAggregationName, destAggregation)
+	searchResult, err := esClient.Do(context.Background(), searchQuery)
 
-	// Keep sampling until the limit has been hit
-	for len(namespaces) < int(params.Limit) {
-		var namespaceAggregationItems *elastic.AggregationBucketCompositeItems
-		select {
-		case <-ctxWithTimeout.Done():
-			return namespaces, ctxWithTimeout.Err()
-		default:
-			var namespacesFound bool
+	if err != nil {
+		return nil, err
+	}
 
-			// Build the aggregation
-			compAggregation := buildAggregation(params, afterKey)
-			index := getClusterFlowIndex(params.ClusterName)
+	if searchResult.Aggregations == nil {
+		return []Namespace{}, nil
+	}
 
-			// perform Aggregated ES query
-			searchQuery := esClient.Backend().Search().
-				Index(index).
-				Query(query).
-				Size(0)
-			searchQuery = searchQuery.Aggregation(compAggregationName, compAggregation)
-			searchResult, err := esClient.Do(ctxWithTimeout, searchQuery)
+	sourceAggregationBuckets, sourceFound := searchResult.Aggregations.Terms(sourceAggregationName)
+	destAggregationBuckets, destFound := searchResult.Aggregations.Terms(destAggregationName)
 
-			if err != nil {
-				return nil, err
-			}
+	if !sourceFound && !destFound {
+		return []Namespace{}, nil
+	}
 
-			if searchResult.Aggregations == nil {
-				return []Namespace{}, nil
-			}
+	buckets := make([]*elastic.AggregationBucketKeyItem, 0)
+	if sourceFound {
+		buckets = append(buckets, sourceAggregationBuckets.Buckets...)
+	}
 
-			namespaceAggregationItems, namespacesFound = searchResult.Aggregations.Composite(compAggregationName)
+	if destFound {
+		buckets = append(buckets, destAggregationBuckets.Buckets...)
+	}
 
-			if !namespacesFound {
-				return []Namespace{}, nil
-			}
-		}
+	// extract unique namespaces from buckets
+	uniqueNamespaces := make(map[string]bool)
+	namespaces := make([]Namespace, 0)
 
-		// Extract unique namespaces from buckets
-		for _, bucket := range namespaceAggregationItems.Buckets {
-			srcNamespaceInf := bucket.Key[sourceAggregationName]
-			destNamespaceInf := bucket.Key[destAggregationName]
-			srcNamespace := srcNamespaceInf.(string)
-			destNamespace := destNamespaceInf.(string)
-			if _, seen := filtered[srcNamespace]; !seen && validNamespaces(params, srcNamespace, rbacHelper) {
-				if _, exists := uniqueNamespaces[srcNamespace]; !exists {
-					uniqueNamespaces[srcNamespace] = struct{}{}
-					namespaceComponent := Namespace{Name: srcNamespace}
-					namespaces = append(namespaces, namespaceComponent)
-					if len(namespaces) == int(params.Limit) {
-						break
-					}
-				}
-			} else if !seen {
-				// Cache namespaces that did not pass validation so we do not
-				// need to reevaluate them
-				filtered[srcNamespace] = struct{}{}
-			}
-			// TODO: This logic can be simplified with the use of the common Set in libcalico
-			if _, seen := filtered[destNamespace]; !seen && validNamespaces(params, destNamespace, rbacHelper) {
-				if _, exists := uniqueNamespaces[destNamespace]; !exists {
-					uniqueNamespaces[destNamespace] = struct{}{}
-					namespaceComponent := Namespace{Name: destNamespace}
-					namespaces = append(namespaces, namespaceComponent)
-					if len(namespaces) == int(params.Limit) {
-						break
-					}
-				}
-			} else if !seen {
-				// Cache namespaces that did not pass validation so we do not
-				// need to reevaluate them
-				filtered[destNamespace] = struct{}{}
+	for _, bucket := range buckets {
+		namespaceInf := bucket.Key
+		namespace := namespaceInf.(string)
+		if _, exists := uniqueNamespaces[namespace]; !exists {
+			uniqueNamespaces[namespace] = true
+			namespaceComponent := Namespace{Name: namespace}
+			namespaces = append(namespaces, namespaceComponent)
+			if len(namespaces) == int(params.Limit) {
+				break
 			}
 		}
-
-		// Check to see if there are any more results. If there
-		// are no more results, quit the loop.
-		// If there are less than the requested amount of results,
-		// there should be no more results to give.
-		if len(namespaceAggregationItems.Buckets) < int(params.Limit)*2 {
-			break
-		}
-
-		// Set the after key for the next iteration
-		afterKey = namespaceAggregationItems.AfterKey
 	}
 
 	return namespaces, nil
