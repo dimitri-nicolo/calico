@@ -458,6 +458,10 @@ rules:
   # "ee-calico-tiered-policy-passthru" for more details).
   resources: ["tiers","networkpolicies","tier.networkpolicies","globalnetworkpolicies","tier.globalnetworkpolicies","stagednetworkpolicies","tier.stagednetworkpolicies","stagedglobalnetworkpolicies","tier.stagedglobalnetworkpolicies","stagedkubernetesnetworkpolicies","namespaces","globalnetworksets","networksets"]
   verbs: ["watch","list"]
+# Additional "list" requests required to view flows
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list"]
 # Access to statistics
 - apiGroups: [""]
   resources: ["services/proxy"]
@@ -506,6 +510,10 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["watch","list"]
+# Additional "list" requests required to view flows
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list"]
 # Access to statistics
 - apiGroups: [""]
   resources: ["services/proxy"]
