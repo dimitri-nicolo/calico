@@ -32,7 +32,7 @@ spec:
 ---
 
 # This section configures the Tigera web manager.
-# Required only for a Standalone or a Management cluster.
+# Remove this section for a Managed cluster.
 # For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.Manager
 apiVersion: operator.tigera.io/v1
 kind: Manager
@@ -74,7 +74,7 @@ metadata:
 ---
 
 # This section configures the Elasticsearch cluster used by Calico Enterprise.
-# Required only for a Standalone or a Management cluster.
+# Remove this section for a Managed cluster.
 # For more information, see: {{site.url}}/{{page.version}}/reference/installation/api#operator.tigera.io/v1.LogStorage
 apiVersion: operator.tigera.io/v1
 kind: LogStorage
