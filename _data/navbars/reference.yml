@@ -4,6 +4,8 @@ order: 5
 section:
 - title: Installation
   path: /reference/installation/api
+- title: Set up multi-cluster management
+  path: /reference/beta/mcm/installation
 - title: calicoctl
   path: /reference/calicoctl/
   section:
