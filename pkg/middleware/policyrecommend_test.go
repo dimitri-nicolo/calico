@@ -22,6 +22,7 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/lma/pkg/api"
+	lmaerror "github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/policyrec"
 )
@@ -281,10 +282,18 @@ var _ = Describe("Policy Recommendation", func() {
 			hdlr.ServeHTTP(w, req)
 			Expect(err).To(BeNil())
 
-			Expect(w.Code).To(Equal(statusCode))
 			if statusCode != http.StatusOK {
+				Expect(w.Code).To(Equal(http.StatusNotFound))
+				recResponse, err := ioutil.ReadAll(w.Body)
+				Expect(err).NotTo(HaveOccurred())
+				errorBody := &lmaerror.Error{}
+				err = json.Unmarshal(recResponse, errorBody)
+				Expect(err).To(BeNil())
+				Expect(errorBody.Code).To(Equal(statusCode))
+				Expect(errorBody.Feature).To(Equal(lmaerror.PolicyRec))
 				return
 			}
+
 			recResponse, err := ioutil.ReadAll(w.Body)
 			Expect(err).NotTo(HaveOccurred())
 

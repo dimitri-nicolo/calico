@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	k8s "k8s.io/client-go/kubernetes"
 
+	lmaerror "github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/policyrec"
 	"github.com/tigera/lma/pkg/rbac"
@@ -31,38 +32,34 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		// Extract the recommendation parameters
 		params, err := policyrec.ExtractPolicyRecommendationParamsFromRequest(req)
 		if err != nil {
-			log.WithError(err).Info("Error extracting policy recommendation parameters")
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			createAndReturnError(err, "Error extracting policy recommendation parameters", http.StatusBadRequest, lmaerror.PolicyRec, w)
 			return
 		}
 
 		// Check that the user is allowed to access flow logs.
 		if stat, err := policyrec.ValidatePermissions(req, authz); err != nil {
-			log.Infof("Not permitting user actions (code=%d): %v", stat, err)
-			http.Error(w, err.Error(), stat)
+			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
 
 		// Check that user has sufficient permissions to list flows for the requested endpoint.
 		if stat, err := ValidateRecommendationPermissions(req, authz, params); err != nil {
-			log.Infof("Not permitting user actions (code=%d): %v", stat, err)
-			http.Error(w, err.Error(), stat)
+			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
 
 		// Query elasticsearch with the parameters provided
 		flows, err := policyrec.QueryElasticsearchFlows(req.Context(), c, params)
 		if err != nil {
-			log.WithError(err).Errorf("Error querying elasticsearch")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			createAndReturnError(err, "Error querying elasticsearch", http.StatusInternalServerError, lmaerror.PolicyRec, w)
 			return
 		}
 
 		if len(flows) == 0 {
 			log.WithField("params", params).Info("No matching flows found")
-			err = fmt.Errorf("No matching flows found for endpoint name '%v' in namespace '%v' within the time range '%v:%v'", params.EndpointName, params.Namespace, params.StartTime, params.EndTime)
-			log.WithError(err).Info("No matching flows found")
-			http.Error(w, err.Error(), http.StatusNotFound)
+			errorStr := fmt.Sprintf("No matching flows found for endpoint name '%v' in namespace '%v' within the time range '%v:%v'", params.EndpointName, params.Namespace, params.StartTime, params.EndTime)
+			err := fmt.Errorf(errorStr)
+			createAndReturnError(err, errorStr, http.StatusNotFound, lmaerror.PolicyRec, w)
 			return
 		}
 
@@ -82,24 +79,22 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		}
 		recommendation, err := recEngine.Recommend()
 		if err != nil {
-			log.WithError(err).Error("Error when generating recommended policy")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			createAndReturnError(err, "Error when generating recommended policy", http.StatusInternalServerError, lmaerror.PolicyRec, w)
 			return
 		}
 		response := &PolicyRecommendationResponse{
 			Recommendation: recommendation,
 		}
 		log.WithField("recommendation", recommendation).Debug("Policy recommendation response")
-		recJson, err := json.Marshal(response)
+		recJSON, err := json.Marshal(response)
 		if err != nil {
-			log.WithError(err).Error("Error marshalling recommendation to JSON")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			createAndReturnError(err, "Error marshalling recommendation to JSON", http.StatusInternalServerError, lmaerror.PolicyRec, w)
 			return
 		}
-		_, err = w.Write(recJson)
+		_, err = w.Write(recJSON)
 		if err != nil {
-			log.WithError(err).Infof("Error writing JSON recommendation: %v", recommendation)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			errorStr := fmt.Sprintf("Error writing JSON recommendation: %v", recommendation)
+			createAndReturnError(err, errorStr, http.StatusInternalServerError, lmaerror.PolicyRec, w)
 			return
 		}
 	})
