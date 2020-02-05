@@ -13,39 +13,6 @@ kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
   name: default-deny
-  namespace: tigera-kibana
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-intrusion-detection
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-manager
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
   namespace: tigera-compliance
 spec:
   podSelector:
@@ -96,60 +63,6 @@ spec:
     destination:
       # The ports Calico Enterprise API Server and Calico Enterprise Query Server are configured to listen on.
       ports: [443, 5443, 8080, 10443]
----
-# Allow users to access Calico Enterprise Manager.
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-tigera.manager-access
-  namespace: tigera-manager
-spec:
-  order: 1
-  tier: allow-tigera
-  selector: k8s-app == 'tigera-manager'
-  types:
-  - Ingress
-  ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      # This policy allows access to Calico Enterprise Manager from anywhere: narrow it down if
-      # only certain subnets should be allowed.
-      nets: ["0.0.0.0/0"]
-    destination:
-      # By default, Calico Enterprise Manager is accessed over https. Update this if needed.
-      ports: [9443]
-  - action: Allow
-    protocol: TCP
-    source: {}
-    # This policy is used for multi-cluster management to establish a tunnel from another cluster: narrow it down if
-    # only certain subnets should be allowed.
-    destination:
-      ports: [9449]
-
----
-
-# Allow internal communication to compliance-server from Manager.
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-tigera.compliance-server
-  namespace: tigera-compliance
-spec:
-  order: 1
-  tier: allow-tigera
-  selector: k8s-app == 'compliance-server'
-  types:
-  - Ingress
-  ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'tigera-manager'
-      namespaceSelector: name == 'tigera-manager'
-    destination:
-      ports: [5443]
-
 ---
 
 # This manifest creates a network policy to allow traffic to Alertmanager
@@ -248,29 +161,8 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: k8s-app == 'tigera-secure'
-      namespaceSelector: name == 'tigera-kibana'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: job-name == 'intrusion-detection-es-job-installer'
-      namespaceSelector: name == 'tigera-intrusion-detection'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
       selector: k8s-app == 'elastic-curator'
       namespaceSelector: name == 'tigera-elasticsearch'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'tigera-manager'
-      namespaceSelector: name == 'tigera-manager'
     destination:
       ports: [9200]
   - action: Allow
@@ -313,13 +205,6 @@ spec:
       ports: [9200]
     protocol: TCP
     source:
-      selector: k8s-app == 'intrusion-detection-controller'
-      namespaceSelector: name == 'tigera-intrusion-detection'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
       selector: k8s-app == 'elastic-operator'
       namespaceSelector: name == 'tigera-eck-operator'
   - action: Allow
@@ -349,83 +234,6 @@ spec:
       selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
     destination:
       ports: [9300]
-
----
-# Allow access to Kibana
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-tigera.kibana-access
-  namespace: tigera-kibana
-spec:
-  order: 1
-  tier: allow-tigera
-  selector: k8s-app == 'tigera-secure'
-  types:
-  - Ingress
-  ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      # This policy allows access to Kibana from anywhere.
-      # Narrow this down to your management network or remove this
-      # policy to block access to Kibana.
-      nets: ["0.0.0.0/0"]
-    destination:
-      ports: [5601]
-  - action: Allow
-    protocol: TCP
-    source:
-      # Allow the installer to access Kibana
-      selector: job-name == 'intrusion-detection-es-job-installer'
-      namespaceSelector: name == 'tigera-intrusion-detection'
-    destination:
-      ports: [5601]
-  - action: Allow
-    destination:
-      ports: [5601]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'elastic-operator'
-      namespaceSelector: name == 'tigera-eck-operator'
-  - action: Allow
-    destination:
-      ports: [5601]
-    protocol: TCP
-    # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
-
----
-
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-tigera.intrusion-detection-controller
-  namespace: tigera-intrusion-detection
-spec:
-  order: 1
-  tier: allow-tigera
-  selector: k8s-app == 'intrusion-detection-controller'
-  types:
-    - Ingress
-    - Egress
-  ingress:
-  # Intrusion detection controller doesn't listen on any external ports
-  - action: Deny
-  egress:
-  # Block any link local IPs, e.g. cloud metadata, which are often targets
-  # of server-side request forgery (SSRF) attacks
-  - action: Deny
-    protocol: TCP
-    destination:
-      nets:
-      - "169.254.0.0/16"
-  - action: Deny
-    protocol: TCP
-    destination:
-      nets:
-      - "fe80::/10"
-  # Pass to subsequent tiers or profiles for further refinement
-  - action: Pass
 
 ---
 
@@ -466,4 +274,3 @@ spec:
   types:
   - Ingress
   - Egress
-
