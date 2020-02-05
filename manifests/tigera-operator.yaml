@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm tigera-operator %}
-kubernetesProvider: ""
+# TODO: fix bug where helm render fails with empty values
 {% endhelm %}

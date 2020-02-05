@@ -2,5 +2,6 @@
 layout: null
 ---
 {% helm tigera-operator --execute templates/prometheus-operator/04-clusterrolebinding-prometheus.yaml %}
-kubernetesProvider: openshift
+installation:
+  kubernetesProvider: openshift
 {% endhelm %}
