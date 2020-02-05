@@ -91,6 +91,9 @@ The first step is to set up a management cluster. This will contain your central
 
 1. [Configure a storage class for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
+   > **Note**: Since the management cluster will stora all log data across your managed clusters, careful consideration should be made in choosing an appropriate size for the storage class to accommodate your anticipated volume of data. You may also need to adjust the log storage settings accordingly to scale up your centralized Elasticsearch cluster. For more information, see [Adjust log storage size]({{site.baseurl}}/maintenance/adjust-log-storage-size).
+   {: .alert .alert-info}
+
 1. Install the Tigera operators and custom resource definitions.
 
    ```
