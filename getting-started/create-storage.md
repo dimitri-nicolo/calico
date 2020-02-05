@@ -106,4 +106,4 @@ allowVolumeExpansion: true
 
 ### Above and beyond
 
-- [Adjust size of Elasticsearch cluster]({{site.baseurl}}/security/adjust-log-storage-size)
+- [Adjust size of Elasticsearch cluster]({{site.baseurl}}/maintenance/adjust-log-storage-size)
