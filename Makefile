@@ -31,7 +31,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico
 
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yq.v2"
-YAML_CMD:=$(shell which yq.v2 || echo docker run --rm -i calico/yaml)
+YAML_CMD:=$(shell which yq.v2 || echo docker run --rm -i mikefarah/yq:2.4.2 yq)
 
 # Local directories to ignore when running htmlproofer
 HP_IGNORE_LOCAL_DIRS="/v2.0/"
