@@ -85,10 +85,10 @@ spec:
     count: 1
     resourceRequirements:
       limits:
-        cpu: 500mi
+        cpu: 500m
         memory: 4Gi
       requests:
-        cpu: 250mi
+        cpu: 250m
         memory: 4Gi
         storage: 10Gi
 
