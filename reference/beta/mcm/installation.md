@@ -73,9 +73,9 @@ Intrusion detection is currently not supported in a multi-cluster configuration.
 
 **Post-installation**
 
-- [Configure cross-cluster user permissions]()
-- [Access log data in Kibana for a specific managed cluster]()
-- [Configure permissions to access log data per managed cluster]()
+- [Configure cross-cluster user permissions](#configure-cross-cluster-user-permissions)
+- [Access log data in Kibana for a specific managed cluster](#access-log-data-in-kibana-for-a-specific-managed-cluster)
+- [Configure permissions to access log data per managed cluster](#configure-permissions-to-access-log-data-per-managed-cluster)
 
 #### Configure multi-cluster management using existing standalone clusters
 
