@@ -14,6 +14,8 @@ section:
       path: /maintenance/kubernetes-upgrade-tsee/upgrade-tsee
     - title: Operator Upgrade
       path: /maintenance/kubernetes-upgrade-tsee/operator
+  - title: OpenShift
+    path: /maintenance/openshift-upgrade
   - title: Helm
     path: /maintenance/helm-upgrade-tsee
 - title: Decommission a node
