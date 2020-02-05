@@ -244,8 +244,24 @@ LINT_ARGS = --disable govet,gosimple,staticcheck,varcheck,errcheck,deadcode,inef
 ## Building the image is required for fvs.
 ci: clean image-all static-checks ut fv
 
-## Deploy images to registry
-cd:
+.PHONY: undo-go-sum check-dirty
+## Avoid unplanned go.sum updates
+undo-go-sum:
+	@if (git status --porcelain go.sum | grep -o 'go.sum'); then \
+	  echo "Undoing go.sum update..."; \
+	  git checkout -- go.sum; \
+	fi
+
+## Check if generated image is dirty
+check-dirty: undo-go-sum
+	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty:"; \
+	  git status --porcelain; \
+	  false; \
+	fi
+
+## Deploys images to registry
+cd: check-dirty
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
