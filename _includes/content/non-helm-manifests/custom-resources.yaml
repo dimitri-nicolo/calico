@@ -83,6 +83,14 @@ metadata:
 spec:
   nodes:
     count: 1
+    resourceRequirements:
+      limits:
+        cpu: 500mi
+        memory: 4Gi
+      requests:
+        cpu: 250mi
+        memory: 4Gi
+        storage: 10Gi
 
 ---
 

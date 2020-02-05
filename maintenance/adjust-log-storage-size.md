@@ -91,7 +91,7 @@ spec:
 
 #### Adjust the CPU and memory
 
-In the following example, {{site.prodname}} is configured to install nodes with 5Gi for CPU and memory.
+In the following example, {{site.prodname}} is configured to install nodes with 5Gi of memory and 500m (half a core) of CPU.
 
 ```
 apiVersion: operator.tigera.io/v1
@@ -102,9 +102,9 @@ spec:
   nodes:
     resourceRequirements:
       limits:
-        cpu: 5Gi
+        cpu: 500m
         memory: 5Gi
       requests:
-        cpu: 5Gi
+        cpu: 500m
         memory: 5Gi
 ```
