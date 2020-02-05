@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/rbac"
 )
 
 const (
@@ -27,31 +28,19 @@ const (
         "hits": []
     },
     "aggregations": {
-        "dest_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
+        "source_dest_namespaces": {
+            "after_key": {
+                "date": 1494201600000,
+		"source_name_aggr": "tigera-eck-operator",
+		"dest_name_aggr": "tigera-elasticsearch"
+            },
             "buckets": [
                 {
-                    "key": "tigera-elasticsearch",
+                    "key": {
+                        "source_namespace": "tigera-eck-operator",
+                        "dest_namespace": "tigera-elasticsearch"
+                    },
                     "doc_count": 50753
-                },
-                {
-                    "key": "tigera-eck-operator",
-                    "doc_count": 1603
-                }
-            ]
-        },
-        "source_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
-                {
-                    "key": "tigera-eck-operator",
-                    "doc_count": 8757
-                },
-                {
-                    "key": "tigera-elasticsearch",
-                    "doc_count": 887
                 }
             ]
         }
@@ -76,14 +65,8 @@ const (
         "hits": []
     },
     "aggregations": {
-        "dest_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": []
-        },
-        "source_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
+        "source_dest_namespaces": {
+            "after_key": {},
             "buckets": []
         }
     }
@@ -106,71 +89,61 @@ const (
         "hits": []
     },
     "aggregations": {
-        "dest_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
+        "source_dest_namespaces": {
+            "after_key": {
+                "date": 1494201600000,
+		"source_name_aggr": "tigera-eck-operator",
+		"dest_name_aggr": "tigera-elasticsearch"
+            },
             "buckets": [
                 {
-                    "key": "tigera-elasticsearch",
+                    "key": {
+                        "source_namespace": "tigera-prometheus",
+                        "dest_namespace": "tigera-elasticsearch"
+                    },
                     "doc_count": 49209
                 },
-                {
-                    "key": "kube-system",
-                    "doc_count": 26072
+		{
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+			"dest_namespace": "kube-system"
+                    },
+                    "doc_count": 26702
                 },
                 {
-                    "key": "tigera-prometheus",
+                    "key": {
+                        "source_namespace": "tigera-fluentd",
+                        "dest_namespace": "tigera-prometheus"
+                    },
                     "doc_count": 13565
                 },
                 {
-                    "key": "tigera-compliance",
-                    "doc_count": 4246
-                },
-                {
-                    "key": "tigera-system",
-                    "doc_count": 2123
-                },
-                {
-                    "key": "tigera-eck-operator",
-                    "doc_count": 1811
-                }
-            ]
-        },
-        "source_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
-                {
-                    "key": "tigera-prometheus",
-                    "doc_count": 24182
-                },
-                {
-                    "key": "tigera-compliance",
-                    "doc_count": 23373
-                },
-                {
-                    "key": "tigera-fluentd",
-                    "doc_count": 16983
-                },
-                {
-                    "key": "tigera-manager",
+                    "key": {
+                        "source_namespace":  "tigera-fluentd",
+			"dest_namespace": "tigera-compliance"
+                    },
                     "doc_count": 8639
                 },
                 {
-                    "key": "tigera-eck-operator",
-                    "doc_count": 8493
+                    "key": {
+                        "source_namespace":  "tigera-manager",
+			"dest_namespace": "tigera-system"
+                    },
+                    "doc_count": 4246
                 },
                 {
-                    "key": "tigera-intrusion-detection",
-                    "doc_count": 8493
+                    "key": {
+                        "source_namespace":  "tigera-eck-operator",
+			"dest_namespace": "tigera-kibana"
+                    },
+                    "doc_count": 2123
                 },
                 {
-                    "key": "tigera-kibana",
-                    "doc_count": 4247
-                },
-                {
-                    "key": "tigera-elasticsearch",
-                    "doc_count": 856
+                    "key": {
+                        "source_namespace":  "tigera-manager",
+			"dest_namespace": "tigera-intrusion-detection"
+                    },
+                    "doc_count": 1811
                 }
             ]
         }
@@ -192,74 +165,6 @@ const (
         },
         "max_score": null,
         "hits": []
-    }
-}`
-	missingSourceAggregations = `{
-    "took": 604,
-    "timed_out": false,
-    "_shards": {
-        "total": 40,
-        "successful": 40,
-        "skipped": 0,
-        "failed": 0
-    },
-    "hits": {
-        "total": {
-            "value": 10000,
-            "relation": "gte"
-        },
-        "max_score": null,
-        "hits": []
-    },
-    "aggregations": {
-        "dest_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
-                {
-                    "key": "tigera-elasticsearch",
-                    "doc_count": 50232
-                },
-                {
-                    "key": "tigera-eck-operator",
-                    "doc_count": 2167
-                }
-            ]
-        }
-    }
-}`
-	missingDestAggregations = `{
-    "took": 604,
-    "timed_out": false,
-    "_shards": {
-        "total": 40,
-        "successful": 40,
-        "skipped": 0,
-        "failed": 0
-    },
-    "hits": {
-        "total": {
-            "value": 10000,
-            "relation": "gte"
-        },
-        "max_score": null,
-        "hits": []
-    },
-    "aggregations": {
-        "source_namespaces": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
-                {
-                    "key": "tigera-eck-operator",
-                    "doc_count": 8671
-                },
-                {
-                    "key": "tigera-elasticsearch",
-                    "doc_count": 886
-                }
-            ]
-        }
     }
 }`
 	malformedResponse = `{
@@ -490,7 +395,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 2))
 			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-eck-operator"))
@@ -509,7 +414,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 0))
 		})
@@ -525,19 +430,19 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 10))
 			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-prometheus"))
-			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-compliance"))
-			Expect(namespaces[2].Name).To(BeEquivalentTo("tigera-fluentd"))
-			Expect(namespaces[3].Name).To(BeEquivalentTo("tigera-manager"))
-			Expect(namespaces[4].Name).To(BeEquivalentTo("tigera-eck-operator"))
-			Expect(namespaces[5].Name).To(BeEquivalentTo("tigera-intrusion-detection"))
-			Expect(namespaces[6].Name).To(BeEquivalentTo("tigera-kibana"))
-			Expect(namespaces[7].Name).To(BeEquivalentTo("tigera-elasticsearch"))
-			Expect(namespaces[8].Name).To(BeEquivalentTo("kube-system"))
-			Expect(namespaces[9].Name).To(BeEquivalentTo("tigera-system"))
+			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-elasticsearch"))
+			Expect(namespaces[2].Name).To(BeEquivalentTo("tigera-compliance"))
+			Expect(namespaces[3].Name).To(BeEquivalentTo("kube-system"))
+			Expect(namespaces[4].Name).To(BeEquivalentTo("tigera-fluentd"))
+			Expect(namespaces[5].Name).To(BeEquivalentTo("tigera-manager"))
+			Expect(namespaces[6].Name).To(BeEquivalentTo("tigera-system"))
+			Expect(namespaces[7].Name).To(BeEquivalentTo("tigera-eck-operator"))
+			Expect(namespaces[8].Name).To(BeEquivalentTo("tigera-kibana"))
+			Expect(namespaces[9].Name).To(BeEquivalentTo("tigera-intrusion-detection"))
 		})
 
 		It("should retrieve an array of namespace objects with no duplicates and only up to the limit", func() {
@@ -551,12 +456,12 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 3))
 			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-prometheus"))
-			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-compliance"))
-			Expect(namespaces[2].Name).To(BeEquivalentTo("tigera-fluentd"))
+			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-elasticsearch"))
+			Expect(namespaces[2].Name).To(BeEquivalentTo("tigera-compliance"))
 		})
 
 		It("should return an empty response when the search result contains no aggregations", func() {
@@ -570,7 +475,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "cluster",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 0))
 		})
@@ -589,7 +494,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				EndDateTime: endTimeObject,
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 0))
 		})
@@ -608,45 +513,9 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				StartDateTime: startTimeObject,
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(namespaces)).To(BeNumerically("==", 0))
-		})
-
-		It("should return an array of namespace objects when the search result contains no source aggregations", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingSourceAggregations})
-
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-			}
-
-			namespaces, err := getNamespacesFromElastic(params, esClient)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(namespaces)).To(BeNumerically("==", 2))
-			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-elasticsearch"))
-			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-eck-operator"))
-		})
-
-		It("should return an array of namespace objects when the search result contains no dest aggregations", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingDestAggregations})
-
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-			}
-
-			namespaces, err := getNamespacesFromElastic(params, esClient)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(namespaces)).To(BeNumerically("==", 2))
-			Expect(namespaces[0].Name).To(BeEquivalentTo("tigera-eck-operator"))
-			Expect(namespaces[1].Name).To(BeEquivalentTo("tigera-elasticsearch"))
 		})
 
 		It("should return an error when the query fails", func() {
@@ -660,7 +529,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 				ClusterName: "",
 			}
 
-			namespaces, err := getNamespacesFromElastic(params, esClient)
+			namespaces, err := getNamespacesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(HaveOccurred())
 			Expect(namespaces).To(BeNil())
 		})
@@ -701,21 +570,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 		})
 	})
 
-	Context("Test that the buildAggregations function applies Include filters only when there is a prefix", func() {
-		It("should return aggregations with Include filters", func() {
-			By("Creating params with a prefix")
-			params := &FlowLogNamespaceParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "tigera.*",
-				ClusterName: "",
-			}
-			sourceAggTermsMap, destAggTermsMap, err := getNamespaceAggregationTermsMaps(params)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 4))
-			Expect(len(destAggTermsMap)).To(BeNumerically("==", 4))
-		})
-
+	Context("Test that the buildAggregations function creates the appropriate composite aggregation", func() {
 		It("should return aggregations without Include filters", func() {
 			By("Creating params without a prefix")
 			params := &FlowLogNamespaceParams{
@@ -726,26 +581,74 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			}
 			sourceAggTermsMap, destAggTermsMap, err := getNamespaceAggregationTermsMaps(params)
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 3))
-			Expect(len(destAggTermsMap)).To(BeNumerically("==", 3))
+			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 1))
+			Expect(len(destAggTermsMap)).To(BeNumerically("==", 1))
 		})
 	})
+
+	/*
+		Context("Test that validateNamespaceRBAC properly validates namespace permissions", func() {
+			It("should allow users with access to all namespaces but not specific ones", func() {
+				resources := map[string]bool{
+					"networksets": true,
+					"pods":        true,
+				}
+				namespaces := map[string]bool{
+					"": true,
+				}
+				flowHelper := rbac.NewMockFlowHelper(resources, false)
+				Expect(validateNamespaceRBAC("", flowHelper)).To(BeTrue())
+				Expect(validateNamespaceRBAC("tigera-elasticsearch", flowHelper)).To(BeTrue())
+				Expect(validateNamespaceRBAC("tigera-system", flowHelper)).To(BeTrue())
+				Expect(validateNamespaceRBAC("random-namespace", flowHelper)).To(BeTrue())
+			})
+		})
+	*/
 })
 
 func getNamespaceAggregationTermsMaps(params *FlowLogNamespaceParams) (map[string]interface{}, map[string]interface{},
 	error) {
-	sourceAgg, destAgg := buildAggregations(params)
-	sourceAggInf, err := sourceAgg.Source()
+	var empty map[string]interface{}
+	nameAgg := buildAggregation(params, empty)
+	nameAggInf, err := nameAgg.Source()
 	if err != nil {
 		return nil, nil, err
 	}
-	destAggInf, err := destAgg.Source()
-	if err != nil {
-		return nil, nil, err
+	// Pull out the terms for the composite aggregation. It should be of the form:
+	//    "composite": {
+	//        "sources": [
+	//            {
+	//                "source_namespace": {
+	//                    "terms": {
+	//                        "field": "source_namespace",
+	//                    },
+	//                },
+	//            },
+	//            {
+	//                "dest_namespace": {
+	//                    "terms": {
+	//                        "field": "dest_namespace",
+	//                    },
+	//                },
+	//            },
+	//        ],
+	//        "size": 4000,
+	//    }
+	nameAggMap := nameAggInf.(map[string]interface{})
+	compAggMap := nameAggMap["composite"].(map[string]interface{})
+	srcSliceInf := compAggMap["sources"].([]interface{})
+	var sourceAggTermsMap map[string]interface{}
+	var destAggTermsMap map[string]interface{}
+	for _, mappingInf := range srcSliceInf {
+		mapping := mappingInf.(map[string]interface{})
+		if srcMapInf, exist := mapping[sourceAggregationName]; exist {
+			srcMap := srcMapInf.(map[string]interface{})
+			sourceAggTermsMap = srcMap["terms"].(map[string]interface{})
+		}
+		if destMapInf, exist := mapping[destAggregationName]; exist {
+			destMap := destMapInf.(map[string]interface{})
+			destAggTermsMap = destMap["terms"].(map[string]interface{})
+		}
 	}
-	sourceAggMap := sourceAggInf.(map[string]interface{})
-	destAggMap := destAggInf.(map[string]interface{})
-	sourceAggTermsMap := sourceAggMap["terms"].(map[string]interface{})
-	destAggTermsMap := destAggMap["terms"].(map[string]interface{})
 	return sourceAggTermsMap, destAggTermsMap, nil
 }
