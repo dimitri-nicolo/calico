@@ -8,11 +8,6 @@ set -e
 # - legacy-release
 # - each archive release
 
-if [ -z "$CURRENT_RELEASE" ]; then
-    echo "must set \$CURRENT_RELEASE"
-    exit 1
-fi
-
 if [ -z "$(which jekyll)" ]; then
     gem install github-pages
 fi
