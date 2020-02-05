@@ -13,7 +13,6 @@ import (
 
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/util"
 )
 
 const (
@@ -94,7 +93,7 @@ func ValidatePermissions(req *http.Request, k8sAuth auth.K8sAuthInterface) (int,
 }
 
 func checkAuthorized(req *http.Request, atr authzv1.ResourceAttributes, k8sAuth auth.K8sAuthInterface) (int, error) {
-	ctx := util.NewContextWithReviewResource(req.Context(), &atr)
+	ctx := auth.NewContextWithReviewResource(req.Context(), &atr)
 	reqWithCtx := req.WithContext(ctx)
 
 	return k8sAuth.Authorize(reqWithCtx)

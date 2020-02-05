@@ -2,14 +2,13 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/tigera/lma/pkg/util"
 
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -250,8 +249,8 @@ func (ka *k8sauth) authenticateToken(req *http.Request) (u k8suser.Info, status 
 // If there is a failure status will be set and an appropriate error, otherwise
 // err is nil.
 func (ka *k8sauth) authorizeUser(req *http.Request, user k8suser.Info) (status int, err error) {
-	res, resOK := util.FromContextGetReviewResource(req.Context())
-	nonRes, nonResOK := util.FromContextGetReviewNonResource(req.Context())
+	res, resOK := FromContextGetReviewResource(req.Context())
+	nonRes, nonResOK := FromContextGetReviewNonResource(req.Context())
 	// Continue only if we have at least one resource or non-resource attribute to check.
 	if !resOK && !nonResOK {
 		return http.StatusForbidden, fmt.Errorf("no resource available to authorize")
@@ -305,8 +304,8 @@ func (ka *k8sauth) BasicAuthorize(req *http.Request) (status int, err error) {
 		return http.StatusInternalServerError, err
 	}
 
-	res, resOK := util.FromContextGetReviewResource(req.Context())
-	nonRes, nonResOK := util.FromContextGetReviewNonResource(req.Context())
+	res, resOK := FromContextGetReviewResource(req.Context())
+	nonRes, nonResOK := FromContextGetReviewNonResource(req.Context())
 	// Continue only if we have at least one resource or non-resource attribute to check.
 	if !resOK && !nonResOK {
 		return http.StatusForbidden, fmt.Errorf("no resource available to authorize")
@@ -378,4 +377,36 @@ func UserInfoToInfo(ui *authnv1.UserInfo) k8suser.Info {
 		Groups: ui.Groups,
 		Extra:  extra,
 	}
+}
+
+// Not exported to avoid collisions.
+type contextKey int
+
+const (
+	ResourceAttributeKey contextKey = iota
+	NonResourceAttributeKey
+)
+
+func NewContextWithReviewResource(
+	ctx context.Context,
+	ra *authzv1.ResourceAttributes,
+) context.Context {
+	return context.WithValue(ctx, ResourceAttributeKey, ra)
+}
+
+func NewContextWithReviewNonResource(
+	ctx context.Context,
+	ra *authzv1.NonResourceAttributes,
+) context.Context {
+	return context.WithValue(ctx, NonResourceAttributeKey, ra)
+}
+
+func FromContextGetReviewResource(ctx context.Context) (*authzv1.ResourceAttributes, bool) {
+	ra, ok := ctx.Value(ResourceAttributeKey).(*authzv1.ResourceAttributes)
+	return ra, ok
+}
+
+func FromContextGetReviewNonResource(ctx context.Context) (*authzv1.NonResourceAttributes, bool) {
+	nra, ok := ctx.Value(NonResourceAttributeKey).(*authzv1.NonResourceAttributes)
+	return nra, ok
 }
