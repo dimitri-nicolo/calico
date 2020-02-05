@@ -25,6 +25,8 @@ section:
     section:
     - title: Docker Enterprise
       path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
+    - title: Rancher Kubernetes Engine
+      path: /getting-started/kubernetes/self-managed-on-prem/rancher
   - title: Enabling application layer policy (optional)
     path: /getting-started/kubernetes/installation/app-layer-policy
   # - title: Calico Enterprise the hard way
