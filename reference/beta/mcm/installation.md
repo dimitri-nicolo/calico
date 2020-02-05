@@ -58,18 +58,18 @@ Intrusion detection is currently not supported in a multi-cluster configuration.
 
 **Install management cluster**
 
-- [Install {{site.prodname}} on the management cluster](#install-siteprodname-on-the-management-cluster)
-- [Install the {{site.prodname}} license on the management cluster](#install-the-siteprodname-license-on-the-management-cluster)
-- [Secure {{site.prodname}} on the management cluster with network policy](#secure-siteprodname-on-the-management-cluster-with-network-policy)
+- [Install {{site.prodname}} on the management cluster](#install-calico-enterprise-on-the-management-cluster)
+- [Install the {{site.prodname}} license on the management cluster](#install-the-calico-enterprise-license-on-the-management-cluster)
+- [Secure {{site.prodname}} on the management cluster with network policy](#secure-calico-enterprise-on-the-management-cluster-with-network-policy)
 - [Allow connections to the management plane](#allow-connections-to-the-management-plane)
-- [View multi-cluster management in {{site.prodname}} Manager](#view-multi-cluster-management-in-siteprodname-manager)
+- [View multi-cluster management in {{site.prodname}} Manager](#view-multi-cluster-management-in-calico-enterprise-manager)
 
 **Install a managed cluster**
 
 - [Add a managed cluster to the management plane](#add-a-managed-cluster-to-the-management-plane)
-- [Install {{site.prodname}} on the managed cluster](#install-siteprodname-on-the-managed-cluster)
-- [Install a {{site.prodname}} license on the managed cluster](#install-a-siteprodname-license-on-the-managed-cluster)
-- [Secure {{site.prodname}} on the managed cluster with network policy](#secure-siteprodname-on-the-managed-cluster-with-network-policy)
+- [Install {{site.prodname}} on the managed cluster](#install-calico-enterprise-on-the-managed-cluster)
+- [Install a {{site.prodname}} license on the managed cluster](#install-a-calico-enterprise-license-on-the-managed-cluster)
+- [Secure {{site.prodname}} on the managed cluster with network policy](#secure-calico-enterprise-on-the-managed-cluster-with-network-policy)
 
 **Post-installation**
 
@@ -386,6 +386,6 @@ The rule below allows access to any cluster for all log types.
 - [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
 - [Log in to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/create-user-login)
 - [Accessing logs from Kibana]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana)
-- Installation API reference
-- ManagementClusterConnection resource reference
-- Adjust log storage size
+- [Installation API reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)
+- [ManagementClusterConnection resource reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementClusterConnection)
+- [Adjust log storage size]({{site.baseurl}}/maintenance/adjust-log-storage-size)
