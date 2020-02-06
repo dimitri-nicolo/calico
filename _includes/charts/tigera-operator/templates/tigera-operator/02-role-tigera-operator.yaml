@@ -22,6 +22,7 @@ rules:
     resources:
       - nodes
     verbs:
+      - 'get'
       - 'list'
       # We need this for Typha autoscaling
       - 'watch'
