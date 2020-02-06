@@ -156,6 +156,8 @@ section:
     path: /security/threat-detection-and-prevention/suspicious-IPs
   - title: Trace and block suspicious domains
     path: /security/threat-detection-and-prevention/suspicious-domains
+  - title: Tor-VPN feeds and Dashboard
+    path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
 - title: Compliance reports
   path: /security/compliance-reports/
   section:
