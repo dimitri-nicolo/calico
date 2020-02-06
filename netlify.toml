@@ -4,7 +4,7 @@
 
 [build.environment]
   RUBY_VERSION = "2.5.4"
-  CANDIDATE_RELEASE = ""
+  CANDIDATE_RELEASE = "v2.7"
   CURRENT_RELEASE = ""
 
 [[headers]]
