@@ -111,6 +111,34 @@ watch kubectl get tigerastatus
 
 When all components show a status of `Available`, proceed to the next section.
 
+#### Login to {{site.prodname}} UI
+
+1. Create network admin user "Jane".
+
+   ```
+   kubectl create sa jane -n default
+   kubectl create clusterrolebinding jane-access --clusterrole tigera-network-admin --serviceaccount default:jane
+   ```
+
+1. Extract the login `token` for use with the {{site.prodname}} UI.
+
+   {%- raw %}
+   ```
+   kubectl get secret $(kubectl get serviceaccount jane -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep token) -o go-template='{{.data.token | base64decode}}' && echo
+   ```
+   {% endraw %}
+
+   Copy the above `token` to your clipboard for use in the next step.
+
+
+1. Set up a channel from your local computer to the {{site.prodname}} UI.
+
+   ```
+   kubectl port-forward -n tigera-manager svc/tigera-manager 9443
+   ```
+
+   Visit [https://localhost:9443/](https://localhost:9443/) to login to the {{site.prodname}} UI. Use the `token` from the previous step to authenticate.
+
 #### Secure {{site.prodname}} with network policy
 
 To secure {{site.prodname}} component communications, install the following set of network policies.
