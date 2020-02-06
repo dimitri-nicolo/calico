@@ -61,15 +61,15 @@ var _ = Describe("Kibana Elasticsearch", func() {
 
 		},
 		Entry("flows index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_flows"), http.StatusOK),
-		Entry("audit index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_audit"), http.StatusOK),
+		Entry("audit index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_audit_*"), http.StatusOK),
 		Entry("events index pattern is accessible by user all", basicUserAll, kibanaBody("tigera_secure_ee_events"), http.StatusOK),
 
 		Entry("flows index pattern is accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_flows"), http.StatusOK),
-		Entry("audit index pattern is not accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_audit"), http.StatusForbidden),
+		Entry("audit index pattern is not accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_audit_*"), http.StatusForbidden),
 		Entry("events index pattern is not accessible by flow only user", basicFlowOnlyUser, kibanaBody("tigera_secure_ee_events"), http.StatusForbidden),
 
 		Entry("flows index pattern is not accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_flows"), http.StatusForbidden),
-		Entry("audit index pattern is accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_audit"), http.StatusOK),
+		Entry("audit index pattern is accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_audit_*"), http.StatusOK),
 		Entry("events index pattern is not accessible by audit only user", basicAuditOnlyUser, kibanaBody("tigera_secure_ee_events"), http.StatusForbidden),
 	)
 })

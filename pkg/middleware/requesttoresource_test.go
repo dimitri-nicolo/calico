@@ -46,6 +46,10 @@ var _ = Describe("Test request to resource name conversion", func() {
 		Entry("Flow conversion",
 			genRequest("/tigera_secure_ee_flows.cluster.*/_search?size=0"),
 			"flows"),
+		// This is the actual audit request made at the time of writing.
+		Entry("Audit conversion (...audit_*)",
+			genRequest("/tigera_secure_ee_audit_*/_search"),
+			"audit*"),
 		Entry("All audit conversion (...audit_*)",
 			genRequest("/tigera_secure_ee_audit_*.cluster.*/_search"),
 			"audit*"),
@@ -59,17 +63,18 @@ var _ = Describe("Test request to resource name conversion", func() {
 			genRequest("/tigera_secure_ee_audit_*.cluster.name.*/_search"),
 			"audit*"),
 		Entry("Audit ee conversion",
-			genRequest("/tigera_secure_ee_audit_ee*.cluster.*/_search"),
+			genRequest("/tigera_secure_ee_audit_ee.cluster.*/_search"),
 			"audit_ee"),
 		Entry("Audit ee conversion with cluster-name",
-			genRequest("/tigera_secure_ee_audit_ee*.cluster-name.*/_search"),
+			genRequest("/tigera_secure_ee_audit_ee.cluster-name.*/_search"),
 			"audit_ee"),
 		Entry("Audit ee conversion with cluster.name",
-			genRequest("/tigera_secure_ee_audit_ee*.cluster.name.*/_search"),
+			genRequest("/tigera_secure_ee_audit_ee.cluster.name.*/_search"),
 			"audit_ee"),
 		Entry("Audit kube conversion with cluster.name",
-			genRequest("/tigera_secure_ee_audit_kube*.cluster.name.*/_search"),
+			genRequest("/tigera_secure_ee_audit_kube.cluster.name.*/_search"),
 			"audit_kube"),
+		// This is the actual events request made at the time of writing.
 		Entry("Events conversion",
 			genRequest("/tigera_secure_ee_events*/_search"),
 			"events"),
@@ -126,39 +131,39 @@ var _ = Describe("Test request to resource name conversion", func() {
 })
 
 var _ = Describe("Test url path modifications in parseLegacyURLPath()", func() {
-	DescribeTable("failed conversion",
+	DescribeTable("successful conversion",
 
 		func(uriStr, xclu, resultUri string) {
 			req := genRequestWithHeader(uriStr, xclu)
-			clu, _, urlPath := parseLegacyURLPath(req)
+			clu, _, urlPath, _ := parseLegacyURLPath(req)
 			Expect(xclu).To(Equal(clu))
 			req.URL.Path = urlPath
 			req.URL.RawPath = urlPath
 			Expect(fmt.Sprintf("%v", req.URL)).To(Equal(resultUri))
 		},
 		Entry("Dateless index",
-			"/tigera_secure_ee_events*/_search", "cluster", "/tigera_secure_ee_events.cluster/_search"),
+			"/tigera_secure_ee_events*/_search", "cluster", "/tigera_secure_ee_events*.cluster/_search"),
 
 		Entry("Standard scenario",
 			"/tigera_secure_ee_flows.cluster.*/_search", "cluster", "/tigera_secure_ee_flows.cluster.*/_search"),
 		Entry("Standard scenario, different x-cluster-id",
 			"/tigera_secure_ee_flows.cluster.*/_search", "different", "/tigera_secure_ee_flows.different.*/_search"),
 		Entry("Standard scenario no .cluster",
-			"/tigera_secure_ee_flows*/_search", "cluster", "/tigera_secure_ee_flows.cluster.*/_search"),
+			"/tigera_secure_ee_flows*/_search", "cluster", "/tigera_secure_ee_flows*.cluster.*/_search"),
 
 		Entry("Path prepended to standard scenario",
 			"/a.b/c/tigera_secure_ee_flows.cluster.*/_search", "cluster", "/a.b/c/tigera_secure_ee_flows.cluster.*/_search"),
 		Entry("Path prepended to standard scenario, different x-cluster-id",
 			"/a.b/c/tigera_secure_ee_flows.cluster.*/_search", "different", "/a.b/c/tigera_secure_ee_flows.different.*/_search"),
 		Entry("Path prepended to standard scenario no .cluster",
-			"/a.b/c/tigera_secure_ee_flows*/_search", "cluster", "/a.b/c/tigera_secure_ee_flows.cluster.*/_search"),
+			"/a.b/c/tigera_secure_ee_flows*/_search", "cluster", "/a.b/c/tigera_secure_ee_flows*.cluster.*/_search"),
 
 		Entry("Url Parameters",
 			"/tigera_secure_ee_flows.cluster.*/_search?foo=bar", "cluster", "/tigera_secure_ee_flows.cluster.*/_search?foo=bar"),
 		Entry("Url Parameters, different x-cluster-id",
 			"/tigera_secure_ee_flows.cluster.*/_search?foo=bar", "different", "/tigera_secure_ee_flows.different.*/_search?foo=bar"),
 		Entry("Url Parameters no .cluster",
-			"/tigera_secure_ee_flows*/_search?foo=bar", "cluster", "/tigera_secure_ee_flows.cluster.*/_search?foo=bar"),
+			"/tigera_secure_ee_flows*/_search?foo=bar", "cluster", "/tigera_secure_ee_flows*.cluster.*/_search?foo=bar"),
 
 		Entry("Events (without asterisk)",
 			"/tigera_secure_ee_events.cluster/_search", "cluster", "/tigera_secure_ee_events.cluster/_search"),
@@ -170,19 +175,19 @@ var _ = Describe("Test url path modifications in parseLegacyURLPath()", func() {
 		Entry("Standard scenario",
 			"/tigera_secure_ee_audit.cluster.*/_search", "cluster", "/tigera_secure_ee_audit.cluster.*/_search"),
 		Entry("Standard scenario no .cluster",
-			"/tigera_secure_ee_audit*/_search", "cluster", "/tigera_secure_ee_audit.cluster.*/_search"),
+			"/tigera_secure_ee_audit*/_search", "cluster", "/tigera_secure_ee_audit*.cluster.*/_search"),
 		Entry("Standard scenario",
 			"/tigera_secure_ee_audit_ee.cluster.*/_search", "cluster", "/tigera_secure_ee_audit_ee.cluster.*/_search"),
 		Entry("Standard scenario no .cluster",
-			"/tigera_secure_ee_audit_ee*/_search", "cluster", "/tigera_secure_ee_audit_ee.cluster.*/_search"),
+			"/tigera_secure_ee_audit_ee*/_search", "cluster", "/tigera_secure_ee_audit_ee*.cluster.*/_search"),
 		Entry("Standard scenario",
 			"/tigera_secure_ee_audit_kube.cluster.*/_search", "cluster", "/tigera_secure_ee_audit_kube.cluster.*/_search"),
 		Entry("Standard scenario no .cluster",
-			"/tigera_secure_ee_audit_kube*/_search", "cluster", "/tigera_secure_ee_audit_kube.cluster.*/_search"),
+			"/tigera_secure_ee_audit_kube*/_search", "cluster", "/tigera_secure_ee_audit_kube*.cluster.*/_search"),
 		Entry("Standard scenario",
 			"/tigera_secure_ee_dns.cluster.*/_search", "cluster", "/tigera_secure_ee_dns.cluster.*/_search"),
 		Entry("Standard scenario no .cluster",
-			"/tigera_secure_ee_dns*/_search", "cluster", "/tigera_secure_ee_dns.cluster.*/_search"),
+			"/tigera_secure_ee_dns*/_search", "cluster", "/tigera_secure_ee_dns*.cluster.*/_search"),
 	)
 
 })
