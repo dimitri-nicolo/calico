@@ -8,7 +8,7 @@ canonical_url: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
 ## Prerequisite
 Ensure that your Kubernetes cluster is running with open source Calico on the latest {{ calico_minor_version | append: '.x' }}
-release. If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/maintenance/kubernetes-upgrade) before continuing.
+release. If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/{{calico_minor_version}}/maintenance/kubernetes-upgrade) before continuing.
 
 
 If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee)
