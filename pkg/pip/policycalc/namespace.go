@@ -30,6 +30,9 @@ func NewNamespaceHandler(n []*v1.Namespace, sa []*v1.ServiceAccount) *NamespaceH
 			sa[i].Namespace, sa[i].Name, sa[i].Labels,
 		)
 	}
+	//Support for global() in namespaceHandler,
+	//Add a namespace with name:""(Blank Name) and Label: __global__
+	nh.setNamespaceLabels("", map[string]string{"__global__": "__global__"})
 	return nh
 }
 
@@ -50,6 +53,8 @@ func (n *NamespaceHandler) GetNamespaceSelectorEndpointMatcher(selStr string) En
 		return m
 	}
 
+	//Caveat for processing global() namespaceselector,
+	selStr = strings.Replace(selStr, "global()", "has(__global__)", 1)
 	// We don't have one, parse the selector string and create the Selector matcher.
 	parsedSel, err := selector.Parse(selStr)
 	if err != nil {
