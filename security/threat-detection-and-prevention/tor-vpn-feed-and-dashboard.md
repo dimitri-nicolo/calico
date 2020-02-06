@@ -37,14 +37,14 @@ In recent times it became a trend to use multiple anonymization networks to hide
 #### The {{site.prodname}} Tor-VPN dashboard
 
 The Tor-VPN dashboard helps network security teams to monitor and respond to any detected activity by Tor and VPN feeds. It provides a cluster context to the detection and shows multiple artifacts e.g. flow logs, filtering controls, a tag cloud and line graph to analyze the activity and respond faster.
-Tor-VPN dashboard can be accessed as below 
-1. Log in to {{site.prodname}} Manager, and go to **kibana**, select **dashboard**, and select **Tor-VPN Dashboard**.
+The Tor-VPN dashboard may be accessed as below: 
+* Log in to {{site.prodname}} Manager, and go to **kibana**, select **dashboard**, and select **Tor-VPN Dashboard**.
 
 ### Before you begin...
 
 #### Required
 
-Privileges to manage GlobalThreatFeed i.e. clusterrole 'intrusion-detection-controller'
+Privileges to manage GlobalThreatFeed i.e. clusterrole `intrusion-detection-controller`
 
 #### Recommended
 
@@ -54,27 +54,22 @@ We recommend that you turn down the aggregation of flow logs sent to Elasticsear
 
 In this section we will look at how to add Tor and VPN feeds to {{site.prodname}}. Installation process is straightforward as below.
 
-1. Download tor-VPN manifests from [here]({{site.baseurl}}/manifests/threatdef/ejr-vpn.yaml) and [here]({{site.baseurl}}/manifests/threatdef/tor-exit-feed.yaml).
-2. Add threat feed to the cluster.
+1. Add threat feed to the cluster.
    For EJR VPN,
    ```shell
-   kubectl apply -f ejr-vpn.yaml
+   kubectl apply -f {{ "/manifests/threatdef/ejr-vpn.yaml" | absolute_url }}
    ```
    For Tor Bulk Exit Feed,
    ```shell
-   kubectl apply -f tor-exit-feed.yaml
+   kubectl apply -f {{ "/manifests/threatdef/tor-exit-feed.yaml" | absolute_url }}
    ```
-3. Now, you can monitor the Dashboard for any malicious activity. The dashboard can be found at {{site.prodname}} Manager, go to "kibana" and then go to "Dashboard". Select "Tor-VPN Dashboard".
-4. Additionally, Feeds can be checked using following command.
+2. Now, you can monitor the Dashboard for any malicious activity. The dashboard can be found at {{site.prodname}} Manager, go to "kibana" and then go to "Dashboard". Select "Tor-VPN Dashboard".
+3. Additionally, feeds can be checked using following command:
    ```shell
-   Kubectl get globalthreatfeeds 
+   kubectl get globalthreatfeeds 
    ```
-
-### Tutorial
-
-N/A
 
 ### Above and beyond
 
-See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
-
+* See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
+* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips)
