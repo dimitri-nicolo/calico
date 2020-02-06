@@ -1,7 +1,7 @@
 ---
 title: Tor-VPN feeds and Dashboard 
 description: Detect and analyse malicious anonymization activity using Tor-VPN feeds.
-canonical_url: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard.md
+canonical_url: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
 ---
 
 ### Big picture
