@@ -93,8 +93,26 @@ var _ = Describe("Namespace handler tests", func() {
 		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns2"}, nil, nil)).To(Equal(MatchTypeTrue))
 		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns3"}, nil, nil)).To(Equal(MatchTypeTrue))
 
+		By("Check for !all(), no namespace exists")
+		m2 = nh.GetNamespaceSelectorEndpointMatcher("!all()")
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns1"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns2"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns3"}, nil, nil)).To(Equal(MatchTypeFalse))
+
+		By("Check for global(), no namespace exists")
+		m2 = nh.GetNamespaceSelectorEndpointMatcher("global()")
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns1"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns2"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns3"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "__global__"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: ""}, nil, nil)).To(Equal(MatchTypeTrue))
+
+		m2 = nh.GetNamespaceSelectorEndpointMatcher("global() && vegetable=='turnip'")
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns1"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &api.FlowEndpointData{Namespace: ""}, nil, nil)).To(Equal(MatchTypeFalse))
+
 		By("Checking the size of the selector cache")
-		Expect(nh.selectorMatchers).To(HaveLen(2))
+		Expect(nh.selectorMatchers).To(HaveLen(5))
 	})
 
 	It("handles service account population", func() {
@@ -135,7 +153,7 @@ var _ = Describe("Namespace handler tests", func() {
 		})
 
 		By("Checking the number of namespaces created implicitly")
-		Expect(nh.namespaces).To(HaveLen(2))
+		Expect(nh.namespaces).To(HaveLen(3))
 
 		By("Checking the number of service accounts cached")
 		Expect(nh.namespaces["ns1"].serviceAccountLabels).To(HaveLen(1))
