@@ -72,4 +72,4 @@ In this section we will look at how to add Tor and VPN feeds to {{site.prodname}
 ### Above and beyond
 
 * See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
-* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips)
+* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-IPs)
