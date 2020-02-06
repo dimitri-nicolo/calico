@@ -342,7 +342,7 @@ func (m *MatcherFactory) Namespace(namespace string) EndpointMatcher {
 			log.Debugf("Namespace: %s (name matches %s)", MatchTypeTrue, ed.Namespace)
 			return MatchTypeTrue
 		}
-		log.Debugf("Namespace: %s (name %s != %s)", MatchTypeUncertain, ed.Namespace, namespace)
+		log.Debugf("Namespace: %s (name %s != %s)", MatchTypeFalse, ed.Namespace, namespace)
 		return MatchTypeFalse
 	}
 }

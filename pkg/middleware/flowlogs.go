@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -11,8 +12,10 @@ import (
 
 	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -49,10 +52,62 @@ type LabelSelector struct {
 	Values   []string `json:"values"`
 }
 
+//TODO: This is wrong. Why is ImpactedOnly in here? What was wrong with ResourceChange type. Why do we no longer support
+//      multiple updates in a single preview transaction?  Let's get rid of this and go back to a slice of ResourceChange
 type PolicyPreview struct {
-	Verb          string                     `json:"verb"`
-	NetworkPolicy libcalicoapi.NetworkPolicy `json:"networkPolicy"`
-	ImpactedOnly  bool                       `json:"impactedOnly"`
+	Verb          string             `json:"verb"`
+	NetworkPolicy resources.Resource `json:"networkPolicy"`
+	ImpactedOnly  bool               `json:"impactedOnly"`
+}
+
+// policyPreviewTrial is used to temporarily unmarshal the PolicyPreview so that we can extract the TypeMeta from
+// the resource definition.
+type policyPreviewTrial struct {
+	NetworkPolicy metav1.TypeMeta `json:"networkPolicy"`
+}
+
+// Defined an alias for the ResourceChange so that we can json unmarshal it from the PolicyPreview.UnmarshalJSON
+// without causing recursion (since aliased types do not inherit methods).
+type AliasedPolicyPreview *PolicyPreview
+
+// UnmarshalJSON allows unmarshalling of a PolicyPreview from JSON bytes. This is required because the Resource
+// field is an interface, and so it needs to be set with a concrete type before it can be unmarshalled.
+func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
+	// Unmarshal into the "trial" struct that allows us to easily extract the TypeMeta of the resource.
+	var r policyPreviewTrial
+	if err := json.Unmarshal(b, &r); err != nil {
+		return err
+	}
+	c.NetworkPolicy = resources.NewResource(r.NetworkPolicy)
+	if err := json.Unmarshal(b, AliasedPolicyPreview(c)); err != nil {
+		return err
+	}
+
+	// If this is a Calico tiered network policy, configure an empty tier to be default and verify the name matches
+	// the tier.
+	var tier *string
+	var name string
+	switch np := c.NetworkPolicy.(type) {
+	case *v3.NetworkPolicy:
+		tier = &np.Spec.Tier
+		name = np.Name
+	case *v3.GlobalNetworkPolicy:
+		tier = &np.Spec.Tier
+		name = np.Name
+	default:
+		// Not a calico tiered policy, so just exit now, no need to do the extra checks.
+		return nil
+	}
+
+	// Calico tiered policy. The tier in the spec should also be the prefix of the policy name.
+	if *tier == "" {
+		// The tier is not set, so set it to be default.
+		*tier = "default"
+	}
+	if !strings.HasPrefix(name, *tier+".") {
+		return errors.New("policy name '" + name + "' is not correct for the configured tier '" + *tier + "'")
+	}
+	return nil
 }
 
 const esflowIndexPrefix = "tigera_secure_ee_flows"
@@ -325,9 +380,14 @@ func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsPa
 			context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit,
 		)
 	} else {
+		if params.PolicyPreview.NetworkPolicy == nil {
+			// Expect the policy preview to contain a network policy.
+			return nil, errors.New("no network policy specified in preview request")
+		}
+
 		policyChange := pippkg.ResourceChange{
 			Action:   params.PolicyPreview.Verb,
-			Resource: &params.PolicyPreview.NetworkPolicy,
+			Resource: params.PolicyPreview.NetworkPolicy,
 		}
 
 		pipParams := &pippkg.PolicyImpactParams{
