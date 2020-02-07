@@ -93,6 +93,7 @@ spec:
     destination:
       ports:
       - 53
+      - dns
   - action: Allow
     destination:
       domains:
@@ -124,6 +125,7 @@ spec:
     destination:
       ports:
       - 53
+      - dns
   - action: Allow
     destination:
       domains:
