@@ -23,7 +23,7 @@ Refer to the section that corresponds to your orchestrator for details.
 - Kubernetes 1.15 and earlier only support one IP stack version at a time. This
   means that if you configure Kubernetes for IPv6 then {{site.prodname}}
   should be configured to assign only IPv6 addresses. Starting with 1.16, it is
-  possible to configure a dual-stack environment.
+  also possible to configure a dual-stack environment.
 - The steps and setup here have not been tested against an existing IPv4
   cluster and are intended only for new clusters.
 
@@ -85,39 +85,26 @@ To enable IPv6, set the following flags.
 To enable IPv6 support when installing {{site.prodname}} follow the
 steps below.
 
-1. Download the {{site.prodname}} manifest you wish to update for IPv6
-   deployment and save it as `calico.yaml`.
-1. If the ipam section in the `cni_network_config` in the `calico.yaml` file
-   has `"type": "calico-ipam"` then it should be modified to
-   [disable IPv4 assignments and enable IPv6
-   assigments]({{site.baseurl}}/reference/cni-plugin/configuration#ipam).
-1. Add the following environment variables to the calico-node Daemonset in
-   the `calico.yaml` file. Be sure to set the value for `CALICO_IPV6POOL_CIDR`
-   to the desired pool, it should match the `--cluster-cidr` passed to the
-   kube-controller-manager and to kube-proxy.
+1.  Follow our [installation docs]({{ site.baseurl }}/getting-started/kubernetes) to install using
+    the Tigera operator on your cluster.
 
-   ```
-   - name: CALICO_IPV6POOL_CIDR
-     value: "fd20::0/112"
-   - name: IP6
-     value: "autodetect"
-   ```
+1.  When about to apply `custom-resources.yaml`, edit it first to define an IPv6 pod CIDR
+    pool in the `Installation` resource.  For example, like this:
 
-1. Ensure in the `calico.yaml` file that the environment variable
-   `FELIX_IPV6SUPPORT` is set `true` on the calico-node Daemonset.
-1. Apply the `calico.yaml` manifest with `kubectl apply -f calico.yaml`.
-
-#### Using only IPv6
-
-If you wish to only use IPv6 (by disabling IPv4) or your hosts only have
-IPv6 addresses, you must disable autodetection of IPv4 by setting `IP`
-to `none`.
-
-With IPv4 enabled, Calico uses the node's IPv4 address as the BGP router ID. With IPv4 disabled,
-you must configure another method to calculate the BGP router ID. There are two ways to do this:
-
-- Set the environment variable `CALICO_ROUTER_ID=hash` on {{site.nodecontainer}}. This will configure {{site.prodname}} to calculate the router ID based on the hostname.
-- Pass a unique value for `CALICO_ROUTER_ID` to each node individually.
+    ```yaml
+    apiVersion: operator.tigera.io/v1
+    kind: Installation
+    metadata:
+      name: default
+    spec:
+      # Install Calico Enterprise
+      variant: TigeraSecureEnterprise
+      ...
+      calicoNetwork:
+        ipPools:
+        - cidr: fd5f:1801::/112
+      ...
+    ```
 
 ### Modifying your DNS for IPv6
 
