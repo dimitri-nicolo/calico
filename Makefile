@@ -56,10 +56,10 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS = -run $(UNIT_TESTS) -v
 endif
 
-APISERVER_VERSION? = $(shell git describe --tags --dirty --always)
-APISERVER_BUILD_DATE? = $(shell date -u +'%FT%T%z')
-APISERVER_GIT_REVISION? = $(shell git rev-parse --short HEAD)
-APISERVER_GIT_DESCRIPTION? = $(shell git describe --tags)
+APISERVER_VERSION?=$(shell git describe --tags --dirty --always)
+APISERVER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+APISERVER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+APISERVER_GIT_DESCRIPTION?=$(shell git describe --tags)
 
 VERSION_FLAGS = -X $(PACKAGE_NAME)/cmd/apiserver/server.VERSION=$(APISERVER_VERSION) \
 	-X $(PACKAGE_NAME)/cmd/apiserver/server.BUILD_DATE=$(APISERVER_BUILD_DATE) \
