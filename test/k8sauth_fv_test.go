@@ -148,12 +148,12 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		Entry("Allow all token access audit_ee",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
-				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_ee*.cluster.*")},
+				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
 			}),
 		Entry("Allow all token access audit_kube",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
-				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_kube*.cluster.*")},
+				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_kube.cluster.*")},
 			}),
 		Entry("Allow all token access events",
 			&http.Request{
@@ -173,12 +173,12 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		Entry("All Audit token access audit_ee",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeefaa"}},
-				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_ee*.cluster.*")},
+				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
 			}),
 		Entry("Audit kube token access audit_kube",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeefak"}},
-				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_kube*.cluster.*")},
+				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_kube.cluster.*")},
 			}),
 
 		Entry("Allow all basic auth access flow",
@@ -197,7 +197,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			&http.Request{
 				Header: http.Header{
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee*.cluster.*")},
+				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
 			}),
 		Entry("Allow all basic auth access events",
 			&http.Request{
@@ -221,13 +221,13 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			&http.Request{
 				Header: http.Header{
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee*.cluster.*")},
+				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
 			}),
 		Entry("Audit kube basic auth access audit_kube",
 			&http.Request{
 				Header: http.Header{
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_kube*.cluster.*")},
+				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_kube.cluster.*")},
 			}),
 		Entry("Allow all basic auth with group binding can access flow",
 			&http.Request{
@@ -237,7 +237,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			}),
 	)
 
-	DescribeTable("Test valid Authorization Headers to unauthorzied resource causes Forbidden",
+	DescribeTable("Test valid Authorization Headers to unauthorized resource causes Forbidden",
 		func(req *http.Request) {
 			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
 			uut.ServeHTTP(rr, req)

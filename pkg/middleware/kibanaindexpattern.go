@@ -54,7 +54,7 @@ func getResourceNameFromKibanaIndexPattern(req *http.Request) (string, error) {
 	// extract the index pattern title
 	title := k.Query.Bool.Filter[0].Match.IndexPatternTitle
 
-	re := regexp.MustCompile(`([_a-z]*)`)
+	re := regexp.MustCompile(`([_a-z*]*)`)
 
 	titleMatch := re.FindStringSubmatch(title)
 	if len(titleMatch) != 2 {

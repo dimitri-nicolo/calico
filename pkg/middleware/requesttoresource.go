@@ -20,25 +20,30 @@ const (
 	defaultClusterName = "cluster"
 )
 
-var legacyURLPath, extractIndexPattern, datelessIndexPattern *regexp.Regexp
+var legacyURLPath, extractIndexPrefixPattern, datelessIndexPattern *regexp.Regexp
 
 var queryResourceMap map[string]string
 
 func init() {
 	// This regexp matches legacy queries, for example: "/tigera-elasticsearch/tigera_secure_ee_flows.cluster.*/_search"
 	legacyURLPath = regexp.MustCompile(`^.*/tigera_secure_ee_.*/_search$`)
-	// This regexp extracts the index from a legacy query URL path
-	extractIndexPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z]*)[.*]?.*/_search`)
+	// This regexp extracts the index prefix from a legacy query URL path (up to first '.').
+	extractIndexPrefixPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z*]*)(?:\..*)?/_search`)
 	datelessIndexPattern = regexp.MustCompile(`^tigera_secure_ee_events\*?$`)
 
+	// This map is used for looking up the resource from an index pattern (either in Kibana or an ES query).
+	// The keys should be the full value searched for, up to the first '.'.
 	queryResourceMap = map[string]string{
 		"tigera_secure_ee_flows":      "flows",
-		"tigera_secure_ee_audit_":     "audit*", // support both audit_*
-		"tigera_secure_ee_audit":      "audit*", // and audit*
+		"tigera_secure_ee_flows*":     "flows",
+		"tigera_secure_ee_audit_*":    "audit*", // support both audit_*
+		"tigera_secure_ee_audit*":     "audit*", // and audit*
 		"tigera_secure_ee_audit_ee":   "audit_ee",
 		"tigera_secure_ee_audit_kube": "audit_kube",
 		"tigera_secure_ee_events":     "events",
+		"tigera_secure_ee_events*":    "events",
 		"tigera_secure_ee_dns":        "dns",
+		"tigera_secure_ee_dns*":       "dns",
 		"flowLogNames":                "flows",
 		"flowLogNamespaces":           "flows",
 		"flowLogs":                    "flows",
@@ -56,7 +61,7 @@ func RequestToResource(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		cluster, resourceName, urlPath, err := parseURLPath(req)
 		if err != nil {
-			log.WithError(err).Debugf("Unable to convert request URL '%+v' to resource", req.URL)
+			log.WithError(err).Infof("Unable to convert request URL '%+v' to resource", req.URL)
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
@@ -87,7 +92,10 @@ func parseURLPath(req *http.Request) (cluster, index, urlPath string, err error)
 
 	if legacyURLPath.MatchString(req.URL.Path) {
 		// This is a legacy Elasticsearch query
-		cluster, index, urlPath = parseLegacyURLPath(req)
+		cluster, index, urlPath, err = parseLegacyURLPath(req)
+		if err != nil {
+			return cluster, index, urlPath, err
+		}
 	} else {
 		// This must be a query according to the flowLog api spec
 		var err error
@@ -136,14 +144,15 @@ func parseFlowLogURLPath(req *http.Request) (cluster, index string, err error) {
 
 // This is a legacy request with a path such as: "some/path/<index>.<cluster>.*/_search".
 // We return a (corrected) url path that does not query unauthorized clusters.
-// returns <cluster>, <index>, urlPath, err
-func parseLegacyURLPath(req *http.Request) (cluster, index, err string) {
+// returns <cluster>, <index>, <url path>, <err>.
+func parseLegacyURLPath(req *http.Request) (cluster, index, urlPath string, err error) {
 	// Extract groups such that:
 	// - group 0 would match "/<index>.<cluster>.*/_search"
 	// - group 1 would match "<index>"
-	match := extractIndexPattern.FindStringSubmatch(req.URL.Path)
-	if len(match) != 2 {
-		return cluster, index, err
+	match := extractIndexPrefixPattern.FindStringSubmatch(req.URL.Path)
+	if match == nil || len(match) != 2 {
+		// Unable to determine resource and cluster, so error out to deny the request.
+		return cluster, index, urlPath, fmt.Errorf("unable to parse path %s for authorization", req.URL.Path)
 	}
 	idx := match[1]
 	index, _ = queryToResource(idx)
@@ -171,7 +180,8 @@ func parseLegacyURLPath(req *http.Request) (cluster, index, err string) {
 		path = fmt.Sprintf("/%s.%s/_search", idx, cluster)
 	}
 
-	return cluster, index, strings.Replace(req.URL.Path, match[0], path, 1)
+	urlPath = strings.Replace(req.URL.Path, match[0], path, 1)
+	return cluster, index, urlPath, nil
 }
 
 // queryToResource maps indexes into resource names used in RBAC
