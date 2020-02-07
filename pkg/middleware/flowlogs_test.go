@@ -12,6 +12,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	listMock "github.com/tigera/compliance/pkg/list/mock"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 
@@ -204,8 +206,9 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params.Actions[1]).To(BeEquivalentTo("unknown"))
 			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
 			Expect(params.SourceDestNamePrefix).To(BeEquivalentTo("coredns"))
-			Expect(params.PolicyPreview.NetworkPolicy.Name).To(BeEquivalentTo("calico-node-alertmanager-mesh"))
-			Expect(params.PolicyPreview.NetworkPolicy.Namespace).To(BeEquivalentTo("tigera-prometheus"))
+			Expect(params.PolicyPreview.NetworkPolicy).To(BeAssignableToTypeOf(&v3.NetworkPolicy{}))
+			Expect(params.PolicyPreview.NetworkPolicy.(*v3.NetworkPolicy).Name).To(BeEquivalentTo("default.calico-node-alertmanager-mesh"))
+			Expect(params.PolicyPreview.NetworkPolicy.(*v3.NetworkPolicy).Namespace).To(BeEquivalentTo("tigera-prometheus"))
 		})
 	})
 

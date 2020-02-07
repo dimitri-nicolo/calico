@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	authzv1 "k8s.io/api/authorization/v1"
 	"github.com/tigera/lma/pkg/auth"
+	authzv1 "k8s.io/api/authorization/v1"
 )
 
 // Request properties to indicate the cluster used for proxying and RBAC.

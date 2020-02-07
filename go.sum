@@ -471,7 +471,9 @@ github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200107221211-591370b83580+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/compliance v0.0.0-20200124090152-e695e0777a80/go.mod h1:m/zkz+Fb9hzhMf3BkbFN/aCEWGV3E3t3KdSFwwrP0vI=
 github.com/tigera/felix-private v0.0.0-20200205042038-a7957a7f6e43/go.mod h1:JuY1TACt8WsBqUx4a0RjCHAWk6hoOFSDq47jc1NAmR8=
+github.com/tigera/felix-private v0.0.0-20200206041944-59780602237f h1:XnFP/MbQhr1uH1/ACu+A+677gvI/ljElaU/P6p6Ddqk=
 github.com/tigera/felix-private v0.0.0-20200206041944-59780602237f/go.mod h1:f8jk7Rw6u5McGdlZ6L0eiY866d91v6Jz97bOfUTTp5E=
+github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58 h1:hGYQ5vdp/BhntX/x/TJidzwergvO22mNKhJLCbK6kJE=
 github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
 github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8/go.mod h1:OHcY7YcS7IXUd2hTFGqAUns2qzyfe7V4lNUbjfR+CLg=

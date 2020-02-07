@@ -6,6 +6,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	networkingv1 "k8s.io/api/networking/v1"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 const (
@@ -233,14 +237,48 @@ var _ = Describe("Test flowlog request validation functions", func() {
 	})
 
 	Context("Test that the getPolicyPreview function behaves as expected", func() {
-		It("should return a PolicyPreview object when passed a valid preview string", func() {
+		It("should return a PolicyPreview object when passed a valid preview string containing a Calico NetworkPolicy", func() {
 			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview.json")
 			Expect(err).To(Not(HaveOccurred()))
 			policyPreview, err := getPolicyPreview(string(validPreview))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(policyPreview.Verb).To(BeEquivalentTo("delete"))
-			Expect(policyPreview.NetworkPolicy.Name).To(BeEquivalentTo("calico-node-alertmanager-mesh"))
-			Expect(policyPreview.NetworkPolicy.Namespace).To(BeEquivalentTo("tigera-prometheus"))
+			Expect(policyPreview.NetworkPolicy).To(BeAssignableToTypeOf(&v3.NetworkPolicy{}))
+			Expect(policyPreview.NetworkPolicy.(*v3.NetworkPolicy).Name).To(Equal("default.calico-node-alertmanager-mesh"))
+			Expect(policyPreview.NetworkPolicy.(*v3.NetworkPolicy).Namespace).To(Equal("tigera-prometheus"))
+		})
+
+		It("should return a PolicyPreview object when passed a valid preview string containing a Calico GlobalNetworkPolicy", func() {
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_2.json")
+			Expect(err).To(Not(HaveOccurred()))
+			policyPreview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(policyPreview.Verb).To(BeEquivalentTo("delete"))
+			Expect(policyPreview.NetworkPolicy).To(BeAssignableToTypeOf(&v3.GlobalNetworkPolicy{}))
+			Expect(policyPreview.NetworkPolicy.(*v3.GlobalNetworkPolicy).Name).To(Equal("default.calico-node-alertmanager-mesh-global"))
+			Expect(policyPreview.NetworkPolicy.(*v3.GlobalNetworkPolicy).Namespace).To(Equal(""))
+		})
+
+		It("should return a PolicyPreview object when passed a valid preview string containing a Kubernetes NetworkPolicy", func() {
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_3.json")
+			Expect(err).To(Not(HaveOccurred()))
+			policyPreview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(policyPreview.Verb).To(BeEquivalentTo("delete"))
+			Expect(policyPreview.NetworkPolicy).To(BeAssignableToTypeOf(&networkingv1.NetworkPolicy{}))
+			Expect(policyPreview.NetworkPolicy.(*networkingv1.NetworkPolicy).Name).To(Equal("calico-node-alertmanager-mesh-xx"))
+			Expect(policyPreview.NetworkPolicy.(*networkingv1.NetworkPolicy).Namespace).To(Equal("tigera-prometheus"))
+		})
+
+		It("should return a PolicyPreview object when passed a valid preview string containing a Kubernetes v1beta1 NetworkPolicy ", func() {
+			validPreview, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_4.json")
+			Expect(err).To(Not(HaveOccurred()))
+			policyPreview, err := getPolicyPreview(string(validPreview))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(policyPreview.Verb).To(BeEquivalentTo("create"))
+			Expect(policyPreview.NetworkPolicy).To(BeAssignableToTypeOf(&networkingv1.NetworkPolicy{}))
+			Expect(policyPreview.NetworkPolicy.(*networkingv1.NetworkPolicy).Name).To(Equal("calico-node-alertmanager-mesh-yy"))
+			Expect(policyPreview.NetworkPolicy.(*networkingv1.NetworkPolicy).Namespace).To(Equal("tigera-prometheus"))
 		})
 
 		It("should return an error when passed an invalid preview string", func() {
