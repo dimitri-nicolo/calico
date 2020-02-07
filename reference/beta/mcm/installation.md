@@ -2,8 +2,8 @@
 title: Set up multi-cluster management
 description: Simplify the management of multiple Calico Enterprise installations using a single management plane.
 ---
->**Note**: Beta version
-{: .alert .alert-info}
+>**Beta version**
+{: .alert .alert-warning}
 
 ### Big picture
 
@@ -36,7 +36,8 @@ This how-to guide uses the following {{site.prodname}} features:
 | Managed           | A cluster that is managed by the shared management plane. Does not have its own Elasticsearch or {{site.prodname}} Manager.                                                           |
 | Standalone        | A cluster that operates independently, is not connected to any other clusters, and has its own Elasticsearch and {{site.prodname}} Manager. All clusters prior to 2.7 are standalone. |
 
-![Multi-cluster Overview]({{site.url}}/images/mcm/mcm-overview.png)
+![Multi-cluster Overview]({{site.baseurl}}/images/mcm/mcm-overview.png)
+{: .align-center}
 
 ### Before you begin...
 
@@ -50,7 +51,8 @@ You will need multiple Kubernetes clusters to install {{site.prodname}} with dif
 
 #### Limitations
 
-Intrusion detection is currently not supported in a multi-cluster configuration.
+- Intrusion detection is currently not supported in a multi-cluster configuration.
+- Converting from an existing standalone cluster to a management or managed cluster is currently not supported.
 
 ### How To
 
@@ -85,18 +87,18 @@ The first step is to set up a management cluster. This will contain your central
 
 1. [Configure a storage class for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
-   > **Note**: Since the management cluster will stora all log data across your managed clusters, careful consideration should be made in choosing an appropriate size for the storage class to accommodate your anticipated volume of data. You may also need to adjust the log storage settings accordingly to scale up your centralized Elasticsearch cluster. For more information, see [Adjust log storage size]({{site.baseurl}}/maintenance/adjust-log-storage-size).
+   > **Note**: Since the management cluster will store all log data across your managed clusters, careful consideration should be made in choosing an appropriate size for the storage class to accommodate your anticipated volume of data. You may also need to adjust the log storage settings accordingly to scale up your centralized Elasticsearch cluster. For more information, see [Adjust log storage size]({{site.baseurl}}/maintenance/adjust-log-storage-size).
    {: .alert .alert-info}
 
 1. Install the Tigera operators and custom resource definitions.
 
-   ```
+   ```shell
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
 
 1. Install your pull secret.
 
-   ```
+   ```shell
    kubectl create secret generic tigera-pull-secret \
        --from-file=.dockerconfigjson=<path/to/pull/secret> \
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
@@ -105,20 +107,22 @@ The first step is to set up a management cluster. This will contain your central
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    Download the custom resources YAML to your local directory.
-   ```
+   ```shell
    curl -O -L {{ "/manifests/custom-resources.yaml" | absolute_url }}
    ```
 
    Update the file by changing the `clusterManagementType` field for the Installation custom resource from `Standalone` to `Management`.
 
+   > **Note**: It is important to ensure the `clusterManagementType` is set to `Management` before applying the custom resources. Otherwise, a standalone cluster will be installed instead.
+
    Now, install the modified manifest.
-   ```
+   ```shell
    kubectl create -f ./custom-resources.yaml
    ```
 
    You can now monitor progress with the following command:
 
-   ```
+   ```shell
    watch kubectl get tigerastatus
    ```
 
@@ -128,13 +132,13 @@ The first step is to set up a management cluster. This will contain your central
 
 In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
 
-```
+```shell
 kubectl create -f </path/to/license.yaml>
 ```
 
 You can now monitor progress with the following command:
 
-```
+```shell
 watch kubectl get tigerastatus
 ```
 
@@ -144,7 +148,7 @@ When all components show a status of `Available`, proceed to the next section.
 
 To secure {{site.prodname}} component communications, install the following set of network policies.
 
-```
+```shell
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
@@ -169,11 +173,17 @@ Let’s take a quick look at viewing the management cluster and managed clusters
 
 2. In the right-hand side of the top navigation bar, you can toggle between the various clusters that are currently registered with the management plane. Clicking it displays a drop-down menu where you can pick the cluster you want to manage.
 
+   ![Cluster Selection]({{site.baseurl}}/images/mcm/mcm-cluster-selection.png)
+   {: .align-center}
+
    Selecting a cluster from the drop-down menu means all other views in the {{site.prodname}} Manager are specific to that cluster. For example, going to the Policies view displays Tiers and Policies defined within the selected cluster.
-   
+
    By default, there is one cluster available in the selection drop down immediately after installation, the management cluster itself.
 
 3. Examine the managed clusters view. This view allows you to see all currently registered managed clusters. From here you can edit each managed cluster and register additional managed clusters. Initially, this listing will be empty. We will walk through how to register a managed cluster in the next section.
+
+   ![Managed Clusters View]({{site.baseurl}}/images/mcm/mcm-managed-clusters-view.png)
+   {: .align-center}
 
    > **Note**: The management cluster is not displayed in this view. It is not registered and cannot be edited or removed.
    {: .alert .alert-info}
@@ -184,23 +194,32 @@ Once a management cluster is up and running, the next step is to register a mana
 
 ###### Add a managed cluster to the management plane
 
-1. To add managed clusters to your management cluster, click the Add Cluster button.
+1. Navigate back to the managed clusters view in the {{site.prodname}} Manager and click the Add Cluster button.
 
-1. Create a name for your managed cluster (e.g. `application-cluster`) and click the Create Cluster button.
+1. Create a name for your managed cluster (e.g. `app-cluster-1`) and click the Create Cluster button.
+
+   ![Create Cluster]({{site.baseurl}}/images/mcm/mcm-create-cluster.png)
+   {: .align-center}
 
    > **Note**: The name you choose for your managed cluster is persisted in the management cluster and is used to uniquely identify this cluster. This unique name is used for storing cluster specific data like flow logs. You cannot rename the managed cluster after it is created.
    {: .alert .alert-info}
 
 1. After clicking Create Cluster, download the manifest YAML file containing configuration for your managed cluster (the file is named `<your-chosen-cluster-name>.yaml`).
 
+   ![Download Manifest]({{site.baseurl}}/images/mcm/mcm-managed-cluster-manifest.png)
+   {: .align-center}
+
    > **Note**: The manifest you download in this step will be used later on to install configuration for your corresponding managed cluster.
    {: .alert .alert-info}
 
 1. After you click the Close button, you will be taken back to the managed clusters view with your new managed cluster.
 
-1. Within the managed cluster manifest you previously downloaded from the {{site.prodname}} Manager, navigate to the `managementClusterAddr` field for `ManagementClusterConnection` custom resource (shown in the snippet below) and set the host and port to be the corresponding values of the service you created during the installation of the management cluster.
+   ![Cluster Created]({{site.baseurl}}/images/mcm/mcm-cluster-created.png)
+   {: .align-center}
 
-   ```
+1. Within the managed cluster manifest you previously downloaded from the {{site.prodname}} Manager, navigate to the `managementClusterAddr` field for the `ManagementClusterConnection` custom resource (shown in the example below) and set the host and port to be the corresponding values of the service you created during the installation of the management cluster.
+
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: ManagementClusterConnection
    metadata:
@@ -215,13 +234,13 @@ Once a management cluster is up and running, the next step is to register a mana
 
 1. Install the Tigera operators and custom resource definitions.
 
-   ```
+   ```shell
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
 
 1. Install your pull secret.
 
-   ```
+   ```shell
    kubectl create secret generic tigera-pull-secret \
        --from-file=.dockerconfigjson=<path/to/pull/secret> \
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
@@ -230,23 +249,28 @@ Once a management cluster is up and running, the next step is to register a mana
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    Download the custom resources YAML to your local directory.
-   ```
+
+   ```shell
    curl -O -L {{ "/manifests/custom-resources.yaml" | absolute_url }}
    ```
 
-   Remove the Manager custom resource from the manifest file (see the below example). The Manager component does not run within a managed cluster, since it will be controlled by the centralized management plane.
-   ```
+   Remove the Manager custom resource from the manifest file (shown in the example below). The Manager component does not run within a managed cluster, since it will be controlled by the centralized management plane.
+
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: Manager
    metadata:
      name: tigera-secure
    spec:
+     # Authentication configuration for accessing the Tigera manager.
+     # Default is to use token-based authentication.
      auth:
        type: Token
    ```
 
-   Remove the LogStorage custom resource from the manifest file (see the below example). Similar to the Manager, the LogStorage component (Elasticsearch) does not run within a managed cluster.
-   ```
+   Remove the LogStorage custom resource from the manifest file (shown in the example below). Similar to the Manager, the LogStorage component (Elasticsearch) does not run within a managed cluster.
+
+   ```yaml
    apiVersion: operator.tigera.io/v1
    kind: LogStorage
    metadata:
@@ -256,15 +280,27 @@ Once a management cluster is up and running, the next step is to register a mana
        count: 1
    ```
 
-   Update the manifest file by changing the `clusterManagementType` field for the Installation custom resource from `Standalone` to `Managed`. 
+   Update the manifest file by changing the `clusterManagementType` field for the `Installation` custom resource from `Standalone` to `Managed`.
 
-   Now, install the modified manifest.
-   ```
+   > **Note**: It is important to ensure the `clusterManagementType` is set to `Managed` before applying the custom resources. Otherwise, a standalone cluster will be installed instead.
+
+   Now install the modified manifest.
+
+   ```shell
    kubectl create -f ./custom-resources.yaml
    ```
 
-   You can now monitor progress with the following command:
+   Finally apply the managed cluster manifest you downloaded when you registered the cluster in the management plane (from section [Add a managed cluster to the management plane](#add-a-managed-cluster-to-the-management-plane)).
+
+   ```shell
+   kubectl create -f ./<your-chosen-cluster-name>.yaml
    ```
+
+   This will bring up the component called `tigera-guardian` which will connect the managed cluster to the management plane. All log data will be sent through this component to the centralized Elasticsearch.
+
+   You can now monitor progress with the following command:
+
+   ```shell
    watch kubectl get tigerastatus
    ```
 
@@ -274,23 +310,23 @@ Once a management cluster is up and running, the next step is to register a mana
 
 In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
 
-```
+```shell
 kubectl create -f </path/to/license.yaml>
 ```
 
 You can now monitor progress with the following command:
 
-```
-watch kubectl get tigerastatus
+```shell
+watch kubectl get pods --all-namespaces -o wide
 ```
 
-When all components (except for Manager & LogStorage) show a status of `Available`, proceed to the next section.
+Wait until you see the `tigera-compliance` namespace get created, then proceed to the next section.
 
 ###### Secure {{site.prodname}} on the managed cluster with network policy
 
 To secure {{site.prodname}} component communications, install the following set of network policies.
 
-```
+```shell
 kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
 ```
 
@@ -298,14 +334,14 @@ kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
 
 ###### Configure cross-cluster user permissions
 
-To ensure a user logged into the {{site.prodname}} Manager in the management plane has permissions to access resources within a managed cluster (e.g. Policies, NetworkSets, etc.), the following requirements must be met:
+To ensure a user logged in to the {{site.prodname}} Manager in the management plane has permissions to access resources within a managed cluster (e.g. Policies, NetworkSets, etc.), the following requirements must be met:
 
 - The same user / service account exists in both the management and managed clusters
   - This means the name used within the RoleBinding or ClusterRoleBinding must match
 - The user / service account in the managed cluster has the permissions to access relevant resources
   - The user / service account must be bound to a role or cluster role with sufficient privileges
 
-{{site.prodname}} uses [Kubernetes user impersonation](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation) when sending requests from the management plane down into a managed cluster. It is assumed that the user logged into the management plane has a corresponding user with the same name in the managed cluster.
+{{site.prodname}} uses [Kubernetes user impersonation](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation) when sending requests from the management plane down in to a managed cluster. It is assumed that the user logged in to the management plane has a corresponding user with the same name in the managed cluster.
 
 {{site.prodname}} provides some default cluster roles that you can assign to your users. For more information on how to assign the default cluster roles to your users, see [Log in to Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/create-user-login).
 
@@ -313,13 +349,15 @@ To ensure a user logged into the {{site.prodname}} Manager in the management pla
 
 1. Log in to the {{site.prodname}} Manager. For more information on how to access the Manager, see [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager).
 2. Click on Kibana from the side navigation.
-3. Log in to the Kibana dashboard. For more information on how to log into your Kibana dashboard, see [Accessing logs from Kibana]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana)
-4. Navigate to Discovery view and filter logs by managed cluster indexes. Select a type of log (e.g. audit, dns, events, flow). Then, from the “Available Fields” section in the side panel, select the _index field.  
+3. Log in to the Kibana dashboard. For more information on how to log in to your Kibana dashboard, see [Accessing logs from Kibana]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana)
+4. Navigate to Discovery view and filter logs by managed cluster indexes. Select a type of log (e.g. audit, dns, events, flow). Then, from the “Available Fields” section in the side panel, select the `_index` field.
 
-   In the example above, the selected log type (flow logs) has the index prefix, `tigera_secure_ee_flow` and three cluster indexes available:
-   - Index: tigera_secure_ee_flows.cluster.20200131
-   - Index: tigera_secure_ee_flows.application-cluster.20200131
-   - Index: tigera_secure_ee_flows.app2.20200131
+   ![Kibana Cluser Indexes]({{site.baseurl}}/images/mcm/mcm-kibana-cluster-indexes.png)
+   {: .align-center}
+
+   In the example above, the selected log type (flow logs) has the index prefix, `tigera_secure_ee_flow` and two cluster indexes available:
+   - Index: tigera_secure_ee_flows.cluster.20200207
+   - Index: tigera_secure_ee_flows.app-cluster-1.20200207
 
    > **Note**: The management cluster has a default cluster name to identify indexes. When filtering logs for the management cluster, use this cluster name: cluster.
    {: .alert .alert-info}
@@ -331,14 +369,16 @@ To ensure a user logged into the {{site.prodname}} Manager in the management pla
 Log data across all managed clusters are stored in a centralized Elasticsearch within the management cluster. You can use [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) roles and cluster roles to define granular access to cluster log data. For example, using the RBAC rule syntax, you can define rules to control access to specific log types or specific clusters by using the `resources` and `resourceNames` list fields.
 
 {{site.prodname}} log data is stored within Elasticsearch indexes. The indexes have the following naming scheme: 
-```
-<log type>.<cluster name>.<date>
+
+```shell
+<log-type>.<cluster-name>.<date>
 ```
 
 A standalone cluster uses the cluster name `cluster` for Elasticsearch indexes. This is also the name used by a management cluster. For a managed cluster, its cluster name is the value chosen by the user at the time of registration, through the {{site.prodname}} Manager.
 
 To restrict to a specific cluster or subset of clusters use resources. To restrict to a specific log type use resourceNames.
-The following are valid cluster types: 
+The following are valid cluster types:
+
 - "flows"
 - "audit*"
 - "audit_ee"
@@ -350,7 +390,7 @@ Let’s look at some examples for defining RBAC rules within a role or cluster r
 
 The rule below allows access to log types flow and DNS for a single cluster with the name `app-cluster`.
 
-```
+```yaml
 - apiGroups: ["lma.tigera.io"]
   resources: ["app-cluster"]
   resourceNames: ["flows", "dns"]
@@ -362,7 +402,7 @@ The rule below allows access to log types flow and DNS for a single cluster with
 
 The rule below allows access to any cluster for log types flow, DNS and audit.
 
-```
+```yaml
 - apiGroups: ["lma.tigera.io"]
   resources: ["*"]
   resourceNames: ["flows", "dns", "audit"]
@@ -371,7 +411,7 @@ The rule below allows access to any cluster for log types flow, DNS and audit.
 
 The rule below allows access to any cluster for all log types.
 
-```
+```yaml
 - apiGroups: ["lma.tigera.io"]
   resources: ["*"]
   resourceNames: ["*"]

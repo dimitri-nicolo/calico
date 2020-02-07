@@ -63,6 +63,7 @@ spec:
     destination:
       # The ports Calico Enterprise API Server and Calico Enterprise Query Server are configured to listen on.
       ports: [443, 5443, 8080, 10443]
+
 ---
 
 # This manifest creates a network policy to allow traffic to Alertmanager
@@ -128,112 +129,6 @@ spec:
     matchLabels:
       app: prometheus
       prometheus: calico-node-prometheus
----
-
-# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
-# intrusion detection installer
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-tigera.elasticsearch-access
-  namespace: tigera-elasticsearch
-spec:
-  order: 1
-  tier: allow-tigera
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
-  types:
-  - Ingress
-  ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'fluentd-node'
-      namespaceSelector: name == 'tigera-fluentd'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'eks-log-forwarder'
-      namespaceSelector: name == 'tigera-fluentd'
-    destination:
-      ports: [9200]
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'elastic-curator'
-      namespaceSelector: name == 'tigera-elasticsearch'
-    destination:
-      ports: [9200]
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-benchmarker'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-controller'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-server'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-snapshotter'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'compliance-reporter'
-      namespaceSelector: name == 'tigera-compliance'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    source:
-      selector: k8s-app == 'elastic-operator'
-      namespaceSelector: name == 'tigera-eck-operator'
-  - action: Allow
-    destination:
-      ports: [9200]
-    protocol: TCP
-    # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
-
----
-
-# Allow internal communication within the ElasticSearch cluster
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-tigera.elasticsearch-internal
-  namespace: tigera-elasticsearch
-spec:
-  order: 1
-  tier: allow-tigera
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
-  types:
-  - Ingress
-  ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
-    destination:
-      ports: [9300]
 
 ---
 
@@ -258,14 +153,10 @@ spec:
     source: {}
   - action: Allow
     destination:
-      namespaceSelector: projectcalico.org/name == "tigera-elasticsearch"
+      namespaceSelector: projectcalico.org/name == "tigera-guardian"
       ports:
-      - 9200
-      selector: (elasticsearch.k8s.elastic.co/node-master == "true"&&elasticsearch.k8s.elastic.co/node-ml
-        == "true"&&common.k8s.elastic.co/type
-        == "elasticsearch"&&elasticsearch.k8s.elastic.co/cluster-name
-        == "tigera-secure"&&elasticsearch.k8s.elastic.co/node-data == "true"&&elasticsearch.k8s.elastic.co/node-ingest
-        == "true")
+      - 8080
+      selector: k8s-app == "tigera-guardian"
     protocol: TCP
     source: {}
   order: 1
@@ -274,3 +165,4 @@ spec:
   types:
   - Ingress
   - Egress
+
