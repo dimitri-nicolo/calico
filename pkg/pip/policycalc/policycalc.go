@@ -176,19 +176,19 @@ func NewPolicyCalculator(
 // action changes from deny to allow then we also have to calculate the destination action since we will not have flow
 // data to work from.
 func (fp *policyCalculator) CalculateSource(flow *api.Flow) (modified bool, before, after EndpointResponse) {
-	return fp.calculateBeforeAfterResponse(flow, &fp.Egress, 0, 0)
+	return fp.calculateBeforeAfterResponse(flow, &fp.Egress, true, 0, 0)
 }
 
 // Calculate calculates the action before and after the configuration change for a specific destination reported flow.
 // This method may be called simultaneously from multiple go routines for different flows if required.
 func (fp *policyCalculator) CalculateDest(flow *api.Flow, sourceActionBefore, sourceActionAfter api.ActionFlag) (modified bool, before, after EndpointResponse) {
-	return fp.calculateBeforeAfterResponse(flow, &fp.Ingress, sourceActionBefore, sourceActionAfter)
+	return fp.calculateBeforeAfterResponse(flow, &fp.Ingress, false, sourceActionBefore, sourceActionAfter)
 }
 
 // calculateBeforeAfterResponse calculates the action before and after the configuration change for a specific reported
 // flow.
 func (fp *policyCalculator) calculateBeforeAfterResponse(
-	flow *api.Flow, changeset *CompiledTierAndPolicyChangeSet, beforeSrcAction, afterSrcAction api.ActionFlag,
+	flow *api.Flow, changeset *CompiledTierAndPolicyChangeSet, isSrc bool, beforeSrcAction, afterSrcAction api.ActionFlag,
 ) (modified bool, before, after EndpointResponse) {
 	// Initialize logger for this flow, and initialize selector caches.
 	clog := log.WithFields(log.Fields{
@@ -210,10 +210,10 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	// If the flow is not impacted return the unmodified response.
 	if !changeset.FlowSelectedByImpactedPolicies(flow, cache) {
 		clog.Debug("Flow unaffected")
-		if beforeSrcAction != api.ActionFlagDeny {
+		if isSrc || beforeSrcAction&api.ActionFlagAllow != 0 {
 			before = getUnchangedResponse(flow)
 		}
-		if afterSrcAction != api.ActionFlagDeny {
+		if isSrc || afterSrcAction&api.ActionFlagAllow != 0 {
 			after = getUnchangedResponse(flow)
 		}
 		return beforeSrcAction != afterSrcAction, before, after
@@ -221,9 +221,8 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 
 	// Calculate the before impact. We don't necessarily use the calculated value, but it pre-populates the cache for
 	// the after response.
-	if beforeSrcAction != api.ActionFlagDeny {
-		// We only bother calculating the before flow for the destination if the before source action is not deny.
-		clog.Debug("Calculate before impact")
+	clog.Debug("Calculate before impact")
+	if isSrc || beforeSrcAction&api.ActionFlagAllow != 0 {
 		before = changeset.Before.Calculate(flow, cache, true)
 	}
 
@@ -232,7 +231,7 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	// If we are requested to calculate the original action it's possible the verdict has changed from deny to
 	// allow or unknown. In that case if the destination is a calico-managed endpoint we'll need to add a fake
 	// destination and calculate the impact of that - this handles the fact that we won't have remote data to use.
-	if !fp.Config.CalculateOriginalAction && beforeSrcAction != api.ActionFlagDeny {
+	if !fp.Config.CalculateOriginalAction && (isSrc || beforeSrcAction&api.ActionFlagAllow != 0) {
 		clog.Debug("Keep original action from flow log")
 		before = getUnchangedResponse(flow)
 
@@ -241,7 +240,7 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 		sort.Sort(api.SortablePolicyHits(before.Policies))
 	}
 
-	if afterSrcAction != api.ActionFlagDeny {
+	if isSrc || afterSrcAction&api.ActionFlagAllow != 0 {
 		// Calculate the after impact.
 		clog.Debug("Calculate after impact")
 		after = changeset.After.Calculate(flow, cache, false)
@@ -267,7 +266,7 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	}
 
 	modified = before.Include != after.Include ||
-		before.Action != after.Action ||
+		before.Action&ActionFlagsAllowAndDeny != after.Action&ActionFlagsAllowAndDeny ||
 		(len(before.Policies) != 0 && api.PolicyHitsEqual(before.Policies, after.Policies))
 
 	return modified, before, after
