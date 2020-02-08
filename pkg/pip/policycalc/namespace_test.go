@@ -75,6 +75,12 @@ var _ = Describe("Namespace handler tests", func() {
 		Expect(m1(nil, &api.FlowEndpointData{Namespace: "ns2"}, nil, nil)).To(Equal(MatchTypeTrue))
 		Expect(m1(nil, &api.FlowEndpointData{Namespace: "ns3"}, nil, nil)).To(Equal(MatchTypeFalse))
 
+		By("Creating a matching on namespace name ns1")
+		m1 = nh.GetNamespaceSelectorEndpointMatcher("projectcalico.org/name == 'ns1'")
+		Expect(m1(nil, &api.FlowEndpointData{Namespace: "ns1"}, nil, nil)).To(Equal(MatchTypeTrue))
+		Expect(m1(nil, &api.FlowEndpointData{Namespace: "ns2"}, nil, nil)).To(Equal(MatchTypeFalse))
+		Expect(m1(nil, &api.FlowEndpointData{Namespace: "ns3"}, nil, nil)).To(Equal(MatchTypeFalse))
+
 		By("Creating a matcher on ns2 and ns3")
 		m2 := nh.GetNamespaceSelectorEndpointMatcher("protein == 'beef' && carb == 'rice'")
 		Expect(m2(nil, &api.FlowEndpointData{Namespace: "ns1"}, nil, nil)).To(Equal(MatchTypeFalse))
@@ -112,7 +118,7 @@ var _ = Describe("Namespace handler tests", func() {
 		Expect(m2(nil, &api.FlowEndpointData{Namespace: ""}, nil, nil)).To(Equal(MatchTypeFalse))
 
 		By("Checking the size of the selector cache")
-		Expect(nh.selectorMatchers).To(HaveLen(5))
+		Expect(nh.selectorMatchers).To(HaveLen(6))
 	})
 
 	It("handles service account population", func() {
