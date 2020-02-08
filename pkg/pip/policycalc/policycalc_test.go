@@ -725,7 +725,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		Expect(after.Include).To(BeTrue())
 
 		By("Checking after flow destination is also allow and included - this has been added by policycalc")
-		modified, before, after = pc.CalculateDest(f, api.ActionFlagDeny, api.ActionFlagAllow)
+		modified, before, after = pc.CalculateDest(f, api.ActionFlagDeny|policycalc.ActionFlagFlowLogRemovedUncertainty, api.ActionFlagAllow)
 		Expect(before.Include).To(BeFalse())
 		Expect(after.Action).To(Equal(api.ActionFlagAllow))
 		Expect(after.Include).To(BeTrue())

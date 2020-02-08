@@ -175,7 +175,7 @@ func (p *pip) SearchAndProcessFlowLogs(
 				// has been modified from denied then we need to add some flow data for the remote. Since we won't have
 				// the actual data, all we can do is add a fake flow with minimal available data.
 				if srcDenyFlow.Destination.IsCalicoManagedEndpoint() &&
-					(afterSrc.Action != api.ActionFlagDeny || beforeSrc.Action != api.ActionFlagDeny) {
+					(afterSrc.Action&api.ActionFlagAllow != 0 || beforeSrc.Action&api.ActionFlagAllow != 0) {
 					log.Debug("Including fake destination flow due to source flow changing from denied")
 					destFlow := api.Flow{
 						Reporter:    api.ReporterTypeDestination,
