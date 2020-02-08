@@ -204,11 +204,21 @@ func (n *namespaceData) getServiceAccounts(sel selector.Selector) (out []string)
 
 // setNamespaceLabels sets the labels for a specific Namespace.
 func (n *NamespaceHandler) setNamespaceLabels(name string, labels map[string]string) {
+	if labels == nil {
+		labels = map[string]string{"projectcalico.org/name": name}
+	} else {
+		labels["projectcalico.org/name"] = name
+	}
 	n.get(name).labels = labels
 }
 
 // setServiceAccountLabels sets the labels for a specific ServiceAccount
 func (n *NamespaceHandler) setServiceAccountLabels(namespace, name string, labels map[string]string) {
+	if labels == nil {
+		labels = map[string]string{"projectcalico.org/name": name}
+	} else {
+		labels["projectcalico.org/name"] = name
+	}
 	n.get(namespace).serviceAccountLabels[name] = labels
 }
 
