@@ -378,7 +378,7 @@ To manually run a report:
    ```bash
    kubectl get secrets -n tigera-compliance
    ```
-   The secret name should look something like this: `compliance-reporter-token-hmpaq`
+   The secret name should look something like this: `tigera-compliance-reporter-token-hmpaq`
 
    With the proper secret name, add it to your pod template
    ```bash
