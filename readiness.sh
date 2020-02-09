@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e -o pipefail
 
 # Location of readiness file which contains elasticsearch metrics
 readiness_destfile="/tmp/readiness_metrics"
@@ -11,7 +12,7 @@ buffer_length_current=$(curl -s http://localhost:24220/api/plugins.json | jq --r
 if [ ! -f "$readiness_destfile" ]
 then
     echo "$retry_count_current $buffer_length_current" > "$readiness_destfile"
-	exit 0
+    exit 0
 fi
 
 # Get the earlier metrics from readiness file
