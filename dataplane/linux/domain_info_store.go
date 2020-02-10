@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -170,9 +170,19 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 			// in the next line is clearly a v4 assumption, and some of the code inside
 			// `nfnetlink.SubscribeDNS` also looks v4-specific.
-			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
-			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
-				dns, _ := dnsLayer.(*layers.DNS)
+			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Lazy)
+			if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+				log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
+			} else {
+				log.Debug("No IPv4 layer")
+			}
+
+			// Decode the packet as DNS.  Don't just use LayerTypeDNS here, because that
+			// requires port 53.  Here we want to parse as DNS regardless of the port
+			// number.
+			dns := &layers.DNS{}
+			err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
+			if err == nil {
 				if s.collector != nil {
 					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
 						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
@@ -181,6 +191,8 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 					}
 				}
 				s.processDNSPacket(dns)
+			} else {
+				log.WithError(err).Debug("No DNS layer")
 			}
 		case expiry := <-s.mappingExpiryChannel:
 			s.processMappingExpiry(expiry.name, expiry.value)
@@ -321,6 +333,7 @@ func (s *domainInfoStore) saveMappingsV1() error {
 func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	log.Debugf("DNS packet with %v answers %v additionals", len(dns.Answers), len(dns.Additionals))
 	for _, rec := range dns.Answers {
 		s.storeDNSRecordInfo(&rec, "answer")
 	}
