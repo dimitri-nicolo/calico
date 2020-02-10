@@ -1,14 +1,14 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 // This code has been based on code from etcd repository
 // to provide support for inline certificates and keys for calicoctl.
 // Below are the github links for the files from which the code has been borrowed.
 
 // Copyright 2015 The etcd Authors
-//     https://github.com/etcd-io/etcd/blob/release-3.3/pkg/transport/listener.go
+//     https://go.etcd.io/etcd/blob/release-3.3/pkg/transport/listener.go
 
 // Copyright 2016 The etcd Authors
-//     https://github.com/etcd-io/etcd/blob/release-3.3/pkg/tlsutil/tlsutil.go
+//     https://go.etcd.io/etcd/blob/release-3.3/pkg/tlsutil/tlsutil.go
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

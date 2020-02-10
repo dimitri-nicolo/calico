@@ -24,10 +24,10 @@ import (
 
 	"crypto/tls"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/pkg/srv"
-	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/pkg/srv"
+	"go.etcd.io/etcd/pkg/transport"
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -59,7 +59,7 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 	}
 
 	if config.EtcdDiscoverySrv != "" {
-		srvs, srvErr := srv.GetClient("etcd-client", config.EtcdDiscoverySrv)
+		srvs, srvErr := srv.GetClient("etcd-client", config.EtcdDiscoverySrv, "")
 		if srvErr != nil {
 			return nil, fmt.Errorf("failed to discover etcd endpoints through SRV discovery: %v", srvErr)
 		}
@@ -94,9 +94,9 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 		tls, err = tlsInfo.ClientConfigInlineCertKey()
 	} else {
 		tlsInfo := &transport.TLSInfo{
-			CAFile:   config.EtcdCACertFile,
-			CertFile: config.EtcdCertFile,
-			KeyFile:  config.EtcdKeyFile,
+			TrustedCAFile: config.EtcdCACertFile,
+			CertFile:      config.EtcdCertFile,
+			KeyFile:       config.EtcdKeyFile,
 		}
 		tls, err = tlsInfo.ClientConfig()
 	}
