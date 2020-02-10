@@ -206,7 +206,7 @@ func (ere *endpointRecommendationEngine) updateSelectorFromFlow(flow api.Flow) {
 	}
 }
 
-// processRuleFromFlow collects traffic information for contructing policy rules.
+// processRuleFromFlow collects traffic information for constructing policy rules.
 func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 	// Process a flow and append to appropriate rule. Rules are processed
 	// in the following order:
@@ -214,9 +214,8 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 	//   2. Named ports matches go next. TODO(doublek).
 	//   3. Finally, port + protocol matches.
 	// The current assumption is that a single flow will yield a single rule.
-
 	if flow.Reporter == api.ReporterTypeSource && ere.matchesSourceEndpoint(flow) {
-		// A flow reported at the source will add a egress rule to an destination port + protocol.
+		// A flow reported at the source will add an egress rule to an destination port + protocol.
 		erpp := endpointRulePerProtocol{
 			endpointName:      flow.Destination.Name,
 			endpointNamespace: flow.Destination.Namespace,
@@ -225,12 +224,14 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 		rule, ok := ere.egressTraffic[erpp]
 		if ok {
 			rule.selector.IntersectLabels(flow.Destination.Labels)
-			rule.ports.Add(numorstring.SinglePort(*flow.Destination.Port))
 		} else {
 			rule = entityRule{
 				selector: NewSelectorBuilder(flow.Destination.Labels),
-				ports:    set.From(numorstring.SinglePort(*flow.Destination.Port)),
+				ports:    set.New(),
 			}
+		}
+		if flow.Destination.Port != nil {
+			rule.ports.Add(numorstring.SinglePort(*flow.Destination.Port))
 		}
 		ere.egressTraffic[erpp] = rule
 		log.Debugf("Adding egress traffic %+v with labels %+v", erpp, rule)
@@ -245,12 +246,14 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 		rule, ok := ere.ingressTraffic[erpp]
 		if ok {
 			rule.selector.IntersectLabels(flow.Source.Labels)
-			rule.ports.Add(numorstring.SinglePort(*flow.Destination.Port))
 		} else {
 			rule = entityRule{
 				selector: NewSelectorBuilder(flow.Source.Labels),
-				ports:    set.From(numorstring.SinglePort(*flow.Destination.Port)),
+				ports:    set.New(),
 			}
+		}
+		if flow.Destination.Port != nil {
+			rule.ports.Add(numorstring.SinglePort(*flow.Destination.Port))
 		}
 		ere.ingressTraffic[erpp] = rule
 		log.Debugf("Adding ingress traffic %+v with labels %+v", erpp, rule)
