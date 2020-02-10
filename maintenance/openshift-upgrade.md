@@ -17,20 +17,47 @@ if either of those return successfully then your installation is using the opera
 
 ## Upgrading to {{page.version}} {{site.prodname}}
 
-{% include content/openshift-manifests.md %}
+1. Download the {{site.prodname}} manifests for OpenShift and add them to the generated manifests directory:
+   ```bash
+   mkdir manifests
+   curl {{ "/manifests/ocp/crds/01-crd-installation.yaml" | absolute_url }} -o manifests/01-crd-installation.yaml
+   curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml" | absolute_url }} -o manifests/01-crd-managementclusterconnection.yaml
+   curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute_url }} -o manifests/02-role-tigera-operator.yaml
+   curl {{ "/manifests/ocp/tigera-operator/02-tigera-operator.yaml" | absolute_url }} -o manifests/02-tigera-operator.yaml
+   ```
 
+1. Delete the existing operator deployment:
+   ```bash
+   oc delete deployment -n tigera-operator tigera-operator
+   ```
 
-Next, apply the manifests.
-```
-oc apply -f manifests/
-``` 
+1. Delete the existing Elasticsearch secrets. When the new operator is deployed,
+   these secrets will be regenerated.
+   ```bash
+   oc delete secret -n tigera-operator tigera-ee-compliance-benchmarker-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-compliance-controller-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-compliance-reporter-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-compliance-server-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-compliance-snapshotter-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-curator-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-installer-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-intrusion-detection-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-ee-manager-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-eks-log-forwarder-elasticsearch-access
+   oc delete secret -n tigera-operator tigera-fluentd-elasticsearch-access
+   ```
 
-To secure the components which make up {{site.prodname}}, install the following set of network policies.
-```
-oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-```
+1. Next, apply the updated manifests.
+   ```bash
+   oc apply -f manifests/
+   ```
 
-You can now monitor the upgrade progress with the following command:
-```
-watch oc get tigerastatus
-```
+1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
+   ```bash
+   oc create -f {{ "/manifests/tigera-policies-openshift.yaml" | absolute_url }}
+   ```
+
+1. You can now monitor the upgrade progress with the following command:
+   ```bash
+   watch oc get tigerastatus
+   ```
