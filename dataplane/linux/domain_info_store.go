@@ -170,14 +170,19 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 			// in the next line is clearly a v4 assumption, and some of the code inside
 			// `nfnetlink.SubscribeDNS` also looks v4-specific.
-			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
+			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Lazy)
 			if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
 				log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
 			} else {
 				log.Debug("No IPv4 layer")
 			}
-			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
-				dns, _ := dnsLayer.(*layers.DNS)
+
+			// Decode the packet as DNS.  Don't just use LayerTypeDNS here, because that
+			// requires port 53.  Here we want to parse as DNS regardless of the port
+			// number.
+			dns := &layers.DNS{}
+			err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
+			if err == nil {
 				if s.collector != nil {
 					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
 						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
@@ -187,7 +192,7 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 				}
 				s.processDNSPacket(dns)
 			} else {
-				log.Debug("No DNS layer")
+				log.WithError(err).Debug("No DNS layer")
 			}
 		case expiry := <-s.mappingExpiryChannel:
 			s.processMappingExpiry(expiry.name, expiry.value)
