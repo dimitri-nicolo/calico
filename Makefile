@@ -489,7 +489,7 @@ st: remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd ca
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean mod-download static-checks ut fv image-all build-windows-archive
+ci: clean mod-download static-checks ut fv image-all build-windows-archive st
 
 ## Avoid unplanned go.sum updates
 .PHONY: undo-go-sum check-dirty
