@@ -49,15 +49,15 @@ as alert conditions are satisfied.
 
 #### Examples
 
-In the following example, TBD.
+Following is the basic example to trigger the alert when we see 100 flows in the entire cluster in last 5 mins.
 
 ```yaml
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: example1
+  name: example-flows
 spec:
-  description: "Example alert"
+  description: "100 flows Example"
   severity: 100
   dataSet: flows
   metric: count
@@ -65,45 +65,45 @@ spec:
   threshold: 100
 ```
 
-In the following example, we identify source IPs probing for the Enternal-Blue-Romance-Synergy-Champion
-Exploit (EBD-ID [45925]). 
+In the following example, we detect ssh traffic in default namespace.
 
-```
+```yaml
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: ebd-id-45925
+  name: network.ssh
 spec:
-  description: "Probe for Apache Spark Exploit by ${source_ip}"
-  severity: 80
+  description: "[flows] ssh flow in default namespace detected from ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  period: 10m
+  lookback: 10m
   dataSet: flows
-  query: action=allow AND proto=tcp AND dest_port=6066
+  query: proto='tcp' AND action='allow' AND dest_port='22' AND (source_namespace='default' OR dest_namespace='default') AND reporter=src
+  aggregateBy: [source_namespace, source_name_aggr]
   field: num_flows
   metric: sum
   condition: gt
   threshold: 0
 ```
 
-In the following example, we identify pods labeled as `pci: true` that are sending 1MB of data or more
-per hour to the public Internet.
+In the following example, we are monitoring priviledge access within your cluster and detect any modification to `globalnetworksets`
 
-```yaml
+```
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
-  name: pci-data-transfer
+  name: policy.globalnetworkset
 spec:
-  description: "Data transfer by ${source_namespace}/${source_name} to Internet detected (${sum} bytes)"
-  severity: 70
-  period: 60m
-  lookback: 60m
-  dataSet: flows
-  query: source_type=wep AND source_labels.labels="pci=true" dest_type=net
-  aggregateBy: [source_namespace, source_name]
-  field: bytes_in
-  metric: sum
-  condition: gte
-  threshold: 1000000
+  description: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
+  severity: 100
+  period: 10m
+  lookback: 10m
+  dataSet: audit
+  query: (verb=create OR verb=update OR verb=delete OR verb=patch) AND "objectRef.resource"=globalnetworksets
+  aggregateBy: [objectRef.resource, objectRef.name]
+  metric: count
+  condition: gt
+  threshold: 0
 ```
 
 ### Templates
