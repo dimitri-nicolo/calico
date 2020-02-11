@@ -5,10 +5,10 @@
 HP_VERSION=v0.2
 
 # Local directories to ignore when checking external links
-HP_IGNORE_LOCAL_DIRS="/v2.0/,/v2.1/,/v2.2/,/v2.3/,/v2.4/"
+HP_IGNORE_LOCAL_DIRS="/v2.0/,/v2.1/,/v2.2/,/v2.3/,/v2.4/,/v2.5/"
 
 # URLs to ignore when checking external links.
-HP_IGNORE_URLS="/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/,/localhost:9443/"
+HP_IGNORE_URLS="/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/"
 
 # jekyll uid
 JEKYLL_UID=${JEKYLL_UID:=`id -u`}

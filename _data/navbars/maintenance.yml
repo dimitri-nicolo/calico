@@ -10,8 +10,6 @@ section:
   - title: Kubernetes
     path: /maintenance/kubernetes-upgrade-tsee/
     section:
-    - title: Manual Upgrade
-      path: /maintenance/kubernetes-upgrade-tsee/upgrade-tsee
     - title: Operator Upgrade
       path: /maintenance/kubernetes-upgrade-tsee/operator
   - title: OpenShift

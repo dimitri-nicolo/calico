@@ -137,7 +137,7 @@ When all components show a status of `Available`, proceed to the next section.
    kubectl port-forward -n tigera-manager svc/tigera-manager 9443
    ```
 
-   Visit [https://localhost:9443/](https://localhost:9443/) to login to the {{site.prodname}} UI. Use the `token` from the previous step to authenticate.
+   Visit https://localhost:9443/ to login to the {{site.prodname}} UI. Use the `token` from the previous step to authenticate.
 
 #### Secure {{site.prodname}} with network policy
 
