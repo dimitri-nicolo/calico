@@ -17,7 +17,7 @@ type testAuth struct {
 	lookup map[k8sauth.Attributes]k8sauth.Decision
 }
 
-func (t *testAuth) Authorize(a k8sauth.Attributes) (authorized k8sauth.Decision, reason string, err error) {
+func (t *testAuth) Authorize(ctx context.Context, a k8sauth.Attributes) (authorized k8sauth.Decision, reason string, err error) {
 	d, ok := t.lookup[a]
 	if !ok {
 		t.t.Fatalf("Unexpected authz attributes: %v", a)

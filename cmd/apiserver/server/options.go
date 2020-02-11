@@ -31,8 +31,10 @@ import (
 	"github.com/tigera/apiserver/pkg/openapi"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
+	"k8s.io/apiserver/pkg/features"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 // CalicoServerOptions contains the aggregation of configuration structs for
@@ -77,9 +79,11 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 			serverConfig.OpenAPIConfig.Info.Version = "unversioned"
 		}
 	}
+
 	if err := o.RecommendedOptions.Etcd.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
+	o.RecommendedOptions.Etcd.StorageConfig.Paging = utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)
 	if err := o.RecommendedOptions.SecureServing.ApplyTo(&serverConfig.SecureServing, &serverConfig.LoopbackClientConfig); err != nil {
 		return nil, err
 	}
