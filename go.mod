@@ -3,7 +3,6 @@ module github.com/tigera/ingress-collector
 go 1.12
 
 require (
-	github.com/envoyproxy/protoc-gen-validate v0.1.0 // indirect
 	github.com/gogo/googleapis v1.3.2
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.3.2
@@ -17,11 +16,10 @@ require (
 	github.com/onsi/gomega v1.7.0
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/client_golang v1.1.0 // indirect
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.26.0
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80
