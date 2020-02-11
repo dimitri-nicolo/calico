@@ -341,7 +341,7 @@ To ensure a user logged in to the {{site.prodname}} Manager in the management pl
 - The user / service account in the managed cluster has the permissions to access relevant resources
   - The user / service account must be bound to a role or cluster role with sufficient privileges
 
-{{site.prodname}} uses [Kubernetes user impersonation](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation) when sending requests from the management plane down in to a managed cluster. It is assumed that the user logged in to the management plane has a corresponding user with the same name in the managed cluster.
+{{site.prodname}} uses [Kubernetes user impersonation](https://kubernetes.io/rbac/#user-impersonation) when sending requests from the management plane down in to a managed cluster. It is assumed that the user logged in to the management plane has a corresponding user with the same name in the managed cluster.
 
 {{site.prodname}} provides some default cluster roles that you can assign to your users. For more information on how to assign the default cluster roles to your users, see [Log in to Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/create-user-login).
 
