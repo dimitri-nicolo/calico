@@ -67,6 +67,9 @@ if [ ! -z "$CURRENT_RELEASE" ]; then
     mv _site/sitemap.xml _site/latest-sitemap.xml
 fi
 
+echo "[INFO] building permalink for current release"
+EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build release-$CURRENT_RELEASE /$CURRENT_RELEASE
+
 if [ ! -z "$CANDIDATE_RELEASE" ]; then
     echo "[INFO] building candidate release"
     build release-$CANDIDATE_RELEASE /$CANDIDATE_RELEASE
