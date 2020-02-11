@@ -366,7 +366,7 @@ To ensure a user logged in to the {{site.prodname}} Manager in the management pl
 
 ###### Configure permissions to access log data per managed cluster
 
-Log data across all managed clusters are stored in a centralized Elasticsearch within the management cluster. You can use [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) roles and cluster roles to define granular access to cluster log data. For example, using the RBAC rule syntax, you can define rules to control access to specific log types or specific clusters by using the `resources` and `resourceNames` list fields.
+Log data across all managed clusters are stored in a centralized Elasticsearch within the management cluster. You can use [Kubernetes RBAC](https://kubernetes.io/rbac/) roles and cluster roles to define granular access to cluster log data. For example, using the RBAC rule syntax, you can define rules to control access to specific log types or specific clusters by using the `resources` and `resourceNames` list fields.
 
 {{site.prodname}} log data is stored within Elasticsearch indexes. The indexes have the following naming scheme: 
 
