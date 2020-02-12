@@ -132,7 +132,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	c.watcherCond = sync.NewCond(&c.cacheLock)
 
 	// Increment the waitForSync wait group.  This blocks the GetValues call until the
-	// syncer has completed it's initial snapshot and is in sync.  The syncer is started
+	// syncer has completed its initial snapshot and is in sync.  The syncer is started
 	// from the SetPrefixes() call from confd.
 	c.waitForSync.Add(1)
 
