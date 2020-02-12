@@ -101,12 +101,25 @@ func (sw *secretWatcher) ensureWatchingSecret(name string) {
 		go controller.Run(sw.watches[name].stopCh)
 		log.Debugf("Controller for secret '%v' is now running", name)
 
-		// Block until the controller has synced.
-		for !controller.HasSynced() {
-			log.Debugf("Controller for secret '%v' has not synced yet", name)
+		// Block for up to 0.5s until the controller has synced.  This is just an
+		// optimization to avoid churning the emitted BGP peer config when the secret is
+		// already available.  If the secret takes a bit longer to appear, we should cope
+		// with that too.
+		snoozes := 0
+		for {
+			if controller.HasSynced() {
+				log.Debugf("Controller for secret '%v' has synced", name)
+				break
+			} else {
+				log.Debugf("Controller for secret '%v' has not synced yet", name)
+			}
+			if snoozes >= 5 {
+				log.Warningf("Controller for secret '%v' did not sync within 0.5s", name)
+				break
+			}
 			sw.snoozeWithoutMutex(100 * time.Millisecond)
+			snoozes += 1
 		}
-		log.Debugf("Controller for secret '%v' has synced", name)
 	}
 }
 
