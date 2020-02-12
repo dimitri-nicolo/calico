@@ -166,7 +166,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			  },
 			  "policy": {"type": "k8s"},
 			  "nodename_file_optional": true,
-			  "log_level":"info"
+			  "log_level":"debug"
 			}`, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"))
 
 		It("successfully networks the namespace", func() {
@@ -508,7 +508,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			  },
 			  "policy": {"type": "k8s"},
 			  "nodename_file_optional": true,
-			  "log_level":"info"
+			  "log_level":"debug"
 			}`
 
 			It("creates pods with the new mtu", func() {
@@ -592,7 +592,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					   "k8s_api_root": "http://127.0.0.1:8080"
 					  },
 					  "policy": {"type": "k8s"},
-					  "log_level":"info"
+					  "log_level":"debug"
 					}`,
 				expectedV4Routes: []string{
 					regexp.QuoteMeta("default via 169.254.1.1 dev eth0"),
@@ -633,7 +633,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					   "k8s_api_root": "http://127.0.0.1:8080"
 					  },
 					  "policy": {"type": "k8s"},
-					  "log_level":"info"
+					  "log_level":"debug"
 					}`,
 				expectedV4Routes: []string{
 					regexp.QuoteMeta("default via 169.254.1.1 dev eth0"),
@@ -694,7 +694,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					   "k8s_api_root": "http://127.0.0.1:8080"
 					  },
 					  "policy": {"type": "k8s"},
-					  "log_level":"info"
+					  "log_level":"debug"
 					}`,
 				expectedV4Routes: []string{
 					regexp.QuoteMeta("10.123.0.0/16 via 169.254.1.1 dev eth0"),
@@ -755,7 +755,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					   "k8s_api_root": "http://127.0.0.1:8080"
 					  },
 					  "policy": {"type": "k8s"},
-					  "log_level":"info"
+					  "log_level":"debug"
 					}`,
 				expectedV4Routes: []string{
 					regexp.QuoteMeta("default via 169.254.1.1 dev eth0"),
@@ -1701,7 +1701,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					  "k8s_api_root": "http://127.0.0.1:8080"
 					 },
 					"policy": {"type": "k8s"},
-					"log_level":"info"
+					"log_level":"debug"
 				}`, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"))
 
 			assignIP := net.IPv4(20, 0, 0, 111).To4()
@@ -1814,6 +1814,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		AfterEach(func() {
+			log.Info("[TEST] Tearing down IPPools")
 			testutils.MustDeleteIPPool(calicoClient, ipPool4)
 			testutils.MustDeleteIPPool(calicoClient, ipPool6)
 		})
@@ -1836,8 +1837,10 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					  "k8s_api_root": "http://127.0.0.1:8080"
 					 },
 					"policy": {"type": "k8s"},
-					"log_level":"info"
+					"log_level":"debug"
 				}`, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"))
+
+			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
 			// Now create a K8s pod (without any IP annotations).
 			name := fmt.Sprintf("run%d", rand.Uint32())
@@ -2358,7 +2361,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				  "etcd_endpoints": "http://%s:2379",
 				  "datastore_type": "%s",
            			  "nodename_file_optional": true,
-				  "log_level": "info",
+				  "log_level": "debug",
 			 	  "ipam": {
 				    "type": "calico-ipam"
 				  },
