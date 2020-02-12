@@ -41,7 +41,7 @@ require (
 	github.com/projectcalico/pod2daemon v0.0.0-20191223184832-a0e1c4693271
 	github.com/projectcalico/typha v3.8.2+incompatible
 	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
@@ -53,25 +53,25 @@ require (
 	github.com/whyrusleeping/go-logging v0.0.0-20170515211332-0457bb6b88fc // indirect
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343
 	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.26.0
 	gopkg.in/ini.v1 v1.46.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
 
 	// k8s.io/api v1.16.3 is at 16d7abae0d2a
-	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+	k8s.io/api v0.17.2
 
 	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
-	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+	k8s.io/apimachinery v0.17.2
 
 	// k8s.io/client-go 1.16.3 is at 6c5935290e33
-	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
+	k8s.io/client-go v0.17.2
 )
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200205195637-1396939bf4fd
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200211042427-0b317263e6a2
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )
