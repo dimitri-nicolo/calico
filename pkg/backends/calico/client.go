@@ -1052,6 +1052,7 @@ func (c *client) WatchPrefix(prefix string, keys []string, lastRevision uint64, 
 func (c *client) GetCurrentRevision() uint64 {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
+	log.Debugf("Current cache revision is %v", c.cacheRevision)
 	return c.cacheRevision
 }
 
