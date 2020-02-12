@@ -281,7 +281,7 @@ func (ss *ServerStream) watchServerStop() {
 	<-ss.ctx.Done()
 	log.Debugf("ServerStream: watchServerStop fired")
 	ss.closed.set(true)
-	ss.closeConn()
+	_ = ss.closeConn()
 }
 
 // closeConn makes sure that the ServerStream is closed only once

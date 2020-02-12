@@ -43,17 +43,17 @@ var _ = Describe("Clusters", func() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				clusters.watchK8s(ctx, nil)
+				_ = clusters.watchK8s(ctx, nil)
 			}()
 		})
 
 		It("should be possible to add a cluster", func() {
-			k8sAPI.AddCluster(clusterID, clusterName)
+			Expect(k8sAPI.AddCluster(clusterID, clusterName)).ShouldNot(HaveOccurred())
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
 
 		It("should be possible to delete a cluster", func() {
-			k8sAPI.DeleteCluster(clusterID)
+			Expect(k8sAPI.DeleteCluster(clusterID)).ShouldNot(HaveOccurred())
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(0))
 		})
 
@@ -67,11 +67,11 @@ var _ = Describe("Clusters", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		It("should cluster added should be seen after watch restarts", func() {
 			Expect(len(clusters.List())).To(Equal(0))
-			k8sAPI.AddCluster(clusterID, clusterName)
+			Expect(k8sAPI.AddCluster(clusterID, clusterName)).ShouldNot(HaveOccurred())
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				clusters.watchK8s(ctx, nil)
+				_ = clusters.watchK8s(ctx, nil)
 			}()
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
@@ -86,11 +86,11 @@ var _ = Describe("Clusters", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		It("should delete a cluster deleted while watch was down", func() {
 			Expect(len(clusters.List())).To(Equal(1))
-			k8sAPI.DeleteCluster(clusterID)
+			Expect(k8sAPI.DeleteCluster(clusterID)).ShouldNot(HaveOccurred())
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				clusters.watchK8s(ctx, nil)
+				_ = clusters.watchK8s(ctx, nil)
 			}()
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(0))
 		})
@@ -99,7 +99,7 @@ var _ = Describe("Clusters", func() {
 			Expect(len(clusters.List())).To(Equal(0))
 			k8sAPI.BreakWatcher()
 			k8sAPI.WaitForManagedClustersWatched() // indicates a watch restart
-			k8sAPI.AddCluster("X", "X")
+			Expect(k8sAPI.AddCluster("X", "X")).ShouldNot(HaveOccurred())
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
 
@@ -107,7 +107,7 @@ var _ = Describe("Clusters", func() {
 			Expect(len(clusters.List())).To(Equal(1))
 			k8sAPI.BlockWatches()
 			k8sAPI.BreakWatcher()
-			k8sAPI.AddCluster("Y", "Y")
+			Expect(k8sAPI.AddCluster("Y", "Y")).ShouldNot(HaveOccurred())
 			k8sAPI.UnblockWatches()
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(2))
 		})

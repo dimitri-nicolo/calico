@@ -61,7 +61,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 	for _, t := range tgts {
 		if t.Path == "" {
 			return nil, errors.New("proxy target path cannot be empty")
-		} else if pathSet[t.Path] == true {
+		} else if pathSet[t.Path] {
 			return nil, errors.Errorf("duplicate proxy target path %s", t.Path)
 		}
 

@@ -25,7 +25,10 @@ func NewHealth() (*Health, error) {
 	// are accessible, the service is live and ready.
 	health.httpServeMux.HandleFunc("/health", func(resp http.ResponseWriter, req *http.Request) {
 		log.Trace("GET /health")
-		resp.Write([]byte("OK"))
+
+		if _, err := resp.Write([]byte("OK")); err != nil {
+			log.WithError(err).Error("failed to write /health response")
+		}
 	})
 
 	return health, nil

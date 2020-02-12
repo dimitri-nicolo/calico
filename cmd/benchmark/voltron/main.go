@@ -43,10 +43,10 @@ func NewSimpleServer(listenAddress, tunnelAddress string) *SimpleServer {
 func (s *SimpleServer) Start() {
 	// Create Server
 	lisServer, err := net.Listen("tcp", s.listenAddress)
-	defer lisServer.Close()
 	if err != nil {
 		log.Fatalf("Main Fail to Listen, %s", err)
 	}
+	defer lisServer.Close()
 
 	// Tunnel Starts Listening
 	lisTunnel, err := net.Listen("tcp", s.tunnelAddress)

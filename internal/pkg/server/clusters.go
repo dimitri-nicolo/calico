@@ -325,7 +325,10 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 	// (error related or otherwise).
 	if recorder.Code != 201 {
 		w.WriteHeader(recorder.Code)
-		w.Write(recordedData)
+
+		if _, err := w.Write(recordedData); err != nil {
+			log.WithError(err).Error("failed to write out response")
+		}
 		return
 	}
 
@@ -379,7 +382,9 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 	log.Debugf("managedClusterHandler: Encoded object %s", dataBuffer.String())
 
 	// Finally write the modified response output
-	w.Write(dataBuffer.Bytes())
+	if _, err := w.Write(dataBuffer.Bytes()); err != nil {
+		log.WithError(err).Error("failed to write out response")
+	}
 }
 
 // get returns the cluster

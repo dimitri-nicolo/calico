@@ -216,8 +216,6 @@ clean-build-image:
 ###############################################################################
 # Static checks
 ###############################################################################
-# TODO: enable linters
-LINT_ARGS := --disable ineffassign,staticcheck,errcheck,gosimple,unused
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed := $(shell ./install-git-hooks.sh)

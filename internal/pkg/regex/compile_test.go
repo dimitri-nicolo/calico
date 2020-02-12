@@ -7,16 +7,13 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
-
-	"github.com/pkg/errors"
 )
 
 func TestCompileRegexStrings(t *testing.T) {
-
 	patternStr := `^/compliance/?`
 	expectedRegexp, err := regexp.Compile(patternStr)
 	if err != nil {
-		errors.Errorf("TestCompileRegexStrings failed to compile expectedRegexp: %s", err)
+		t.Errorf("TestCompileRegexStrings failed to compile expectedRegexp: %s", err)
 	}
 
 	type args struct {
