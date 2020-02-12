@@ -30,10 +30,10 @@ import (
 
 	"k8s.io/client-go/rest"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/pkg/srv"
-	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/pkg/srv"
+	"go.etcd.io/etcd/pkg/transport"
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -449,7 +449,7 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 	}
 
 	if config.Spec.EtcdDiscoverySrv != "" {
-		srvs, srvErr := srv.GetClient("etcd-client", config.Spec.EtcdDiscoverySrv)
+		srvs, srvErr := srv.GetClient("etcd-client", config.Spec.EtcdDiscoverySrv, "")
 		if srvErr != nil {
 			return nil, fmt.Errorf("failed to discover etcd endpoints through SRV discovery: %v", srvErr)
 		}
@@ -463,9 +463,9 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 
 	// Create the etcd client
 	tlsInfo := &transport.TLSInfo{
-		CAFile:   config.Spec.EtcdCACertFile,
-		CertFile: config.Spec.EtcdCertFile,
-		KeyFile:  config.Spec.EtcdKeyFile,
+		TrustedCAFile: config.Spec.EtcdCACertFile,
+		CertFile:      config.Spec.EtcdCertFile,
+		KeyFile:       config.Spec.EtcdKeyFile,
 	}
 	tlsClient, _ := tlsInfo.ClientConfig()
 
