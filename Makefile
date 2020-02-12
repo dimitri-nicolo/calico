@@ -566,7 +566,7 @@ chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
 appVersion=$(CALICO_VER)-$(GIT_HASH)
 endif
 
-charts: chart/tigera-secure-ee-core chart/tigera-secure-ee
+charts: chart/tigera-secure-ee-core chart/tigera-secure-ee chart/tigera-operator
 chart/%: _includes/charts/%/values.yaml
 	mkdir -p bin
 	helm package ./_includes/charts/$* \
