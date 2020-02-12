@@ -24,7 +24,7 @@
 
    ```bash
    curl --compressed -O \
-   {{ "/{{manifestPath}}/cnx.yaml" | absolute_url }}
+   {{ "/" | append: manifestPath | append: "/cnx.yaml" | absolute_url }}
    ```
 
 {% include content/cnx-cred-sed.md yaml="cnx" %}
@@ -120,7 +120,7 @@
 
    ```bash
    kubectl create secret generic cnx-manager-tls \
-   --from-file=cert=./manager.cert \
+   --from-file=cert=./manager.crt \
    --from-file=key=./manager.key -n calico-monitoring
    ```
 
