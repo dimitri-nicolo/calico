@@ -90,29 +90,38 @@ func (sw *secretWatcher) MarkStale() {
 }
 
 func (sw *secretWatcher) ensureWatchingSecret(name string) {
-	if _, ok := sw.watches[name]; !ok {
+	if _, ok := sw.watches[name]; ok {
+		log.Debugf("Already watching secret '%v' (namespace %v)", name, sw.namespace)
+	} else {
+		log.Debugf("Start a watch for secret '%v' (namespace %v)", name, sw.namespace)
 		// We're not watching this secret yet, so start a watch for it.
 		watcher := cache.NewListWatchFromClient(sw.k8sClientset.CoreV1().RESTClient(), "secrets", sw.namespace, fields.OneTermEqualSelector("metadata.name", name))
 		_, controller := cache.NewInformer(watcher, &v1.Secret{}, 0, sw)
 		sw.watches[name] = &secretWatchData{stopCh: make(chan struct{})}
 		go controller.Run(sw.watches[name].stopCh)
+		log.Debugf("Controller for secret '%v' is now running", name)
 
 		// Block until the controller has synced.
 		for !controller.HasSynced() {
-			sw.snoozeWithoutMutex()
+			log.Debugf("Controller for secret '%v' has not synced yet", name)
+			sw.snoozeWithoutMutex(100 * time.Millisecond)
 		}
+		log.Debugf("Controller for secret '%v' has synced", name)
 	}
 }
 
-func (sw *secretWatcher) snoozeWithoutMutex() {
+func (sw *secretWatcher) snoozeWithoutMutex(t time.Duration) {
 	sw.mutex.Unlock()
 	defer sw.mutex.Lock()
-	time.Sleep(10 * time.Millisecond)
+	log.Debug("Unlocked")
+	time.Sleep(t)
+	log.Debug("Relock...")
 }
 
 func (sw *secretWatcher) GetSecret(name, key string) (string, error) {
 	sw.mutex.Lock()
 	defer sw.mutex.Unlock()
+	log.Debugf("Get secret for name '%v' key '%v'", name, key)
 
 	// Ensure that we're watching this secret.
 	sw.ensureWatchingSecret(name)
@@ -145,16 +154,19 @@ func (sw *secretWatcher) SweepStale() {
 }
 
 func (sw *secretWatcher) OnAdd(obj interface{}) {
+	log.Debug("Secret added")
 	sw.updateSecret(obj.(*v1.Secret))
 	sw.client.recheckPeerConfig()
 }
 
 func (sw *secretWatcher) OnUpdate(oldObj, newObj interface{}) {
+	log.Debug("Secret updated")
 	sw.updateSecret(newObj.(*v1.Secret))
 	sw.client.recheckPeerConfig()
 }
 
 func (sw *secretWatcher) OnDelete(obj interface{}) {
+	log.Debug("Secret deleted")
 	sw.deleteSecret(obj.(*v1.Secret))
 	sw.client.recheckPeerConfig()
 }
