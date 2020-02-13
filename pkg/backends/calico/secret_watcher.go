@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,31 +103,32 @@ func (sw *secretWatcher) ensureWatchingSecret(name string) {
 
 		// Block for up to 0.5s until the controller has synced.  This is just an
 		// optimization to avoid churning the emitted BGP peer config when the secret is
-		// already available.  If the secret takes a bit longer to appear, we should cope
-		// with that too.
-		snoozes := 0
-		for {
-			if controller.HasSynced() {
-				log.Debugf("Controller for secret '%v' has synced", name)
-				break
-			} else {
-				log.Debugf("Controller for secret '%v' has not synced yet", name)
-			}
-			if snoozes >= 5 {
-				log.Warningf("Controller for secret '%v' did not sync within 0.5s", name)
-				break
-			}
-			sw.snoozeWithoutMutex(100 * time.Millisecond)
-			snoozes += 1
-		}
+		// already available.  If the secret takes a bit longer to appear, we will cope
+		// with that too, but asynchronously and with some possible BIRD config churn.
+		sw.allowTimeForControllerSync(name, controller, 500*time.Millisecond)
 	}
 }
 
-func (sw *secretWatcher) snoozeWithoutMutex(t time.Duration) {
+func (sw *secretWatcher) allowTimeForControllerSync(name string, controller cache.Controller, timeAllowed time.Duration) {
 	sw.mutex.Unlock()
 	defer sw.mutex.Lock()
 	log.Debug("Unlocked")
-	time.Sleep(t)
+
+	startTime := time.Now()
+	for {
+		if controller.HasSynced() {
+			log.Debugf("Controller for secret '%v' has synced", name)
+			break
+		} else {
+			log.Debugf("Controller for secret '%v' has not synced yet", name)
+		}
+		if time.Since(startTime) > timeAllowed {
+			log.Warningf("Controller for secret '%v' did not sync within %v", name, timeAllowed)
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
 	log.Debug("Relock...")
 }
 
