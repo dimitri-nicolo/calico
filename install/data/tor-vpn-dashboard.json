@@ -10,8 +10,10 @@
       "columns": [
         "source_name",
         "source_namespace",
+        "source_ip",
         "dest_name",
         "dest_namespace",
+        "dest_ip",
         "dest_port",
         "proto",
         "action"
@@ -22,7 +24,7 @@
       ],
       "version": 1,
       "kibanaSavedObjectMeta": {
-        "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":{\"language\":\"lucene\",\"query\":\"dest_name : threatfeed.tor-bulk-exit-list OR dest_name: threatfeed.ejr-vpn\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+        "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":{\"language\":\"lucene\",\"query\":\"dest_name : threatfeed.tor-bulk-exit-list OR dest_name: threatfeed.ejr-vpn OR source_name : threatfeed.tor-bulk-exit-list OR source_name: threatfeed.ejr-vpn\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
       }
     },
     "references": [
