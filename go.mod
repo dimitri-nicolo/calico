@@ -39,18 +39,18 @@ require (
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 
 	// k8s.io/api v1.16.3 is at 16d7abae0d2a
-	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+	k8s.io/api v0.17.2
 
 	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
-	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+	k8s.io/apimachinery v0.17.2
 
 	// k8s.io/client-go 1.16.3 is at 6c5935290e33
-	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
+	k8s.io/client-go v0.17.2
 
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
