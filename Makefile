@@ -1,44 +1,40 @@
-# Copyright 2019 Tigera Inc. All rights reserved.
+# Copyright 2019-20 Tigera Inc. All rights reserved.
 
-APP_NAME   = voltron
-COMPONENTS = guardian voltron
+APP_NAME        = voltron
+PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
+GO_BUILD_VER   ?= v0.34
+GIT_USE_SSH     = true
+LOCAL_CHECKS    = mod-download
+
+build: images
+
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+# Mount Semaphore configuration files.
+ifdef ST_MODE
+EXTRA_DOCKER_ARGS = -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp:rw -v /home/runner/config:/home/runner/config:rw -v /home/runner/docker_auth.json:/home/runner/config/docker_auth.json:rw
+endif
+
+include Makefile.common
 
 ##########################################################################################
 # Define some constants
 ##########################################################################################
-
-# Both native and cross architecture builds are supported.
-# The target architecture is select by setting the ARCH variable.
-# When ARCH is undefined it is set to the detected host architecture.
-# When ARCH differs from the host architecture a crossbuild will be performed.
 ARCHES = amd64
-
-# BUILDARCH is the host architecture
-# ARCH is the target architecture
-# we need to keep track of them separately
-BUILDARCH ?= $(shell uname -m)
-BUILDOS ?= $(shell uname -s | tr A-Z a-z)
-
-BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
-
-# canonicalized names for host architecture
-ifeq ($(BUILDARCH),aarch64)
-  BUILDARCH=arm64
-endif
-ifeq ($(BUILDARCH),x86_64)
-  BUILDARCH=amd64
-endif
-
-# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
-ARCH ?= $(BUILDARCH)
-
-# canonicalized names for target architecture
-ifeq ($(ARCH),aarch64)
-  override ARCH=arm64
-endif
-ifeq ($(ARCH),x86_64)
-  override ARCH=amd64
-endif
+BRANCH_NAME ?= $(PIN_BRANCH)
 
 # Some env vars that devs might find useful:
 #  TEST_DIRS=   : only run the unit tests from the specified dirs
@@ -57,17 +53,17 @@ else
 STAT           = stat -c '%Y %n'
 endif
 ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
 #############################################
-# Env vars for 
+# Env vars related to building
 #############################################
 BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/null)
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
-GIT_VERSION           ?= $(shell git describe --tags --dirty --always --long)
+GIT_VERSION            = $(shell git describe --tags --dirty --always --long)
 
 VERSION_FLAGS   = -X main.VERSION=$(BUILD_VERSION) \
                   -X main.BUILD_DATE=$(BUILD_BUILD_DATE) \
@@ -77,50 +73,13 @@ BUILD_LDFLAGS   = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 
 #############################################
-# Env vars related to building, packaging 
-# and releasing
+# Env vars related to packaging and releasing
 #############################################
 PUSH_REPO     ?= gcr.io/unique-caldron-775/cnx
+COMPONENTS     = guardian voltron
 BUILD_IMAGES  ?= $(addprefix tigera/, $(COMPONENTS))
-PACKAGE_NAME  ?= github.com/tigera/$(APP_NAME)
 RELEASE_BUILD ?= ""
 
-# Figure out the users UID/GID.  These are needed to run docker containers
-# as the current user and ensure that files built inside containers are
-# owned by the current user.
-MY_UID := $(shell id -u)
-MY_GID := $(shell id -g)
-
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-# Mount Semaphore configuration files.
-ifdef ST_MODE
-  EXTRA_DOCKER_ARGS = -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp:rw -v /home/runner/config:/home/runner/config:rw -v /home/runner/docker_auth.json:/home/runner/config/docker_auth.json:rw
-endif
-
-# For building, we use the go-build image for the *host* architecture, even if the target is different
-# the one for the host should contain all the necessary cross-compilation tools
-# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-GO_BUILD_VER ?= v0.1
-CALICO_BUILD  = gcr.io/unique-caldron-775/cnx/tigera/voltron-go-build:${GO_BUILD_VER}
-
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(MY_UID) \
-                              -e LOCAL_GROUP_ID=$(MY_GID) \
-                              -e GOARCH=$(ARCH) \
-                              -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-                              -v ${PWD}:/$(PACKAGE_NAME):rw \
-                              -v ${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -w /$(PACKAGE_NAME) \
-                              $(CALICO_BUILD)
-
-##########################################################################################
-# Display usage output
 ##########################################################################################
 help:
 	@echo "Tigera $(APP_NAME) Makefile"
@@ -146,12 +105,6 @@ help:
 	@echo
 	@echo "  make clean                 Remove binary files."
 
-# Disable make's implicit rules, which are not useful for golang, and slow down the build
-# considerably.
-.SUFFIXES:
-
-all: images
-
 ##########################################################################################
 # BUILD
 ##########################################################################################
@@ -166,7 +119,7 @@ $(COMPONENTS): %: $(BINDIR)/% ;
 
 $(BINDIR)/%: $(BINDIR)/%-$(ARCH)
 	rm -f $@; ln -s $*-$(ARCH) $@
- 
+
 $(BINDIR)/%-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
@@ -176,8 +129,8 @@ endif
 	@echo Building $* ...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-	           go build -o $@ -v $(LDFLAGS) cmd/$*/*.go && \
+	    sh -c '$(GIT_CONFIG_SSH) \
+	        go build -o $@ -v $(LDFLAGS) cmd/$*/*.go && \
                ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $@ was not statically linked"; false ) )'
 
@@ -185,6 +138,7 @@ endif
 # Docker Image
 #############################################
 
+## Build all app docker images.
 images: manifests $(BUILD_IMAGES)
 tigera/%: tigera/%-$(ARCH) ;
 tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
@@ -211,87 +165,47 @@ clean-manifests:
 	rm -f $(MANIFESTS)
 	scripts/certs/clean-self-signed.sh scripts/certs
 
-
 ##########################################################################################
-# TESTING 
+# TESTING
 ##########################################################################################
 
 GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)
-
-test: ut fv
 
 #############################################
 # Run unit level tests
 #############################################
 
 .PHONY: ut
+## Run only Unit Tests.
 ut: CMD = go mod download && $(GINKGO) -r pkg/* internal/*
 ut:
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(CMD)'
 endif
 
 #############################################
 # Run package level functional level tests
 #############################################
 .PHONY: fv
+## Run only Package Functional Tests.
 fv: CMD = go mod download && $(GINKGO) -r test/fv
 fv:
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
-endif
-
-#############################################
-# Run old system integration tests
-#############################################
-.PHONY: st-old
-st-old: CMD = go mod download && $(GINKGO) -r test/st/
-ifdef LOCAL
-st-old: export TEST_CMD=$(CMD)
-else
-st-old: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
-endif
-st-old: $(MANIFESTS) $(COMPONENTS)
-	sh test/st/run.sh
-
-#############################################
-# Run system integration tests
-#############################################
-.PHONY: st
-st:  $(COMPONENTS)
-	$(MAKE) images
-	# TODO: to be updated in https://tigera.atlassian.net/browse/SAAS-283
-	# EXTRA_GINKGO_ARGS="-- -token-type=basic" $(MAKE) build_cmd ST_MODE=true &&
-	EXTRA_GINKGO_ARGS="-- -token-type=bearer" $(MAKE) build_cmd ST_MODE=true
-
-.PHONY: build_cmd
-build_cmd: CMD = go mod download && $(GINKGO) -r test/st-kind $(EXTRA_GINKGO_ARGS)
-build_cmd:
-ifdef LOCAL
-	$(CMD)
-else
-	# Pull Images (Works because we are sharing the socket)
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:master
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-queryserver:master
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/kube-controllers:master
-	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
-	docker pull calico/pod2daemon-flexvol:master
-	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(CMD)'
 endif
 
 ##########################################################################################
-# CLEAN UP 
+# CLEAN UP
 ##########################################################################################
 .PHONY: clean
+## Remove binary files.
 clean: clean-build-image clean-manifests
 	rm -rf $(BINDIR) docker-image/bin
-	if test -d .go-pkg-cache; then chmod -R +w .go-pkg-cache && rm -rf .go-pkg-cache; fi
 	find . -name "*.coverprofile" -type f -delete
 	rm -rf docker-image/templates docker-image/scripts
 
@@ -302,22 +216,24 @@ clean-build-image:
 ###############################################################################
 # Static checks
 ###############################################################################
-.PHONY: static-checks
-static-checks:
-	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
-		$(EXTRA_DOCKER_ARGS) \
-		-e LOCAL_USER_ID=$(MY_UID) \
-		$(CALICO_BUILD) \
-	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-		       cd /build-dir/$(PACKAGE_NAME); ./static-checks.sh'
+# TODO: enable linters
+LINT_ARGS := --disable ineffassign,staticcheck,errcheck,gosimple,unused
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed := $(shell ./install-git-hooks.sh)
 
-.PHONY: install-git-hooks
-## Install Git hooks
-install-git-hooks:
-	./install-git-hooks.sh
+###############################################################################
+# Updating pins
+###############################################################################
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 ##########################################################################################
 # CI/CD
@@ -327,11 +243,13 @@ install-git-hooks:
 #############################################
 # Run CI cycle - build, test, etc.
 #############################################
-ci: clean static-checks test images
+## Run all CI steps for build and test, likely other targets.
+ci: clean static-checks ut fv images
 
 #############################################
 # Deploy images to registry
 #############################################
+## Run all CD steps, normally pushing images out to registries.
 cd:
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
