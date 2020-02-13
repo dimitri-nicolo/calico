@@ -45,6 +45,9 @@ spec:
 
 #### Autodetection methods
 
+{% comment %}
+If merging from Calico, make sure to retain the changes that have been made here for the operator.
+{% endcomment %}
 By default, {{site.prodname}} uses the **firstFound** method; the first valid IP address on the first interface (excluding local interfaces such as the docker bridge). However, you can change the default method to any of the following:
 
 - Address used by the node to reach a particular IP or domain (**canReach**)
@@ -57,7 +60,7 @@ and for more details see the [node configuration]({{ site.baseurl }}/reference/n
 
 #### Manually configure IP address and subnet
 
-To manually configure an IP address and subnet Autodetection will need to be disabled and then the node resources updated with the IP address.
+To manually configure an IP address and subnet, disable autodetection and update the node resources with the IP address.
 
 ### How to
 
@@ -100,7 +103,7 @@ during installation or edit it later with `kubectl edit installation default`.
         <autodetection-method>: <value>
   ```
 
-> **Note**: Both `nodeAddressAutodetectionV4` and `nodeAddressAutodetectionV6` can be provided to specify the method for both IPv4 and IPv6.
+> **Note**: You can use both `nodeAddressAutodetectionV4` and `nodeAddressAutodetectionV6` to specify IPv4 and IPv6 methods.
 {: .alert .alert-info}
 
 Where autodetection methods are based on:
@@ -146,11 +149,11 @@ In the following scenarios, you may want to configure a specific IP and subnet:
 - Changes to cross subnet packet encapsulation
 - Changes to host IP address
 
-You can configure specific IP address and subnet for a node by disabling Automatic IP detection and then updating the [Node resource]({{ site.baseurl }}/reference/resources/node).
+You can configure specific IP address and subnet for a node by disabling IP autodetection and then updating the [Node resource]({{ site.baseurl }}/reference/resources/node).
 
 ##### Disable autodetection
 
-To disable autodetection method, update the proper NodeAddressAutodetection field in the Installation resource:
+To disable autodetection method, update the proper `NodeAddressAutodetection` field in the Installation resource:
 
 ```yaml
 apiVersion: operator.tigera.io/v1
