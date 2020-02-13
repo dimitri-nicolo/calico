@@ -690,6 +690,8 @@ github.com/tigera/felix-private v0.0.0-20200206041944-59780602237f h1:XnFP/MbQhr
 github.com/tigera/felix-private v0.0.0-20200206041944-59780602237f/go.mod h1:f8jk7Rw6u5McGdlZ6L0eiY866d91v6Jz97bOfUTTp5E=
 github.com/tigera/felix-private v0.0.0-20200212042123-4e98a5700453 h1:sd4PkF7tT+rvn7zBMM6iceDKJwnfvZSRmMg0fU5tpio=
 github.com/tigera/felix-private v0.0.0-20200212042123-4e98a5700453/go.mod h1:tO4/8pQjUmpRj/YF/NNB7Yn8xCnbHU5HM0OOpXSHrlI=
+github.com/tigera/felix-private v0.0.0-20200213041848-6fed2a8b283b h1:jrFfqkr/f9xOJfq3qkqcP041Uq6LPWkRKXjiG8ol6Zg=
+github.com/tigera/felix-private v0.0.0-20200213041848-6fed2a8b283b/go.mod h1:tO4/8pQjUmpRj/YF/NNB7Yn8xCnbHU5HM0OOpXSHrlI=
 github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27 h1:l5SKCG9Mdp0yhx4YmfxpTJOC0dCS3E3KBiRzb2TgWd8=
 github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
 github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364 h1:HG5iAW0Sy1hbgCdpWGMvj52gfj/h3M6n1OEB5IWYnBA=
@@ -727,6 +729,8 @@ github.com/tigera/lma v0.0.0-20200205021529-a4b27c58ad78 h1:mXOz2LuqbZoGg1dZc33L
 github.com/tigera/lma v0.0.0-20200205021529-a4b27c58ad78/go.mod h1:ZodEPXI83DnlLSr1BoOauKLdl1+PcfhupfEuRzpBYNs=
 github.com/tigera/lma v0.0.0-20200212031716-75b1e2c1d19d h1:ncNsuAB2bYwNELaZ9jNu/opxJcKhZ1eAB0vcxNF+l9M=
 github.com/tigera/lma v0.0.0-20200212031716-75b1e2c1d19d/go.mod h1:Oa9FZiPYzxJfeW/iZsyG+r26YoIEzT77LHIbEJ5+vCc=
+github.com/tigera/lma v0.0.0-20200212190844-aecc1673f32b h1:jikcI3kLY9G18q5AGk0naCDmq0JpXY9lRHf0Oy2KrpQ=
+github.com/tigera/lma v0.0.0-20200212190844-aecc1673f32b/go.mod h1:Oa9FZiPYzxJfeW/iZsyG+r26YoIEzT77LHIbEJ5+vCc=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
