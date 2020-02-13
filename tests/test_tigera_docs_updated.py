@@ -27,13 +27,15 @@ def test_latest_redirects_correctly():
     req = requests.get("%s/latest" % DOCS_URL)
     assert req.status_code == 200
 
-    redirect = BeautifulSoup(req.content, features="html.parser").find('a', href=True)
-    assert redirect['href'] == "%s/%s/" % (DOCS_URL, RELEASE_STREAM)
-
 
 def test_latest_release_notes_redirects_correctly():
     req = requests.get("%s/latest/release-notes" % DOCS_URL)
     assert req.status_code == 200
 
-    redirect = BeautifulSoup(req.content, features="html.parser").find('a', href=True)
-    assert redirect['href'] == "%s/%s/release-notes/" % (DOCS_URL, RELEASE_STREAM)
+
+def test_release_version_redirects_correctly():
+    req = requests.get("%s/%s/" % (DOCS_URL, RELEASE_STREAM))
+    assert req.status_code == 200
+
+    req = requests.get("%s/%s/release-notes/" % (DOCS_URL, RELEASE_STREAM))
+    assert req.status_code == 200
