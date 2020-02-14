@@ -116,6 +116,9 @@ func (sw *secretWatcher) allowTimeForControllerSync(name string, controller cach
 
 	startTime := time.Now()
 	for {
+		// Note: There is a lock associated with the controller's Queue, and HasSynced()
+		// needs to take and release that lock.  The same lock is held when the controller
+		// calls our OnAdd, OnUpdate and OnDelete callbacks.
 		if controller.HasSynced() {
 			log.Debugf("Controller for secret '%v' has synced", name)
 			break
