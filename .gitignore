@@ -8,3 +8,4 @@
 /controller/docker-image/bin
 /controller/cmd/controller/controller
 vendor
+controller/Makefile.common*

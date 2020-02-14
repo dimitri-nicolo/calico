@@ -325,7 +325,7 @@ func LookbackFilter(lookback time.Duration, timeField string) JsonObject {
 	return JsonObject{
 		"range": JsonObject{
 			timeField: JsonObject{
-				"gte":    fmt.Sprintf("{{ctx.trigger.scheduled_time}}||-%ds", lookback.Milliseconds()/1000),
+				"gte":    fmt.Sprintf("{{ctx.trigger.scheduled_time}}||-%ds", int64(lookback.Seconds())),
 				"lte":    "{{ctx.trigger.scheduled_time}}",
 				"format": "strict_date_optional_time||epoch_millis",
 			},

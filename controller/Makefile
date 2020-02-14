@@ -1,37 +1,32 @@
-# Copyright 2019 Tigera Inc. All rights reserved.
+##############################################################################
+# Copyright 2019-20 Tigera Inc. All rights reserved.
+##############################################################################
+PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
+GO_BUILD_VER   ?= v0.34
+GIT_USE_SSH     = true
+LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
+BUILD_IMAGE    ?= tigera/intrusion-detection-controller
+
+build: $(BUILD_IMAGE)
+
+##############################################################################
+# Download and include Makefile.common before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+MAKE_BRANCH?=$(GO_BUILD_VER)
+MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+
+Makefile.common: Makefile.common.$(MAKE_BRANCH)
+	cp "$<" "$@"
+Makefile.common.$(MAKE_BRANCH):
+	# Clean up any files downloaded from other branches so they don't accumulate.
+	rm -f Makefile.common.*
+	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+include Makefile.common
 
 ###############################################################################
-# Both native and cross architecture builds are supported.
-# The target architecture is select by setting the ARCH variable.
-# When ARCH is undefined it is set to the detected host architecture.
-# When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst docker-image/Dockerfile.%,%,$(wildcard docker-image/Dockerfile.*))
-
-# BUILDARCH is the host architecture
-# ARCH is the target architecture
-# we need to keep track of them separately
-BUILDARCH ?= $(shell uname -m)
-BUILDOS ?= $(shell uname -s | tr A-Z a-z)
-
-# canonicalized names for host architecture
-ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
-endif
-ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
-endif
-
-# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
-ARCH ?= $(BUILDARCH)
-
-# canonicalized names for target architecture
-ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
-endif
-ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
-endif
-
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
 # however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
@@ -40,18 +35,9 @@ endif
 escapefs = $(subst :,---,$(subst /,___,$(1)))
 unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
 
-# these macros create a list of valid architectures for pushing manifests
-space :=
-space +=
-comma := ,
-prefix_linux = $(addprefix linux/,$(strip $1))
-join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
-
 ###############################################################################
-BUILD_IMAGE?=tigera/intrusion-detection-controller
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
-PACKAGE_NAME?=github.com/tigera/intrusion-detection/controller
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -65,12 +51,6 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
-
-GO_BUILD_VER?=v0.26
-# For building, we use the go-build image for the *host* architecture, even if the target is different
-# the one for the host should contain all the necessary cross-compilation tools
-# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 help:
 	@echo "Tigera Intrusion Detection Controller Makefile"
@@ -86,20 +66,10 @@ help:
 	@echo "Maintenance:"
 	@echo
 	@echo "  make clean         Remove binary files."
-# Disable make's implicit rules, which are not useful for golang, and slow down the build
-# considerably.
-.SUFFIXES:
 
-all: $(BUILD_IMAGE)
-test: ut fv
-
-# Some env vars that devs might find useful:
-#  TEST_DIRS=   : only run the unit tests from the specified dirs
-#  UNIT_TESTS=  : only run the unit tests matching the specified regexp
-
+###############################################################################
 # Define some constants
-#######################
-K8S_VERSION    = v1.10.0
+###############################################################################
 BINDIR        ?= bin
 BUILD_DIR     ?= build
 TOP_SRC_DIRS   = pkg
@@ -114,7 +84,7 @@ else
 STAT           = stat -c '%Y %n'
 endif
 ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+UNIT_TEST_FLAGS= -run $(UNIT_TESTS) -v
 endif
 
 CONTROLLER_VERSION?=$(shell git describe --tags --dirty --always)
@@ -129,20 +99,10 @@ VERSION_FLAGS=-X main.VERSION=$(CONTROLLER_VERSION) \
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
-# Figure out the users UID/GID.  These are needed to run docker containers
-# as the current user and ensure that files built inside containers are
-# owned by the current user.
-MY_UID:=$(shell id -u)
-MY_GID:=$(shell id -g)
-
 # Figure out the GID of the docker group so that we can set the user inside the
 # container to be a member of that group. This, combined with mounting the
 # docker socket, allows the UTs to start docker containers.
 MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
-
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
 
 # A note on GOCACHE: the default directory for the build cache is
 # `/home/user/.cache/go-build`. However, if we ask Docker to volume mount this
@@ -151,22 +111,22 @@ endif
 # `/go-build` and set the GOCACHE environment variable to use it.
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    mkdir -p .go-build-cache && \
+                   mkdir -p bin $(GOMOD_CACHE) && \
                    docker run --rm \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(MY_UID) \
+                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
                               -e GOARCH=$(ARCH) \
                               -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-                              -v $${PWD}/../:/intrusion-detection/:rw \
-                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -v $${PWD}/.go-build-cache:/go-build:rw \
+                              -v $(CURDIR)/../:/intrusion-detection/:rw \
+                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
+                              -v $(CURDIR)/.go-build-cache:/go-build:rw \
                               -e GOCACHE=/go-build \
                               -e GOSUMDB=off \
                               -v /var/run/docker.sock:/var/run/docker.sock:rw \
                               -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) \
                               -w /intrusion-detection/controller \
                               $(CALICO_BUILD)
-
 
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
@@ -186,7 +146,7 @@ endif
 	@echo Building controller...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
                ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
@@ -205,7 +165,7 @@ endif
 	@echo Building healthz...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/healthz" && \
                ( ldd $(BINDIR)/healthz-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/healthz-$(ARCH) was not statically linked"; false ) )'
@@ -288,13 +248,14 @@ sub-tag-images-%:
 .PHONY: ut
 ut:
 	$(DOCKER_GO_BUILD) \
-		sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-		    go test $(UNIT_TEST_FLAGS) \
+		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
-.PHONY: fv
+.PHONY: fv st
 fv:
 	echo "FV not implemented yet"
+st:
+	echo "ST not implemented yet"
 
 .PHONY: clean
 clean: clean-bin clean-build-image
@@ -311,7 +272,7 @@ clean-bin:
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: test image-all
+ci: clean test image-all
 
 ## Deploy images to registry
 cd:
@@ -343,7 +304,7 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image-all 
+	$(MAKE) image-all
 	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
 	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
@@ -370,10 +331,24 @@ ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
 
+###############################################################################
+# Updating pins
+###############################################################################
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
 
-# Run fossa.io license checks
-foss-checks:
-	@echo Running $@...
-	$(DOCKER_GO_BUILD) \
-			sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-					/usr/local/bin/fossa'
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' go modules.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
