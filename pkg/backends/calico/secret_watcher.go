@@ -126,7 +126,7 @@ func (sw *secretWatcher) allowTimeForControllerSync(name string, controller cach
 			log.Warningf("Controller for secret '%v' did not sync within %v", name, timeAllowed)
 			break
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	log.Debug("Relock...")
