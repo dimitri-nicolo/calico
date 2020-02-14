@@ -530,8 +530,8 @@ bin/helm:
 ###############################################################################
 # Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml: values.yaml/tigera-secure-ee-core values.yaml/tigera-secure-ee values.yaml/tigera-operator
-values.yaml/%:
+values.yaml: _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-secure-ee/values.yaml _includes/charts/tigera-operator/values.yaml
+_includes/charts/%/values.yaml:
 ifndef RELEASE_STREAM
 	# Default the version to master if not set
 	$(eval RELEASE_STREAM = master)
@@ -539,7 +539,7 @@ endif
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(@F) > _includes/charts/$(@F)/values.yaml
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
 # The following chunk of conditionals sets the Version of the helm chart. 
 # Helm requires strict semantic versioning.
@@ -566,10 +566,10 @@ chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
 appVersion=$(CALICO_VER)-$(GIT_HASH)
 endif
 
-charts: values.yaml chart/tigera-secure-ee-core chart/tigera-secure-ee
-chart/%:
+charts: chart/tigera-secure-ee-core chart/tigera-secure-ee chart/tigera-operator
+chart/%: _includes/charts/%/values.yaml
 	mkdir -p bin
-	helm package ./_includes/charts/$(@F) \
+	helm package ./_includes/charts/$* \
 	--save=false \
 	--destination ./bin/ \
 	--version $(chartVersion) \

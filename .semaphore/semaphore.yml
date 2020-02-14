@@ -13,9 +13,8 @@ global_job_config:
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
       - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
       - checkout
-      - curl --compressed -O https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-linux-amd64.tar.gz
-      - tar -xvf helm-v2.16.1-linux-amd64.tar.gz
-      - sudo install -m +x ./linux-amd64/helm /usr/local/bin/
+      - make bin/helm
+      - sudo install -m +x ./bin/helm /usr/local/bin/
       - sudo helm init --client-only
       - sudo helm plugin install https://github.com/viglesiasce/helm-gcs.git
       - sudo helm repo add tigera gs://tigera-helm-charts
@@ -24,13 +23,21 @@ global_job_config:
     - name: banzai-secrets
 
 blocks:
-  - name: "Build/Push helm charts"
+  - name: "Build helm charts"
     dependencies: []
     task:
       jobs:
-        - name: Build and push helm charts for master branch
+        - name: Build helm charts for master branch
           commands:
             - make charts RELEASE_STREAM=master
+  - name: "Push helm charts"
+    dependencies: ["Build"]
+    run:
+      when: "branch = 'master'"
+    task:
+      jobs:
+        - name: Push helm charts for master branch
+          commands:
             - |
               for chart in ./bin/*.tgz; do
                   sudo helm gcs push $chart gs://tigera-helm-charts
