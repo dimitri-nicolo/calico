@@ -179,8 +179,7 @@ spec:
 
 ---
 
-# This policy creates a network policy to allow traffic to the Tigera-guardian pod
-# (TCP port 8080).
+# Creates a network policy to allow traffic through Guardian (TCP port 8080) to the management plane.
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
