@@ -107,7 +107,7 @@ func (sw *secretWatcher) ensureWatchingSecret(name string) {
 func (sw *secretWatcher) snoozeWithoutMutex() {
 	sw.mutex.Unlock()
 	defer sw.mutex.Lock()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 }
 
 func (sw *secretWatcher) GetSecret(name, key string) (string, error) {
