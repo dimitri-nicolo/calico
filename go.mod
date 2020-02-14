@@ -28,6 +28,6 @@ require (
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200211042427-0b317263e6a2
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200214043031-9b580a77213b
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
