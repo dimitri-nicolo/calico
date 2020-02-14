@@ -393,6 +393,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
   elsif chart == "tigera-operator"
     versionsYml = <<~EOF
     installation:
+      enabled: true
       kubernetesProvider: ""
 
     # Configuration for the tigera operator

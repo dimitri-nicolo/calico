@@ -2,5 +2,6 @@
 layout: null
 ---
 {% helm tigera-operator %}
-# TODO: fix bug where helm render fails with empty values
+installation:
+  enabled: false
 {% endhelm %}
