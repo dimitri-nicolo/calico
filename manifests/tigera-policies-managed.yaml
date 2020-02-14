@@ -31,6 +31,17 @@ spec:
 
 ---
 
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-guardian
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
 # Tier containing policies to allow access to Calico Enterprise.
 apiVersion: projectcalico.org/v3
 kind: Tier
@@ -166,3 +177,59 @@ spec:
   - Ingress
   - Egress
 
+---
+
+# Creates a network policy to allow traffic through Guardian (TCP port 8080) to the management plane.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.guardian-access
+  namespace: tigera-guardian
+spec:
+  selector: k8s-app == 'tigera-guardian'
+  tier: allow-tigera
+  types:
+    - Ingress
+  ingress:
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-fluentd'
+        selector: k8s-app == 'fluentd-node'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-compliance'
+        selector: k8s-app == 'compliance-benchmarker'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-compliance'
+        selector: k8s-app == 'compliance-reporter'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-compliance'
+        selector: k8s-app == 'compliance-snapshotter'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-compliance'
+        selector: k8s-app == 'compliance-controller'
+
+---
