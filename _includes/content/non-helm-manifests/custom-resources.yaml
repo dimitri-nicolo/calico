@@ -25,7 +25,7 @@ spec:
 
 {%- if include.kubernetesProvider %}
 
-  # Enables provider-specific settings requried for compatibility.
+  # Enables provider-specific settings required for compatibility.
   kubernetesProvider: {{include.kubernetesProvider}}
 {%- endif %}
 
