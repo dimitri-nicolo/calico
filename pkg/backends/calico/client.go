@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,6 +116,17 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		nodeMeshEnabled:   nodeMeshEnabled,
 		nodeLabels:        make(map[string]map[string]string),
 		bgpPeers:          make(map[string]*apiv3.BGPPeer),
+
+		// This channel, for the syncer calling OnUpdates and OnStatusUpdated, has 0
+		// capacity so that the caller blocks in the same way as it did before when its
+		// calls were processed synchronously.
+		syncerC: make(chan interface{}),
+
+		// This channel holds a trigger for existing BGP peerings to be recomputed.  We only
+		// ever need 1 pending trigger, hence capacity 1.  recheckPeerConfig() does a
+		// non-blocking write into this channel, so as not to block if a trigger is already
+		// pending.
+		recheckC: make(chan struct{}, 1),
 	}
 	for k, v := range globalDefaults {
 		c.cache[k] = v
@@ -132,7 +143,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	c.watcherCond = sync.NewCond(&c.cacheLock)
 
 	// Increment the waitForSync wait group.  This blocks the GetValues call until the
-	// syncer has completed it's initial snapshot and is in sync.  The syncer is started
+	// syncer has completed its initial snapshot and is in sync.  The syncer is started
 	// from the SetPrefixes() call from confd.
 	c.waitForSync.Add(1)
 
@@ -217,6 +228,27 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	} else {
 		c.OnInSync(SourceRouteGenerator)
 	}
+
+	// Start a goroutine to process updates in a way that's decoupled from their sources.
+	go func() {
+		for {
+			select {
+			case e := <-c.syncerC:
+				switch event := e.(type) {
+				case []api.Update:
+					c.onUpdates(event, false)
+				case api.SyncStatus:
+					c.onStatusUpdated(event)
+				default:
+					log.Panicf("Unknown type %T in syncer channel", event)
+				}
+			case <-c.recheckC:
+				log.Info("Recompute v1 BGP peerings")
+				c.onUpdates(nil, true)
+			}
+		}
+	}()
+
 	return c, nil
 }
 
@@ -322,6 +354,10 @@ type client struct {
 
 	// Subcomponent for accessing and watching secrets (that hold BGP passwords).
 	secretWatcher *secretWatcher
+
+	// Channels used to decouple update and status processing.
+	syncerC  chan interface{}
+	recheckC chan struct{}
 }
 
 // SetPrefixes is called from confd to notify this client of the full set of prefixes that will
@@ -346,6 +382,10 @@ func (c *client) SetPrefixes(keys []string) error {
 // When we receive WaitForDatastore and are already InSync, we reset the client's syncer status which blocks
 // GetValues calls.
 func (c *client) OnStatusUpdated(status api.SyncStatus) {
+	c.syncerC <- status
+}
+
+func (c *client) onStatusUpdated(status api.SyncStatus) {
 	log.Debugf("Got status update: %s, syncer ready: %t", status, c.syncerReady)
 	switch status {
 	case api.InSync:
@@ -719,6 +759,10 @@ func (c *client) nodeAsBGPPeers(nodeName string) (peers []*bgpPeer) {
 // -  wakes up the watchers so that they can check if any of the prefixes they are
 //    watching have been updated.
 func (c *client) OnUpdates(updates []api.Update) {
+	c.syncerC <- updates
+}
+
+func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 
 	// Update our cache from the updates.
 	c.cacheLock.Lock()
@@ -726,9 +770,6 @@ func (c *client) OnUpdates(updates []api.Update) {
 
 	// Indicate that our cache has been updated.
 	c.incrementCacheRevision()
-
-	// Track whether these updates require BGP peerings to be recomputed.
-	needUpdatePeersV1 := false
 
 	// Track whether these updates require service advertisement to be recomputed.
 	needsServiceAdvertismentUpdates := false
@@ -917,10 +958,13 @@ func (c *client) onNewUpdates() {
 }
 
 func (c *client) recheckPeerConfig() {
-	log.Info("Recheck BGP peers following possible password update")
-	c.incrementCacheRevision()
-	c.updatePeersV1()
-	c.onNewUpdates()
+	log.Info("Trigger to recheck BGP peers following possible password update")
+	select {
+	// Non-blocking write into the recheckC channel.  The idea here is that we don't need to add
+	// a second trigger if there is already one pending.
+	case c.recheckC <- struct{}{}:
+	default:
+	}
 }
 
 // updateChache will update a cache entry. It returns true if the entry was
@@ -1052,6 +1096,7 @@ func (c *client) WatchPrefix(prefix string, keys []string, lastRevision uint64, 
 func (c *client) GetCurrentRevision() uint64 {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
+	log.Debugf("Current cache revision is %v", c.cacheRevision)
 	return c.cacheRevision
 }
 

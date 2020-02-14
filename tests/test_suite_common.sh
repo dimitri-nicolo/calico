@@ -21,6 +21,10 @@ execute_test_suite() {
     rm $LOGPATH/log* || true
     rm $LOGPATH/rendered/*.cfg || true
 
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+	run_extra_test test_bgp_password_deadlock
+    fi
+
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
 	run_extra_test test_dual_tor
 	run_extra_test test_bgp_password
@@ -255,6 +259,104 @@ EOF
     calicoctl delete node node4
     calicoctl delete bgppeer bgppeer-1
     calicoctl delete bgppeer bgppeer-2
+}
+
+test_bgp_password_deadlock() {
+    # For this test we populate the datastore before starting confd.
+    # Also we use Typha.
+    start_typha
+
+    # Clean up the output directory.
+    rm -f /etc/calico/confd/config/*
+
+    # Turn the node-mesh off.
+    turn_mesh_off
+
+    # Adjust this number until confd's iteration through BGPPeers
+    # takes longer than 100ms.  That is what's needed to see the
+    # deadlock.
+    SCALE=99
+
+    # Create $SCALE nodes and BGPPeer configs.
+    for ii in `seq 1 $SCALE`; do
+	kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    node.alpha.kubernetes.io/ttl: "0"
+    volumes.kubernetes.io/controller-managed-attach-detach: "true"
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/os: linux
+    kubernetes.io/hostname: node$ii
+  name: node$ii
+  namespace: ""
+spec:
+  externalID: node$ii
+EOF
+	calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node$ii
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.$ii/24
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-$ii
+spec:
+  node: node$ii
+  peerIP: 10.24.0.2
+  asNumber: 64512
+  password:
+    secretKeyRef:
+      name: my-secrets-1
+      key: a
+EOF
+    done
+
+    # Create the required secret.
+    kubectl create -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secrets-1
+  namespace: kube-system
+type: Opaque
+stringData:
+  a: password-a
+EOF
+
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Expect BIRD config to be generated.
+    test_confd_templates password-deadlock
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Kill Typha.
+    kill_typha
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete resources.
+    kubectl delete secret my-secrets-1 -n kube-system
+    for ii in `seq 1 $SCALE`; do
+	calicoctl delete bgppeer bgppeer-$ii
+	kubectl delete node node$ii
+    done
 }
 
 test_dual_tor() {
