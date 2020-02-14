@@ -710,6 +710,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58 h1:hGY
 github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80 h1:KsxRF5nUHYbueFoLmSs8kniTvSXMSpoSTPYlx/n7bkc=
 github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80/go.mod h1:kNFLW+X7/S5hQX9zO/lHTQQl6orMNQrRdijXjQo6qFQ=
+github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60 h1:GQyMUGGt6Sb43EC4PTyxe+GH8L46s3nTrHz5NLV6Ors=
+github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60/go.mod h1:kNFLW+X7/S5hQX9zO/lHTQQl6orMNQrRdijXjQo6qFQ=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac h1:QrcDEIylqNTKsjVMeRxvU9YyyxNMc6CKHH+MWRHCKcU=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
@@ -731,6 +733,8 @@ github.com/tigera/lma v0.0.0-20200212031716-75b1e2c1d19d h1:ncNsuAB2bYwNELaZ9jNu
 github.com/tigera/lma v0.0.0-20200212031716-75b1e2c1d19d/go.mod h1:Oa9FZiPYzxJfeW/iZsyG+r26YoIEzT77LHIbEJ5+vCc=
 github.com/tigera/lma v0.0.0-20200212190844-aecc1673f32b h1:jikcI3kLY9G18q5AGk0naCDmq0JpXY9lRHf0Oy2KrpQ=
 github.com/tigera/lma v0.0.0-20200212190844-aecc1673f32b/go.mod h1:Oa9FZiPYzxJfeW/iZsyG+r26YoIEzT77LHIbEJ5+vCc=
+github.com/tigera/lma v0.0.0-20200214020939-78214e9e72e4 h1:zIlu0yGmuvsF5ag41tvjgxbGcxnnKeqHgrw+kChwQrE=
+github.com/tigera/lma v0.0.0-20200214020939-78214e9e72e4/go.mod h1:n7DYIAukfc2ecCAXqP2VVdIgq+czQSn0T8HuBWpMz1k=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
