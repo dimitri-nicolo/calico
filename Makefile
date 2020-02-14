@@ -3,7 +3,10 @@ GO_BUILD_VER    ?= v0.32
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
+# Used by Makefile.common
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+# Used only when doing local build
+LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
 
 build: ut
 
@@ -23,8 +26,9 @@ Makefile.common.$(MAKE_BRANCH):
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 # Allow libcalico-go to be mapped into the build container.
+# Please note, this will change go.mod.
 ifdef LIBCALICOGO_PATH
-	EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):$(LOCAL_LIBCALICO):ro
 endif
 
 EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
@@ -74,6 +78,9 @@ KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
 .PHONY: vendor
 vendor vendor/.up-to-date: go.mod
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod vendor'
+ifdef LIBCALICOGO_PATH
+	go mod edit -replace=github.com/projectcalico/libcalico-go=$(LOCAL_LIBCALICO)
+endif	
 	touch vendor/.up-to-date
 
 ###############################################################################
