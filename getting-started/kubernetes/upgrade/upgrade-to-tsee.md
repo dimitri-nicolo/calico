@@ -16,15 +16,10 @@ instead.
 
 ## Upgrading Calico to {{site.prodname}}
 
-If you used the manifests provided on the [Calico documentation site](https://docs.projectcalico.org/)
-to install Calico, complete the {{site.prodname}} installation procedure that
-corresponds to your Calico installation method.
+For clusters with a `Kubernetes` datastore, follow the operator-based installation instructions for {{site.prodname}}
+for your platform. For Kubernetes clusters, see [quickstart](../quickstart).
 
-- [Installing {{site.prodname}} for policy and networking]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/calico)
+Upgrades for clusters with an `etcdv3` datastore are not supported.
 
-- [Installing {{site.prodname}} for policy]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/other)
-
-If you modified the manifests or used the
-[Integration Guide](https://docs.projectcalico.org/latest/getting-started/kubernetes/installation/integration)
-to install Calico, contact Tigera support for assistance with your upgrade
-to {{site.prodname}}.
+> **Note**: Operator-based upgrades from open source Calico are not recommended for production clusters due to limited testing.
+{: .alert .alert-info}
