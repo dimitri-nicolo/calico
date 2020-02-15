@@ -409,7 +409,9 @@ github.com/tigera/felix-private v0.0.0-20200206041944-59780602237f h1:XnFP/MbQhr
 github.com/tigera/felix-private v0.0.0-20200206041944-59780602237f/go.mod h1:f8jk7Rw6u5McGdlZ6L0eiY866d91v6Jz97bOfUTTp5E=
 github.com/tigera/felix-private v0.0.0-20200210182927-cdf3811b737a h1:feiRBtR38n6ZshCwla25NKMmdKgdhS4JYfAhPfbOcZ4=
 github.com/tigera/felix-private v0.0.0-20200210182927-cdf3811b737a/go.mod h1:f8jk7Rw6u5McGdlZ6L0eiY866d91v6Jz97bOfUTTp5E=
+github.com/tigera/felix-private v0.0.0-20200213041848-6fed2a8b283b h1:jrFfqkr/f9xOJfq3qkqcP041Uq6LPWkRKXjiG8ol6Zg=
 github.com/tigera/felix-private v0.0.0-20200213041848-6fed2a8b283b/go.mod h1:tO4/8pQjUmpRj/YF/NNB7Yn8xCnbHU5HM0OOpXSHrlI=
+github.com/tigera/felix-private v0.0.0-20200215041917-9423adbbee8b/go.mod h1:QEfYkZMdHsYr1AXlPY2y8nn+SeXPK0EaNiSAlWmFYBw=
 github.com/tigera/libcalico-go-private v0.0.0-20200130020649-1e0d913b77f8 h1:f/QT+sj/hEy+aKMB60/iC1jc2hAL9/NtRFHhE3mA/ps=
 github.com/tigera/libcalico-go-private v0.0.0-20200130020649-1e0d913b77f8/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/libcalico-go-private v0.0.0-20200130203734-85760318d620 h1:9dSnilB+yiiZHC3wrPJExPMfj9oQ699ncJHq7pmew/I=
@@ -418,6 +420,7 @@ github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58 h1:hGY
 github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80 h1:KsxRF5nUHYbueFoLmSs8kniTvSXMSpoSTPYlx/n7bkc=
 github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80/go.mod h1:kNFLW+X7/S5hQX9zO/lHTQQl6orMNQrRdijXjQo6qFQ=
+github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60 h1:GQyMUGGt6Sb43EC4PTyxe+GH8L46s3nTrHz5NLV6Ors=
 github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60/go.mod h1:kNFLW+X7/S5hQX9zO/lHTQQl6orMNQrRdijXjQo6qFQ=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
 github.com/tigera/licensing v2.6.0-0.dev+incompatible h1:KeU++u0m7pNi0+Y11AjQByp7d8WLuXOzk2T5JPYZ1zI=
