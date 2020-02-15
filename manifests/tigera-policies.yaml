@@ -436,9 +436,10 @@ kind: NetworkPolicy
 metadata:
   labels:
     projectcalico.org/tier: default
-  name: default.allow-fluentd-node
+  name: allow-tigera.allow-fluentd-node
   namespace: tigera-fluentd
 spec:
+  tier: allow-tigera
   egress:
   - action: Deny
     destination:
@@ -457,7 +458,6 @@ spec:
       namespaceSelector: all()
   order: 1
   selector: k8s-app == "fluentd-node"
-  tier: default
   types:
   - Ingress
   - Egress
