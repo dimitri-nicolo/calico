@@ -15,24 +15,24 @@ require (
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
 
 	// k8s.io/api v1.16.3 is at 16d7abae0d2a
-	k8s.io/api v0.0.0-20191114100352-16d7abae0d2a
+	k8s.io/api v0.17.2
 
 	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
-	k8s.io/apimachinery v0.0.0-20191028221656-72ed19daf4bb
+	k8s.io/apimachinery v0.17.2
 
 	// k8s.io/client-go 1.16.3 is at 6c5935290e33
-	k8s.io/client-go v0.0.0-20191114101535-6c5935290e33
+	k8s.io/client-go v0.17.2
 )
 
 replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200207193758-a9e3dc1d2915
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200207214758-3233462f3a63
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200210182927-cdf3811b737a
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200205195637-1396939bf4fd
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200215040908-59860486be92
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200215042034-c14792587969
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200216041803-778667a7ce80
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200214043031-9b580a77213b
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )
