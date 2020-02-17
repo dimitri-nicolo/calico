@@ -168,7 +168,7 @@ update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-ty
 ###############################################################################
 # Building the binary
 ###############################################################################
-build:  $(NODE_CONTAINER_BINARY)
+build: image-all
 
 .PHONY: remote-deps
 remote-deps:
