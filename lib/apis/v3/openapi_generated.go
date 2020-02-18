@@ -161,6 +161,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey":                        schema_libcalico_go_lib_apis_v3_LicenseKey(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList":                    schema_libcalico_go_lib_apis_v3_LicenseKeyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec":                    schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyStatus":                  schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster":                    schema_libcalico_go_lib_apis_v3_ManagedCluster(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterList":                schema_libcalico_go_lib_apis_v3_ManagedClusterList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec":                schema_libcalico_go_lib_apis_v3_ManagedClusterSpec(ref),
@@ -7011,11 +7012,17 @@ func schema_libcalico_go_lib_apis_v3_LicenseKey(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status of the LicenseKey.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -7089,6 +7096,34 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref common.ReferenceCallback
 					},
 				},
 				Required: []string{"token"},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LicenseKeyStatus contains the license key information.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"expiry": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Expiry is the expiry date of License",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maxnode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Maximum Number of Allowed Names",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"expiry", "maxnode"},
 			},
 		},
 	}

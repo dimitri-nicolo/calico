@@ -33,6 +33,8 @@ type LicenseKey struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the LicenseKey.
 	Spec LicenseKeySpec `json:"spec,omitempty"`
+	// Status of the LicenseKey.
+	Status LicenseKeyStatus `json:"status,omitempty"`
 }
 
 // LicenseKeySpec contains the license key itself.
@@ -41,6 +43,14 @@ type LicenseKeySpec struct {
 	Token string `json:"token" yaml:"token"`
 	// Certificate is used to validate the token.
 	Certificate string `json:"certificate,omitempty" yaml:"certificate" validate:"omitempty"`
+}
+
+// LicenseKeyStatus contains the license key information.
+type LicenseKeyStatus struct {
+	// Expiry is the expiry date of License
+	Expiry string `json:"expiry" yaml:"expiry"`
+	// Maximum Number of Allowed Names
+	MaxNodes int `json:"maxnode" yaml:"maxnode"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
