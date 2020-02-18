@@ -1,0 +1,11 @@
+{{ if .Values.apiServer.enabled }}
+{{ $spec := omit .Values.apiServer "enabled" }}
+
+apiVersion: operator.tigera.io/v1
+kind: APIServer
+metadata:
+  name: tigera-secure
+spec:
+{{ $spec | toYaml | indent 2 }}
+
+{{ end }}

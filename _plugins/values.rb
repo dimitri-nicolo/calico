@@ -398,6 +398,26 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       enabled: true
       kubernetesProvider: ""
 
+    apiServer:
+      enabled: true
+
+    intrusionDetection:
+      enabled: true
+
+    logCollector:
+      enabled: true
+
+    logStorage:
+      enabled: true
+      nodes:
+        count: 1
+
+    manager:
+      enabled: true
+
+    compliance:
+      enabled: true
+
     # Configuration for the tigera operator
     tigeraOperator:
       image: #{versions["tigera-operator"].image}

@@ -6,6 +6,8 @@ metadata:
   labels:
     controller-tools.k8s.io: "1.0"
   name: apmservers.apm.k8s.elastic.co
+  annotations:
+    "helm.sh/hook": "crd-install"
 spec:
   additionalPrinterColumns:
     - JSONPath: .status.health
