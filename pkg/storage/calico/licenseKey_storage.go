@@ -79,6 +79,7 @@ func (gc LicenseKeyConverter) convertToLibcalico(aapiObj runtime.Object) resourc
 	lcgLicenseKey.TypeMeta = aapiLicenseKey.TypeMeta
 	lcgLicenseKey.ObjectMeta = aapiLicenseKey.ObjectMeta
 	lcgLicenseKey.Spec = aapiLicenseKey.Spec
+	lcgLicenseKey.Status = aapiLicenseKey.Status
 	return lcgLicenseKey
 }
 
@@ -86,6 +87,7 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 	lcgLicenseKey := libcalicoObject.(*libcalicoapi.LicenseKey)
 	aapiLicenseKey := aapiObj.(*aapi.LicenseKey)
 	aapiLicenseKey.Spec = lcgLicenseKey.Spec
+	aapiLicenseKey.Status = lcgLicenseKey.Status
 	aapiLicenseKey.TypeMeta = lcgLicenseKey.TypeMeta
 	aapiLicenseKey.ObjectMeta = lcgLicenseKey.ObjectMeta
 }

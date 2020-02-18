@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2017-2020 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -49,9 +49,43 @@ func (apiServerStrategy) NamespaceScoped() bool {
 }
 
 func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+
+	lcgLicenseKey := convertToLibcalico(obj)
+	licClaims, err := licClient.Decode(*lcgLicenseKey)
+	if err != nil {
+		return
+	}
+
+	aapiLicenseKey := obj.(*calico.LicenseKey)
+	if licClaims.Validate() != licClient.Valid {
+		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+			Expiry:   fmt.Sprintf("%s", "Expired"),
+			MaxNodes: *licClaims.Nodes}
+	} else {
+		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+			Expiry:   fmt.Sprintf("%s", licClaims.Expiry.Time()),
+			MaxNodes: *licClaims.Nodes}
+	}
 }
 
 func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+
+	lcgLicenseKey := convertToLibcalico(obj)
+	licClaims, err := licClient.Decode(*lcgLicenseKey)
+	if err != nil {
+		return
+	}
+
+	newLicenseKey := obj.(*calico.LicenseKey)
+	if licClaims.Validate() != licClient.Valid {
+		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+			Expiry:   fmt.Sprintf("%s", "Expired"),
+			MaxNodes: *licClaims.Nodes}
+	} else {
+		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+			Expiry:   fmt.Sprintf("%s", licClaims.Expiry.Time()),
+			MaxNodes: *licClaims.Nodes}
+	}
 }
 
 func (apiServerStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
@@ -70,6 +104,31 @@ func (apiServerStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func (apiServerStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
+	return validateLicenseKey(obj)
+}
+
+type apiServerStatusStrategy struct {
+	apiServerStrategy
+}
+
+func NewStatusStrategy(strategy apiServerStrategy) apiServerStatusStrategy {
+	return apiServerStatusStrategy{strategy}
+}
+
+func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	lcgLicenseKey := convertToLibcalico(obj)
+	licClaims, err := licClient.Decode(*lcgLicenseKey)
+	if err != nil {
+		return
+	}
+	newLicenseKey := obj.(*calico.LicenseKey)
+	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+		Expiry:   fmt.Sprintf("%s", licClaims.Expiry.Time()),
+		MaxNodes: *licClaims.Nodes}
+}
+
+// ValidateUpdate is the default update validation for an end user updating status
+func (apiServerStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validateLicenseKey(obj)
 }
 

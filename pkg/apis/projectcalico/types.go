@@ -190,12 +190,14 @@ type LicenseKeyList struct {
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 type LicenseKey struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.LicenseKeySpec
+	Spec   calico.LicenseKeySpec
+	Status calico.LicenseKeyStatus
 }
 
 // +genclient:nonNamespaced

@@ -1065,6 +1065,7 @@ func Convert_projectcalico_IPPoolList_To_v3_IPPoolList(in *projectcalico.IPPoolL
 func autoConvert_v3_LicenseKey_To_projectcalico_LicenseKey(in *LicenseKey, out *projectcalico.LicenseKey, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 
@@ -1076,6 +1077,7 @@ func Convert_v3_LicenseKey_To_projectcalico_LicenseKey(in *LicenseKey, out *proj
 func autoConvert_projectcalico_LicenseKey_To_v3_LicenseKey(in *projectcalico.LicenseKey, out *LicenseKey, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 
