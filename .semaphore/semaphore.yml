@@ -31,7 +31,7 @@ blocks:
           commands:
             - make charts RELEASE_STREAM=master
   - name: "Push helm charts"
-    dependencies: ["Build"]
+    dependencies: ["Build helm charts"]
     run:
       when: "branch = 'master'"
     task:
