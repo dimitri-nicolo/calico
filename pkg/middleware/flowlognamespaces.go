@@ -3,8 +3,8 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -12,13 +12,25 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/rbac"
 )
 
 const (
-	sourceAggregationName = "source_namespaces"
-	destAggregationName   = "dest_namespaces"
+	namespaceBucketName = "source_dest_namespaces"
+	srcNamespaceIdx     = 0
+	destNamespaceIdx    = 1
+)
+
+var (
+	namespaceTimeout = 10 * time.Second
+
+	NamespaceCompositeSources = []lmaelastic.AggCompositeSourceInfo{
+		{"source_namespace", "source_namespace"},
+		{"dest_namespace", "dest_namespace"},
+	}
 )
 
 type FlowLogNamespaceParams struct {
@@ -29,6 +41,7 @@ type FlowLogNamespaceParams struct {
 	Unprotected   bool     `json:"unprotected"`
 	StartDateTime string   `json:"startDateTime"`
 	EndDateTime   string   `json:"endDateTime"`
+	Strict        bool     `json:"strict"`
 
 	// Parsed timestamps
 	startDateTimeESParm interface{}
@@ -56,7 +69,8 @@ func FlowLogNamespaceHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.
 			return
 		}
 
-		response, err := getNamespacesFromElastic(params, esClient)
+		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req})
+		response, err := getNamespacesFromElastic(params, esClient, rbacHelper)
 		if err != nil {
 			log.WithError(err).Info("Error getting namespaces from elastic")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
@@ -111,6 +125,12 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 		log.WithError(err).Info("Error extracting end date time")
 		return nil, errParseRequest
 	}
+	strict := false
+	if strictValue := url.Get("strict"); strictValue != "" {
+		if strict, err = strconv.ParseBool(strictValue); err != nil {
+			return nil, errParseRequest
+		}
+	}
 
 	params := &FlowLogNamespaceParams{
 		Actions:             actions,
@@ -122,14 +142,12 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 		EndDateTime:         endDateTimeString,
 		startDateTimeESParm: startDateTimeESParm,
 		endDateTimeESParm:   endDateTimeESParm,
+		Strict:              strict,
 	}
 
 	// Check whether the params are provided in the request and set default values if not
 	if params.ClusterName == "" {
 		params.ClusterName = "cluster"
-	}
-	if params.Prefix != "" {
-		params.Prefix = fmt.Sprintf("%s.*", params.Prefix)
 	}
 	valid := validateActions(params.Actions)
 	if !valid {
@@ -170,76 +188,139 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 		query = query.Filter(filter)
 	}
 
+	if params.Prefix != "" {
+		query = query.Should(
+			elastic.NewPrefixQuery("source_namespace", params.Prefix),
+			elastic.NewPrefixQuery("dest_namespace", params.Prefix),
+		).MinimumNumberShouldMatch(1)
+	}
+
+	if params.StartDateTime != "" {
+		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime)
+		query = query.Filter(startFilter)
+	}
+	if params.EndDateTime != "" {
+		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime)
+		query = query.Filter(endFilter)
+	}
+
 	return query
 }
 
-func buildAggregations(params *FlowLogNamespaceParams) (*elastic.TermsAggregation, *elastic.TermsAggregation) {
-	baseAgg := elastic.NewTermsAggregation().
-		Exclude("-").
-		Size(int(params.Limit))
-	if params.Prefix != "" {
-		baseAgg = baseAgg.Include(params.Prefix)
-	}
-
-	sourceAggregation := *baseAgg.Field("source_namespace")
-	destAggregation := *baseAgg.Field("dest_namespace")
-	return &sourceAggregation, &destAggregation
-}
-
-func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client) ([]Namespace, error) {
+func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelastic.Client, rbacHelper rbac.FlowHelper) ([]Namespace, error) {
 	// form query
 	query := buildESQuery(params)
-	sourceAggregation, destAggregation := buildAggregations(params)
 	index := getClusterFlowIndex(params.ClusterName)
 
-	// perform Aggregated ES query
-	searchQuery := esClient.Backend().Search().
-		Index(index).
-		Query(query).
-		Size(0)
-	searchQuery = searchQuery.Aggregation(sourceAggregationName, sourceAggregation).Aggregation(destAggregationName, destAggregation)
-	searchResult, err := esClient.Do(context.Background(), searchQuery)
-
-	if err != nil {
-		return nil, err
+	aggQuery := &lmaelastic.CompositeAggregationQuery{
+		DocumentIndex:           index,
+		Query:                   query,
+		Name:                    namespaceBucketName,
+		AggCompositeSourceInfos: NamespaceCompositeSources,
 	}
 
-	if searchResult.Aggregations == nil {
-		return []Namespace{}, nil
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), namespaceTimeout)
+	defer cancel()
 
-	sourceAggregationBuckets, sourceFound := searchResult.Aggregations.Terms(sourceAggregationName)
-	destAggregationBuckets, destFound := searchResult.Aggregations.Terms(destAggregationName)
-
-	if !sourceFound && !destFound {
-		return []Namespace{}, nil
-	}
-
-	buckets := make([]*elastic.AggregationBucketKeyItem, 0)
-	if sourceFound {
-		buckets = append(buckets, sourceAggregationBuckets.Buckets...)
-	}
-
-	if destFound {
-		buckets = append(buckets, destAggregationBuckets.Buckets...)
-	}
-
-	// extract unique namespaces from buckets
-	uniqueNamespaces := make(map[string]bool)
+	// Perform the query with composite aggregation
+	rcvdBuckets, rcvdErrors := esClient.SearchCompositeAggregations(ctx, aggQuery, nil)
+	nsSet := set.New()
 	namespaces := make([]Namespace, 0)
+	for bucket := range rcvdBuckets {
+		// Pull namespaces out of the buckets
+		// The index refers to the order in which the fields are listed in the composite sources
+		key := bucket.CompositeAggregationKey
+		source_namespace := key[srcNamespaceIdx].String()
+		dest_namespace := key[destNamespaceIdx].String()
 
-	for _, bucket := range buckets {
-		namespaceInf := bucket.Key
-		namespace := namespaceInf.(string)
-		if _, exists := uniqueNamespaces[namespace]; !exists {
-			uniqueNamespaces[namespace] = true
-			namespaceComponent := Namespace{Name: namespace}
-			namespaces = append(namespaces, namespaceComponent)
-			if len(namespaces) == int(params.Limit) {
-				break
+		// Check if the set length hits the requested limit
+		if nsSet.Len() >= int(params.Limit) {
+			break
+		}
+
+		// Add namespaces to the set
+		if params.Strict {
+			// If we strictly enforce RBAC, then we will only return namespaces we have RBAC
+			// permissions for and match the query parameters.
+			if allowedNamespace(params, source_namespace, rbacHelper) && checkNamespaceRBAC(rbacHelper, source_namespace) {
+				nsSet.Add(source_namespace)
+			}
+			if allowedNamespace(params, dest_namespace, rbacHelper) && checkNamespaceRBAC(rbacHelper, dest_namespace) {
+				nsSet.Add(dest_namespace)
+			}
+		} else {
+			// If we are not strictly enforcing RBAC, we will return both namespaces as long we
+			// have the permissions to view one namespace in the flow and they match the query
+			// parameters.
+			if checkNamespaceRBAC(rbacHelper, source_namespace) || checkNamespaceRBAC(rbacHelper, dest_namespace) {
+				if allowedNamespace(params, source_namespace, rbacHelper) {
+					nsSet.Add(source_namespace)
+				}
+				if allowedNamespace(params, dest_namespace, rbacHelper) {
+					nsSet.Add(dest_namespace)
+				}
 			}
 		}
 	}
 
+	// Convert the set to the namespace slice
+	i := 0
+	nsSet.Iter(func(item interface{}) error {
+		// Only add items up to the limit
+		if i < int(params.Limit) {
+			namespaces = append(namespaces, Namespace{Name: item.(string)})
+			i++
+		}
+		return nil
+	})
+
+	// Sort the namespaces for nice display purposes
+	sort.Slice(namespaces, func(i, j int) bool {
+		return namespaces[i].Name < namespaces[j].Name
+	})
+
+	// Check for an error after all the namespaces have been processed. This should be fine
+	// since an error should stop more buckets from being received.
+	if err, ok := <-rcvdErrors; ok {
+		log.WithError(err).Warning("Error processing the flow logs for finding valid namespaces")
+		return namespaces, err
+	}
+
 	return namespaces, nil
+}
+
+func allowedNamespace(params *FlowLogNamespaceParams, namespace string, rbacHelper rbac.FlowHelper) bool {
+	if params.Prefix != "" && !strings.HasPrefix(namespace, params.Prefix) {
+		return false
+	}
+
+	return true
+}
+
+func checkNamespaceRBAC(rbacHelper rbac.FlowHelper, namespace string) bool {
+	var allowed bool
+	var err error
+
+	if namespace == "-" {
+		// Check the global namespace permissions
+		allowed, err = rbacHelper.IncludeGlobalNamespace()
+		if err != nil {
+			log.WithError(err).Info("Error checking RBAC permissions for the cluster scope")
+		}
+	} else {
+		// Check if the user has access to all namespaces first
+		if allowed, err = rbacHelper.IncludeNamespace(""); err != nil {
+			log.WithError(err).Info("Error checking namespace RBAC permissions for all namespaces")
+			return false
+		} else if allowed {
+			return true
+		}
+
+		// Check the namespace permissions
+		allowed, err = rbacHelper.IncludeNamespace(namespace)
+		if err != nil {
+			log.WithError(err).Info("Error checking namespace RBAC permissions")
+		}
+	}
+	return allowed
 }
