@@ -36,11 +36,9 @@ blocks:
       when: "branch = 'master'"
     task:
       jobs:
-        - name: Build helm charts for master branch
-          commands:
-            - make charts RELEASE_STREAM=master
         - name: Push helm charts for master branch
           commands:
+            - make charts RELEASE_STREAM=master
             - |
               for chart in ./bin/*.tgz; do
                   sudo helm gcs push $chart gs://tigera-helm-charts
