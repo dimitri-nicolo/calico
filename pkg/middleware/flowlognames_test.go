@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/rbac"
 )
 
 const (
@@ -27,23 +28,38 @@ const (
         "hits": []
     },
     "aggregations": {
-        "source_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
+        "source_dest_name_aggrs": {
+            "after_key": {
+                "date": 1494201600000,
+                "source_namespace": "tigera-manager",
+                "source_name_aggr": "tigera-manager-778447894c-*",
+                "source_type": "wep",
+                "dest_namespace": "tigera-elasticsearch",
+                "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                "dest_type": "wep"
+            },
             "buckets": [
                 {
-                    "key": "tigera-manager-778447894c-*",
+                    "key": {
+                        "source_namespace": "tigera-manager",
+                        "source_name_aggr": "tigera-manager-778447894c-*",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-elasticsearch",
+                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 4370
-                }
-            ]
-        },
-        "dest_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
+                },
                 {
-                    "key": "tigera-secure-es-xg2jxdtnqn",
-                    "doc_count": 21855
+                    "key": {
+                        "source_namespace": "default",
+                        "source_name_aggr": "test-app-83958379dc",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-elasticsearch",
+                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                        "dest_type": "wep"
+                    },
+                    "doc_count": 3698
                 }
             ]
         }
@@ -68,15 +84,65 @@ const (
         "hits": []
     },
     "aggregations": {
-        "source_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
+        "source_dest_name_aggrs": {
+            "after_key": {},
             "buckets": []
+        }
+    }
+}
+`
+	filterPrefixResponse = `{
+    "took": 65,
+    "timed_out": false,
+    "_shards": {
+        "total": 40,
+        "successful": 40,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 10000,
+            "relation": "gte"
         },
-        "dest_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": []
+        "max_score": null,
+        "hits": []
+    },
+    "aggregations": {
+        "source_dest_name_aggrs": {
+            "after_key": {
+                "date": 1494201600000,
+                "source_namespace": "tigera-manager",
+                "source_name_aggr": "tigera-manager-778447894c-*",
+                "source_type": "wep",
+                "dest_namespace": "tigera-elasticsearch",
+                "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                "dest_type": "wep"
+            },
+            "buckets": [
+                {
+                    "key": {
+                        "source_namespace": "tigera-manager",
+                        "source_name_aggr": "tigera-manager-778447894c-*",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-elasticsearch",
+                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                        "dest_type": "wep"
+                    },
+                    "doc_count": 4370
+                },
+                {
+                    "key": {
+			"source_namespace": "default",
+                        "source_name_aggr": "tigera-app-83958379dc",
+			"source_type": "wep",
+			"dest_namespace": "tigera-elasticsearch",
+                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+			"dest_type": "wep"
+                    },
+                    "doc_count": 3698
+                }
+            ]
         }
     }
 }
@@ -99,77 +165,155 @@ const (
         "hits": []
     },
     "aggregations": {
-        "source_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
+        "source_dest_name_aggrs": {
+            "after_key": {
+                "date": 1494201600000,
+                "source_namespace": "tigera-compliance",
+                "source_name_aggr": "compliance-benchmarker-*",
+                "source_type": "wep",
+                "dest_namespace": "default",
+                "dest_name_aggr": "default/kse.kubernetes",
+                "dest_type": "wep"
+            },
             "buckets": [
                 {
-                    "key": "compliance-benchmarker-*",
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+                        "source_name_aggr": "compliance-benchmarker-*",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-compliance",
+                        "dest_name_aggr": "compliance-controller-c7f4b94dd-*",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 10930
                 },
                 {
-                    "key": "compliance-benchmarker-*",
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+                        "source_name_aggr": "compliance-benchmarker-*",
+                        "source_type":  "wep",
+                        "dest_namespace": "tigera-compliance",
+                        "dest_name_aggr": "compliance-server-69c97dffcf-*",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 4393
                 },
                 {
-                    "key": "compliance-controller-c7f4b94dd-*",
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+                        "source_name_aggr": "compliance-controller-c7f4b94dd-*",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-compliance",
+                        "dest_name_aggr": "compliance-server-69c97dffcf-*",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 4374
                 },
                 {
-                    "key": "compliance-server-69c97dffcf-*",
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+                        "source_name_aggr": "compliance-server-69c97dffcf-*",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-manager",
+                        "dest_name_aggr": "tigera-manager-778447894c-*",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 4372
                 },
                 {
-                    "key": "tigera-manager-778447894c-*",
-                    "doc_count": 4372
-                }
-            ]
-        },
-        "dest_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+                        "source_name_aggr": "compliance-server-69c97dffcf-*",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-compliance",
+                        "dest_name_aggr": "compliance-controller-c7f4b94dd-*",
+                        "dest_type": "wep"
+                    },
+                    "doc_count": 4374
+                },
                 {
-                    "key": "tigera-secure-es-xg2jxdtnqn",
+                    "key": {
+                        "source_namespace": "tigera-elasticsearch",
+                        "source_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                        "source_type": "wep",
+                        "dest_namespace": "tigera-manager",
+                        "dest_name_aggr": "tigera-manager-778447894c-*",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 21865
                 },
                 {
-                    "key": "compliance-benchmarker-*",
-                    "doc_count": 4372
-                },
-                {
-                    "key": "default/kse.kubernetes",
+                    "key": {
+                        "source_namespace": "tigera-compliance",
+                        "source_name_aggr": "compliance-benchmarker-*",
+                        "source_type": "wep",
+                        "dest_namespace": "default",
+                        "dest_name_aggr": "default/kse.kubernetes",
+                        "dest_type": "wep"
+                    },
                     "doc_count": 2185
+                }
+            ]
+        }
+    }
+}`
+	globalResponse = `{
+    "took": 65,
+    "timed_out": false,
+    "_shards": {
+        "total": 40,
+        "successful": 40,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 10000,
+            "relation": "gte"
+        },
+        "max_score": null,
+        "hits": []
+    },
+    "aggregations": {
+        "source_dest_name_aggrs": {
+            "after_key": {
+                "date": 1494201600000,
+		"source_namespace": "tigera-manager",
+                "source_name_aggr": "tigera-manager-778447894c-*",
+                "source_type": "wep",
+                "dest_namespace": "tigera-elasticsearch",
+                "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                "dest_type": "wep"
+            },
+            "buckets": [
+                {
+                    "key": {
+                        "source_namespace": "-",
+                        "source_name_aggr": "tigera-cluster-*",
+                        "source_type": "hep",
+                        "dest_namespace": "-",
+                        "dest_name_aggr": "tigera-global-networkset",
+                        "dest_type": "ns"
+                    },
+                    "doc_count": 4370
                 },
                 {
-                    "key": "compliance-benchmarker-*",
-                    "doc_count": 19
+                    "key": {
+                        "source_namespace": "default",
+                        "source_name_aggr": "test-app-83958379dc",
+                        "source_type": "ns",
+                        "dest_namespace": "tigera-elasticsearch",
+                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
+                        "dest_type": "wep"
+                    },
+                    "doc_count": 3698
                 }
             ]
         }
     }
 }`
 	missingNamesAggregations = `{
-	   "took": 155,
-	   "timed_out": false,
-	   "_shards": {
-	       "total": 40,
-	       "successful": 40,
-	       "skipped": 0,
-	       "failed": 0
-	   },
-	   "hits": {
-	       "total": {
-	           "value": 10000,
-	           "relation": "gte"
-	       },
-	       "max_score": null,
-	       "hits": []
-	   }
-	}`
-
-	missingDestNamesAggregations = `{
-    "took": 13,
+    "took": 155,
     "timed_out": false,
     "_shards": {
         "total": 40,
@@ -184,66 +328,11 @@ const (
         },
         "max_score": null,
         "hits": []
-    },
-    "aggregations": {
-        "source_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
-                {
-                    "key": "compliance-benchmarker-*",
-                    "doc_count": 10930
-                },
-                {
-                    "key": "compliance-benchmarker-*",
-                    "doc_count": 4393
-                },
-                {
-                    "key": "compliance-controller-c7f4b94dd-*",
-                    "doc_count": 4374
-                }
-            ]
-        }
-    }
-}`
-
-	missingSourceNamesAggregations = `{
-    "took": 13,
-    "timed_out": false,
-    "_shards": {
-        "total": 40,
-        "successful": 40,
-        "skipped": 0,
-        "failed": 0
-    },
-    "hits": {
-        "total": {
-            "value": 10000,
-            "relation": "gte"
-        },
-        "max_score": null,
-        "hits": []
-    },
-    "aggregations": {
-        "dest_name_aggrs": {
-            "doc_count_error_upper_bound": 0,
-            "sum_other_doc_count": 0,
-            "buckets": [
-                {
-                    "key": "tigera-secure-es-xg2jxdtnqn",
-                    "doc_count": 21865
-                },
-                {
-                    "key": "compliance-benchmarker-*",
-                    "doc_count": 4372
-                }
-            ]
-        }
     }
 }`
 	malformedNamesResponse = `{
-	   badlyFormedNamesJson
-	}`
+    badlyFormedNamesJson
+}`
 )
 
 var _ = Describe("Test /flowLogNames endpoint functions", func() {
@@ -428,7 +517,6 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			q := req.URL.Query()
 			q.Add("actions", "ALLOW")
 			q.Add("cluster", "CLUSTER")
-			q.Add("prefix", "TIGERA-")
 			q.Add("namespace", "TIGERA-ELASTICSEARCH")
 			req.URL.RawQuery = q.Encode()
 
@@ -436,7 +524,6 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(params.Actions[0]).To(BeEquivalentTo("allow"))
 			Expect(params.ClusterName).To(BeEquivalentTo("cluster"))
-			Expect(params.Prefix).To(BeEquivalentTo("tigera-.*"))
 			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
 		})
 
@@ -446,7 +533,6 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			q := req.URL.Query()
 			q.Add("actions", "ALLOW")
 			q.Add("cluster", "CLUSTER")
-			q.Add("prefix", "TIGERA-")
 			q.Add("namespace", "TIGERA-ELASTICSEARCH")
 			startTimeObject, endTimeObject := getTestStartAndEndTime()
 			Expect(err).To(Not(HaveOccurred()))
@@ -460,7 +546,6 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(params.Actions[0]).To(BeEquivalentTo("allow"))
 			Expect(params.ClusterName).To(BeEquivalentTo("cluster"))
-			Expect(params.Prefix).To(BeEquivalentTo("tigera-.*"))
 			Expect(params.Namespace).To(BeEquivalentTo("tigera-elasticsearch"))
 			Expect(params.StartDateTime).To(BeEquivalentTo(startTimeObject))
 			Expect(params.EndDateTime).To(BeEquivalentTo(endTimeObject))
@@ -470,7 +555,7 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 	Context("Test that the getNamesFromElastic function behaves as expected", func() {
 		It("should retrieve all names with prefix tigera", func() {
 			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{defaultResponse})
+			esClient = NewMockSearchClient([]interface{}{defaultResponse})
 
 			By("Creating params with the prefix tigera")
 			params := &FlowLogNamesParams{
@@ -478,19 +563,37 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				Actions:     []string{"allow", "deny", "unknown"},
 				Prefix:      "tigera",
 				ClusterName: "cluster",
-				Namespace:   "tigera-compliance",
+				Namespace:   "",
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(names)).To(BeNumerically("==", 2))
-			Expect(names[0]).To(BeEquivalentTo("tigera-manager-778447894c-*"))
-			Expect(names[1]).To(BeEquivalentTo("tigera-secure-es-xg2jxdtnqn"))
+			Expect(names).To(HaveLen(2))
+			Expect(names[0]).To(Equal("tigera-manager-778447894c-*"))
+			Expect(names[1]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
 		})
 
-		It("should retrieve an empty array of names", func() {
+		It("should handle an empty array of names returned from elasticsearch", func() {
 			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{emptyNamesResponse})
+			esClient = NewMockSearchClient([]interface{}{emptyNamesResponse})
+
+			By("Creating params with the prefix tigera")
+			params := &FlowLogNamesParams{
+				Limit:       1000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "tigera",
+				ClusterName: "cluster",
+				Namespace:   "",
+			}
+
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(names).To(HaveLen(0))
+		})
+
+		It("should retrieve an empty array of names when the prefix filters them out", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{emptyNamesResponse})
 
 			By("Creating params with the prefix tigera-elasticccccccc")
 			params := &FlowLogNamesParams{
@@ -501,37 +604,37 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				Namespace:   "tigera-compliance",
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(names)).To(BeNumerically("==", 0))
+			Expect(names).To(HaveLen(0))
 		})
 
 		It("should retrieve an array of names with no duplicates", func() {
 			By("Creating a mock ES client with a mocked out search results containing duplicates")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{duplicateNamesResponse})
+			esClient = NewMockSearchClient([]interface{}{duplicateNamesResponse})
 
 			params := &FlowLogNamesParams{
 				Limit:       2000,
 				Actions:     []string{"allow", "deny", "unknown"},
 				Prefix:      "",
 				ClusterName: "cluster",
-				Namespace:   "tigera-compliance",
+				Namespace:   "",
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(names)).To(BeNumerically("==", 6))
-			Expect(names[0]).To(BeEquivalentTo("compliance-benchmarker-*"))
-			Expect(names[1]).To(BeEquivalentTo("compliance-controller-c7f4b94dd-*"))
-			Expect(names[2]).To(BeEquivalentTo("compliance-server-69c97dffcf-*"))
-			Expect(names[3]).To(BeEquivalentTo("tigera-manager-778447894c-*"))
-			Expect(names[4]).To(BeEquivalentTo("tigera-secure-es-xg2jxdtnqn"))
-			Expect(names[5]).To(BeEquivalentTo("default/kse.kubernetes"))
+			Expect(names).To(HaveLen(6))
+			Expect(names[0]).To(Equal("compliance-benchmarker-*"))
+			Expect(names[1]).To(Equal("compliance-controller-c7f4b94dd-*"))
+			Expect(names[2]).To(Equal("compliance-server-69c97dffcf-*"))
+			Expect(names[3]).To(Equal("default/kse.kubernetes"))
+			Expect(names[4]).To(Equal("tigera-manager-778447894c-*"))
+			Expect(names[5]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
 		})
 
 		It("should retrieve an array of names with no duplicates and only up to the limit", func() {
 			By("Creating a mock ES client with a mocked out search results containing duplicates")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{duplicateNamesResponse})
+			esClient = NewMockSearchClient([]interface{}{duplicateNamesResponse})
 
 			params := &FlowLogNamesParams{
 				Limit:       3,
@@ -541,17 +644,17 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				Namespace:   "tigera-compliance",
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(names)).To(BeNumerically("==", 3))
-			Expect(names[0]).To(BeEquivalentTo("compliance-benchmarker-*"))
-			Expect(names[1]).To(BeEquivalentTo("compliance-controller-c7f4b94dd-*"))
-			Expect(names[2]).To(BeEquivalentTo("compliance-server-69c97dffcf-*"))
+			Expect(names[0]).To(Equal("compliance-benchmarker-*"))
+			Expect(names[1]).To(Equal("compliance-controller-c7f4b94dd-*"))
+			Expect(names[2]).To(Equal("compliance-server-69c97dffcf-*"))
 		})
 
 		It("should return an empty response when the search result contains no aggregations", func() {
 			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
+			esClient = NewMockSearchClient([]interface{}{missingNamesAggregations})
 
 			params := &FlowLogNamesParams{
 				Limit:       2000,
@@ -561,14 +664,14 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				Namespace:   "tigera-compliance",
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(names)).To(BeNumerically("==", 0))
 		})
 
 		It("should return an empty response when the EndDateTime is in the past", func() {
 			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
+			esClient = NewMockSearchClient([]interface{}{missingNamesAggregations})
 
 			_, endTimeObject := getTestStartAndEndTime()
 
@@ -581,14 +684,14 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				EndDateTime: endTimeObject,
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(names)).To(BeNumerically("==", 0))
 		})
 
 		It("should return an empty response when the StartDateTime is in the future", func() {
 			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingNamesAggregations})
+			esClient = NewMockSearchClient([]interface{}{missingNamesAggregations})
 
 			startTimeObject := "now + 20d"
 
@@ -601,52 +704,14 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				StartDateTime: startTimeObject,
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(len(names)).To(BeNumerically("==", 0))
 		})
 
-		It("should return an array of names when the search result contains no source aggregations", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingSourceNamesAggregations})
-
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-				Namespace:   "",
-			}
-
-			names, err := getNamesFromElastic(params, esClient)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(names)).To(BeNumerically("==", 2))
-			Expect(names[0]).To(BeEquivalentTo("tigera-secure-es-xg2jxdtnqn"))
-			Expect(names[1]).To(BeEquivalentTo("compliance-benchmarker-*"))
-		})
-
-		It("should return an array of names when the search result contains no dest aggregations", func() {
-			By("Creating a mock ES client with a mocked out search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{missingDestNamesAggregations})
-
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "cluster",
-				Namespace:   "",
-			}
-
-			names, err := getNamesFromElastic(params, esClient)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(names)).To(BeNumerically("==", 2))
-			Expect(names[0]).To(BeEquivalentTo("compliance-benchmarker-*"))
-			Expect(names[1]).To(BeEquivalentTo("compliance-controller-c7f4b94dd-*"))
-		})
-
 		It("should return an error when the query fails", func() {
 			By("Creating a mock ES client with badly formed search results")
-			esClient = lmaelastic.NewMockSearchClient([]interface{}{malformedNamesResponse})
+			esClient = NewMockSearchClient([]interface{}{malformedNamesResponse})
 
 			params := &FlowLogNamesParams{
 				Limit:       2000,
@@ -656,9 +721,170 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 				Namespace:   "tigera-compliance",
 			}
 
-			names, err := getNamesFromElastic(params, esClient)
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
 			Expect(err).To(HaveOccurred())
-			Expect(names).To(BeNil())
+			Expect(names).To(HaveLen(0))
+		})
+
+		It("should only return the endpoints for the specified namespace when the namespace is specified", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{duplicateNamesResponse})
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "tigera-compliance",
+			}
+
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(names)).To(BeNumerically("==", 3))
+			Expect(names[0]).To(Equal("compliance-benchmarker-*"))
+			Expect(names[1]).To(Equal("compliance-controller-c7f4b94dd-*"))
+			Expect(names[2]).To(Equal("compliance-server-69c97dffcf-*"))
+		})
+
+		It("should return all endpoints and global endpoints with permissive RBAC", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{globalResponse})
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+			}
+
+			names, err := getNamesFromElastic(params, esClient, rbac.NewAlwaysAllowFlowHelper())
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(len(names)).To(BeNumerically("==", 4))
+			Expect(names[0]).To(Equal("test-app-83958379dc"))
+			Expect(names[1]).To(Equal("tigera-cluster-*"))
+			Expect(names[2]).To(Equal("tigera-global-networkset"))
+			Expect(names[3]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
+		})
+
+		It("should only return endpoints when global endpoints are not allowed due to RBAC", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{globalResponse})
+			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
+				"pods":        []string{""},
+				"networksets": []string{""},
+			})
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+				Strict:      true,
+			}
+
+			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(names).To(HaveLen(2))
+			Expect(names[0]).To(Equal("test-app-83958379dc"))
+			Expect(names[1]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
+		})
+
+		It("should properly filter endpoints based on allowed namespaces", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{globalResponse})
+			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
+				"pods":        []string{"tigera-elasticsearch"},
+				"networksets": []string{"tigera-elasticsearch"},
+			})
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+				Strict:      true,
+			}
+
+			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(names).To(HaveLen(1))
+			Expect(names[0]).To(Equal("tigera-secure-es-xg2jxdtnqn"))
+		})
+
+		It("should properly filter out endpoints based on the endpoint type per namespace", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{globalResponse})
+			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
+				"pods":        []string{"default"},
+				"networksets": []string{"default", "tigera-elasticsearch"},
+			})
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+				Strict:      true,
+			}
+
+			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(names).To(HaveLen(1))
+			Expect(names[0]).To(Equal("test-app-83958379dc"))
+		})
+
+		It("should properly filter out endpoints based on the endpoint type globally", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{globalResponse})
+			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
+				"pods":          []string{"default"},
+				"networksets":   []string{"tigera-elasticsearch"},
+				"hostendpoints": []string{""},
+			})
+
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+				Strict:      true,
+			}
+
+			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(names).To(HaveLen(1))
+			Expect(names[0]).To(Equal("tigera-cluster-*"))
+		})
+
+		It("should return all endpoints as long as RBAC permissions exist for one endpoint in the flow", func() {
+			By("Creating a mock ES client with a mocked out search results")
+			esClient = NewMockSearchClient([]interface{}{duplicateNamesResponse})
+			mockFlowHelper := rbac.NewMockFlowHelper(map[string][]string{
+				"pods": []string{"tigera-compliance"},
+			})
+
+			By("Creating params without strict RBAC enforcement")
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Actions:     []string{"allow", "deny", "unknown"},
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+			}
+
+			names, err := getNamesFromElastic(params, esClient, mockFlowHelper)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(names).To(HaveLen(5))
+			Expect(names[0]).To(Equal("compliance-benchmarker-*"))
+			Expect(names[1]).To(Equal("compliance-controller-c7f4b94dd-*"))
+			Expect(names[2]).To(Equal("compliance-server-69c97dffcf-*"))
+			Expect(names[3]).To(Equal("default/kse.kubernetes"))
+			Expect(names[4]).To(Equal("tigera-manager-778447894c-*"))
 		})
 	})
 
@@ -703,55 +929,4 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 		})
 	})
 
-	Context("Test that the buildNameAggregations function applies Include filters only when there is a prefix", func() {
-		It("should return aggregations with Include filters", func() {
-			By("Creating params with a prefix")
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "tigera*",
-				ClusterName: "",
-				Namespace:   "tigera-compliance",
-			}
-
-			sourceAggTermsMap, destAggTermsMap, err := getNamesAggregationTermsMaps(params)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 3))
-			Expect(len(destAggTermsMap)).To(BeNumerically("==", 3))
-		})
-
-		It("should return aggregations without Include filters", func() {
-			By("Creating params without a prefix")
-			params := &FlowLogNamesParams{
-				Limit:       2000,
-				Actions:     []string{"allow", "deny", "unknown"},
-				Prefix:      "",
-				ClusterName: "",
-				Namespace:   "tigera-compliance",
-			}
-
-			sourceAggTermsMap, destAggTermsMap, err := getNamesAggregationTermsMaps(params)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(len(sourceAggTermsMap)).To(BeNumerically("==", 2))
-			Expect(len(destAggTermsMap)).To(BeNumerically("==", 2))
-		})
-	})
 })
-
-func getNamesAggregationTermsMaps(params *FlowLogNamesParams) (map[string]interface{}, map[string]interface{},
-	error) {
-	sourceAgg, destAgg := buildNameAggregations(params)
-	sourceAggInf, err := sourceAgg.Source()
-	if err != nil {
-		return nil, nil, err
-	}
-	destAggInf, err := destAgg.Source()
-	if err != nil {
-		return nil, nil, err
-	}
-	sourceAggMap := sourceAggInf.(map[string]interface{})
-	destAggMap := destAggInf.(map[string]interface{})
-	sourceAggTermsMap := sourceAggMap["terms"].(map[string]interface{})
-	destAggTermsMap := destAggMap["terms"].(map[string]interface{})
-	return sourceAggTermsMap, destAggTermsMap, nil
-}
