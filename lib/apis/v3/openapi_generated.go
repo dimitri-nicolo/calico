@@ -7117,13 +7117,13 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 					},
 					"maxnode": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Maximum Number of Allowed Names",
+							Description: "Maximum Number of Allowed Nodes",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 				},
-				Required: []string{"expiry", "maxnode"},
+				Required: []string{"expiry"},
 			},
 		},
 	}
