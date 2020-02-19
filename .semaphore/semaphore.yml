@@ -24,7 +24,6 @@ global_job_config:
 
 blocks:
   - name: "Build helm charts"
-    dependencies: []
     task:
       jobs:
         - name: Build helm charts for master branch
@@ -36,6 +35,9 @@ blocks:
       when: "branch = 'master'"
     task:
       jobs:
+        - name: Build helm charts for master branch
+          commands:
+            - make charts RELEASE_STREAM=master
         - name: Push helm charts for master branch
           commands:
             - |
