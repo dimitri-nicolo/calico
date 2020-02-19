@@ -9,6 +9,8 @@ package worker
 import (
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,27 +76,33 @@ func (w *worker) resourceEventHandlerFuncs(options ...ResourceWatch) cache.Resou
 
 	if len(options) == 0 || hasFuncOption(options, ResourceWatchAdd) {
 		r.AddFunc = func(obj interface{}) {
+			objMeta := obj.(metav1.Object)
+			log.Debugf("Create event received for resource %s/%s", objMeta.GetName(), objMeta.GetNamespace())
 			w.Add(types.NamespacedName{
-				Name:      obj.(metav1.Object).GetName(),
-				Namespace: obj.(metav1.Object).GetNamespace(),
+				Name:      objMeta.GetName(),
+				Namespace: objMeta.GetNamespace(),
 			})
 		}
 	}
 
 	if len(options) == 0 || hasFuncOption(options, ResourceWatchUpdate) {
 		r.UpdateFunc = func(oldObj interface{}, newObj interface{}) {
+			objMeta := newObj.(metav1.Object)
+			log.Debugf("Create event received for resource %s/%s", objMeta.GetName(), objMeta.GetNamespace())
 			w.Add(types.NamespacedName{
-				Name:      newObj.(metav1.Object).GetName(),
-				Namespace: newObj.(metav1.Object).GetNamespace(),
+				Name:      objMeta.GetName(),
+				Namespace: objMeta.GetNamespace(),
 			})
 		}
 	}
 
 	if len(options) == 0 || hasFuncOption(options, ResourceWatchDelete) {
 		r.DeleteFunc = func(obj interface{}) {
+			objMeta := obj.(metav1.Object)
+			log.Debugf("Create event received for resource %s/%s", objMeta.GetName(), objMeta.GetNamespace())
 			w.Add(types.NamespacedName{
-				Name:      obj.(metav1.Object).GetName(),
-				Namespace: obj.(metav1.Object).GetNamespace(),
+				Name:      objMeta.GetName(),
+				Namespace: objMeta.GetNamespace(),
 			})
 		}
 	}
@@ -145,15 +153,25 @@ func (w *worker) processNextItem() bool {
 	if shutdown {
 		return false
 	}
+	defer w.Done(key)
+
+	reqLogger := log.WithField("key", key)
+	reqLogger.Debug("Processing next item")
 
 	if err := w.reconciler.Reconcile(key.(types.NamespacedName)); err != nil {
+		reqLogger.WithError(err).Error("An error occurred while processing the next item")
 		if w.NumRequeues(key) < 5 {
+			reqLogger.Debug("Rate limiting key")
 			w.AddRateLimited(key)
 			return true
 		}
+
+		reqLogger.Debug("Rate limiting retries reached, forgetting key")
+		w.Forget(key)
 		uruntime.HandleError(err)
 	}
 
-	w.Done(key)
+	reqLogger.Debug("Finished processing next item")
+
 	return true
 }

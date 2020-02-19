@@ -3,11 +3,11 @@
 package worker_test
 
 import (
+	"errors"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -71,29 +71,98 @@ func (m *MockListerWatcher) Stop() {
 var _ = Describe("worker", func() {
 	Context("Runs Reconcile function", func() {
 		It("when a new resource is added", func() {
-			testReconcileRun(watch.Added, true, worker.ResourceWatchAdd)
+			simpleReconcileRunTest(watch.Added, true, worker.ResourceWatchAdd)
 		})
 		It("when a resource is updated", func() {
-			testReconcileRun(watch.Modified, true, worker.ResourceWatchUpdate)
+			simpleReconcileRunTest(watch.Modified, true, worker.ResourceWatchUpdate)
 		})
 		It("when a resource is deleted", func() {
-			testReconcileRun(watch.Deleted, true, worker.ResourceWatchDelete)
+			simpleReconcileRunTest(watch.Deleted, true, worker.ResourceWatchDelete)
 		})
 	})
 	Context("Does not run Reconcile function", func() {
 		It("when a new resource is added but the worker doesn't have ResourceWatchAdd set", func() {
-			testReconcileRun(watch.Added, false, worker.ResourceWatchUpdate)
+			simpleReconcileRunTest(watch.Added, false, worker.ResourceWatchUpdate)
 		})
 		It("when a resource is updated but the worker doesn't have ResourceWatchUpdate set", func() {
-			testReconcileRun(watch.Modified, false, worker.ResourceWatchDelete)
+			simpleReconcileRunTest(watch.Modified, false, worker.ResourceWatchDelete)
 		})
 		It("when a resource is deleted but the worker doesn't have ResourceWatchDelete set", func() {
-			testReconcileRun(watch.Deleted, false, worker.ResourceWatchUpdate)
+			simpleReconcileRunTest(watch.Deleted, false, worker.ResourceWatchUpdate)
+		})
+	})
+	Context("Rate limiting", func() {
+		It("tests that a key that caused a previous error doesn't get ignored", func() {
+			nameChan := make(chan types.NamespacedName, 5)
+			defer close(nameChan)
+			count := 0
+			errorThreshold := 1
+			r := &MockReconciler{f: func(name types.NamespacedName) error {
+				nameChan <- name
+
+				count++
+				if count > errorThreshold {
+					return nil
+				}
+
+				return errors.New("error")
+			}}
+			listFunc := func() (runtime.Object, error) { return &corev1.SecretList{}, nil }
+
+			mockLW := NewMockListerWatcher(listFunc)
+			defer mockLW.Stop()
+
+			w := worker.New(r)
+			w.AddWatch(mockLW, &corev1.Secret{})
+
+			stop := make(chan struct{})
+			defer close(stop)
+
+			go w.Run(1, stop)
+
+			mockLW.AddEvent(watch.Event{
+				Type: watch.Added,
+				Object: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "TestNamespace",
+					},
+				},
+			})
+			mockLW.AddEvent(watch.Event{
+				Type: watch.Added,
+				Object: &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "TestNamespace",
+					},
+				},
+			})
+
+			var name types.NamespacedName
+			select {
+			case name = <-nameChan:
+				Expect(name).Should(Equal(types.NamespacedName{
+					Name:      "test",
+					Namespace: "TestNamespace",
+				}))
+			case <-time.NewTicker(500 * time.Millisecond).C:
+				Fail("timeout waiting for name")
+			}
+			select {
+			case name = <-nameChan:
+				Expect(name).Should(Equal(types.NamespacedName{
+					Name:      "test",
+					Namespace: "TestNamespace",
+				}))
+			case <-time.NewTicker(500 * time.Millisecond).C:
+				Fail("timeout waiting for name")
+			}
 		})
 	})
 })
 
-func testReconcileRun(eventType watch.EventType, reconcileShouldRun bool, resourceWatchOptions ...worker.ResourceWatch) {
+func simpleReconcileRunTest(eventType watch.EventType, reconcileShouldRun bool, resourceWatchOptions ...worker.ResourceWatch) {
 	nameChan := make(chan types.NamespacedName)
 	defer close(nameChan)
 
