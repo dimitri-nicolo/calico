@@ -19,7 +19,7 @@ type httpError struct {
 }
 
 func (e *httpError) Error() string {
-	return fmt.Sprintf("[%s] %s", e.ErrCode, e.Error())
+	return fmt.Sprintf("[%s] %s", e.ErrCode, e.ErrMsg)
 }
 
 // Returns an HTTP error representing when a selected cluster is not connected.

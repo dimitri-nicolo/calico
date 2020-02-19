@@ -98,7 +98,7 @@ var _ = Describe("Server", func() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv.WatchK8sWithSync(watchSync)
+			_ = srv.WatchK8sWithSync(watchSync)
 		}()
 	})
 
@@ -115,7 +115,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to register a new cluster", func() {
-			k8sAPI.AddCluster(clusterA, clusterA)
+			Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -133,7 +133,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to register another cluster", func() {
-			k8sAPI.AddCluster(clusterB, clusterB)
+			Expect(k8sAPI.AddCluster(clusterB, clusterB)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -146,7 +146,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to delete a cluster", func() {
-			k8sAPI.DeleteCluster(clusterB)
+			Expect(k8sAPI.DeleteCluster(clusterB)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -208,6 +208,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Certificates: []tls.Certificate{xcert},
 			NextProtos:   []string{"h2"},
 		})
+		Expect(e).NotTo(HaveOccurred())
 
 		lisTun, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
@@ -250,25 +251,25 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv.ServeHTTP(lis)
+			_ = srv.ServeHTTP(lis)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv.ServeHTTP(lis2)
+			_ = srv.ServeHTTP(lis2)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv.ServeTunnelsTLS(lisTun)
+			_ = srv.ServeTunnelsTLS(lisTun)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv.WatchK8sWithSync(watchSync)
+			_ = srv.WatchK8sWithSync(watchSync)
 		}()
 	}
 
@@ -297,7 +298,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("should not be able to proxy to a cluster without a tunnel", func() {
-			k8sAPI.AddCluster(clusterA, clusterA)
+			Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 			clientHelloReq(lis.Addr().String(), clusterA, 400)
 		})
@@ -407,7 +408,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should be able to register another cluster", func() {
-				k8sAPI.AddCluster(clusterB, clusterB)
+				Expect(k8sAPI.AddCluster(clusterB, clusterB)).ShouldNot(HaveOccurred())
 				Expect(<-watchSync).NotTo(HaveOccurred())
 			})
 
@@ -459,7 +460,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				It("should be possible to delete the cluster", func() {
-					k8sAPI.DeleteCluster(clusterB)
+					Expect(k8sAPI.DeleteCluster(clusterB)).ShouldNot(HaveOccurred())
 					Expect(<-watchSync).NotTo(HaveOccurred())
 				})
 
@@ -481,7 +482,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				It("should be able to register clusterB again", func() {
-					k8sAPI.AddCluster(clusterB, clusterB)
+					Expect(k8sAPI.AddCluster(clusterB, clusterB)).ShouldNot(HaveOccurred())
 					Expect(<-watchSync).NotTo(HaveOccurred())
 				})
 
@@ -511,7 +512,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("Should add cluster", func() {
-				k8sAPI.AddCluster("slow", "slow")
+				Expect(k8sAPI.AddCluster("slow", "slow")).ShouldNot(HaveOccurred())
 				Expect(<-watchSync).NotTo(HaveOccurred())
 			})
 
@@ -551,6 +552,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					clnt := configureHTTPSClient()
 					req, err := http.NewRequest("GET",
 						"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
+					Expect(err).NotTo(HaveOccurred())
 					req.Header[server.ClusterHeaderField] = []string{"slow"}
 					test.AddJaneToken(req)
 					resp, err := clnt.Do(req)
@@ -560,7 +562,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				}()
 
 				<-slowWaitC
-				k8sAPI.UpdateCluster("slow")
+				Expect(k8sAPI.UpdateCluster("slow")).ShouldNot(HaveOccurred())
 				Expect(<-watchSync).NotTo(HaveOccurred())
 				close(slowC) // let the call handler exit
 				slow.Close()
@@ -599,7 +601,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("should delete clusterA", func() {
-			k8sAPI.DeleteCluster(clusterA)
+			Expect(k8sAPI.DeleteCluster(clusterA)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -727,7 +729,7 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("Should add cluster A", func() {
-		k8sAPI.AddCluster(clusterA, clusterA)
+		Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
@@ -808,7 +810,7 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("should be able to delete a cluster - test race SAAS-226", func() {
-		k8sAPI.DeleteCluster(clusterA)
+		Expect(k8sAPI.DeleteCluster(clusterA)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
@@ -824,7 +826,6 @@ var _ = Describe("Server authenticates requests", func() {
 var _ = Describe("Creating an HTTP server that proxies traffic", func() {
 	var k8sAPI = test.NewK8sSimpleFakeClient(nil, nil)
 	var srv *server.Server
-	var address string
 	var certFile string
 	var keyFile string
 	var listener net.Listener
@@ -833,11 +834,12 @@ var _ = Describe("Creating an HTTP server that proxies traffic", func() {
 		By("Creating a server that only serves HTTPS traffic")
 		var err error
 		listener, err = net.Listen("tcp", "localhost:0")
-		address = listener.Addr().String()
+		address := listener.Addr()
+		Expect(address).ShouldNot(BeNil())
 		Expect(err).NotTo(HaveOccurred())
 
 		var opts = []server.Option{
-			server.WithDefaultAddr(address),
+			server.WithDefaultAddr(address.String()),
 			server.WithKeepAliveSettings(true, 100),
 			server.WithCredsFiles(certFile, keyFile),
 		}
@@ -884,6 +886,7 @@ func requestToClusterA(address string) *http.Request {
 	defer GinkgoRecover()
 	req, err := http.NewRequest("GET",
 		"https://"+address+"/some/path", strings.NewReader("HELLO"))
+	Expect(err).ShouldNot(HaveOccurred())
 	req.Header[server.ClusterHeaderField] = []string{clusterA}
 	Expect(err).NotTo(HaveOccurred())
 	return req
@@ -957,7 +960,8 @@ func http2Srv(t *tunnel.Tunnel) {
 		Expect(ok).To(BeTrue())
 
 		for i := 0; i < 3; i++ {
-			fmt.Fprintf(w, "tick %d\n", i)
+			_, err := fmt.Fprintf(w, "tick %d\n", i)
+			Expect(err).ShouldNot(HaveOccurred())
 			f.Flush()
 			time.Sleep(300 * time.Millisecond)
 		}
@@ -973,12 +977,12 @@ func http2Srv(t *tunnel.Tunnel) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		httpsrv.Serve(lisTLS)
+		_ = httpsrv.Serve(lisTLS)
 	}()
 
 	// we only handle one request, we wait until it is done
 	reqWg.Wait()
 
-	httpsrv.Close()
+	Expect(httpsrv.Close()).ShouldNot(HaveOccurred())
 	wg.Wait()
 }

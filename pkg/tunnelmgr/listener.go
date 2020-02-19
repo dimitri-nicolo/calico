@@ -45,5 +45,5 @@ func (l *listener) Close() error {
 }
 
 func (l *listener) Addr() net.Addr {
-	return l.Addr()
+	return l.addr
 }

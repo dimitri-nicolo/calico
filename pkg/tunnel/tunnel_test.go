@@ -157,7 +157,7 @@ var _ = Describe("Tunnel server", func() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					test.DataFlow(r, w, []byte(msg))
+					_, _ = test.DataFlow(r, w, []byte(msg))
 				}()
 			}
 
@@ -228,9 +228,7 @@ func startServer() (*tunnel.Server, net.Addr) {
 	srv, err := tunnel.NewServer()
 	Expect(err).NotTo(HaveOccurred())
 
-	go func() {
-		srv.Serve(lis)
-	}()
+	go func() { _ = srv.Serve(lis) }()
 
 	return srv, lis.Addr()
 }
@@ -302,7 +300,7 @@ var _ = Describe("TLS Stream", func() {
 	})
 
 	It("should  create a cert for client", func() {
-		clnCert, err = test.CreateSignedX509Cert("guardian", srvCert)
+		clnCert, err = test.CreateSignedX509Cert("guardian")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(clnCert.EmailAddresses)).To(Equal(1))
 		Expect(clnCert.EmailAddresses[0]).To(Equal("guardian"))
@@ -325,7 +323,7 @@ var _ = Describe("TLS Stream", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		go func() {
-			srv.ServeTLS(lis)
+			_ = srv.ServeTLS(lis)
 		}()
 	})
 
@@ -347,6 +345,7 @@ var _ = Describe("TLS Stream", func() {
 
 		certPem := test.PemEncodeCert(clnCert)
 		cert, err := tls.X509KeyPair(certPem, []byte(test.PrivateRSA))
+		Expect(err).NotTo(HaveOccurred())
 
 		rootCAs := x509.NewCertPool()
 		rootCAs.AddCert(srvCert)
@@ -417,8 +416,9 @@ var _ = Describe("tunnel tests", func() {
 				}()
 
 				srvTunnel, err := tunnel.NewServerTunnel(srvConn)
+				Expect(err).ShouldNot(HaveOccurred())
 				_, err = srvTunnel.Open()
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).ShouldNot(HaveOccurred())
 
 				wg.Wait()
 			})

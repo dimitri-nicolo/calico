@@ -265,7 +265,7 @@ func getServerFromConnection(conn net.Conn, responses ...string) *http.Server {
 		_, err := w.Write([]byte(rList.Next()))
 		Expect(err).ShouldNot(HaveOccurred())
 	})
-	go srv.Serve(session)
+	go func() { _ = srv.Serve(session) }()
 	return srv
 }
 

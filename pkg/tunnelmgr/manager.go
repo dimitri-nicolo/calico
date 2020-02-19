@@ -105,8 +105,13 @@ func (m *manager) startStateLoop() {
 			}
 
 			if err != nil {
-				if ok = handleError(err, errListeners, tun, dialer); ok == false {
+				var newTunnel *tunnel.Tunnel
+				if newTunnel, ok = handleError(err, errListeners, dialer); !ok {
 					continue
+				}
+
+				if newTunnel != nil {
+					tun = newTunnel
 				}
 			}
 
@@ -183,23 +188,23 @@ func writeOutError(listeners []chan error, err error) {
 	}
 }
 
-func handleError(err error, errListeners []chan error, tun *tunnel.Tunnel, dialer tunnel.Dialer) bool {
+func handleError(err error, errListeners []chan error, dialer tunnel.Dialer) (*tunnel.Tunnel, bool) {
 	writeOutError(errListeners, err)
-
+	var tun *tunnel.Tunnel
+	var dailErr error
 	if err == tunnel.ErrTunnelClosed {
-		tun = nil
 		if dialer == nil {
-			return false
+			return nil, false
 		}
 
-		tun, err = dialer.Dial()
-		if err != nil {
-			writeOutError(errListeners, err)
-			return false
+		tun, dailErr = dialer.Dial()
+		if dailErr != nil {
+			writeOutError(errListeners, dailErr)
+			return nil, false
 		}
 	}
 
-	return true
+	return tun, true
 }
 
 func handleSetTunnel(tun *tunnel.Tunnel, setTunnel state.SendInterface) *tunnel.Tunnel {

@@ -153,7 +153,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			ts.http.Serve(lisTs)
+			_ = ts.http.Serve(lisTs)
 		}()
 
 		lisTs2, err = net.Listen("tcp", "localhost:0")
@@ -164,7 +164,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			ts2.http.Serve(lisTs2)
+			_ = ts2.http.Serve(lisTs2)
 		}()
 	})
 
@@ -207,25 +207,25 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			voltron.ServeHTTP(lisHTTP11)
+			_ = voltron.ServeHTTP(lisHTTP11)
 		}()
 
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			voltron.ServeHTTP(lisHTTP2)
+			_ = voltron.ServeHTTP(lisHTTP2)
 		}()
 
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			voltron.ServeTunnelsTLS(lisTun)
+			_ = voltron.ServeTunnelsTLS(lisTun)
 		}()
 
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			voltron.WatchK8sWithSync(watchSync)
+			_ = voltron.WatchK8sWithSync(watchSync)
 		}()
 
 		ui.voltronHTTPS = lisHTTP2.Addr().String()
@@ -234,10 +234,10 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 	It("should register 2 clusters", func() {
 		k8sAPI.WaitForManagedClustersWatched()
-		k8sAPI.AddCluster(clusterID, clusterID)
+		Expect(k8sAPI.AddCluster(clusterID, clusterID)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		k8sAPI.AddCluster(clusterID2, clusterID2)
+		Expect(k8sAPI.AddCluster(clusterID2, clusterID2)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
@@ -261,7 +261,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			guardian.ServeTunnelHTTP()
+			_ = guardian.ServeTunnelHTTP()
 		}()
 	})
 
@@ -285,7 +285,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			guardian2.ServeTunnelHTTP()
+			_ = guardian2.ServeTunnelHTTP()
 		}()
 	})
 
@@ -316,7 +316,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should be possible to stop guardian", func() {
-		guardian.Close()
+		_ = guardian.Close()
 	})
 
 	It("should not be possible to reach the test server", func() {
@@ -344,7 +344,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			guardian.ServeTunnelHTTP()
+			_ = guardian.ServeTunnelHTTP()
 		}()
 	})
 
@@ -359,11 +359,11 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should clean up", func(done Done) {
-		voltron.Close()
-		guardian.Close()
-		guardian2.Close()
-		ts.http.Close()
-		ts2.http.Close()
+		_ = voltron.Close()
+		_ = guardian.Close()
+		_ = guardian2.Close()
+		_ = ts.http.Close()
+		_ = ts2.http.Close()
 		wgSrvCnlt.Wait()
 
 		close(done)
