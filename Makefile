@@ -226,6 +226,7 @@ protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
 		      $(PROTOC_CONTAINER) \
 		      --gogofaster_out=plugins=grpc:. \
 		      felixbackend.proto
+	$(MAKE) fix
 
 BPF_INC_FILES := bpf/include/bpf.h
 BPF_XDP_INC_FILES :=
