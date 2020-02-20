@@ -67,7 +67,7 @@ func MustGetElasticClient() Client {
 	cfg := MustLoadConfig()
 	c, err := NewFromConfig(cfg)
 	if err != nil {
-		log.Panicf("Unable to connect to Elasticsearch: %v", err)
+		log.Fatalf("Unable to connect to Elasticsearch: %v", err)
 	}
 	return c
 }

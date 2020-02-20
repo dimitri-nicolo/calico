@@ -26,7 +26,7 @@ type Config struct {
 	ElasticPassword          string        `envconfig:"ELASTIC_PASSWORD"`
 	ElasticCA                string        `envconfig:"ELASTIC_CA"`
 	ElasticIndexSuffix       string        `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
-	ElasticConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"5"`
+	ElasticConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"10"`
 	ElasticConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
 	ElasticShards            int           `envconfig:"ELASTIC_SHARDS" default:"5"`
 	ElasticReplicas          int           `envconfig:"ELASTIC_REPLICAS" default:"0"`
