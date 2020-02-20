@@ -62,7 +62,6 @@ module Jekyll
       cmd = """helm template _includes/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path} \
-        --set imagePullSecrets.cnx-pull-secret='' \
         --set node.resources.requests.cpu='250m' \
         --set manager.service.type=NodePort \
         --set manager.service.nodePort=30003 \
@@ -73,6 +72,13 @@ module Jekyll
         --set kibana.service.type=NodePort \
         --set kibana.service.nodePort=30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
+
+      if @chart == "calico" or @chart == "tigera-secure-ee"
+        # static rendered manifests for the 'tigera-secure-ee-core' (calico) and
+        # 'tigera-secure-ee' chart should configure components to use an imagePullSecret
+        # named 'cnx-pull-secret'.
+        cmd +=  " --set imagePullSecrets.cnx-pull-secret=''"
+      end
 
       # Add mock elasticsearch settings if required for rendering in the docs.
       if @mock_es
