@@ -11,7 +11,7 @@ access to {{site.prodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
-pre-v2.3 RBAC behavior, [upgrade to 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23),
+pre-v2.3 RBAC behavior, [upgrade to 2.3]({{site.url}}/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23),
 following the instructions for handling RBAC. Then, continue to
 [upgrade to this release]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee).
 

@@ -21,7 +21,7 @@ This how-to guide uses the following {{site.prodname}} features:
 ### Concepts
 
 #### Federation tools
-One way to achieve federation with Calico Enterprise tiers and policies is to use [KubeFed](https://kubernetes.io/docs/tasks/federation/administer-federation/cluster/), which allows you to configure multiple Kubernetes clusters from a single set of APIs in a host cluster. You need to determine which Calico Enterprise cluster will be the host cluster, and the member clusters.
+One way to achieve federation with Calico Enterprise tiers and policies is to use [KubeFed](https://github.com/kubernetes-sigs/kubefed), which allows you to configure multiple Kubernetes clusters from a single set of APIs in a host cluster. You need to determine which Calico Enterprise cluster will be the host cluster, and the member clusters.
 
 - _Host cluster_ 
  
