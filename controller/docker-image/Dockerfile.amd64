@@ -10,5 +10,3 @@ ADD bin/controller-amd64 /controller
 ADD bin/healthz-amd64 /healthz
 WORKDIR /
 ENTRYPOINT ["/controller"]
-# By default, tell glog to log to stderr instead of file.
-CMD ["-logtostderr=true"]
