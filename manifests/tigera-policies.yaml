@@ -454,8 +454,6 @@ spec:
     protocol: TCP
     source: {}
   - action: Allow
-    destination:
-      namespaceSelector: all()
   order: 1
   selector: k8s-app == "fluentd-node"
   types:
