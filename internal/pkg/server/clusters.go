@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	vtls "github.com/tigera/voltron/pkg/tls"
+
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	apiv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
@@ -37,6 +39,10 @@ import (
 // AppYaml is the content-type that will be returned when returning a yaml file
 const AppYaml = "application/vnd.yaml"
 
+var sniServiceMap = map[string]string{
+	"tigera-secure-kb-http.tigera-kibana.svc": "tigera-secure-kb-http.tigera-kibana.svc:5601",
+}
+
 type cluster struct {
 	jclust.ManagedCluster
 
@@ -50,11 +56,7 @@ type cluster struct {
 
 	k8sCLI K8sInterface
 
-	// parameters for forwarding guardian requests to a default server
-	forwardingEnabled               bool
-	defaultForwardServerName        string
-	defaultForwardDialRetryAttempts int
-	defaultForwardDialRetryInterval time.Duration
+	tlsProxy vtls.Proxy
 }
 
 type clusters struct {
@@ -99,13 +101,24 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 	}
 
 	c := &cluster{
-		ManagedCluster:                  *mc,
-		forwardingEnabled:               cs.forwardingEnabled,
-		defaultForwardServerName:        cs.defaultForwardServerName,
-		defaultForwardDialRetryAttempts: cs.defaultForwardDialRetryAttempts,
-		defaultForwardDialRetryInterval: cs.defaultForwardDialRetryInterval,
-		tunnelManager:                   tunnelmgr.NewManager(),
-		k8sCLI:                          cs.k8sCLI,
+		ManagedCluster: *mc,
+		tunnelManager:  tunnelmgr.NewManager(),
+		k8sCLI:         cs.k8sCLI,
+	}
+
+	if cs.forwardingEnabled {
+		tlsProxy, err := vtls.NewProxy(
+			vtls.WithDefaultServiceURL(cs.defaultForwardServerName),
+			vtls.WithProxyOnSNI(true),
+			vtls.WithSNIServiceMap(sniServiceMap),
+			vtls.WithConnectionRetryAttempts(cs.defaultForwardDialRetryAttempts),
+			vtls.WithConnectionRetryInterval(cs.defaultForwardDialRetryInterval),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		c.tlsProxy = tlsProxy
 	}
 
 	cs.clusters[mc.ID] = c
@@ -568,7 +581,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 		},
 	}
 
-	if c.forwardingEnabled {
+	if c.tlsProxy != nil {
 		go func() {
 			log.Debugf("server has started listening for connections from cluster %s", c.ID)
 			// This loop only stops trying to listen if the tunnel or manager was closed
@@ -585,12 +598,9 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 						return
 					}
 					defer listener.Close()
-					if err = listenAndForward(
-						listener,
-						c.defaultForwardServerName,
-						c.defaultForwardDialRetryAttempts,
-						c.defaultForwardDialRetryInterval); err != nil {
-						log.WithError(err).Error("failed to listen over the tunnel")
+
+					if err := c.tlsProxy.ListenAndProxy(listener); err != nil {
+						log.WithError(err).Error("failed to listen for incoming requests through the tunnel")
 					}
 				}()
 

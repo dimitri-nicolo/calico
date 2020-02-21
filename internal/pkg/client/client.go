@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/voltron/pkg/conn"
+
 	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"github.com/pkg/errors"
@@ -156,7 +158,7 @@ func (c *Client) AcceptAndProxy(listener net.Listener) error {
 		}
 
 		//TODO I think we want to throttle the connections
-		go proxy.ForwardConnection(srcConn, dstConn)
+		go conn.Forward(srcConn, dstConn)
 	}
 }
 
