@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"io"
 	"math/big"
@@ -92,7 +93,7 @@ func createCert(email string, isCA bool) (*x509.Certificate, error) {
 func createX509Cert(email string, isCA bool) ([]byte, error) {
 	templ := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		EmailAddresses:        []string{email},
+		Subject:               pkix.Name{CommonName: email},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(time.Hour),
 		BasicConstraintsValid: isCA,
@@ -109,7 +110,7 @@ func createX509Cert(email string, isCA bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := x509.CreateCertificate(rand.Reader, templ, templ, pubKey, privKey)
+	bytes, err := x509.CreateCertificate(rand.Reader, templ, parent, pubKey, privKey)
 	if err != nil {
 		return nil, err
 	}

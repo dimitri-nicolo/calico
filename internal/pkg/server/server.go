@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"math/big"
 	"net"
@@ -228,7 +229,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			// N.B. By now, we know that we signed this certificate, that means,
 			// it contains what we placed into that cert, therefore there is no
 			// need to do any additional checks on that cert.
-			clusterID = id.EmailAddresses[0]
+			clusterID = id.Subject.CommonName
 			// However, the cert may be outdate (e.g. revoked, custer id
 			// reused, etc.) so we need to double check the cert
 			idChecker = func(c *cluster) error {
@@ -395,11 +396,11 @@ func (s *Server) generateCreds(clusterInfo *jclust.ManagedCluster) (*x509.Certif
 	}
 
 	tmpl := &x509.Certificate{
-		SerialNumber:   big.NewInt(1),
-		EmailAddresses: []string{clusterInfo.ID},
-		NotBefore:      time.Now(),
-		NotAfter:       time.Now().Add(1000000 * time.Hour), // XXX TBD
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: clusterInfo.ID},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(1000000 * time.Hour), // XXX TBD
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
 
 	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, s.tunnelCert, &key.PublicKey, s.tunnelKey)

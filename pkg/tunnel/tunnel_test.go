@@ -295,15 +295,13 @@ var _ = Describe("TLS Stream", func() {
 	It("should  create a cert for server", func() {
 		srvCert, err = test.CreateSelfSignedX509Cert("voltron", true)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(srvCert.EmailAddresses)).To(Equal(1))
-		Expect(srvCert.EmailAddresses[0]).To(Equal("voltron"))
+		Expect(srvCert.Subject.CommonName).To(Equal("voltron"))
 	})
 
 	It("should  create a cert for client", func() {
 		clnCert, err = test.CreateSignedX509Cert("guardian")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(clnCert.EmailAddresses)).To(Equal(1))
-		Expect(clnCert.EmailAddresses[0]).To(Equal("guardian"))
+		Expect(clnCert.Subject.CommonName).To(Equal("guardian"))
 	})
 
 	var (
