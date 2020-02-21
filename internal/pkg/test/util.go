@@ -112,7 +112,7 @@ func createX509Cert(email string, isCA bool, parent *x509.Certificate) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := x509.CreateCertificate(rand.Reader, templ, templ, pubKey, privKey)
+	bytes, err := x509.CreateCertificate(rand.Reader, templ, parent, pubKey, privKey)
 	if err != nil {
 		return nil, err
 	}
