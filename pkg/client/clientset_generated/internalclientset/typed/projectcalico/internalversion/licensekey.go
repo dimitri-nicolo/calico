@@ -25,6 +25,7 @@ type LicenseKeysGetter interface {
 type LicenseKeyInterface interface {
 	Create(*projectcalico.LicenseKey) (*projectcalico.LicenseKey, error)
 	Update(*projectcalico.LicenseKey) (*projectcalico.LicenseKey, error)
+	UpdateStatus(*projectcalico.LicenseKey) (*projectcalico.LicenseKey, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*projectcalico.LicenseKey, error)
@@ -105,6 +106,21 @@ func (c *licenseKeys) Update(licenseKey *projectcalico.LicenseKey) (result *proj
 	err = c.client.Put().
 		Resource("licensekeys").
 		Name(licenseKey.Name).
+		Body(licenseKey).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *licenseKeys) UpdateStatus(licenseKey *projectcalico.LicenseKey) (result *projectcalico.LicenseKey, err error) {
+	result = &projectcalico.LicenseKey{}
+	err = c.client.Put().
+		Resource("licensekeys").
+		Name(licenseKey.Name).
+		SubResource("status").
 		Body(licenseKey).
 		Do().
 		Into(result)

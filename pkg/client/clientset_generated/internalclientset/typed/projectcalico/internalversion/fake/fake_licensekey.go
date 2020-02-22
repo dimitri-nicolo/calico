@@ -80,6 +80,17 @@ func (c *FakeLicenseKeys) Update(licenseKey *projectcalico.LicenseKey) (result *
 	return obj.(*projectcalico.LicenseKey), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeLicenseKeys) UpdateStatus(licenseKey *projectcalico.LicenseKey) (*projectcalico.LicenseKey, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(licensekeysResource, "status", licenseKey), &projectcalico.LicenseKey{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.LicenseKey), err
+}
+
 // Delete takes name of the licenseKey and deletes it. Returns an error if one occurs.
 func (c *FakeLicenseKeys) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

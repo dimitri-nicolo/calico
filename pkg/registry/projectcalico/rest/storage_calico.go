@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2016-2020 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -557,7 +557,14 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts))
 	storage["globalnetworksets"] = rESTInPeace(calicognetworkset.NewREST(scheme, *gNetworkSetOpts))
 	storage["networksets"] = rESTInPeace(caliconetworkset.NewREST(scheme, *networksetOpts))
-	storage["licensekeys"] = rESTInPeace(calicolicensekey.NewREST(scheme, *licenseKeysSetOpts))
+	licenseStorage, licenseStatusStorage, err := calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+
+	storage["licensekeys"] = licenseStorage
+	storage["licensekeys/status"] = licenseStatusStorage
 
 	globalAlertsStorage, globalAlertsStatusStorage, err := calicogalert.NewREST(scheme, *gAlertOpts)
 	if err != nil {
