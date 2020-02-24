@@ -85,15 +85,15 @@ func loadKeys() (interface{}, interface{}, error) {
 	return pubKey, privKey, nil
 }
 
-func createCert(email string, isCA bool) (*x509.Certificate, error) {
-	bytes, _ := createX509Cert(email, isCA)
+func createCert(clusterID string, isCA bool, parent *x509.Certificate) (*x509.Certificate, error) {
+	bytes, _ := createX509Cert(clusterID, isCA, parent)
 	return x509.ParseCertificate(bytes)
 }
 
-func createX509Cert(email string, isCA bool) ([]byte, error) {
+func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate) ([]byte, error) {
 	templ := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: email},
+		Subject:               pkix.Name{CommonName: clusterID},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(time.Hour),
 		BasicConstraintsValid: isCA,
@@ -105,7 +105,9 @@ func createX509Cert(email string, isCA bool) ([]byte, error) {
 	if isCA {
 		templ.KeyUsage |= x509.KeyUsageCertSign
 	}
-
+	if parent == nil {
+		parent = templ
+	}
 	pubKey, privKey, err := loadKeys()
 	if err != nil {
 		return nil, err
@@ -118,21 +120,21 @@ func createX509Cert(email string, isCA bool) ([]byte, error) {
 }
 
 // CreateSelfSignedX509Cert creates a self-signed certificate using predefined
-// keys that includes the given email
-func CreateSelfSignedX509Cert(email string, isCA bool) (*x509.Certificate, error) {
-	return createCert(email, isCA)
+// keys that includes the given cluster ID
+func CreateSelfSignedX509Cert(clusterID string, isCA bool) (*x509.Certificate, error) {
+	return createCert(clusterID, isCA, nil)
 }
 
 // CreateSelfSignedX509CertBinary creates a self-signed certificate using predefined
-// keys that includes the given email
-func CreateSelfSignedX509CertBinary(email string, isCA bool) ([]byte, error) {
-	return createX509Cert(email, isCA)
+// keys that includes the given cluster ID
+func CreateSelfSignedX509CertBinary(clusterID string, isCA bool) ([]byte, error) {
+	return createX509Cert(clusterID, isCA, nil)
 }
 
 // CreateSignedX509Cert creates a cert signed by a parent cert using predefined
-// keys that includes the given email
-func CreateSignedX509Cert(email string) (*x509.Certificate, error) {
-	return createCert(email, false)
+// keys that includes the given cluster ID
+func CreateSignedX509Cert(clusterID string, parent *x509.Certificate) (*x509.Certificate, error) {
+	return createCert(clusterID, false, parent)
 }
 
 // CreateSelfSignedX509CertRandom returns a random self-signed X509 cert and its key
