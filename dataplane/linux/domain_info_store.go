@@ -458,7 +458,6 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			timer:      makeTimer(),
 			isName:     isName,
 		}
-		s.signalDomainInfoChange(name, "mapping added")
 
 		// If value is another name, for which we don't yet have any information, create a
 		// mapping entry for it so we can record that it is a descendant of the name in
@@ -470,6 +469,14 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 				namesToNotify: set.New(),
 			}
 		}
+
+		// Now signal that the available domain info for this name has changed.  It's
+		// important, in order to preserve the correctness of mapping entries knowing the
+		// names that they should notify for, to do this _after_ the previous block that
+		// creates a mapping entry for a CNAME value, because signalDomainInfoChange
+		// releases the mutex and so allows other goroutines to call GetDomainIPs for one of
+		// the domain names that is signaled as changed.
+		s.signalDomainInfoChange(name, "mapping added")
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
