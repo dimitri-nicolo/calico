@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -177,6 +177,7 @@ var _ = Describe("Domain Info Store", func() {
 		for {
 			select {
 			case signal := <-domainStore.domainInfoChanges:
+				log.Debugf("Got domain change signal for %v", signal.domain)
 				domainsSignaled.Add(signal.domain)
 			default:
 				break loop

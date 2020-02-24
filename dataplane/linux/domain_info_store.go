@@ -459,6 +459,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			isName:     isName,
 		}
 		s.signalDomainInfoChange(name, "mapping added")
+
 		// If value is another name, for which we don't yet have any information, create a
 		// mapping entry for it so we can record that it is a descendant of the name in
 		// hand.  Then, when we get information for the descendant name, we can correctly
@@ -565,6 +566,7 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	s.mutex.Unlock()
 	defer s.mutex.Lock()
 	changedNames.Iter(func(item interface{}) error {
+		log.Debugf("Signal domain change for %v -> %v", name, item.(string))
 		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
 		return nil
 	})
