@@ -5,6 +5,7 @@ package intdataplane
 import (
 	"net"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket/layers"
@@ -74,8 +75,8 @@ var _ = Describe("Domain Info Store", func() {
 	}
 
 	// Create a new datastore.
-	domainStoreCreate := func() {
-		domainChannel := make(chan *domainInfoChanged, 100)
+	domainStoreCreateEx := func(capacity int) {
+		domainChannel := make(chan *domainInfoChanged, capacity)
 		config := &Config{
 			DNSCacheFile:         "/dnsinfo",
 			DNSCacheSaveInterval: time.Minute,
@@ -83,6 +84,10 @@ var _ = Describe("Domain Info Store", func() {
 		// For UT purposes, arrange that mappings always appear to have expired when UT code
 		// calls processMappingExpiry.
 		domainStore = newDomainInfoStoreWithShims(domainChannel, config, func(time.Time) bool { return true })
+	}
+	domainStoreCreate := func() {
+		// Create domain info store with 100 capacity for changes channel.
+		domainStoreCreateEx(100)
 	}
 
 	// Basic validation tests that add/expire one or two DNS records of A and AAAA type to the data store.
@@ -189,6 +194,68 @@ var _ = Describe("Domain Info Store", func() {
 			Expect(domainsSignaled.Contains(domain)).To(BeTrue())
 		}
 	}
+
+	Context("with monitor thread", func() {
+
+		var (
+			expectedSeen      bool
+			expectedDomainIPs []string
+			monitorMutex      sync.Mutex
+			killMonitor       chan struct{}
+		)
+
+		monitor := func(domain string) {
+			for {
+			loop:
+				for {
+					select {
+					case <-killMonitor:
+						return
+					case signal := <-domainStore.domainInfoChanges:
+						log.Debugf("Got domain change signal for %v", signal.domain)
+						monitorMutex.Lock()
+						if signal.domain == domain {
+							expectedSeen = true
+							expectedDomainIPs = domainStore.GetDomainIPs(domain)
+						}
+						monitorMutex.Unlock()
+					default:
+						break loop
+					}
+				}
+			}
+		}
+
+		checkMonitor := func(expectedIPs []string) {
+			time.Sleep(time.Second)
+			monitorMutex.Lock()
+			defer monitorMutex.Unlock()
+			Expect(expectedSeen).To(BeTrue())
+			expectedSeen = false
+			Expect(expectedDomainIPs).To(Equal(expectedIPs))
+		}
+
+		BeforeEach(func() {
+			expectedSeen = false
+			killMonitor = make(chan struct{})
+			domainStoreCreateEx(0)
+			go monitor("*.microsoft.com")
+		})
+
+		AfterEach(func() {
+			close(killMonitor)
+		})
+
+		It("microsoft case", func() {
+			Expect(domainStore.GetDomainIPs("*.microsoft.com")).To(Equal([]string(nil)))
+			programDNSAnswer(domainStore, testutils.MakeCNAME("www.microsoft.com", "www.microsoft.com-c-3.edgekey.net"))
+			checkMonitor(nil)
+			programDNSAnswer(domainStore, testutils.MakeCNAME("www.microsoft.com-c-3.edgekey.net", "www.microsoft.com-c-3.edgekey.net.globalredir.akadns.net"))
+			programDNSAnswer(domainStore, testutils.MakeCNAME("www.microsoft.com-c-3.edgekey.net.globalredir.akadns.net", "e13678.dspb.akamaiedge.net"))
+			programDNSAnswer(domainStore, testutils.MakeA("e13678.dspb.akamaiedge.net", "104.75.174.50"))
+			checkMonitor([]string{"104.75.174.50"})
+		})
+	})
 
 	// Test where:
 	// - a1.com and a2.com are both CNAMEs for b.com
