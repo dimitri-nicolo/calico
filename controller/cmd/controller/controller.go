@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 
 	alertElastic "github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
 	alertWatcher "github.com/tigera/intrusion-detection/controller/pkg/alert/watcher"
@@ -45,9 +46,12 @@ const (
 func main() {
 	var ver, debug bool
 	var healthzSockPort int
+
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
+	// enable klog flags for API call logging (to stderr).
+	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
 
 	if ver {
