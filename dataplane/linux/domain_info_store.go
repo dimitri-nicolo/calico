@@ -458,7 +458,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			timer:      makeTimer(),
 			isName:     isName,
 		}
-		s.signalDomainInfoChange(name, "mapping added")
+
 		// If value is another name, for which we don't yet have any information, create a
 		// mapping entry for it so we can record that it is a descendant of the name in
 		// hand.  Then, when we get information for the descendant name, we can correctly
@@ -469,6 +469,33 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 				namesToNotify: set.New(),
 			}
 		}
+
+		// Now signal that the available domain info for this name has changed.  It's
+		// important, in order to preserve the correctness of mapping entries knowing the
+		// names that they should notify for, to do this _after_ the previous block that
+		// creates a mapping entry for a CNAME value, because signalDomainInfoChange
+		// releases the mutex and so allows other goroutines to call GetDomainIPs for one of
+		// the domain names that is signaled as changed.
+		//
+		// With the ordering here:
+		// - the CNAME value mapping <entry> must exist before GetDomainIPs(<ancestor>) is
+		//   called
+		// - therefore, GetDomainIPs(<ancestor>) will update <entry>.namesToNotify so that
+		//   it includes <ancestor>
+		// - then, when further information is learned for <entry>, <ancestor> will be
+		//   signaled again.
+		//
+		// On the other hand, if we signaled before creating the CNAME value mapping
+		// <entry>, this would be possible:
+		// - GetDomainIPs(<ancestor>) is called (in response to the current signaling)
+		// - <entry> does not exist yet, so its namesToNotify is not updated
+		// - now this thread creates <entry>, with an empty set for namesToNotify
+		// - when further information is learned for <entry>, <ancestor> will not be
+		//   signaled, unless there has been a further intervening call to
+		//   GetDomainIPs(<ancestor>).  (And such a call would only happen if there was an
+		//   independent update to one of the mappings in the tree below <ancestor>, which
+		//   is unlikely.)
+		s.signalDomainInfoChange(name, "mapping added")
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
@@ -565,6 +592,7 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	s.mutex.Unlock()
 	defer s.mutex.Lock()
 	changedNames.Iter(func(item interface{}) error {
+		log.Debugf("Signal domain change for %v -> %v", name, item.(string))
 		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
 		return nil
 	})

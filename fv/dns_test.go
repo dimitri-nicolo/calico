@@ -68,9 +68,11 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	wgetMicrosoftErr := func() error {
-		// Need to allow a timeout of more than 1 second here so that wget has time for the
-		// initial TCP connection packet at t=0s and the first retry packet at t=1s.
-		out, err := w[0].ExecCombinedOutput("wget", "-T", "2", "microsoft.com")
+		// Need to allow a timeout of at least 2 seconds here so that wget has time for the
+		// initial TCP connection packet at T=0s and the first retry packet at T=1s.  Then
+		// it seems microsoft.com can take a little time to send a response, so allow 2s
+		// more.
+		out, err := w[0].ExecCombinedOutput("wget", "-T", "4", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
 	}
@@ -86,11 +88,12 @@ var _ = Describe("DNS Policy", func() {
 	}
 
 	hostWgetMicrosoftErr := func() error {
-		// Need to allow a timeout of more than 1 second here so that wget has time for the
-		// initial TCP connection packet at t=0s and the first retry packet at t=1s.  Note
-		// that wget on the host needs "-t 1" to prevent it from retrying for a long time
-		// (around 10 minutes!).
-		out, err := felix.ExecCombinedOutput("wget", "-T", "2", "-t", "1", "microsoft.com")
+		// Need to allow a timeout of at least 2 seconds here so that wget has time for the
+		// initial TCP connection packet at T=0s and the first retry packet at T=1s.  Then
+		// it seems microsoft.com can take a little time to send a response, so allow 2s
+		// more.  Note that wget on the host needs "-t 1" (which means only try once) to
+		// prevent it from retrying for a long time (around 10 minutes!).
+		out, err := felix.ExecCombinedOutput("wget", "-T", "4", "-t", "1", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
 	}
