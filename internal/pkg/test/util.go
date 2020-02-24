@@ -132,7 +132,8 @@ func CreateSelfSignedX509CertBinary(clusterID string, isCA bool) ([]byte, error)
 // keys that includes the given cluster ID
 func CreateSignedX509Cert(clusterID string, parent *x509.Certificate) (*x509.Certificate, error) {
 	bytes, _ := createX509Cert(clusterID, false, parent)
-	return x509.ParseCertificate(bytes)}
+	return x509.ParseCertificate(bytes)
+}
 
 // CreateSelfSignedX509CertRandom returns a random self-signed X509 cert and its key
 func CreateSelfSignedX509CertRandom() (*x509.Certificate, crypto.Signer, error) {
