@@ -85,11 +85,6 @@ func loadKeys() (interface{}, interface{}, error) {
 	return pubKey, privKey, nil
 }
 
-func createCert(clusterID string, isCA bool, parent *x509.Certificate) (*x509.Certificate, error) {
-	bytes, _ := createX509Cert(clusterID, isCA, parent)
-	return x509.ParseCertificate(bytes)
-}
-
 func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate) ([]byte, error) {
 	templ := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
@@ -113,6 +108,7 @@ func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate) ([]by
 		return nil, err
 	}
 	bytes, err := x509.CreateCertificate(rand.Reader, templ, parent, pubKey, privKey)
+
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +118,8 @@ func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate) ([]by
 // CreateSelfSignedX509Cert creates a self-signed certificate using predefined
 // keys that includes the given cluster ID
 func CreateSelfSignedX509Cert(clusterID string, isCA bool) (*x509.Certificate, error) {
-	return createCert(clusterID, isCA, nil)
+	bytes, _ := createX509Cert(clusterID, isCA, nil)
+	return x509.ParseCertificate(bytes)
 }
 
 // CreateSelfSignedX509CertBinary creates a self-signed certificate using predefined
@@ -134,8 +131,8 @@ func CreateSelfSignedX509CertBinary(clusterID string, isCA bool) ([]byte, error)
 // CreateSignedX509Cert creates a cert signed by a parent cert using predefined
 // keys that includes the given cluster ID
 func CreateSignedX509Cert(clusterID string, parent *x509.Certificate) (*x509.Certificate, error) {
-	return createCert(clusterID, false, parent)
-}
+	bytes, _ := createX509Cert(clusterID, false, parent)
+	return x509.ParseCertificate(bytes)}
 
 // CreateSelfSignedX509CertRandom returns a random self-signed X509 cert and its key
 func CreateSelfSignedX509CertRandom() (*x509.Certificate, crypto.Signer, error) {
