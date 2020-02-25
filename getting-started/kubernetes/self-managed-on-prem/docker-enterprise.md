@@ -16,7 +16,7 @@ Install Calico Enterprise in a Docker Enterprise deployed Kubernetes cluster.
 
 #### Create a compatible Docker EE cluster
 
-- Ensure that your Docker Enterprise cluster meets the requirements by following the [Deploy Docker Enterprise on Linux](https://docs.docker.com/v17.09/datacenter/install/linux/) instructions and refering to [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
+- Ensure that you have a compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux, and refer to [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
   - During the installation of UCP, the installation will require the following flag `--unmanaged-cni`. This tells UCP to not install the default Calico networking plugin.
 
 - Refer to [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.

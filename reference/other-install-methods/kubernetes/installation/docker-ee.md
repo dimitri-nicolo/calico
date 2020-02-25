@@ -16,7 +16,7 @@ policy and compliance capabilities for a Docker UCP Kubernetes deployment. The b
 
 ## Before you begin
 
-- Ensure that you have a compatible Docker Enterprise installation by following the [Deploy Docker Enterprise on Linux](https://docs.docker.com/v17.09/datacenter/install/linux/) instructions.
+- Ensure that you have a compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux.
 For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
 
 - Refer to [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.

@@ -1,36 +1,59 @@
 ---
-title: Configuring Calico Enterprise RBAC for Elasticsearch
-description: Configure RBAC to control access to Elasticsearch indices.
+title: Configure RBAC for Elasticsearch logs and events
+description: Configure RBAC to control access to Elasticsearch logs and events.
 ---
 
-The {{site.prodname}} allows administrators the ability to manage access to Elasticsearch indices from the UI.
-This effectively allows administrators to manage a user's UI access to flow logs, audit logs, and intrusion detection events. If a user
-does not have access to a specific Elasticsearch index, then when they navigate to a page that uses Elasticsearch queries on that index,
-the page will not display any data from that index.
+### Big picture
 
-### Elasticsearch indexes and RBAC
+Configure fine-grained user access controls for flow logs, audit logs, DNS logs, and intrusion detection events.
 
-In {{site.prodname}}, Elasticsearch resources are associated with the Kubernetes API group `lma.tigera.io` and access 
-can be granted per cluster. The default cluster name for {{site.prodname}} is `cluster`.
+### Value
 
-| Elasticsearch Index          | Kubernetes RBAC resource name | Description                                                                                                                     |
-|------------------------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| tigera_secure_ee_flows       | flows                         | Access to flow logs                                                                                                             |
-| tigera_secure_ee_audit*      | audit*                        | Access both EE and K8s audit logs. The UI currently uses this query for searching both Kube and EE audit logs at the same time. |
-| tigera_secure_ee_audit_ee    | audit_ee                      | Access to EE Audit logs                                                                                                         |
-| tigera_secure_ee_audit_kube  | audit_kube                    | Access to K8s Audit logs                                                                                                        |
-| tigera_secure_ee_events      | events                        | Access to intrusion detection events                                                                                            |
-| tigera_secure_ee_dns         | dns                           | Access to EE DNS logs                                                                                                           |
+Security teams and auditors require Elasticsearch logs and associated reports. Teams responsible for threat defense (suspicious IPs and domains), may have different roles. When sharing a user interface, it is critical to provide fine-grained RBAC. {{site.prodname}} lets you manage user access at the cluster, feature, and feature subset levels. For example, users without permissions to specific Elasticsearch resources (for example, DNS logs), will not see data displayed on pages that use the Elasticsearch resource.
 
-Each Elasticsearch index used within Calico Enterprise is mapped to a specific RBAC resource name within the `lma.tigera.io` API group.
+### Features
 
-> **Note**: The `lma.tigera.io` API group is only used for RBAC and is not backed by an actual API.
+This how-to guide uses the following {{site.prodname}} features:
+
+- **{{site.prodname}} Manager** with built-in Elasticsearch and Kibana instances
+
+### Concepts
+
+#### RBAC for logs and events
+
+Elasticsearch resources are associated with the **Kubernetes API group**, `lma.tigera.io`. You can grant access to resources per cluster. The default cluster name for {{site.prodname}} is, `cluster`. As shown in the following table, each Elasticsearch resource is mapped to a specific RBAC resource name within the `lma.tigera.io` API group. In {{site.prodname}} Manager, Elasticsearch resources are called, **indexes or indices**.
+
+| Elasticsearch index         | Kubernetes RBAC resource name | Logs or events                                                 |
+| --------------------------- | ----------------------------- | ------------------------------------------------------------ |
+| tigera_secure_ee_flows      | flows                         | Flow logs.                                                   |
+| tigera_secure_ee_audit*     | audit*                        | Both {{site.prodname}} and Kubernetes audit logs. The UI currently uses this query for searching both Kubernetes and {{site.prodname}} audit logs. |
+| tigera_secure_ee_audit_ee   | audit_ee                      | {{site.prodname}} audit logs.                                |
+| tigera_secure_ee_audit_kube | audit_kube                    | Kubernetes audit logs                                        |
+| tigera_secure_ee_events     | events                        | {{site.prodname}} intrusion detection events.                |
+
+> **Note**: Because the `lma.tigera.io` API group is used only for RBAC, and is not backed by an actual API, it does not provide access to any other Kubernetes resources. 
 {: .alert .alert-info}
 
-### Users with custom permissions
+### Before you begin...
 
-To apply custom Elasticsearch index permissions to a user, create a `ClusterRole` that lists the RBAC resource names corresponding
-to the Elasticsearch indexes you want that user to access. For example, the `ClusterRole` below allows access to Calico Enterprise audit logs only.
+**Required**
+
+- A `tigera-network-admin` role with full permissions to create and modify resources. For help, see [Log in to {{site.prodname}} Manager](({{site.baseurl}}/getting-started/create-user-login).
+
+- To see Elasticsearch resources in {{site.prodname}} Manager, uses must have [minimum permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies).
+
+### How to
+
+- [Create access to a specific Elasticsearch resource](#create-access-to-a-specific-elasticsearch-resource)
+- [Allow user access to a specific Elasticsearch resource](#allow-user-access-to-a-specific-elasticsearch-resource)
+- [Verify user access to a specific Elasticsearch resource](#verify-user-access-to-a-specific-elasticsearch-resource)
+- [Create access to all Elasticsearch resources](#create-access-to-all-elasticsearch-resources)
+- [Allow user access to all Elasticsearch resources](#allow-user-access-to-all-elasticsearch-resources)
+- [Verify user access to all Elasticsearch resources](#verify-user-access-to-all-elasticsearch-resources)
+
+#### Create access to a specific Elasticsearch resource
+
+Create a `ClusterRole` with permissions to the resource using the table in the **Concepts** section. In this example, the ClusterRole named, `audit-ee-only` provides access to {{site.prodname}} audit logs using the `resourceNames: ["audit_ee"]`. The `apiGroups: ["lma.tigera.io"]` is required.
 
 ```
 kind: ClusterRole
@@ -44,8 +67,9 @@ rules:
   verbs: ["get"]
 ```
 
-Once you have a `ClusterRole` with the right Elasticsearch index access permissions, create a `ClusterRoleBinding` with it, binding
-the role to the desired user. Below is an example `ClusterRoleBinding` to attach the above cluster role to a user:
+#### Allow user access to a specific Elasticsearch resource
+
+To allow a user access to a specific Elasticsearch resource, create a `ClusterRoleBinding`. In the following example, the `ClusterRoleBinding` allows user **bob** access only to the resource, {{site.prodname}} audit logs (`audit-ee-only`).
 
 ```
 kind: ClusterRoleBinding
@@ -62,24 +86,21 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-Note: if you want to provision a user with the minimal Calico Enterprise UI permissions, please refer to [Minimum permissions for all UI users]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#minimum-permissions-for-all-ui-users).
+#### Verify user access to a specific Elasticsearch resource
 
-### Verify user access to Elasticsearch indexes
+Create a `SubjectAccessReview` spec to verify user access to a specific Elasticsearch resource. In the SubjectAccessReview spec, set the following:
 
-Once you have `ClusterRole`s and `ClusterRoleBinding`s setup, you can verify user access to Elasticsearch indexes by creating a `SubjectAccessReview`.
-Creating a `SubjectAccessReview` returns YAML output that tells you whether the user is authorized.
+- group: `lma.tigera.io`
+- resource: `cluster`
+- verb: `get`
+- resource: a Kubernetes RBAC resource name
+- user: username you are verifying 
 
-In the `SubjectAccessReview` spec:
-- `group` should be set to `lma.tigera.io`
-- `resource` should be set to `cluster`
-- `verb` should be set to `get`
-- and `resource` should be set to a Kubernetes RBAC resource name (as defined in the table above)
-
-Continuing with our running example `ClusterRoleBinding` that allows the user bob access only to the `audit_ee` resource (i.e., Calico Enterprise audit logs),
-we can verify that bob has that access with the following:
+>**Note**: When verifying the **`audit*` RBAC resource name** (which accesses both {{site.prodname}} and Kubernetes audit logs), create a `SubjectAccessReview` **only on `audit*`**; this provides the correct verification results. Do not create a `SubjectAccessReview` to query the individual `audit_ee` or `audit_kube` resources; results ("allowed: false") do not accurately reflect user access.   
+{: .alert .alert-info}
 
 ```
-kubectl create -oyaml -f - <<EOF
+kubectl create -o yaml -f - <<EOF
 apiVersion: authorization.k8s.io/v1
 kind: SubjectAccessReview
 spec:
@@ -92,7 +113,7 @@ spec:
 EOF
 ```
 
-Running that verifies the `ClusterRoleBinding` is doing what we expect:
+View the `status` and `allowed` fields to verify that the `ClusterRoleBinding` is doing what you expect. In this example, **bob** is allowed access (`allowed: true`) using the `ClusterRoleBinding`, `"bob-es-access"` for the `audit-ee-only` resource.
 
 ```
 apiVersion: authorization.k8s.io/v1
@@ -112,12 +133,46 @@ status:
     to User "bob"'
 ```
 
-You would need to create a `SubjectAccessReview` resource for each Elasticsearch index. The one exception is if you wanted
-to verify whether the user had access to all indexes. In a `SubjectAccessReview` resource, setting the `name` field to the empty string means "all".
-We could check whether bob has access to all indexes by running:
+#### Create access to all Elasticsearch resources
+
+In a `ClusterRole` resource, set the field, `resourceNames: []` to allow access to all Elasticsearch resources. 
 
 ```
-kubectl create -oyaml -f - <<EOF
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: allow-all-es
+rules:
+- apiGroups: ["lma.tigera.io"]
+  resources: ["cluster"]
+  resourceNames: []
+  verbs: ["get"]
+```
+
+#### Allow user access to all Elasticsearch resources
+
+In this example, we create a binding that allows the user `jane` access to all Elasticsearch resources.
+
+```
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: jane-allow-all-es
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: allow-all-es
+  apiGroup: rbac.authorization.k8s.io
+```
+#### Verify user access to all Elasticsearch resources
+
+To verify if a user has access to all Elasticsearch resources, create a `SubjectAccessReview` and set the `name:` field with an empty string, `""` ("all"). 
+
+```
+kubectl create -o yaml -f - <<EOF
 apiVersion: authorization.k8s.io/v1
 kind: SubjectAccessReview
 spec:
@@ -130,7 +185,7 @@ spec:
 EOF
 ```
 
-And this verifies that bob does not have access to all indexes:
+View the `status` and `allowed` fields to verify that bob cannot access any Elasticsearch resources (`allowed: false`).
 
 ```
 apiVersion: authorization.k8s.io/v1
@@ -148,41 +203,6 @@ status:
   reason: no RBAC policy matched
 ```
 
-> **Note**: If a user is given access to the `audit*` RBAC resource name, a `SubjectAccessReview`
-on either `audit_ee` or `audit_kube` will return "allowed: false" due to the way the authorization is implemented.
-However, a `SubjectAccessReview` on `audit*` will return "allowed: true".
-{: .alert .alert-info}
+### Above and beyond
 
-### Give access to all Elasticsearch indexes
-
-In a `ClusterRole` resource, setting the `resourceNames` field to an empty array means that everything is allowed.
-For example, the following `ClusterRole` gives a bound user access to all Elasticsearch indexes:
-
-```
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: allow-all-es
-rules:
-- apiGroups: ["lma.tigera.io"]
-  resources: ["cluster"]
-  resourceNames: []
-  verbs: ["get"]
-```
-
-Then we could allow the user `jane` all Elasticsearch indexes by creating this binding:
-
-```
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: jane-allow-all-es
-subjects:
-- kind: User
-  name: jane
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: allow-all-es
-  apiGroup: rbac.authorization.k8s.io
-```
+[Configure RBAC for tiered policies]({{site.baseurl}}/reference/cnx/rbac-tiered-policies)
