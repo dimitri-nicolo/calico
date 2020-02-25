@@ -109,6 +109,13 @@ func New(
 	)
 
 	w.AddWatch(
+		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.KibanaCertSecret))),
+		&corev1.Secret{},
+		notifications...,
+	)
+
+	w.AddWatch(
 		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 		&corev1.ConfigMap{},

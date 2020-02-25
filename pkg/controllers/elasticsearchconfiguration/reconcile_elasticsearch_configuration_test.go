@@ -95,9 +95,20 @@ kdjulhPG079HRWabxrqxv49z9Hb1w71iD6Yd/oDVzeXyvj/pfBaAit6qq9yEAyTT
 var _ = Describe("Reconcile", func() {
 	Context("Configuration successfully created", func() {
 		It("creates all the necessary Secrets and ConfigMaps in the managed cluster when they don't exist", func() {
-			managementCertSecret := &corev1.Secret{
+			esCertSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resource.ElasticsearchCertSecret,
+					Namespace: resource.OperatorNamespace,
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(cert),
+					"tls.key": []byte(key),
+				},
+			}
+
+			kbCertSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.KibanaCertSecret,
 					Namespace: resource.OperatorNamespace,
 				},
 				Data: map[string][]byte{
@@ -129,7 +140,7 @@ var _ = Describe("Reconcile", func() {
 			}
 
 			managedK8sCli := k8sfake.NewSimpleClientset()
-			managementK8sCli := k8sfake.NewSimpleClientset(managementCertSecret, managementESConfigMap, esUserSecret)
+			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap, esUserSecret)
 
 			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esalpha1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
@@ -152,12 +163,23 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
 		})
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
-			managementCertSecret := &corev1.Secret{
+			esCertSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resource.ElasticsearchCertSecret,
+					Namespace: resource.OperatorNamespace,
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte(cert),
+					"tls.key": []byte(key),
+				},
+			}
+
+			kbCertSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resource.KibanaCertSecret,
 					Namespace: resource.OperatorNamespace,
 				},
 				Data: map[string][]byte{
@@ -189,7 +211,7 @@ var _ = Describe("Reconcile", func() {
 			}
 
 			managedK8sCli := k8sfake.NewSimpleClientset()
-			managementK8sCli := k8sfake.NewSimpleClientset(managementCertSecret, managementESConfigMap, esUserSecret)
+			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap, esUserSecret)
 
 			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esalpha1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
@@ -206,7 +228,7 @@ var _ = Describe("Reconcile", func() {
 			err = r.Reconcile(types.NamespacedName{})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			assertManagedConfiguration(managedK8sCli, managementCertSecret, managementESConfigMap)
+			assertManagedConfiguration(managedK8sCli, esCertSecret, kbCertSecret, managementESConfigMap)
 
 			fluentdSecret, err := managedK8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(fmt.Sprintf("%s-elasticsearch-access", esusers.ElasticsearchUserNameFluentd), metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
@@ -226,7 +248,7 @@ var _ = Describe("Reconcile", func() {
 	})
 })
 
-func assertManagedConfiguration(k8sCli kubernetes.Interface, expectedCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
+func assertManagedConfiguration(k8sCli kubernetes.Interface, expectedESCertSecret *corev1.Secret, expectedKBCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
 	userSecrets, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).List(metav1.ListOptions{LabelSelector: elasticsearchconfiguration.ElasticsearchUserNameLabel})
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -243,9 +265,13 @@ func assertManagedConfiguration(k8sCli kubernetes.Interface, expectedCertSecret 
 	}
 	Expect(userMap).Should(BeEmpty())
 
-	managedCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
+	esCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
-	Expect(managedCertSecret.Data).Should(Equal(expectedCertSecret.Data))
+	Expect(esCertSecret.Data).Should(Equal(expectedESCertSecret.Data))
+
+	kbCertSecret, err := k8sCli.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.KibanaCertSecret, metav1.GetOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(kbCertSecret.Data).Should(Equal(expectedKBCertSecret.Data))
 
 	managedESConfigMap, err := k8sCli.CoreV1().ConfigMaps(resource.OperatorNamespace).Get(resource.ElasticsearchConfigMapName, metav1.GetOptions{})
 	Expect(err).ShouldNot(HaveOccurred())
