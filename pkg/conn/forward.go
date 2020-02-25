@@ -1,4 +1,4 @@
-package proxy
+package conn
 
 import (
 	"io"
@@ -8,9 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ForwardConnection sends all coming from the srcConn to the dstConn, and all data coming from dstConn to srcConn. Both
+// Forward sends all coming from the srcConn to the dstConn, and all data coming from dstConn to srcConn. Both
 // srcConn and dstConn are closed when this function returns
-func ForwardConnection(srcConn net.Conn, dstCon net.Conn) {
+func Forward(srcConn net.Conn, dstCon net.Conn) {
 	var wg sync.WaitGroup
 
 	wg.Add(2)

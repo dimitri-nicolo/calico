@@ -1,17 +1,17 @@
-package proxy_test
+package conn_test
 
 import (
 	"net"
 	"sync"
 
+	"github.com/tigera/voltron/pkg/conn"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/tigera/voltron/internal/pkg/proxy"
 )
 
 var _ = Describe("Forwarding connections", func() {
-	Context("ForwardConnection", func() {
+	Context("Forward", func() {
 		It("sends connection data forwarded back and forward between the connections", func() {
 			var dst1, dst2 net.Conn
 			var err error
@@ -46,7 +46,7 @@ var _ = Describe("Forwarding connections", func() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				proxy.ForwardConnection(dst1, src2)
+				conn.Forward(dst1, src2)
 			}()
 
 			request := "request"
