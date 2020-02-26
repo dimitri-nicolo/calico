@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,8 +53,8 @@ type LabelSelector struct {
 	Values   []string `json:"values"`
 }
 
-//TODO: This is wrong. Why is ImpactedOnly in here? What was wrong with ResourceChange type. Why do we no longer support
-//      multiple updates in a single preview transaction?  Let's get rid of this and go back to a slice of ResourceChange
+//TODO: What was wrong with ResourceChange type. Why do we no longer support multiple updates in a single preview
+// transaction?  Let's get rid of this and go back to a slice of ResourceChange
 type PolicyPreview struct {
 	Verb          string             `json:"verb"`
 	NetworkPolicy resources.Resource `json:"networkPolicy"`
@@ -79,8 +80,16 @@ func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	c.NetworkPolicy = resources.NewResource(r.NetworkPolicy)
-	if err := json.Unmarshal(b, AliasedPolicyPreview(c)); err != nil {
+
+	// Decode the policy preview JSON data. We should fail if there are unhandled fields in the request. Validation of
+	// the actual data is done within PIP as part of the xrefcache population.
+	decoder := json.NewDecoder(bytes.NewReader(b))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(AliasedPolicyPreview(c)); err != nil {
 		return err
+	}
+	if decoder.More() {
+		return errPreviewResourceExtraData
 	}
 
 	// If this is a Calico tiered network policy, configure an empty tier to be default and verify the name matches

@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -15,6 +16,7 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 
 	compcfg "github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/replay"
@@ -278,7 +280,7 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 				action = "update"
 			default:
 				log.Warningf("Invalid staged action: %s", stagedAction)
-				continue
+				return nil, fmt.Errorf("invalid staged action in preview request: %s", stagedAction)
 			}
 		}
 
@@ -290,6 +292,20 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 				Resource:   resource,
 				ResourceID: id,
 			}})
+
+			if xcres := xc.Get(id); xcres == nil {
+				// The xrefcache will delete resources that could not be converted (which may be the case with incorrect
+				// data). Check the resource is present, and if not, error.
+				log.Infof("Invalid resource data: %v", resource)
+				return nil, fmt.Errorf("invalid resource in preview request: %s", id.String())
+			} else if v3res := xcres.GetCalicoV3(); v3res != nil {
+				// Validate the calico representation of the resource.
+				log.Debug("Validating Calico v3 resource")
+				if err := validator.Validate(v3res); err != nil {
+					log.WithError(err).Info("previous resource failed validation")
+					return nil, err
+				}
+			}
 		case "delete":
 			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: false, Deleted: true})
 			xc.OnUpdates([]syncer.Update{{
@@ -297,6 +313,9 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 				Resource:   resource,
 				ResourceID: id,
 			}})
+		default:
+			log.Warningf("Invalid preview action: %s", action)
+			return nil, fmt.Errorf("invalid action in preview request: %s", action)
 		}
 	}
 

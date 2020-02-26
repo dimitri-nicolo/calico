@@ -33,6 +33,7 @@ var (
 	errInvalidLabelSelector     = errors.New("Invalid label selector specified")
 	errGeneric                  = errors.New("Something went wrong")
 	errInvalidPolicyPreview     = errors.New("Invalid policy preview specified")
+	errPreviewResourceExtraData = errors.New("Invalid policy preview specified - resource has unexpected data")
 	errInvalidActionUnprotected = errors.New("Action deny and unprotected true is an invalid combination")
 )
 
@@ -149,9 +150,17 @@ func getPolicyPreview(preview string) (*PolicyPreview, error) {
 		return nil, nil
 	}
 	var policyPreview PolicyPreview
-	err := json.Unmarshal([]byte(preview), &policyPreview)
+
+	// Decode the policy preview JSON data. We should fail if there are unhandled fields in the request. Validation of
+	// the actual data is done within PIP as part of the xrefcache population.
+	decoder := json.NewDecoder(strings.NewReader(preview))
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&policyPreview)
 	if err != nil {
 		return nil, err
+	}
+	if decoder.More() {
+		return nil, errPreviewResourceExtraData
 	}
 	return &policyPreview, nil
 }
