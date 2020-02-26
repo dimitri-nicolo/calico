@@ -14,7 +14,6 @@
 import logging
 import subprocess
 import json
-import sys
 
 from tests.k8st.test_base import TestBaseV6
 from tests.k8st.utils.utils import start_external_node_with_bgp, \
@@ -160,12 +159,56 @@ EOF
         return kubectl("get svc %s -n %s -o json | jq -r .spec.clusterIP" %
                        (svc, ns)).strip()
 
-    def assert_ecmp_routes(self, dst, via):
-        matchStr = dst + " proto bird metric 1024 "
-        # sort ips and construct match string for ECMP routes.
-        for ip in sorted(via):
-            matchStr += "\n\tnexthop via %s dev eth0 weight 1 " % ip
-        retry_until_success(lambda: self.assertIn(matchStr, self.get_routes()))
+    def assert_ecmp_route(self, dst, num_vias):
+        # Check here that there is an ECMP route to DST with the
+        # expected number of possible next hops.  For IPv6 - unlike in
+        # the similar IPv4 case - we do not verify exactly what those
+        # next hops are, because they can be link-local or global
+        # scope addresses depending on the BGP peering config for the
+        # sessions over which the route was advertised.
+        #
+        # RFC 2545 is the relevant authority here.  It says that when
+        # a router is directly connected to a BGP peer, it advertises
+        # both global and link-local next hop addresses for an IPv6
+        # route, and the receiving router should use the link-local
+        # address for forwarding, i.e. in its kernel route
+        # programming.  But when a BGP peer is not directly connected,
+        # only the global next hop address is advertised, and the
+        # receiving router uses that.
+        #
+        # Our open source and private code currently differ on this
+        # point: private has an enhancement to detect when a BGP peer
+        # is directly connected, and generates BIRD config with
+        # "direct;" in that case.  Open source does not have that
+        # enhancement, and always generates BIRD config with
+        # "multihop;".  Hence with the private code (here) we get
+        # link-local next hop addresses, but with open source we get
+        # global.
+        #
+        # Note, both link-local and global addresses should work for
+        # the data path, in this test setup where the peers really are
+        # all directly connected, and we independently (of this
+        # function) test that we can connect through this ECMP route.
+        routeStr = dst + " proto bird metric 1024"
+        viaStr = "\tnexthop via "
+
+        def assert_ecmp_route_present():
+            route_found = False
+            num_vias_found = 0
+            for line in self.get_routes().splitlines():
+                _log.debug("Line: '%s'", line)
+                if not route_found:
+                    if routeStr in line:
+                        route_found = True
+                else:
+                  if viaStr in line:
+                      num_vias_found += 1
+                  elif line.strip() != "":
+                      break
+            self.assertTrue(route_found)
+            self.assertEqual(num_vias_found, num_vias)
+
+        retry_until_success(assert_ecmp_route_present)
 
     def get_svc_host_ipv6(self, svc, ns):
         ipv4 = kubectl("get po -l app=%s -n %s -o json | jq -r .items[0].status.hostIP" %
@@ -289,7 +332,7 @@ EOF
             # Scale the local_svc to 4 replicas
             self.scale_deployment(local_svc, self.ns, 4)
             self.wait_for_deployment(local_svc, self.ns)
-            self.assert_ecmp_routes(local_svc_ip, [self.ipv6s[1], self.ipv6s[2], self.ipv6s[3]])
+            self.assert_ecmp_route(local_svc_ip, 3)
             for i in range(attempts):
               retry_until_success(curl, function_args=[local_svc_ip])
 
@@ -381,8 +424,8 @@ EOF
             self.scale_deployment(local_svc, self.ns, 4)
             self.wait_for_deployment(local_svc, self.ns)
 
-            # Verify that we have ECMP routes for the external IP of the local service.
-            retry_until_success(lambda: self.assert_ecmp_routes(local_svc_external_ip, [self.ipv6s[1], self.ipv6s[2], self.ipv6s[3]]))
+            # Verify that we have an ECMP route for the external IP of the local service.
+            retry_until_success(lambda: self.assert_ecmp_route(local_svc_external_ip, 3))
 
             # Delete both services, assert only cluster CIDR route is advertised.
             self.delete_and_confirm(local_svc, "svc", self.ns)
