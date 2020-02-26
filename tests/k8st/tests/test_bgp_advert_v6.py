@@ -415,8 +415,10 @@ EOF
             self.add_svc_external_ips(cluster_svc, self.ns, [cluster_svc_external_ip])
 
             # Verify that external IPs for local service is advertised but not the cluster service.
-            local_svc_externalips_route = "%s via %s" % (local_svc_external_ip, local_svc_host_ip)
-            cluster_svc_externalips_route = "%s via %s" % (cluster_svc_external_ip, cluster_svc_host_ip)
+            # As commented in assert_ecmp_route, don't check the exact next hop, as it may in
+            # general be link-local or global.
+            local_svc_externalips_route = "%s via " % local_svc_external_ip
+            cluster_svc_externalips_route = "%s via " % cluster_svc_external_ip
             retry_until_success(lambda: self.assertIn(local_svc_externalips_route, self.get_routes()))
             retry_until_success(lambda: self.assertNotIn(cluster_svc_externalips_route, self.get_routes()))
 
