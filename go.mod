@@ -14,7 +14,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac // indirect
+	github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad // indirect
 
 	// k8s.io/api v1.16.3 is at 16d7abae0d2a
 	k8s.io/api v0.17.2
