@@ -46,7 +46,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
 	github.com/stretchr/testify v1.4.0
-	github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac
+	github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad
 	github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be
 	github.com/vishvananda/netlink v0.0.0-20180501223456-f07d9d5231b9
 	github.com/vishvananda/netns v0.0.0-20160430053723-8ba1072b58e0 // indirect
