@@ -31,7 +31,7 @@ Users must have appropriate RBAC to access resources in the UI. We provide the f
 - **tigera-ui-user**: Allows basic UI access.
 - **tigera-network-admin**: Allows UI access, plus the ability to create and modify resources, view compliance reports, and more.
 
-If you would like additional roles, see this [document]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions).
+If you would like additional roles, see this [document]({{site.baseurl}}/reference/cnx/rbac-tiered-policies).
 
 ### How to
 
@@ -174,4 +174,5 @@ kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-t
 
 ### Above and beyond
 
-- [Fine-grained RBAC permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions)
+- [Configuring RBAC for tiered policies]({{site.baseurl}}/reference/cnx/rbac-tiered-policies)
+- [Configuring Calico Enterprise RBAC for Elasticsearch]({{site.baseurl}}/reference/cnx/rbac-elasticsearch)

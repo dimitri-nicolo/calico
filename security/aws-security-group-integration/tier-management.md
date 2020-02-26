@@ -31,11 +31,11 @@ does not allow you to hide specific tiers from non-admin users, it is possible
 to display only a subset of tiers in the {{site.prodname}} UI.
 
 For an example of how to display only a subset of tiers in the {{site.prodname}} UI, see
-[displaying only the net-sec tier]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#displaying-only-the-net-sec-tier).
+[displaying only the net-sec tier]({{site.baseurl}}/reference/cnx/rbac-tiered-policies).
 
 For an example of how to display tiers and associated network policies, but
 disable write access to those tiers, see
-[RBAC example fine-grained permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies#example-fine-grained-permissions).
+[RBAC example fine-grained permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies).
 
 > **Note**: Although admin users have permission to modify the above tiers and associated
 > network policies, it is best practice to not do so.
