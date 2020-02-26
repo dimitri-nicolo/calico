@@ -702,6 +702,8 @@ github.com/tigera/felix-private v0.0.0-20200223041852-1d50839fa59c h1:1dvIlk4+Zl
 github.com/tigera/felix-private v0.0.0-20200223041852-1d50839fa59c/go.mod h1:8gaLsHqFX0o302aNoB6+iYHySw7mfg5Ew+fNT/soM2A=
 github.com/tigera/felix-private v0.0.0-20200224154921-439235f4195c h1:ZJjdSwRa1ptzUljrWS8V+bHX9alTEQ9D12uDUuHasnA=
 github.com/tigera/felix-private v0.0.0-20200224154921-439235f4195c/go.mod h1:8gaLsHqFX0o302aNoB6+iYHySw7mfg5Ew+fNT/soM2A=
+github.com/tigera/felix-private v0.0.0-20200226041936-0ecbe8245492 h1:DlKH2CiBJwyNLvtBPCF0BxUfnFIcCHb3lXaxNea0U48=
+github.com/tigera/felix-private v0.0.0-20200226041936-0ecbe8245492/go.mod h1:0bDUYhcDwFMmM3ATkjfQ+1q6+HEjH+0s7T1+monGatw=
 github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27 h1:l5SKCG9Mdp0yhx4YmfxpTJOC0dCS3E3KBiRzb2TgWd8=
 github.com/tigera/libcalico-go-private v0.0.0-20190920203615-2ac87253de27/go.mod h1:L+jcNJbPFXv3QBer3oO/vVQe+4+u0G3ZItgHbw90WKA=
 github.com/tigera/libcalico-go-private v0.0.0-20191113215606-944388dd8364 h1:HG5iAW0Sy1hbgCdpWGMvj52gfj/h3M6n1OEB5IWYnBA=
@@ -727,6 +729,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20200220222347-a1a823061b9e/go.mod
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac h1:QrcDEIylqNTKsjVMeRxvU9YyyxNMc6CKHH+MWRHCKcU=
 github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
+github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad h1:UI7E4EtDHuAWkn9mbMaSkKOPxVdyI06QGQxBockHt4w=
+github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
 github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8 h1:035F6xYUd786wnylIEsdiMzaKVhZ17k5pWtVONXD34c=
 github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8/go.mod h1:OHcY7YcS7IXUd2hTFGqAUns2qzyfe7V4lNUbjfR+CLg=
 github.com/tigera/lma v0.0.0-20200124190638-c2407a991fff h1:ZHzGFzdgVi8PvMRekZBm81tQEH4SQGShO/v+QRqFTbk=
