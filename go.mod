@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-	github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac
+	github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/ugorji/go v0.0.0-20171019201919-bdcc60b419d1 // indirect
 	github.com/vishvananda/netlink v0.0.0-20180501223456-f07d9d5231b9 // indirect
