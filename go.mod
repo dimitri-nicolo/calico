@@ -31,7 +31,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20170622225139-7ff1ba29eca2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v0.0.0-20200103202009-cd8a8b68f3ac // indirect
+	github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad // indirect
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/ugorji/go v0.0.0-20171019201919-bdcc60b419d1 // indirect
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
