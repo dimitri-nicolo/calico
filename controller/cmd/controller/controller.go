@@ -35,12 +35,12 @@ import (
 )
 
 const (
-	DefaultElasticScheme = "https"
-	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
-	DefaultElasticPort   = 9200
-	DefaultElasticUser   = "elastic"
-	ConfigMapNamespace   = "calico-monitoring"
-	SecretsNamespace     = "calico-monitoring"
+	DefaultElasticScheme      = "https"
+	DefaultElasticHost        = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
+	DefaultElasticPort        = 9200
+	DefaultElasticUser        = "elastic"
+	DefaultConfigMapNamespace = "tigera-intrusion-detection"
+	DefaultSecretsNamespace   = "tigera-intrusion-detection"
 )
 
 func main() {
@@ -85,6 +85,16 @@ func main() {
 	calicoClient, err := calicoclient.NewForConfig(config)
 	if err != nil {
 		panic(err.Error())
+	}
+
+	// This allows us to use "calico-monitoring" in helm if we want to
+	configMapNamespace := os.Getenv("CONFIG_MAP_NAMESPACE")
+	if configMapNamespace == "" {
+		configMapNamespace = DefaultConfigMapNamespace
+	}
+	secretsNamespace := os.Getenv("SECRETS_NAMESPACE")
+	if secretsNamespace == "" {
+		secretsNamespace = DefaultSecretsNamespace
 	}
 
 	var u *url.URL
@@ -185,8 +195,8 @@ func main() {
 	sDN := events.NewSuspiciousDomainNameSet(e)
 
 	s := feedsWatcher.NewWatcher(
-		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),
-		k8sClient.CoreV1().Secrets(SecretsNamespace),
+		k8sClient.CoreV1().ConfigMaps(configMapNamespace),
+		k8sClient.CoreV1().Secrets(secretsNamespace),
 		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
 		gns,
 		eip,
