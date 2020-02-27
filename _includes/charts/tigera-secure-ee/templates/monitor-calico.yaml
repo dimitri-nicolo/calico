@@ -1146,6 +1146,10 @@ spec:
 {{- end}}
           - name: ELASTIC_CA
             value: /certs/ca.pem
+          - name: CONFIG_MAP_NAMESPACE
+            value: calico-monitoring
+          - name: SECRETS_NAMESPACE
+            value: calico-monitoring
         volumeMounts:
           - name: certs
             mountPath: /certs/
