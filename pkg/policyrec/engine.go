@@ -134,7 +134,9 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 	ere.constructRulesFromTraffic()
 
 	if len(ere.ingressRules) == 0 && len(ere.egressRules) == 0 {
-		return nil, fmt.Errorf("Could not calculate any rules for namespace/name %v/%v", ere.endpointNamespace, ere.endpointName)
+		err := fmt.Errorf("No matching flows to compute rules for namespace/name %v/%v", ere.endpointNamespace, ere.endpointName)
+		log.WithError(err).Info("Could not calculate rules")
+		return nil, err
 	}
 
 	policyTypes := []v3.PolicyType{}
@@ -153,8 +155,9 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 		}
 		policySelector := ere.policySelector.Expression()
 		if policySelector == "" {
-			log.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
-			return nil, fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
+			err := fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
+			log.WithError(err).Info("Could not compute selector")
+			return nil, err
 		}
 		gnp.Spec = v3.StagedGlobalNetworkPolicySpec{
 			StagedAction: v3.StagedActionSet,
@@ -173,8 +176,9 @@ func (ere *endpointRecommendationEngine) Recommend() (*Recommendation, error) {
 		}
 		policySelector := ere.policySelector.Expression()
 		if policySelector == "" {
-			log.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
-			return nil, fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
+			err := fmt.Errorf("Could not compute selector for namespace/name: %v/%v", ere.endpointNamespace, ere.endpointName)
+			log.WithError(err).Info("Could not compute selector")
+			return nil, err
 		}
 		np.Spec = v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionSet,
