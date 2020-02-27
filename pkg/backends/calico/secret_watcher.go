@@ -163,8 +163,7 @@ func (sw *secretWatcher) SweepStale() {
 
 	for name, watchData := range sw.watches {
 		if watchData.stale {
-			var q struct{}
-			watchData.stopCh <- q
+			close(watchData.stopCh)
 			delete(sw.watches, name)
 		}
 	}
