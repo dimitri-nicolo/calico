@@ -1,7 +1,7 @@
 ---
-title: Installing calicoq
+title: Install calicoq
 description: Install the CLI for Calico Enterprise.
-canonical_url: /getting-started/calicoq/
+canonical_url: /getting-started/clis/calicoq/
 ---
 
 ## About installing calicoq
@@ -21,6 +21,6 @@ corresponds to your desired deployment.
 
 **Next step**:
 
-[Configure `calicoq` to connect to your datastore]({{site.baseurl}}/getting-started/calicoq/configure/).
+[Configure `calicoq` to connect to your datastore]({{site.baseurl}}/getting-started/clis/calicoq/configure/).
 
 {% include content/ctl-container-install.md cli="calicoq" %}

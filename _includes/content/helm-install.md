@@ -2,9 +2,9 @@
 
 Ensure that you have the following:
 
-- [credentials for the Tigera private registry]({{ site.baseurl }}/getting-started/calico-enterprise#obtain-the-private-registry-credentials), (`config.json`)
+- [credentials for the Tigera private registry]({{ site.baseurl }}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key), (`config.json`)
 
-- A [license key]({{ site.baseurl }}/getting-started/calico-enterprise#obtain-a-license-key) (`license.yaml`)
+- A [license key]({{ site.baseurl }}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key) (`license.yaml`)
 
 {%- if include.method == "full" %}
 
@@ -253,7 +253,10 @@ manager:
 
 ### Grant access to user interface
 
-In this step, we are going to grant a user permission to access the Calico Enterprise Manager in your cluster. For instructions on how to create a user, please consult our ["Configuring user authentication to Calico Enterprise Manager" document]({{site.baseurl}}/reference/cnx/authentication#basic-authentication). Once you have a user, you can run the following commands, replacing `<USER>` with the name of the user you wish to grant access.
+In this step, we are going to grant a user permission to access the Calico Enterprise Manager in your cluster.
+For instructions on how to create a user, please consult
+["Create a user and login using basic authentication"]({{site.baseurl}}/getting-started/cnx/create-user-login#create-a-user-and-login-using-basic-authentication).
+Once you have a user, you can run the following commands, replacing `<USER>` with the name of the user you wish to grant access.
 
 **User manager**
 

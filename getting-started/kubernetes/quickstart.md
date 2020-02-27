@@ -153,11 +153,11 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 ### Next steps
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+- [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)
 - [Secure a simple application using the Kubernetes NetworkPolicy API](../../security/tutorials/kubernetes-policy-basic)
 - [Control ingress and egress traffic using the Kubernetes NetworkPolicy API](../../security/tutorials/kubernetes-policy-advanced)
 - [Create a user interface that shows blocked and allowed connections in real time](../../security/tutorials/kubernetes-policy-demo/kubernetes-demo)
-- [Install and configure calicoctl](../calicoctl/install)
+- [Install and configure calicoctl](../clis/calicoctl/install)

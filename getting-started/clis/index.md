@@ -1,10 +1,11 @@
 ---
-title: calicoctl
-description: Install and configure the required CLI for managing Calico Enterprise resources. 
+title: Calico command line utilities
+description: Calico command line utilities for manipulating and querying resources.
 show_read_time: false
 show_toc: false
-canonical_url: '/getting-started/calicoctl/index'
 ---
+
 {{ page.description }}
+
 {% capture content %}{% include index.html %}{% endcapture %}
 {{ content | replace: "    ", "" }}

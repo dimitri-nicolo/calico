@@ -40,7 +40,7 @@ Elasticsearch resources are associated with the **Kubernetes API group**, `lma.t
 
 - A `tigera-network-admin` role with full permissions to create and modify resources. For help, see [Log in to {{site.prodname}} Manager](({{site.baseurl}}/getting-started/create-user-login).
 
-- To see Elasticsearch resources in {{site.prodname}} Manager, uses must have [minimum permissions]({{site.baseurl}}/reference/cnx/rbac-tiered-policies).
+- To see Elasticsearch resources in {{site.prodname}} Manager, uses must have [minimum permissions]({{site.baseurl}}/security/rbac-tiered-policies).
 
 ### How to
 
@@ -205,4 +205,4 @@ status:
 
 ### Above and beyond
 
-[Configure RBAC for tiered policies]({{site.baseurl}}/reference/cnx/rbac-tiered-policies)
+[Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)

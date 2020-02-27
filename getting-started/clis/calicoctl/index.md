@@ -1,9 +1,9 @@
 ---
-title: Upgrade
-description: Upgrade to a newer version of Calico. 
+title: calicoctl
+description: Install and configure the required CLI for managing Calico Enterprise resources. 
 show_read_time: false
 show_toc: false
-canonical_url: '/maintenance/upgrading'
+canonical_url: '/getting-started/clis/calicoctl/index'
 ---
 {{ page.description }}
 {% capture content %}{% include index.html %}{% endcapture %}

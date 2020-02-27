@@ -14,7 +14,7 @@ By default, the {{site.prodname}} manager UI uses self-signed TLS certificates o
 ### Before you begin...
 
 - **Get the certificate and key pair for the {{site.prodname}} Manager UI**
-  Generate the certificate using any X.509-compatible tool or from your organization's Certificate Authority. The certificate must have Common Name or Subject Alternate Names that match the IPs or DNS names that will be used to [access the manager UI]({{site.baseurl}}/getting-started/access-the-manager).
+  Generate the certificate using any X.509-compatible tool or from your organization's Certificate Authority. The certificate must have Common Name or Subject Alternate Names that match the IPs or DNS names that will be used to [access the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager).
 
 ### How to
 

@@ -1,5 +1,5 @@
 ---
-title: Deploy and Monitor Calico Enterprise licensing metrics
+title: Deploy and monitor Calico Enterprise license metrics
 description: Use the Prometheus monitoring and alerting tool to get Calico Enterprise license metrics such as nodes used, nodes available, and days until license expires.
 ---
 

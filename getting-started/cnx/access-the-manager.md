@@ -1,11 +1,11 @@
 ---
-title: Configure access to Calico Enterprise Manager.
+title: Configure access to Calico Enterprise Manager
 description: Configure user access to the Calico Enterprise Manager user interface. 
 ---
 
 ### Big picture
 
-Configure access to the {{site.prodname}} manager user interface.
+Configure access to the {{site.prodname}} Manager user interface.
 
 ### Value
 
@@ -23,11 +23,11 @@ These instructions only apply to the operator-based installation of {{site.prodn
 
 Choose one of the following methods for accessing the manager UI:
 
-- [Access using Kubernetes Ingress](#access-using-kubernetes-ingress)
+- [Access using Kubernetes ingress](#access-using-kubernetes-ingress)
 - [Access using a LoadBalancer service](#access-using-a-loadbalancer-service)
 - [Access using port-forwarding](#access-using-port-forwarding)
 
-#### Access using Kubernetes Ingress
+#### Access using Kubernetes ingress
 
 Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/). This approach requires that your cluster be configured with an ingress controller to implement the `Ingress` resource.
 
@@ -88,4 +88,4 @@ You can now access the manager UI in your browser at `https://localhost:9443`.
 
 ### Above and beyond
 
-- [Create a user and login to the manager UI]({{site.baseurl}}/getting-started/create-user-login)
+- [Configure user access and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)

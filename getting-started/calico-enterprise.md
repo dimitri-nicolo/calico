@@ -1,13 +1,16 @@
 ---
-title: Getting started with Calico Enterprise
+title: Get a license
 description: Get a license to install Calico Enterprise.
 canonical_url: /getting-started/calico-enterprise
 ---
 
-## Obtain the private registry credentials
+### Get private registry credentials and license key
 
-Contact your Tigera support representative to obtain a Docker configuration file
-in JSON format. When you open the file, it should look something like the following.
+Contact your Tigera support representative and get the following files:
+
+**Private registy credentials**
+
+Get the Docker configuration file, (`config.json`) that contains a robot account token to retrieve the {{site.prodname}} images from the private Tigera repository. For example:
 
 ```json
 {
@@ -20,12 +23,9 @@ in JSON format. When you open the file, it should look something like the follow
 }
 ```
 
-The file should be named `config.json`. It contains a robot account token that will allow you to retrieve the {{site.prodname}} images from the private Tigera repository.
+**License key**
 
-## Obtain a license key
-
-Contact your Tigera support representative to obtain a license key in YAML format.
-When you open the file, it should look something like the following.
+Get a license key file, `<customer-name>-license.yaml`. For example:
 
 ```yaml
 apiVersion: projectcalico.org/v3
@@ -40,9 +40,6 @@ spec:
     -----END CERTIFICATE-----
   token: eyJ...zaQ
 ```
-
-The file should be named `<customer-name>-license.yaml`. For example, if your customer name
-was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
 
 ## Get started
 
