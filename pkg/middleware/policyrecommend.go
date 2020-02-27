@@ -79,7 +79,7 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		}
 		recommendation, err := recEngine.Recommend()
 		if err != nil {
-			createAndReturnError(err, "Error when generating recommended policy", http.StatusInternalServerError, lmaerror.PolicyRec, w)
+			createAndReturnError(err, err.Error(), http.StatusInternalServerError, lmaerror.PolicyRec, w)
 			return
 		}
 		response := &PolicyRecommendationResponse{
