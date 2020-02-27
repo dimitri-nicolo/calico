@@ -4057,7 +4057,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
-					"XDPRefreshInterval": {
+					"xdpRefreshInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
@@ -4905,7 +4905,6 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						},
 					},
 				},
-				Required: []string{"XDPRefreshInterval"},
 			},
 		},
 		Dependencies: []string{

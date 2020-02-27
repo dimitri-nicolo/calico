@@ -89,7 +89,7 @@ type FelixConfigurationSpec struct {
 	// XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no
 	// other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to
 	// disable XDP refresh. [Default: 90s]
-	XDPRefreshInterval *metav1.Duration `json"xdpRefreshInterval,omitempty" configv1timescale:"seconds"`
+	XDPRefreshInterval *metav1.Duration `json:"xdpRefreshInterval,omitempty" configv1timescale:"seconds"`
 
 	NetlinkTimeout *metav1.Duration `json:"netlinkTimeout,omitempty" configv1timescale:"seconds" confignamev1:"NetlinkTimeoutSecs"`
 
