@@ -246,6 +246,46 @@ var (
 			},
 		},
 	}
+
+	app1ToNginxEgressFlows = []*elastic.CompositeAggregationBucket{
+		&elastic.CompositeAggregationBucket{
+			CompositeAggregationKey: []elastic.CompositeAggregationSourceValue{
+				elastic.CompositeAggregationSourceValue{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
+				elastic.CompositeAggregationSourceValue{Name: "source_namespace", Value: "namespace1"},
+				elastic.CompositeAggregationSourceValue{Name: "source_name_aggr", Value: "app1-abcdef-*"},
+				elastic.CompositeAggregationSourceValue{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
+				elastic.CompositeAggregationSourceValue{Name: "dest_namespace", Value: "namespace1"},
+				elastic.CompositeAggregationSourceValue{Name: "dest_name_aggr", Value: "nginx-12345-*"},
+				elastic.CompositeAggregationSourceValue{Name: "proto", Value: "6"},
+				elastic.CompositeAggregationSourceValue{Name: "dest_ip", Value: ""},
+				elastic.CompositeAggregationSourceValue{Name: "source_ip", Value: ""},
+				elastic.CompositeAggregationSourceValue{Name: "source_port", Value: ""},
+				elastic.CompositeAggregationSourceValue{Name: "dest_port", Value: 80.0},
+				elastic.CompositeAggregationSourceValue{Name: "reporter", Value: "src"},
+				elastic.CompositeAggregationSourceValue{Name: "action", Value: "allow"},
+			},
+			AggregatedTerms: map[string]*elastic.AggregatedTerm{
+				"source_labels": &elastic.AggregatedTerm{
+					DocCount: 1,
+					Buckets: map[interface{}]int64{
+						"app=app1": 1,
+					},
+				},
+				"dest_labels": &elastic.AggregatedTerm{
+					DocCount: 1,
+					Buckets: map[interface{}]int64{
+						"app=nginx": 1,
+					},
+				},
+				"policies": &elastic.AggregatedTerm{
+					DocCount: 1,
+					Buckets: map[interface{}]int64{
+						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow": 1,
+					},
+				},
+			},
+		},
+	}
 )
 
 var _ = Describe("Policy Recommendation", func() {
@@ -328,6 +368,8 @@ var _ = Describe("Policy Recommendation", func() {
 					GlobalNetworkPolicies: []*v3.StagedGlobalNetworkPolicy{},
 				},
 			}, http.StatusOK),
+		Entry("for destination endpoint with egress only flows - no rules will be computed", app1ToNginxEgressFlows, nil,
+			nginxQuery, nil, http.StatusInternalServerError),
 		Entry("for unknown endpoint", []*elastic.CompositeAggregationBucket{}, nil,
 			&policyrec.PolicyRecommendationParams{
 				StartTime:    "now-1h",
