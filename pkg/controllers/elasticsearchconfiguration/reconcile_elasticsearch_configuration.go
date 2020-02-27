@@ -44,7 +44,7 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 			return err
 		}
 
-		if err := c.reconcilePublicCert(); err != nil {
+		if err := c.reconcileCASecrets(); err != nil {
 			return err
 		}
 	}
@@ -68,15 +68,18 @@ func (c *reconciler) reconcileConfigMap() error {
 	return nil
 }
 
-// reconcilePublicCert copies the tigera-secure-es-http-certs-public secret from the management cluster to the managed cluster
-func (c *reconciler) reconcilePublicCert() error {
-	secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(resource.ElasticsearchCertSecret, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
+// reconcilePublicCert copies the tigera-secure-es-http-certs-public and tigera-secure-kb-http-certs-public secrets from
+// the management cluster to the managed cluster
+func (c *reconciler) reconcileCASecrets() error {
+	for _, secretName := range []string{resource.ElasticsearchCertSecret, resource.KibanaCertSecret} {
+		secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(secretName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
-		return err
+		if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
+			return err
+		}
 	}
 
 	return nil
