@@ -25,7 +25,7 @@ class RESTClient:
 
 
     def exec(self, method, path, filename):
-        if filename is not "":
+        if filename != "":
             with open(filename) as data:
                 response = self.session.request(method, self.base_url + path, data=os.path.expandvars(data.read()), headers=self.headers, verify=self.verify)
         else:
