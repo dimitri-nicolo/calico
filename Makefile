@@ -5,6 +5,8 @@ PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
 GO_BUILD_VER   ?= v0.34
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
+# Used by Makefile.common
+LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 
 build: images
 
