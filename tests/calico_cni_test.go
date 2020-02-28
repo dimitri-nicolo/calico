@@ -1,10 +1,11 @@
-// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
 
 package main_test
 
 import (
 	"context"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"os"
@@ -731,5 +732,74 @@ var _ = Describe("CalicoCni", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 		})
+	})
+
+	Describe("testConnection tests", func() {
+
+		It("successfully connects to the datastore", func(done Done) {
+			netconf := fmt.Sprintf(`
+{
+  "cniVersion": "%s",
+  "name": "net1",
+  "type": "calico",
+  "etcd_endpoints": "http://%s:2379",
+  "log_level": "info",
+  "nodename_file_optional": true,
+  "datastore_type": "%s",
+  "ipam": {
+	"type": "host-local",
+	"subnet": "10.0.0.0/8"
+  }
+}`, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"))
+			pluginPath := fmt.Sprintf("%s/%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
+			c := exec.Command(pluginPath, "-t")
+			stdin, err := c.StdinPipe()
+			Expect(err).ToNot(HaveOccurred())
+
+			go func() {
+				defer stdin.Close()
+				_, _ = io.WriteString(stdin, netconf)
+			}()
+
+			_, err = c.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred())
+			close(done)
+		}, 10)
+
+		// This test fails because etcd client doesn't respect our context
+		// timeout.  Works in open source so will have to investigate different
+		// versions of the client.
+		// Remove this "P" as part of https://tigera.atlassian.net/browse/OS-5705
+		PIt("reports it cannot connect to the datastore", func(done Done) {
+			// wrong port.
+			netconf := fmt.Sprintf(`
+{
+  "cniVersion": "%s",
+  "name": "net1",
+  "type": "calico",
+  "etcd_endpoints": "http://%s:2370",
+  "log_level": "info",
+  "nodename_file_optional": true,
+  "datastore_type": "%s",
+  "ipam": {
+	"type": "host-local",
+	"subnet": "10.0.0.0/8"
+  }
+}`, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"))
+			pluginPath := fmt.Sprintf("%s/%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
+			c := exec.Command(pluginPath, "-t")
+			stdin, err := c.StdinPipe()
+			Expect(err).ToNot(HaveOccurred())
+
+			go func() {
+				defer stdin.Close()
+				_, _ = io.WriteString(stdin, netconf)
+			}()
+
+			_, err = c.CombinedOutput()
+			Expect(err).To(HaveOccurred())
+			close(done)
+		}, 10)
+
 	})
 })
