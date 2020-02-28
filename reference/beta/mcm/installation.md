@@ -51,7 +51,6 @@ You will need multiple Kubernetes clusters to install {{site.prodname}} with dif
 
 #### Limitations
 
-- Intrusion detection is currently not supported in a multi-cluster configuration.
 - Converting from an existing standalone cluster to a management or managed cluster is currently not supported.
 
 ### How To
