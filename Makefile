@@ -65,7 +65,7 @@ ifneq ($(BUILDARCH),amd64)
 endif
 
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
-TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created')
+TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc')
 
 # Variables controlling the image
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
@@ -168,7 +168,10 @@ update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-ty
 ###############################################################################
 # Building the binary
 ###############################################################################
-build:  $(NODE_CONTAINER_BINARY)
+build:
+	$(MAKE) $(NODE_CONTAINER_BINARY)
+
+commit-pin-updates: update-pins build git-status git-commit ci
 
 .PHONY: remote-deps
 remote-deps:
