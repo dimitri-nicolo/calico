@@ -13,8 +13,8 @@ type Config struct {
 	// Maximum allowable length of time that a PIP request may take to complete. After this time, the results that have
 	// been gathered so far will be returned to the user. The results will be incomplete (in that we won't have gathered
 	// the required number, but the results will be self-consistent). The ES response object will have the TimedOut
-	// flag set to true.
-	MaxCalculationTime time.Duration `envconfig:"TIGERA_PIP_MAX_CALCULATION_TIME" default:"10s"`
+	// flag set to true.  Default this to twice the default for ES queries.
+	MaxCalculationTime time.Duration `envconfig:"TIGERA_PIP_MAX_CALCULATION_TIME" default:"20s"`
 
 	// Whether or not the original action should be calculated. If this is false, the Action in the flow data will
 	// be unchanged from the original value. If this is true, the Action in the flow log will be calculated by

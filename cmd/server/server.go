@@ -7,10 +7,11 @@ import (
 	"net"
 	"os"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
+
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 
 	"github.com/tigera/es-proxy/pkg/server"
 )
