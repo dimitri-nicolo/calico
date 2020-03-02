@@ -90,20 +90,10 @@
       },
       {
         "range":{
-          "start_time":{
-            "from":"now-3h",
-            "include_lower":false,
-            "include_upper":true,
-            "to":null
-          }
-        }
-      },
-      {
-        "range":{
           "end_time":{
-            "from":null,
             "include_lower":true,
             "include_upper":false,
+            "from":"now-3h",
             "to":"now"
           }
         }
