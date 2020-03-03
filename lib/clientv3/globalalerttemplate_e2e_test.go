@@ -38,19 +38,21 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlertTemplate tests", testutils.Da
 	ctx := context.Background()
 	name1 := "alert-1"
 	name2 := "alert-2"
-	spec1 := apiv3.GlobalAlertSpec{
+	spec1 := apiv3.GlobalAlertTemplateSpec{
+		Summary:     "test 1",
 		Description: "test 1",
 		Severity:    100,
 		DataSet:     "flows",
 	}
-	spec2 := apiv3.GlobalAlertSpec{
+	spec2 := apiv3.GlobalAlertTemplateSpec{
+		Summary:     "test 2",
 		Description: "test 2",
 		Severity:    80,
 		DataSet:     "dns",
 	}
 
 	DescribeTable("GlobalAlertTemplate e2e CRUD tests",
-		func(name1, name2 string, spec1, spec2 apiv3.GlobalAlertSpec) {
+		func(name1, name2 string, spec1, spec2 apiv3.GlobalAlertTemplateSpec) {
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
 

@@ -594,11 +594,24 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		false,
 	),
+)
+
+var _ = DescribeTable("GlobalAlertTemplate Validator",
+	func(input interface{}, valid bool) {
+		if valid {
+			Expect(Validate(input)).NotTo(HaveOccurred(),
+				"expected value to be valid")
+		} else {
+			Expect(Validate(input)).To(HaveOccurred(),
+				"expected value to be invalid")
+		}
+	},
 
 	Entry("valid template",
 		&api.GlobalAlertTemplate{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec: api.GlobalAlertSpec{
+			Spec: api.GlobalAlertTemplateSpec{
+				Summary:     "foo",
 				Description: "test",
 				Severity:    100,
 				DataSet:     "dns",
@@ -606,12 +619,25 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		true,
 	),
-	Entry("invalid template",
+	Entry("invalid GlobalAlertSpec",
 		&api.GlobalAlertTemplate{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec: api.GlobalAlertSpec{
+			Spec: api.GlobalAlertTemplateSpec{
+				Summary:     "bar",
 				Description: "test",
 				Severity:    100,
+			},
+		},
+		false,
+	),
+	Entry("empty summary",
+		&api.GlobalAlertTemplate{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertTemplateSpec{
+				Summary:     "",
+				Description: "test",
+				Severity:    100,
+				DataSet:     "dns",
 			},
 		},
 		false,

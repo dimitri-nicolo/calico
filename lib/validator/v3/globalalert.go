@@ -27,8 +27,35 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel) {
 	*/
 }
 
+func getGlobalAlertSpec(structLevel validator.StructLevel) api.GlobalAlertSpec {
+	i := structLevel.Current().Interface()
+	switch i.(type) {
+	case api.GlobalAlertSpec:
+		return i.(api.GlobalAlertSpec)
+	case api.GlobalAlertTemplateSpec:
+		// We do this to reuse the code for validating GlobalAlertSpec as the rules for GlobalAlertTemplateSpec are
+		// identical.
+		t := i.(api.GlobalAlertTemplateSpec)
+		return api.GlobalAlertSpec{
+			Description: t.Description,
+			Severity:    t.Severity,
+			Period:      t.Period,
+			Lookback:    t.Lookback,
+			DataSet:     t.DataSet,
+			Query:       t.Query,
+			AggregateBy: t.AggregateBy,
+			Field:       t.Field,
+			Metric:      t.Metric,
+			Condition:   t.Condition,
+			Threshold:   t.Threshold,
+		}
+	default:
+		panic("Unknown type")
+	}
+}
+
 func validateGlobalAlertPeriod(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
+	s := getGlobalAlertSpec(structLevel)
 
 	if s.Period != nil && s.Period.Duration != 0 && s.Period.Duration < api.GlobalAlertMinPeriod {
 		structLevel.ReportError(
@@ -42,7 +69,7 @@ func validateGlobalAlertPeriod(structLevel validator.StructLevel) {
 }
 
 func validateGlobalAlertLookback(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
+	s := getGlobalAlertSpec(structLevel)
 
 	if s.Lookback != nil && s.Lookback.Duration != 0 && s.Lookback.Duration < api.GlobalAlertMinLookback {
 		structLevel.ReportError(
@@ -56,7 +83,7 @@ func validateGlobalAlertLookback(structLevel validator.StructLevel) {
 }
 
 func validateGlobalAlertQuery(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
+	s := getGlobalAlertSpec(structLevel)
 
 	if q, err := query.ParseQuery(s.Query); err != nil {
 		structLevel.ReportError(
@@ -104,7 +131,8 @@ func validateGlobalAlertQuery(structLevel validator.StructLevel) {
 
 // validateGlobalAlertDescription validates that there are no unreferenced fields in the description
 func validateGlobalAlertDescription(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
+	s := getGlobalAlertSpec(structLevel)
+
 	if variables, err := extractVariablesFromDescriptionTemplate(s.Description); err != nil {
 		structLevel.ReportError(
 			reflect.ValueOf(s.DataSet),
@@ -150,7 +178,8 @@ func validateGlobalAlertDescription(structLevel validator.StructLevel) {
 }
 
 func validateGlobalAlertMetric(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalAlertSpec)
+	s := getGlobalAlertSpec(structLevel)
+
 	switch s.Metric {
 	case api.GlobalAlertMetricAvg, api.GlobalAlertMetricMax, api.GlobalAlertMetrixMin, api.GlobalAlertMetricSum:
 		if s.Field == "" {
