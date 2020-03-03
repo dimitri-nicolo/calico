@@ -146,12 +146,22 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		})
 
 		It("should return errInvalidPolicyPreview when passed a request with a policyPreview that has an invalid verb", func() {
-			validPreviewBadVerb, err := ioutil.ReadFile("testdata/flow_logs_valid_preview_bad_verb.json")
+			validPreviewBadVerb, err := ioutil.ReadFile("testdata/flow_logs_invalid_preview_bad_verb.json")
 			Expect(err).To(Not(HaveOccurred()))
 			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", string(validPreviewBadVerb))
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
 			Expect(err).To(BeEquivalentTo(errInvalidPolicyPreview))
+			Expect(params).To(BeNil())
+		})
+
+		It("should return errInvalidPolicyPreview when passed a request with a policyPreview that has an extra unknown field", func() {
+			validPreviewBadVerb, err := ioutil.ReadFile("testdata/flow_logs_invalid_preview_extra_field.json")
+			Expect(err).To(Not(HaveOccurred()))
+			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", string(validPreviewBadVerb))
+			Expect(err).NotTo(HaveOccurred())
+			params, err := validateFlowLogsRequest(req)
+			Expect(err.Error()).To(Equal("Error parsing request parameters"))
 			Expect(params).To(BeNil())
 		})
 
@@ -507,6 +517,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 
 			searchResults, err := getFlowLogsFromElastic(flowFilter, params, esClient, pipClient)
 			Expect(err).To(Not(HaveOccurred()))
+
+			// Check the results.
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
 			convertedResults := searchResults.(*pip.FlowLogResults)
 			// the took field won't always match the expected response since it is timer based so overwrite it here

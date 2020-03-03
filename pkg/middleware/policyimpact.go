@@ -118,6 +118,7 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 	// Unmarshal the body data to a map of raw JSON messages.
 	var reqRaw map[string]json.RawMessage
 	err = json.Unmarshal(b, &reqRaw)
+
 	if err != nil {
 		log.WithError(err).Info("Error unmarshaling query")
 		return nil, fmt.Errorf("invalid elasticsearch query syntax: %v", err)

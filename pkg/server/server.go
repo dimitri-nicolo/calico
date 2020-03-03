@@ -103,8 +103,7 @@ func Start(cfg *Config) error {
 				k8sAuth.KubernetesAuthnAuthz(proxy)))
 		sm.Handle("/",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.PolicyImpactHandler(k8sAuth, p, proxy))))
+				k8sAuth.KubernetesAuthnAuthz(proxy)))
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
@@ -127,8 +126,7 @@ func Start(cfg *Config) error {
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.PolicyImpactHandler(k8sAuth, p,
-						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
+						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(

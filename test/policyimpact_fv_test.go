@@ -14,7 +14,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PolicyimpactFV Elasticsearch", func() {
+//TODO: Remove these tests, or update to use the new API.  To do the latter we need to:
+// -  Fix up RBAC checks for PIP
+// -  Fix up these tests to do valid configuration changes.
+
+var _ = PDescribe("PolicyimpactFV Elasticsearch", func() {
 
 	proxyScheme := getEnvOrDefaultString("TEST_PROXY_SCHEME", "https")
 	proxyHost := getEnvOrDefaultString("TEST_PROXY_HOST", "127.0.0.1:8000")

@@ -123,6 +123,18 @@ var (
 			StagedAction: v3.StagedActionDelete,
 		},
 	}
+
+	invalid_pr1 = &v3.NetworkPolicy{
+		TypeMeta: resources.TypeCalicoNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tier1.np",
+			Namespace: "ns1",
+		},
+		Spec: v3.NetworkPolicySpec{
+			Tier:     "tier1",
+			Selector: "has(hello1", // Bad selector
+		},
+	}
 )
 
 var _ = Describe("Test sending in pip updates to the xrefcache", func() {
@@ -322,5 +334,15 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		Expect(modified.IsDeleted(pr1)).To(BeTrue())
 		Expect(modified.IsDeleted(pr2)).To(BeTrue())
 		Expect(modified.IsDeleted(pr3)).To(BeTrue())
+	})
+
+	It("Errors setting an invalid Calico policy", func() {
+		By("Sending set updates for invalid Calico policy create")
+		// Invalid selector - will get stored, but then will not validate
+		_, err := pip.ApplyPIPPolicyChanges(xc, []pip.ResourceChange{{
+			Action:   "update",
+			Resource: invalid_pr1,
+		}})
+		Expect(err).To(HaveOccurred())
 	})
 })
