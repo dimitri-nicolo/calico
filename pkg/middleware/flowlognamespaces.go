@@ -30,7 +30,7 @@ type FlowLogNamespaceParams struct {
 	StartDateTime string   `json:"startDateTime"`
 	EndDateTime   string   `json:"endDateTime"`
 
-	// Parsed parameters
+	// Parsed timestamps
 	startDateTimeESParm interface{}
 	endDateTimeESParm   interface{}
 }
@@ -159,13 +159,15 @@ func buildESQuery(params *FlowLogNamespaceParams) *elastic.BoolQuery {
 		query = query.Filter(UnprotectedQuery())
 	}
 
-	if params.StartDateTime != "" {
-		startFilter := elastic.NewRangeQuery("start_time").Gt(params.StartDateTime)
-		query = query.Filter(startFilter)
-	}
-	if params.EndDateTime != "" {
-		endFilter := elastic.NewRangeQuery("end_time").Lt(params.EndDateTime)
-		query = query.Filter(endFilter)
+	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
+		filter := elastic.NewRangeQuery("end_time")
+		if params.startDateTimeESParm != nil {
+			filter = filter.Gte(params.startDateTimeESParm)
+		}
+		if params.endDateTimeESParm != nil {
+			filter = filter.Lt(params.endDateTimeESParm)
+		}
+		query = query.Filter(filter)
 	}
 
 	return query

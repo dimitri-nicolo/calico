@@ -8,7 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/lma/pkg/api"
@@ -208,6 +208,7 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	cache := fp.newFlowCache(flow)
 
 	// If the flow is not impacted return the unmodified response.
+	//TODO: Should probably still run this through PIP to verify that the processor agrees.
 	if !changeset.FlowSelectedByImpactedPolicies(flow, cache) {
 		clog.Debug("Flow unaffected")
 		if isSrc || beforeSrcAction&api.ActionFlagAllow != 0 {
@@ -219,25 +220,29 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 		return beforeSrcAction != afterSrcAction, before, after
 	}
 
-	// Calculate the before impact. We don't necessarily use the calculated value, but it pre-populates the cache for
-	// the after response.
-	clog.Debug("Calculate before impact")
 	if isSrc || beforeSrcAction&api.ActionFlagAllow != 0 {
+		// Calculate the before impact. We don't necessarily use the calculated value, but it pre-populates the cache for
+		// the after response.
+		// Note that we don't calculate the before impact if this is a destination reported flow and the flow was denied
+		// at source.
+		clog.Debug("Calculate before impact")
 		before = changeset.Before.Calculate(flow, cache, true)
-	}
 
-	// If we are not requested to calculate the original action then replace with the unchanged source response.
-	//
-	// If we are requested to calculate the original action it's possible the verdict has changed from deny to
-	// allow or unknown. In that case if the destination is a calico-managed endpoint we'll need to add a fake
-	// destination and calculate the impact of that - this handles the fact that we won't have remote data to use.
-	if !fp.Config.CalculateOriginalAction && (isSrc || beforeSrcAction&api.ActionFlagAllow != 0) {
-		clog.Debug("Keep original action from flow log")
-		before = getUnchangedResponse(flow)
+		if ActualFlowAction(before.Action) == ActualFlowAction(flow.ActionFlag) &&
+			(len(flow.Policies) == 0 || PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(flow.Policies, before.Policies)) {
+			// The original and calculated before actions are the same and the policies match. Use the calculated set
+			// of policies to avoid duplications and to ensure ordering agrees with the current configuration.  This
+			// also fills in the blanks when the policy data was not in the original flow data.
+			clog.Debug("Calculated flow matches original after ignoring duplicate and staged policies")
+		} else if !fp.Config.CalculateOriginalAction {
+			// We are not configured to calculate the original action, so revert back to use the data from the flow.
+			clog.Debug("Use original flow data for before response")
+			before = getUnchangedResponse(flow)
 
-		// Sort the original set of flows so that we can compare to the "after" set to see if anything has actually
-		// changed. We don't need to sort the calculated policies since these will already be sorted.
-		sort.Sort(api.SortablePolicyHits(before.Policies))
+			// Sort the original set of flows so that we can compare to the "after" set to see if anything has actually
+			// changed. We don't need to sort the calculated policies since these will already be sorted.
+			sort.Sort(api.SortablePolicyHits(before.Policies))
+		}
 	}
 
 	if isSrc || afterSrcAction&api.ActionFlagAllow != 0 {
@@ -266,8 +271,8 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	}
 
 	modified = before.Include != after.Include ||
-		before.Action&ActionFlagsAllowAndDeny != after.Action&ActionFlagsAllowAndDeny ||
-		(len(before.Policies) != 0 && api.PolicyHitsEqual(before.Policies, after.Policies))
+		ActualFlowAction(before.Action) != ActualFlowAction(after.Action) ||
+		!PolicyHitsEqualIgnoringStaged(before.Policies, after.Policies)
 
 	return modified, before, after
 }
@@ -368,4 +373,88 @@ type CompiledTierAndPolicyChangeSet struct {
 // the change is applied.
 func (c CompiledTierAndPolicyChangeSet) FlowSelectedByImpactedPolicies(flow *api.Flow, cache *flowCache) bool {
 	return c.Before.FlowSelectedByImpactedPolicies(flow, cache) || c.After.FlowSelectedByImpactedPolicies(flow, cache)
+}
+
+// PolicyHitsEqualIgnoringOrderDuplicatesAndStaged compares two sets of PolicyHits to see if the set of matches is
+// identical. This ignores the match index, staged policies and surplus policies in the dirty set. This means the match
+// is somewhat fuzzy, but makes it simpler to compare before and after flows when the flow is long running and contains
+// data from old connections.
+func PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(dirty, calculated []api.PolicyHit) bool {
+	// Get the set of policy names and actions. This removes duplicates with different match indexes.
+	dirtyActions := map[string]api.ActionFlag{}
+	for _, p := range dirty {
+		if p.Staged {
+			log.Debug("Skip staged in dirty set")
+			continue
+		}
+		name := p.FlowLogName()
+		action := ActualPolicyHitAction(p.Action)
+		if af, ok := dirtyActions[name]; ok {
+			if af != action {
+				// Flow has multiple actions for the same policy. This can never match the calculated.
+				log.WithField("name", name).Debug("Flow contains identical policy matches with different actions")
+				return false
+			}
+		} else {
+			dirtyActions[name] = action
+		}
+	}
+
+	// Check the calculated hits against the dirty hits (ignoring staged policies).
+	for _, p := range calculated {
+		if p.Staged {
+			log.Debug("Skip staged in calculated set")
+			continue
+		}
+		name := p.FlowLogName()
+		action := ActualPolicyHitAction(p.Action)
+		if af, ok := dirtyActions[name]; !ok {
+			log.WithField("name", name).Debug("No matching policy")
+			return false
+		} else if af != action {
+			log.WithFields(log.Fields{
+				"policy":     name,
+				"dirty":      af,
+				"calculated": action,
+			}).Debug("No matching action")
+			return false
+		}
+	}
+
+	return true
+}
+
+// PolicyHitsEqualIgnoringStaged compares two sets of PolicyHits to see if the set of matches is identical.
+// This ignores staged policies, but otherwise the policies and their order should be identical.
+func PolicyHitsEqualIgnoringStaged(before, after []api.PolicyHit) bool {
+
+	next := func(idx int, p []api.PolicyHit) int {
+		for ; idx < len(p); idx++ {
+			if !p[idx].Staged {
+				return idx
+			}
+		}
+		return -1
+	}
+
+	var beforeIdx, afterIdx int
+	for {
+		beforeIdx, afterIdx = next(beforeIdx, before), next(afterIdx, after)
+		if beforeIdx == -1 || afterIdx == -1 {
+			break
+		}
+		if ActualPolicyHitAction(before[beforeIdx].Action) != ActualPolicyHitAction(after[afterIdx].Action) ||
+			before[beforeIdx].FlowLogName() != after[afterIdx].FlowLogName() {
+			// Either the action or policy do not match. Return false.
+			return false
+		}
+
+		// Increment to the next policy hit.
+		beforeIdx++
+		afterIdx++
+	}
+
+	// We exit the loop when we have reached the end of a policy hit slice. If we reached the end of both then the
+	// match is successful.
+	return beforeIdx == afterIdx
 }

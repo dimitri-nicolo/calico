@@ -38,3 +38,15 @@ func Indeterminate(a api.ActionFlag) bool {
 	// indeterminate.
 	return a&ActionFlagsAllowAndDeny == ActionFlagsAllowAndDeny
 }
+
+// ActualFlowAction returns the real flow action flags from the full set of flags. The calculated
+// set contains various other flags that augment that actual action info.
+func ActualFlowAction(in api.ActionFlag) api.ActionFlag {
+	return in & ActionFlagsAllowAndDeny
+}
+
+// ActualPolicyHitAction returns the real action flags from the full set of flags in a policy hit. The calculated
+// set contains various other flags that augment that actual action info.
+func ActualPolicyHitAction(in api.ActionFlag) api.ActionFlag {
+	return in & (ActionFlagsAllowAndDeny | api.ActionFlagNextTier)
+}

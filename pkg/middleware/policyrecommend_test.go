@@ -14,13 +14,14 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
+
 	"github.com/tigera/lma/pkg/api"
 	lmaerror "github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"

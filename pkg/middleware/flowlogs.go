@@ -292,13 +292,15 @@ func buildFlowLogsQuery(params *FlowLogsParams) *elastic.BoolQuery {
 		destLabelsFilter := buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels")
 		filters = append(filters, destLabelsFilter)
 	}
-	if params.startDateTimeESParm != nil {
-		startFilter := elastic.NewRangeQuery("start_time").Gt(params.startDateTimeESParm)
-		filters = append(filters, startFilter)
-	}
-	if params.endDateTimeESParm != nil {
-		endFilter := elastic.NewRangeQuery("end_time").Lt(params.endDateTimeESParm)
-		filters = append(filters, endFilter)
+	if params.startDateTimeESParm != nil || params.endDateTimeESParm != nil {
+		filter := elastic.NewRangeQuery("end_time")
+		if params.startDateTimeESParm != nil {
+			filter = filter.Gte(params.startDateTimeESParm)
+		}
+		if params.endDateTimeESParm != nil {
+			filter = filter.Lt(params.endDateTimeESParm)
+		}
+		filters = append(filters, filter)
 	}
 
 	if params.Unprotected {

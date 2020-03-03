@@ -3,8 +3,9 @@ package policycalc
 import (
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	"github.com/tigera/lma/pkg/api"
 
@@ -129,7 +130,7 @@ func (ts CompiledTiers) Calculate(flow *api.Flow, ep *api.FlowEndpointData, cach
 			af |= ts[i].ActionAfter(flow, &epr, cache)
 		}
 
-		if af&ActionFlagsAllowAndDeny == ActionFlagsAllowAndDeny {
+		if Indeterminate(af) {
 			// The flags now indicate the action is indeterminate, exit immediately. Store the action in the response
 			// object.
 			log.Debug("Indeterminate action from this tier - stop further processing")
