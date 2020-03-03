@@ -401,6 +401,7 @@ func (s *Server) generateCreds(clusterInfo *jclust.ManagedCluster) (*x509.Certif
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(1000000 * time.Hour), // XXX TBD
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth,},
 	}
 
 	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, s.tunnelCert, &key.PublicKey, s.tunnelKey)
