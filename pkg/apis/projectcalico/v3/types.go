@@ -240,7 +240,7 @@ type GlobalAlertTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec calico.GlobalAlertSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec calico.GlobalAlertTemplateSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // +genclient:nonNamespaced
