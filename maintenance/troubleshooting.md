@@ -9,18 +9,17 @@ canonical_url: '/maintenance/troubleshooting'
 
 ### Logs and diagnostics
 
-To collect diagnostics use the `calicoctl` command line tool using superuser privileges. For example:
+To collect diagnostics, download and install the `kubectl-calico` plugin somewhere in your `$PATH`. For example:
 
-```bash
-sudo calicoctl node diags
+```
+sudo curl -o /usr/local/bin/kubectl-calico {{site.url}}/{{page.version}}/maintenance/kubectl-calico
 ```
 
-To view logs, use the following command:
+Then, create a diagnostics bundle.
 
-`kubectl logs -n kube-system <pod_name>`
-
-To view debug logs on some {{site.prodname}} components, set the `LogSeverityScreen` through the associated environment variable.
-
+```
+kubectl calico diags
+```
 
 To report a problem, contact Tigera Support.
 
