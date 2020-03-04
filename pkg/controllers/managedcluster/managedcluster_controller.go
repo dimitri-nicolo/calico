@@ -5,12 +5,12 @@ package managedcluster
 import (
 	"fmt"
 
-	esalpha1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1alpha1"
+	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
-	"github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -65,7 +65,7 @@ func New(
 	mgmtChangeWorker.AddWatch(
 		cache.NewListWatchFromClient(esk8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
-		&esalpha1.Elasticsearch{},
+		&esv1.Elasticsearch{},
 	)
 
 	mgmtChangeWorker.AddWatch(

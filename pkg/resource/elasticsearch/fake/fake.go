@@ -10,14 +10,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	esalpha1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1alpha1"
+	v1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	restfake "k8s.io/client-go/rest/fake"
 )
 
 type RESTClient struct {
-	esResponse *esalpha1.Elasticsearch
+	esResponse *v1.Elasticsearch
 	*restfake.RESTClient
 }
 
@@ -28,14 +28,14 @@ type RESTClient struct {
 // Note that at the time this was written the only call made through this rest client would be to grab the singular
 // elasticsearch resource, thus there was no need to do anything but return an single elasticsearch response for every
 // call through this rest client
-func NewFakeRESTClient(esResponse *esalpha1.Elasticsearch) (*RESTClient, error) {
-	if err := esalpha1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
+func NewFakeRESTClient(esResponse *v1.Elasticsearch) (*RESTClient, error) {
+	if err := v1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 	cli := &RESTClient{
 		esResponse: esResponse,
 		RESTClient: &restfake.RESTClient{
-			GroupVersion:         schema.GroupVersion{Group: "elasticsearch.k8s.elastic.co", Version: "v1alpha1"},
+			GroupVersion:         schema.GroupVersion{Group: "elasticsearch.k8s.elastic.co", Version: "v1"},
 			VersionedAPIPath:     "/apis",
 			NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
 		}}
@@ -56,7 +56,7 @@ func NewFakeRESTClient(esResponse *esalpha1.Elasticsearch) (*RESTClient, error) 
 	return cli, nil
 }
 
-func (r *RESTClient) SetElasticsearch(es *esalpha1.Elasticsearch) {
+func (r *RESTClient) SetElasticsearch(es *v1.Elasticsearch) {
 	r.esResponse = es
 }
 

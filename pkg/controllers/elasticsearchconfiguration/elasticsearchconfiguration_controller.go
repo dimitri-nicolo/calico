@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	esalpha1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1alpha1"
+	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 )
 
 const (
@@ -128,7 +128,7 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
-			&esalpha1.Elasticsearch{},
+			&esv1.Elasticsearch{},
 		)
 
 		w.AddWatch(
