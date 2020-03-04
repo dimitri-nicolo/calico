@@ -115,33 +115,5 @@ advantage of the {{site.prodname}} Elasticsearch and Kibana dashboards, send you
 
 ### OpenShift
 
-Set up an [OpenShift Audit Configuration](https://docs.openshift.com/container-platform/3.11/install_config/master_node_configuration.html#master-node-config-audit-config){:target="_blank"}
-using the `openshift_master_audit_config` variable in Ansible or `auditConfig` in the master configuration file (typically found in /etc/origin/master/master-config.yaml).
-At minimum you need to set the following configuration parameters:
-- `enabled`: Boolean flag used to enable audit logging.
-- `auditFilePath`: The path to the file that audit logs are written to.
-- `policyFile`: Path to the audit policy configuration.
-- `logFormat`: Format of the audit logs. Should be `json` if using sending the logs to the {{site.prodname}} Elasticsearch.
-For more details on configuration parameters and their values, please reference the [OpenShift Advanced Audit documentation](https://docs.openshift.com/container-platform/3.11/install_config/master_node_configuration.html#master-node-config-advanced-audit){:target="_blank"}.
-
-1. Either set the appropriate ansible variable in your inventory file (adjust paths as necessary):
-
-   ```
-   openshift_master_audit_config={"enabled": true, "auditFilePath": "/var/lib/origin/audit/kube-audit.log", "logFormat": "json", "policyFile": "/etc/origin/master/audit.yaml"}
-   ```
-
-   Or add the following to the master configuration file (adjust paths as necessary).
-
-   ```
-   auditConfig:
-     enabled: true
-     auditFilePath: "/var/lib/origin/audit/kube-audit.log"
-     policyFile: "/etc/origin/master/audit.yaml"
-     logFormat: "json"
-   ```
-
-1. Distribute the audit policy file to the appropriate location on all master nodes (`/etc/origin/master/audit.yaml` in the above example).
-
-1. Restart the OpenShift API server. If you set the audit log configuration in an ansible variable in your inventory file,
-   rerun the ansible provisioner. If you set the audit log configuration in the master configuration file, then restart the
-   API server pod.
+> **Note**: Audit logging is `not supported` on Openshift v4.x
+{: .alert .alert-info}
