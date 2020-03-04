@@ -25,22 +25,28 @@ var (
 	globalNamespace = ""
 	namespace1      = "namespace1"
 	namespace2      = "namespace2"
+	namespace3      = "namespace3"
 
 	// Profiles
 	namespace1DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace1|allow", 0)
 	namespace2DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace2|allow", 0)
+	namespace3DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace3|allow", 0)
 
 	// Endpoints
-	pod1Aggr = "pod-1-*"
-	pod1     = "pod-1"
-	pod2Aggr = "pod-2-*"
-	pod2     = "pod-2"
-	pod3Aggr = "pod-3-*"
-	pod3     = "pod-3"
-	ns1      = "netset-1"
-	ns1Aggr  = "netset-1"
-	gns1     = "gns-1"
-	gns1Aggr = "gns-1"
+	pod1Aggr    = "pod-1-*"
+	pod1        = "pod-1"
+	pod2Aggr    = "pod-2-*"
+	pod2        = "pod-2"
+	pod3Aggr    = "pod-3-*"
+	pod3        = "pod-3"
+	pod4Rs1Aggr = "pod-4-rs-1-*"
+	pod4Rs2Aggr = "pod-4-rs-2-*"
+	pod4Rs1     = "pod-4-rs-1"
+	pod4Rs2     = "pod-4-rs-2"
+	ns1         = "netset-1"
+	ns1Aggr     = "netset-1"
+	gns1        = "gns-1"
+	gns1Aggr    = "gns-1"
 
 	// Labels
 	pod1LabelsBlue = map[string]string{
@@ -52,7 +58,7 @@ var (
 	pod1LabelsRed = map[string]string{
 		"name":      pod1,
 		"namespace": namespace1,
-		"job-name":  "nagging",
+		"job-name":  "badger",
 		"color":     "red",
 	}
 	pod2Labels = map[string]string{
@@ -64,6 +70,12 @@ var (
 		"pod-name":                 pod3,
 		"pod-namespace":            namespace2,
 		"controller-revision-hash": "xyz123",
+	}
+	pod4Rs1Labels = map[string]string{
+		"controller-revision-hash": "rs1",
+	}
+	pod4Rs2Labels = map[string]string{
+		"controller-revision-hash": "rs2",
 	}
 	ns1Labels = map[string]string{
 		"name":      ns1,
@@ -103,6 +115,18 @@ var (
 		Name:      gns1Aggr,
 		Namespace: globalNamespace,
 		Labels:    gns1Labels,
+	}
+	flowEndpointNamespace3Pod4Rs1Source = api.FlowEndpointData{
+		Type:      api.FlowLogEndpointTypeWEP,
+		Name:      pod4Rs1Aggr,
+		Namespace: namespace3,
+		Labels:    pod4Rs1Labels,
+	}
+	flowEndpointNamespace3Pod4Rs2Source = api.FlowEndpointData{
+		Type:      api.FlowLogEndpointTypeWEP,
+		Name:      pod4Rs2Aggr,
+		Namespace: namespace3,
+		Labels:    pod4Rs2Labels,
 	}
 
 	// Flow Endpoints - destination (and traffic)
@@ -144,6 +168,7 @@ var (
 	// pod1 has only egress flows.
 	// pod2 has both ingress and egress flows.
 	// pod3 has only ingress flows.
+	// pod4 has only egress flows.
 
 	// pod1-blue -> pod2 allow port 443
 	flowPod1BlueToPod2Allow443ReporterSource = api.Flow{
@@ -264,6 +289,46 @@ var (
 		Proto:       &protoTCP,
 		Policies:    []api.PolicyHit{namespace2DefaultAllowProfile},
 	}
+
+	// Ingress only pod4rs1 -> pod3 port 5432
+	flowPod4Rs1ToPod3Allow5432ReporterDestination = api.Flow{
+		Reporter:    api.ReporterTypeDestination,
+		ActionFlag:  api.ActionFlagAllow,
+		Source:      flowEndpointNamespace3Pod4Rs1Source,
+		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
+		Proto:       &protoTCP,
+		Policies:    []api.PolicyHit{namespace3DefaultAllowProfile},
+	}
+
+	// Ingress only pod4rs1 -> pod3 port 8080
+	flowPod4Rs1ToPod3Allow8080ReporterDestination = api.Flow{
+		Reporter:    api.ReporterTypeDestination,
+		ActionFlag:  api.ActionFlagAllow,
+		Source:      flowEndpointNamespace3Pod4Rs1Source,
+		Destination: flowEndpointNamespace2Pod3DestinationTCP8080,
+		Proto:       &protoTCP,
+		Policies:    []api.PolicyHit{namespace3DefaultAllowProfile},
+	}
+
+	// Ingress only pod4rs2 -> pod3 port 5432
+	flowPod4Rs2ToPod3Allow5432ReporterDestination = api.Flow{
+		Reporter:    api.ReporterTypeDestination,
+		ActionFlag:  api.ActionFlagAllow,
+		Source:      flowEndpointNamespace3Pod4Rs2Source,
+		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
+		Proto:       &protoTCP,
+		Policies:    []api.PolicyHit{namespace3DefaultAllowProfile},
+	}
+
+	// Ingress only pod4rs2 -> pod3 port 8080
+	flowPod4Rs2ToPod3Allow8080ReporterDestination = api.Flow{
+		Reporter:    api.ReporterTypeDestination,
+		ActionFlag:  api.ActionFlagAllow,
+		Source:      flowEndpointNamespace3Pod4Rs2Source,
+		Destination: flowEndpointNamespace2Pod3DestinationTCP5432,
+		Proto:       &protoTCP,
+		Policies:    []api.PolicyHit{namespace3DefaultAllowProfile},
+	}
 )
 
 // Expected Policies
@@ -299,7 +364,7 @@ var (
 	}
 
 	// Egress policy matching pod1 (both blue and red labels) in namespace1, to pod2 port 443.
-	networkPolicyNamespace1Pod1ToPod2 = &v3.StagedNetworkPolicy{
+	egressNetworkPolicyNamespace1Pod1ToPod2 = &v3.StagedNetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v3.KindStagedNetworkPolicy,
 			APIVersion: v3.GroupVersionCurrent,
@@ -319,6 +384,35 @@ var (
 					Destination: v3.EntityRule{
 						Selector: "name == 'pod-2' && namespace == 'namespace1'",
 						Ports:    []numorstring.Port{numorstring.SinglePort(port443)},
+					},
+				},
+			},
+		},
+	}
+
+	// Ingress policy matching pod2 in namespace1, from everywhere to port 443.
+	ingressNetworkPolicyNamespace1Pod1ToPod2 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + pod2,
+			Namespace: namespace1,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:     "default",
+			Selector: "name == 'pod-2' && namespace == 'namespace1'",
+			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Ingress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						Selector: "name == 'pod-1' && namespace == 'namespace1'",
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(port443)},
 					},
 				},
 			},
@@ -487,6 +581,67 @@ var (
 					},
 					Destination: v3.EntityRule{
 						Ports: []numorstring.Port{numorstring.SinglePort(port5432)},
+					},
+				},
+			},
+		},
+	}
+
+	// Ingress policy matching pod3 in namespace2, from pod4 to port 5432.
+	ingressNetworkPolicyToNamespace2Pod3FromPod4Port5432 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + pod3,
+			Namespace: namespace2,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:     "default",
+			Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
+			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Ingress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						NamespaceSelector: "projectcalico.org/name == 'namespace3'",
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(port5432)},
+					},
+				},
+			},
+		},
+	}
+
+	// Ingress policy matching pod3 in namespace2, from pod4 to port 5432.
+	ingressNetworkPolicyToNamespace2Pod3FromPod4Port5432And8080 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + pod3,
+			Namespace: namespace2,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:     "default",
+			Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
+			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Ingress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						NamespaceSelector: "projectcalico.org/name == 'namespace3'",
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{
+							numorstring.SinglePort(port5432),
+							numorstring.SinglePort(port8080),
+						},
 					},
 				},
 			},

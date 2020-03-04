@@ -51,6 +51,14 @@ type entityRule struct {
 	// TODO(doublek): Add service account string
 }
 
+// endpointBySelector groups selectors with protocols to dedup any duplicated rules
+// that share the same selectors for a particular protocol.
+type endpointBySelector struct {
+	endpointSelector  string
+	namespaceSelector string
+	protocol          numorstring.Protocol
+}
+
 // endpointRecommendationEngine implements the RecommendationEngine interface.
 // Policies are recommended for a given endpoint in a namespace.
 type endpointRecommendationEngine struct {
@@ -278,14 +286,45 @@ func (ere *endpointRecommendationEngine) constructRulesFromTraffic() {
 // to libcalico-go v3 Rule object.
 func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyType, trafficAndSelector map[endpointRulePerProtocol]entityRule) []v3.Rule {
 	log.WithField("policyType", policyType).Debugf("Processing rules for traffic %+v", trafficAndSelector)
-	rules := make([]v3.Rule, 0)
+	dedupedRules := make(map[endpointBySelector]entityRule)
 	for erpp, rule := range trafficAndSelector {
+		endpointSelector := rule.selector.Expression()
+		var namespaceSelector string
+		if erpp.endpointNamespace == noNamespace {
+			// Only include the global() selector if we want to actually select a Calico
+			// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
+			// out all selectors.
+			if !rule.selector.IsEmpty() {
+				namespaceSelector = globalNamespaceSelector
+			}
+		} else if erpp.endpointNamespace != ere.endpointNamespace {
+			namespaceSelector = selectNamespaceByName(erpp.endpointNamespace)
+		}
+		selKey := endpointBySelector{
+			endpointSelector:  endpointSelector,
+			namespaceSelector: namespaceSelector,
+			protocol:          erpp.protocol,
+		}
+
+		// Try to also collect all ports together for same selectors.
+		if dedupedRule, ok := dedupedRules[selKey]; ok {
+			dedupedRule.ports.Iter(func(item interface{}) error {
+				rule.ports.Add(item)
+				return nil
+			})
+		}
+		dedupedRules[selKey] = rule
+	}
+	log.WithField("policyType", policyType).Debugf("Deduped rules for traffic %+v", dedupedRules)
+	rules := make([]v3.Rule, 0)
+	for selKey, rule := range dedupedRules {
 		ports := make([]numorstring.Port, 0)
 		rule.ports.Iter(func(item interface{}) error {
 			ports = append(ports, item.(numorstring.Port))
 			return nil
 		})
-		proto := erpp.protocol
+
+		proto := selKey.protocol
 		newRule := v3.Rule{
 			Action:   v3.Allow,
 			Protocol: &proto,
@@ -306,29 +345,11 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 		// TODO(doublek): Fix this when we have nicer namespaced selectors.
 		switch policyType {
 		case v3.PolicyTypeEgress:
-			if erpp.endpointNamespace == noNamespace {
-				// Only include the !all() selector if we want to actually select a Calico
-				// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
-				// out all selectors.
-				if !rule.selector.IsEmpty() {
-					newRule.Destination.NamespaceSelector = globalNamespaceSelector
-				}
-			} else if erpp.endpointNamespace != ere.endpointNamespace {
-				newRule.Destination.NamespaceSelector = selectNamespaceByName(erpp.endpointNamespace)
-			}
-			newRule.Destination.Selector = rule.selector.Expression()
+			newRule.Destination.NamespaceSelector = selKey.namespaceSelector
+			newRule.Destination.Selector = selKey.endpointSelector
 		case v3.PolicyTypeIngress:
-			if erpp.endpointNamespace == noNamespace {
-				// Only include the !all() selector if we want to actually select a Calico
-				// HostEndpoint. For all other non namespaced non-Calico endpoints, we just leave
-				// out all selectors.
-				if !rule.selector.IsEmpty() {
-					newRule.Source.NamespaceSelector = globalNamespaceSelector
-				}
-			} else if erpp.endpointNamespace != ere.endpointNamespace {
-				newRule.Source.NamespaceSelector = selectNamespaceByName(erpp.endpointNamespace)
-			}
-			newRule.Source.Selector = rule.selector.Expression()
+			newRule.Source.NamespaceSelector = selKey.namespaceSelector
+			newRule.Source.Selector = selKey.endpointSelector
 		}
 		rules = append(rules, newRule)
 	}
