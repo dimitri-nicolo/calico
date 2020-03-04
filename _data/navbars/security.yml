@@ -130,8 +130,6 @@ section:
       path: /security/logs/elastic/filtering
     - title: Filter out DNS logs
       path: /security/logs/elastic/filtering-dns
-    - title: Trace and block external IP addresses
-      path: /security/logs/elastic/ingress
   - title: iptables logs
     path: /security/logs/iptables
 - title: Threat detection and prevention
@@ -156,6 +154,8 @@ section:
     path: /security/threat-detection-and-prevention/suspicious-IPs
   - title: Trace and block suspicious domains
     path: /security/threat-detection-and-prevention/suspicious-domains
+  - title: Trace and block external IP addresses
+    path: /security/logs/elastic/ingress  
   - title: Tor-VPN feeds and Dashboard
     path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
 - title: Compliance reports
