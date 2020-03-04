@@ -89,7 +89,16 @@ var _ = Describe("Policy Recommendation Engine", func() {
 				{flowPod1RedToPod2Allow443ReporterSource, false},
 				{flowPod1RedToPod2Allow443ReporterDestination, true},
 			},
-			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod1ToPod2}),
+			[]*v3.StagedNetworkPolicy{egressNetworkPolicyNamespace1Pod1ToPod2}),
+		Entry("recommend a policy with ingress rule for a flow betwen 2 endpoints with a non overlapping label - and matching source endpoint",
+			pod2Aggr, namespace1, pod2, defaultTier, nil,
+			[]flowWithError{
+				{flowPod1BlueToPod2Allow443ReporterSource, true},
+				{flowPod1BlueToPod2Allow443ReporterDestination, false},
+				{flowPod1RedToPod2Allow443ReporterSource, true},
+				{flowPod1RedToPod2Allow443ReporterDestination, false},
+			},
+			[]*v3.StagedNetworkPolicy{ingressNetworkPolicyNamespace1Pod1ToPod2}),
 		Entry("recommend a policy with egress rule for a flow betwen 2 endpoints and external network and matching source endpoint",
 			pod1Aggr, namespace1, pod1, defaultTier, nil,
 			[]flowWithError{
@@ -130,6 +139,22 @@ var _ = Describe("Policy Recommendation Engine", func() {
 				{flowGlobalNetworkSet1ToPod3Allow5432ReporterDestination, false},
 			},
 			[]*v3.StagedNetworkPolicy{networkPolicyNamespace1Pod3}),
+		Entry("recommend a policy with ingress rule for a flow betwen 3 endpoints with no intersectings label - and matching destination endpoint",
+			pod3Aggr, namespace2, pod3, defaultTier, nil,
+			[]flowWithError{
+				{flowPod4Rs1ToPod3Allow5432ReporterDestination, false},
+				{flowPod4Rs2ToPod3Allow5432ReporterDestination, false},
+			},
+			[]*v3.StagedNetworkPolicy{ingressNetworkPolicyToNamespace2Pod3FromPod4Port5432}),
+		Entry("recommend a policy with ingress rule for a flow betwen 3 endpoints with no intersectings label - and matching destination endpoint and 2 ports",
+			pod3Aggr, namespace2, pod3, defaultTier, nil,
+			[]flowWithError{
+				{flowPod4Rs1ToPod3Allow5432ReporterDestination, false},
+				{flowPod4Rs2ToPod3Allow5432ReporterDestination, false},
+				{flowPod4Rs1ToPod3Allow8080ReporterDestination, false},
+				{flowPod4Rs2ToPod3Allow8080ReporterDestination, false},
+			},
+			[]*v3.StagedNetworkPolicy{ingressNetworkPolicyToNamespace2Pod3FromPod4Port5432And8080}),
 	)
 	It("should reject flows that don't match endpoint name and namaespace", func() {
 		By("Initializing a recommendationengine with namespace and name")
