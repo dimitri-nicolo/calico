@@ -903,9 +903,8 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			queryMap := queryInf.(map[string]interface{})
 			boolQueryMap := queryMap["bool"].(map[string]interface{})
-			boolQueryFilterMap := boolQueryMap["filter"].(map[string]interface{})
-			nestedBoolQueryMap := boolQueryFilterMap["bool"].(map[string]interface{})
-			Expect(len(nestedBoolQueryMap)).To(BeNumerically("==", 2))
+			boolQueryShouldQueries := boolQueryMap["should"].([]interface{})
+			Expect(boolQueryShouldQueries).To(HaveLen(2))
 		})
 
 		It("should return a query with filters", func() {
@@ -924,8 +923,62 @@ var _ = Describe("Test /flowLogNames endpoint functions", func() {
 			queryMap := queryInf.(map[string]interface{})
 			boolQueryMap := queryMap["bool"].(map[string]interface{})
 			boolQueryFilterMap := boolQueryMap["filter"].(map[string]interface{})
+			boolQueryShouldQueries := boolQueryMap["should"].([]interface{})
 			nestedBoolQueryMap := boolQueryFilterMap["bool"].(map[string]interface{})
-			Expect(len(nestedBoolQueryMap)).To(BeNumerically("==", 3))
+			Expect(nestedBoolQueryMap).To(HaveLen(1))
+			Expect(boolQueryShouldQueries).To(HaveLen(2))
+		})
+
+		It("should return a query with endpoint filters", func() {
+			By("Creating params with type filters")
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+				SourceType:  []string{"net"},
+				DestType:    []string{"wep"},
+			}
+
+			query := buildNamesQuery(params)
+			queryInf, err := query.Source()
+			Expect(err).To(Not(HaveOccurred()))
+			queryMap := queryInf.(map[string]interface{})
+			boolQueryMap := queryMap["bool"].(map[string]interface{})
+			boolQueryShouldQueries := boolQueryMap["should"].([]interface{})
+			Expect(boolQueryShouldQueries).To(HaveLen(2))
+		})
+
+		It("should return a query with label filters", func() {
+			By("Creating params with type filters")
+			params := &FlowLogNamesParams{
+				Limit:       2000,
+				Prefix:      "",
+				ClusterName: "",
+				Namespace:   "",
+				SourceLabels: []LabelSelector{
+					LabelSelector{
+						Key:      "app",
+						Operator: "=",
+						Values:   []string{"test-app"},
+					},
+				},
+				DestLabels: []LabelSelector{
+					LabelSelector{
+						Key:      "otherapp",
+						Operator: "=",
+						Values:   []string{"not-test-app"},
+					},
+				},
+			}
+
+			query := buildNamesQuery(params)
+			queryInf, err := query.Source()
+			Expect(err).To(Not(HaveOccurred()))
+			queryMap := queryInf.(map[string]interface{})
+			boolQueryMap := queryMap["bool"].(map[string]interface{})
+			boolQueryShouldQueries := boolQueryMap["should"].([]interface{})
+			Expect(boolQueryShouldQueries).To(HaveLen(2))
 		})
 	})
 
