@@ -29,7 +29,7 @@ func MustLoadReportConfig(cfg *config.Config) *Config {
 
 	reportCfg.Report, err = client.GlobalReports().Get(reportCfg.ReportName, metav1.GetOptions{})
 	if err != nil {
-		log.Panicf("Global report %s not found.", reportCfg.ReportName)
+		log.WithError(err).Panicf("Global report %s not found.", reportCfg.ReportName)
 	}
 
 	reportCfg.ReportType, err = client.GlobalReportTypes().Get(reportCfg.Report.Spec.ReportType, metav1.GetOptions{})
