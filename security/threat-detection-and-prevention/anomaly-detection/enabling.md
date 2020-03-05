@@ -13,6 +13,17 @@ allows users to search and visualize traffic patterns as opposed to individual c
 
 However, anomaly detection requires that additional flow data be stored. To do so, set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConfiguration][felixconfig].
 
+## Anomaly detection memory requirements
+
+We recommend the following minimum memory requirements for your Elasticsearch cluster, depending on how many anomaly detection jobs you intend to run concurrently:
+|Number of jobs|Minimum memory (GB)|
+|:---|:---|
+|1|4|
+|2|8|
+|3-4|16|
+|5-7|32|
+See [adjusting LogStorage]({{site.baseurl}}/maintenance/adjust-log-storage-size) to change the Elasticsearch cluster memory.
+
 ## Enabling anomaly detection jobs
 
 Anomaly detection jobs are included as part of standard {{site.prodname}} installation. You can control
