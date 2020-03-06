@@ -111,10 +111,11 @@ spec:
 {{site.prodname}} includes a set of Alert templates. These are used
 by the {{site.prodname}} Manager to create alerts
 for common tasks that can then be modified to suit your needs. They
-are identical to GlobalAlerts with the addition of the `summary` field.
-The `summary` field is a human-readable description of the template
-that is displayed in the user interface, as opposed to `description`
-which is a template that should contain variable substitutions.
+are identical to GlobalAlerts with the addition of the optional `summary`
+field. The `summary` field is a human-readable description of the
+template that is displayed in the user interface, as opposed to
+`description` which is a template that should contain variable
+substitutions.
 
 ### Above and beyond
 
