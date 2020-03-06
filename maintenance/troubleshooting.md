@@ -219,3 +219,12 @@ GlobalAlerts should consider the size of the keyspace used in the
 Namespace should precede pod name. Avoid aggregating by source or destination
 port unless the query selects specific ports. Ephemeral ports used by clients
 number in the tens of thousands and a single host can trigger this condition.
+
+### Anomaly detection job does not start due to lack of resources
+
+Error when starting job from Machine Learning tab in Kibana:
+```
+<job_datafeed_id> failed to start
+```
+
+For anomaly detection jobs to start, the Elasticsearch cluster requires sufficient available memory. Please see Elasticsearch [sizing guidelines]({{site.baseurl}}/security/threat-detection-and-prevention/anomaly-detection/enabling).
