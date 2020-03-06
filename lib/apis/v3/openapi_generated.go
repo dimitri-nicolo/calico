@@ -5363,7 +5363,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"summary", "description", "severity", "dataSet"},
+				Required: []string{"description", "severity", "dataSet"},
 			},
 		},
 		Dependencies: []string{
