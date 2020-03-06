@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/license-agent/pkg/config"
@@ -26,7 +25,6 @@ func main() {
 
 	// Load env config
 	cfg := config.MustLoadConfig()
-	fmt.Println(cfg)
 
 	//Create New Instance of License reporter
 	lr := metrics.NewLicenseReporter("", "", "", "", cfg.MetricsPort, cfg.MetricPollTime)
