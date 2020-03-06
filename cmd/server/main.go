@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/license-agent/pkg/config"
 	"github.com/tigera/license-agent/pkg/metrics"
-	"github.com/tigera/ts-queryserver/pkg/clientmgr"
 	"os"
 )
 
@@ -24,12 +24,12 @@ func main() {
 	}
 	log.SetLevel(logLevel)
 
-	// Load the client configuration.  Currently we only support loading from environment.
-	cfg, err := clientmgr.LoadClientConfig("")
-	fmt.Println(cfg, err)
+	// Load env config
+	cfg := config.MustLoadConfig()
+	fmt.Println(cfg)
 
 	//Create New Instance of License reporter
-	lr := metrics.NewLicenseReporter("", "", "", "", 9081, 2)
+	lr := metrics.NewLicenseReporter("", "", "", "", cfg.MetricsPort, cfg.MetricPollTime)
 	//Start License metric server and scraper
 	lr.Start()
 }
