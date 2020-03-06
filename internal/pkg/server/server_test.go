@@ -3,12 +3,14 @@
 package server_test
 
 import (
+	"crypto"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"golang.org/x/crypto/ssh"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -636,6 +638,150 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 		})
+
+	})
+
+	It("should stop the servers", func(done Done) {
+		err := srv.Close()
+		Expect(err).NotTo(HaveOccurred())
+		wg.Wait()
+		close(done)
+	})
+})
+
+var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
+	var (
+		err    error
+		wg     sync.WaitGroup
+		srv    *server.Server
+		lisTun net.Listener
+	)
+	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+	watchSync := make(chan error)
+
+	defaultServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	startServer := func(withTunnelCreds bool, opts ...server.Option) {
+		var e error
+
+		lisTun, e = net.Listen("tcp", "localhost:0")
+		Expect(e).NotTo(HaveOccurred())
+
+		defaultURL, e := url.Parse(defaultServer.URL)
+		Expect(e).NotTo(HaveOccurred())
+
+		defaultProxy, e := proxy.New([]proxy.Target{
+			{
+				Path: "/",
+				Dest: defaultURL,
+			},
+			{
+				Path: "/compliance/",
+				Dest: defaultURL,
+			},
+		})
+		Expect(e).NotTo(HaveOccurred())
+
+		tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
+			`^/$`,
+			`^/some/path$`,
+		})
+
+		if withTunnelCreds {
+			opts = append(opts,
+				server.WithKeepClusterKeys(),
+				server.WithAuthentication(&rest.Config{}),
+				server.WithDefaultProxy(defaultProxy),
+				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithWatchAdded(),
+			)
+		} else {
+			opts = append(opts,
+				server.WithKeepClusterKeys(),
+				server.WithTunnelCreds(srvCert, srvPrivKey),
+				server.WithAuthentication(&rest.Config{}),
+				server.WithDefaultProxy(defaultProxy),
+				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithWatchAdded(),
+			)
+		}
+
+		srv, err = server.New(
+			k8sAPI,
+			opts...,
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = srv.ServeTunnelsTLS(lisTun)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = srv.WatchK8sWithSync(watchSync)
+		}()
+
+		k8sAPI.WaitForManagedClustersWatched()
+	}
+
+	JustBeforeEach(func() {
+		startServer(false)
+	})
+
+	JustAfterEach(func() {
+		By("Closing the server")
+		err := srv.Close()
+		Expect(err).NotTo(HaveOccurred())
+		wg.Wait()
+	})
+
+	It("shouldn't be possible to open a tunnel using client cert as the tunnel cert", func() {
+		var err error
+
+		By("adding ClusterA")
+
+		Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
+		Expect(<-watchSync).NotTo(HaveOccurred())
+
+		By("adding a managed cluster named voltron to spoof the management cluster")
+		Expect(k8sAPI.AddCluster("voltron", "voltron")).ShouldNot(HaveOccurred())
+		Expect(<-watchSync).NotTo(HaveOccurred())
+
+		By("Trying to connect clusterA to the fake voltron")
+		certPemA, keyPemA, err := srv.ClusterCreds(clusterA)
+		Expect(err).NotTo(HaveOccurred())
+
+		certPem, keyPem, err := srv.ClusterCreds("voltron")
+		Expect(err).NotTo(HaveOccurred())
+
+		//close the server
+		err = srv.Close()
+		Expect(err).NotTo(HaveOccurred())
+		wg.Wait()
+
+		k, _ := ssh.ParseRawPrivateKey(keyPem)
+		block, _ := pem.Decode(certPem)
+		c, _ := x509.ParseCertificate(block.Bytes)
+
+		// Restart the server with the guardian certificates as the new tunnel credentials
+		startServer(true, server.WithTunnelCreds(c, k.(crypto.Signer)))
+
+		// Try to connect clusterA to the new fake voltron, should fail
+		cert, err := tls.X509KeyPair(certPemA, keyPemA)
+		Expect(err).NotTo(HaveOccurred())
+
+		cfg := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			RootCAs:      rootCAs,
+			ServerName:   "voltron",
+		}
+
+		_, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+		Expect(err).Should(MatchError("tcp.tls.Dial failed: x509: certificate specifies an incompatible key usage"))
 	})
 
 	It("should stop the servers", func(done Done) {
