@@ -640,6 +640,6 @@ var _ = DescribeTable("GlobalAlertTemplate Validator",
 				DataSet:     "dns",
 			},
 		},
-		false,
+		true,
 	),
 )
