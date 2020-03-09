@@ -83,19 +83,19 @@ var (
 	// Hostname  have to be valid ipv4, ipv6 or strings up to 64 characters.
 	prometheusHostRegexp = regexp.MustCompile(`^[a-zA-Z0-9:._+-]{1,64}$`)
 
-	interfaceRegex        = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,15}$")
-	ifaceFilterRegex      = regexp.MustCompile("^[a-zA-Z0-9:._+-]{1,15}$")
-	actionRegex           = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
-	protocolRegex         = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
-	ipipModeRegex         = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
-	vxlanModeRegex        = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
-	logLevelRegex         = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
+	interfaceRegex   = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,15}$")
+	ifaceFilterRegex = regexp.MustCompile("^[a-zA-Z0-9:._+-]{1,15}$")
+	actionRegex      = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
+	protocolRegex    = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
+	ipipModeRegex    = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
+	vxlanModeRegex   = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
+	logLevelRegex    = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
 
-	IPSeclogLevelRegex    = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
-	IPSecModeRegex        = regexp.MustCompile("^(PSK)$")
+	IPSeclogLevelRegex = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
+	IPSecModeRegex     = regexp.MustCompile("^(PSK)$")
 
-	bpfLogLevelRegex      = regexp.MustCompile("^(Debug|Info|Off)$")
-	bpfServiceModeRegex   = regexp.MustCompile("^(Tunnel|DSR)$")
+	bpfLogLevelRegex    = regexp.MustCompile("^(Debug|Info|Off)$")
+	bpfServiceModeRegex = regexp.MustCompile("^(Tunnel|DSR)$")
 
 	datastoreType         = regexp.MustCompile("^(etcdv3|kubernetes)$")
 	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
@@ -204,7 +204,6 @@ func init() {
 	registerFieldValidator("restartMode", RegexValidator("RestartMode", RestartModeRegex))
 	registerFieldValidator("birdGatewayMode", RegexValidator("BIRDGatewayMode", BIRDGatewayModeRegex))
 	registerFieldValidator("regexp", validateRegexp)
-
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -516,6 +515,7 @@ func validateIPSecMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPSec mode: %s", s)
 	return IPSecModeRegex.MatchString(s)
+}
 
 func validateBPFLogLevel(fl validator.FieldLevel) bool {
 	s := fl.Field().String()

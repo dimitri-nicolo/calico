@@ -1254,6 +1254,26 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.BPFEnabled != nil {
+		in, out := &in.BPFEnabled, &out.BPFEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.BPFConnectTimeLoadBalancingEnabled != nil {
+		in, out := &in.BPFConnectTimeLoadBalancingEnabled, &out.BPFConnectTimeLoadBalancingEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.BPFKubeProxyIptablesCleanupEnabled != nil {
+		in, out := &in.BPFKubeProxyIptablesCleanupEnabled, &out.BPFKubeProxyIptablesCleanupEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.BPFKubeProxyMinSyncPeriod != nil {
+		in, out := &in.BPFKubeProxyMinSyncPeriod, &out.BPFKubeProxyMinSyncPeriod
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.IPSecAllowUnsecuredTraffic != nil {
 		in, out := &in.IPSecAllowUnsecuredTraffic, &out.IPSecAllowUnsecuredTraffic
 		*out = new(bool)
@@ -2983,26 +3003,6 @@ func (in *NamesAndLabelsMatch) DeepCopyInto(out *NamesAndLabelsMatch) {
 		in, out := &in.Names, &out.Names
 		*out = make([]string, len(*in))
 		copy(*out, *in)
-	}
-	if in.BPFEnabled != nil {
-		in, out := &in.BPFEnabled, &out.BPFEnabled
-		*out = new(bool)
-		**out = **in
-	}
-	if in.BPFConnectTimeLoadBalancingEnabled != nil {
-		in, out := &in.BPFConnectTimeLoadBalancingEnabled, &out.BPFConnectTimeLoadBalancingEnabled
-		*out = new(bool)
-		**out = **in
-	}
-	if in.BPFKubeProxyIptablesCleanupEnabled != nil {
-		in, out := &in.BPFKubeProxyIptablesCleanupEnabled, &out.BPFKubeProxyIptablesCleanupEnabled
-		*out = new(bool)
-		**out = **in
-	}
-	if in.BPFKubeProxyMinSyncPeriod != nil {
-		in, out := &in.BPFKubeProxyMinSyncPeriod, &out.BPFKubeProxyMinSyncPeriod
-		*out = new(v1.Duration)
-		**out = **in
 	}
 	return
 }
