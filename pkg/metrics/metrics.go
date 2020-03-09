@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"context"
-	"fmt"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
