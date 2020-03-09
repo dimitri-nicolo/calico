@@ -14,11 +14,12 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	listMock "github.com/tigera/compliance/pkg/list/mock"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 
+	listMock "github.com/tigera/compliance/pkg/list/mock"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 const (
@@ -31,7 +32,10 @@ const (
 
 var _ = Describe("Test /flowLogs endpoint functions", func() {
 	var esClient lmaelastic.Client
-
+	rbacHelper := &testHelper{
+		action: "delete",
+		name:   "default.calico-node-alertmanager-mesh",
+	}
 	Context("Test that the validateFlowLogNamesRequest function behaves as expected", func() {
 		It("should return an errInvalidMethod when passed a request with an http method other than GET", func() {
 			By("Creating a request with a POST method")
@@ -330,7 +334,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit: 2,
 			}
 
-			searchResults, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient, nil)
+			searchResults, stat, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient)
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&lmaelastic.CompositeAggregationResults{}))
 			convertedResults := searchResults.(*lmaelastic.CompositeAggregationResults)
@@ -348,7 +353,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{malformedFlowsResponse})
 			params := &FlowLogsParams{}
 
-			searchResults, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient, nil)
+			searchResults, stat, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient)
+			Expect(stat).To(Equal(http.StatusInternalServerError))
 			Expect(err).To(HaveOccurred())
 			Expect(searchResults).To(BeNil())
 		})
@@ -374,7 +380,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit:         1,
 			}
 
-			searchResults, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient, pipClient)
+			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
 			convertedResults := searchResults.(*pip.FlowLogResults)
@@ -404,7 +411,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit:         2,
 			}
 
-			searchResults, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient, pipClient)
+			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
 			convertedResults := searchResults.(*pip.FlowLogResults)
@@ -433,7 +441,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				PolicyPreview: preview,
 			}
 
-			searchResults, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient, pipClient)
+			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&pip.FlowLogResults{}))
 			convertedResults := searchResults.(*pip.FlowLogResults)
@@ -452,7 +461,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				PolicyPreview: &PolicyPreview{},
 			}
 
-			searchResults, err := getFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, esClient, pipClient)
+			searchResults, stat, err := getPIPFlowLogsFromElastic(lmaelastic.NewFlowFilterIncludeAll(), params, pipClient, rbacHelper)
+			Expect(stat).To(Equal(http.StatusBadRequest))
 			Expect(err).To(HaveOccurred())
 			Expect(searchResults).To(BeNil())
 		})
@@ -468,7 +478,6 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			listSrc := listMock.NewSource()
 			listSrc.Initialize(time.Now())
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
-			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
 				Limit: 1,
 			}
@@ -478,7 +487,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				"pods": {""}, "tier.networkpolicies": {""}, "networkpolicies": {""}, "networksets": {""}, "globalnetworksets": {""}},
 			))
 
-			searchResults, err := getFlowLogsFromElastic(flowFilter, params, esClient, pipClient)
+			searchResults, stat, err := getFlowLogsFromElastic(flowFilter, params, esClient)
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&lmaelastic.CompositeAggregationResults{}))
 			convertedResults := searchResults.(*lmaelastic.CompositeAggregationResults)
@@ -515,7 +525,8 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				"pods": {""}, "tier.networkpolicies": {""}, "networkpolicies": {""}, "networksets": {""}, "globalnetworksets": {""}},
 			))
 
-			searchResults, err := getFlowLogsFromElastic(flowFilter, params, esClient, pipClient)
+			searchResults, stat, err := getPIPFlowLogsFromElastic(flowFilter, params, pipClient, rbacHelper)
+			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 
 			// Check the results.
@@ -550,4 +561,16 @@ func newTestRequestWithParams(method string, key string, values []string) (*http
 	}
 	req.URL.RawQuery = q.Encode()
 	return req, nil
+}
+
+// Fake rbacHelper that satisfies the interface
+type testHelper struct {
+	action string
+	name   string
+}
+
+func (t *testHelper) CheckCanPreviewPolicyAction(action string, policy resources.Resource) (status int, err error) {
+	Expect(t.action).To(Equal(action))
+	Expect(t.name).To(Equal(policy.GetObjectMeta().GetName()))
+	return 200, nil
 }

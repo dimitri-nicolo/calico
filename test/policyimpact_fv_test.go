@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -14,11 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-//TODO: Remove these tests, or update to use the new API.  To do the latter we need to:
-// -  Fix up RBAC checks for PIP
-// -  Fix up these tests to do valid configuration changes.
-
-var _ = PDescribe("PolicyimpactFV Elasticsearch", func() {
+var _ = Describe("PolicyimpactFV Elasticsearch PIP", func() {
 
 	proxyScheme := getEnvOrDefaultString("TEST_PROXY_SCHEME", "https")
 	proxyHost := getEnvOrDefaultString("TEST_PROXY_HOST", "127.0.0.1:8000")
@@ -40,20 +37,17 @@ var _ = PDescribe("PolicyimpactFV Elasticsearch", func() {
 
 	// We only verify access from the clients point of view.
 	DescribeTable("Users can only preview policy changes they can perform ",
-		func(userAuth authInjector, postRequestBody string, expectedStatusCode int) {
+		func(userAuth authInjector, params url.Values, expectedStatusCode int) {
 
 			//build the request
 			// for policy impact the es query is always a post to flows
-			requestVerb := http.MethodPost
-			reqPath := "tigera_secure_ee_flows*/_search"
-			urlStr := fmt.Sprintf("%s://%s/%s", proxyScheme, proxyHost, reqPath)
-			bodyreader := strings.NewReader(postRequestBody)
-			req, err := http.NewRequest(requestVerb, urlStr, bodyreader)
+			requestVerb := http.MethodGet
+			reqPath := "flowLogs"
+			urlStr := fmt.Sprintf("%s://%s/%s?%s", proxyScheme, proxyHost, reqPath, params.Encode())
+			req, err := http.NewRequest(requestVerb, urlStr, nil)
 			Expect(err).To(BeNil())
 
-			//add the content and auth headers
-			req.Header.Add("content-length", fmt.Sprintf("%d", len(postRequestBody)))
-			req.Header.Add("Content-Type", "application/json")
+			//add the auth header
 			userAuth.setAuthHeader(req)
 
 			//make the request (the item under test)
@@ -64,11 +58,14 @@ var _ = PDescribe("PolicyimpactFV Elasticsearch", func() {
 			Expect(resp.StatusCode).To(Equal(expectedStatusCode))
 
 		},
-		Entry("Malformed request errors correctly", authFullCRUDDefault, badBody, http.StatusBadRequest),
-		Entry("Invalid action errors correctly", authReadCreateDefault, bodyInvalidAction, http.StatusBadRequest),
-		Entry("Missing action errors correctly", authReadCreateDefault, bodyMissingAction, http.StatusBadRequest),
-		Entry("Missing policy errors correctly", authReadCreateDefault, bodyMissingPolicy, http.StatusBadRequest),
-		Entry("Policy with no metadata errors correctly", authReadCreateDefault, bodyNoMetaPolicy, http.StatusBadRequest),
+
+		Entry("Full CRUD user can preview Calico policy create in default", authFullCRUDDefault, bodyCreateDefaultCalico, http.StatusOK),
+		Entry("Full CRUD user can preview Calico policy update in default", authFullCRUDDefault, bodyUpdateDefaultCalico, http.StatusOK),
+		Entry("Full CRUD user can preview Calico policy delete in default", authFullCRUDDefault, bodyDeleteDefaultCalico, http.StatusOK),
+
+		Entry("Malformed request errors correctly", authFullCRUDDefault, badParams, http.StatusBadRequest),
+		Entry("Invalid action errors correctly", authReadCreateDefault, bodyInvalidAction, http.StatusUnprocessableEntity),
+		Entry("Missing action errors correctly", authReadCreateDefault, bodyMissingAction, http.StatusUnprocessableEntity),
 
 		Entry("Full CRUD user can preview k8s policy create in default", authFullCRUDDefault, bodyCreateDefaultK8s, http.StatusOK),
 		Entry("Full CRUD user can preview k8s policy update in default", authFullCRUDDefault, bodyUpdateDefaultK8s, http.StatusOK),
@@ -152,20 +149,72 @@ var _ = PDescribe("PolicyimpactFV Elasticsearch", func() {
 	)
 })
 
-func modBody(b string, act string, ns string) string {
-	b = strings.Replace(b, "@@ACTION@@", act, -1)
-	b = strings.Replace(b, "@@NAMESPACE@@", ns, -1)
-	return b
+const (
+	apiCalico = "projectcalico.org/v3"
+	apiK8s    = "networking.k8s.io/v1"
+)
+
+func params(api, kind, verb, ns, name string) url.Values {
+	var policy string
+	if api == apiCalico {
+		policy = strings.Replace(validCalicoPolicy, "API", api, -1)
+	} else {
+		policy = strings.Replace(validK8sPolicy, "API", api, -1)
+	}
+
+	policy = strings.Replace(policy, "KIND", kind, -1)
+	policy = strings.Replace(policy, "VERB", verb, -1)
+	policy = strings.Replace(policy, "NAMESPACE", ns, -1)
+	policy = strings.Replace(policy, "@NAME", name, -1)
+	pars := url.Values{
+		"policyPreview": {policy},
+	}
+
+	return pars
 }
 
-func patchVars(b string) string {
-	b = strings.Replace(b, "@@QUERY@@", query, -1)
-	b = strings.Replace(b, "@@PA_CALICO@@", calicoPolicyActions, -1)
-	b = strings.Replace(b, "@@PA_K8S@@", k8sPolicyActions, -1)
-	b = strings.Replace(b, "@@PA_GLOBAL@@", globalPolicyActions, -1)
-	b = strings.Replace(b, "@@NO_META_POLICY@@", policyNoMetadata, -1)
-	return b
-}
+var validCalicoPolicy = `{
+  "networkPolicy": {
+    "apiVersion": "API",
+    "kind": "KIND",
+    "metadata": {
+      "name": "default.@NAME",
+      "uid": "",
+      "namespace": "NAMESPACE"
+    },
+    "spec": {
+      "ingress": [
+        {
+          "action": "Deny",
+          "destination": {},
+          "source": {
+            "selector": "all()"
+          }
+        }
+      ],
+      "order": 1100,
+      "selector": "k8s-app == \"compliance-server\"",
+      "tier": "default"
+    }
+  },
+  "verb": "VERB"
+}`
+
+var validK8sPolicy = `{
+  "networkPolicy": {
+    "apiVersion": "API",
+    "kind": "KIND",
+    "metadata": {
+      "name": "default.@NAME",
+      "uid": "",
+      "namespace": "NAMESPACE"
+    },
+    "spec": {
+      "podSelector": {}
+    }
+  },
+  "verb": "VERB"
+}`
 
 var (
 	authReadOnlyDefault   = basicAuthMech{"basicpolicyreadonly", "polreadonlypw"}
@@ -176,289 +225,35 @@ var (
 )
 
 var (
-	bodyCreateDefaultK8s = modBody(baseBodyK8s, "create", "default")
-	bodyUpdateDefaultK8s = modBody(baseBodyK8s, "update", "default")
-	bodyDeleteDefaultK8s = modBody(baseBodyK8s, "delete", "default")
-	bodyCreateAltNSK8s   = modBody(baseBodyK8s, "create", "alt-ns")
-	bodyUpdateAltNSK8s   = modBody(baseBodyK8s, "update", "alt-ns")
-	bodyDeleteAltNSK8s   = modBody(baseBodyK8s, "delete", "alt-ns")
+	bodyCreateDefaultK8s = params(apiK8s, "NetworkPolicy", "create", "default", "p-name")
+	bodyUpdateDefaultK8s = params(apiK8s, "NetworkPolicy", "update", "default", "p-name")
+	bodyDeleteDefaultK8s = params(apiK8s, "NetworkPolicy", "delete", "default", "p-name")
 
-	bodyCreateDefaultCalico = modBody(baseBodyCalico, "create", "default")
-	bodyUpdateDefaultCalico = modBody(baseBodyCalico, "update", "default")
-	bodyDeleteDefaultCalico = modBody(baseBodyCalico, "delete", "default")
+	bodyCreateAltNSK8s = params(apiK8s, "NetworkPolicy", "create", "alt-ns", "p-name")
+	bodyUpdateAltNSK8s = params(apiK8s, "NetworkPolicy", "update", "alt-ns", "p-name")
+	bodyDeleteAltNSK8s = params(apiK8s, "NetworkPolicy", "delete", "alt-ns", "p-name")
 
-	bodyCreateDefaultDifferentCalico = strings.Replace(bodyCreateDefaultCalico, "default.p-name", "default.different", -1)
-	bodyUpdateDefaultDifferentCalico = strings.Replace(bodyUpdateDefaultCalico, "default.p-name", "default.different", -1)
-	bodyDeleteDefaultDifferentCalico = strings.Replace(bodyDeleteDefaultCalico, "default.p-name", "default.different", -1)
+	bodyCreateDefaultCalico = params(apiCalico, "NetworkPolicy", "create", "default", "p-name")
+	bodyUpdateDefaultCalico = params(apiCalico, "NetworkPolicy", "update", "default", "p-name")
+	bodyDeleteDefaultCalico = params(apiCalico, "NetworkPolicy", "delete", "default", "p-name")
 
-	bodyCreateAltNSCalico = modBody(baseBodyCalico, "create", "alt-ns")
-	bodyUpdateAltNSCalico = modBody(baseBodyCalico, "update", "alt-ns")
-	bodyDeleteAltNSCalico = modBody(baseBodyCalico, "delete", "alt-ns")
+	bodyCreateDefaultDifferentCalico = params(apiCalico, "NetworkPolicy", "create", "default", "different")
+	bodyUpdateDefaultDifferentCalico = params(apiCalico, "NetworkPolicy", "update", "default", "different")
+	bodyDeleteDefaultDifferentCalico = params(apiCalico, "NetworkPolicy", "delete", "default", "different")
 
-	bodyCreateDefaultGlobal = modBody(baseBodyGlobal, "create", "")
-	bodyUpdateDefaultGlobal = modBody(baseBodyGlobal, "update", "")
-	bodyDeleteDefaultGlobal = modBody(baseBodyGlobal, "delete", "")
+	bodyCreateAltNSCalico = params(apiCalico, "NetworkPolicy", "create", "alt-ns", "p-name")
+	bodyUpdateAltNSCalico = params(apiCalico, "NetworkPolicy", "update", "alt-ns", "p-name")
+	bodyDeleteAltNSCalico = params(apiCalico, "NetworkPolicy", "delete", "alt-ns", "p-name")
 
-	bodyMissingAction = modBody(strings.Replace(baseBodyCalico, ",\"action\":\"@@ACTION@@\"", "", -1), "", "")
-	bodyInvalidAction = modBody(baseBodyCalico, "foo", "")
-	bodyMissingPolicy = patchVars("{@@QUERY@@,\"resourceActions\":[\"action\":\"create\"}]  ")
-	bodyNoMetaPolicy  = patchVars("{@@QUERY@@,@@NO_META_POLICY@@}")
+	bodyCreateDefaultGlobal = params(apiCalico, "GlobalNetworkPolicy", "create", "default", "p-name")
+	bodyUpdateDefaultGlobal = params(apiCalico, "GlobalNetworkPolicy", "update", "default", "p-name")
+	bodyDeleteDefaultGlobal = params(apiCalico, "GlobalNetworkPolicy", "delete", "default", "p-name")
+
+	bodyMissingAction = params(apiCalico, "NetworkPolicy", "", "default", "p-name")
+	bodyInvalidAction = params(apiCalico, "NetworkPolicy", "pancakes", "default", "p-name")
 )
 
-var (
-	baseBodyK8s    = patchVars("{@@QUERY@@,@@PA_K8S@@}")
-	baseBodyCalico = patchVars("{@@QUERY@@,@@PA_CALICO@@}")
-	baseBodyGlobal = patchVars("{@@QUERY@@,@@PA_GLOBAL@@}")
-)
-
-const (
-	badBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
-"resourceActions":[{"resource":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`
-
-	policyNoMetadata = `"resourceActions":[{"resource":{
-	"apiVersion": "projectcalico.org/v3",
-	"kind":"NetworkPolicy",
-	"spec":{
-		"tier":"default",
-		"order":1,
-		"selector":"a|bogus|selector|string"
-	}
+var badParams = url.Values{
+	"policyPreview": {`{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
+	"resourceActions":[{"resource":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`},
 }
-,"action":"create"}]`
-
-	calicoPolicyActions = `"resourceActions":[{"resource":{
-	"apiVersion": "projectcalico.org/v3",
-	"kind":"NetworkPolicy",
-	"metadata":{
-		"name":"default.p-name",
-		"generateName":"p-gen-name",
-		"namespace":"@@NAMESPACE@@",
-		"selfLink":"p-self-link",
-		"resourceVersion":"p-res-ver",
-		"creationTimestamp": null
-	},
-	"spec":{
-		"tier":"default",
-		"order":1,
-		"selector":"a|bogus|selector|string"
-	}
-}
-,"action":"@@ACTION@@"}]`
-
-	k8sPolicyActions = `"resourceActions":[{"resource":{
-	"apiVersion": "networking.k8s.io/v1",
-	"kind": "NetworkPolicy",
-	"metadata": {
-		"name": "a-kubernetes-network-policy",
-		"uid": "7dfbb617-a1ea-11e9-bd43-001c42e3cabd",
-		"namespace": "@@NAMESPACE@@",
-		"resourceVersion": "758945",
-		"creationTimestamp": null
-	},
-	"spec": {
-		"podSelector": {},
-		"ingress": [
-		{"from": [{"podSelector": {"matchLabels": {"color": "blue"}}}],
-			"ports": [{"port": 111,"protocol": "TCP"}]},
-		{"from": [{"namespaceSelector": {"matchExpressions": [{
-			"key": "name","operator": "In","values": ["es-client-tigera-elasticsearch"]}
-		]}}, {"podSelector": {}}]}],
-		"policyTypes": ["Ingress"]
-	}
-}
-,"action":"@@ACTION@@"}]`
-
-	globalPolicyActions = `"resourceActions":[{"resource":{
-	"apiVersion": "projectcalico.org/v3",
-	"kind": "GlobalNetworkPolicy",
-	"metadata": {
-		"name": "test.a-global-policy",
-		"creationTimestamp": null
-	},
-	"spec": {
-		"tier": "test",
-		"order": 100,
-		"selector": "all()",
-		"ingress": [{
-			"action": "Allow",
-			"source": {	"namespaceSelector": "name == \"kibana-tigera-elasticsearch\"" },
-			"destination": {}
-		}],
-		"types": ["Ingress"]
-	}
-}
-,"action":"@@ACTION@@"}]`
-
-	// query JSON - we don't add time query for the FVs at the moment.
-	query = `"query": {
-    "bool": {
-      "must": [
-        {
-          "terms": {
-            "source_type": [
-              "net",
-              "ns",
-              "wep",
-              "hep"
-            ]
-          }
-        },
-        {
-          "terms": {
-            "dest_type": [
-              "net",
-              "ns",
-              "wep",
-              "hep"
-            ]
-          }
-        }
-      ]
-    }
-  },
-  "size": 0,
-  "aggs": {
-    "flog_buckets": {
-      "composite": {
-        "size": 1000,
-        "sources": [
-          {
-            "source_type": {
-              "terms": {
-                "field": "source_type"
-              }
-            }
-          },
-          {
-            "source_namespace": {
-              "terms": {
-                "field": "source_namespace"
-              }
-            }
-          },
-          {
-            "source_name": {
-              "terms": {
-                "field": "source_name_aggr"
-              }
-            }
-          },
-          {
-            "dest_type": {
-              "terms": {
-                "field": "dest_type"
-              }
-            }
-          },
-          {
-            "dest_namespace": {
-              "terms": {
-                "field": "dest_namespace"
-              }
-            }
-          },
-          {
-            "dest_name": {
-              "terms": {
-                "field": "dest_name_aggr"
-              }
-            }
-          },
-          {
-            "reporter": {
-              "terms": {
-                "field": "reporter"
-              }
-            }
-          },
-          {
-            "action": {
-              "terms": {
-                "field": "action"
-              }
-            }
-          }
-        ]
-      },
-      "aggs": {
-        "policies": {
-          "nested": {
-            "path": "policies"
-          },
-          "aggs": {
-            "by_tiered_policy": {
-              "terms": {
-                "field": "policies.all_policies"
-              }
-            }
-          }
-        },
-        "source_labels": {
-          "nested": {
-            "path": "source_labels"
-          },
-          "aggs": {
-            "by_kvpair": {
-              "terms": {
-                "field": "source_labels.labels"
-              }
-            }
-          }
-        },
-        "dest_labels": {
-          "nested": {
-            "path": "dest_labels"
-          },
-          "aggs": {
-            "by_kvpair": {
-              "terms": {
-                "field": "dest_labels.labels"
-              }
-            }
-          }
-        },
-        "sum_num_flows_started": {
-          "sum": {
-            "field": "num_flows_started"
-          }
-        },
-        "sum_num_flows_completed": {
-          "sum": {
-            "field": "num_flows_completed"
-          }
-        },
-        "sum_packets_in": {
-          "sum": {
-            "field": "packets_in"
-          }
-        },
-        "sum_bytes_in": {
-          "sum": {
-            "field": "bytes_in"
-          }
-        },
-        "sum_packets_out": {
-          "sum": {
-            "field": "packets_out"
-          }
-        },
-        "sum_bytes_out": {
-          "sum": {
-            "field": "bytes_out"
-          }
-        },
-        "sum_http_requests_allowed_in": {
-          "sum": {
-            "field": "http_requests_allowed_in"
-          }
-        },
-        "sum_http_requests_denied_in": {
-          "sum": {
-            "field": "http_requests_denied_in"
-          }
-        }
-      }
-    }
-  }
-`
-)

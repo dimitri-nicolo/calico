@@ -126,7 +126,7 @@ func Start(cfg *Config) error {
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
+					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(

@@ -145,12 +145,20 @@ func FlowLogsHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client, 
 			}
 			return
 		}
-
 		flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req}))
-		response, err := getFlowLogsFromElastic(flowFilter, params, esClient, pip)
+		var response interface{}
+		var stat int
+		if params.PolicyPreview == nil {
+			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
+		} else {
+			factory := NewStandardPolicyImpactRbacHelperFactory(auth)
+			rbacHelper := factory.NewPolicyImpactRbacHelper(req)
+			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
+		}
+
 		if err != nil {
 			log.WithError(err).Info("Error getting search results from elastic")
-			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), stat)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -379,46 +387,81 @@ func buildLabelSelectorFilter(labelSelectors []LabelSelector, path string, terms
 	return elastic.NewNestedQuery(path, elastic.NewBoolQuery().Filter(selectorQueries...))
 }
 
-// if a policy preview is provided use pip to perform the ES query and return flows with the policy applied
-// otherwise just perform a regular ES query and return the results
-func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client, pip pippkg.PIP) (interface{}, error) {
+// This method will take a look at the request parameters made to the /flowLogs endpoint and return the results from elastic.
+func getFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, esClient lmaelastic.Client) (interface{}, int, error) {
 	query := buildFlowLogsQuery(params)
+	index := getClusterFlowIndex(params.ClusterName)
+	result, err := lmaelastic.GetCompositeAggrFlows(
+		context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return result, http.StatusOK, nil
+}
 
+func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
+	query := buildFlowLogsQuery(params)
 	index := getClusterFlowIndex(params.ClusterName)
 
-	if params.PolicyPreview == nil {
-		return lmaelastic.GetCompositeAggrFlows(
-			context.TODO(), 60*time.Second, esClient, query, index, flowFilter, params.Limit,
-		)
-	} else {
-		if params.PolicyPreview.NetworkPolicy == nil {
-			// Expect the policy preview to contain a network policy.
-			return nil, errors.New("no network policy specified in preview request")
-		}
-
-		policyChange := pippkg.ResourceChange{
-			Action:   params.PolicyPreview.Verb,
-			Resource: params.PolicyPreview.NetworkPolicy,
-		}
-
-		pipParams := &pippkg.PolicyImpactParams{
-			Query:           query,
-			DocumentIndex:   index,
-			ResourceActions: []pippkg.ResourceChange{policyChange},
-			Limit:           params.Limit,
-			ImpactedOnly:    params.PolicyPreview.ImpactedOnly,
-			FromTime:        params.startDateTime,
-			ToTime:          params.endDateTime,
-		}
-
-		pipResults, err := pip.GetFlows(context.TODO(), pipParams, flowFilter)
-		if err != nil {
-			return nil, err
-		}
-		return pipResults, nil
+	policyChange := pippkg.ResourceChange{
+		Action:   params.PolicyPreview.Verb,
+		Resource: params.PolicyPreview.NetworkPolicy,
 	}
+
+	return &pippkg.PolicyImpactParams{
+		Query:           query,
+		DocumentIndex:   index,
+		ResourceActions: []pippkg.ResourceChange{policyChange},
+		Limit:           params.Limit,
+		ImpactedOnly:    params.PolicyPreview.ImpactedOnly,
+		FromTime:        params.startDateTime,
+		ToTime:          params.endDateTime,
+	}
+}
+
+// This method will take a look at the request parameters made to the /flowLogs endpoint with pip settings,
+// verify RBAC based on the previewed settings and return the results from elastic.
+func getPIPFlowLogsFromElastic(flowFilter lmaelastic.FlowFilter, params *FlowLogsParams, pip pippkg.PIP, rbacHelper PolicyImpactRbacHelper) (interface{}, int, error) {
+
+	if params.PolicyPreview.NetworkPolicy == nil {
+		// Expect the policy preview to contain a network policy.
+		return nil, http.StatusBadRequest, errors.New("no network policy specified in preview request")
+	}
+
+	// This is a PIP request. Extract the PIP parameters.
+	pipParams := getPIPParams(params)
+
+	// Check for RBAC
+	for _, action := range pipParams.ResourceActions {
+		if action.Resource == nil {
+			return nil, http.StatusBadRequest, fmt.Errorf("invalid resource actions syntax: resource is missing from request")
+		}
+		if err := validateAction(action.Action); err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		if stat, err := rbacHelper.CheckCanPreviewPolicyAction(action.Action, action.Resource); err != nil {
+			return nil, stat, err
+		}
+	}
+
+	// Fetch results from Elasticsearch
+	response, err := pip.GetFlows(context.TODO(), pipParams, flowFilter)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return response, http.StatusOK, nil
 }
 
 func getClusterFlowIndex(cluster string) string {
 	return fmt.Sprintf("%s.%s.*", esflowIndexPrefix, cluster)
+}
+
+// validateAction checks that the action in a resource update is one of the expected actions. Any deviation from these
+// actions is considered a bad request (even if it is strictly a valid k8s action).
+func validateAction(action string) error {
+	switch strings.ToLower(action) {
+	case "create", "update", "delete":
+		return nil
+	}
+	return fmt.Errorf("invalid action '%s' in preview request", action)
 }
