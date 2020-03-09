@@ -728,6 +728,18 @@ func init() {
 		Entry("should reject an invalid DNSLogsFileAggregationKind value '2'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &two}, false),
 		Entry("should reject an invalid DNSLogsFileAggregationKind value '-1'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &minusOne}, false),
 
+		Entry("should reject an invalid BPFLogLevel value 'badVal'", api.FelixConfigurationSpec{BPFLogLevel: "badVal"}, false),
+		Entry("should accept a valid BPFLogLevel value 'Info'", api.FelixConfigurationSpec{BPFLogLevel: "Info"}, true),
+		Entry("should accept a valid BPFLogLevel value 'Debug'", api.FelixConfigurationSpec{BPFLogLevel: "Debug"}, true),
+		Entry("should accept a valid BPFLogLevel value 'Off'", api.FelixConfigurationSpec{BPFLogLevel: "Off"}, true),
+
+		Entry("should reject a valid BPFExternalServiceMode value 'Foo'", api.FelixConfigurationSpec{BPFExternalServiceMode: "Foo"}, false),
+		Entry("should accept a valid BPFExternalServiceMode value 'Tunnel'", api.FelixConfigurationSpec{BPFExternalServiceMode: "Tunnel"}, true),
+		Entry("should accept a valid BPFExternalServiceMode value 'DSR'", api.FelixConfigurationSpec{BPFExternalServiceMode: "DSR"}, true),
+
+		Entry("should reject an invalid BPFDataIfacePattern value '*'", api.FelixConfigurationSpec{BPFDataIfacePattern: "*"}, false),
+		Entry("should accept a valid BPFDataIfacePattern value 'eth.*'", api.FelixConfigurationSpec{BPFDataIfacePattern: "eth.*"}, true),
+
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
 		Entry("should accept protocol UDP", protocolFromString("UDP"), true),

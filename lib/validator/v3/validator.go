@@ -90,8 +90,13 @@ var (
 	ipipModeRegex         = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
 	vxlanModeRegex        = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
 	logLevelRegex         = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
+
 	IPSeclogLevelRegex    = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
 	IPSecModeRegex        = regexp.MustCompile("^(PSK)$")
+
+	bpfLogLevelRegex      = regexp.MustCompile("^(Debug|Info|Off)$")
+	bpfServiceModeRegex   = regexp.MustCompile("^(Tunnel|DSR)$")
+
 	datastoreType         = regexp.MustCompile("^(etcdv3|kubernetes)$")
 	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
 	acceptReturnRegex     = regexp.MustCompile("^(Accept|Return)$")
@@ -178,6 +183,8 @@ func init() {
 	registerFieldValidator("logLevel", validateLogLevel)
 	registerFieldValidator("ipsecLogLevel", validateIPSecLogLevel)
 	registerFieldValidator("ipsecMode", validateIPSecMode)
+	registerFieldValidator("bpfLogLevel", validateBPFLogLevel)
+	registerFieldValidator("bpfServiceMode", validateBPFServiceMode)
 	registerFieldValidator("dropAcceptReturn", validateFelixEtoHAction)
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
 	registerFieldValidator("portName", validatePortName)
@@ -191,10 +198,13 @@ func init() {
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
+
 	registerFieldValidator("sourceAddress", RegexValidator("SourceAddress", SourceAddressRegex))
 	registerFieldValidator("failureDetectionMode", RegexValidator("FailureDetectionMode", FailureDetectionModeRegex))
 	registerFieldValidator("restartMode", RegexValidator("RestartMode", RestartModeRegex))
 	registerFieldValidator("birdGatewayMode", RegexValidator("BIRDGatewayMode", BIRDGatewayModeRegex))
+	registerFieldValidator("regexp", validateRegexp)
+
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -315,6 +325,13 @@ func validateDatastoreType(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate Datastore Type: %s", s)
 	return datastoreType.MatchString(s)
+}
+
+func validateRegexp(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate regexp: %s", s)
+	_, err := regexp.Compile(s)
+	return err == nil
 }
 
 func validateName(fl validator.FieldLevel) bool {
@@ -499,6 +516,17 @@ func validateIPSecMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPSec mode: %s", s)
 	return IPSecModeRegex.MatchString(s)
+
+func validateBPFLogLevel(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Felix BPF log level: %s", s)
+	return bpfLogLevelRegex.MatchString(s)
+}
+
+func validateBPFServiceMode(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Felix BPF service mode: %s", s)
+	return bpfServiceModeRegex.MatchString(s)
 }
 
 func validateFelixEtoHAction(fl validator.FieldLevel) bool {
