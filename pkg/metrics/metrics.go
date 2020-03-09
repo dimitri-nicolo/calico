@@ -87,7 +87,7 @@ func init() {
 func (lr *LicenseReporter) servePrometheusMetrics() {
 	err := security.ServePrometheusMetrics(prometheus.DefaultGatherer, lr.host, lr.port, lr.certFile, lr.keyFile, lr.caFile)
 	if err != nil {
-		fmt.Println("libcaligo error: ", err)
+		log.Errorf("Error from libcalico go: ", err)
 	}
 	wg.Done()
 }
@@ -120,7 +120,6 @@ func (lr *LicenseReporter) startReporter() {
 			gaugeValidLicense.Set(float64(0))
 		}
 		time.Sleep(time.Duration(lr.pollMinutes) * time.Minute)
-		fmt.Println(len(nodeList.Items), daysToExpire, maxNodes, isValid)
 	}
 	wg.Done()
 }
