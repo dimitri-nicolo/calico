@@ -56,6 +56,7 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.fake.svc
 spec:
+  summary: "Alerts on Honeypod accessed via fake debug service"
   description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
   dataSet: flows

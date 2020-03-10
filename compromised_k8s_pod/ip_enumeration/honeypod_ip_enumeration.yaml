@@ -23,6 +23,7 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.ip.enum
 spec:
+  summary: "Alerts on Honeypod accessed via IP enumeration"
   description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
@@ -45,6 +46,7 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.port.scan
 spec:
+  summary: "Alerts on Honeypod accessed via port scan"
   description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
