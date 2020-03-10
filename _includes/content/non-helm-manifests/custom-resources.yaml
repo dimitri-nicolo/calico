@@ -85,7 +85,7 @@ spec:
     count: 1
     resourceRequirements:
       limits:
-        cpu: 500m
+        cpu: 1
         memory: 4Gi
       requests:
         cpu: 250m
