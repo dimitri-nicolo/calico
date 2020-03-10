@@ -267,7 +267,7 @@ a global setting and a per-host override.
 1. Get the current felixconfig settings.
 
    ```bash
-   calicoctl get felixconfig default -o yaml --export > felix.yaml
+   kubectl get felixconfiguration.projectcalico.org default -o yaml --export > felix.yaml
    ```
 
 1. Modify logFilePath to your intended path, e.g. "/tmp/felix.log"
@@ -282,7 +282,7 @@ a global setting and a per-host override.
 1. Replace the current felixconfig settings
 
    ```bash
-   calicoctl replace -f felix.yaml
+   kubectl replace -f felix.yaml
    ```
 
 For more information, see [Felix Configuration Resource](../resources/felixconfig).

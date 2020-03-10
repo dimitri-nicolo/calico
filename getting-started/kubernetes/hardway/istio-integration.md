@@ -43,10 +43,7 @@ FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagen
 existing default config before re-applying it.
 
 ```bash
-calicoctl get felixconfiguration default --export -o yaml | \
-sed -e '/  policySyncPathPrefix:/d' \
-    -e '$ a\  policySyncPathPrefix: /var/run/nodeagent' > felix-config.yaml
-calicoctl apply -f felix-config.yaml
+kubectl patch felixconfiguration.projectcalico.org default -p '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
 ```
 
 ## Installing Istio

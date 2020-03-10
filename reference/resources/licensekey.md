@@ -8,7 +8,7 @@ A License Key resource (`LicenseKey`) represents a user's license to use {{site.
 provided by Tigera support, and must be applied to the cluster to enable
 {{site.prodname}} features.
 
-This resource is not supported in `kubectl`.
+For `kubectl` commands, the following case-insensitive aliases may be used to specify the resource type on the CLI: `licensekey.projectcalico.org`, `licensekeys.projectcalico.org` as well as abbreviations such as `licensekey.p` and `licensekeys.p`.
 
 ### Working with license keys
 

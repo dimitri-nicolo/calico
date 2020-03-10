@@ -68,7 +68,7 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 1. Check to see if you have a default BGPConfiguration.
 
    ```bash
-   calicoctl get bgpconfig default
+   kubectl get bgpconfiguration.projectcalico.org default
    ```
 
 1. Based on above results, update or create a BGPConfiguration.
@@ -77,15 +77,14 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
    Patch the BGPConfiguration using the following command, using your own service cluster IP CIDR in place of "10.0.0.0/24":
 
    ```bash
-   calicoctl patch BGPConfig default --patch \
-      '{"spec": {"serviceClusterIPs": [{"cidr": "10.0.0.0/24"}]}}'
+   kubectl patch bgpconfiguration.projectcalico.org default -p '{"spec":{"serviceClusterIPs": [{"cidr": "10.0.0.0/24"}]}}'
    ```
 
    **Create default BGPConfiguration**
    Use the following sample command to create a default BGPConfiguration. Add your CIDR blocks, covering the cluster IPs to be advertised, in the `serviceClusterIPs` field, for example:
 
    ```bash
-   calicoctl create -f - <<EOF
+   kubectl create -f - <<EOF
    apiVersion: projectcalico.org/v3
    kind: BGPConfiguration
    metadata:
@@ -94,7 +93,7 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
      serviceClusterIPs:
      - cidr: 10.96.0.0/16
      - cidr: fd00:1234::/112
-   EOF
+EOF
    ```
 
    For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).
@@ -123,7 +122,7 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
 1. Check to see if you have a default BGPConfiguration.
 
    ```bash
-   calicoctl get bgpconfig default
+   kubectl get bgpconfiguration.projectcalico.org default
    ```
 
 1. Based on above results, update or create a BGPConfiguration.
@@ -132,15 +131,14 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
    Patch the BGPConfiguration using the following command, adding your own service external IP CIDRs:
 
    ```bash
-   calicoctl patch BGPConfig default --patch \
-      '{"spec": {"serviceExternalIPs": [{"cidr": "x.x.x.x"}, {"cidr": "y.y.y.y"}]}}'
+   kubectl patch bgpconfiguration.projectcalico.org default -p '{"spec":{"serviceExternalIPs": [{"cidr": "x.x.x.x"}, {"cidr": "y.y.y.y"}]}}'
    ```
 
    **Create default BGPConfiguration**
    Use the following sample command to create a default BGPConfiguration. Add your CIDR blocks for external IPs to be advertised in the `serviceExternalIPs` field.
 
    ```bash
-   calicoctl create -f - <<EOF
+   kubectl create -f - <<EOF
    apiVersion: projectcalico.org/v3
    kind: BGPConfiguration
    metadata:
@@ -149,7 +147,7 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
      serviceExternalIPs:
      - cidr: x.x.x.x/16
      - cidr: y.y.y.y/32
-   EOF
+EOF
    ```
 
    For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).

@@ -20,12 +20,12 @@ The easiest way to get outbound connectivity is to turn on NAT Outgoing on all
 {{site.prodname}} pools you want to be able to access the internet.
 
 ```shell
-calicoctl get ipPool
+kubectl get ipPool.projectcalico.org
 ```
 
 ### For each pool that needs connectivity:
 ```
-cat << EOF | calicoctl apply -f -
+cat << EOF | kubectl apply -f -
 - apiVersion: projectcalico.org/v3
   kind: IPPool
   metadata:

@@ -10,7 +10,7 @@ specific node.
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `bgpconfiguration`, `bgpconfig`, `bgpconfigurations`, `bgpconfigs`.
 
-This resource is not supported in `kubectl`.
+For `kubectl` commands, the following case-insensitive aliases may be used to specify the resource type on the CLI: `bgpconfiguration.projectcalico.org`, `bgpconfigurations.projectcalico.org` as well as abbreviations such as `bgpconfiguration.p` and `bgpconfigurations.p`.
 
 ### Sample YAML
 

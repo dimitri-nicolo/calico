@@ -81,7 +81,7 @@ pod is scheduled on, as expected.
 Recall that we created two IP pools, but left one disabled.
 
 ```
-calicoctl get ippools -o wide
+kubectl get ippools.projectcalico.org -o wide
 ```
 
 Result
@@ -96,7 +96,7 @@ pool2   192.168.192.0/19   true   Never      Never       true       all()
 Enable the second pool.
 
 ```
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:

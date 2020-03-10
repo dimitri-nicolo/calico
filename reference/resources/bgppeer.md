@@ -14,7 +14,7 @@ information on cluster layouts, see {{site.prodname}}'s documentation on
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `bgppeer`, `bgppeers`, `bgpp`, `bgpps`, `bp`, `bps`.
 
-This resource is not supported in `kubectl`.
+For `kubectl` commands, the following case-insensitive aliases may be used to specify the resource type on the CLI: `bgppeer.projectcalico.org`, `bgppeers.projectcalico.org` as well as abbreviations such as `bgppeer.p` and `bgppeers.p`.
 
 ### Sample YAML
 
