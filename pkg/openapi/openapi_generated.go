@@ -110,7 +110,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertStatus":                     schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate":                   schema_libcalico_go_lib_apis_v3_GlobalAlertTemplate(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateList":               schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec":               schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy":                   schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicyList":               schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec":               schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicySpec(ref),
@@ -4835,6 +4834,54 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"bpfEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFEnabled, if enabled Felix will use the BPF dataplane. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"bpfLogLevel": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFLogLevel controls the log level of the BPF programs when in BPF dataplane mode.  One of \"Off\", \"Info\", or \"Debug\".  The logs are emitted to the BPF trace pipe, accessible with the command `tc exec bpf debug`. [Default: Off].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"bpfDataIfacePattern": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFDataIfacePattern is a regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network.  This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.  It should not match the workload interfaces (usually named cali...). [Default: ^(en.*|eth.*|tunl0$)]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"bpfConnectTimeLoadBalancingEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFConnectTimeLoadBalancingEnabled when in BPF mode, controls whether Felix installs the connection-time load balancer.  The connect-time load balancer is required for the host to be able to reach Kubernetes services and it improves the performance of pod-to-service connections.  The only reason to disable it is for debugging purposes.  [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"bpfExternalServiceMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFExternalServiceMode in BPF mode, controls how connections from outside the cluster to services (node ports and cluster IPs) are forwarded to remote workloads.  If set to \"Tunnel\" then both request and response traffic is tunneled to the remote node.  If set to \"DSR\", the request traffic is tunneled but the response traffic is sent directly from the remote node.  In \"DSR\" mode, the remote node appears to use the IP of the ingress node; this requires a permissive L2 network.  [Default: Tunnel]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"bpfKubeProxyIptablesCleanupEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFKubeProxyIptablesCleanupEnabled, if enabled in BPF mode, Felix will proactively clean up the upstream Kubernetes kube-proxy's iptables chains.  Should only be enabled if kube-proxy is not running.  [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"bpfKubeProxyMinSyncPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFKubeProxyMinSyncPeriod, in BPF mode, controls the minimum time between updates to the dataplane for Felix's embedded kube-proxy.  Lower values give reduced set-up latency.  Higher values reduce Felix CPU usage by batching up more work.  [Default: 1s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 					"syslogReporterNetwork": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -5351,6 +5398,12 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertSpec(ref common.ReferenceCallbac
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
+					"summary": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"description": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -5520,14 +5573,14 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplate(ref common.ReferenceCal
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the GlobalAlert.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec"),
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -5575,98 +5628,6 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateList(ref common.Referenc
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"summary": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"description": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"severity": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
-						},
-					},
-					"period": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
-					"lookback": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
-					"dataSet": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"query": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"aggregateBy": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-					"field": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"metric": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"condition": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"threshold": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"number"},
-							Format: "double",
-						},
-					},
-				},
-				Required: []string{"description", "severity", "dataSet"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -10699,14 +10660,14 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertTemplate(ref common.ReferenceCa
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec"),
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

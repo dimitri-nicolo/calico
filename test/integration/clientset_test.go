@@ -1205,7 +1205,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	globalAlertClient := client.ProjectcalicoV3().GlobalAlertTemplates()
 	globalAlert := &v3.GlobalAlertTemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.GlobalAlertTemplateSpec{
+		Spec: calico.GlobalAlertSpec{
 			Summary:     "foo",
 			DataSet:     "dns",
 			Description: "test",
@@ -1291,7 +1291,7 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 	for i := 0; i < 2; i++ {
 		ga := &v3.GlobalAlertTemplate{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
-			Spec: calico.GlobalAlertTemplateSpec{
+			Spec: calico.GlobalAlertSpec{
 				Summary:     "bar",
 				Description: "test",
 				Severity:    100,

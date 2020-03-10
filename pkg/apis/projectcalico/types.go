@@ -244,7 +244,7 @@ type GlobalAlertTemplate struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.GlobalAlertTemplateSpec
+	Spec calico.GlobalAlertSpec
 }
 
 // +genclient:nonNamespaced
