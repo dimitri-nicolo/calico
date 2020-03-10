@@ -28,30 +28,7 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel) {
 }
 
 func getGlobalAlertSpec(structLevel validator.StructLevel) api.GlobalAlertSpec {
-	i := structLevel.Current().Interface()
-	switch i.(type) {
-	case api.GlobalAlertSpec:
-		return i.(api.GlobalAlertSpec)
-	case api.GlobalAlertTemplateSpec:
-		// We do this to reuse the code for validating GlobalAlertSpec as the rules for GlobalAlertTemplateSpec are
-		// identical.
-		t := i.(api.GlobalAlertTemplateSpec)
-		return api.GlobalAlertSpec{
-			Description: t.Description,
-			Severity:    t.Severity,
-			Period:      t.Period,
-			Lookback:    t.Lookback,
-			DataSet:     t.DataSet,
-			Query:       t.Query,
-			AggregateBy: t.AggregateBy,
-			Field:       t.Field,
-			Metric:      t.Metric,
-			Condition:   t.Condition,
-			Threshold:   t.Threshold,
-		}
-	default:
-		panic("Unknown type")
-	}
+	return structLevel.Current().Interface().(api.GlobalAlertSpec)
 }
 
 func validateGlobalAlertPeriod(structLevel validator.StructLevel) {

@@ -120,7 +120,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertStatus":                 schema_libcalico_go_lib_apis_v3_GlobalAlertStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate":               schema_libcalico_go_lib_apis_v3_GlobalAlertTemplate(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateList":           schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec":           schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy":               schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicyList":           schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec":           schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicySpec(ref),
@@ -5100,6 +5099,12 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertSpec(ref common.ReferenceCallbac
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
+					"summary": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"description": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -5269,14 +5274,14 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplate(ref common.ReferenceCal
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Specification of the GlobalAlert.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec"),
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplateSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -5324,98 +5329,6 @@ func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateList(ref common.Referenc
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalAlertTemplate", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalAlertTemplateSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"summary": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"description": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"severity": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
-						},
-					},
-					"period": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
-					"lookback": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
-					"dataSet": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"query": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"aggregateBy": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-					"field": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"metric": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"condition": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"threshold": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"number"},
-							Format: "double",
-						},
-					},
-				},
-				Required: []string{"description", "severity", "dataSet"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
