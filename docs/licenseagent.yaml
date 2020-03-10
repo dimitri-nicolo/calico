@@ -94,7 +94,23 @@ spec:
               value: kubernetes
 
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: license-agent
+  namespace: tigera-license-agent
+  labels:
+    k8s-app: tigera-license-agent
+spec:
+  selector:
+    k8s-app: tigera-license-agent
+  ports:
+    - protocol: TCP
+      name: calico-metrics-port
+      port: 9081
+      targetPort: 9081
 
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
