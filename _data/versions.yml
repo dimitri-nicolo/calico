@@ -116,10 +116,6 @@
       image: calico/pod2daemon-flexvol
       version: master
       registry: quay.io
-    busybox:
-      image: busybox
-      version: 1.26.2
-      registry: docker.io
     cpHorizontalAutoscaler:
       image: google-containers/cluster-proportional-autoscaler-amd64
       version: 1.1.2-r2
