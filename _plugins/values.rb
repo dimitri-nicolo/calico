@@ -378,10 +378,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
       tag: #{versions["elasticsearch-operator"].version}
 
-    busybox:
-      image: #{versions["busybox"].image}
-      tag: #{versions["busybox"].version}
-
     # Optionally specify docker configuration to be used for imagePullSecrets. 
     # Default to an empty list. 
     #
