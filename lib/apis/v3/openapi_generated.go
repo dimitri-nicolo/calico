@@ -4954,7 +4954,6 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						},
 					},
 				},
-				Required: []string{"bpfLogLevel"},
 			},
 		},
 		Dependencies: []string{
