@@ -2,10 +2,7 @@ PACKAGE_NAME    ?= github.com/tigera/license-agent
 GO_BUILD_VER    ?= v0.34
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-FELIX_REPO       = github.com/tigera/felix-private
 LOCAL_CHECKS     = mod-download
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-FELIX_REPO       = github.com/tigera/felix-private
 
 build: license-agent
 
@@ -51,16 +48,6 @@ BUILD_IMAGE?=tigera/license-agent
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
 
-ETCD_VERSION?=v3.3.7
-# If building on amd64 omit the arch in the container name.  Fixme!
-ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
-
-K8S_VERSION?=v1.11.3
-HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
-
-ELASTICSEARCH_VERSION?=7.3.2
-ELASTICSEARCH_IMAGE?=docker.elastic.co/elasticsearch/elasticsearch:$(ELASTICSEARCH_VERSION)
-
 K8S_VERSION    = v1.11.0
 BINDIR        ?= bin
 BUILD_DIR     ?= build
@@ -78,11 +65,6 @@ endif
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
-
-ES_PROXY_VERSION?=$(shell git describe --tags --dirty --always)
-ES_PROXY_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-ES_PROXY_GIT_COMMIT?=$(shell git rev-parse --short HEAD)
-ES_PROXY_GIT_TAG?=$(shell git describe --tags)
 
 VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(ES_PROXY_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
@@ -199,22 +181,6 @@ ut: report-dir
 			go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
-.PHONY: fv
-fv: signpost image report-dir run-k8s-apiserver
-	$(MAKE) fv-no-setup
-
-## Developer friendly target to only run fvs and skip other
-## setup steps.
-.PHONY: fv-no-setup
-fv-no-setup:
-	PACKAGE_ROOT=$(CURDIR) \
-		       GO_BUILD_IMAGE=$(CALICO_BUILD) \
-		       PACKAGE_NAME=$(PACKAGE_NAME) \
-		       GINKGO_ARGS='$(GINKGO_ARGS)' \
-		       FV_ELASTICSEARCH_IMAGE=$(ELASTICSEARCH_IMAGE) \
-		       GOMOD_CACHE=$(GOMOD_CACHE) \
-		       ./test/run_test.sh
-
 .PHONY: clean
 clean: clean-bin clean-build-image
 clean-build-image:
@@ -242,7 +208,7 @@ LINT_ARGS = --disable govet,gosimple,staticcheck,varcheck,errcheck,deadcode,inef
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean image-all static-checks ut fv
+ci: clean image-all static-checks ut
 
 .PHONY: undo-go-sum check-dirty
 ## Avoid unplanned go.sum updates
@@ -329,60 +295,9 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
 
 ###############################################################################
 # Utilities
 ###############################################################################
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
-
-# etcd is used by the FVs
-.PHONY: run-etcd
-run-etcd: stop-etcd
-	@-docker rm -f calico-etcd
-	docker run --detach \
-		--net=host \
-		--name calico-etcd $(ETCD_IMAGE) \
-		etcd \
-		--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379" \
-		--listen-client-urls "http://0.0.0.0:2379"
-
-stop-etcd:
-	@-docker rm -f calico-etcd
-
-
-# Kubernetes apiserver used for FVs
-.PHONY: run-k8s-apiserver
-run-k8s-apiserver: stop-k8s-apiserver run-etcd
-	docker run \
-		--net=host --name st-apiserver \
-		-v  $(CURDIR)/test:/test\
-		--detach \
-		${HYPERKUBE_IMAGE} \
-		/hyperkube apiserver \
-			--bind-address=0.0.0.0 \
-			--insecure-bind-address=0.0.0.0 \
-			--etcd-servers=http://127.0.0.1:2379 \
-			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
-			--authorization-mode=RBAC \
-			--service-cluster-ip-range=10.101.0.0/16 \
-			--v=10 \
-			--token-auth-file=/test/token_auth.csv \
-			--basic-auth-file=/test/basic_auth.csv \
-			--anonymous-auth=true \
-			--logtostderr=true
-
-	# Wait until we can configure a cluster role binding which allows anonymous auth.
-	while ! docker exec st-apiserver kubectl create \
-		clusterrolebinding anonymous-admin \
-		--clusterrole=cluster-admin \
-		--user=system:anonymous; \
-		do echo "Trying to create ClusterRoleBinding"; \
-		sleep 1; \
-		done
-
-	test/setup_k8s_auth.sh
-
-# Stop Kubernetes apiserver
-stop-k8s-apiserver:
-	@-docker rm -f st-apiserver

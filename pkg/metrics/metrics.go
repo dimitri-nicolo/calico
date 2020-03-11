@@ -1,17 +1,27 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package metrics
 
 import (
 	"context"
+	"sync"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/security"
-	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
 	licenseClient "github.com/tigera/licensing/client"
-	"sync"
-	"time"
+)
+
+type LicenseStatus int
+
+const (
+	InValid LicenseStatus = iota
+	Valid
 )
 
 //Declare Prometheus metrics variables
@@ -25,7 +35,7 @@ var (
 		Help: "Total number of nodes currently in use.",
 	})
 	gaugeMaxNodes = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "calico_maximum_licensed_node",
+		Name: "calico_maximum_licensed_nodes",
 		Help: "Total number of Licensed nodes.",
 	})
 	gaugeValidLicense = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -36,27 +46,30 @@ var (
 	wg sync.WaitGroup
 )
 
+//License Reporter contains data which is required to start webserver,
+//and serve prometheus requests
 type LicenseReporter struct {
-	port        int
-	pollMinutes int
-	host        string
-	caFile      string
-	keyFile     string
-	certFile    string
-	registry    *prometheus.Registry
-	client      clientv3.Interface
+	//Prometheus requests are served on this port
+	port int
+	host string
+	//CA, certifciate and Key file location for secured connections
+	caFile   string
+	keyFile  string
+	certFile string
+	//Sampling Interval to scrape data
+	pollInterval time.Duration
+	client       clientv3.Interface
 }
 
-func NewLicenseReporter(host, certFile, keyFile, caFile string, port, pollMinutes int) *LicenseReporter {
+func NewLicenseReporter(host, certFile, keyFile, caFile string, pollInterval time.Duration, port int) *LicenseReporter {
 
 	return &LicenseReporter{
-		port:        port,
-		host:        host,
-		caFile:      caFile,
-		keyFile:     keyFile,
-		certFile:    certFile,
-		registry:    prometheus.NewRegistry(),
-		pollMinutes: pollMinutes,
+		port:         port,
+		host:         host,
+		caFile:       caFile,
+		keyFile:      keyFile,
+		certFile:     certFile,
+		pollInterval: pollInterval,
 	}
 }
 
@@ -82,16 +95,16 @@ func init() {
 	prometheus.MustRegister(gaugeValidLicense)
 }
 
-// servePrometheusMetrics starts a lightweight web server to server prometheus metrics.
+// servePrometheusMetrics starts a lightweight web server to serve prometheus metrics.
 func (lr *LicenseReporter) servePrometheusMetrics() {
 	err := security.ServePrometheusMetrics(prometheus.DefaultGatherer, lr.host, lr.port, lr.certFile, lr.keyFile, lr.caFile)
 	if err != nil {
-		log.Errorf("Error from libcalico go: ", err)
+		log.WithError(err).Error("Error from libcalico library")
 	}
 	wg.Done()
 }
 
-//Continously scrape License Validity, Number of days license valid
+//Continuously scrape License Validity, Number of days license valid
 //Maximum number of nodes licensed and Number of nodes in Use
 func (lr *LicenseReporter) startReporter() {
 	for {
@@ -104,27 +117,31 @@ func (lr *LicenseReporter) startReporter() {
 			default:
 				log.Infof("Error getting LicenseKey :%v", err)
 			}
-			time.Sleep(time.Duration(lr.pollMinutes) * time.Minute)
+			time.Sleep(lr.pollInterval)
 			continue
 		}
 
-		nodeList, _ := lr.client.Nodes().List(context.Background(), options.ListOptions{})
-		isValid, daysToExpire, maxNodes := lr.licesneHandler(*lic)
+		nodeList, err := lr.client.Nodes().List(context.Background(), options.ListOptions{})
+		if err != nil {
+			log.WithError(err).Error("Unable to get Node count from libcalico library")
+			continue
+		}
+		isValid, daysToExpire, maxNodes := lr.licenseHandler(*lic)
 		gaugeNumNodes.Set(float64(len(nodeList.Items)))
 		gaugeNumDays.Set(float64(daysToExpire))
 		gaugeMaxNodes.Set(float64(maxNodes))
 		if isValid == true {
-			gaugeValidLicense.Set(float64(1))
+			gaugeValidLicense.Set(float64(Valid))
 		} else {
-			gaugeValidLicense.Set(float64(0))
+			gaugeValidLicense.Set(float64(InValid))
 		}
-		time.Sleep(time.Duration(lr.pollMinutes) * time.Minute)
+		time.Sleep(lr.pollInterval)
 	}
 	wg.Done()
 }
 
 //Decode License, get expiry date, maximum allowed nodes
-func (lr *LicenseReporter) licesneHandler(lic api.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
+func (lr *LicenseReporter) licenseHandler(lic api.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
 
 	//Decode the LicenseKey
 	claims, err := licenseClient.Decode(lic)

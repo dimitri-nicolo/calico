@@ -1,3 +1,4 @@
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 package config
 
 import (
@@ -6,8 +7,12 @@ import (
 )
 
 type Config struct {
-	MetricsPort    int `envconfig:"LICENSE_METRICS_PORT" default:"9081"`
-	MetricPollTime int `envconfig:"LICENSE_POLL_MINUTES" default:"2"`
+	MetricsPort        int    `envconfig:"LICENSE_METRICS_PORT"      default:"9081"`
+	MetricPollInterval string `envconfig:"LICENSE_POLL_INTERVAL"     default:"2m"`
+	MetricsCertFile    string `envconfig:"LICENSE_METRICS_CERT_FILE" default:""`
+	MetricsKeyFile     string `envconfig:"LICENSE_METRICS_KEY_FILE"  default:""`
+	MetricsCaFile      string `envconfig:"LICENSE_METRICS_CA_FILE"   default:""`
+	MetricsHost        string `envconfig:"LICENSE_METRICS_HOST"      default:""`
 }
 
 func MustLoadConfig() *Config {
