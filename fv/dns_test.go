@@ -72,7 +72,7 @@ var _ = Describe("DNS Policy", func() {
 		// initial TCP connection packet at T=0s and the first retry packet at T=1s.  Then
 		// it seems microsoft.com can take a little time to send a response, so allow 2s
 		// more.
-		out, err := w[0].ExecCombinedOutput("wget", "-T", "4", "microsoft.com")
+		out, err := w[0].ExecCombinedOutput("wget", "-U", "firefox", "-T", "4", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
 	}
@@ -93,7 +93,7 @@ var _ = Describe("DNS Policy", func() {
 		// it seems microsoft.com can take a little time to send a response, so allow 2s
 		// more.  Note that wget on the host needs "-t 1" (which means only try once) to
 		// prevent it from retrying for a long time (around 10 minutes!).
-		out, err := felix.ExecCombinedOutput("wget", "-T", "4", "-t", "1", "microsoft.com")
+		out, err := felix.ExecCombinedOutput("wget", "-U", "firefox", "-T", "4", "-t", "1", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
 	}
