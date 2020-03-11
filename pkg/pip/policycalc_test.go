@@ -159,7 +159,7 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		}})
 	})
 
-	It("Handles setting of staged policy sets", func() {
+	It("Handles setting of staged policy sets (staged policies do not exist)", func() {
 		By("Sending set updates for staged policy sets")
 		modified, err := pip.ApplyPIPPolicyChanges(xc, []pip.ResourceChange{{
 			Action:   "update",
@@ -195,12 +195,77 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		}))
 
 		By("Checking the impacted set")
-		Expect(modified.IsModified(pr1)).To(BeFalse())
-		Expect(modified.IsModified(pr2)).To(BeFalse())
-		Expect(modified.IsModified(pr3)).To(BeFalse())
+		// Staged policies did not previously exist, so will be flagged as modified.
+		Expect(modified.IsModified(pr1)).To(BeTrue())
+		Expect(modified.IsModified(pr2)).To(BeTrue())
+		Expect(modified.IsModified(pr3)).To(BeTrue())
+		// These are enforced staged policies.
 		Expect(modified.UseStaged(pr1)).To(BeTrue())
 		Expect(modified.UseStaged(pr2)).To(BeTrue())
 		Expect(modified.UseStaged(pr3)).To(BeTrue())
+		// These are all sets not deletes.
+		Expect(modified.IsDeleted(pr1)).To(BeFalse())
+		Expect(modified.IsDeleted(pr2)).To(BeFalse())
+		Expect(modified.IsDeleted(pr3)).To(BeFalse())
+	})
+
+	It("Handles setting of staged policy sets (staged policies exist)", func() {
+		By("Creating the staged policies 1 and 2")
+		xc.OnUpdates([]syncer.Update{{
+			Type:       syncer.UpdateTypeSet,
+			ResourceID: resources.GetResourceID(supr1),
+			Resource:   supr1,
+		}, {
+			Type:       syncer.UpdateTypeSet,
+			ResourceID: resources.GetResourceID(supr2),
+			Resource:   supr2,
+		}})
+
+		By("Sending set updates for staged policy sets")
+		modified, err := pip.ApplyPIPPolicyChanges(xc, []pip.ResourceChange{{
+			Action:   "update",
+			Resource: supr1,
+		}, {
+			Action:   "update",
+			Resource: supr2,
+		}, {
+			Action:   "update",
+			Resource: supr3,
+		}})
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Checking the enforced policies have been updated")
+		ce := xc.Get(resources.GetResourceID(pr1))
+		Expect(ce).ToNot(BeNil())
+		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(p1.Spec.Selector).To(Equal("has(goodbye1)"))
+
+		ce = xc.Get(resources.GetResourceID(pr2))
+		Expect(ce).ToNot(BeNil())
+		p2, ok := ce.GetPrimary().(*v3.GlobalNetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(p2.Spec.Selector).To(Equal("has(goodbye2)"))
+
+		ce = xc.Get(resources.GetResourceID(pr3))
+		Expect(ce).ToNot(BeNil())
+		p3, ok := ce.GetPrimary().(*networkingv1.NetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(p3.Spec.PolicyTypes).To(Equal([]networkingv1.PolicyType{
+			networkingv1.PolicyTypeEgress,
+		}))
+
+		By("Checking the impacted set")
+		// Staged policies 1 and 2 existed before and were not modified, Staged policy 3 did not exist and so will be
+		// flagged as modified.
+		Expect(modified.IsModified(pr1)).To(BeFalse())
+		Expect(modified.IsModified(pr2)).To(BeFalse())
+		Expect(modified.IsModified(pr3)).To(BeTrue())
+		// These are enforced staged policies.
+		Expect(modified.UseStaged(pr1)).To(BeTrue())
+		Expect(modified.UseStaged(pr2)).To(BeTrue())
+		Expect(modified.UseStaged(pr3)).To(BeTrue())
+		// These are all sets not deletes.
 		Expect(modified.IsDeleted(pr1)).To(BeFalse())
 		Expect(modified.IsDeleted(pr2)).To(BeFalse())
 		Expect(modified.IsDeleted(pr3)).To(BeFalse())

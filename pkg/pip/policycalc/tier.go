@@ -52,6 +52,8 @@ func calculateCompiledTiersAndImpactedPolicies(
 				ingressTier = append(ingressTier, ingressPol)
 				if isImpacted {
 					// If resource is impacted include this policy. We do this for original and changed resources.
+					log.Debugf("This is an impacted ingress policy: deleted:%v; modified:%v; useStaged:%v",
+						actualImpact.Deleted, actualImpact.Modified, actualImpact.UseStaged)
 					ingress.ImpactedPolicies = append(ingress.ImpactedPolicies, ingressPol)
 				}
 			}
@@ -59,6 +61,8 @@ func calculateCompiledTiersAndImpactedPolicies(
 				egressTier = append(egressTier, egressPol)
 				if isImpacted {
 					// If resource is impacted include this policy. We do this for original and changed resources.
+					log.Debugf("This is an impacted egress policy: deleted:%v; modified:%v; useStaged:%v",
+						actualImpact.Deleted, actualImpact.Modified, actualImpact.UseStaged)
 					egress.ImpactedPolicies = append(egress.ImpactedPolicies, egressPol)
 				}
 			}
@@ -335,7 +339,7 @@ func (tier CompiledTier) ActionAfter(flow *api.Flow, r *EndpointResponse, cache 
 		//           label aggregation.
 
 		// Store the last matched policy. For the "after" processing we treat staged as enforced, so it's not necessary
-		// to treat them differntly.
+		// to treat them differently.
 		lastMatchedPolicy = p
 
 		// If the policy is not modified use the cached value if there is one, otherwise calculate.
