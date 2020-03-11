@@ -414,6 +414,10 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     compliance:
       enabled: true
 
+    # Optional configuration for setting custom BGP templates where
+    # key is the filename of the template and value is the contents of the template.
+    bgp: {}
+
     # Configuration for the tigera operator
     tigeraOperator:
       image: #{versions["tigera-operator"].image}
