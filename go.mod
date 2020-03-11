@@ -28,11 +28,11 @@ replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200310041910-3ee937049275
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200307042119-0a890c792973
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v0.0.0-20200311041312-29410f43b9d2
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200311042213-1c54273739fb
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200304211117-5caba4aba4a3
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200310204028-59913de27e11
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200307163514-61b3e6fe48b8
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200310211350-635f510eff35
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 )
