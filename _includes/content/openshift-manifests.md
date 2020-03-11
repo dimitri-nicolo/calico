@@ -18,6 +18,11 @@ curl {{ "/manifests/ocp/crds/01-crd-prometheus.yaml" | absolute_url }} -o manife
 curl {{ "/manifests/ocp/crds/01-crd-servicemonitor.yaml" | absolute_url }} -o manifests/01-crd-servicemonitor.yaml
 curl {{ "/manifests/ocp/crds/01-crd-tigerastatus.yaml" | absolute_url }} -o manifests/01-crd-tigerastatus.yaml
 curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml" | absolute_url }} -o manifests/01-crd-managementclusterconnection.yaml
+{%- for data in site.static_files %}
+{%- if data.path contains '/manifests/ocp/crds/calico' %}
+curl {{ data.path | absolute_url }} -o manifests/{{data.name}}
+{%- endif -%}
+{% endfor %}
 curl {{ "/manifests/ocp/tigera-operator/00-namespace-tigera-operator.yaml" | absolute_url }} -o manifests/00-namespace-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml" | absolute_url }} -o manifests/02-rolebinding-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute_url }} -o manifests/02-role-tigera-operator.yaml
