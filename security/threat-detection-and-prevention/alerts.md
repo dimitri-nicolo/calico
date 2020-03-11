@@ -57,7 +57,8 @@ kind: GlobalAlert
 metadata:
   name: example-flows
 spec:
-  description: "100 flows Example"
+  summary: "100 flows Example"
+  description: "Flows example ${count} > 100"
   severity: 100
   dataSet: flows
   metric: count
@@ -73,6 +74,7 @@ kind: GlobalAlert
 metadata:
   name: network.ssh
 spec:
+  summary: "ssh flows to default namespace"
   description: "[flows] ssh flow in default namespace detected from ${source_namespace}/${source_name_aggr}"
   severity: 100
   period: 10m
@@ -94,6 +96,7 @@ kind: GlobalAlert
 metadata:
   name: policy.globalnetworkset
 spec:
+  summary: "Changed globalnetworkset"
   description: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
   severity: 100
   period: 10m
@@ -110,12 +113,7 @@ spec:
 
 {{site.prodname}} includes a set of Alert templates. These are used
 by the {{site.prodname}} Manager to create alerts
-for common tasks that can then be modified to suit your needs. They
-are identical to GlobalAlerts with the addition of the optional `summary`
-field. The `summary` field is a human-readable description of the
-template that is displayed in the user interface, as opposed to
-`description` which is a template that should contain variable
-substitutions.
+for common tasks that can then be modified to suit your needs.
 
 ### Above and beyond
 

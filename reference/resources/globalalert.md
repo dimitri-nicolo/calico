@@ -32,7 +32,8 @@ kind: GlobalAlert
 metadata:
   name: sample
 spec:
-  description: "Sample"
+  summary: "Sample"
+  description: "Sample ${client_namespace}/${client_name_aggr}"
   severity: 100
   dataSet: flows
   query: action=allow
@@ -56,7 +57,7 @@ spec:
 | Field | Description | Type | Required | Acceptable Values | Default |
 |---|---|---|---|---|---|
 | description | Template for the description field in generated events. See the description section below for more details. | string | yes |
-| summary | **GlobalAlertTemplate only:** Human-readable description of the template. | string | no |
+| summary | Human-readable description of the template. | string | no |
 | severity | Severity of the alert for display in Manager. | int | yes | 1 - 100 |
 | dataSet | Which data set to execute the alert against. | string | yes | audit, dns, flows |
 | period | How often the query is run. | duration | no | 1h 2m 3s | 5m |
@@ -165,6 +166,7 @@ kind: GlobalAlert
 metadata:
   name: frequent-dns-responses
 spec:
+  summary: "Monitor for NXDomain"
   description: "Observed ${sum} NXDomain responses for ${qname}"
   severity: 100
   dataSet: dns
@@ -256,9 +258,8 @@ narrow and specific queries.
 These are used in the {{site.prodname}} Manager to create alerts
 with prepopulated fields that can be modified to suit your needs.
 The `GlobalAlertTemplate` resource is configured identically to the
-`GlobalAlert` resource with the addition of the optional `summary` field.
-{{site.prodname}} includes some sample Alert templates; add your own
-templates as needed.
+`GlobalAlert` resource. {{site.prodname}} includes some sample Alert
+templates; add your own templates as needed.
 
 #### Sample YAML
 
