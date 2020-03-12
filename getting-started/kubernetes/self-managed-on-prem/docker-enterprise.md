@@ -65,6 +65,8 @@ Install Calico Enterprise in a Docker Enterprise deployed Kubernetes cluster.
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
+1. Install any extra [Calico resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```
