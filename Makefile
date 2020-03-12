@@ -1,5 +1,7 @@
 PACKAGE_NAME?=github.com/tigera/licensing
-GO_BUILD_VER?=v0.30
+GO_BUILD_VER?=v0.34
+
+GIT_USE_SSH = true
 
 ###############################################################################
 # Download and include Makefile.common before anything else
@@ -13,6 +15,8 @@ Makefile.common.$(MAKE_BRANCH):
 	# Clean up any files downloaded from other branches so they don't accumulate.
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 include Makefile.common
 
@@ -47,6 +51,13 @@ ifeq ($(ARCH),amd64)
 endif
 
 ###############################################################################
+# Updating pins
+###############################################################################
+LIBCALICO_REPO=github.com/tigera/libcalico-go-private
+
+update-pins: replace-libcalico-pin
+
+###############################################################################
 # Building the binary
 ###############################################################################
 LOCAL_DOCKER_ARGS := -i -e ARCH=$(ARCH) -e CARROTCTL_VERSION=$(CARROTCTL_VERSION) \
@@ -72,8 +83,7 @@ bin/carrotctl-windows-amd64: BUILDOS=windows
 bin/carrotctl-linux-%: BUILDOS=linux
 
 bin/carrotctl-%: $(SRC_FILES)
-	$(DOCKER_RUN) $(LOCAL_DOCKER_ARGS) $(CALICO_BUILD) \
-	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && GOPRIVATE="github.com/tigera"\
+	$(DOCKER_RUN) $(LOCAL_DOCKER_ARGS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o bin/carrotctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "$(CARROTCTL_DIR)/carrotctl.go"'
 
 .PHONY: calico/carrotctl
@@ -90,7 +100,7 @@ bin/carrotctl-windows-amd64.exe: bin/carrotctl-windows-amd64
 ## Run the tests in a container. Useful for CI, Mac dev.
 ut: $(SRC_FILES)
 	mkdir -p report
-	$(DOCKER_GO_BUILD) /bin/bash -c "go test -v ./... | go-junit-report > ./report/tests.xml"
+	$(DOCKER_GO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v ./... | go-junit-report > ./report/tests.xml"
 
 fv st:
 	@echo "No FVs or STs available"

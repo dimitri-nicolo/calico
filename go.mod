@@ -1,6 +1,6 @@
 module github.com/tigera/licensing
 
-go 1.12
+go 1.13
 
 require (
 	github.com/davecgh/go-spew v1.1.1
@@ -11,9 +11,8 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/onsi/gomega v1.7.1
-	github.com/projectcalico/felix v3.8.5+incompatible
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
-	github.com/projectcalico/libcalico-go v1.7.3
+	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.3
@@ -27,7 +26,4 @@ require (
 	gopkg.in/yaml.v2 v2.2.5
 )
 
-replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20191220191724-c757233f7c16
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200103165626-2c83fde7c5ce
-)
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11
