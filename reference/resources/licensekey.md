@@ -8,7 +8,9 @@ A License Key resource (`LicenseKey`) represents a user's license to use {{site.
 provided by Tigera support, and must be applied to the cluster to enable
 {{site.prodname}} features.
 
-For `kubectl` commands, the following case-insensitive aliases may be used to specify the resource type on the CLI: `licensekey.projectcalico.org`, `licensekeys.projectcalico.org` as well as abbreviations such as `licensekey.p` and `licensekeys.p`.
+For `kubectl` commands, the following case-insensitive aliases may be used to specify
+the resource type on the CLI: `licensekey.projectcalico.org`, `licensekeys.projectcalico.org`
+as well as abbreviations such as `licensekey.p` and `licensekeys.p`.
 
 ### Working with license keys
 
@@ -25,27 +27,27 @@ with the customer name in the file sent to you by Tigera.
 
 **Command**
 ```
-calicoctl apply -f <customer-name>-license.yaml
+kubectl apply -f <customer-name>-license.yaml
 ```
 
 **Example**
 ```
-calicoctl apply -f awesome-corp-license.yaml
+kubectl apply -f awesome-corp-license.yaml
 ```
 
 #### Viewing information about your license key
 
-To check information about the license key of your cluster, use `calicoctl get`.
+To view the number of licensed nodes and the license key expiry, use:
 
 ```
-calicoctl get licensekey -o wide
+kubectl get licensekeys.p -o custom-columns='Name:.metadata.name,MaxNodes:.status.maxnode,Expiry:.status.expiry'
 ```
 
-This is an example of the output of that command.
+This is an example of the output of above command.
 
 ```
-LICENSEID    EXPIRATION                      NODES   FEATURES
-<UUID>       1999-03-14 23:59:59 -0700 PDT   999     [cnx all]
+Name      MaxNodes   Expiry
+default   100        2022-03-05 23:59:59 +0000 UTC
 ```
 {: .no-select-button}
 
