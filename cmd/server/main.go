@@ -3,15 +3,42 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"os"
+
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/license-agent/pkg/config"
 	"github.com/tigera/license-agent/pkg/metrics"
-	"os"
-	"time"
 )
 
+// Below variables are filled out during the build process (using git describe output)
+var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
+var version bool
+
+func PrintBuildVersion() error {
+	fmt.Println("************************************")
+	fmt.Println("Version:     ", VERSION)
+	fmt.Println("Build date:  ", BUILD_DATE)
+	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
+	fmt.Println("Git commit:  ", GIT_REVISION)
+	fmt.Println("************************************")
+	return nil
+}
+
+func init() {
+	// Add a flag to check the version.
+	flag.BoolVar(&version, "version", false, "Display version")
+}
+
 func main() {
+
+	flag.Parse()
+	if version {
+		PrintBuildVersion()
+		os.Exit(0)
+	}
 
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
@@ -32,13 +59,8 @@ func main() {
 	ca := checkFileExists(cfg.MetricsCaFile)
 	key := checkFileExists(cfg.MetricsKeyFile)
 
-	interval, err := time.ParseDuration(cfg.MetricPollInterval)
-	if err != nil {
-		log.Fatal("Failed to parse Poll Interval err: %s pollInterval:%s", err, cfg.MetricPollInterval)
-		os.Exit(1)
-	}
 	//Create New Instance of License reporter
-	lr := metrics.NewLicenseReporter(cfg.MetricsHost, cert, key, ca, interval, cfg.MetricsPort)
+	lr := metrics.NewLicenseReporter(cfg.MetricsHost, cert, key, ca, cfg.MetricPollInterval, cfg.MetricsPort)
 	//Start License metric server and scraper
 	lr.Start()
 }

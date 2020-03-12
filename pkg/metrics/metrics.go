@@ -93,6 +93,10 @@ func init() {
 	prometheus.MustRegister(gaugeNumNodes)
 	prometheus.MustRegister(gaugeMaxNodes)
 	prometheus.MustRegister(gaugeValidLicense)
+	//Discard GolangMetrics
+	prometheus.Unregister(prometheus.NewGoCollector())
+	//Discard process metrics
+	prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 }
 
 // servePrometheusMetrics starts a lightweight web server to serve prometheus metrics.
@@ -124,6 +128,7 @@ func (lr *LicenseReporter) startReporter() {
 		nodeList, err := lr.client.Nodes().List(context.Background(), options.ListOptions{})
 		if err != nil {
 			log.WithError(err).Error("Unable to get Node count from libcalico library")
+			time.Sleep(lr.pollInterval)
 			continue
 		}
 		isValid, daysToExpire, maxNodes := lr.licenseHandler(*lic)
