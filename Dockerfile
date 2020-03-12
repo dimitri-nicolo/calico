@@ -1,20 +1,20 @@
-FROM fluent/fluentd:v1.7
+FROM fluent/fluentd:v1.9.3-1.0
 MAINTAINER spike@tigera.io
 
 USER root
 
 RUN apk add --update --virtual .build-deps \
-        sudo build-base ruby-dev \
- && sudo gem install \
-        fluent-plugin-elasticsearch fluent-plugin-s3 \
-        fluent-plugin-splunk-hec fluent-plugin-sumologic_output \
-        fluent-plugin-cloudwatch-logs \
- && sudo fluent-gem install fluent-plugin-remote_syslog \
- && sudo gem sources --clear-all \
+        build-base=0.5-r1 ruby-dev=2.5.7-r0 \
+ && gem install \
+        fluent-plugin-elasticsearch:4.0.5 fluent-plugin-s3:1.3.0 \
+        fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
+        fluent-plugin-cloudwatch-logs:0.8.0 \
+ && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
+ && gem sources --clear-all \
  && apk del .build-deps \
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/2.3.0/cache/*.gem
-RUN apk add --no-cache curl jq
+RUN apk add --no-cache curl=7.64.0-r3 jq=1.6-r0
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
