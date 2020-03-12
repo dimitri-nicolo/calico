@@ -453,6 +453,21 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
         cert:
         commonName:
         caBundle:
+      manager:
+        key:
+        cert:
+      elasticsearch:
+        key:
+        cert:
+      kibana:
+        key:
+        cert:
+      apiServer:
+        key:
+        cert:
+      compliance:
+        key:
+        cert:
 
     # Configuration for the tigera operator
     tigeraOperator:
