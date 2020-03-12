@@ -218,6 +218,7 @@ func resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData 
 // ApplyPolicyChanges applies the supplied resource updates on top of the loaded configuration in the xrefcache.
 func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policycalc.ImpactedResources, error) {
 	impacted := make(policycalc.ImpactedResources)
+	var err error
 
 	for _, r := range rs {
 		// Get the resource ID.
@@ -231,7 +232,7 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 		// for staged policies since we don't process staged policies in the "after" processing.
 		var stagedAction v3.StagedAction
 
-		// Unless determined otherwise, the resource is neither modified nor enforced.
+		// Unless determined otherwise, the resource is modified and enforced.
 		staged := false
 		modified := true
 
@@ -239,31 +240,36 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 		resource := r.Resource
 		action := r.Action
 
-		// Locate the resource in the xrefcache if it exists and work out if it has been modified.
+		// Locate the resource in the xrefcache if it exists and work out if it has been modified. We do this for
+		// staged and enforced policies.
 		existing := xc.Get(id)
-		if existing != nil {
-			modified = IsResourceModifiedForPIP(existing.GetPrimary(), resource)
+		if existing != nil && resource != nil {
+			log.Debug("Check if resource is modified")
+			modified, err = IsResourceModifiedForPIP(existing.GetPrimary(), resource)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		switch np := resource.(type) {
 		case *v3.StagedNetworkPolicy:
+			log.Debug("Enforcing StagedNetworkPolicy")
 			stagedAction, resource = v3.ConvertStagedPolicyToEnforced(np)
 			staged = true
-			modified = false
 		case *v3.StagedGlobalNetworkPolicy:
+			log.Debug("Enforcing StagedGlobalNetworkPolicy")
 			stagedAction, resource = v3.ConvertStagedGlobalPolicyToEnforced(np)
 			staged = true
-			modified = false
 		case *v3.StagedKubernetesNetworkPolicy:
+			log.Debug("Enforcing StagedKubernetesNetworkPolicy")
 			stagedAction, resource = v3.ConvertStagedKubernetesPolicyToK8SEnforced(np)
 			staged = true
-			modified = false
 		}
 
 		if staged {
 			// Update and trace the resource ID.
 			id = resources.GetResourceID(resource)
-			log.Debugf("Converted resource update: %s", id)
+			log.Debugf("Converted staged resource update: %s", id)
 
 			if action == "delete" {
 				log.Debug("Staged policy deleted - no op")
@@ -286,6 +292,7 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 
 		switch action {
 		case "update", "create":
+			log.Debugf("Update or create resource: id=%s; modified=%v; staged=%v; deleted=false", id, modified, staged)
 			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: modified, Deleted: false})
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
@@ -307,6 +314,7 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 				}
 			}
 		case "delete":
+			log.Debugf("Delete resource: id=%s; modified=false; staged=%v; deleted=true", id, staged)
 			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: false, Deleted: true})
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
@@ -363,60 +371,81 @@ func DeleteStagedResources(xc xrefcache.XrefCache) {
 // itself will match a flow. This is a minor finesse for the situation where we decrease the order of a policy but don't
 // change anything else - in this case we can still use the match data in the flow log for this policy (if we have any)
 // to augment the calculation.
-func IsResourceModifiedForPIP(r1, r2 resources.Resource) bool {
+func IsResourceModifiedForPIP(r1, r2 resources.Resource) (bool, error) {
+	if r1 == nil || r2 == nil {
+		// A resource is not modified if either is nil.  Created or deleted, but not modified (in the sense that we
+		// mean.
+		log.Debug("At least one resource is nil - not modified")
+		return false, nil
+	}
+
 	if reflect.TypeOf(r1) != reflect.TypeOf(r2) {
-		return false
+		// Resource types do not match.  This indicates a bug rather than an abuse of the API, but return an error
+		// up the stack for debugging purposes.
+		log.Errorf("Resource types do not match: %v != %v", reflect.TypeOf(r1), reflect.TypeOf(r2))
+		return false, fmt.Errorf("Resource type before and after do not match: %v != %v", reflect.TypeOf(r1), reflect.TypeOf(r2))
 	}
 
 	// Copy the resources since we modify them to do the comparison.
 	r1 = r1.DeepCopyObject().(resources.Resource)
 	r2 = r2.DeepCopyObject().(resources.Resource)
+	mod := true
 
 	switch rc1 := r1.(type) {
 	case *v3.NetworkPolicy:
+		log.Debug("Compare v3.NetworkPolicy")
 		rc2 := r2.(*v3.NetworkPolicy)
 
 		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
 		// so nil out the order before comparing.  We only need to compare the spec for policies.
 		rc1.Spec.Order = nil
 		rc2.Spec.Order = nil
-		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+		mod = !reflect.DeepEqual(rc1.Spec, rc2.Spec)
 	case *v3.StagedNetworkPolicy:
+		log.Debug("Compare v3.StagedNetworkPolicy")
 		rc2 := r2.(*v3.StagedNetworkPolicy)
 
 		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
 		// so nil out the order.
 		rc1.Spec.Order = nil
 		rc2.Spec.Order = nil
-		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+		mod = !reflect.DeepEqual(rc1.Spec, rc2.Spec)
 	case *v3.GlobalNetworkPolicy:
+		log.Debug("Compare v3.GlobalNetworkPolicy")
 		rc2 := r2.(*v3.GlobalNetworkPolicy)
 
 		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
 		// so nil out the order before comparing.  We only need to compare the spec for policies.
 		rc1.Spec.Order = nil
 		rc2.Spec.Order = nil
-		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+		mod = !reflect.DeepEqual(rc1.Spec, rc2.Spec)
 	case *v3.StagedGlobalNetworkPolicy:
+		log.Debug("Compare v3.StagedGlobalNetworkPolicy")
 		rc2 := r2.(*v3.StagedGlobalNetworkPolicy)
 
 		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
 		// so nil out the order before comparing.  We only need to compare the spec for policies.
 		rc1.Spec.Order = nil
 		rc2.Spec.Order = nil
-		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+		mod = !reflect.DeepEqual(rc1.Spec, rc2.Spec)
 	case *networkingv1.NetworkPolicy:
+		log.Debug("Compare networkingv1.NetworkPolicy")
 		rc2 := r2.(*networkingv1.NetworkPolicy)
 
 		// We only need to compare the spec for policies. Kubernetes policies do not have an order.
-		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+		mod = !reflect.DeepEqual(rc1.Spec, rc2.Spec)
 	case *v3.StagedKubernetesNetworkPolicy:
+		log.Debug("Compare v3.StagedKubernetesNetworkPolicy")
 
 		// We only need to compare the spec for policies. Kubernetes policies do not have an order.
 		rc2 := r2.(*v3.StagedKubernetesNetworkPolicy)
-		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+		mod = !reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	default:
+		log.Infof("Unhandled resource type for policy impact preview: %s", resources.GetResourceID(r1))
+		return false, fmt.Errorf("resource type not valid for policy preview: %v", resources.GetResourceID(r1))
 	}
 
 	// Not a supported resource update type. Assume it changed.
-	return true
+	log.Debugf("Resource modified: %v", mod)
+	return mod, nil
 }
