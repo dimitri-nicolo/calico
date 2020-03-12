@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/calicoq
-GO_BUILD_VER    ?= v0.32
+GO_BUILD_VER    ?= v0.36
 GOMOD_VENDOR     = true
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
@@ -84,12 +84,8 @@ ut:
 	@find ./calicoq/ -iname '*.coverprofile' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'
 
 ut-containerized: vendor
-	docker run --rm -t \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		$(CALICO_BUILD) \
-		sh -c 'make ut'
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) make ut'
 
 .PHONY: fv fv-containerized
 fv: bin/calicoq
