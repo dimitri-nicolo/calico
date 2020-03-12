@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
-GO_BUILD_VER    ?= v0.34
+GO_BUILD_VER    ?= v0.36
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
@@ -24,7 +24,7 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-EXTRA_DOCKER_ARGS = -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 # Allow local libcalico-go to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
 EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
@@ -115,7 +115,8 @@ endif
 	$(DOCKER_GO_BUILD) \
 		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
 			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-				( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+				( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | \
+	                grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 				( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
@@ -386,3 +387,12 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 # Stop Kubernetes apiserver
 stop-k8s-apiserver:
 	@-docker rm -f st-apiserver
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' go modules.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
