@@ -324,7 +324,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("should start guardian again", func() {
+	// To be fixed in SAAS-768
+/*	It("should start guardian again", func() {
 		cert, key, err := voltron.ClusterCreds(clusterID)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -356,7 +357,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			return err
 		}, "10s", "1s").ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
-	})
+	})*/
 
 	It("should clean up", func(done Done) {
 		_ = voltron.Close()
