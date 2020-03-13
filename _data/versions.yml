@@ -86,6 +86,9 @@
     ingress-collector:
       image: tigera/ingress-collector
       version: master
+    license-agent:
+      image: tigera/license-agent
+      version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
     calico/cni:

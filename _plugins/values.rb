@@ -377,6 +377,10 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     elasticsearchOperator:
       image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
       tag: #{versions["elasticsearch-operator"].version}
+    
+    licenseAgent:
+      image: #{imageRegistry}#{versions["license-agent"].image}
+      tag: #{versions["license-agent"].version}
 
     # Optionally specify docker configuration to be used for imagePullSecrets. 
     # Default to an empty list. 
