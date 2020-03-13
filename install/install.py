@@ -84,7 +84,7 @@ if __name__ == '__main__':
     kibana = RESTClient(kibana_url, username=user, password=password, ca_cert=kb_ca_cert,
             headers={"kbn-xsrf": "reporting"}, verify=verify)
     with open("./config.yaml") as f:
-        cfg = yaml.load(f)
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
     try:
         for l in cfg["elasticsearch"]:
             elastic.exec(l[0], os.path.expandvars(l[1]), l[2])
