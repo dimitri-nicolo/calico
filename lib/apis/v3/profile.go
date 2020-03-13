@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ type ProfileSpec struct {
 	// referencing this profile.  If labels configured on the endpoint have keys matching those
 	// labels inherited from the profile, the endpoint label values take precedence.
 	LabelsToApply map[string]string `json:"labelsToApply,omitempty" validate:"omitempty,labels"`
+	// Egress control.
+	EgressControl *EgressSpec `json:"egressControl,omitempty" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
