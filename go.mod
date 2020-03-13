@@ -18,7 +18,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
-	github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad
+	github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 
@@ -30,7 +30,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200311042213-1c54273739fb
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200312042650-0ed148d822a0
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200311201331-18ed66d02c9a
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200310204028-59913de27e11
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200310211350-635f510eff35
