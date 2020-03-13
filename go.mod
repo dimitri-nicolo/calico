@@ -11,10 +11,11 @@ require (
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
+	github.com/projectcalico/felix v3.8.5+incompatible // indirect
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad // indirect
+	github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd // indirect
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
 	k8s.io/client-go v0.17.2
