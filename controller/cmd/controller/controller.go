@@ -28,6 +28,7 @@ import (
 	anomalyWatcher "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/rbac"
 	syncElastic "github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	feedsWatcher "github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
@@ -196,7 +197,7 @@ func main() {
 
 	s := feedsWatcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(configMapNamespace),
-		k8sClient.CoreV1().Secrets(secretsNamespace),
+		rbac.RestrictedSecretsClient{k8sClient.CoreV1().Secrets(secretsNamespace)},
 		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
 		gns,
 		eip,
