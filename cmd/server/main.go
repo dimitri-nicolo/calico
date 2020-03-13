@@ -17,14 +17,13 @@ import (
 var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
 var version bool
 
-func PrintBuildVersion() error {
+func PrintBuildVersion() {
 	fmt.Println("************************************")
 	fmt.Println("Version:     ", VERSION)
 	fmt.Println("Build date:  ", BUILD_DATE)
 	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
 	fmt.Println("Git commit:  ", GIT_REVISION)
 	fmt.Println("************************************")
-	return nil
 }
 
 func init() {

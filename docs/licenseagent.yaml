@@ -8,7 +8,7 @@ metadata:
 ---
 
 # Required RBAC:
-# - watch/list nodes,  pods and access LicenseKeys
+# - watch/list nodes and access LicenseKeys
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -22,13 +22,6 @@ kind: ClusterRole
 metadata:
   name: tigera-license-agent
 rules:
-  - apiGroups: [""]
-    resources:
-      - pods
-    verbs:
-      - list
-      - get
-      - watch
   - apiGroups: [""]
     resources:
       - nodes

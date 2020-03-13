@@ -11,5 +11,4 @@ require (
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v2.5.1+incompatible
-	github.com/tigera/ts-queryserver v2.6.2+incompatible
 )
