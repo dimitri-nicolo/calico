@@ -15,6 +15,12 @@ To collect diagnostics, download and install the `kubectl-calico` plugin somewhe
 sudo curl -o /usr/local/bin/kubectl-calico {{site.url}}/{{page.version}}/maintenance/kubectl-calico
 ```
 
+Make it executable:
+
+```
+chmod +x /usr/local/bin/kubectl-calico
+```
+
 Then, create a diagnostics bundle.
 
 ```
