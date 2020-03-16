@@ -62,8 +62,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200406225356-95f7a04212f6
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200403210659-2b6c37caecda
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200409101828-0b3104e7a08e
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200409102455-041dd897f4c9
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
