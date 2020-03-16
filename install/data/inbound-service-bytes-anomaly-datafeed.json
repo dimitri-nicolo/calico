@@ -1,6 +1,6 @@
 {
-  "datafeed_id": "$CLUSTER_NAME.datafeed-service_bytes_anomaly",
-  "job_id": "$CLUSTER_NAME.service_bytes_anomaly",
+  "datafeed_id": "$CLUSTER_NAME.datafeed-inbound_service_bytes_anomaly",
+  "job_id": "$CLUSTER_NAME.inbound_service_bytes_anomaly",
   "query_delay": "5m",
   "indices": [
     "tigera_secure_ee_flows.$CLUSTER_NAME.*"
@@ -15,12 +15,6 @@
       "script": {
         "lang": "painless",
         "source": "doc['dest_namespace'].value + '/' + doc['dest_name_aggr'].value"
-      }
-    },
-    "namespace_source_name_aggr": {
-      "script": {
-        "lang": "painless",
-        "source": "doc['source_namespace'].value + '/' + doc['source_name_aggr'].value"
       }
     }
   },
