@@ -192,6 +192,32 @@ EKS_CLOUDWATCH_LOG_STREAM_PREFIX=kube-apiserver-audit-overwritten-
 EOM
 checkConfiguration $TEST_DIR/tmp/eks-log-stream-pfx.env eks-log-stream-pfx "EKS - Log Stream Prefix overwritten"
 
+SPLUNK_COMMON_VARS=$(cat <<EOM
+SPLUNK_HEC_TOKEN=splunk-token
+SPLUNK_FLOW_LOG=true
+SPLUNK_AUDIT_LOG=true
+SPLUNK_HEC_HOST=splunk.eng.tigera.com
+SPLUNK_HEC_PORT=8088
+SPLUNK_PROTOCOL=https
+SPLUNK_FLUSH_INTERVAL=5
+EOM
+)
+
+# Test with Splunk, normal server with http https
+cat > $TEST_DIR/tmp/splunk-trusted-http-https.env << EOM
+$SPLUNK_COMMON_VARS
+EOM
+
+checkConfiguration $TEST_DIR/tmp/splunk-trusted-http-https.env splunk-trusted-http-https "Splunk - with http and https"
+
+## Test with Splunk, self signed ca certificate
+cat > $TEST_DIR/tmp/splunk-self-signed-ca.env << EOM
+$SPLUNK_COMMON_VARS
+SPLUNK_CA_FILE=/etc/ssl/splunk/ca.pem
+EOM
+
+checkConfiguration $TEST_DIR/tmp/splunk-self-signed-ca.env splunk-self-signed-ca "Splunk - self signed ca config"
+
 rm -f $TMP
 
 exit $FAILED

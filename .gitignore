@@ -3,3 +3,4 @@ test/tmp/*
 *.go-build-cache*
 *.go-pkg-cache*
 */bin/*
+.idea
