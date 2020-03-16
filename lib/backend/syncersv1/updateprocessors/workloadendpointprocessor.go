@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -179,6 +179,11 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		IPv6Gateway:  ipv6Gateway,
 		Ports:        ports,
 		GenerateName: v3res.GenerateName,
+	}
+	if v3res.Spec.EgressControl != nil {
+		// Convert egress Selector and NamespaceSelector fields to a single selector
+		// expression in the same way we do for namespaced policy EntityRule selectors.
+		v1value.EgressSelector = GetEgressSelector(v3res.Spec.EgressControl, v3res.Namespace)
 	}
 
 	return v1value, nil

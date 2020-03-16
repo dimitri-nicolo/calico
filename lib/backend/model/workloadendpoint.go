@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,6 +163,7 @@ type WorkloadEndpoint struct {
 	IPv6Gateway      *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
 	Ports            []EndpointPort    `json:"ports,omitempty" validate:"dive"`
 	GenerateName     string            `json:"generate_name,omitempty"`
+	EgressSelector   string            `json:"egress_selector,omitempty"`
 }
 
 type EndpointPort struct {
