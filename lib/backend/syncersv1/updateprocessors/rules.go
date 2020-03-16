@@ -40,10 +40,16 @@ func RulesAPIV2ToBackend(ars []apiv3.Rule, ns string, matchSGs bool) []model.Rul
 	return brs
 }
 
-// entityRuleAPIV2ToBackend collects the ordered set of selectors for the EntityRule:
-// (serviceAccountSelector) && (selector)
-// It also returns the namespace selector to use
-func entityRuleAPIV2TOBackend(er *apiv3.EntityRule, ns string) (nsSelector, selector string) {
+// Form and return a single selector expression for all the endpoints that an EntityRule should
+// match.  The returned expression incorporates the semantics of:
+// - the EntityRule's Selector, NamespaceSelector and ServiceAccounts fields
+// - the namespace or global-ness of the policy that the EntityRule is part of
+// - SG matching, if SG matching is enabled
+// - endpoints for a namespaced policy being limited to the namespace (or to selected namespaces) as
+//   soon as _any_ of the selector fields are used, including NotSelector.
+func getSelector(er *apiv3.EntityRule, ns string, matchSGs bool, direction string) string {
+
+	var nsSelector, selector string
 
 	// Determine which namespaces are impacted by this entityRule.
 	if er.NamespaceSelector != "" {
@@ -93,13 +99,6 @@ func entityRuleAPIV2TOBackend(er *apiv3.EntityRule, ns string) (nsSelector, sele
 			selector = "(" + selector + ")"
 		}
 	}
-
-	return
-}
-
-func getSelector(er *apiv3.EntityRule, ns string, matchSGs bool, direction string) string {
-
-	nsSelector, selector := entityRuleAPIV2TOBackend(er, ns)
 
 	// If configured to also allow from security groups and the selector selects a security group, then
 	// generate a selector clause that allows from that security group.
