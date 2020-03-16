@@ -11,9 +11,11 @@ if [ "$(which kubectl)" == "" ]; then echo "Unable to locate kubectl in PATH"; f
 kubectl get ns 2>&1>/dev/null || if [[ $? != 0 ]]; then echo "kubectl does not appear to be functioning"; exit 1; fi
 
 # Make a tmp dir.
+set -e
 mtmp=$(mktemp -d)
 mkdir ${mtmp}/calico-diagnostics
 tmp=${mtmp}/calico-diagnostics
+set +e
 
 
 echo "==== Begin collecting diagnostics. ===="
