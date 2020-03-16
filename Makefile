@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/ingress-collector
-GO_BUILD_VER    ?= v0.32
+GO_BUILD_VER    ?= v0.36
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
@@ -22,6 +22,8 @@ Makefile.common.$(MAKE_BRANCH):
 ifdef LIBCALICOGO_PATH
 EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
 endif
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 include Makefile.common
 
