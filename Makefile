@@ -231,7 +231,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
-	$(MAKE) push-image IMAGETAG=${GIT_VERSION}
+	$(MAKE) push-image IMAGETAG=$(shell git describe --tags --dirty --always --long)
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
