@@ -36,4 +36,3 @@ if [ -z "$DATASTORE_TYPE" ]; then
 fi
 
 runTests
-

@@ -84,6 +84,9 @@ func withConfigGetFreshApiserverAndClient(
 			StopCh:             stopCh,
 		}
 		options.RecommendedOptions.SecureServing.BindPort = securePort
+		// Set this so that we avoid RecommendedOptions.CoreAPI's initialization from calling InClusterConfig()
+		// and uses our fv kubeconfig instead.
+		options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../test-apiserver-kubeconfig.conf"
 
 		//options.RecommendedOptions.SecureServing.BindAddress=
 		if err := server.RunServer(options); err != nil {
