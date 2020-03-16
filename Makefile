@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.32
+GO_BUILD_VER    ?= v0.36
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
@@ -57,7 +57,7 @@ K8SAPISERVER_GO_FILES = $(shell find $(SRC_DIRS) -name \*.go -exec $(STAT) {} \;
                    | sort -r | head -n 1 | sed "s/.* //")
 
 ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS = -run $(UNIT_TESTS) -v
+UNIT_TEST_FLAGS = -run $(UNIT_TESTS) -v
 endif
 
 APISERVER_VERSION?=$(shell git describe --tags --dirty --always)
@@ -80,7 +80,7 @@ vendor vendor/.up-to-date: go.mod
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod vendor'
 ifdef LIBCALICOGO_PATH
 	go mod edit -replace=github.com/projectcalico/libcalico-go=$(LOCAL_LIBCALICO)
-endif	
+endif
 	touch vendor/.up-to-date
 
 ###############################################################################
@@ -257,7 +257,8 @@ endif
 	mkdir -p bin
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/apiserver" && \
-		( ldd $(BINDIR)/apiserver 2>&1 | grep -q "Not a valid dynamic program" || \
+		( ldd $(BINDIR)/apiserver 2>&1 | \
+	        grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 		( echo "Error: $(BINDIR)/apiserver was not statically linked"; false ) )'
 
 # Build the tigera/cnx-apiserver docker image.
