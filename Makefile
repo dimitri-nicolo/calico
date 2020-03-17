@@ -1,5 +1,5 @@
 PACKAGE_NAME            ?= github.com/tigera/compliance
-GO_BUILD_VER            ?= v0.32
+GO_BUILD_VER            ?= v0.36
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
@@ -40,6 +40,7 @@ ifdef GOPATH
 EXTRA_DOCKER_ARGS += -v $(GOPATH)/pkg/mod:/go/pkg/mod:rw
 endif
 
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 include Makefile.common
 
@@ -791,3 +792,12 @@ help:
 	@echo "BUILDARCH (host):       $(BUILDARCH)"
 	@echo "CALICO_BUILD:     $(CALICO_BUILD)"
 	@echo "-----------------------------------------"
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' go modules.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
