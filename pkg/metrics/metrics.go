@@ -131,7 +131,7 @@ func (lr *LicenseReporter) startReporter() {
 			time.Sleep(lr.pollInterval)
 			continue
 		}
-		isValid, daysToExpire, maxNodes := lr.licenseHandler(*lic)
+		isValid, daysToExpire, maxNodes := lr.LicenseHandler(*lic)
 		gaugeNumNodes.Set(float64(len(nodeList.Items)))
 		gaugeNumDays.Set(float64(daysToExpire))
 		gaugeMaxNodes.Set(float64(maxNodes))
@@ -146,7 +146,7 @@ func (lr *LicenseReporter) startReporter() {
 }
 
 //Decode License, get expiry date, maximum allowed nodes
-func (lr *LicenseReporter) licenseHandler(lic api.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
+func (lr *LicenseReporter) LicenseHandler(lic api.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
 
 	//Decode the LicenseKey
 	claims, err := licenseClient.Decode(lic)
