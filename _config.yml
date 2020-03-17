@@ -57,6 +57,7 @@ imageNames:
   compliance-benchmarker: tigera/compliance-benchmarker
   ingress-collector: tigera/ingress-collector
   kibana: tigera/kibana
+  license-agent: tigera/license-agent
   prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
   configMapReload: quay.io/coreos/configmap-reload
   alertManager: quay.io/prometheus/alertmanager
@@ -135,6 +136,7 @@ defaults:
         compliance-benchmarker: tigera/compliance-benchmarker
         ingress-collector: tigera/ingress-collector
         kibana: tigera/kibana
+        license-agent: tigera/license-agent
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
         alertManager: quay.io/prometheus/alertmanager
