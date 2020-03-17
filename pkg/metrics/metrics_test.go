@@ -1,10 +1,11 @@
-package metrics
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+package metrics_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/tigera/licensing/client"
+	"github.com/tigera/license-agent/pkg/metrics"
 	"time"
 )
 
@@ -47,7 +48,6 @@ const validLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBM
 var licenseKey = struct {
 	description string
 	license     api.LicenseKey
-	claim       client.LicenseClaims
 }{
 	description: "Test License",
 	license: api.LicenseKey{
@@ -59,12 +59,16 @@ var licenseKey = struct {
 }
 
 var _ = FDescribe("Check License Validity", func() {
-	min, ok := time.ParseDuration("1m")
-	lr := NewLicenseReporter("", "", "", "", min, 9081)
-	It("Should be valid license", func() {
+	maxLicensedNodes := 100
+	It("Validates test license", func() {
+		By("Checking timeDuration")
+		min, ok := time.ParseDuration("1m")
 		Expect(ok).To(BeTrue(), "ParseDuration")
-		isValid, _, maxNodes := lr.licenseHandler(licenseKey.license)
+
+		By("Checking Validity")
+		lr := metrics.NewLicenseReporter("", "", "", "", min, 9081)
+		isValid, _, maxNodes := lr.LicenseHandler(licenseKey.license)
 		Expect(isValid).To(BeTrue(), "License Valid")
-		Expect(maxNodes).To(Equal(100))
+		Expect(maxNodes).Should(Equal(maxLicensedNodes))
 	})
 })
