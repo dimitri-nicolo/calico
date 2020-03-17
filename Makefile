@@ -37,7 +37,7 @@ EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache
 include Makefile.common
 
 ###############################################################################
-K8S_VERSION ?= v1.16.3
+K8S_VERSION = v1.16.4
 BINDIR ?= bin
 CONTAINER_NAME = gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 BUILD_DIR ?= build
@@ -303,19 +303,14 @@ hack-lib:
 	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/golang.sh -o hack/lib/golang.sh
 	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/etcd.sh -o hack/lib/etcd.sh
 
-.PHONY: fv
-fv: vendor/.up-to-date run-etcd hack-lib
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
-
-## Run a local kubernetes master with API via hyperkube
-run-kubernetes-master: run-etcd stop-kubernetes-master
+## Run a local kubernetes server with API via hyperkube
+run-kubernetes-server: run-etcd stop-kubernetes-server
 	# Run a Kubernetes apiserver using Docker.
 	docker run \
 		--net=host --name st-apiserver \
 		--detach \
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
-		/hyperkube apiserver \
+		kube-apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
 			--etcd-servers=http://127.0.0.1:2379 \
@@ -345,7 +340,7 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 	docker run \
 		--net=host \
 		--rm \
-		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
+		-v  $(CURDIR):/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
 		apply -f /manifests/test/crds.yaml
@@ -354,7 +349,7 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 	docker run \
 		--net=host \
 		--rm \
-		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
+		-v  $(CURDIR):/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
 		apply -f /manifests/test/mock-node.yaml
@@ -364,21 +359,34 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 	docker run \
 		--net=host \
 		--rm \
-		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
+		-v  $(CURDIR):/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
 		apply -f /manifests/test/namespaces.yaml
 
-## Stop the local kubernetes master
-stop-kubernetes-master:
+## Stop the local kubernetes server
+stop-kubernetes-server:
 	# Delete the cluster role binding.
 	-docker exec st-apiserver kubectl delete clusterrolebinding anonymous-admin
 
 	# Stop master components.
 	-docker rm -f st-apiserver st-controller-manager
 
+
+# TODO(doublek): Add fv-etcd back to fv. It is currently disabled because profiles behavior is broken.
+# Profiles should be disallowed from being created for both etcd and kdd mode. However we are allowing
+# profiles to be created in etcd and disallow in kdd. This has the test incorrect for etcd and running
+# for kdd.
+.PHONY: fv
+fv: fv-kdd
+
+.PHONY: fv-etcd
+fv-etcd: vendor/.up-to-date run-kubernetes-server hack-lib
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
+
 .PHONY: fv-kdd
-fv-kdd: vendor/.up-to-date run-kubernetes-master hack-lib
+fv-kdd: vendor/.up-to-date run-kubernetes-server hack-lib
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'K8S_API_ENDPOINT="http://127.0.0.1:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 

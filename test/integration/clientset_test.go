@@ -35,13 +35,12 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	"github.com/tigera/apiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/apiserver/pkg/apis/projectcalico/install"
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
-
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 // TestGroupVersion is trivial.
@@ -2138,7 +2137,9 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 
 // TestProfileClient exercises the Profile client.
 func TestProfileClient(t *testing.T) {
-	const name = "test-profile"
+	// This matches the namespace that is created at test setup time in the Makefile.
+	// TODO(doublek): Note that this currently only works for KDD mode.
+	const name = "kns.namespace-1"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
@@ -2158,9 +2159,8 @@ func TestProfileClient(t *testing.T) {
 
 func testProfileClient(client calicoclient.Interface, name string) error {
 	profileClient := client.ProjectcalicoV3().Profiles()
-	resName := "profile-test"
 	profile := &v3.Profile{
-		ObjectMeta: metav1.ObjectMeta{Name: resName},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: calico.ProfileSpec{
 			LabelsToApply: map[string]string{
 				"aa": "bb",
@@ -2177,22 +2177,25 @@ func testProfileClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	profileRes, err := profileClient.Create(profile)
-	if nil != err {
-		return fmt.Errorf("error creating the profile '%v' (%v)", profile, err)
+	// Profile creation is not supported.
+	_, err = profileClient.Create(profile)
+	if err == nil {
+		return fmt.Errorf("profile should not be allowed to be created'%v' (%v)", profile, err)
 	}
-	if resName != profileRes.Name {
+
+	profileRes, err := profileClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting profile %s (%s)", name, err)
+	}
+
+	if name != profileRes.Name {
 		return fmt.Errorf("didn't get the same profile back from server\n%+v\n%+v", profile, profileRes)
 	}
 
-	profileRes, err = profileClient.Get(resName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("error getting profile %s (%s)", resName, err)
-	}
-
-	err = profileClient.Delete(resName, &metav1.DeleteOptions{})
-	if nil != err {
-		return fmt.Errorf("Profile should be deleted (%s)", err)
+	// Profile deletion is not supported.
+	err = profileClient.Delete(name, &metav1.DeleteOptions{})
+	if err == nil {
+		return fmt.Errorf("Profile cannot be deleted (%s)", err)
 	}
 
 	return nil
