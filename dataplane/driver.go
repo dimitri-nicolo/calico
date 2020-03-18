@@ -20,18 +20,15 @@ import (
 	"math/bits"
 	"net"
 	"os/exec"
-
-	"github.com/projectcalico/felix/bpf/conntrack"
-
-	"k8s.io/client-go/kubernetes"
-
-	log "github.com/sirupsen/logrus"
-
 	"runtime/debug"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/libcalico-go/lib/health"
+
+	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	extdataplane "github.com/projectcalico/felix/dataplane/external"
@@ -41,7 +38,6 @@ import (
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
 func StartDataplaneDriver(configParams *config.Config,

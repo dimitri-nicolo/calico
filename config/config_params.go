@@ -799,9 +799,7 @@ func loadParams() {
 			param = &RegexpParam{Regexp: IfaceListRegexp,
 				Msg: "invalid Linux interface name"}
 		case "regexp-pattern":
-			param = &RegexpPatternParam{
-				Msg: "invalid regex pattern",
-			}
+			param = &RegexpPatternParam{}
 		case "iface-list-regexp":
 			param = &RegexpPatternListParam{
 				NonRegexpElemRegexp: NonRegexpIfaceElemRegexp,

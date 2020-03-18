@@ -35,14 +35,13 @@ import (
 	k8sp "k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis"
 	"k8s.io/kubernetes/pkg/proxy/config"
-	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/util/async"
 )
 
 // Proxy watches for updates of Services and Endpoints, maintains their mapping
 // and programs it into the dataplane
 type Proxy interface {
-	//Stop stops the proxy and waits for its exit
+	// Stop stops the proxy and waits for its exit
 	Stop()
 }
 
@@ -88,10 +87,10 @@ type proxy struct {
 
 	// event recorder to update node events
 	recorder record.EventRecorder
-
-	// LB health checker proxy
-	healthChecker healthcheck.Server
-	healthzServer healthcheck.HealthzUpdater
+	// FIXME MERGE Commenting out proxy health checker for now; API has changed
+	// // LB health checker proxy
+	// healthChecker healthcheck.ProxierHealthUpdater
+	// healthzServer healthcheck.ProxierHealthServer
 
 	stopCh   chan struct{}
 	stopWg   sync.WaitGroup
@@ -133,7 +132,7 @@ func New(k8s kubernetes.Interface, dp DPSyncer, hostname string, opts ...Option)
 	p.runner = async.NewBoundedFrequencyRunner("dp-sync-runner",
 		p.invokeDPSyncer, p.minDPSyncPeriod, time.Hour /* XXX might be infinite? */, 1)
 
-	p.healthChecker = healthcheck.NewServer(p.hostname, p.recorder, nil, nil)
+	// p.healthChecker = healthcheck.NewProxierHealthServer(p.hostname, p.recorder, nil, nil)
 	isIPv6 := false
 	p.epsChanges = k8sp.NewEndpointChangeTracker(p.hostname,
 		nil, // change if you want to provide more ctx
@@ -213,7 +212,7 @@ func (p *proxy) invokeDPSyncer() {
 
 	svcUpdateResult := k8sp.UpdateServiceMap(p.svcMap, p.svcChanges)
 	epsUpdateResult := p.epsMap.Update(p.epsChanges)
-
+	_ = epsUpdateResult
 	staleUDPSvcs := svcUpdateResult.UDPStaleClusterIP
 
 	/* XXX no tincluded in 1.15 yet
@@ -228,17 +227,17 @@ func (p *proxy) invokeDPSyncer() {
 	}
 	*/
 
-	// XXX perhaps in a different thread that runs regularly
-	if p.healthzServer != nil {
-		p.healthzServer.UpdateTimestamp()
-	}
-
-	if err := p.healthChecker.SyncServices(svcUpdateResult.HCServiceNodePorts); err != nil {
-		log.WithError(err).Error("Error syncing healthcheck services")
-	}
-	if err := p.healthChecker.SyncEndpoints(epsUpdateResult.HCEndpointsLocalIPSize); err != nil {
-		log.WithError(err).Error("Error syncing healthcheck endpoints")
-	}
+	// // XXX perhaps in a different thread that runs regularly
+	// if p.healthzServer != nil {
+	// 	p.healthzServer.UpdateTimestamp()
+	// }
+	//
+	// if err := p.healthChecker.SyncServices(svcUpdateResult.HCServiceNodePorts); err != nil {
+	// 	log.WithError(err).Error("Error syncing healthcheck services")
+	// }
+	// if err := p.healthChecker.SyncEndpoints(epsUpdateResult.HCEndpointsLocalIPSize); err != nil {
+	// 	log.WithError(err).Error("Error syncing healthcheck endpoints")
+	// }
 	err := p.dpSyncer.Apply(DPSyncerState{
 		SvcMap:       p.svcMap,
 		EpsMap:       p.epsMap,
