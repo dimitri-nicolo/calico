@@ -420,34 +420,22 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
 
     # Configuration for the tigera operator
     tigeraOperator:
-      image: #{versions["tigera-operator"].image}
-      registry: #{versions["tigera-operator"].registry}
-      version: #{versions["tigera-operator"].version}
+      image: #{versions.fetch("tigera-operator").image}
+      version: #{versions.fetch("tigera-operator").version}
+      registry: #{versions.fetch("tigera-operator").registry}
 
-    # Configuration for the tigera operator init container.
-    tigeraOperatorInit:
-      image: #{versions["tigera-operator"].image}-init
-      registry: #{versions["tigera-operator"].registry}
-      version: #{versions["tigera-operator"].version}
+    calicoctl:
+      image: #{imageRegistry}#{versions["calicoctl"].image}
+      tag: #{versions.fetch("calicoctl")}
 
-    # TODO: All of this will be removed when these components are installed by the Tigera operator.
-    fluentd:
-      image: #{versions["fluentd"].image}
-      registry: #{imageRegistry}
-      version: #{versions["fluentd"].version}
-    esCurator:
-      image: #{versions["es-curator"].image}
-      registry: #{imageRegistry}
-      version: #{versions["es-curator"].version}
     prometheusOperator:
       image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
-      version: #{versions["prometheus-operator"].version}
-    elasticsearchOperator:
-      image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
-      version: #{versions["elasticsearch-operator"].version}
+      tag: #{versions["prometheus-operator"].version}
+
     prometheusConfigReloader:
       image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
+
     configmapReload:
       image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
       tag: #{versions["configmap-reload"].version}

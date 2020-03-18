@@ -74,6 +74,19 @@ spec:
           image: {{ join ":" (list .Values.cni.image .Values.cni.tag) }}
           command: ["/install-cni.sh"]
           env:
+{{- if .Values.bpf }}
+            # Overrides for kubernetes API server host/port.  Needed in BPF mode.
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: kubernetes_service_host
+            - name: KUBERNETES_SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: kubernetes_service_port
+{{- end }}
             # Name of the CNI config file to create.
             - name: CNI_CONF_NAME
               value: "10-{{include "variant_name" . | lower}}.conflist"
@@ -136,6 +149,22 @@ spec:
           image: {{ join ":" (list .Values.node.image .Values.node.tag) }}
 {{ tuple .Values.node.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
+{{- if .Values.bpf }}
+            # Overrides for kubernetes API server host/port.  Needed in BPF mode.
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: kubernetes_service_host
+            - name: KUBERNETES_SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: kubernetes_service_port
+            # Actually enable BPF mode.
+            - name: FELIX_BPFENABLED
+              value: "true"
+{{- end }}
 {{- if eq .Values.datastore "etcd" }}
             # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -206,7 +235,7 @@ spec:
             - name: IP
               value: "autodetect"
             - name: CALICO_IPV4POOL_IPIP
-              value: "{{ .Values.initialPool.ipIpMode }}"
+              value: "{{- if .Values.bpf -}} Never {{- else -}} {{ .Values.initialPool.ipIpMode }} {{- end -}}"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:
@@ -409,6 +438,13 @@ spec:
 {{- end }}
             - name: policysync
               mountPath: /var/run/nodeagent
+{{- if .Values.bpf }}
+            # We need to mount the BPF filesystem at /sys/fs/bpf and we need that mount to persist
+            # even if {{ include "nodeName" . }} is restarted.
+            - name: sysfs
+              mountPath: /sys/fs/
+              mountPropagation: Bidirectional
+{{- end }}
       volumes:
         # Used by cnx-node.
         - name: lib-modules
@@ -425,6 +461,12 @@ spec:
             path: /run/xtables.lock
             type: FileOrCreate
 {{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
+{{- if .Values.bpf }}
+        - name: sysfs
+          hostPath:
+            path: /sys/fs/
+            type: DirectoryOrCreate
+{{- end }}
         # Used to install CNI.
         - name: cni-bin-dir
           hostPath:

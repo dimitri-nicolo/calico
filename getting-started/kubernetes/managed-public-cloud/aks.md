@@ -110,8 +110,12 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 > **Note**: The Calico network policy feature can only be enabled when the cluster is created. You can't enable Calico network policy on an existing AKS cluster.
 {: .alert .alert-info}
 
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Azure,CNI:Azure,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
+
 ### Above and beyond
 
+- [Video: Everything you need to know about Kubernetes networking on Azure](https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-azure/)
 - [Install calicoctl command line tool]({{ site.baseurl }}/getting-started/calicoctl/install)
 - [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)

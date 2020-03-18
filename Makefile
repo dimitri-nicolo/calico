@@ -93,7 +93,8 @@ _site build: bin/helm
 
 ## Clean enough that a new release build will be clean
 clean:
-	rm -rf _output _site .jekyll-metadata stderr.out filtered.out docs_test.created bin pinned_versions.yaml
+	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
+	rm -rf stderr.out filtered.out docs_test.created bin
 
 ########################################################################################################################
 # Builds locally checked out code using local versions of libcalico, felix, and confd.
@@ -384,7 +385,7 @@ release-publish: release-prereqs
 	@echo ""
 
 ## Generates release notes for the given version.
-release-notes: #release-prereqs
+release-notes: 
 	VERSION=$(CALICO_VER) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./release-scripts/generate-release-notes.py
 
 update-authors:
@@ -421,7 +422,7 @@ RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
 # Determine where the manifests live. For older versions we used
 # a different location, but we still need to package them up for patch
 # releases.
-DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/manifests
+DEFAULT_MANIFEST_SRC=./_site/manifests
 OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4 
 ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
 DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation

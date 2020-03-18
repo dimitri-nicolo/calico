@@ -18,7 +18,7 @@ Enable {{site.prodname}} application layer network policy in Istio service mesh.
 
 Although Istio policy is ideal for operational goals, security inside and outside the cluster requires {{site.prodname}} network policy. {{site.prodname}} supports a special integration for Istio, called **application layer policy**. This policy lets you restrict ingress traffic inside and outside pods, and mitigate common threats to Istio-enabled apps.
 
-For a tutorial on how application layer policy provides second-factor authentication for the mythical Yao Bank, see [Enforce network policy using Istio]({{ site.baseurl }}/security/tutorials/app-layer-policy/enforce-policy-istio).
+For a tutorial on how application layer policy provides second-factor authentication for the mythical Yao Bank, see [Enforce network policy using Istio]({{site.baseurl}}/security/tutorials/app-layer-policy/enforce-policy-istio).
 
 ### Before you begin...
 
@@ -50,7 +50,7 @@ kubectl patch felixconfiguration default --type='merge' -p \
 
 #### Install Istio
 
-1. Verify [application layer policy requirements]({{ site.baseurl }}/getting-started/kubernetes/requirements#application-layer-policy-requirements).
+1. Verify [application layer policy requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#application-layer-policy-requirements).
 1. Install Istio using the [Istio project documentation](https://istio.io/docs/setup/install/). Istio can be installed in both strict mode or permissive mode. For example to install Istio in strict mode:
 
 ```bash
@@ -105,6 +105,6 @@ If the namespace already has pods in it, you must recreate them for this to take
 
 ### Above and beyond
 
-- [Enforce network policy using Istio tutorial]({{ site.baseurl }}/security/tutorials/app-layer-policy/enforce-policy-istio)
-- [Enforce network policy using Istio]({{ site.baseurl }}/security/enforce-policy-istio)
-- [Use HTTP methods and paths in policy rules]({{ site.baseurl }}/security/http-methods)
+- [Enforce network policy using Istio tutorial]({{site.baseurl}}/security/tutorials/app-layer-policy/enforce-policy-istio)
+- [Enforce network policy using Istio]({{site.baseurl}}/security/enforce-policy-istio)
+- [Use HTTP methods and paths in policy rules]({{site.baseurl}}/security/http-methods)

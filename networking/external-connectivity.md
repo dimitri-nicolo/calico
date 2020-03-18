@@ -19,12 +19,12 @@ to destinations outside the cluster.
 The easiest way to get outbound connectivity is to turn on NAT Outgoing on all
 {{site.prodname}} pools you want to be able to access the internet.
 
-```shell
+```bash
 kubectl get ipPool.projectcalico.org
 ```
 
 ### For each pool that needs connectivity:
-```
+```bash
 cat << EOF | kubectl apply -f -
 - apiVersion: projectcalico.org/v3
   kind: IPPool
@@ -75,8 +75,8 @@ switch sides of the sessions.
 If you have a small number of hosts, you can configure BGP sessions between your router and each {{site.prodname}}-enabled host. With many hosts, you may wish to use a
 route reflector or set up a Layer 3 topology.
 
-There's further advice on network topologies in [{{site.prodname}} over Ethernet fabrics]({{site.baseurl}}/reference/architecture/design/l2-interconnect-fabric).
-We'd also encourage you to [get in touch](https://www.projectcalico.org/contact/)
+There's further advice on network topologies in [{{site.prodname}} over Ethernet fabrics]({{ site.baseurl }}/reference/architecture/design/l2-interconnect-fabric).
+We'd also encourage you to {% include open-new-window.html text='get in touch' url='https://www.projectcalico.org/contact/' %}
 to discuss your environment.
 
 ### Orchestrator specific

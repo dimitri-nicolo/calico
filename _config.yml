@@ -88,6 +88,9 @@ breadcrumbs:
     hide: false  # show breadcrumbs on root/home page
     image: false # Show image or title text
 
+# Set to 'true' to show warning that points users to latest version of each page.
+is_latest: false
+
 defaults:
   -
     scope:
@@ -97,7 +100,7 @@ defaults:
       show_title: true
       show_read_time: true
       show_toc: true
-      version: master
+      version: v3.13
       sitemap: true
       registry: gcr.io/unique-caldron-775/cnx/
       # A lookup map for imageNames based on component names.

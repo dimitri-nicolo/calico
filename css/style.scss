@@ -8,6 +8,9 @@
 @import "../css/search";
 @import "../css/plugins/offcanvas";
 
+$header-height: 75px;
+$sticky-top: $header-height + $navbar-margin-bottom;
+
 // By default bootstrap doesn't apply many styles to table elements
 // unless they have class .table and .table-bordered
 // These lines here extend the table so it automatically gets those
@@ -44,6 +47,7 @@ html {
 body {
   -webkit-overflow-scrolling: touch;
   overflow-x: visible;
+  padding-top: $sticky-top;
 
   @media (max-width: $screen-xs-max) {
     overflow-x: hidden;
@@ -255,6 +259,71 @@ input.gsc-input, .gsc-input-box, .gsc-input-box-hover, .gsc-input-box-focus, .gs
   font-weight: 700 !important;
 }
 
+.geek-details-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.geek-details {
+  display: inline-block; 
+  box-shadow: 2px 2px 10px grey;
+}
+
+.geek-details-info {
+  height: 30px;
+  width: 30px;
+  margin: 10px;
+  padding-top: 2px;
+  border-radius: 50%;
+  border-color: #5580d5;
+  text-align: center;
+  color: #FFF;
+  font-weight: 600;
+  font-size: 19px;
+  background-color: #5788e2;
+  cursor: pointer;
+}
+
+.geek-details-info:hover {
+  background-color: #134ebc;
+}
+
+.geek-detail {
+  border-style: solid; 
+  border-width: 1px; 
+  border-color: #ccc; 
+  width: 80px; 
+  text-align: center; 
+  font-size: 12px; 
+  float: left;
+}
+
+.geek-detail-value {
+  border-style: solid; 
+  border-width: 2px;
+  border-radius: 5px;
+  border-color: #999;
+  margin: 5px;
+  padding: 0px;
+  background-color: #d9e6d2;
+  cursor: pointer;
+}
+
+.geek-details-wrapper .modal-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.geek-detail-value:hover {
+  background-color: #93c47d;
+}
+
+.glyphicon.glyphicon-new-window.open-new-window {
+  font-size: 14px;
+  padding-left: 4px;
+}
+
 .read-time {
   padding-bottom: 10px;
   color: #666;
@@ -307,11 +376,9 @@ input.gsc-input, .gsc-input-box, .gsc-input-box-hover, .gsc-input-box-focus, .gs
   }
 }
 
-$wpfront-notification-bar-spacer-height: 55px;
-$sticky-top: $wpfront-notification-bar-spacer-height + $navbar-margin-bottom;
-$header-height: 75px;
 $search-height: 50px;
-$max-sidebar-height: calc(100vh - #{$wpfront-notification-bar-spacer-height + $header-height + $navbar-margin-bottom + $search-height + $navbar-margin-bottom});
+$max-sidebar-height: calc(100vh - #{$sticky-top + $search-height + $navbar-margin-bottom});
+$max-toc-height: calc(100vh - #{$sticky-top + $navbar-margin-bottom});
 
 .sidebar {
   position: -webkit-sticky;
@@ -333,12 +400,17 @@ $max-sidebar-height: calc(100vh - #{$wpfront-notification-bar-spacer-height + $h
   top: $sticky-top;
 
   .toc {
-    max-height: $max-sidebar-height;
+    max-height: $max-toc-height;
 
     @media (min-width: $screen-md-min) {
       overflow-y: auto;
     }
   }
+}
+
+#right-toc {
+  padding-left: .5em;
+  border-left: 1px solid #ddd;
 }
 
 .navbar-right {

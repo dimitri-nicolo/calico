@@ -37,6 +37,7 @@ Ensure that your GKE cluster that meets the following requirements:
 
 ### How to
 
+<<<<<<< HEAD
 1. [Install {{site.prodname}}](#install-calico-enterprise)
 1. [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
 1. [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
@@ -100,9 +101,13 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Host Local,CNI:Calico,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
+
 ### Above and beyond
 
 - [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+- [Video: Everything you need to know about Kubernetes networking on Google cloud](https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-google-cloud/)
 - [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)

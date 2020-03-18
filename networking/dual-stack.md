@@ -23,10 +23,8 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Before you begin...
 
-Set up a cluster following the Kubernetes
-[prerequisites](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#prerequisites)
-and [enablement
-steps](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#enable-ipv4-ipv6-dual-stack).
+Set up a cluster following the Kubernetes {% include open-new-window.html text='prerequisites' url='https://kubernetes.io/docs/concepts/services-networking/dual-stack/#prerequisites' %} and {% include open-new-window.html text='enablement
+steps' url='https://kubernetes.io/docs/concepts/services-networking/dual-stack/#enable-ipv4-ipv6-dual-stack' %}.
 
 ### How to
 
