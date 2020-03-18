@@ -66,7 +66,13 @@ The **License Agent** is a containerized application that monitors the following
 
 To add the license-agent component in a Kubernetes cluster for license metrics, install pull secret and apply license-agent manifest. 
 
-1. Install your pull secret.
+1. Create namespace for license-agent
+
+```
+kubectl create namespace tigera-license-agent
+```
+
+2. Install your pull secret
 
 ```
    kubectl create secret generic tigera-pull-secret \
@@ -74,7 +80,7 @@ To add the license-agent component in a Kubernetes cluster for license metrics, 
      --type=kubernetes.io/dockerconfigjson -n tigera-license-agent
 ```
 
-2. Apply manifest
+3. Apply manifest
 
 ```
 kubectl apply -f {{ "/manifests/licenseagent.yaml" | absolute_url }}
