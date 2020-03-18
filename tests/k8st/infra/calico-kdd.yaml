@@ -329,11 +329,13 @@ metadata:
   name: calico-node
 rules:
   # The CNI plugin needs to get pods, nodes, and namespaces.
+  # node startup needs to get configmaps.
   - apiGroups: [""]
     resources:
       - pods
       - nodes
       - namespaces
+      - configmaps
     verbs:
       - get
   - apiGroups: [""]
@@ -590,7 +592,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: calico/node:master
+          image: calico/node:latest-amd64
           env:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
@@ -765,7 +767,7 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: calico-kube-controllers
-          image: calico/kube-controllers:master
+          image: calico/kube-controllers:release-v3.13
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS

@@ -20,4 +20,9 @@ report/*.xml
 .empty
 crds.yaml
 filesystem/etc/calico/confd/*
+filesystem/code/*
+filesystem/usr
 Makefile.common*
+bin
+kubectl
+/tests/k8st/kind
