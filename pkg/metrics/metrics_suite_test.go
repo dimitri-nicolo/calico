@@ -10,6 +10,6 @@ import (
 
 func TestHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/handler_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/metrics_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Metrics Suite", []Reporter{junitReporter})
 }
