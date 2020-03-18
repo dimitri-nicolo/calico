@@ -178,6 +178,8 @@ commit-pin-updates: update-pins build git-status git-commit ci
 .PHONY: remote-deps
 remote-deps: mod-download
 	# Recreate the directory so that we are sure to clean up any old files.
+	rm -rf vendor/github.com/tigera vendor/github.com/Microsoft
+	mkdir -p vendor/github.com/tigera vendor/github.com/Microsoft
 	rm -rf filesystem/etc/calico/confd
 	mkdir -p filesystem/etc/calico/confd
 	rm -rf bin/bpf

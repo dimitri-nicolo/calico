@@ -31,6 +31,7 @@ github.com/Masterminds/semver v1.2.2 h1:ptelpryog9A0pR4TGFvIAvw2c8SaNrYkFtfrxhSv
 github.com/Masterminds/semver v1.2.2/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/sprig v2.19.0+incompatible h1:xTFLLXzR0JJGQe7M492jAOJ9F3jpYdNiWcL8h9JOV8Y=
 github.com/Masterminds/sprig v2.19.0+incompatible/go.mod h1:y6hNFY5UBTIWBxnzTeuNhlNS5hqE0NB0E6fgfo2Br3o=
+github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4/go.mod h1:f8+uWZKRD+e0kwDzXNJTvNVeQbSxk2DW2YkWxmmNJxQ=
 github.com/Microsoft/go-winio v0.0.0-20190408173621-84b4ab48a507/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Microsoft/go-winio v0.4.11 h1:zoIOcVf0xPN1tnMVbTtEdI+P8OofVk3NObnwOQ6nK2Q=
 github.com/Microsoft/go-winio v0.4.11/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
