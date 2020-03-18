@@ -112,7 +112,7 @@ section:
     section:
     - title: Overview
       path: /security/logs/elastic/overview
-    - title: Access Elasticsearchlogs
+    - title: Access Elasticsearch logs
       path: /security/logs/elastic/view
     - title: Flow logs
       path: /security/logs/elastic/flow
