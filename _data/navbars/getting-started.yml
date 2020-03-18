@@ -77,10 +77,7 @@ section:
       path: /getting-started/bare-metal/installation/container
     - title: Binary install
       path: /getting-started/bare-metal/installation/binary
-
-- title: Running cnx/node with an init system
-  path: /getting-started/as-service
-
+      
 - title: calicoctl
   path: /getting-started/calicoctl/
   section:
