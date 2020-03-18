@@ -11,7 +11,7 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearchfake "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch/fake"
 
-	esalpha1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1alpha1"
+	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ var _ = Describe("Reconcile", func() {
 	Context("When the elasticsearch components exist in management cluster", func() {
 		var managementCertSecret *corev1.Secret
 		var managementESConfigMap *corev1.ConfigMap
-		var es *esalpha1.Elasticsearch
+		var es *esv1.Elasticsearch
 		var managementK8sCli kubernetes.Interface
 		var calicoK8sCLI tigeraapi.Interface
 		var esK8sCLI *relasticsearchfake.RESTClient
@@ -57,7 +57,7 @@ var _ = Describe("Reconcile", func() {
 					"shards":      "5",
 				},
 			}
-			es = &esalpha1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
+			es = &esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
 				Namespace:         resource.TigeraElasticsearchNamespace,
 				CreationTimestamp: metav1.Now(),
@@ -123,7 +123,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("notifies when elasticsearch is recreated", func() {
 			// Changing the creation time stamp signals that the cluster was recreated
-			esK8sCLI.SetElasticsearch(&esalpha1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
+			esK8sCLI.SetElasticsearch(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
 				Namespace:         resource.TigeraElasticsearchNamespace,
 				CreationTimestamp: metav1.Now(),
@@ -172,7 +172,7 @@ var _ = Describe("Reconcile", func() {
 
 		It("doesn't notify when Elasticsearches status changes", func() {
 			cp := es.DeepCopy()
-			cp.Status.Health = esalpha1.ElasticsearchYellowHealth
+			cp.Status.Health = esv1.ElasticsearchYellowHealth
 			esK8sCLI.SetElasticsearch(cp)
 			Expect(r.Reconcile(types.NamespacedName{})).ShouldNot(HaveOccurred())
 

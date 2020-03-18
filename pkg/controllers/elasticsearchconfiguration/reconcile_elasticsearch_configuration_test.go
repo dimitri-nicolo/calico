@@ -11,7 +11,7 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 
-	esalpha1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1alpha1"
+	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -142,14 +142,14 @@ var _ = Describe("Reconcile", func() {
 			managedK8sCli := k8sfake.NewSimpleClientset()
 			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap, esUserSecret)
 
-			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esalpha1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
+			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
 				Namespace:         resource.TigeraElasticsearchNamespace,
 				CreationTimestamp: metav1.Now(),
 			}})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			es := &esalpha1.Elasticsearch{}
+			es := &esv1.Elasticsearch{}
 			err = esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do().Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -213,7 +213,7 @@ var _ = Describe("Reconcile", func() {
 			managedK8sCli := k8sfake.NewSimpleClientset()
 			managementK8sCli := k8sfake.NewSimpleClientset(esCertSecret, kbCertSecret, managementESConfigMap, esUserSecret)
 
-			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esalpha1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
+			esK8sCli, err := relasticsearchfake.NewFakeRESTClient(&esv1.Elasticsearch{ObjectMeta: metav1.ObjectMeta{
 				Name:              resource.DefaultTSEEInstanceName,
 				Namespace:         resource.TigeraElasticsearchNamespace,
 				CreationTimestamp: metav1.Now(),
