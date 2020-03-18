@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 
 	"k8s.io/client-go/rest"
 
@@ -503,75 +504,75 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		// Will be fixed in SAAS-769
-/*		When("long lasting connection is in progress", func() {
-			var slowTun *tunnel.Tunnel
-			var xCert tls.Certificate
+		/*		When("long lasting connection is in progress", func() {
+				var slowTun *tunnel.Tunnel
+				var xCert tls.Certificate
 
-			It("should get some certs for test server", func() {
-				key, _ := utils.KeyPEMEncode(srvPrivKey)
-				cert := utils.CertPEMEncode(srvCert)
+				It("should get some certs for test server", func() {
+					key, _ := utils.KeyPEMEncode(srvPrivKey)
+					cert := utils.CertPEMEncode(srvCert)
 
-				xCert, _ = tls.X509KeyPair(cert, key)
-			})
-
-			It("Should add cluster", func() {
-				Expect(k8sAPI.AddCluster("slow", "slow")).ShouldNot(HaveOccurred())
-				Expect(<-watchSync).NotTo(HaveOccurred())
-			})
-
-			var slow *test.HTTPSBin
-			slowC := make(chan struct{})
-			slowWaitC := make(chan struct{})
-
-			It("Should open a tunnel", func() {
-				certPem, keyPem, _ := srv.ClusterCreds("slow")
-				cert, _ := tls.X509KeyPair(certPem, keyPem)
-
-				cfg := &tls.Config{
-					Certificates: []tls.Certificate{cert},
-					RootCAs:      rootCAs,
-				}
-
-				Eventually(func() error {
-					var err error
-					slowTun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
-					return err
-				}).ShouldNot(HaveOccurred())
-
-				slow = test.NewHTTPSBin(slowTun, xCert, func(r *http.Request) {
-					// the connection is set up, let the test proceed
-					close(slowWaitC)
-					// block here to emulate long lasting connection
-					<-slowC
+					xCert, _ = tls.X509KeyPair(cert, key)
 				})
 
-			})
+				It("Should add cluster", func() {
+					Expect(k8sAPI.AddCluster("slow", "slow")).ShouldNot(HaveOccurred())
+					Expect(<-watchSync).NotTo(HaveOccurred())
+				})
 
-			It("should be able to update a cluster - test race SAAS-226", func() {
-				var wg sync.WaitGroup
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					clnt := configureHTTPSClient()
-					req, err := http.NewRequest("GET",
-						"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
-					Expect(err).NotTo(HaveOccurred())
-					req.Header[server.ClusterHeaderField] = []string{"slow"}
-					test.AddJaneToken(req)
-					resp, err := clnt.Do(req)
-					log.Infof("resp = %+v\n", resp)
-					log.Infof("err = %+v\n", err)
-					Expect(err).NotTo(HaveOccurred())
-				}()
+				var slow *test.HTTPSBin
+				slowC := make(chan struct{})
+				slowWaitC := make(chan struct{})
 
-				<-slowWaitC
-				Expect(k8sAPI.UpdateCluster("slow")).ShouldNot(HaveOccurred())
-				Expect(<-watchSync).NotTo(HaveOccurred())
-				close(slowC) // let the call handler exit
-				slow.Close()
-				wg.Wait()
-			})
-		})*/
+				It("Should open a tunnel", func() {
+					certPem, keyPem, _ := srv.ClusterCreds("slow")
+					cert, _ := tls.X509KeyPair(certPem, keyPem)
+
+					cfg := &tls.Config{
+						Certificates: []tls.Certificate{cert},
+						RootCAs:      rootCAs,
+					}
+
+					Eventually(func() error {
+						var err error
+						slowTun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+						return err
+					}).ShouldNot(HaveOccurred())
+
+					slow = test.NewHTTPSBin(slowTun, xCert, func(r *http.Request) {
+						// the connection is set up, let the test proceed
+						close(slowWaitC)
+						// block here to emulate long lasting connection
+						<-slowC
+					})
+
+				})
+
+				It("should be able to update a cluster - test race SAAS-226", func() {
+					var wg sync.WaitGroup
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						clnt := configureHTTPSClient()
+						req, err := http.NewRequest("GET",
+							"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
+						Expect(err).NotTo(HaveOccurred())
+						req.Header[server.ClusterHeaderField] = []string{"slow"}
+						test.AddJaneToken(req)
+						resp, err := clnt.Do(req)
+						log.Infof("resp = %+v\n", resp)
+						log.Infof("err = %+v\n", err)
+						Expect(err).NotTo(HaveOccurred())
+					}()
+
+					<-slowWaitC
+					Expect(k8sAPI.UpdateCluster("slow")).ShouldNot(HaveOccurred())
+					Expect(<-watchSync).NotTo(HaveOccurred())
+					close(slowC) // let the call handler exit
+					slow.Close()
+					wg.Wait()
+				})
+			})*/
 
 		It("should stop the servers", func(done Done) {
 			err := srv.Close()
@@ -1067,23 +1068,17 @@ func listClusters(server string) ([]clusters.ManagedCluster, int) {
 	return list, 200
 }
 
-func clientHelloReq(addr string, target string, expectStatus int) *http.Response {
-	defer GinkgoRecover()
-	req, err := http.NewRequest("GET", "http://"+addr+"/some/path", strings.NewReader("HELLO"))
-	Expect(err).NotTo(HaveOccurred())
-
-	req.Header[server.ClusterHeaderField] = []string{target}
-	test.AddJaneToken(req)
-
-	var resp *http.Response
-
+func clientHelloReq(addr string, target string, expectStatus int) {
 	Eventually(func() bool {
-		var err error
+		req, err := http.NewRequest("GET", "http://"+addr+"/some/path", strings.NewReader("HELLO"))
+		Expect(err).NotTo(HaveOccurred())
+
+		req.Header[server.ClusterHeaderField] = []string{target}
+		test.AddJaneToken(req)
 		resp, err := http.DefaultClient.Do(req)
+
 		return err == nil && resp.StatusCode == expectStatus
 	}, 2*time.Second, 400*time.Millisecond).Should(BeTrue())
-
-	return resp
 }
 
 func http2Srv(t *tunnel.Tunnel) {
