@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,13 +28,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containernetworking/cni/pkg/ns"
+	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/docopt/docopt-go"
 	"github.com/ishidawataru/sctp"
 	reuse "github.com/libp2p/go-reuseport"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/fv/cgroup"
 	"github.com/projectcalico/felix/fv/utils"
 )
 
@@ -46,7 +47,7 @@ Usage:
 Options:
   --source-ip=<source_ip>  Source IP to use for the connection [default: 0.0.0.0].
   --source-port=<source>  Source port to use for the connection [default: 0].
-  --protocol=<protocol>  Protocol to test [default: tcp].
+  --protocol=<protocol>  Protocol to test tcp (default), udp (connected) udp-noconn (unconnected).
   --duration=<seconds>   Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
   --loop-with-file=<file>  Whether to send messages repeatedly, file is used for synchronization
 
@@ -74,7 +75,10 @@ const defaultIPv6SourceIP = "::"
 func main() {
 	log.SetLevel(log.DebugLevel)
 
-	arguments, err := docopt.Parse(usage, nil, true, "v0.1", false)
+	// If we've been told to, move into this felix's cgroup.
+	cgroup.MaybeMoveToFelixCgroupv2()
+
+	arguments, err := docopt.ParseArgs(usage, nil, "v0.1")
 	if err != nil {
 		println(usage)
 		log.WithError(err).Fatal("Failed to parse usage")
@@ -113,7 +117,7 @@ func main() {
 		go func() {
 			timeout := time.Duration(seconds + 2)
 			time.Sleep(timeout * time.Second)
-			panic("Timed out")
+			log.Fatal("Timed out")
 		}()
 	}
 
@@ -186,6 +190,7 @@ type testConn struct {
 	duration time.Duration
 }
 
+// FIXME MERGE Need to port over the new RESPONSE=json blob handling
 func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol string, duration time.Duration) (*testConn, error) {
 	err := utils.RunCommand("ip", "r")
 	if err != nil {
@@ -204,7 +209,9 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 	}
 
 	log.Infof("Connecting from %v to %v over %s", localAddr, remoteAddr, protocol)
-	if protocol == "udp" {
+
+	switch protocol {
+	case "udp":
 		// Since we specify the source port rather than use an ephemeral port, if
 		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
 		// another call to this program, the original port is in post-close wait
@@ -215,7 +222,7 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 		if err != nil {
 			panic(err)
 		}
-	} else if protocol == "sctp" {
+	case "sctp":
 		lip, err := net.ResolveIPAddr("ip", "::")
 		if err != nil {
 			return nil, err
@@ -246,8 +253,7 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 			panic(err)
 		}
 		log.Infof("SCTP connection established")
-	} else {
-
+	default:
 		// Since we specify the source port rather than use an ephemeral port, if
 		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
 		// another call to this program, the original port is in post-close wait

@@ -212,7 +212,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 
 	for i := 0; i < n; i++ {
 		// Then start Felix and create a node for it.
-		felix := RunFelix(infra, opts)
+		opts.ExtraEnvVars["BPF_LOG_PFX"] = fmt.Sprintf("%d-", i)
+		felix := RunFelix(infra, i, opts)
+		opts.ExtraEnvVars["BPF_LOG_PFX"] = ""
 		felix.TyphaIP = typhaIP
 		if opts.IPIPEnabled {
 			infra.SetExpectedIPIPTunnelAddr(felix, i, bool(n > 1))

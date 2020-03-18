@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/felix/fv/connectivity"
+
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -34,12 +36,13 @@ import (
 )
 
 type Container struct {
-	Name     string
-	IP       string
-	IPPrefix string
-	Hostname string
-	runCmd   *exec.Cmd
-	Stdin    io.WriteCloser
+	Name           string
+	IP             string
+	ExtraSourceIPs []string
+	IPPrefix       string
+	Hostname       string
+	runCmd         *exec.Cmd
+	Stdin          io.WriteCloser
 
 	mutex         sync.Mutex
 	binaries      set.Set
@@ -102,9 +105,10 @@ func (c *Container) Stop() {
 		time.Sleep(200 * time.Millisecond)
 	}
 	c.WaitNotRunning(60 * time.Second)
-	logCxt.Info("Container stopped")
 	withTimeoutPanic(logCxt, 5*time.Second, func() { c.signalDockerRun(os.Kill) })
 	withTimeoutPanic(logCxt, 10*time.Second, func() { c.logFinished.Wait() })
+
+	logCxt.Info("Container stopped")
 }
 
 func withTimeoutPanic(logCxt *log.Entry, t time.Duration, f func()) {
@@ -168,10 +172,19 @@ func NextContainerIndex() int {
 }
 
 func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
+	name := UniqueName(namePrefix)
+	return RunWithFixedName(name, opts, args...)
+}
 
+func UniqueName(namePrefix string) string {
 	// Build unique container name and struct.
 	containerIdx++
-	c = &Container{Name: fmt.Sprintf("%v-%d-%d-felixfv", namePrefix, os.Getpid(), containerIdx)}
+	name := fmt.Sprintf("%v-%d-%d-felixfv", namePrefix, os.Getpid(), containerIdx)
+	return name
+}
+
+func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) {
+	c = &Container{Name: name}
 
 	// Prep command to run the container.
 	log.WithField("container", c).Info("About to run container")
@@ -378,14 +391,68 @@ func (c *Container) GetPIDs(processName string) []int {
 	return pids
 }
 
+type ProcInfo struct {
+	PID  int
+	PPID int
+}
+
+var psRegexp = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\S+)$`)
+
+func (c *Container) GetProcInfo(processName string) []ProcInfo {
+	out, err := c.ExecOutput("ps", "wwxo", "pid,ppid,comm")
+	if err != nil {
+		log.WithError(err).WithField("out", out).Warn("ps failed, assuming no PIDs")
+		return nil
+	}
+	var pids []ProcInfo
+	for _, line := range strings.Split(out, "\n") {
+		log.WithField("line", line).Debug("Parsing ps line")
+		matches := psRegexp.FindStringSubmatch(line)
+		if len(matches) == 0 {
+			continue
+		}
+		name := matches[3]
+		if name != processName {
+			continue
+		}
+		pid, err := strconv.Atoi(matches[1])
+		if err != nil {
+			log.WithError(err).WithField("line", line).Panic("Failed to parse ps output")
+		}
+		ppid, err := strconv.Atoi(matches[2])
+		if err != nil {
+			log.WithError(err).WithField("line", line).Panic("Failed to parse ps output")
+		}
+		pids = append(pids, ProcInfo{PID: pid, PPID: ppid})
+
+	}
+	return pids
+}
+
 func (c *Container) GetSinglePID(processName string) int {
 	// Get the process's PID.  This retry loop ensures that we don't get tripped up if we see multiple
-	// PIDs, which can happen transiently when a process restarts/forks off a subprocess.
+	// PIDs, which can happen transiently when a process restarts.
 	start := time.Now()
 	for {
-		pids := c.GetPIDs(processName)
-		if len(pids) == 1 {
-			return pids[0]
+		// Get the PID and parent PID of all processes with the right name.
+		procs := c.GetProcInfo(processName)
+		log.WithField("procs", procs).Debug("Got ProcInfos")
+		// Collect all the pids so we can detect forked child processes by their PPID.
+		pids := set.New()
+		for _, p := range procs {
+			pids.Add(p.PID)
+		}
+		// Filter the procs, ignore any that are children of another proc in the set.
+		var filteredProcs []ProcInfo
+		for _, p := range procs {
+			if pids.Contains(p.PPID) {
+				continue
+			}
+			filteredProcs = append(filteredProcs, p)
+		}
+		if len(filteredProcs) == 1 {
+			// Success, there's one process.
+			return filteredProcs[0].PID
 		}
 		Expect(time.Since(start)).To(BeNumerically("<", 5*time.Second),
 			fmt.Sprintf("Timed out waiting for there to be a single PID for %s", processName))
@@ -450,11 +517,13 @@ func (c *Container) WaitNotRunning(timeout time.Duration) {
 func (c *Container) EnsureBinary(name string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-
+	logCtx := log.WithField("container", c.Name).WithField("binary", name)
+	logCtx.Info("Ensuring binary")
 	if !c.binaries.Contains(name) {
+		logCtx.Info("Binary not already present")
 		err := utils.Command("docker", "cp", "../bin/"+name, c.Name+":/"+name).Run()
 		if err != nil {
-			log.WithField("name", name).Error("Failed to run 'docker cp' command")
+			log.WithField("name", name).Panic("Failed to run 'docker cp' command")
 		}
 		c.binaries.Add(name)
 	}
@@ -482,6 +551,14 @@ func (c *Container) ExecOutput(args ...string) (string, error) {
 	arg := []string{"exec", c.Name}
 	arg = append(arg, args...)
 	cmd := utils.Command("docker", arg...)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", err
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go c.copyOutputToLog("exec-err", stderr, &wg, nil)
+	defer wg.Wait()
 	out, err := cmd.Output()
 	if err != nil {
 		if out == nil {
@@ -510,9 +587,16 @@ func (c *Container) SourceName() string {
 	return c.Name
 }
 
-func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+func (c *Container) SourceIPs() []string {
+	ips := []string{c.IP}
+	ips = append(ips, c.ExtraSourceIPs...)
+	return ips
+}
 
+func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Response {
 	// Ensure that the container has the 'test-connection' binary.
+	logCxt := log.WithField("container", c.Name)
+	logCxt.Debugf("Entering Container.CanConnectTo(%v,%v,%v)", ip, port, protocol)
 	c.EnsureBinary("test-connection")
 
 	// Run 'test-connection' to the target.

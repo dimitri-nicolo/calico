@@ -447,6 +447,7 @@ func describeAsyncTests(baseTests []StateList, l license) {
 					conf := config.New()
 					conf.FelixHostname = localHostname
 					conf.VXLANEnabled = true
+					conf.BPFEnabled = true
 					conf.IPSecMode = "PSK"
 					conf.IPSecPSKFile = "/proc/1/cmdline"
 					conf.IPSecIKEAlgorithm = "somealgo"
@@ -611,6 +612,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		conf := config.New()
 		conf.FelixHostname = localHostname
 		conf.VXLANEnabled = true
+		conf.BPFEnabled = true
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
