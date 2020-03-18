@@ -45,15 +45,19 @@ var (
 )
 
 type FlowLogNamesParams struct {
-	Limit         int32    `json:"limit"`
-	Actions       []string `json:"actions"`
-	ClusterName   string   `json:"cluster"`
-	Namespace     string   `json:"namespace"`
-	Prefix        string   `json:"prefix"`
-	Unprotected   bool     `json:"unprotected"`
-	StartDateTime string   `json:"startDateTime"`
-	EndDateTime   string   `json:"endDateTime"`
-	Strict        bool     `json:"string"`
+	Limit         int32           `json:"limit"`
+	Actions       []string        `json:"actions"`
+	ClusterName   string          `json:"cluster"`
+	Namespace     string          `json:"namespace"`
+	Prefix        string          `json:"prefix"`
+	Unprotected   bool            `json:"unprotected"`
+	StartDateTime string          `json:"startDateTime"`
+	EndDateTime   string          `json:"endDateTime"`
+	Strict        bool            `json:"bool"`
+	SourceType    []string        `json:"srcType"`
+	SourceLabels  []LabelSelector `json:"srcLabels"`
+	DestType      []string        `json:"dstType"`
+	DestLabels    []LabelSelector `json:"dstLabels"`
 
 	// Parsed timestamps
 	startDateTimeESParm interface{}
@@ -145,6 +149,19 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 		}
 	}
 
+	srcType := lowerCaseParams(url["srcType"])
+	srcLabels, err := getLabelSelectors(url["srcLabels"])
+	if err != nil {
+		log.WithError(err).Info("Error extracting srcLabels")
+		return nil, errParseRequest
+	}
+	dstType := lowerCaseParams(url["dstType"])
+	dstLabels, err := getLabelSelectors(url["dstLabels"])
+	if err != nil {
+		log.WithError(err).Info("Error extracting dstLabels")
+		return nil, errParseRequest
+	}
+
 	params := &FlowLogNamesParams{
 		Actions:             actions,
 		Limit:               limit,
@@ -157,6 +174,10 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 		startDateTimeESParm: startDateTimeESParm,
 		endDateTimeESParm:   endDateTimeESParm,
 		Strict:              strict,
+		SourceType:          srcType,
+		SourceLabels:        srcLabels,
+		DestType:            dstType,
+		DestLabels:          dstLabels,
 	}
 
 	// Check whether the params are provided in the request and set default values if not
@@ -171,6 +192,24 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	valid = validateActionsAndUnprotected(params.Actions, params.Unprotected)
 	if !valid {
 		return nil, errInvalidActionUnprotected
+	}
+
+	srcTypeValid := validateFlowTypes(params.SourceType)
+	if !srcTypeValid {
+		return nil, errInvalidFlowType
+	}
+	dstTypeValid := validateFlowTypes(params.DestType)
+	if !dstTypeValid {
+		return nil, errInvalidFlowType
+	}
+
+	srcLabelsValid := validateLabelSelector(params.SourceLabels)
+	if !srcLabelsValid {
+		return nil, errInvalidLabelSelector
+	}
+	dstLabelsValid := validateLabelSelector(params.DestLabels)
+	if !dstLabelsValid {
+		return nil, errInvalidLabelSelector
 	}
 
 	return params, nil
@@ -201,32 +240,54 @@ func buildNamesQuery(params *FlowLogNamesParams) *elastic.BoolQuery {
 		query = query.Filter(filter)
 	}
 
-	// If both the namespace and prefix are specified, make sure to filter
-	// so that at least one of the two endpoints in the flow will match both
-	// conditions.
-	if params.Namespace != "" && params.Prefix != "" {
-		sourceQuery := elastic.NewBoolQuery().Must(
-			elastic.NewPrefixQuery("source_name_aggr", params.Prefix),
-			elastic.NewTermQuery("source_namespace", params.Namespace),
-		)
-		destQuery := elastic.NewBoolQuery().Must(
-			elastic.NewPrefixQuery("dest_name_aggr", params.Prefix),
-			elastic.NewTermQuery("dest_namespace", params.Namespace),
-		)
-		query = query.Should(sourceQuery, destQuery).MinimumNumberShouldMatch(1)
-	} else if params.Prefix != "" {
-		query = query.Should(
-			elastic.NewPrefixQuery("source_name_aggr", params.Prefix),
-			elastic.NewPrefixQuery("dest_name_aggr", params.Prefix),
-		).MinimumNumberShouldMatch(1)
-	} else if params.Namespace != "" {
-		nestedQuery = nestedQuery.
-			Should(
-				elastic.NewTermQuery("source_namespace", params.Namespace),
-				elastic.NewTermQuery("dest_namespace", params.Namespace),
-			).
-			MinimumNumberShouldMatch(1)
+	// Collect all the different filtering queries based on the specified parameters.
+	sourceConditions := []elastic.Query{}
+	destConditions := []elastic.Query{}
+	if params.Prefix != "" {
+		sourceConditions = append(sourceConditions, elastic.NewPrefixQuery("source_name_aggr", params.Prefix))
+		destConditions = append(destConditions, elastic.NewPrefixQuery("dest_name_aggr", params.Prefix))
 	}
+	if params.Namespace != "" {
+		sourceConditions = append(sourceConditions, elastic.NewTermQuery("source_namespace", params.Namespace))
+		destConditions = append(destConditions, elastic.NewTermQuery("dest_namespace", params.Namespace))
+	}
+	if len(params.SourceType) > 0 {
+		sourceConditions = append(sourceConditions, buildTermsFilter(params.SourceType, "source_type"))
+	}
+	if len(params.SourceLabels) > 0 {
+		sourceConditions = append(sourceConditions, buildLabelSelectorFilter(params.SourceLabels, "source_labels", "source_labels.labels"))
+	}
+	if len(params.DestType) > 0 {
+		destConditions = append(destConditions, buildTermsFilter(params.DestType, "dest_type"))
+	}
+	if len(params.DestLabels) > 0 {
+		destConditions = append(destConditions, buildLabelSelectorFilter(params.DestLabels, "dest_labels", "dest_labels.labels"))
+	}
+
+	// Use the filtering queries to craft the appropriate source and destination filtering queries
+	var sourceQuery, destQuery *elastic.BoolQuery
+	if len(sourceConditions) > 0 {
+		sourceQuery = elastic.NewBoolQuery()
+		for _, query := range sourceConditions {
+			sourceQuery = sourceQuery.Must(query)
+		}
+	}
+	if len(destConditions) > 0 {
+		destQuery = elastic.NewBoolQuery()
+		for _, query := range destConditions {
+			destQuery = destQuery.Must(query)
+		}
+	}
+
+	// Add the source and destination filtering queries to the ES query.
+	if sourceQuery != nil && destQuery != nil {
+		query = query.Should(sourceQuery, destQuery).MinimumNumberShouldMatch(1)
+	} else if sourceQuery != nil {
+		query = query.Should(sourceQuery)
+	} else if destQuery != nil {
+		query = query.Should(destQuery)
+	}
+
 	query = query.Filter(nestedQuery)
 
 	return query
@@ -248,6 +309,16 @@ func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client,
 	defer cancel()
 
 	// Perform the query with composite aggregation
+	// TODO: Since composite aggregation is expensive and we only care about
+	// correlating fields together in order to do RBAC checks, we should instead
+	// precalculate RBAC permissions and use those as filters on the query itself.
+	// In this case, there will be four possibilities for return values, source filtered
+	// on source, destination filtered on source, source filtered on destination, and
+	// destination filtered on destination. We will need to run four separate queries
+	// with the precalculated filters to grab these four possible return values and
+	// then aggregate the set together in order to get our return values. This should
+	// be cheaper since the four queries themselves should be much cheaper to run than
+	// the single composite aggregation query.
 	rcvdBuckets, rcvdErrors := esClient.SearchCompositeAggregations(ctx, aggQuery, nil)
 	nameSet := set.New()
 	names := make([]string, 0)
