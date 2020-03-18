@@ -2,7 +2,7 @@
 
 APP_NAME        = voltron
 PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
-GO_BUILD_VER   ?= v0.34
+GO_BUILD_VER   ?= v0.37
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 # Used by Makefile.common
@@ -29,6 +29,8 @@ Makefile.common.$(MAKE_BRANCH):
 ifdef ST_MODE
 EXTRA_DOCKER_ARGS = -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp:rw -v /home/runner/config:/home/runner/config:rw -v /home/runner/docker_auth.json:/home/runner/config/docker_auth.json:rw
 endif
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 include Makefile.common
 
@@ -138,7 +140,8 @@ endif
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	        go build -o $@ -v $(LDFLAGS) cmd/$*/*.go && \
-               ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
+               ( ldd $@ 2>&1 | \
+	               grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 	             ( echo "Error: $@ was not statically linked"; false ) )'
 
 #############################################
