@@ -5,7 +5,7 @@ go 1.13
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200311201331-18ed66d02c9a
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11
 
 	k8s.io/api => k8s.io/api v0.17.2
