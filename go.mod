@@ -1,6 +1,6 @@
 module github.com/projectcalico/kube-controllers
 
-go 1.12
+go 1.13
 
 require (
 	github.com/apparentlymart/go-cidr v1.0.1
@@ -10,9 +10,11 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
+
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
 	github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627
+
 	github.com/projectcalico/felix v3.8.5+incompatible
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/satori/go.uuid v1.2.0
@@ -33,8 +35,8 @@ require (
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200313042400-bc2de395d540
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200310204028-59913de27e11
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200310211350-635f510eff35
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200310211350-635f510eff35
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
