@@ -5,7 +5,8 @@ go 1.13
 require (
 	github.com/apparentlymart/go-cidr v1.0.1
 
-	github.com/elastic/cloud-on-k8s v0.0.0-20190924084002-6ce4c9177aec
+	// Elastic repo for ECK v1.0.1
+	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
