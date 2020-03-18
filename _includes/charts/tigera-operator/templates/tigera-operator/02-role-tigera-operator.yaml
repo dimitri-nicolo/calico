@@ -22,8 +22,6 @@ rules:
     resources:
       - nodes
     verbs:
-      # Need to update node labels when migrating nodes.
-      - 'patch'
       - 'get'
       - 'list'
       # We need this for Typha autoscaling
