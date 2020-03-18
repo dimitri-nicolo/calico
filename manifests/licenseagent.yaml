@@ -135,6 +135,8 @@ metadata:
   name: allow-tigera.tigera-license-agent-access
   namespace: tigera-license-agent
 spec:
+  order: 1
+  tier: allow-tigera
   selector: k8s-app == 'tigera-license-agent'
   types:
   - Ingress
