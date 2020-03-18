@@ -155,6 +155,7 @@ rules:
   - apps
   resources:
   - deployments
+  - statefulsets
   verbs:
   - get
   - list
@@ -290,6 +291,19 @@ metadata:
 
 ---
 
+# Apply an elastic trial license using yaml, not by api call.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eck-trial-license
+  namespace: calico-monitoring
+  labels:
+    license.k8s.elastic.co/type: enterprise-trial
+  annotations:
+    elastic.co/eula: accepted
+
+---
+
 # Elasticsearch operator
 apiVersion: apps/v1
 kind: StatefulSet
@@ -314,10 +328,21 @@ spec:
       serviceAccountName: elastic-operator
       nodeSelector:
         beta.kubernetes.io/os: linux
+      initContainers:
+      - name: elastic-internal-init-os-settings
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        image: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+          runAsUser: 0
       containers:
       - image: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
         name: manager
-        args: ["manager", "--operator-roles", "all", "--enable-debug-logs=false"]
+        args: ["manager", "--operator-roles", "all", "--log-verbosity=0"]
         env:
           - name: OPERATOR_NAMESPACE
             valueFrom:
@@ -332,16 +357,16 @@ spec:
         resources:
           limits:
             cpu: 1
-            memory: 100Mi
+            memory: 150Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 50Mi
         ports:
-        - containerPort: 9876
+        - containerPort: 9443
           name: webhook-server
           protocol: TCP
         volumeMounts:
-        - mountPath: /tmp/cert
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
       terminationGracePeriodSeconds: 10
@@ -354,7 +379,7 @@ spec:
 ---
 
 # Set up the elasticsearch cluster parameters
-apiVersion: elasticsearch.k8s.elastic.co/v1alpha1
+apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
 metadata:
   name: tigera-elasticsearch
@@ -366,8 +391,9 @@ spec:
       selfSignedCertificate:
         subjectAltNames:
         - dns: tigera-elasticsearch-es-http.calico-monitoring.svc.{{.Values.elasticsearch.tls.selfSignedCertificate.dns}}
-  nodes:
-  - nodeCount: {{.Values.elasticsearch.nodeCount}}
+  nodeSets:
+  - count: {{.Values.elasticsearch.nodeCount}}
+    name: node
     config:
       node.master: true
       node.data: true
@@ -384,9 +410,67 @@ spec:
         storageClassName: tigera-elasticsearch
 
 ---
+# Webhook server service to validate new Elastic CR's
+apiVersion: v1
+kind: Service
+metadata:
+  name: elastic-webhook-server
+  namespace: calico-monitoring
+spec:
+  ports:
+    - port: 443
+      targetPort: 9443
+  selector:
+    control-plane: elastic-operator
+
+---
+# Registers elastic-webhook-server as webhook for CR validation.
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: elastic-webhook.k8s.elastic.co
+webhooks:
+  - clientConfig:
+      caBundle: Cg==
+      service:
+        name: elastic-webhook-server
+        namespace: calico-monitoring
+        path: /validate-elasticsearch-k8s-elastic-co-v1-elasticsearch
+    failurePolicy: Ignore
+    name: elastic-es-validation-v1.k8s.elastic.co
+    rules:
+      - apiGroups:
+          - elasticsearch.k8s.elastic.co
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - elasticsearches
+  - clientConfig:
+      caBundle: Cg==
+      service:
+        name: elastic-webhook-server
+        namespace: calico-monitoring
+        path: /validate-elasticsearch-k8s-elastic-co-v1beta1-elasticsearch
+    failurePolicy: Ignore
+    name: elastic-es-validation-v1beta1.k8s.elastic.co
+    rules:
+      - apiGroups:
+          - elasticsearch.k8s.elastic.co
+        apiVersions:
+          - v1beta1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - elasticsearches
+
+---
 
 # Configure Kibana
-apiVersion: kibana.k8s.elastic.co/v1alpha1
+apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
   name: tigera-kibana
@@ -400,7 +484,9 @@ spec:
     server:
       basePath: {{ print "/" $kibanaBasePath }}
       rewriteBasePath: true
-  nodeCount: 1
+    elasticsearch.ssl.certificateAuthorities:
+    - /usr/share/kibana/config/elasticsearch-certs/tls.crt
+  count: 1
   elasticsearchRef:
     name: tigera-elasticsearch
   podTemplate:
@@ -427,9 +513,10 @@ spec:
 
 {{- if .Values.prometheus.createFinalizers }}
 
+---
+
 # This manifest includes some additional resources required to
 # deploy Prometheus Operator with Openshift.
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

@@ -22,6 +22,8 @@ rules:
     resources:
       - nodes
     verbs:
+      # Need to update node labels when migrating nodes.
+      - 'patch'
       - 'get'
       - 'list'
       # We need this for Typha autoscaling
@@ -145,5 +147,11 @@ rules:
       - kibana.k8s.elastic.co
     resources:
       - kibanas
+    verbs:
+      - '*'
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
     verbs:
       - '*'
