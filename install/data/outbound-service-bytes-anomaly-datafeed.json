@@ -1,22 +1,13 @@
 {
-  "datafeed_id": "$CLUSTER_NAME.datafeed-pod_outlier_ip_activity",
-  "job_id": "$CLUSTER_NAME.pod_outlier_ip_activity",
+  "datafeed_id": "$CLUSTER_NAME.datafeed-outbound_service_bytes_anomaly",
+  "job_id": "$CLUSTER_NAME.outbound_service_bytes_anomaly",
   "query_delay": "5m",
   "indices": [
     "tigera_secure_ee_flows.$CLUSTER_NAME.*"
   ],
   "query": {
-    "bool": {
-      "must": [
-        {
-          "term": {"dest_name": "-"}
-        }
-      ],
-      "must_not": [
-	{
-          "term": {"source_name": "-"}
-	}
-      ]
+    "match_all": {
+      "boost": 1
     }
   },
   "script_fields": {

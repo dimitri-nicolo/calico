@@ -1,24 +1,27 @@
 {
-  "job_id": "$CLUSTER_NAME.ip_sweep_external",
+  "job_id": "$CLUSTER_NAME.outbound_service_bytes_anomaly",
   "job_type": "anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
-    "recon"
+    "dos"
   ],
-  "description": "IP Sweep - External",
+  "description": "Outbound service bytes anomaly",
   "analysis_config": {
     "bucket_span": "10m",
     "detectors": [
       {
-        "detector_description": "Count of dest. IPs compared with all external IPs",
-        "function": "high_distinct_count",
-        "field_name": "dest_ip",
-        "over_field_name": "source_ip",
+        "detector_description": "Output bytes spike for a pod within a replica set",
+        "function": "high_sum",
+        "field_name": "bytes_out",
+        "over_field_name": "source_name",
+        "partition_field_name": "namespace_source_name_aggr",
         "detector_index": 0
       }
     ],
     "influencers": [
-      "source_ip"
+      "source_name",
+      "source_name_aggr",
+      "source_namespace"
     ]
   },
   "analysis_limits": {
@@ -33,5 +36,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "ip_sweep_external.$CLUSTER_NAME"
+  "results_index_name": "service_bytes_anomaly.$CLUSTER_NAME"
 }

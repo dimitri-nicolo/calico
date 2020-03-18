@@ -6,8 +6,23 @@
     "tigera_secure_ee_flows.$CLUSTER_NAME.*"
   ],
   "query": {
-    "match_all": {
-      "boost": 1
+    "bool": {
+      "must_not": [
+        {
+          "bool": {
+            "filter": [
+              { "term": { "dest_namespace": "kube-system" } },
+              {
+                "regexp": {
+                  "dest_name_aggr": {
+                      "value": "coredns-.*"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
   },
   "script_fields": {
