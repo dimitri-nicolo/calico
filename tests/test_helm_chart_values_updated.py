@@ -58,7 +58,6 @@ EE_MAPPED_IMAGES = {
     'prometheus-config-reloader': 'prometheusConfigReloader',
     'configmap-reload': 'configmapReload',
     'elasticsearch-operator': 'elasticsearchOperator',
-    'busybox': 'busybox',
 }
 
 EXCLUDED_IMAGES = [
