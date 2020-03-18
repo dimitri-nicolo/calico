@@ -1,6 +1,6 @@
 module github.com/tigera/intrusion-detection/controller
 
-go 1.12
+go 1.13
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200213220436-ef850de5ac60

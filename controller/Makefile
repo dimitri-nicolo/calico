@@ -2,7 +2,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 ##############################################################################
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
-GO_BUILD_VER   ?= v0.34
+GO_BUILD_VER   ?= v0.37
 GIT_USE_SSH     = true
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 BUILD_IMAGE    ?= tigera/intrusion-detection-controller
@@ -23,6 +23,8 @@ Makefile.common.$(MAKE_BRANCH):
 	# Clean up any files downloaded from other branches so they don't accumulate.
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 include Makefile.common
 
@@ -148,7 +150,8 @@ endif
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
-               ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+               ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | \
+			       grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
 
 healthz: $(BINDIR)/healthz
@@ -167,7 +170,8 @@ endif
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/healthz" && \
-               ( ldd $(BINDIR)/healthz-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+               ( ldd $(BINDIR)/healthz-$(ARCH) 2>&1 | \
+			       grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 	             ( echo "Error: $(BINDIR)/healthz-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
@@ -342,7 +346,14 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+APIMACHINERY_REPO_ORIG=k8s.io/apimachinery
+APIMACHINERY_REPO=github.com/tigera/apimachinery-private
+APIMACHINERY_BRANCH=$(PIN_BRANCH)
+
+replace-apimachinery-pin:
+	$(call update_replace_pin,$(APIMACHINERY_REPO_ORIG),$(APIMACHINERY_REPO),$(APIMACHINERY_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-apimachinery-pin
 
 ###############################################################################
 # Utils
