@@ -1,4 +1,4 @@
-title: "Install Calico"
+title: "Install Calico Enterprise"
 path: /getting-started/
 order: 1
 section:
@@ -63,8 +63,6 @@ section:
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
   - title: System requirements
     path: /getting-started/kubernetes/requirements
-  - title: Try out the eBPF tech preview
-    path: /getting-started/kubernetes/trying-ebpf
 - title: Non-cluster hosts
   path: /getting-started/bare-metal/
   section:
