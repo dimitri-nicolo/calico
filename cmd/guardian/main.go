@@ -5,9 +5,11 @@ package main
 import (
 	"crypto/x509"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -16,11 +18,16 @@ import (
 
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/client"
+	"github.com/tigera/voltron/pkg/version"
 )
 
 const (
 	// EnvConfigPrefix represents the prefix used to load ENV variables required for startup
 	EnvConfigPrefix = "GUARDIAN"
+)
+
+var (
+	versionFlag = flag.Bool("version", false, "Print version information")
 )
 
 // Config is a configuration used for Guardian
@@ -53,6 +60,15 @@ func (cfg config) String() string {
 }
 
 func main() {
+	// Parse all command-line flags
+	flag.Parse()
+
+	// For --version use case
+	if *versionFlag {
+		version.Version()
+		os.Exit(0)
+	}
+
 	cfg := config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)

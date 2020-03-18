@@ -4,12 +4,15 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/tigera/voltron/pkg/version"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -22,6 +25,10 @@ import (
 const (
 	// EnvConfigPrefix represents the prefix used to load ENV variables required for startup
 	EnvConfigPrefix = "VOLTRON"
+)
+
+var (
+	versionFlag = flag.Bool("version", false, "Print version information")
 )
 
 // Config is a configuration used for Voltron
@@ -60,6 +67,15 @@ type config struct {
 }
 
 func (cfg config) String() string {
+	// Parse all command-line flags
+	flag.Parse()
+
+	// For --version use case
+	if *versionFlag {
+		version.Version()
+		os.Exit(0)
+	}
+
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return "{}"

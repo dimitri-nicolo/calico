@@ -67,10 +67,15 @@ BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
 GIT_VERSION            = $(shell git describe --tags --dirty --always --long)
 
-VERSION_FLAGS   = -X main.VERSION=$(BUILD_VERSION) \
-                  -X main.BUILD_DATE=$(BUILD_BUILD_DATE) \
-                  -X main.GIT_DESCRIPTION=$(BUILD_GIT_DESCRIPTION) \
-                  -X main.GIT_REVISION=$(BUILD_GIT_REVISION)
+# Flags for building the binaries.
+#
+# We use -X to insert the version information into the placeholder variables
+# in the version package.
+VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(BUILD_VERSION) \
+                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(BUILD_BUILD_DATE) \
+                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(BUILD_GIT_DESCRIPTION) \
+                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(BUILD_GIT_REVISION) \
+
 BUILD_LDFLAGS   = -ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 

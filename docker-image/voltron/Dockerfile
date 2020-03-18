@@ -18,4 +18,4 @@ RUN chown -R 999 /tmp
 USER 999
 
 # Now define the command-line call to start your application
-CMD ["sh", "-c", "/voltron"]
+ENTRYPOINT ["/voltron"]
