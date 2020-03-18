@@ -35,7 +35,7 @@ metadata:
   name: calico-prometheus-dp-rate
   namespace: calico-monitoring
   labels:
-    role: calico-prometheus-rules
+    role: tigera-prometheus-rules
     prometheus: calico-node-prometheus
 spec:
   groups:

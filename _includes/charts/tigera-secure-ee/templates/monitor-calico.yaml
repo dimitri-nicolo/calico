@@ -346,7 +346,7 @@ spec:
       memory: 400Mi
   ruleSelector:
     matchLabels:
-      role: calico-prometheus-rules
+      role: tigera-prometheus-rules
       prometheus: calico-node-prometheus
   alerting:
     alertmanagers:
