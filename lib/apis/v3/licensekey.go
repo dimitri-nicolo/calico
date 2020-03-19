@@ -50,7 +50,7 @@ type LicenseKeyStatus struct {
 	// Expiry is the expiry date of License
 	Expiry string `json:"expiry" yaml:"expiry"`
 	// Maximum Number of Allowed Nodes
-	MaxNodes int `json:"maxnode,omitempty" yaml:"maxnode" validate:"omitempty"`
+	MaxNodes int `json:"maxnodes,omitempty" yaml:"maxnodes" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
