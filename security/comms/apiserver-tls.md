@@ -31,13 +31,13 @@ This feature is available for Kubernetes and OpenShift.
 To provide certificates for use during deployment you must create a secret before applying the 'custom-resource.yaml' or before creating the Installation resource. To specify certificates for use in the {{site.prodname}} Manager, create a secret using the following command:
 
 ```bash
-kubectl create secret generic tigera-apiserver-certs -n tigera-operator --from-file=cert=</path/to/certificate-file> --from-file=key=</path/to/key-file>
+kubectl create secret generic tigera-apiserver-certs -n tigera-operator --from-file=apiserver.crt=</path/to/certificate-file> --from-file=apiserver.key=</path/to/key-file>
 ```
 
 To update existing certificates, run the following command:
 
 ```bash
-kubectl create secret generic tigera-apiserver-certs -n tigera-operator --from-file=cert=</path/to/certificate-file> --from-file=key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
+kubectl create secret generic tigera-apiserver-certs -n tigera-operator --from-file=apiserver.crt=</path/to/certificate-file> --from-file=apiserver.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
 ```
 
 > **Note**: If the {{site.prodname}} API server is already running, updating the secret restarts the API server. While the server restarts, the {{site.prodname}} API server may be unavailable for a short period of time.

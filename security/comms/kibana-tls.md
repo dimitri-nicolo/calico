@@ -27,11 +27,11 @@ before creating the LogStorage resource. To specify certificates for use in the 
 using the following command:
 
 ```bash
-kubectl create secret generic calico-enterprise-kibana-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file>
+kubectl create secret generic tigera-secure-kibana-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file>
 ```
 
 To update existing certificates, run the following command:
 
 ```bash
-kubectl create secret generic calico-enterprise-kibana-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
+kubectl create secret generic tigera-secure-kibana-cert -n tigera-operator --from-file=tls.crt=</path/to/certificate-file> --from-file=tls.key=</path/to/key-file> --dry-run -o yaml --save-config | kubectl replace -f -
 ```
