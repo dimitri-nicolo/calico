@@ -16,8 +16,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -36,6 +37,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/cgroup"
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/utils"
 )
 
@@ -185,12 +187,17 @@ type testConn struct {
 	stat statistics
 
 	config   utils.ConnConfig
-	conn     net.Conn
-	protocol string
+	protocol protocolDriver
 	duration time.Duration
 }
 
-// FIXME MERGE Need to port over the new RESPONSE=json blob handling
+type protocolDriver interface {
+	Connect() error
+	Send(msg []byte) error
+	Receive() ([]byte, error)
+	Close() error
+}
+
 func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol string, duration time.Duration) (*testConn, error) {
 	err := utils.RunCommand("ip", "r")
 	if err != nil {
@@ -199,7 +206,6 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 
 	var localAddr string
 	var remoteAddr string
-	var conn net.Conn
 	if strings.Contains(remoteIpAddr, ":") {
 		localAddr = "[" + sourceIpAddr + "]:" + sourcePort
 		remoteAddr = "[" + remoteIpAddr + "]:" + remotePort
@@ -210,60 +216,41 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 
 	log.Infof("Connecting from %v to %v over %s", localAddr, remoteAddr, protocol)
 
+	var driver protocolDriver
+
 	switch protocol {
 	case "udp":
-		// Since we specify the source port rather than use an ephemeral port, if
-		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
-		// another call to this program, the original port is in post-close wait
-		// state and bind fails.  The reuse library implements a Dial() that sets
-		// these options.
-		conn, err = reuse.Dial("udp", localAddr, remoteAddr)
-		log.Infof(`UDP "connection" established`)
-		if err != nil {
-			panic(err)
+		driver = &connectedUDP{
+			localAddr:  localAddr,
+			remoteAddr: remoteAddr,
+		}
+	case "udp-recvmsg":
+		driver = &connectedUDP{
+			localAddr:   localAddr,
+			remoteAddr:  remoteAddr,
+			useReadFrom: true,
+		}
+	case "udp-noconn":
+		driver = &unconnectedUDP{
+			localAddr:  localAddr,
+			remoteAddr: remoteAddr,
 		}
 	case "sctp":
-		lip, err := net.ResolveIPAddr("ip", "::")
-		if err != nil {
-			return nil, err
+		driver = &connectedSCTP{
+			sourcePort:   sourcePort,
+			remoteIpAddr: remoteIpAddr,
+			remotePort:   remotePort,
 		}
-		lport, err := strconv.Atoi(sourcePort)
-		if err != nil {
-			return nil, err
-		}
-		laddr := &sctp.SCTPAddr{IPAddrs: []net.IPAddr{*lip}, Port: lport}
-		rip, err := net.ResolveIPAddr("ip", remoteIpAddr)
-		if err != nil {
-			return nil, err
-		}
-		rport, err := strconv.Atoi(remotePort)
-		if err != nil {
-			return nil, err
-		}
-		raddr := &sctp.SCTPAddr{IPAddrs: []net.IPAddr{*rip}, Port: rport}
-		// Since we specify the source port rather than use an ephemeral port, if
-		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
-		// another call to this program, the original port is in post-close wait
-		// state and bind fails. The reuse.Dial() does not support SCTP, but the
-		// SCTP library has a SocketConfig that accepts a Control function
-		// (provided by reuse) that sets these options.
-		sCfg := sctp.SocketConfig{Control: reuse.Control}
-		conn, err = sCfg.Dial("sctp", laddr, raddr)
-		if err != nil {
-			panic(err)
-		}
-		log.Infof("SCTP connection established")
 	default:
-		// Since we specify the source port rather than use an ephemeral port, if
-		// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
-		// another call to this program, the original port is in post-close wait
-		// state and bind fails.  The reuse library implements a Dial() that sets
-		// these options.
-		conn, err = reuse.Dial("tcp", localAddr, remoteAddr)
-		if err != nil {
-			return nil, err
+		driver = &connectedTCP{
+			localAddr:  localAddr,
+			remoteAddr: remoteAddr,
 		}
-		log.Infof("TCP connection established")
+	}
+
+	err = driver.Connect()
+	if err != nil {
+		return nil, err
 	}
 
 	var connType string
@@ -279,8 +266,7 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 	log.Infof("%s connection established from %v to %v", connType, localAddr, remoteAddr)
 	return &testConn{
 		config:   utils.ConnConfig{connType, uuid.NewV4().String()},
-		conn:     conn,
-		protocol: protocol,
+		protocol: driver,
 		duration: duration,
 	}, nil
 
@@ -291,7 +277,9 @@ func tryConnect(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol str
 	if err != nil {
 		panic(err)
 	}
-	defer tc.conn.Close()
+	defer func() {
+		_ = tc.Close()
+	}()
 
 	if loopFile != "" {
 		return tc.tryLoopFile(loopFile)
@@ -305,21 +293,38 @@ func tryConnect(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol str
 }
 
 func (tc *testConn) tryLoopFile(loopFile string) error {
-	testMessage := tc.config.GetTestMessage(0)
+	req := tc.config.GetTestMessage(0)
+	msg, err := json.Marshal(req)
+	if err != nil {
+		log.WithError(err).Panic("Failed to marshall request")
+	}
 
 	ls := newLoopState(loopFile)
 	for {
-		fmt.Fprintf(tc.conn, testMessage+"\n")
-		log.WithField("message", testMessage).Infof("Sent message over %v", tc.protocol)
-		reply, err := bufio.NewReader(tc.conn).ReadString('\n')
+		err = tc.protocol.Send(msg)
 		if err != nil {
-			return err
+			log.WithError(err).Fatal("Failed to send")
 		}
-		reply = strings.TrimSpace(reply)
-		log.WithField("reply", reply).Info("Got reply")
-		if reply != testMessage {
-			return errors.New("Unexpected reply: " + reply)
+		respRaw, err := tc.protocol.Receive()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to receive")
 		}
+
+		var resp connectivity.Response
+		err = json.Unmarshal(respRaw, &resp)
+		if err != nil {
+			log.WithError(err).Panic("Failed to unmarshall response")
+		}
+
+		if !resp.Request.Equal(req) {
+			log.WithField("reply", resp).Fatal("Unexpected response")
+		}
+		j, err := json.Marshal(resp)
+		if err != nil {
+			log.WithError(err).Panic("Failed to re-marshal response")
+		}
+
+		fmt.Println("RESPONSE=", string(j))
 		if !ls.Next() {
 			break
 		}
@@ -328,20 +333,36 @@ func (tc *testConn) tryLoopFile(loopFile string) error {
 }
 
 func (tc *testConn) tryConnectOnceOff() error {
-	testMessage := tc.config.GetTestMessage(0)
-
-	// Write test message.
-	fmt.Fprintf(tc.conn, testMessage+"\n")
-
-	// Read back and compare.
-	reply, err := bufio.NewReader(tc.conn).ReadString('\n')
+	req := tc.config.GetTestMessage(0)
+	msg, err := json.Marshal(req)
 	if err != nil {
-		return err
+		log.WithError(err).Panic("Failed to marshall request")
 	}
-	reply = strings.TrimSpace(reply)
-	if reply != testMessage {
-		return errors.New("Unexpected reply: " + reply)
+
+	err = tc.protocol.Send(msg)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to send")
 	}
+	respRaw, err := tc.protocol.Receive()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to receive")
+	}
+
+	var resp connectivity.Response
+	err = json.Unmarshal(respRaw, &resp)
+	if err != nil {
+		log.WithError(err).Panic("Failed to unmarshall response")
+	}
+
+	if !resp.Request.Equal(req) {
+		log.WithField("reply", resp).Fatal("Unexpected response")
+	}
+	j, err := json.Marshal(resp)
+	if err != nil {
+		log.WithError(err).Panic("Failed to re-marshal response")
+	}
+
+	fmt.Println("RESPONSE=", string(j))
 
 	return nil
 }
@@ -355,11 +376,12 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 
 	var wg sync.WaitGroup
 
+	conn := tc.protocol.(*connectedUDP).conn
+
 	// Start a reader
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		connReader := bufio.NewReader(tc.conn)
 
 		lastSequence := 0
 		count := 0
@@ -380,8 +402,9 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 				return
 			default:
 				// Deadline is point of time. Have to set it in the loop for each read.
-				tc.conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-				reply, err := connReader.ReadString('\n')
+				_ = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+				respRaw, err := tc.protocol.Receive()
+
 				if e, ok := err.(net.Error); ok && e.Timeout() {
 					// This was a timeout. Nothing to read.
 					log.Infof("Nothing to read. Total reply so far %d", count)
@@ -390,10 +413,15 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 					// This is an error, not a timeout
 					panic(err)
 				}
-				// Reset buffer for next read.
-				connReader.Reset(tc.conn)
 
-				lastSequence, err = tc.config.GetTestMessageSequence(reply)
+				var resp connectivity.Response
+				err = json.Unmarshal(respRaw, &resp)
+				if err != nil {
+					log.WithError(err).Warning("Failed to unmarshall response")
+					continue
+				}
+
+				lastSequence, err = tc.config.GetTestMessageSequence(resp.Request.Payload)
 				if err != nil {
 					panic(err)
 				}
@@ -428,8 +456,17 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 
 				return
 			default:
-				testMessage := tc.config.GetTestMessage(count)
-				fmt.Fprintf(tc.conn, testMessage+"\n")
+				req := tc.config.GetTestMessage(count)
+				msg, err := json.Marshal(req)
+				if err != nil {
+					log.WithError(err).Panic("Failed to marshall request")
+				}
+
+				err = tc.protocol.Send(msg)
+				if err != nil {
+					log.WithError(err).Fatal("Failed to send")
+				}
+
 				count++
 
 				// Slow down sending request, otherwise we may get udp buffer overflow and loss packet,
@@ -449,6 +486,10 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 	log.Infof("Stat -- %s", utils.FormPacketStatString(tc.stat.totalReq, tc.stat.totalReply))
 
 	return nil
+}
+
+func (tc *testConn) Close() error {
+	return tc.protocol.Close()
 }
 
 type loopState struct {
@@ -497,4 +538,225 @@ func (l *loopState) Next() bool {
 	}
 	time.Sleep(500 * time.Millisecond)
 	return true
+}
+
+// connectedUDP abstracts a connected UDP stream.  I.e. it calls connect() to bind the local end of
+// the socket.  It can optionally use RecvFrom() when reading form the other side.
+type connectedUDP struct {
+	conn        *net.UDPConn
+	r           *bufio.Reader
+	localAddr   string
+	remoteAddr  string
+	useReadFrom bool
+}
+
+func (d *connectedUDP) Close() error {
+	if d.conn == nil {
+		return nil
+	}
+	return d.conn.Close()
+}
+
+func (d *connectedUDP) Connect() error {
+	// Since we specify the source port rather than use an ephemeral port, if
+	// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
+	// another call to this program, the original port is in post-close wait
+	// state and bind fails.  The reuse library implements a Dial() that sets
+	// these options.
+	conn, err := reuse.Dial("udp", d.localAddr, d.remoteAddr)
+	if err != nil {
+		return err
+	}
+	d.conn = conn.(*net.UDPConn)
+	d.r = bufio.NewReader(d.conn)
+	return nil
+}
+
+func (d *connectedUDP) Send(msg []byte) error {
+	msg = append(msg, '\n')
+	_, err := d.conn.Write(msg)
+	return err
+}
+
+func (d *connectedUDP) Receive() ([]byte, error) {
+	if d.useReadFrom {
+		bufIn := make([]byte, 8<<10)
+		n, from, err := d.conn.ReadFrom(bufIn)
+		if err != nil {
+			log.WithError(err).Error("Failed to read from")
+		} else {
+			log.Infof("Received %d bytes from %s", n, from)
+		}
+		return bytes.TrimRight(bufIn[:n], "\n"), err
+	} else {
+		d.r.Reset(d.conn)
+		return d.r.ReadSlice('\n')
+	}
+}
+
+// unconnectedUDP abstracts an unconnected UDP stream.  I.e. it calls ListenPacket() to open the local side
+// of the connection than then it uses SendTo and RecvFrom.
+type unconnectedUDP struct {
+	conn               net.PacketConn
+	r                  *bufio.Reader
+	localAddr          string
+	remoteAddr         string
+	remoteAddrResolved *net.UDPAddr
+}
+
+func (d *unconnectedUDP) Close() error {
+	if d.conn == nil {
+		return nil
+	}
+	return d.conn.Close()
+}
+
+func (d *unconnectedUDP) Connect() error {
+	conn, err := net.ListenPacket("udp", d.localAddr)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to listen UDP")
+	}
+	remoteAddrResolved, err := net.ResolveUDPAddr("udp", d.remoteAddr)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to resolve UDP")
+	}
+	log.WithFields(log.Fields{
+		"addr":               conn.LocalAddr(),
+		"remoteAddrResolved": remoteAddrResolved,
+	}).Infof("Resolved udp addr")
+	d.remoteAddrResolved = remoteAddrResolved
+	return nil
+}
+
+func (d *unconnectedUDP) Send(msg []byte) error {
+	_, err := d.conn.WriteTo(msg, d.remoteAddrResolved)
+	if err != nil {
+		return err
+	}
+	log.WithField("message", string(msg)).Infof("Sent message over unconnected UDP to %v", d.remoteAddr)
+	return nil
+}
+
+func (d *unconnectedUDP) Receive() ([]byte, error) {
+	bufIn := make([]byte, 8<<10)
+	n, from, err := d.conn.ReadFrom(bufIn)
+	if err != nil {
+		log.WithError(err).Error("Failed to read from")
+	} else {
+		log.Infof("Received %d bytes from %s", n, from)
+	}
+	return bufIn[:n], err
+}
+
+// connectedSCTP abstracts an SCTP stream.
+type connectedSCTP struct {
+	sourcePort   string
+	remoteIpAddr string
+	remotePort   string
+
+	conn net.Conn
+	r    *bufio.Reader
+	w    *bufio.Writer
+}
+
+func (d *connectedSCTP) Connect() error {
+	lip, err := net.ResolveIPAddr("ip", "::")
+	if err != nil {
+		return err
+	}
+	lport, err := strconv.Atoi(d.sourcePort)
+	if err != nil {
+		return err
+	}
+	laddr := &sctp.SCTPAddr{IPAddrs: []net.IPAddr{*lip}, Port: lport}
+	rip, err := net.ResolveIPAddr("ip", d.remoteIpAddr)
+	if err != nil {
+		return err
+	}
+	rport, err := strconv.Atoi(d.remotePort)
+	if err != nil {
+		return err
+	}
+	raddr := &sctp.SCTPAddr{IPAddrs: []net.IPAddr{*rip}, Port: rport}
+	// Since we specify the source port rather than use an ephemeral port, if
+	// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
+	// another call to this program, the original port is in post-close wait
+	// state and bind fails. The reuse.Dial() does not support SCTP, but the
+	// SCTP library has a SocketConfig that accepts a Control function
+	// (provided by reuse) that sets these options.
+	sCfg := sctp.SocketConfig{Control: reuse.Control}
+	d.conn, err = sCfg.Dial("sctp", laddr, raddr)
+	if err != nil {
+		return err
+	}
+
+	d.r = bufio.NewReader(d.conn)
+	d.w = bufio.NewWriter(d.conn)
+
+	return nil
+}
+
+func (d *connectedSCTP) Send(msg []byte) error {
+	_, err := d.w.Write(msg)
+	if err != nil {
+		return err
+	}
+	return d.w.Flush()
+}
+
+func (d *connectedSCTP) Receive() ([]byte, error) {
+	return d.r.ReadSlice('\n')
+}
+
+func (d *connectedSCTP) Close() error {
+	if d.conn == nil {
+		return nil
+	}
+	return d.conn.Close()
+}
+
+// connectedTCP abstracts an SCTP stream.
+type connectedTCP struct {
+	localAddr  string
+	remoteAddr string
+
+	conn net.Conn
+	r    *bufio.Reader
+	w    *bufio.Writer
+}
+
+func (d *connectedTCP) Connect() error {
+	// Since we specify the source port rather than use an ephemeral port, if
+	// the SO_REUSEADDR and SO_REUSEPORT options are not set, when we make
+	// another call to this program, the original port is in post-close wait
+	// state and bind fails.  The reuse library implements a Dial() that sets
+	// these options.
+	conn, err := reuse.Dial("tcp", d.localAddr, d.remoteAddr)
+	if err != nil {
+		return err
+	}
+	d.conn = conn
+
+	d.r = bufio.NewReader(d.conn)
+	d.w = bufio.NewWriter(d.conn)
+	return nil
+}
+
+func (d *connectedTCP) Send(msg []byte) error {
+	_, err := d.w.Write(msg)
+	if err != nil {
+		return err
+	}
+	return d.w.Flush()
+}
+
+func (d *connectedTCP) Receive() ([]byte, error) {
+	return d.r.ReadSlice('\n')
+}
+
+func (d *connectedTCP) Close() error {
+	if d.conn == nil {
+		return nil
+	}
+	return d.conn.Close()
 }

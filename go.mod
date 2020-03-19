@@ -19,17 +19,13 @@ require (
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/gophercloud/gophercloud v0.4.0 // indirect
-	github.com/gxed/GoEndian v0.0.0-20160916112711-0f5c6873267e // indirect
-	github.com/gxed/eventfd v0.0.0-20160916113412-80a92cca79a8 // indirect
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
-	github.com/ipfs/go-log v1.0.2 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-reuseport v0.0.1
-	github.com/libp2p/go-sockaddr v0.0.0-20190411201116-52957a0228cc // indirect
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.10.1

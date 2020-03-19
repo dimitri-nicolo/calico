@@ -277,8 +277,9 @@ func (cc ConnConfig) getTestMessagePrefix() string {
 }
 
 // Assembly a test message.
-func (cc ConnConfig) GetTestMessage(sequence int) string {
-	return cc.getTestMessagePrefix() + fmt.Sprintf("%d", sequence)
+func (cc ConnConfig) GetTestMessage(sequence int) connectivity.Request {
+	req := connectivity.NewRequest(cc.getTestMessagePrefix() + fmt.Sprintf("%d", sequence))
+	return req
 }
 
 // Extract sequence number from test message.

@@ -203,16 +203,18 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 	ginkgo.Fail(message, callerSkip)
 }
 
-func NewRequest() Request {
+func NewRequest(payload string) Request {
 	return Request{
 		Timestamp: time.Now(),
 		ID:        uuid.NewV4().String(),
+		Payload:   payload,
 	}
 }
 
 type Request struct {
 	Timestamp time.Time
 	ID        string
+	Payload   string
 }
 
 func (req Request) Equal(oth Request) bool {
