@@ -28,7 +28,7 @@ require (
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/libp2p/go-reuseport v0.0.0-20180924121034-dd0c37d7767b
+	github.com/libp2p/go-reuseport v0.0.1
 	github.com/libp2p/go-sockaddr v0.0.0-20190411201116-52957a0228cc // indirect
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0

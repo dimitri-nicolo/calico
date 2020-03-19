@@ -500,6 +500,8 @@ github.com/leodido/go-urn v0.0.0-20181204092800-a67a23e1c1af/go.mod h1:+cyI34gQW
 github.com/libopenstorage/openstorage v1.0.0/go.mod h1:Sp1sIObHjat1BeXhfMqLZ14wnOzEhNx2YQedreMcUyc=
 github.com/libp2p/go-reuseport v0.0.0-20180924121034-dd0c37d7767b h1:aMR7gRGtIrahvQNtYrdXKaLYv/RT20mnwWtT3qwhgaE=
 github.com/libp2p/go-reuseport v0.0.0-20180924121034-dd0c37d7767b/go.mod h1:UeLFiw50cCfyDHBpU0sXBR8ul1MO/m51mXpRO/SYjCE=
+github.com/libp2p/go-reuseport v0.0.1 h1:7PhkfH73VXfPJYKQ6JwS5I/eVcoyYi9IMNGc6FWpFLw=
+github.com/libp2p/go-reuseport v0.0.1/go.mod h1:jn6RmB1ufnQwl0Q1f+YxAj8isJgDCQzaaxIFYDhcYEA=
 github.com/libp2p/go-sockaddr v0.0.0-20190411201116-52957a0228cc h1:W3yN/EbItWRhQlK18dUTzr2AKxMQlkKpCUg3xl6MpA8=
 github.com/libp2p/go-sockaddr v0.0.0-20190411201116-52957a0228cc/go.mod h1:EBeYKMYs5LFgoaBSN2nA2jPQVmnA4gv7WkY64CBqYqQ=
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=

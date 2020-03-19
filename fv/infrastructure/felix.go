@@ -372,6 +372,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 }
 
 func (f *Felix) Stop() {
+	_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
 	f.Container.Stop()
 	if f.cwlCallsExpected {
 		Expect(cwLogDir + "/" + f.cwlFile).To(BeAnExistingFile())
@@ -384,10 +385,4 @@ func (f *Felix) Restart() {
 	oldPID := f.GetFelixPID()
 	f.Signal(syscall.SIGHUP)
 	Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(oldPID))
-}
-
-func (f *Felix) Stop() {
-	// FIXME need to detach programs.
-	_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
-	f.Container.Stop()
 }
