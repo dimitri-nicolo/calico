@@ -390,7 +390,7 @@ spec:
       served: true
       storage: false
     - name: v1alpha1
-      served: false
+      served: true
       storage: false
 status:
   acceptedNames:
