@@ -560,11 +560,11 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(mockDataplane.EndpointToPolicyOrder()).To(Equal(state.ExpectedEndpointPolicyOrder),
 		"Endpoint policy order incorrect after moving to state: %v",
 		state.Name)
-	Expect(mockDataplane.EndpointToPreDNATPolicyOrder()).To(Equal(state.ExpectedPreDNATEndpointPolicyOrder),
-		"Endpoint pre-DNAT policy order incorrect after moving to state: %v",
-		state.Name)
 	Expect(mockDataplane.EndpointToUntrackedPolicyOrder()).To(Equal(state.ExpectedUntrackedEndpointPolicyOrder),
-		"Endpoint untracked policy order incorrect after moving to state: %v",
+		"Untracked endpoint policy order incorrect after moving to state: %v",
+		state.Name)
+	Expect(mockDataplane.EndpointToPreDNATPolicyOrder()).To(Equal(state.ExpectedPreDNATEndpointPolicyOrder),
+		"Pre-DNAT endpoint policy order incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.ActiveUntrackedPolicies()).To(Equal(state.ExpectedUntrackedPolicyIDs),
 		"Untracked policies incorrect after moving to state: %v",
@@ -700,15 +700,12 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		Expect(lastStats.NumTiers).To(Equal(state.NumTiers()),
 			"number of tiers stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))
-
 		Expect(lastStats.NumPolicies).To(Equal(state.NumPolicies()),
 			"number of policies stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))
-
 		Expect(lastStats.NumProfiles).To(Equal(state.NumProfileRules()),
 			"number of profiles stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))
-
 		Expect(lastStats.NumALPPolicies).To(Equal(state.NumALPPolicies()),
 			"number of ALP policies stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))
