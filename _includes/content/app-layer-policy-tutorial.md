@@ -6,7 +6,7 @@ layer policy to mitigate some common threats.
 
 To create a Kubernetes cluster which supports application layer policy, follow
 one of our [getting started guides]({{site.baseurl}}/getting-started/kubernetes),
-and [enable application layer policy]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy).
+and [enable application layer policy]({{site.baseurl}}/security/app-layer-policy).
 
 ### Create a test namespace and enable istio injection
 

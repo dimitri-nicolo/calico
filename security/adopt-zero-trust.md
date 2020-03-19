@@ -105,11 +105,11 @@ After your Zero Trust Network is established, you will need to maintain it.
 
 #### Install {{site.prodname}}
 
-Follow the [install instructions]({{ site.baseurl }}/reference/other-install-methods/kubernetes/installation/overview) to get {{site.prodname}} software running in your cluster.
+Follow the [install instructions]({{ site.baseurl }}/getting-started/kubernetes/) to get {{site.prodname}} software running in your cluster.
 
 #### Install Istio and enable {{site.prodname}} integration
 
-Follow the instructions to [Enable Application Layer Policy]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy).
+Follow the instructions to [Enable application layer policy[Enable application layer policy]({{site.baseurl}}/security/app-layer-policy).
 
 The instructions include a “demo” install of Istio for quickly testing out functionality. For a production installation to support a Zero Trust Network, you should instead follow the official Istio install instructions. Be sure to enable mutually authenticated TLS (mTLS) in your install options by setting **global.mtls.enabled to true**.
 
@@ -167,7 +167,7 @@ After you have the set of expected flows for each service, you are ready to writ
 
 Returning to the example flow graph in the previous section, let’s write the policy for the post service. For the purpose of this example, assume all the services in the application run in a Kubernetes Namespace called microblog.  We see from the flow graph that the post service is accessed by the api and search services.
 
-```
+```yaml
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -252,7 +252,7 @@ However, some development teams don’t explicitly know who needs access to thei
 
 In the following example, we have changed the **serviceAccount** clause. Instead of a name, we use a label selector. The **selector: svc-post = access** label grants access to the post service.
 
-```
+```yaml
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -305,7 +305,13 @@ You may wish to review every security policy change request (aka pull request in
 
 ### Above and beyond
 
-- [Protect hosts]({{site.baseurl}}/security/protect-hosts)
-- [Global network policy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
-- [Network policy]({{site.baseurl}}/reference/resources/networkpolicy)
+- [Protect hosts]({{ site.baseurl }}/security/protect-hosts)
+- [Global network policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy)
+- [Network policy]({{ site.baseurl }}/reference/resources/networkpolicy)
+- {% include enterprise_icon.html %}[Network visibility with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/network-visibility)
+- {% include enterprise_icon.html %}[Advanced egress access controls with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/egress-access-controls)
+- {% include enterprise_icon.html %}[Advanced compliance controls with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/compliance)
 - {% include enterprise_icon.html %}[Compliance and threat detection with Calico Enterprise]({{site.baseurl}}/security/calico-enterprise/network-visibility)
+- {% include enterprise_icon.html %}[Federation]({{ site.baseurl }}/security/calico-enterprise/federation)
+- {% include enterprise_icon.html %}[Threat defense]({{ site.baseurl }}/security/calico-enterprise/threat-defense)
+- {% include enterprise_icon.html %}[Calico Enterprise user console]({{ site.baseurl }}/security/calico-enterprise/user-console)

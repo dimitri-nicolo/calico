@@ -34,7 +34,11 @@ This article requires a Linux host that meets the following requirements.
 
 #### Install Kubernetes
 
-1. [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
+1. {% include open-new-window.html text='Follow the Kubernetes instructions to install kubeadm' url='https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/' %}
+
+   > **Note**: After installing kubeadm, do not power down or restart
+   the host. Instead, continue directly to the next step.
+   {: .alert .alert-info}
 
 1. As a regular user with sudo privileges, open a terminal on the host that you installed kubeadm on.
 
@@ -46,7 +50,7 @@ This article requires a Linux host that meets the following requirements.
    ```
 
    > **Note**: If 192.168.0.0/16 is already in use within your network you must select a different pod network
-   > CIDR, replacing 192.168.0.0/16 in the above command as well as in any manifests applied below.
+   > CIDR, replacing 192.168.0.0/16 in the above command.
    {: .alert .alert-info}
 
 1. Execute the following commands to configure kubectl (also returned by `kubeadm init`).
@@ -147,9 +151,13 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
-### Above and beyond
+### Next steps
 
 - [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)
+- [Secure a simple application using the Kubernetes NetworkPolicy API](../../security/tutorials/kubernetes-policy-basic)
+- [Control ingress and egress traffic using the Kubernetes NetworkPolicy API](../../security/tutorials/kubernetes-policy-advanced)
+- [Create a user interface that shows blocked and allowed connections in real time](../../security/tutorials/kubernetes-policy-demo/kubernetes-demo)
+- [Install and configure calicoctl](../calicoctl/install)

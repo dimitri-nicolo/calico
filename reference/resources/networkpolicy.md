@@ -46,6 +46,10 @@ spec:
   - Egress
   ingress:
   - action: Allow
+    metadata:
+      annotations:
+        from: frontend
+        to: database
     protocol: TCP
     source:
       selector: role == 'frontend'
@@ -115,7 +119,7 @@ spec:
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.baseurl}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.baseurl}}/security/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.

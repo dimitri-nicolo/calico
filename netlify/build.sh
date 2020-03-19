@@ -8,6 +8,11 @@ set -e
 # - legacy-release
 # - each archive release
 
+if [ -z "$CURRENT_RELEASE" ]; then
+    echo "must set \$CURRENT_RELEASE"
+    exit 1
+fi
+
 if [ -z "$(which jekyll)" ]; then
     gem install github-pages
 fi
@@ -41,8 +46,7 @@ function build() {
 
 # master builds skip the git clone and build the site in the current tree
 function build_master() {
-    echo "archive: true" >_config_jekyll.yml
-    jekyll build --config $JEKYLL_CONFIG,$(pwd)/_config_jekyll.yml --baseurl /master --destination _site/master
+    jekyll build --config $JEKYLL_CONFIG --baseurl /master --destination _site/master
 }
 
 function build_archives() {
@@ -61,11 +65,9 @@ echo "[INFO] building archives"
 build_archives
 mv _site/sitemap.xml _site/release-legacy-sitemap.xml
 
-if [ ! -z "$CURRENT_RELEASE" ]; then
-    echo "[INFO] building current release"
-    EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build release-$CURRENT_RELEASE
-    mv _site/sitemap.xml _site/latest-sitemap.xml
-fi
+echo "[INFO] building current release"
+EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build release-$CURRENT_RELEASE
+mv _site/sitemap.xml _site/latest-sitemap.xml
 
 echo "[INFO] building permalink for current release"
 EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build release-$CURRENT_RELEASE /$CURRENT_RELEASE

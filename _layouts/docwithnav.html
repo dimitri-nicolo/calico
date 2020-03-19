@@ -86,7 +86,7 @@ The code is a little roundabout for a few reasons:
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5FQ2QV4" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
     <section>
-      <nav id="toplevel-nav" class="navbar navbar-default navbar-static-top">
+      <nav id="toplevel-nav" class="navbar navbar-default navbar-fixed-top">
         <div class="container-fluid">
           <div class="navbar-header">
             <!-- Hamburger menu for mobile -->
@@ -98,13 +98,15 @@ The code is a little roundabout for a few reasons:
             </button>
             <!-- Left brand image -->
             <a class="navbar-brand" href="https://tigera.io/">
-              <img alt="Brand" src="{{site.baseurl}}/images/brand.png">
+              <img alt="Tigera" src="{{site.baseurl}}/images/brand.png">
             </a>
           </div>
           <div id="tigera-navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right">
 
               <li><a data-proofer-ignore href="/releases">Releases</a></li>
+              <li><a href="https://support.tigera.io/">Support</a></li>
+              <li><a href="https://www.tigera.io/blog">Blog</a></li>
 
             </ul>
             <form class="navbar-form visible-xs">
@@ -177,7 +179,7 @@ The code is a little roundabout for a few reasons:
 
               {% unless site.is_latest %}
               {% include version_warning.html %}
-              {% endunless -%}
+              {% endunless %}
 
               {% if page.calico_enterprise -%}
               {% include enterprise_header.html %}   

@@ -57,7 +57,7 @@ No. {{site.prodname}} allows connections the host makes to the workloads running
 
 ### Before you begin...
 
-If you are already running {{site.prodname}} for Kubernetes, you are good to go. If you want to install {{site.prodname}} on a bare-metal machine for host protection only, see [Bare metal hosts]({{site.baseurl}}/getting-started/bare-metal/installation/).
+If you are already running {{site.prodname}} for Kubernetes, you are good to go. If you want to install {{site.prodname}} on a non-cluster machine for host protection only, see [Non-cluster hosts]({{ site.baseurl }}/getting-started/bare-metal/).
 
 ### How to
 
@@ -93,7 +93,7 @@ In the following example, we use a **GlobalNetworkPolicy** that applies to all w
 
 **Ingress traffic** is also allowed for ICMP, and on TCP port 10250 (default kubelet port). **Egress** traffic is allowed to etcd on a particular IP, and UDP on port 53 and 67 for DNS and DHCP.
 
-```
+```yaml
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
@@ -136,7 +136,7 @@ In the following example, we create a HostEndpoint for the host named **my-host*
 
 When the HostEndpoint is created, traffic to or from the interface is dropped unless policy is in place.
 
-```
+```yaml
 apiVersion: projectcalico.org/v3
 kind: HostEndpoint
 metadata:
@@ -160,12 +160,12 @@ To change this parameter for all hosts, edit the **FelixConfiguration** object n
 
 1. Get a copy of the object to edit.
 
-   ```
+   ```bash
    calicoctl get felixconfiguration default --export -o yaml > default-felix-config.yaml
    ```
 1. Open the file in a text editor and add the parameter, **defaultEndpointToHostAction**. For example:
 
-   ```
+   ```yaml
    apiVersion: projectcalico.org/v3
    kind: FelixConfiguration
    metadata:
@@ -178,7 +178,7 @@ To change this parameter for all hosts, edit the **FelixConfiguration** object n
    ```
 
 1. Update the FelixConfiguration on the cluster.
-   ```
+   ```bash
    calicoctl apply -f default-felix-config.yaml
    ```
 

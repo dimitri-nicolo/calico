@@ -29,8 +29,7 @@ For completeness, the advantages of the etcd driver are
 
 ## Custom Resources
 
-When using the Kubernetes API datastore driver, most {{site.prodname}} resources are stored as
-[Kubernetes custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+When using the Kubernetes API datastore driver, most {{site.prodname}} resources are stored as {% include open-new-window.html text='Kubernetes custom resources' url='https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/' %}.
 
 A few {{site.prodname}} resources are not stored as custom resources and instead are backed by corresponding native Kubernetes resources. For example, [workload endpoints](/reference/resources/workloadendpoint) are Kubernetes pods.
 
@@ -58,7 +57,7 @@ Resources availble through `calicoctl` are now natively available through `kubec
 
 1. Download the `calicoctl` binary to a Linux host with access to Kubernetes.
 
-   ```
+   ```bash
    wget https://github.com/projectcalico/calicoctl/releases/download/v3.13.0/calicoctl
    chmod +x calicoctl
    sudo mv calicoctl /usr/local/bin/
@@ -66,7 +65,7 @@ Resources availble through `calicoctl` are now natively available through `kubec
 
 1. Configure `calicoctl` to access Kubernetes.
 
-   ```
+   ```bash
    export KUBECONFIG=/path/to/your/kubeconfig
    export DATASTORE_TYPE=kubernetes
    ```
@@ -78,7 +77,7 @@ Resources availble through `calicoctl` are now natively available through `kubec
 
 Verify `calicoctl` can reach your datastore by running
 
-```
+```bash
 calicoctl get nodes
 ```
 
@@ -97,7 +96,7 @@ Nodes are backed by the Kubernetes node object, so you should see names that mat
 
 Try to get an object backed by a custom resource
 
-```
+```bash
 calicoctl get ippools
 ```
 

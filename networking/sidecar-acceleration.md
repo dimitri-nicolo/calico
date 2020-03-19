@@ -30,7 +30,7 @@ The Sidecar acceleration process bypasses several layers of kernel networking, a
 
 ### Before you begin...
 
-- [Enable application layer policy]({{ site.baseurl }}/getting-started/kubernetes/installation/app-layer-policy)
+- [Enable application layer policy]({{site.baseurl}}/security/app-layer-policy)
 - Verify that hosts installed with Calico are using Linux kernel 4.19 and above
 
 #### Sidecar acceleration: experimental technology
@@ -47,7 +47,7 @@ To enable sidecar acceleration for Istio-enabled apps using Calico:
 
 2. Edit felix-config.yaml and add the option, `SidecarAccelerationEnabled: true` to the end.  
 
-   ```
+   ```yaml
    apiVersion: projectcalico.org/v3
    kind: FelixConfiguration
    metadata:
@@ -64,7 +64,7 @@ To enable sidecar acceleration for Istio-enabled apps using Calico:
 
 3. Apply the updated configuration.  
 
-   ```
+   ```bash
    calicoctl apply -f - < felix-config.yaml 
    Successfully applied 1 'FelixConfiguration' resource(s)
    ```

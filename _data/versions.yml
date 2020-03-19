@@ -5,7 +5,7 @@
     version: master
     registry: quay.io
   calico:
-    minor_version: v3.12
+    minor_version: v3.13
   components:
     cnx-manager:
       image: tigera/cnx-manager
