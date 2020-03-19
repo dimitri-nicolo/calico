@@ -175,6 +175,8 @@ section:
     path: /security/comms/apiserver-tls
   - title: Provide TLS certificates for Typha and Node
     path: /security/comms/typha-node-tls
+  - title: Provide TLS certificates for Compliance
+    path: /security/comms/compliance-tls
   - title: Secure Calico Enterprise Prometheus endpoints
     path: /security/comms/secure-metrics
   - title: Secure BGP sessions
