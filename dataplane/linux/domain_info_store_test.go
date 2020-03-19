@@ -202,6 +202,7 @@ var _ = Describe("Domain Info Store", func() {
 			expectedDomainIPs []string
 			monitorMutex      sync.Mutex
 			killMonitor       chan struct{}
+			domainChannel     chan *domainInfoChanged
 		)
 
 		monitor := func(domain string) {
@@ -211,7 +212,7 @@ var _ = Describe("Domain Info Store", func() {
 					select {
 					case <-killMonitor:
 						return
-					case signal := <-domainStore.domainInfoChanges:
+					case signal := <-domainChannel:
 						log.Debugf("Got domain change signal for %v", signal.domain)
 						monitorMutex.Lock()
 						if signal.domain == domain {
@@ -239,10 +240,12 @@ var _ = Describe("Domain Info Store", func() {
 			expectedSeen = false
 			killMonitor = make(chan struct{})
 			domainStoreCreateEx(0)
+			domainChannel = domainStore.domainInfoChanges
 			go monitor("*.microsoft.com")
 		})
 
 		AfterEach(func() {
+			domainChannel = nil
 			close(killMonitor)
 		})
 
