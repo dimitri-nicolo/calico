@@ -37,7 +37,7 @@ PACKAGE_NAME?=github.com/projectcalico/felix
 GO_BUILD_VER?=v0.36
 
 GIT_USE_SSH = true
-LOCAL_CHECKS = check-typha-pins check-packr
+LOCAL_CHECKS = check-typha-pins
 
 ###############################################################################
 # Download and include Makefile.common
