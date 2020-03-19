@@ -19,13 +19,18 @@ promotions:
 
 global_job_config:
   secrets:
+  # Key for pulling from private github repos.
   - name: private-repo
+  # Key for pulling images from GCR.
+  - name: tigera-dev-ci-pull-credentials
+
 
   prologue:
     commands:
     # Load the github access secrets.  First fix the permissions.
     - chmod 0600 ~/.keys/*
     - ssh-add ~/.keys/*
+    - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
 
 blocks:
 - name: Build
@@ -47,8 +52,8 @@ blocks:
       - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
       - cache store go-pkg-cache .go-pkg-cache
       - 'cache store go-mod-cache ${HOME}/go/pkg/mod/cache'
-      - docker save -o /tmp/calico-felix.tar calico/felix:latest-amd64
-      - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/calico-felix.tar'
+      - docker save -o /tmp/tigera-felix.tar tigera/felix:latest-amd64
+      - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/tigera-felix.tar'
 - name: FV Tests
   dependencies: ["Build"]
   task:
@@ -59,8 +64,8 @@ blocks:
       - cache restore go-mod-cache
       - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
       - 'cache restore felix-image-${SEMAPHORE_GIT_SHA}'
-      - docker load -i /tmp/calico-felix.tar
-      - rm /tmp/calico-felix.tar
+      - docker load -i /tmp/tigera-felix.tar
+      - rm /tmp/tigera-felix.tar
       - touch bin/*
     jobs:
     - name: FV Test matrix
@@ -81,8 +86,8 @@ blocks:
     jobs:
     - name: FV / UT on remote
       commands:
-      - if [ ${SEMAPHORE_JOB_INDEX} = "1" ]; then gcloud --quiet compute ssh --zone=europe-west3-c ubuntu@${VM_NAME} -- make --directory=$(basename $(pwd)) ut-bpf; fi
-      - gcloud --quiet compute ssh --zone=europe-west3-c ubuntu@${VM_NAME} -- -o ServerAliveInterval=10 make --directory=$(basename $(pwd)) fv-bpf GINKGO_FOCUS=BPF-SAFE FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT} FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}"
+      - if [ ${SEMAPHORE_JOB_INDEX} = "1" ]; then gcloud --quiet compute ssh --zone=europe-west3-c ubuntu@${VM_NAME} -- -A make --directory=$(basename $(pwd)) ut-bpf; fi
+      - gcloud --quiet compute ssh --zone=europe-west3-c ubuntu@${VM_NAME} -- -A -o ServerAliveInterval=10 make --directory=$(basename $(pwd)) fv-bpf GINKGO_FOCUS=BPF-SAFE FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT} FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}"
       parallelism: 5
     epilogue:
       always:
@@ -90,6 +95,8 @@ blocks:
         - gcloud --quiet compute instances delete ${VM_NAME} --zone=europe-west3-c
     secrets:
     - name: google-service-account-for-gce
+    - name: private-repo
+    - name: tigera-dev-ci-pull-credentials
 - name: Static checks
   dependencies: []
   task:
