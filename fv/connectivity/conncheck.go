@@ -84,8 +84,17 @@ func (c *Checker) ExpectLoss(from ConnectionSource, to ConnectionTarget,
 	if c.ReverseDirection {
 		from, to = to.(ConnectionSource), from.(ConnectionTarget)
 	}
-	c.expectations = append(c.expectations, Expectation{From: from, To: to.ToMatcher(explicitPort...), Expected: true, ExpSrcIPs: nil,
-		ExpectedPacketLoss: ExpPacketLoss{Duration: duration, MaxPercent: maxPacketLossPercent, MaxNumber: maxPacketLossNumber}})
+	c.expectations = append(c.expectations, Expectation{
+		From:      from,
+		To:        to.ToMatcher(explicitPort...),
+		Expected:  true,
+		ExpSrcIPs: nil,
+		ExpectedPacketLoss: ExpPacketLoss{
+			Duration:   duration,
+			MaxPercent: maxPacketLossPercent,
+			MaxNumber:  maxPacketLossNumber,
+		},
+	})
 
 	// Packet loss measurements shouldn't be retried.
 	c.RetriesDisabled = true

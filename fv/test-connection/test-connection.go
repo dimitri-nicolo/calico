@@ -333,6 +333,8 @@ func (tc *testConn) tryLoopFile(loopFile string) error {
 }
 
 func (tc *testConn) tryConnectOnceOff() error {
+	log.Info("Doing single-shot test...")
+
 	req := tc.config.GetTestMessage(0)
 	msg, err := json.Marshal(req)
 	if err != nil {
@@ -407,7 +409,7 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 
 				if e, ok := err.(net.Error); ok && e.Timeout() {
 					// This was a timeout. Nothing to read.
-					log.Infof("Nothing to read. Total reply so far %d", count)
+					// log.Infof("Nothing to read. Total reply so far %d", count)
 					continue
 				} else if err != nil {
 					// This is an error, not a timeout
@@ -554,6 +556,7 @@ func (d *connectedUDP) Close() error {
 	if d.conn == nil {
 		return nil
 	}
+	log.Info("Closing UDP connection.")
 	return d.conn.Close()
 }
 
@@ -589,8 +592,9 @@ func (d *connectedUDP) Receive() ([]byte, error) {
 		}
 		return bytes.TrimRight(bufIn[:n], "\n"), err
 	} else {
+		log.Debug("Connected UDP buffered read")
 		d.r.Reset(d.conn)
-		return d.r.ReadSlice('\n')
+		return d.r.ReadBytes('\n')
 	}
 }
 
@@ -612,10 +616,12 @@ func (d *unconnectedUDP) Close() error {
 }
 
 func (d *unconnectedUDP) Connect() error {
+	log.Info("'Connecting' unconnected UDP")
 	conn, err := net.ListenPacket("udp", d.localAddr)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to listen UDP")
 	}
+	d.conn = conn
 	remoteAddrResolved, err := net.ResolveUDPAddr("udp", d.remoteAddr)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to resolve UDP")

@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -295,7 +296,7 @@ func main() {
 			}()
 
 			decoder := json.NewDecoder(conn)
-			encoder := json.NewEncoder(conn)
+			w := bufio.NewWriter(conn)
 
 			for {
 				var request connectivity.Request
@@ -313,7 +314,14 @@ func main() {
 					Request:    request,
 				}
 
-				err = encoder.Encode(&response)
+				respBytes, err := json.Marshal(&response)
+				respBytes = append(respBytes, '\n')
+				_, err = w.Write(respBytes)
+				if err != nil {
+					log.Error("failed to write response while handling connection")
+					return
+				}
+				err = w.Flush()
 				if err != nil {
 					log.Error("failed to write response while handling connection")
 					return
@@ -368,10 +376,11 @@ func main() {
 							logCxt.WithError(err).WithField("remoteAddr", addr).Info("Failed to respond")
 							continue
 						}
+						data = append(data, '\n')
 
 						_, err = p.WriteTo(data, addr)
 
-						if !utils.IsMessagePartOfStream(string(buffer[:n])) {
+						if !utils.IsMessagePartOfStream(request.Payload) {
 							// Only print when packet is not part of stream.
 							logCxt.WithError(err).WithField("remoteAddr", addr).Info("Responded")
 						}
