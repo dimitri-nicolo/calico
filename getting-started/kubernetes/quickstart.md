@@ -37,8 +37,7 @@ This article requires a Linux host that meets the following requirements.
 1. {% include open-new-window.html text='Follow the Kubernetes instructions to install kubeadm' url='https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/' %}
 
    > **Note**: After installing kubeadm, do not power down or restart
-   the host. Instead, continue directly to the
-   [next section to create your cluster](#create-a-single-host-kubernetes-cluster).
+   the host. Instead, continue directly to the next step.
    {: .alert .alert-info}
 
 1. As a regular user with sudo privileges, open a terminal on the host that you installed kubeadm on.

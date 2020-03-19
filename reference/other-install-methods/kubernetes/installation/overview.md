@@ -12,7 +12,7 @@ for instructions.
 
 - [Installing {{site.prodname}} for policy (advanced)](other)
 
-After installing {{site.prodname}}, you can [enable application layer policy]({{ site.baseurl }}/getting-started/kubernetes/installation/app-layer-policy).
+After installing {{site.prodname}}, you can [enable application layer policy]({{ site.baseurl }}/security/app-layer-policy).
 Enabling application layer policy also secures workload-to-workload communications with mutual 
 TLS authentication.
 
