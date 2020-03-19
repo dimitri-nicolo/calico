@@ -398,6 +398,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		client  client.Interface
 		w       [3]*workload.Workload
 		options infrastructure.TopologyOptions
+		cc      *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -413,6 +414,8 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 		}
+
+		cc = &connectivity.Checker{}
 	})
 
 	AfterEach(func() {
@@ -434,10 +437,11 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 	})
 
 	It("full connectivity to and from workload 0", func() {
-		Expect(w[1]).To(HaveConnectivityTo(w[0]))
-		Expect(w[2]).To(HaveConnectivityTo(w[0]))
-		Expect(w[0]).To(HaveConnectivityTo(w[1]))
-		Expect(w[0]).To(HaveConnectivityTo(w[2]))
+		cc.ExpectSome(w[1], w[0])
+		cc.ExpectSome(w[2], w[0])
+		cc.ExpectSome(w[0], w[1])
+		cc.ExpectSome(w[0], w[2])
+		cc.CheckConnectivity()
 	})
 
 	testAccess := func(tester func(caFile, certFile, keyFile string) error) func(certKeyName string, canAccess bool) func() {

@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/workload"
@@ -39,7 +40,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
 		hostW [2]*workload.Workload
-		cc    *workload.ConnectivityChecker
+		cc    *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -71,7 +72,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:], "tcp")
 
-		cc = &workload.ConnectivityChecker{}
+		cc = &connectivity.Checker{}
 	})
 
 	AfterEach(func() {
@@ -221,11 +222,11 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		It("should have connectivity via NAT entries", func() {
 			// NAT to remote host
-			cc.ExpectSome(w[0], workload.IP("10.66.1.1"), 8080)
-			cc.ExpectSome(w[1], workload.IP("10.66.0.1"), 8080)
+			cc.ExpectSome(w[0], connectivity.TargetIP("10.66.1.1"), 8080)
+			cc.ExpectSome(w[1], connectivity.TargetIP("10.66.0.1"), 8080)
 			// NAT to remote workload
-			cc.ExpectSome(w[0], workload.IP("10.66.1.2"), 8080)
-			cc.ExpectSome(w[1], workload.IP("10.66.0.2"), 8080)
+			cc.ExpectSome(w[0], connectivity.TargetIP("10.66.1.2"), 8080)
+			cc.ExpectSome(w[1], connectivity.TargetIP("10.66.0.2"), 8080)
 			cc.CheckConnectivity()
 		})
 	})
@@ -496,7 +497,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
 		hostW [2]*workload.Workload
-		cc    *workload.ConnectivityChecker
+		cc    *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -523,7 +524,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 
 		createWorkloads(infra, felixes, w[:], hostW[:], "tcp")
 
-		cc = &workload.ConnectivityChecker{}
+		cc = &connectivity.Checker{}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -593,7 +594,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
 		hostW [3]*workload.Workload
-		cc    *workload.ConnectivityChecker
+		cc    *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -621,7 +622,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:], "udp") /* UDP for packet loss test */
 
-		cc = &workload.ConnectivityChecker{}
+		cc = &connectivity.Checker{}
 		cc.Protocol = "udp"
 	})
 

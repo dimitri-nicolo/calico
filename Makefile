@@ -187,7 +187,7 @@ bin/calico-felix-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
 	  $(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" '; \
+	     go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
 	fi
 
 # Cross-compile Felix for Windows
@@ -381,10 +381,10 @@ sub-base-tag-images-%:
 ###############################################################################
 LOCAL_CHECKS = check-typha-pins
 
-LIBCALICO_FELIX?=$(shell $(DOCKER_GO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/libcalico-go)
-TYPHA_GOMOD?=$(shell $(DOCKER_GO_BUILD) go list -m -f "{{.GoMod}}" github.com/projectcalico/typha)
-ifneq ($(TYPHA_GOMOD),)
-	LIBCALICO_TYPHA?=$(shell $(DOCKER_GO_BUILD) grep libcalico-go $(TYPHA_GOMOD) | cut -d' ' -f2)
+LIBCALICO_FELIX?=$(shell $(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download; go list -m -f "{{.Replace.Version}}" github.com/projectcalico/libcalico-go')
+TYPHA_GOMOD_DIR?=$(shell $(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download; go list -m -f "{{.Dir}}" github.com/projectcalico/typha')
+ifneq ($(TYPHA_GOMOD_DIR),)
+	LIBCALICO_TYPHA?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download; (cd $(TYPHA_GOMOD_DIR); go list -m -f "{{.Replace.Version}}" github.com/projectcalico/libcalico-go)')
 endif
 
 .PHONY: check-typha-pins
@@ -547,27 +547,24 @@ stop-grafana:
 
 bin/calico-bpf: $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	@echo Building calico-bpf...
-	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
 
 bin/iptables-locker: $(LOCAL_BUILD_DEP) go.mod $(shell find iptables -type f -name '*.go' -print)
 	@echo Building iptables-locker...
-	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/iptables-locker"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/iptables-locker"'
 
 bin/test-workload: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
 	@echo Building test-workload...
-	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
 
 bin/test-connection: $(LOCAL_BUILD_DEP) go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-connection/*.go
 	@echo Building test-connection...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
 
 st:
 	@echo "No STs available"

@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -27,8 +28,6 @@ import (
 
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
-	"encoding/json"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/containers"
@@ -229,7 +228,8 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 		"FELIX_BPFLOGLEVEL":               "debug",
 		"FELIX_USAGEREPORTINGENABLED":     "false",
 		"FELIX_IPV6SUPPORT":               ipv6Enabled,
-		"FELIX_DEBUGDISABLELOGDROPPING":   "true",
+		// Disable log dropping, because it can cause flakes in tests that look for particular logs.
+		"FELIX_DEBUGDISABLELOGDROPPING": "true",
 	}
 
 	containerName := containers.UniqueName(fmt.Sprintf("felix-%d", id))

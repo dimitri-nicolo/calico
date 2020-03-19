@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
@@ -33,7 +33,7 @@ import (
 // ConnectivityChecker records a set of connectivity expectations and supports calculating the
 // actual state of the connectivity between the given workloads.  It is expected to be used like so:
 //
-//     var cc = &conncheck.ConnectivityChecker{}
+//     var cc = &connectivity.Checker{}
 //     cc.ExpectNone(w[2], w[0], 1234)
 //     cc.ExpectSome(w[1], w[0], 5678)
 //     cc.CheckConnectivity()
@@ -43,6 +43,7 @@ type Checker struct {
 	Protocol         string // "tcp" or "udp"
 	expectations     []Expectation
 	CheckSNAT        bool
+	RetriesDisabled  bool
 }
 
 func (c *Checker) ExpectSome(from ConnectionSource, to ConnectionTarget, explicitPort ...uint16) {
@@ -50,7 +51,7 @@ func (c *Checker) ExpectSome(from ConnectionSource, to ConnectionTarget, explici
 	if c.ReverseDirection {
 		from, to = to.(ConnectionSource), from.(ConnectionTarget)
 	}
-	c.expectations = append(c.expectations, Expectation{from, to.ToMatcher(explicitPort...), true, from.SourceIPs()})
+	c.expectations = append(c.expectations, Expectation{From: from, To: to.ToMatcher(explicitPort...), Expected: true, ExpSrcIPs: from.SourceIPs()})
 }
 
 func (c *Checker) ExpectSNAT(from ConnectionSource, srcIP string, to ConnectionTarget, explicitPort ...uint16) {
@@ -59,7 +60,7 @@ func (c *Checker) ExpectSNAT(from ConnectionSource, srcIP string, to ConnectionT
 	if c.ReverseDirection {
 		from, to = to.(ConnectionSource), from.(ConnectionTarget)
 	}
-	c.expectations = append(c.expectations, Expectation{from, to.ToMatcher(explicitPort...), true, []string{srcIP}})
+	c.expectations = append(c.expectations, Expectation{From: from, To: to.ToMatcher(explicitPort...), Expected: true, ExpSrcIPs: []string{srcIP}})
 }
 
 func (c *Checker) ExpectNone(from ConnectionSource, to ConnectionTarget, explicitPort ...uint16) {
@@ -67,10 +68,10 @@ func (c *Checker) ExpectNone(from ConnectionSource, to ConnectionTarget, explici
 	if c.ReverseDirection {
 		from, to = to.(ConnectionSource), from.(ConnectionTarget)
 	}
-	c.expectations = append(c.expectations, Expectation{from, to.ToMatcher(explicitPort...), false, nil})
+	c.expectations = append(c.expectations, Expectation{From: from, To: to.ToMatcher(explicitPort...), Expected: false, ExpSrcIPs: nil})
 }
 
-func (c *ConnectivityChecker) ExpectLoss(from connectionSource, to connectionTarget,
+func (c *Checker) ExpectLoss(from ConnectionSource, to ConnectionTarget,
 	duration time.Duration, maxPacketLossPercent, maxPacketLossNumber int, explicitPort ...uint16) {
 
 	Expect(duration.Seconds()).NotTo(BeZero())
@@ -79,17 +80,21 @@ func (c *ConnectivityChecker) ExpectLoss(from connectionSource, to connectionTar
 	Expect(maxPacketLossNumber).To(BeNumerically(">=", -1))
 	Expect(maxPacketLossPercent + maxPacketLossNumber).NotTo(Equal(-2)) // Do not set both value to -1
 
-	UnactivatedConnectivityCheckers.Add(c)
+	UnactivatedCheckers.Add(c)
 	if c.ReverseDirection {
-		from, to = to.(connectionSource), from.(connectionTarget)
+		from, to = to.(ConnectionSource), from.(ConnectionTarget)
 	}
-	c.expectations = append(c.expectations, expectation{from, to.ToMatcher(explicitPort...), true,
-		ExpPacketLoss{Duration: duration, MaxPercent: MaxPacketLossPercent, MaxNumber: maxPacketLossNumber}})
+	c.expectations = append(c.expectations, Expectation{From: from, To: to.ToMatcher(explicitPort...), Expected: true, ExpSrcIPs: nil,
+		ExpectedPacketLoss: ExpPacketLoss{Duration: duration, MaxPercent: maxPacketLossPercent, MaxNumber: maxPacketLossNumber}})
+
+	// Packet loss measurements shouldn't be retried.
+	c.RetriesDisabled = true
 }
 
 func (c *Checker) ResetExpectations() {
 	c.expectations = nil
 	c.CheckSNAT = false
+	c.RetriesDisabled = false
 }
 
 // ActualConnectivity calculates the current connectivity for all the expected paths.  It returns a
@@ -109,7 +114,7 @@ func (c *Checker) ActualConnectivity() ([]*Response, []string) {
 			if c.Protocol != "" {
 				p = c.Protocol
 			}
-			responses[i] = exp.From.CanConnectTo(exp.To.IP, exp.To.Port, p)
+			responses[i] = exp.From.CanConnectTo(exp.To.IP, exp.To.Port, p, time.Duration(0))
 			pretty[i] = fmt.Sprintf("%s -> %s = %v", exp.From.SourceName(), exp.To.TargetName, responses[i] != nil)
 			if c.CheckSNAT && responses[i] != nil {
 				srcIP := strings.Split(responses[i].SourceAddr, ":")[0]
@@ -145,16 +150,16 @@ func (c *Checker) CheckConnectivity(optionalDescription ...interface{}) {
 	c.CheckConnectivityWithTimeoutOffset(2, defaultConnectivityTimeout, optionalDescription...)
 }
 
-func (c *ConnectivityChecker) CheckConnectivityPacketLoss(optionalDescription ...interface{}) {
+func (c *Checker) CheckConnectivityPacketLoss(optionalDescription ...interface{}) {
 	// Timeout is not used for packet loss test because there is no retry.
 	c.CheckConnectivityWithTimeoutOffset(2, 0*time.Second, optionalDescription...)
 }
 
 func (c *Checker) CheckConnectivityWithTimeout(timeout time.Duration, optionalDescription ...interface{}) {
-	gomega.Expect(timeout).To(gomega.BeNumerically(">", 100*time.Millisecond),
+	Expect(timeout).To(BeNumerically(">", 100*time.Millisecond),
 		"Very low timeout, did you mean to multiply by time.<Unit>?")
 	if len(optionalDescription) > 0 {
-		gomega.Expect(optionalDescription[0]).NotTo(gomega.BeAssignableToTypeOf(time.Second),
+		Expect(optionalDescription[0]).NotTo(BeAssignableToTypeOf(time.Second),
 			"Unexpected time.Duration passed for description")
 	}
 	c.CheckConnectivityWithTimeoutOffset(2, timeout, optionalDescription...)
@@ -170,8 +175,7 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 	completedAttempts := 0
 	var actualConn []*Response
 	var actualConnPretty []string
-	// FIXME MERGE Should not retry packet loss tests
-	for time.Since(start) < timeout || completedAttempts < 2 {
+	for !c.RetriesDisabled && time.Since(start) < timeout || completedAttempts < 2 {
 		actualConn, actualConnPretty = c.ActualConnectivity()
 		failed := false
 		expConnectivity = c.ExpectedConnectivityPretty()
@@ -256,13 +260,13 @@ type Matcher struct {
 }
 
 type ConnectionSource interface {
-	CanConnectTo(ip, port, protocol string) *Response
+	CanConnectTo(ip, port, protocol string, duration time.Duration) *Response
 	SourceName() string
 	SourceIPs() []string
 }
 
 func (m *Matcher) Match(actual interface{}) (success bool, err error) {
-	success = actual.(ConnectionSource).CanConnectTo(m.IP, m.Port, m.Protocol) != nil
+	success = actual.(ConnectionSource).CanConnectTo(m.IP, m.Port, m.Protocol, time.Duration(0)) != nil
 	return
 }
 

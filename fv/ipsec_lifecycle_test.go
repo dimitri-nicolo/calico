@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
@@ -28,7 +29,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
 		hostW [2]*workload.Workload
-		cc    *workload.ConnectivityChecker
+		cc    *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -80,7 +81,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 			}
 		}
 
-		cc = &workload.ConnectivityChecker{Protocol: "udp"}
+		cc = &connectivity.Checker{Protocol: "udp"}
 	})
 
 	AfterEach(func() {

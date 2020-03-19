@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/metrics"
 
 	. "github.com/onsi/ginkgo"
@@ -67,7 +68,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 		felixes                    []*infrastructure.Felix
 		client                     client.Interface
 		ep1_1, ep2_1, ep2_2, ep2_3 *workload.Workload
-		cc                         *workload.ConnectivityChecker
+		cc                         *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -269,7 +270,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 			"Expected nflog iptables rules to appear on the correct felix instances")
 
 		// Describe the connectivity that we now expect.
-		cc = &workload.ConnectivityChecker{}
+		cc = &connectivity.Checker{}
 		cc.ExpectSome(ep1_1, ep2_1) // allowed by np1-1
 		cc.ExpectSome(ep1_1, ep2_2) // allowed by np3-3
 		cc.ExpectNone(ep1_1, ep2_3) // denied by np2-4
