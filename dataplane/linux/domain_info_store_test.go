@@ -229,12 +229,15 @@ var _ = Describe("Domain Info Store", func() {
 		}
 
 		checkMonitor := func(expectedIPs []string) {
-			time.Sleep(time.Second)
+			Eventually(func() bool {
+				monitorMutex.Lock()
+				defer monitorMutex.Unlock()
+				return expectedSeen
+			}).Should(BeTrue())
 			monitorMutex.Lock()
 			defer monitorMutex.Unlock()
-			Expect(expectedSeen).To(BeTrue())
-			expectedSeen = false
 			Expect(expectedDomainIPs).To(Equal(expectedIPs))
+			expectedSeen = false
 		}
 
 		BeforeEach(func() {
