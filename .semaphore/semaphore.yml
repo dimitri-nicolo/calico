@@ -83,6 +83,7 @@ blocks:
       - export VM_NAME=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${SEMAPHORE_JOB_INDEX:-ut}
       - echo VM_NAME=${VM_NAME}
       - ./.semaphore/create-test-vm ${VM_NAME}
+      - gcloud --quiet compute ssh --zone=europe-west3-c ubuntu@${VM_NAME} -- -A -o ServerAliveInterval=10 docker login --username casey@tigera.io -u _json_key -p "\"$(cat /home/semaphore/tigera-dev-ci.json)\"" https://gcr.io
     jobs:
     - name: FV / UT on remote
       commands:
