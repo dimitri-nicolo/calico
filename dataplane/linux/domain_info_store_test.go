@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"net"
 	"regexp"
 	"sync"
@@ -191,7 +192,8 @@ var _ = Describe("Domain Info Store", func() {
 		// We shouldn't care if _more_ domains are signaled than we expect.  Just check that
 		// the expected ones _are_ signaled.
 		for _, domain := range domains {
-			Expect(domainsSignaled.Contains(domain)).To(BeTrue())
+			ExpectWithOffset(1, domainsSignaled.Contains(domain)).To(BeTrue(),
+				fmt.Sprintf("Expected domain %v to be signalled but it wasn't", domain))
 		}
 	}
 
