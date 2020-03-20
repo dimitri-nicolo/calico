@@ -218,6 +218,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 			options = infrastructure.DefaultTopologyOptions()
 			options.FelixLogSeverity = "debug"
+			options.NATOutgoingEnabled = true // Mimic default behaviour of OS tests.
 			switch testOpts.tunnel {
 			case "none":
 				options.IPIPEnabled = false

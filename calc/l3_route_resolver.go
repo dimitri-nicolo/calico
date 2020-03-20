@@ -115,7 +115,7 @@ func (c *L3RouteResolver) OnBlockUpdate(update api.Update) (_ bool) {
 		for _, r := range newRoutes {
 			logCxt := logrus.WithField("newRoute", r)
 			if cachedRoutes.Contains(r) {
-				logCxt.Debug("Desired VXLAN route already exists, skip")
+				logCxt.Debug("Desired route already exists, skip")
 				continue
 			}
 
