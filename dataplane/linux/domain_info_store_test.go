@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"net"
 	"regexp"
 	"sync"
@@ -191,7 +192,8 @@ var _ = Describe("Domain Info Store", func() {
 		// We shouldn't care if _more_ domains are signaled than we expect.  Just check that
 		// the expected ones _are_ signaled.
 		for _, domain := range domains {
-			Expect(domainsSignaled.Contains(domain)).To(BeTrue())
+			ExpectWithOffset(1, domainsSignaled.Contains(domain)).To(BeTrue(),
+				fmt.Sprintf("Expected domain %v to be signalled but it wasn't", domain))
 		}
 	}
 
@@ -202,16 +204,18 @@ var _ = Describe("Domain Info Store", func() {
 			expectedDomainIPs []string
 			monitorMutex      sync.Mutex
 			killMonitor       chan struct{}
+			monitorRunning    sync.WaitGroup
 		)
 
-		monitor := func(domain string) {
+		monitor := func(domain string, domainChannel chan *domainInfoChanged) {
+			defer monitorRunning.Done()
 			for {
 			loop:
 				for {
 					select {
 					case <-killMonitor:
 						return
-					case signal := <-domainStore.domainInfoChanges:
+					case signal := <-domainChannel:
 						log.Debugf("Got domain change signal for %v", signal.domain)
 						monitorMutex.Lock()
 						if signal.domain == domain {
@@ -227,23 +231,28 @@ var _ = Describe("Domain Info Store", func() {
 		}
 
 		checkMonitor := func(expectedIPs []string) {
-			time.Sleep(time.Second)
+			Eventually(func() bool {
+				monitorMutex.Lock()
+				defer monitorMutex.Unlock()
+				return expectedSeen
+			}).Should(BeTrue())
 			monitorMutex.Lock()
 			defer monitorMutex.Unlock()
-			Expect(expectedSeen).To(BeTrue())
-			expectedSeen = false
 			Expect(expectedDomainIPs).To(Equal(expectedIPs))
+			expectedSeen = false
 		}
 
 		BeforeEach(func() {
 			expectedSeen = false
 			killMonitor = make(chan struct{})
 			domainStoreCreateEx(0)
-			go monitor("*.microsoft.com")
+			monitorRunning.Add(1)
+			go monitor("*.microsoft.com", domainStore.domainInfoChanges)
 		})
 
 		AfterEach(func() {
 			close(killMonitor)
+			monitorRunning.Wait()
 		})
 
 		It("microsoft case", func() {

@@ -716,6 +716,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				[]string{"cali"},
 				statusReportRec.endpointStatusUpdateCallback,
 				mockProcSys.write,
+				false,
 				newCallbacks(),
 			)
 		})

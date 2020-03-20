@@ -82,7 +82,7 @@ type passthruCallbacks interface {
 
 type routeCallbacks interface {
 	OnRouteUpdate(update *proto.RouteUpdate)
-	OnRouteRemove(dst string)
+	OnRouteRemove(routeType proto.RouteType, dst string)
 }
 
 type vxlanCallbacks interface {
@@ -338,6 +338,23 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
+
+	if conf.BPFEnabled {
+		// Calculate simple node-ownership routes.
+		//        ...
+		//     Dispatcher (all updates)
+		//         |
+		//         | host IPs, host config, IP pools, IPAM blocks
+		//         |
+		//       L3 resolver
+		//         |
+		//         | routes
+		//         |
+		//      <dataplane>
+		//
+		l3RR := NewL3RouteResolver(hostname, callbacks, conf.UseNodeResourceUpdates())
+		l3RR.RegisterWith(allUpdDispatcher)
+	}
 
 	// Calculate VXLAN routes.
 	//        ...

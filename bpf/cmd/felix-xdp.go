@@ -102,15 +102,16 @@ func main() {
 	version := "Version:            " + buildinfo.GitVersion + "\n" +
 		"Full git commit ID: " + buildinfo.GitRevision + "\n" +
 		"Build date:         " + buildinfo.BuildDate + "\n"
-	args, err := docopt.Parse(usage, nil, true, version, false)
+
+	args, err := docopt.ParseArgs(usage, nil, version)
 	if err != nil {
 		println(usage)
 		log.Fatalf("Failed to parse usage, exiting: %v", err)
 	}
 
-	bpfLib, err = bpf.NewBPFLib()
+	bpfLib, err = bpf.NewBPFLib(".")
 	if err != nil {
-		log.Fatalf("Failed to instanciate BPF library: %v", err)
+		log.Fatalf("Failed to instantiate BPF library: %v", err)
 	}
 
 	if args["populate"] == true {

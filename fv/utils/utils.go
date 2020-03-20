@@ -17,28 +17,31 @@ package utils
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/kelseyhightower/envconfig"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"regexp"
-	"strconv"
-
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/ipsets"
-	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/selector"
+
+	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/fv/connectivity"
+	"github.com/projectcalico/felix/ipsets"
+	"github.com/projectcalico/felix/rules"
 )
 
 type EnvConfig struct {
@@ -211,7 +214,7 @@ func IPSetNameForSelector(ipVersion int, rawSelector string) string {
 
 // Run a connection test command.
 // Report if connection test is successful and packet loss string for packet loss test.
-func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) (bool, string) {
+func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) *connectivity.Result {
 	outPipe, err := connectionCmd.StdoutPipe()
 	Expect(err).NotTo(HaveOccurred())
 	errPipe, err := connectionCmd.StderrPipe()
@@ -219,17 +222,46 @@ func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) (bool, string) {
 	err = connectionCmd.Start()
 	Expect(err).NotTo(HaveOccurred())
 
-	wOut, err := ioutil.ReadAll(outPipe)
-	Expect(err).NotTo(HaveOccurred())
-	wErr, err := ioutil.ReadAll(errPipe)
-	Expect(err).NotTo(HaveOccurred())
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var wOut, wErr []byte
+	var outErr, errErr error
+
+	go func() {
+		defer wg.Done()
+		wOut, outErr = ioutil.ReadAll(outPipe)
+	}()
+
+	go func() {
+		defer wg.Done()
+		wErr, errErr = ioutil.ReadAll(errPipe)
+	}()
+
+	wg.Wait()
+	Expect(outErr).NotTo(HaveOccurred())
+	Expect(errErr).NotTo(HaveOccurred())
+
 	err = connectionCmd.Wait()
 
 	log.WithFields(log.Fields{
 		"stdout": string(wOut),
 		"stderr": string(wErr)}).WithError(err).Info(logMsg)
 
-	return (err == nil), extractPacketStatString(string(wErr))
+	if err != nil {
+		return nil
+	}
+
+	r := regexp.MustCompile(`RESULT=(.*)\n`)
+	m := r.FindSubmatch(wOut)
+	if len(m) > 0 {
+		var resp connectivity.Result
+		err := json.Unmarshal(m[1], &resp)
+		if err != nil {
+			log.WithError(err).WithField("output", string(wOut)).Panic("Failed to parse connection check response")
+		}
+		return &resp
+	}
+	return nil
 }
 
 const ConnectionTypeStream = "stream"
@@ -245,8 +277,9 @@ func (cc ConnConfig) getTestMessagePrefix() string {
 }
 
 // Assembly a test message.
-func (cc ConnConfig) GetTestMessage(sequence int) string {
-	return cc.getTestMessagePrefix() + fmt.Sprintf("%d", sequence)
+func (cc ConnConfig) GetTestMessage(sequence int) connectivity.Request {
+	req := connectivity.NewRequest(cc.getTestMessagePrefix() + fmt.Sprintf("%d", sequence))
+	return req
 }
 
 // Extract sequence number from test message.

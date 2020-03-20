@@ -1,6 +1,4 @@
-// +build !windows
-
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build !windows
+
 package dataplane
 
 import (
@@ -24,7 +24,11 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/libcalico-go/lib/health"
+
+	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	extdataplane "github.com/projectcalico/felix/dataplane/external"
@@ -34,14 +38,14 @@ import (
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
-	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+	childExitedRestartCallback func(),
+	k8sClientSet *kubernetes.Clientset) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal (linux) dataplane driver.")
 		// If kube ipvs interface is present, enable ipvs support.
@@ -165,6 +169,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesNATOutgoingInterfaceFilter: configParams.IptablesNATOutgoingInterfaceFilter,
 				DNSTrustedServers:                  configParams.DNSTrustedServers,
 				NATOutgoingAddress:                 configParams.NATOutgoingAddress,
+				BPFEnabled:                         configParams.BPFEnabled,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
@@ -216,12 +221,30 @@ func StartDataplaneDriver(configParams *config.Config,
 			FelixHostname:                   configParams.FelixHostname,
 			ExternalNodesCidrs:              configParams.ExternalNodesCIDRList,
 			SidecarAccelerationEnabled:      configParams.SidecarAccelerationEnabled,
-			XDPEnabled:                      configParams.XDPEnabled,
-			XDPAllowGeneric:                 configParams.GenericXDPEnabled,
-			Collector:                       collector,
-			DNSCacheFile:                    configParams.DNSCacheFile,
-			DNSCacheSaveInterval:            configParams.DNSCacheSaveInterval,
+
+			BPFEnabled:                         configParams.BPFEnabled,
+			BPFConnTimeLBEnabled:               configParams.BPFConnectTimeLoadBalancingEnabled,
+			BPFKubeProxyIptablesCleanupEnabled: configParams.BPFKubeProxyIptablesCleanupEnabled,
+			BPFLogLevel:                        configParams.BPFLogLevel,
+			BPFDataIfacePattern:                configParams.BPFDataIfacePattern,
+			BPFCgroupV2:                        configParams.DebugBPFCgroupV2,
+			BPFMapRepin:                        configParams.DebugBPFMapRepinEnabled,
+			KubeProxyMinSyncPeriod:             configParams.BPFKubeProxyMinSyncPeriod,
+			XDPEnabled:                         configParams.XDPEnabled,
+			XDPAllowGeneric:                    configParams.GenericXDPEnabled,
+			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
+
+			KubeClientSet: k8sClientSet,
+
+			Collector:            collector,
+			DNSCacheFile:         configParams.DNSCacheFile,
+			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
 		}
+
+		if configParams.BPFExternalServiceMode == "dsr" {
+			dpConfig.BPFNodePortDSREnabled = true
+		}
+
 		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)
 		intDP.Start()

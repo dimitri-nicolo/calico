@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"
@@ -103,7 +104,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		wlHost1           [4]*workload.Workload
 		wlHost2           [2]*workload.Workload
 		hostW             [2]*workload.Workload
-		cc                *workload.ConnectivityChecker
+		cc                *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -244,7 +245,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			"Expected HostEndpoint iptables rules to appear")
 
 		// Describe the connectivity that we now expect.
-		cc = &workload.ConnectivityChecker{}
+		cc = &connectivity.Checker{}
 		for _, source := range wlHost1 {
 			// Workloads on host 1 can connect to the first workload on host 2.
 			cc.ExpectSome(source, wlHost2[0])

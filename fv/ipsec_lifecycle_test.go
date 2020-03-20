@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
@@ -28,7 +29,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
 		hostW [2]*workload.Workload
-		cc    *workload.ConnectivityChecker
+		cc    *connectivity.Checker
 	)
 
 	BeforeEach(func() {
@@ -80,7 +81,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 			}
 		}
 
-		cc = &workload.ConnectivityChecker{Protocol: "udp"}
+		cc = &connectivity.Checker{Protocol: "udp"}
 	})
 
 	AfterEach(func() {
@@ -139,6 +140,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 			startSPIs = getDestSPIs(felixes[0], felixes[1])
 			return startSPIs
 		}, "10s").Should(Or(HaveLen(1), HaveLen(2)))
+
 		// The acceptable packet loss threshold here is slightly arbitrary.
 		// We choose 50 because we've seen 22 packets lost in a Semaphore run.
 		// Real fix to this issue (to drop 0 packets) would be in the charon code...
@@ -156,7 +158,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 
 		// Get felix/charon's PID so we can check that it restarts...
 		felixPID := felix.GetFelixPID()
-		charonPID := felix.GetSinglePID("/usr/lib/ipsec/charon")
+		charonPID := felix.GetSinglePID("charon")
 
 		// Kill charon daemon
 		killProcess(felix, fmt.Sprint(charonPID))
@@ -165,7 +167,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 			"Felix failed to restart after killing the charon")
 
 		Eventually(func() int {
-			return felix.GetSinglePID("/usr/lib/ipsec/charon")
+			return felix.GetSinglePID("charon")
 		}, "3s").ShouldNot(Equal(charonPID), "New charon process")
 	})
 })

@@ -15,6 +15,8 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -24,7 +26,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containernetworking/cni/pkg/ns"
+	"github.com/projectcalico/felix/fv/connectivity"
+
+	"github.com/projectcalico/felix/fv/cgroup"
+
+	"github.com/containernetworking/plugins/pkg/ns"
+	nsutils "github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/docopt/docopt-go"
 	"github.com/ishidawataru/sctp"
 	log "github.com/sirupsen/logrus"
@@ -44,7 +51,10 @@ Usage:
 func main() {
 	log.SetLevel(log.DebugLevel)
 
-	arguments, err := docopt.Parse(usage, nil, true, "v0.1", false)
+	// If we've been told to, move into this felix's cgroup.
+	cgroup.MaybeMoveToFelixCgroupv2()
+
+	arguments, err := docopt.ParseArgs(usage, nil, "v0.1")
 	if err != nil {
 		println(usage)
 		log.WithError(err).Fatal("Failed to parse usage")
@@ -74,7 +84,7 @@ func main() {
 		// Create a new network namespace for the workload.
 		attempts := 0
 		for {
-			namespace, err = ns.NewNS()
+			namespace, err = nsutils.NewNS()
 			if err == nil {
 				break
 			}
@@ -151,6 +161,11 @@ func main() {
 			err = utils.RunCommand("ip", "link", "set", "eth0", "up")
 			if err != nil {
 				return
+			}
+
+			err = utils.RunCommand("ip", "link", "set", "dev", "lo", "up")
+			if err != nil {
+				log.WithError(err).Info("Failed to set dev lo up")
 			}
 
 			if strings.Contains(ipAddress, ":") {
@@ -276,21 +291,40 @@ func main() {
 				"remoteAddr": conn.RemoteAddr(),
 			}).Info("Accepted new connection.")
 			defer func() {
-				conn.Close()
-				log.Info("Closed connection.")
+				err := conn.Close()
+				log.WithError(err).Info("Closed connection.")
 			}()
 
+			decoder := json.NewDecoder(conn)
+			w := bufio.NewWriter(conn)
+
 			for {
-				buf := make([]byte, 1024)
-				size, err := conn.Read(buf)
+				var request connectivity.Request
+
+				err := decoder.Decode(&request)
 				if err != nil {
+					log.WithError(err).Error("failed to read request")
 					return
 				}
-				data := buf[:size]
-				log.WithField("data", data).Info("Read data from connection")
-				_, err = conn.Write(data)
+
+				response := connectivity.Response{
+					Timestamp:  time.Now(),
+					SourceAddr: conn.RemoteAddr().String(),
+					ServerAddr: conn.LocalAddr().String(),
+					Request:    request,
+				}
+
+				respBytes, err := json.Marshal(&response)
+				respBytes = append(respBytes, '\n')
+				_, err = w.Write(respBytes)
 				if err != nil {
-					log.WithField("data", data).Error("failed to write data while handling connection")
+					log.Error("failed to write response while handling connection")
+					return
+				}
+				err = w.Flush()
+				if err != nil {
+					log.Error("failed to write response while handling connection")
+					return
 				}
 			}
 		}
@@ -322,9 +356,31 @@ func main() {
 						buffer := make([]byte, 1024)
 						n, addr, err := p.ReadFrom(buffer)
 						panicIfError(err)
-						_, err = p.WriteTo(buffer[:n], addr)
 
-						if !utils.IsMessagePartOfStream(string(buffer[:n])) {
+						var request connectivity.Request
+						err = json.Unmarshal(buffer[:n], &request)
+						if err != nil {
+							logCxt.WithError(err).WithField("remoteAddr", addr).Info("Failed to parse data")
+							continue
+						}
+
+						response := connectivity.Response{
+							Timestamp:  time.Now(),
+							SourceAddr: addr.String(),
+							ServerAddr: p.LocalAddr().String(),
+							Request:    request,
+						}
+
+						data, err := json.Marshal(&response)
+						if err != nil {
+							logCxt.WithError(err).WithField("remoteAddr", addr).Info("Failed to respond")
+							continue
+						}
+						data = append(data, '\n')
+
+						_, err = p.WriteTo(data, addr)
+
+						if !utils.IsMessagePartOfStream(request.Payload) {
 							// Only print when packet is not part of stream.
 							logCxt.WithError(err).WithField("remoteAddr", addr).Info("Responded")
 						}

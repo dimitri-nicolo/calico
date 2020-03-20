@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,29 +18,26 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	log "github.com/sirupsen/logrus"
 
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
-
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
 type Workload struct {
@@ -69,10 +66,10 @@ func (w *Workload) Stop() {
 		log.WithField("workload", w).Info("Stop")
 		outputBytes, err := utils.Command("docker", "exec", w.C.Name,
 			"cat", fmt.Sprintf("/tmp/%v", w.Name)).CombinedOutput()
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "failed to run docker exec command to get workload pid")
 		pid := strings.TrimSpace(string(outputBytes))
 		err = utils.Command("docker", "exec", w.C.Name, "kill", pid).Run()
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "failed to kill workload")
 		_, err = w.runCmd.Process.Wait()
 		if err != nil {
 			log.WithField("workload", w).Error("failed to wait for process")
@@ -156,7 +153,7 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 				log.WithError(err).Info("End of workload stderr")
 				return
 			}
-			log.Infof("Workload %s stderr: %s", name, strings.TrimSpace(string(line)))
+			log.Infof("Workload %s stderr: %s", n, strings.TrimSpace(string(line)))
 		}
 	}()
 
@@ -211,7 +208,7 @@ func (w *Workload) Configure(client client.Interface) {
 	wep.Namespace = "fv"
 	var err error
 	w.WorkloadEndpoint, err = client.WorkloadEndpoints().Create(utils.Ctx, w.WorkloadEndpoint, utils.NoOptions)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to create workload in the calico datastore.")
 }
 
 func (w *Workload) RemoveFromDatastore(client client.Interface) {
@@ -235,7 +232,11 @@ func (w *Workload) SourceName() string {
 	return w.Name
 }
 
-func (w *Workload) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+func (w *Workload) SourceIPs() []string {
+	return []string{w.IP}
+}
+
+func (w *Workload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	anyPort := Port{
 		Workload: w,
 	}
@@ -247,18 +248,6 @@ func (w *Workload) Port(port uint16) *Port {
 		Workload: w,
 		Port:     port,
 	}
-}
-
-type Port struct {
-	*Workload
-	Port uint16
-}
-
-func (w *Port) SourceName() string {
-	if w.Port == 0 {
-		return w.Name
-	}
-	return fmt.Sprintf("%s:%d", w.Name, w.Port)
 }
 
 func (w *Workload) NamespaceID() string {
@@ -489,23 +478,58 @@ func startPermanentConnection(w *Workload, ip string, port, sourcePort int) (*Pe
 	}, nil
 }
 
+func (w *Workload) ToMatcher(explicitPort ...uint16) *connectivity.Matcher {
+	var port string
+	if len(explicitPort) == 1 {
+		port = fmt.Sprintf("%d", explicitPort[0])
+	} else if w.DefaultPort != "" {
+		port = w.DefaultPort
+	} else if !strings.Contains(w.Ports, ",") {
+		port = w.Ports
+	} else {
+		panic("Explicit port needed for workload with multiple ports")
+	}
+	return &connectivity.Matcher{
+		IP:         w.IP,
+		Port:       port,
+		TargetName: fmt.Sprintf("%s on port %s", w.Name, port),
+		Protocol:   "tcp",
+	}
+}
+
 type SpoofedWorkload struct {
 	*Workload
 	SpoofedSourceIP string
 }
 
-func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	return canConnectTo(s.Workload, ip, port, s.SpoofedSourceIP, "", protocol, duration)
+}
+
+type Port struct {
+	*Workload
+	Port uint16
+}
+
+func (p *Port) SourceName() string {
+	if p.Port == 0 {
+		return p.Name
+	}
+	return fmt.Sprintf("%s:%d", p.Name, p.Port)
+}
+
+func (p *Port) SourceIPs() []string {
+	return []string{p.IP}
 }
 
 // Return if a connection is good and packet loss string "PacketLoss[xx]".
 // If it is not a packet loss test, packet loss string is "".
-func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	srcPort := strconv.Itoa(int(p.Port))
 	return canConnectTo(p.Workload, ip, port, "", srcPort, protocol, duration)
 }
 
-func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, duration time.Duration) (bool, string) {
+func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, duration time.Duration) *connectivity.Result {
 	// Ensure that the host has the 'test-connection' binary.
 	w.C.EnsureBinary("test-connection")
 
@@ -514,7 +538,11 @@ func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, durati
 		// to influence the connectivity check.  UDP lacks a sequence number, so conntrack operates
 		// on a simple timer. In the case of SCTP, conntrack appears to match packets even when
 		// the conntrack entry is in the CLOSED state.
-		_ = w.C.ExecMayFail("conntrack", "-D", "-p", protocol, "-s", w.IP, "-d", ip)
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			w.C.Exec("calico-bpf", "conntrack", "remove", "udp", w.IP, ip)
+		} else {
+			_ = w.C.ExecMayFail("conntrack", "-D", "-p", protocol, "-s", w.IP, "-d", ip)
+		}
 	}
 
 	logMsg := "Connection test"
@@ -539,289 +567,13 @@ func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, durati
 
 // ToMatcher implements the connectionTarget interface, allowing this port to be used as
 // target.
-func (p *Port) ToMatcher(explicitPort ...uint16) *connectivityMatcher {
+func (p *Port) ToMatcher(explicitPort ...uint16) *connectivity.Matcher {
 	if p.Port == 0 {
 		return p.Workload.ToMatcher(explicitPort...)
 	}
-	return &connectivityMatcher{
-		ip:         p.Workload.IP,
-		port:       fmt.Sprint(p.Port),
-		targetName: fmt.Sprintf("%s on port %d", p.Workload.Name, p.Port),
+	return &connectivity.Matcher{
+		IP:         p.Workload.IP,
+		Port:       fmt.Sprint(p.Port),
+		TargetName: fmt.Sprintf("%s on port %d", p.Workload.Name, p.Port),
 	}
-}
-
-type connectionTarget interface {
-	ToMatcher(explicitPort ...uint16) *connectivityMatcher
-}
-
-type IP string // Just so we can define methods on it...
-
-func (s IP) ToMatcher(explicitPort ...uint16) *connectivityMatcher {
-	if len(explicitPort) != 1 {
-		panic("Explicit port needed with IP as a connectivity target")
-	}
-	port := fmt.Sprintf("%d", explicitPort[0])
-	return &connectivityMatcher{
-		ip:         string(s),
-		port:       port,
-		targetName: string(s) + ":" + port,
-		protocol:   "tcp",
-	}
-}
-
-func (w *Workload) ToMatcher(explicitPort ...uint16) *connectivityMatcher {
-	var port string
-	if len(explicitPort) == 1 {
-		port = fmt.Sprintf("%d", explicitPort[0])
-	} else if w.DefaultPort != "" {
-		port = w.DefaultPort
-	} else if !strings.Contains(w.Ports, ",") {
-		port = w.Ports
-	} else {
-		panic("Explicit port needed for workload with multiple ports")
-	}
-	return &connectivityMatcher{
-		ip:         w.IP,
-		port:       port,
-		targetName: fmt.Sprintf("%s on port %s", w.Name, port),
-		protocol:   "tcp",
-	}
-}
-
-func HaveConnectivityTo(target connectionTarget, explicitPort ...uint16) types.GomegaMatcher {
-	return target.ToMatcher(explicitPort...)
-}
-
-type connectivityMatcher struct {
-	ip, port, targetName, protocol string
-}
-
-type connectionSource interface {
-	CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string)
-	SourceName() string
-}
-
-func (m *connectivityMatcher) Match(actual interface{}) (success bool, err error) {
-	success, _ = actual.(connectionSource).CanConnectTo(m.ip, m.port, m.protocol, time.Duration(0))
-	return
-}
-
-func (m *connectivityMatcher) FailureMessage(actual interface{}) (message string) {
-	src := actual.(connectionSource)
-	message = fmt.Sprintf("Expected %v\n\t%+v\nto have connectivity to %v\n\t%v:%v\nbut it does not", src.SourceName(), src, m.targetName, m.ip, m.port)
-	return
-}
-
-func (m *connectivityMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-	src := actual.(connectionSource)
-	message = fmt.Sprintf("Expected %v\n\t%+v\nnot to have connectivity to %v\n\t%v:%v\nbut it does", src.SourceName(), src, m.targetName, m.ip, m.port)
-	return
-}
-
-type expPacketLoss struct {
-	duration   time.Duration // how long test will run
-	maxPercent int           // 10 means 10%. -1 means field not valid.
-	maxNumber  int           // 10 means 10 packets. -1 means field not valid.
-}
-
-type expectation struct {
-	from               connectionSource     // Workload or Container
-	to                 *connectivityMatcher // Workload or IP, + port
-	expected           bool
-	expectedPacketLoss expPacketLoss
-}
-
-var UnactivatedConnectivityCheckers = set.New()
-
-// ConnectivityChecker records a set of connectivity expectations and supports calculating the
-// actual state of the connectivity between the given workloads.  It is expected to be used like so:
-//
-//     var cc = &workload.ConnectivityChecker{}
-//     cc.ExpectNone(w[2], w[0], 1234)
-//     cc.ExpectSome(w[1], w[0], 5678)
-//     Eventually(cc.ActualConnectivity, "10s", "100ms").Should(Equal(cc.ExpectedConnectivity()))
-//
-// Note that the ActualConnectivity method is passed to Eventually as a function pointer to allow
-// Ginkgo to re-evaluate the result as needed.
-type ConnectivityChecker struct {
-	ReverseDirection bool
-	Protocol         string // "tcp" or "udp"
-	expectations     []expectation
-}
-
-func (c *ConnectivityChecker) ExpectSome(from connectionSource, to connectionTarget, explicitPort ...uint16) {
-	UnactivatedConnectivityCheckers.Add(c)
-	if c.ReverseDirection {
-		from, to = to.(connectionSource), from.(connectionTarget)
-	}
-	c.expectations = append(c.expectations, expectation{from: from, to: to.ToMatcher(explicitPort...), expected: true})
-}
-
-func (c *ConnectivityChecker) ExpectNone(from connectionSource, to connectionTarget, explicitPort ...uint16) {
-	UnactivatedConnectivityCheckers.Add(c)
-	if c.ReverseDirection {
-		from, to = to.(connectionSource), from.(connectionTarget)
-	}
-	c.expectations = append(c.expectations, expectation{from: from, to: to.ToMatcher(explicitPort...), expected: false})
-}
-
-func (c *ConnectivityChecker) ExpectLoss(from connectionSource, to connectionTarget,
-	duration time.Duration, maxPacketLossPercent, maxPacketLossNumber int, explicitPort ...uint16) {
-
-	Expect(duration.Seconds()).NotTo(BeZero())
-	Expect(maxPacketLossPercent).To(BeNumerically(">=", -1))
-	Expect(maxPacketLossPercent).To(BeNumerically("<=", 100))
-	Expect(maxPacketLossNumber).To(BeNumerically(">=", -1))
-	Expect(maxPacketLossPercent + maxPacketLossNumber).NotTo(Equal(-2)) // Do not set both value to -1
-
-	UnactivatedConnectivityCheckers.Add(c)
-	if c.ReverseDirection {
-		from, to = to.(connectionSource), from.(connectionTarget)
-	}
-	c.expectations = append(c.expectations, expectation{from, to.ToMatcher(explicitPort...), true,
-		expPacketLoss{duration: duration, maxPercent: maxPacketLossPercent, maxNumber: maxPacketLossNumber}})
-}
-
-func (c *ConnectivityChecker) ResetExpectations() {
-	c.expectations = nil
-}
-
-// ActualConnectivity calculates the current connectivity for all the expected paths.  One string is
-// returned for each expectation, in the order they were recorded.  The strings are intended to be
-// human readable, and they are in the same order and format as those returned by
-// ExpectedConnectivity().
-func (c *ConnectivityChecker) ActualConnectivity() []string {
-	UnactivatedConnectivityCheckers.Discard(c)
-	var wg sync.WaitGroup
-	result := make([]string, len(c.expectations))
-	for i, exp := range c.expectations {
-		wg.Add(1)
-		go func(i int, exp expectation) {
-			defer wg.Done()
-			p := "tcp"
-			if c.Protocol != "" {
-				p = c.Protocol
-			}
-
-			hasConnectivity, statString := exp.from.CanConnectTo(exp.to.ip, exp.to.port, p, exp.expectedPacketLoss.duration)
-			result[i] = fmt.Sprintf("%s -> %s = %v %s", exp.from.SourceName(), exp.to.targetName, hasConnectivity, statString)
-
-		}(i, exp)
-	}
-	wg.Wait()
-	log.Debug("Connectivity", result)
-	return result
-}
-
-// ExpectedConnectivity returns one string per recorded expection in order, encoding the expected.
-// It also returns minimum retries for a connection check.
-// connectivity in the same format used by ActualConnectivity().
-func (c *ConnectivityChecker) ExpectedConnectivity() ([]string, int) {
-	minRetries := 1 // Default retry once
-	result := make([]string, len(c.expectations))
-	for i, exp := range c.expectations {
-		result[i] = fmt.Sprintf("%s -> %s = %v ", exp.from.SourceName(), exp.to.targetName, exp.expected)
-		if exp.expectedPacketLoss.duration != 0 {
-			result[i] += utils.FormPacketLossString(exp.expectedPacketLoss.maxPercent, exp.expectedPacketLoss.maxNumber)
-			minRetries = 0 // Never retry for packet loss test.
-		}
-	}
-	return result, minRetries
-}
-
-func (c *ConnectivityChecker) CheckConnectivityOffset(offset int, optionalDescription ...interface{}) {
-	c.CheckConnectivityWithTimeoutOffset(offset+2, 10*time.Second, optionalDescription...)
-}
-
-func (c *ConnectivityChecker) CheckConnectivity(optionalDescription ...interface{}) {
-	c.CheckConnectivityWithTimeoutOffset(2, 10*time.Second, optionalDescription...)
-}
-
-func (c *ConnectivityChecker) CheckConnectivityPacketLoss(optionalDescription ...interface{}) {
-	// Timeout is not used for packet loss test because there is no retry.
-	c.CheckConnectivityWithTimeoutOffset(2, 0*time.Second, optionalDescription...)
-}
-
-func (c *ConnectivityChecker) CheckConnectivityWithTimeout(timeout time.Duration, optionalDescription ...interface{}) {
-	Expect(timeout).To(BeNumerically(">", 100*time.Millisecond),
-		"Very low timeout, did you mean to multiply by time.<Unit>?")
-	if len(optionalDescription) > 0 {
-		Expect(optionalDescription[0]).NotTo(BeAssignableToTypeOf(time.Second),
-			"Unexpected time.Duration passed for description")
-	}
-	c.CheckConnectivityWithTimeoutOffset(2, timeout, optionalDescription...)
-}
-
-func (c *ConnectivityChecker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout time.Duration, optionalDescription ...interface{}) {
-	expConnectivity, minRetries := c.ExpectedConnectivity()
-	start := time.Now()
-
-	// Track the number of attempts for non packet loss test. If the first connectivity check fails, we want to
-	// do at least one retry before we time out.  That covers the case where the first
-	// connectivity check takes longer than the timeout.
-	// For packet loss test, no retry.
-	completedAttempts := 0
-	var errMsg string
-
-	for time.Since(start) < timeout || completedAttempts <= minRetries { // use 'or' here to make sure we do retry.
-
-		actualConn := c.ActualConnectivity()
-		errMsg = actualSatisfyExpected(actualConn, expConnectivity)
-		if errMsg == "" {
-			return
-		}
-		completedAttempts++
-	}
-
-	Fail(errMsg, callerSkip)
-}
-
-// Check test results against expectations.
-// Return non-empty error messages if any test failed.
-func actualSatisfyExpected(actual, expected []string) string {
-	Expect(len(expected)).To(Equal(len(actual)))
-	// run a deep equal first. Tests are good if everything is equal.
-	if reflect.DeepEqual(actual, expected) {
-		return ""
-	}
-
-	// Make a copy of expected. We do not want to change it because the test could retry.
-	expMsgs := make([]string, len(expected))
-	copy(expMsgs, expected)
-
-	good := true
-	// Build a concise description of the incorrect connectivity if test failed.
-	for i := range expected {
-		if !strings.Contains(expected[i], utils.PacketLossPrefix) {
-			if actual[i] != expected[i] {
-				actual[i] += " <---- WRONG"
-				expMsgs[i] += " <----"
-				good = false
-			}
-		} else {
-			// expected got a packet loss string.
-			Expect(actual[i]).To(ContainSubstring(utils.PacketTotalReqPrefix))
-
-			// Check packet loss.
-			actualPercent, actualNumber := utils.GetPacketLossFromStat(actual[i])
-			expPercent, expNumber := utils.GetPacketLossDirect(expected[i])
-
-			if (expPercent >= 0 && actualPercent > expPercent) || (expNumber >= 0 && actualNumber > expNumber) {
-				actual[i] += " <---- WRONG:" + utils.FormPacketLossString(actualPercent, actualNumber)
-				expMsgs[i] += " <----"
-				good = false
-			}
-		}
-	}
-
-	message := ""
-	if !good {
-		message = fmt.Sprintf(
-			"Connectivity was incorrect:\n\nExpected\n    %s\nto match\n    %s",
-			strings.Join(actual, "\n    "),
-			strings.Join(expMsgs, "\n    "),
-		)
-	}
-
-	return message
 }

@@ -106,6 +106,22 @@ type Config struct {
 	UseInternalDataplaneDriver bool   `config:"bool;true"`
 	DataplaneDriver            string `config:"file(must-exist,executable);calico-iptables-plugin;non-zero,die-on-fail,skip-default-validation"`
 
+	BPFEnabled                         bool           `config:"bool;false"`
+	BPFLogLevel                        string         `config:"oneof(off,info,debug);off;non-zero"`
+	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^(en.*|eth.*|tunl0$)"`
+	BPFConnectTimeLoadBalancingEnabled bool           `config:"bool;true"`
+	BPFExternalServiceMode             string         `config:"oneof(tunnel,dsr);tunnel;non-zero"`
+	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
+	BPFKubeProxyMinSyncPeriod          time.Duration  `config:"seconds;1"`
+
+	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
+	// are configured for cgroup v1, which prevents all but hte root cgroup v2 from working so this is only useful
+	// for development right now.
+	DebugBPFCgroupV2 string `config:"string;;local"`
+	// DebugBPFMapRepinEnabled can be used to prevent Felix from repinning its BPF maps at startup.  This is useful for
+	// testing with multiple Felix instances running on one host.
+	DebugBPFMapRepinEnabled bool `config:"bool;true;local"`
+
 	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
 	FelixHostname string `config:"hostname;;local,non-zero"`
@@ -151,7 +167,7 @@ type Config struct {
 	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
 	XDPRefreshInterval                 time.Duration `config:"seconds;90"`
 
-	WindowsNetworkName *regexp.Regexp `config:"regexp-pattern;(?i)calico.*"`
+	WindowsNetworkName *regexp.Regexp `config:"regexp;(?i)calico.*"`
 
 	PolicySyncPathPrefix string `config:"file;;"`
 
@@ -618,7 +634,7 @@ func (config *Config) DatastoreConfig() apiconfig.CalicoAPIConfig {
 		cfg.Spec.EtcdCACertFile = config.EtcdCaFile
 	}
 
-	if !config.IpInIpEnabled && !config.VXLANEnabled && !config.IPSecEnabled() {
+	if !(config.IpInIpEnabled || config.VXLANEnabled || config.BPFEnabled || config.IPSecEnabled()) {
 		// Polling k8s for node updates is expensive (because we get many superfluous
 		// updates) so disable if we don't need it.
 		log.Info("Encap disabled, disabling node poll (if KDD is in use).")
@@ -782,10 +798,6 @@ func loadParams() {
 		case "iface-list":
 			param = &RegexpParam{Regexp: IfaceListRegexp,
 				Msg: "invalid Linux interface name"}
-		case "regexp-pattern":
-			param = &RegexpPatternParam{
-				Msg: "invalid regex pattern",
-			}
 		case "iface-list-regexp":
 			param = &RegexpPatternListParam{
 				NonRegexpElemRegexp: NonRegexpIfaceElemRegexp,
@@ -793,6 +805,8 @@ func loadParams() {
 				Delimiter:           ",",
 				Msg:                 "list contains invalid Linux interface name or regex pattern",
 			}
+		case "regexp":
+			param = &RegexpPatternParam{}
 		case "iface-param":
 			param = &RegexpParam{Regexp: IfaceParamRegexp,
 				Msg: "invalid Linux interface parameter"}

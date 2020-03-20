@@ -26,16 +26,16 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"time"
-
 	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -213,20 +213,15 @@ func (p *RegexpParam) Parse(raw string) (result interface{}, err error) {
 // string values that are (themselves) regular expressions.
 type RegexpPatternParam struct {
 	Metadata
-	Msg string
 }
 
-// Parse validates whether the given raw string contains a valid regex.
-// Validation is dictated by two regexp patterns: one for valid regular expression
-// values, another for non-regular expressions.
+// Parse validates whether the given raw string contains a valid regexp pattern.
 func (p *RegexpPatternParam) Parse(raw string) (interface{}, error) {
 	var result *regexp.Regexp
-	// Split into individual elements, then validate each one and compile to regexp
 	result, compileErr := regexp.Compile(raw)
 	if compileErr != nil {
-		return nil, p.parseFailed(raw, p.Msg)
+		return nil, p.parseFailed(raw, "invalid regexp")
 	}
-
 	return result, nil
 }
 

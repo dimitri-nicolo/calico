@@ -16,9 +16,11 @@ package infrastructure
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,10 +28,6 @@ import (
 
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
-	"path"
-
-	"encoding/json"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/containers"
@@ -215,23 +213,37 @@ func (f *Felix) ReadCloudWatchLogs() ([]collector.FlowLog, error) {
 	return nil, errors.New("Should never get here")
 }
 
-func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
+func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	log.Info("Starting felix")
 	ipv6Enabled := fmt.Sprint(options.EnableIPv6)
 
 	args := infra.GetDockerArgs()
-	args = append(args,
-		"--privileged",
-		"-e", "FELIX_LOGSEVERITYSCREEN="+options.FelixLogSeverity,
-		"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
-		"-e", "FELIX_PROMETHEUSREPORTERENABLED=true",
-		"-e", "FELIX_USAGEREPORTINGENABLED=false",
-		"-e", "FELIX_IPV6SUPPORT="+ipv6Enabled,
-		// Disable log dropping, because it can cause flakes in tests that look
-		// for particular logs.
-		"-e", "FELIX_DEBUGDISABLELOGDROPPING=true",
-		"-v", "/lib/modules:/lib/modules",
-	)
+	args = append(args, "--privileged")
+
+	// Add in the environment variables.
+	envVars := map[string]string{
+		"FELIX_LOGSEVERITYSCREEN":         options.FelixLogSeverity,
+		"FELIX_PROMETHEUSMETRICSENABLED":  "true",
+		"FELIX_PROMETHEUSREPORTERENABLED": "true",
+		"FELIX_BPFLOGLEVEL":               "debug",
+		"FELIX_USAGEREPORTINGENABLED":     "false",
+		"FELIX_IPV6SUPPORT":               ipv6Enabled,
+		// Disable log dropping, because it can cause flakes in tests that look for particular logs.
+		"FELIX_DEBUGDISABLELOGDROPPING": "true",
+	}
+
+	containerName := containers.UniqueName(fmt.Sprintf("felix-%d", id))
+	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+		envVars["FELIX_BPFENABLED"] = "true"
+
+		// Disable map repinning by default since BPF map names are global and we don't want our simulated instances to
+		// share maps.
+		envVars["FELIX_DebugBPFMapRepinEnabled"] = "false"
+
+		// FIXME: isolate individual Felix instances in their own cgroups.  Unfortunately, this doesn't work on systems that are using cgroupv1
+		// see https://elixir.bootlin.com/linux/v5.3.11/source/include/linux/cgroup-defs.h#L788 for explanation.
+		// envVars["FELIX_DEBUGBPFCGROUPV2"] = containerName
+	}
 
 	// For FV, tell Felix to write CloudWatch logs to a file instead of to the real
 	// AWS API.  Whether logs are actually generated, at all, still depends on
@@ -287,10 +299,21 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 	}
 
 	for k, v := range options.ExtraEnvVars {
+		envVars[k] = v
+	}
+
+	for k, v := range envVars {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// Add in the volumes.
+	volumes := map[string]string{
+		"/lib/modules": "/lib/modules",
+	}
 	for k, v := range options.ExtraVolumes {
+		volumes[k] = v
+	}
+	for k, v := range volumes {
 		args = append(args, "-v", fmt.Sprintf("%s:%s", k, v))
 	}
 
@@ -298,7 +321,7 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 		utils.Config.FelixImage,
 	)
 
-	c := containers.Run("felix",
+	c := containers.RunWithFixedName(containerName,
 		containers.RunOpts{AutoRemove: true},
 		args...,
 	)
@@ -349,6 +372,7 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 }
 
 func (f *Felix) Stop() {
+	_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
 	f.Container.Stop()
 	if f.cwlCallsExpected {
 		Expect(cwLogDir + "/" + f.cwlFile).To(BeAnExistingFile())
