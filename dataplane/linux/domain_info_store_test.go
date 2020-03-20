@@ -202,10 +202,9 @@ var _ = Describe("Domain Info Store", func() {
 			expectedDomainIPs []string
 			monitorMutex      sync.Mutex
 			killMonitor       chan struct{}
-			domainChannel     chan *domainInfoChanged
 		)
 
-		monitor := func(domain string) {
+		monitor := func(domain string, domainChannel chan *domainInfoChanged) {
 			for {
 			loop:
 				for {
@@ -240,12 +239,10 @@ var _ = Describe("Domain Info Store", func() {
 			expectedSeen = false
 			killMonitor = make(chan struct{})
 			domainStoreCreateEx(0)
-			domainChannel = domainStore.domainInfoChanges
-			go monitor("*.microsoft.com")
+			go monitor("*.microsoft.com", domainStore.domainInfoChanges)
 		})
 
 		AfterEach(func() {
-			domainChannel = nil
 			close(killMonitor)
 		})
 
