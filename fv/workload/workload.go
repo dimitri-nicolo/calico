@@ -29,14 +29,15 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/fv/connectivity"
-	"github.com/projectcalico/felix/fv/containers"
-	"github.com/projectcalico/felix/fv/infrastructure"
-	"github.com/projectcalico/felix/fv/utils"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
+
+	"github.com/projectcalico/felix/fv/connectivity"
+	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/utils"
 )
 
 type Workload struct {
@@ -235,7 +236,7 @@ func (w *Workload) SourceIPs() []string {
 	return []string{w.IP}
 }
 
-func (w *Workload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Response {
+func (w *Workload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	anyPort := Port{
 		Workload: w,
 	}
@@ -501,7 +502,7 @@ type SpoofedWorkload struct {
 	SpoofedSourceIP string
 }
 
-func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Response {
+func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	return canConnectTo(s.Workload, ip, port, s.SpoofedSourceIP, "", protocol, duration)
 }
 
@@ -523,12 +524,12 @@ func (p *Port) SourceIPs() []string {
 
 // Return if a connection is good and packet loss string "PacketLoss[xx]".
 // If it is not a packet loss test, packet loss string is "".
-func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Response {
+func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	srcPort := strconv.Itoa(int(p.Port))
 	return canConnectTo(p.Workload, ip, port, "", srcPort, protocol, duration)
 }
 
-func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, duration time.Duration) *connectivity.Response {
+func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, duration time.Duration) *connectivity.Result {
 	// Ensure that the host has the 'test-connection' binary.
 	w.C.EnsureBinary("test-connection")
 

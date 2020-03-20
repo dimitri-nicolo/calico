@@ -26,13 +26,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/felix/fv/connectivity"
-
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/fv/utils"
+	"github.com/projectcalico/felix/fv/connectivity"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
+
+	"github.com/projectcalico/felix/fv/utils"
 )
 
 type Container struct {
@@ -593,7 +594,7 @@ func (c *Container) SourceIPs() []string {
 	return ips
 }
 
-func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Response {
+func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
 	// Ensure that the container has the 'test-connection' binary.
 	logCxt := log.WithField("container", c.Name)
 	logCxt.Debugf("Entering Container.CanConnectTo(%v,%v,%v)", ip, port, protocol)

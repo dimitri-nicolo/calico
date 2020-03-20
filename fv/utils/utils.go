@@ -23,6 +23,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -31,17 +33,15 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"regexp"
-	"strconv"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/libcalico-go/lib/selector"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
-	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
 type EnvConfig struct {
@@ -214,7 +214,7 @@ func IPSetNameForSelector(ipVersion int, rawSelector string) string {
 
 // Run a connection test command.
 // Report if connection test is successful and packet loss string for packet loss test.
-func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) *connectivity.Response {
+func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) *connectivity.Result {
 	outPipe, err := connectionCmd.StdoutPipe()
 	Expect(err).NotTo(HaveOccurred())
 	errPipe, err := connectionCmd.StderrPipe()
@@ -251,10 +251,10 @@ func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) *connectivity.Resp
 		return nil
 	}
 
-	r := regexp.MustCompile(`RESPONSE=(.*)\n`)
+	r := regexp.MustCompile(`RESULT=(.*)\n`)
 	m := r.FindSubmatch(wOut)
 	if len(m) > 0 {
-		var resp connectivity.Response
+		var resp connectivity.Result
 		err := json.Unmarshal(m[1], &resp)
 		if err != nil {
 			log.WithError(err).WithField("output", string(wOut)).Panic("Failed to parse connection check response")

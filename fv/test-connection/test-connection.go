@@ -52,6 +52,7 @@ Options:
   --protocol=<protocol>  Protocol to test tcp (default), udp (connected) udp-noconn (unconnected).
   --duration=<seconds>   Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
   --loop-with-file=<file>  Whether to send messages repeatedly, file is used for synchronization
+  --debug Enable debug logging
 
 If connection is successful, test-connection exits successfully.
 
@@ -75,7 +76,7 @@ const defaultIPv4SourceIP = "0.0.0.0"
 const defaultIPv6SourceIP = "::"
 
 func main() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 
 	// If we've been told to, move into this felix's cgroup.
 	cgroup.MaybeMoveToFelixCgroupv2()
@@ -91,6 +92,10 @@ func main() {
 	port := arguments["<port>"].(string)
 	sourcePort := arguments["--source-port"].(string)
 	sourceIpAddress := arguments["--source-ip"].(string)
+	if debug, err := arguments.Bool("--debug"); err == nil && debug {
+		log.SetLevel(log.DebugLevel)
+		log.Debug("Debug logging enabled")
+	}
 
 	// Set default for source IP. If we're using IPv6 as indicated by ipAddress
 	// and no --source-ip option was provided, set the source IP to the default
@@ -300,11 +305,13 @@ func (tc *testConn) tryLoopFile(loopFile string) error {
 	}
 
 	ls := newLoopState(loopFile)
+	var lastResponse connectivity.Response
 	for {
 		err = tc.protocol.Send(msg)
 		if err != nil {
 			log.WithError(err).Fatal("Failed to send")
 		}
+		tc.stat.totalReq++
 		respRaw, err := tc.protocol.Receive()
 		if err != nil {
 			log.WithError(err).Fatal("Failed to receive")
@@ -319,16 +326,21 @@ func (tc *testConn) tryLoopFile(loopFile string) error {
 		if !resp.Request.Equal(req) {
 			log.WithField("reply", resp).Fatal("Unexpected response")
 		}
-		j, err := json.Marshal(resp)
-		if err != nil {
-			log.WithError(err).Panic("Failed to re-marshal response")
-		}
+		tc.stat.totalReply++
 
-		fmt.Println("RESPONSE=", string(j))
+		lastResponse = resp
 		if !ls.Next() {
 			break
 		}
 	}
+	res := connectivity.Result{
+		LastResponse: lastResponse,
+		Stats: connectivity.Stats{
+			RequestsSent:      tc.stat.totalReq,
+			ResponsesReceived: tc.stat.totalReply,
+		},
+	}
+	res.PrintToStdout()
 	return nil
 }
 
@@ -359,12 +371,15 @@ func (tc *testConn) tryConnectOnceOff() error {
 	if !resp.Request.Equal(req) {
 		log.WithField("reply", resp).Fatal("Unexpected response")
 	}
-	j, err := json.Marshal(resp)
-	if err != nil {
-		log.WithError(err).Panic("Failed to re-marshal response")
-	}
 
-	fmt.Println("RESPONSE=", string(j))
+	res := connectivity.Result{
+		LastResponse: resp,
+		Stats: connectivity.Stats{
+			RequestsSent:      1,
+			ResponsesReceived: 1,
+		},
+	}
+	res.PrintToStdout()
 
 	return nil
 }
@@ -379,6 +394,8 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 	var wg sync.WaitGroup
 
 	conn := tc.protocol.(*connectedUDP).conn
+
+	var lastResponse connectivity.Response
 
 	// Start a reader
 	wg.Add(1)
@@ -409,7 +426,7 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 
 				if e, ok := err.(net.Error); ok && e.Timeout() {
 					// This was a timeout. Nothing to read.
-					// log.Infof("Nothing to read. Total reply so far %d", count)
+					log.Debugf("Read timeout. Total reply so far %d", count)
 					continue
 				} else if err != nil {
 					// This is an error, not a timeout
@@ -422,6 +439,7 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 					log.WithError(err).Warning("Failed to unmarshall response")
 					continue
 				}
+				lastResponse = resp
 
 				lastSequence, err = tc.config.GetTestMessageSequence(resp.Request.Payload)
 				if err != nil {
@@ -485,7 +503,14 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 	// Wait for writer and reader to complete.
 	wg.Wait()
 
-	log.Infof("Stat -- %s", utils.FormPacketStatString(tc.stat.totalReq, tc.stat.totalReply))
+	res := connectivity.Result{
+		LastResponse: lastResponse,
+		Stats: connectivity.Stats{
+			RequestsSent:      tc.stat.totalReq,
+			ResponsesReceived: tc.stat.totalReply,
+		},
+	}
+	res.PrintToStdout()
 
 	return nil
 }

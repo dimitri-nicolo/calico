@@ -19,8 +19,11 @@ package fv_test
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/connectivity"
 
@@ -38,8 +41,8 @@ var _ = describeConnCheckTests("udp-recvmsg")
 var _ = describeConnCheckTests("udp-noconn")
 
 func describeConnCheckTests(protocol string) bool {
-	return infrastructure.DatastoreDescribe("Connectivity sanity checks: "+protocol,
-		[]apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes},
+	return infrastructure.DatastoreDescribe("Connectivity checker self tests: "+protocol,
+		[]apiconfig.DatastoreType{apiconfig.EtcdV3}, // Skipping k8s since these tests don't rely on the datastore.
 		func(getInfra infrastructure.InfraFactory) {
 
 			var (
@@ -81,9 +84,41 @@ func describeConnCheckTests(protocol string) bool {
 				infra.Stop()
 			})
 
-			It("should have host-to-host", func() {
+			It("should have host-to-host on right port only", func() {
 				cc.ExpectSome(felixes[0], hostW[1])
+				cc.ExpectNone(felixes[0], hostW[1], 8066)
 				cc.CheckConnectivity()
 			})
-		})
+
+			if protocol == "udp" {
+				Describe("with tc configured to drop 5% of packets", func() {
+					BeforeEach(func() {
+						// Make sure we have connectivity before we start packet loss measurements.
+						cc.ExpectSome(felixes[0], hostW[1])
+						cc.CheckConnectivity()
+						cc.ResetExpectations()
+
+						felixes[0].Exec("tc", "qdisc", "add", "dev", "eth0", "root", "netem", "loss", "5%")
+					})
+
+					It("and a 1% threshold, should see packet loss", func() {
+						failed := false
+						cc.OnFail = func(msg string) {
+							log.WithField("msg", msg).Info("Connectivity checker failed (as expected)")
+							failed = true
+						}
+						cc.ExpectLoss(felixes[0], hostW[1], 2*time.Second, 1, -1)
+						cc.CheckConnectivityPacketLoss()
+
+						Expect(failed).To(BeTrue(), "Expected the connection checker to detect packet loss")
+					})
+
+					It("and a 20% threshold, should tolerate packet loss", func() {
+						cc.ExpectLoss(felixes[0], hostW[1], 2*time.Second, 20, -1)
+						cc.CheckConnectivityPacketLoss()
+					})
+				})
+			}
+		},
+	)
 }
