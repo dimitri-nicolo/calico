@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
-var _ = Describe("_HEALTH_ _BPF-SAFE_ health tests", func() {
+var _ = Describe("_HEALTH_ health tests", func() {
 
 	var k8sInfra *infrastructure.K8sDatastoreInfra
 

@@ -38,7 +38,7 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
-var _ = Context("_INGRESS-EGRESS_ _BPF-SAFE_ with initialized Felix, etcd datastore, 3 workloads", func() {
+var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", func() {
 
 	var (
 		etcd   *containers.Container
