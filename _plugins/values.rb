@@ -430,7 +430,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
 
     calicoctl:
       image: #{imageRegistry}#{versions["calicoctl"].image}
-      tag: #{versions.fetch("calicoctl")}
+      tag: #{versions["calicoctl"].version}
 
     prometheusOperator:
       image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}

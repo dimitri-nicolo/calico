@@ -53,7 +53,3 @@ curl {{ "/manifests/ocp/01-cr-prometheus.yaml" | absolute_url }} -o manifests/01
 curl {{ "/manifests/ocp/01-cr-prometheusrule.yaml" | absolute_url }} -o manifests/01-cr-prometheusrule.yaml
 curl {{ "/manifests/ocp/01-cr-servicemonitor.yaml" | absolute_url }} -o manifests/01-cr-servicemonitor.yaml
 ```
-
-> **Note**: The Tigera operator manifest downloaded above includes an initialization container which configures Amazon AWS
-> security groups for {{site.prodname}}. If not running on AWS, you should remove the init container from `manifests/02-tigera-operator.yaml`.
-{: .alert .alert-info}
