@@ -1,6 +1,6 @@
 [
   {
-    "expected": "Inbound connection spike for replica set calico-monitoring/alertmanager-calico-node-alertmanager-*: 75 >> 53.38787082337713",
+    "expected": "Inbound connection spike for pod basic-hr2v9e within replica set calico-monitoring/alertmanager-calico-node-alertmanager-*: 75 >> 53.38787082337713",
     "input": {
       "type": "anomaly_detection",
       "time": 1564669800,
@@ -38,6 +38,8 @@
       ],
       "initial_record_score": 94.97606951527302,
       "job_id": "inbound_connection_spike",
+      "over_field_name": "dest_name",
+      "over_field_value": "basic-hr2v9e",
       "partition_field_name": "namespace_dest_name_aggr",
       "partition_field_value": "calico-monitoring/alertmanager-calico-node-alertmanager-*",
       "probability": 2.304603709121432e-07,
