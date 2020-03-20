@@ -18,6 +18,5 @@ In this section we will elaborate on the specifics of the collected data and how
 * [Data Retention](../retention)
 * [Filtering flow logs](filtering)
 * [Filtering DNS logs](filtering-dns)
-* [Archiving to syslog](syslog)
-* [Archiving to S3](s3-archive)
+* [Archive logs to storage](archive-storage)
 * [Tracing external IP addresses](ingress)
