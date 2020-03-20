@@ -206,12 +206,12 @@ var _ = Describe("Domain Info Store", func() {
 		)
 
 		monitor := func(domain string, domainChannel chan *domainInfoChanged) {
+			defer monitorRunning.Done()
 			for {
 			loop:
 				for {
 					select {
 					case <-killMonitor:
-						monitorRunning.Done()
 						return
 					case signal := <-domainChannel:
 						log.Debugf("Got domain change signal for %v", signal.domain)
