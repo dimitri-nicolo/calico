@@ -21,7 +21,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
-	github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd
+	github.com/tigera/licensing v0.0.0-20200319192200-2922adbd39e9
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 
@@ -33,10 +33,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200318212929-4c66b8b4c400
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200319042359-a8e792457ea8
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200310211350-635f510eff35
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200319165815-dcfd07befeb2
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200319184751-e12d75794b87
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
