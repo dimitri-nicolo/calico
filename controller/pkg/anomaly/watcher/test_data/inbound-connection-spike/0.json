@@ -10,7 +10,7 @@
         75
       ],
       "bucket_span": 600,
-      "detector_index": 1,
+      "detector_index": 0,
       "field_name": "num_flows_started",
       "function": "high_non_null_sum",
       "function_description": "sum",
