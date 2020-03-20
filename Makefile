@@ -37,7 +37,7 @@ EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache
 include Makefile.common
 
 ###############################################################################
-K8S_VERSION = v1.16.4
+K8S_VERSION = v1.15.4
 BINDIR ?= bin
 CONTAINER_NAME = gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 BUILD_DIR ?= build

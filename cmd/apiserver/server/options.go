@@ -17,12 +17,13 @@ limitations under the License.
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"strings"
 
-	"crypto/tls"
-
+	"github.com/go-openapi/spec"
+	"github.com/spf13/pflag"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
 	"k8s.io/apiserver/pkg/features"
@@ -31,8 +32,6 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/klog"
 
-	"github.com/go-openapi/spec"
-	"github.com/spf13/pflag"
 	"github.com/tigera/apiserver/pkg/apiserver"
 	"github.com/tigera/apiserver/pkg/openapi"
 )
@@ -42,13 +41,20 @@ import (
 // It is public so that integration tests can access it.
 type CalicoServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions
+
 	// DisableAuth disables delegating authentication and authorization for testing scenarios
 	DisableAuth bool
-	StopCh      <-chan struct{}
+
+	// Enable Admission Controller support.
+	EnableAdmissionController bool
+
+	StopCh <-chan struct{}
 }
 
 func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 	s.RecommendedOptions.AddFlags(flags)
+	flags.BoolVar(&s.EnableAdmissionController, "enable-admission-controller-support", s.EnableAdmissionController, ""+
+		"If true, admission controller hooks will be enabled.")
 }
 
 func (o CalicoServerOptions) Validate(args []string) error {
@@ -121,13 +127,16 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		return nil, err
 	}
 
-	if err := o.RecommendedOptions.CoreAPI.ApplyTo(serverConfig); err != nil {
-		return nil, err
-	}
-	if initializers, err := o.RecommendedOptions.ExtraAdmissionInitializers(serverConfig); err != nil {
-		return nil, err
-	} else if err := o.RecommendedOptions.Admission.ApplyTo(&serverConfig.Config, serverConfig.SharedInformerFactory, serverConfig.ClientConfig, o.RecommendedOptions.FeatureGate, initializers...); err != nil {
-		return nil, err
+	if o.EnableAdmissionController {
+		if err := o.RecommendedOptions.CoreAPI.ApplyTo(serverConfig); err != nil {
+			return nil, err
+		}
+
+		if initializers, err := o.RecommendedOptions.ExtraAdmissionInitializers(serverConfig); err != nil {
+			return nil, err
+		} else if err := o.RecommendedOptions.Admission.ApplyTo(&serverConfig.Config, serverConfig.SharedInformerFactory, serverConfig.ClientConfig, o.RecommendedOptions.FeatureGate, initializers...); err != nil {
+			return nil, err
+		}
 	}
 
 	config := &apiserver.Config{
