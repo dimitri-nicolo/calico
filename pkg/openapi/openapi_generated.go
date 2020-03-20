@@ -7467,7 +7467,7 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
-					"maxnode": {
+					"maxnodes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Maximum Number of Allowed Nodes",
 							Type:        []string{"integer"},

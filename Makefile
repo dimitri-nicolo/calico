@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.36
+GO_BUILD_VER    ?= v0.37
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
@@ -31,6 +31,7 @@ ifdef LIBCALICOGO_PATH
 EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):$(LOCAL_LIBCALICO):ro
 endif
 
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/* 
 EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
 				 -v $(CURDIR)/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 
