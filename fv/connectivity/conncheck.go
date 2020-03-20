@@ -357,7 +357,6 @@ func (e Expectation) Matches(response *Result, checkSNAT bool) bool {
 			return false
 		}
 	}
-	// FIXME MERGE Packet loss pretty printing
 
 	return true
 }
