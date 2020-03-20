@@ -2,7 +2,7 @@
   {
     "expected": "Input bytes spike for pod coredns-576cbf47c7-tm9hr within replica set kube-system/coredns-576cbf47c7-*:1.119264e+06 >> 650159.0870510652",
     "input": {
-      "job_id": "service_bytes_anomaly",
+      "job_id": "inbound_service_bytes_anomaly",
       "result_type": "record",
       "probability": 1.4910228190476503e-19,
       "record_score": 95.10879,
