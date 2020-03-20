@@ -455,7 +455,7 @@ func (c *Container) GetSinglePID(processName string) int {
 			// Success, there's one process.
 			return filteredProcs[0].PID
 		}
-		Expect(time.Since(start)).To(BeNumerically("<", 5*time.Second),
+		ExpectWithOffset(1, time.Since(start)).To(BeNumerically("<", 5*time.Second),
 			fmt.Sprintf("Timed out waiting for there to be a single PID for %s", processName))
 		time.Sleep(50 * time.Millisecond)
 	}
