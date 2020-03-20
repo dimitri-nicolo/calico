@@ -18,11 +18,11 @@ require (
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/ugorji/go v0.0.0-20171019201919-bdcc60b419d1 // indirect
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.26.0
 	k8s.io/client-go v12.0.0+incompatible // indirect
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200203232830-a5de53a78f58
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200319165815-dcfd07befeb2
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
