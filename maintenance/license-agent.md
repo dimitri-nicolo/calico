@@ -115,6 +115,7 @@ spec:
 ### Note
 
 Monitoring {{site.prodname}} license metrics works only with Operator based Install.
+If Kubernetes api-server serves on any other port than 6443 or 443, Add that port in the Egress policy of license agent manifest.
 
 ### Above and beyond
 
