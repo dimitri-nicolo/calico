@@ -131,7 +131,7 @@ func (c *Checker) ActualConnectivity() ([]*Result, []string) {
 				srcIP := strings.Split(responses[i].LastResponse.SourceAddr, ":")[0]
 				pretty[i] += " (from " + srcIP + ")"
 			}
-			if exp.ExpectedPacketLoss.Duration > 0 {
+			if exp.ExpectedPacketLoss.Duration > 0 && responses[i] != nil {
 				sent := responses[i].Stats.RequestsSent
 				lost := responses[i].Stats.Lost()
 				pct := responses[i].Stats.LostPercent()
