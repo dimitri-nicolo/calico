@@ -7,6 +7,7 @@
       "description": "Port Scan - Pods: Count of destination ports compared with all pods",
       "severity": 100,
       "bucket_span": 600,
+      "detector_index": 0,
       "causes": [
         {
           "actual": [

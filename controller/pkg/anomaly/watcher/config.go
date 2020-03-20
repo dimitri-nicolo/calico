@@ -106,21 +106,6 @@ var Jobs = map[string]Job{
 					Funcs(templateFuncs).
 					Parse("Inbound connection spike for pod {{.OverFieldValue}} within replica set" +
 						" {{.PartitionFieldValue}}: {{actual .}} >> {{typical .}}")),
-			1: template.Must(
-				template.New("inbound_connection_spike[1]").
-					Funcs(templateFuncs).
-					Parse("Inbound connection spike for replica set {{.PartitionFieldValue}}:" +
-						" {{actual .}} >> {{typical .}}")),
-		},
-	},
-	"ip_sweep_external": {
-		"datafeed-ip_sweep_external",
-		map[int]*template.Template{
-			0: template.Must(
-				template.New("ip_sweep_external[0]").
-					Funcs(templateFuncs).
-					Parse("Possible IP sweep by {{.OverFieldValue}}:" +
-						" {{actual .}} >> {{typical .}} unique destination IPs")),
 		},
 	},
 	"ip_sweep_pods": {
@@ -131,31 +116,6 @@ var Jobs = map[string]Job{
 					Funcs(templateFuncs).
 					Parse(`Possible IP sweep by pod {{influencer . "source_namespace"}}/{{.OverFieldValue}}:` +
 						" {{actual .}} >> {{typical .}} unique destination IPs as compared to all pods")),
-			1: template.Must(
-				template.New("ip_sweep_pods[1]").
-					Funcs(templateFuncs).
-					Parse(`Possible IP sweep by pod {{influencer . "source_namespace"}}/{{.OverFieldValue}}:` +
-						" {{actual .}} >> {{typical .}} unique destination IPs as compared to replica set {{.PartitionFieldValue}}")),
-		},
-	},
-	"pod_outlier_ip_activity": {
-		"datafeed-pod_outlier_ip_activity",
-		map[int]*template.Template{
-			0: template.Must(
-				template.New("pod_outlier_ip_activity[0]").
-					Funcs(templateFuncs).
-					Parse(`Unexpected connection from pod {{influencer . "source_name"}}` +
-						` in replica set {{.PartitionFieldValue}} to IP {{.ByFieldValue}}`)),
-		},
-	},
-	"port_scan_external": {
-		"datafeed-port_scan_external",
-		map[int]*template.Template{
-			0: template.Must(
-				template.New("port_scan_external[0]").
-					Funcs(templateFuncs).
-					Parse("Possible port scan by {{.OverFieldValue}}:" +
-						" {{actual .}} >> {{typical .}} unique destination ports")),
 		},
 	},
 	"port_scan_pods": {
@@ -166,34 +126,26 @@ var Jobs = map[string]Job{
 					Funcs(templateFuncs).
 					Parse(`Possible port scan by pod {{influencer . "source_namespace"}}/{{.OverFieldValue}}:` +
 						" {{actual .}} >> {{typical .}} unique destination ports as compared to all pods")),
-			1: template.Must(
-				template.New("port_scan_pods[1]").
-					Funcs(templateFuncs).
-					Parse(`Possible port scan by pod {{influencer . "source_namespace"}}/{{.OverFieldValue}}:` +
-						" {{actual .}} >> {{typical .}} unique destination ports as compared to replica set {{.PartitionFieldValue}}")),
 		},
 	},
-	"service_bytes_anomaly": {
-		"datafeed-service_bytes_anomaly",
+	"inbound_service_bytes_anomaly": {
+		"datafeed-inbound_service_bytes_anomaly",
 		map[int]*template.Template{
 			0: template.Must(
-				template.New("service_bytes_anomaly[0]").
+				template.New("inbound_service_bytes_anomaly[0]").
 					Funcs(templateFuncs).
 					Parse("Input bytes spike for pod {{.OverFieldValue}} within replica set {{.PartitionFieldValue}}:" +
 						"{{actual .}} >> {{typical .}}")),
-			1: template.Must(
-				template.New("service_bytes_anomaly[1]").
-					Funcs(templateFuncs).
-					Parse("Input bytes spike for replica set {{.PartitionFieldValue}}: {{actual .}} >> {{typical .}}")),
-			2: template.Must(
-				template.New("service_bytes_anomaly[2]").
+		},
+	},
+	"outbound_service_bytes_anomaly": {
+		"datafeed-outbound_service_bytes_anomaly",
+		map[int]*template.Template{
+			0: template.Must(
+				template.New("outbound_service_bytes_anomaly[0]").
 					Funcs(templateFuncs).
 					Parse("Output bytes spike for pod {{.OverFieldValue}} within replica set {{.PartitionFieldValue}}:" +
 						"{{actual .}} >> {{typical .}}")),
-			3: template.Must(
-				template.New("service_bytes_anomaly[3]").
-					Funcs(templateFuncs).Parse("Output bytes spike for replica set {{.PartitionFieldValue}}:" +
-					"{{actual .}} >> {{typical .}}")),
 		},
 	},
 }
