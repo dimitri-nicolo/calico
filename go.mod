@@ -29,7 +29,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20170622225139-7ff1ba29eca2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd // indirect
+	github.com/tigera/licensing v0.0.0-20200319192200-2922adbd39e9 // indirect
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
@@ -40,6 +40,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200310204028-59913de27e11
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200319165815-dcfd07befeb2
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
