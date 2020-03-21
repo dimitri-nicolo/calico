@@ -401,6 +401,7 @@ dual-tor-setup: cnx-node.tar calico_test.created
 	chmod +x ./kubectl
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup tests/k8st/dual-tor/dualtor.sh
 
+DUAL_TOR_ST_TO_RUN=dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture
 .PHONY: dual-tor-run-test
 dual-tor-run-test:
 	docker run -t --rm \
@@ -412,7 +413,7 @@ dual-tor-run-test:
 	    --net host \
 	${TEST_CONTAINER_NAME} \
 	    sh -c 'echo "container started.." && cp /root/bin/kubectl /bin/kubectl && echo "kubectl copied." && \
-	     cd /code/tests/k8st &&  nosetests dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+	     cd /code/tests/k8st && nosetests $(DUAL_TOR_ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
 
 .PHONY: dual-tor-cleanup
 dual-tor-cleanup:

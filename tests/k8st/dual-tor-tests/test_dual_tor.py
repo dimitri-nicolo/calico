@@ -211,7 +211,7 @@ class FailoverTest(object):
                 #time.sleep(2)
 
         return seq, error
-    
+
     def clean_up(self):
         names = ["ra-server", "rb-server"]
         for name in names:
@@ -264,7 +264,7 @@ class FailoverTest(object):
 
         _log.info("test %s completed.", test_name)
 
-    def client_func_pod_ip(self):   
+    def client_func_pod_ip(self):
         self.start_client("ra-server", self.config.ra_server_ip, self.config.target_port)
         self.start_client("rb-server", self.config.rb_server_ip, self.config.target_port)
 
@@ -573,3 +573,37 @@ class TestFailoverHostAccess(TestBase):
 
     def test_failover_drop_server(self):
         self.test.test_failover_drop_server()
+
+class TestRestartCalicoNodes(TestBase):
+
+    def get_restart_node_pod_name(self):
+        self.restart_pod_name = kubectl(
+            "get po -n kube-system" +
+            " -l k8s-app=calico-node" +
+            " --field-selector status.podIP=" + self.restart_node_ip +
+            " -o jsonpath='{.items[*].metadata.name}'")
+        if self.restart_pod_name == "":
+            raise Exception('pod name not found')
+
+    def test_restart_calico_nodes(self):
+        for node_ip in ["172.31.10.3",
+                        "172.31.10.4",
+                        "172.31.20.3",
+                        "172.31.20.4"]:
+
+            # Get the name of the calico/node pod with that IP.
+            self.restart_node_ip = node_ip
+            self.get_restart_node_pod_name()
+
+            # Delete it.
+            kubectl("delete po %s -n kube-system" % self.restart_pod_name)
+
+            # Wait until a replacement calico-node pod has been created.
+            retry_until_success(self.get_restart_node_pod_name, retries=10, wait_time=1)
+
+            # Wait until it is ready, before returning.
+            kubectl("wait po %s -n kube-system --timeout=2m --for=condition=ready" %
+                self.restart_pod_name)
+
+            # Wait another 2s before moving on.
+            time.sleep(2)
