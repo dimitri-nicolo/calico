@@ -2,7 +2,6 @@ PACKAGE_NAME?=github.com/projectcalico/node
 GO_BUILD_VER?=v0.36
 
 GIT_USE_SSH = true
-SKIP_GOMOD_READONLY_FLAG = true
 
 ###############################################################################
 # Download and include Makefile.common
