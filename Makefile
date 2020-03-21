@@ -241,7 +241,13 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+APISERVER_REPO=github.com/tigera/apiserver
+APISERVER_BRANCH=$(PIN_BRANCH)
+
+update-apiserver-pin:
+	$(call update_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-apiserver-pin
 
 ##########################################################################################
 # CI/CD

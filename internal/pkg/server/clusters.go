@@ -23,7 +23,7 @@ import (
 	vtls "github.com/tigera/voltron/pkg/tls"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	apiv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"github.com/pkg/errors"

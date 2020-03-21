@@ -17,9 +17,9 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	apiv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	calicofake "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/fake"
-	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	apiv3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	calicofake "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const (

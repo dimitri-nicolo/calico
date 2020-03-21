@@ -3,7 +3,7 @@ module github.com/tigera/voltron
 go 1.13
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200210210953-175670a51f80
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -42,8 +42,8 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/projectcalico/libcalico-go v0.0.0
 	github.com/sirupsen/logrus v1.4.2
+	github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b
 
-	github.com/tigera/calico-k8sapiserver v0.0.0-20200110212651-95b7ffebd28b
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
 
