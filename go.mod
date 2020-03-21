@@ -12,7 +12,6 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
 	github.com/sirupsen/logrus v1.4.2
-	golang.org/x/sys v0.0.0-20200321134203-328b4cd54aae // indirect
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
@@ -25,7 +24,7 @@ replace (
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200320193814-d728bf60a85f
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200320215431-30517628b471
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200321051644-defc44521de1
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200321222223-39af61b4b653
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200319184751-e12d75794b87
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
