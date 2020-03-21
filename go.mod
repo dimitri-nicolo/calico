@@ -36,7 +36,7 @@ require (
 	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
+	github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
 	k8s.io/apiserver v0.17.2
