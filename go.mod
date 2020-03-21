@@ -22,7 +22,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
 	github.com/tigera/licensing v0.0.0-20200319192200-2922adbd39e9
-	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 
 	k8s.io/api v0.17.2
@@ -34,17 +33,36 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200319042359-a8e792457ea8
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200319165815-dcfd07befeb2
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200320230400-53a0b6ef329b
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200319184751-e12d75794b87
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
+
 	k8s.io/api => k8s.io/api v0.17.2
+
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.17.2
 	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340
 	k8s.io/apiserver => k8s.io/apiserver v0.17.2
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.17.2
 	k8s.io/client-go => k8s.io/client-go v0.17.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.17.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.17.2
+	k8s.io/code-generator => k8s.io/code-generator v0.17.2
+	k8s.io/component-base => k8s.io/component-base v0.17.2
+	k8s.io/cri-api => k8s.io/cri-api v0.17.2
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.17.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.17.2
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.17.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.17.2
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.17.2
+	k8s.io/kubectl => k8s.io/kubectl v0.17.2
+	k8s.io/kubelet => k8s.io/kubelet v0.17.2
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.17.2
+	k8s.io/metrics => k8s.io/metrics v0.17.2
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.17.2
 )
