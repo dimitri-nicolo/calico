@@ -99,14 +99,30 @@ configure Felix. The configuration file as well as other options for
 configuring Felix (including environment variables) are described in
 [this]({{site.baseurl}}/reference/felix/configuration) document.
 
-If etcd is not running on the local machine, it's essential to configure
-the `EtcdAddr` or `EtcdEndpoints` setting to tell Felix how to reach
-etcd.
-
 Felix tries to detect whether IPv6 is available on your platform but
 the detection can fail on older (or more unusual) systems.  If Felix
 exits soon after startup with `ipset` or `iptables` errors try
 setting the `Ipv6Support` setting to `false`.
+
+### Etcd 
+
+If you are configuring Felix in etcd mode and etcd is not running
+on the local machine, it's essential to configure the `EtcdAddr` or
+`EtcdEndpoints` setting to tell Felix how to reach etcd.
+
+### Kubernetes datastore
+
+If you are configuring Felix to interact with a Kubernetes datastore,
+it is essential to set the `DatastoreType` setting to `kubernetes`.
+You will also need to set the environment variable `CALICO_KUBECONFIG`
+to point to a valid kubeconfig for your kubernetes cluster and
+`CALICO_NETWORKING_BACKEND` to `none`.
+
+> **Note**: Felix only works in policy-only mode when running
+in Kubernetes datastore mode. This means that pod networking is
+disabled on the baremetal host Felix is running on but policy can
+still be used to secure the host.
+{: .alert .alert-info}
 
 ## Start Felix
 
@@ -119,10 +135,19 @@ service calico-felix start
 ## Running Felix manually
 
 For debugging, it's sometimes useful to run Felix manually and tell it
-to emit its logs to screen. You can do that with the following command.
+to emit its logs to screen. You can accomplish that using the appropriate
+command depending on what mode Felix is running in.
+
+### Etcd
 
 ```bash
 ETCD_ENDPOINTS=http://<YOUR_ECTD_HOST_IP>:2379 FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
 ```
 > **Note**: Add the `ETCD_ENDPOINTS` Env and replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration when etcd isn't running locally.
 {: .alert .alert-info}
+
+### Kubernetes datastore
+
+```bash
+FELIX_DATASTORETYPE=kubernetes CALICO_KUBECONFIG=<YOUR_KUBECONFIG_PATH> FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
+```
