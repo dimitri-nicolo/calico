@@ -21,9 +21,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
+	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"

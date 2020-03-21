@@ -10,8 +10,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	v3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
 )
