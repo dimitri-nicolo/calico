@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
-GO_BUILD_VER    ?= v0.36
+GO_BUILD_VER    ?= v0.37
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
@@ -329,8 +329,24 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+APISERVER_BRANCH=$(PIN_BRANCH)
+APISERVER_REPO=github.com/tigera/apiserver
+COMPLIANCE_BRANCH?=$(PIN_BRANCH)
+COMPLIANCE_REPO?=github.com/tigera/compliance
+LMA_BRANCH?=$(PIN_BRANCH)
+LMA_REPO?=github.com/tigera/lma
+
+replace-apiserver-pin:
+	$(call update_replace_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
+
+replace-compliance-pin:
+	$(call update_replace_pin,$(COMPLIANCE_REPO),$(COMPLIANCE_REPO),$(COMPLIANCE_BRANCH))
+
+replace-lma-pin:
+	$(call update_replace_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
+
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin replace-apiserver-pin replace-compliance-pin replace-lma-pin
 
 ###############################################################################
 # Utilities

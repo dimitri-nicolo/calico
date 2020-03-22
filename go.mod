@@ -3,8 +3,12 @@ module github.com/tigera/es-proxy
 go 1.13
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200321051644-defc44521de1
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b
+	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200321224316-58d751857f09
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200321212149-273f27b4c88b
+
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.17.2
@@ -30,7 +34,14 @@ replace (
 )
 
 require (
+	github.com/cloudflare/cfssl v0.0.0-20180726162950-56268a613adf // indirect
+	github.com/coreos/etcd v3.3.17+incompatible // indirect
+	github.com/coreos/rkt v1.30.0 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
+	github.com/godbus/dbus v4.1.0+incompatible // indirect
+	github.com/google/certificate-transparency-go v1.0.21 // indirect
+	github.com/heketi/rest v0.0.0-20180404230133-aa6a65207413 // indirect
+	github.com/heketi/utils v0.0.0-20170317161834-435bc5bdfa64 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
@@ -39,9 +50,9 @@ require (
 	github.com/onsi/gomega v1.7.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200107221211-591370b83580+incompatible
-	github.com/tigera/compliance v0.0.0-20200124090152-e695e0777a80
-	github.com/tigera/lma v0.0.0-20200227192215-10278780fefe
+	github.com/tigera/apiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
+	github.com/tigera/compliance v0.0.0-20200321083204-39304111550f
+	github.com/tigera/lma v0.0.0-20200321212149-273f27b4c88b
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
