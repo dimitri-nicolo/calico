@@ -533,7 +533,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 			case ByPodPrefix:
-				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 23,
+				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 24,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{}, // ""
