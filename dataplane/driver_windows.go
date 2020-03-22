@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package dataplane
 
@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
@@ -19,7 +20,8 @@ func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
-	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+	childExitedRestartCallback func(),
+	k8sClientSet *kubernetes.Clientset) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	log.Info("Using Windows dataplane driver.")
 
 	dpConfig := windataplane.Config{
