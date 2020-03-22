@@ -529,6 +529,7 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZGmS0R0G2V6lLTawuNLmYXOhgBn8K7qClxJjj7A9A=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
+github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b h1:q8I8ELToi93aTJwb5NVmnmlzssly9SysR9PPzrvCKQA=
 github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b/go.mod h1:RS9tXRstsf9WZ8tmMLGZm44lhzEq360+6u38+wJck7c=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible h1:CnjILlLeLzSapuAg4jY1go7ICAmeiPuU6xNRWQY5kW8=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
