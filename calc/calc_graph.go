@@ -538,13 +538,8 @@ func (f *remoteEndpointFilter) OnUpdate(update api.Update) (filterOut bool) {
 			filterOut = true
 		}
 	}
-	if !filterOut {
-		if update.Value == nil {
-			log.WithField("id", update.Key).Info("Remote endpoint deleted")
-		} else {
-			log.WithField("id", update.Key).Info("Remote endpoint updated")
-		}
-	}
+	// Do not log for remote endpoints, since there can be many and logging each
+	// will impact performance.
 	return
 }
 
