@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.34
+GO_BUILD_VER?=v0.36
 
 GIT_USE_SSH = true
 
@@ -39,6 +39,8 @@ $(LOCAL_BUILD_DEP):
 		-replace=github.com/kelseyhightower/confd=../confd \
 		-replace=github.com/projectcalico/cni-plugin=../cni-plugin
 endif
+
+EXTRA_DOCKER_ARGS+=-e GOPRIVATE='github.com/tigera/*'
 
 include Makefile.common
 
@@ -174,31 +176,37 @@ build:
 commit-pin-updates: update-pins build git-status git-commit ci
 
 .PHONY: remote-deps
-remote-deps:
-	mkdir -p filesystem/etc/calico/confd vendor/github.com/tigera vendor/github.com/Microsoft
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go mod download; \
+remote-deps: mod-download
+	# Recreate the directory so that we are sure to clean up any old files.
+	rm -rf vendor/github.com/tigera vendor/github.com/Microsoft
+	mkdir -p vendor/github.com/tigera vendor/github.com/Microsoft
+	rm -rf filesystem/etc/calico/confd
+	mkdir -p filesystem/etc/calico/confd
+	rm -rf bin/bpf
+	mkdir -p bin/bpf
+	rm -rf filesystem/usr/lib/calico/bpf/
+	mkdir -p filesystem/usr/lib/calico/bpf/
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+		$(GIT_CONFIG_SSH) \
 		cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml crds.yaml; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/; \
+		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/conf.d; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/config filesystem/etc/calico/confd/config; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd` vendor/github.com/tigera/confd-private; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/Microsoft/SDN` vendor/github.com/Microsoft/SDN; \
 		chmod -R +w filesystem/etc/calico/confd/ crds.yaml vendor'
 
-$(NODE_CONTAINER_BINARY): $(LOCAL_BUILD_DEP) $(SRC_FILES)
-	mkdir -p .go-pkg-cache $(GOMOD_CACHE)
-	docker run --rm \
-		$(EXTRA_DOCKER_ARGS) \
-		-e GOARCH=$(ARCH) \
-		-e GOOS=linux \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-		-e GOCACHE=/go-cache \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
+# We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), amd64)
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
+
+$(NODE_CONTAINER_BINARY): $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ $(BUILD_FLAGS) $(LDFLAGS) ./cmd/calico-node/main.go'
 
 $(WINDOWS_BINARY):
 	$(DOCKER_RUN) \
@@ -232,7 +240,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(BUILD_IMAGE): $(NODE_CONTAINER_CREATED)
-$(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) remote-deps check-dirty
+$(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) remote-deps
 ifeq ($(LOCAL_BUILD),true)
 	# If doing a local build, copy in local confd templates in case there are changes.
 	rm -rf filesystem/etc/calico/confd/templates
