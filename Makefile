@@ -195,7 +195,9 @@ bin/calico-felix.exe: $(SRC_FILES)
 	@echo Building felix for Windows...
 	mkdir -p bin
 	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	   	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'
+	   	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
+		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program\|not a dynamic executable" || \
+		( echo "Error: $@ was not statically linked"; false ) )'
 
 bin/tigera-felix.exe: $(REMOTE_DEPS) bin/calico-felix.exe
 	cp $< $@
