@@ -24,38 +24,47 @@ global_job_config:
       - git fetch --unshallow
 
 blocks:
+  # Run the full set of tests. Each job can potentially be run in parallel,
+  # provided Semaphore has enough boxes available.
+  - name: "Tests"
+    dependencies: []
+    task:
+      jobs:
+      - name: "make ci"
+        commands:
+        - make ci
+      - name: "make k8s-test"
+        commands:
+        - make k8s-test
 
-# Run the full set of tests. Each job can potentially be run in parallel,
-# provided Semaphore has enough boxes available.
-- name: "Tests"
-  dependencies: []
-  task:
-    jobs:
-    - name: "make ci"
-      commands:
-      - make ci
-    - name: "make k8s-test"
-      commands:
-      - make k8s-test
+  - name: 'Dual ToR (make dual-tor-test)'
+    dependencies: ["Tests"]
+    run:
+      when: "branch = 'master'"
+    task:
+      jobs:
+      - name: "make dual-tor-test"
+        commands:
+        - make dual-tor-test
 
-# If tests passed, then build and push images. 
-# We'll only do this on non-PR builds, where we have credentials to do so.
-- name: "Push images"
-  dependencies: ["Tests"]
-  task:
-    jobs:
-    - name: "make cd"
-      commands:
-      - if [ -z SEMAPHORE_GIT_PR_NUMBER ]; then make image cd; fi
+  # If tests passed, then build and push images.
+  # We'll only do this on non-PR builds, where we have credentials to do so.
+  - name: "Push images"
+    dependencies: ["Tests"]
+    task:
+      jobs:
+      - name: "make cd"
+        commands:
+        - if [ -z SEMAPHORE_GIT_PR_NUMBER ]; then make image cd; fi
 
-# If tests have passed, then update pins and try to commit them.
-# We'll only do this on scheduled builds, where we have credentials to do so.
-- name: "Commit pin updates"
-  dependencies: ["Tests"]
-  run:
-    when: "branch = 'master'"
-  task:
-    jobs:
-    - name: "make commit-pin-updates"
-      commands:
-      - if [ "$SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE" = "true" ]; then make commit-pin-updates; fi
+  # If tests have passed, then update pins and try to commit them.
+  # We'll only do this on scheduled builds, where we have credentials to do so.
+  - name: "Commit pin updates"
+    dependencies: ["Tests"]
+    run:
+      when: "branch = 'master'"
+    task:
+      jobs:
+      - name: "make commit-pin-updates"
+        commands:
+        - if [ "$SEMAPHORE_WORKFLOW_TRIGGERED_BY_SCHEDULE" = "true" ]; then make commit-pin-updates; fi
