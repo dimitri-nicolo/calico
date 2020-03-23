@@ -389,6 +389,12 @@ spec:
       node.ingest: true
     podTemplate:
       spec:
+{{- if .Values.imagePullSecrets }}
+        imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
         initContainers:
           - name: elastic-internal-init-os-settings
             command:
