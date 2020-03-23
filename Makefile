@@ -543,28 +543,21 @@ endif
 	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
 # The following chunk of conditionals sets the Version of the helm chart. 
-# Helm requires strict semantic versioning.
-# There are several use cases this code seeks to accomodate:
-# - For master directory, we hardcode the version to v0.0.0
-# - For master branch of any other directory, we should append '-pre' to the
-#   latest revision release (CALICO_VER) if it's not already appended,
-#   e.g. 'v2.4.0-pre'
-# - When building release artifacts, allow the ability to override '-pre' with an
-#   integer, e.g. 'v2.4.0-1'
-ifeq ($(RELEASE_STREAM), master)
-# For master, helm requires semantic versioning, so use v0.0.0
-chartVersion:=v0.0.0
-appVersion:=master-$(GIT_HASH)
-else ifdef CHART_RELEASE
-# When cutting a final package, use CHART_RELEASE to append a increasing integer.
-# eg. 'make charts.yaml RELEASE_STREAM=v2.4 CHART_RELEASE=0' would produce v2.4.0-0
-chartVersion=$(CALICO_VER)-$(CHART_RELEASE)
+# Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
+ifdef CHART_RELEASE
+# the presence of CHART_RELEASE indicates we're trying to cut an official chart release.
+chartVersion:=$(CALICO_VER)-$(CHART_RELEASE)
 appVersion:=$(CALICO_VER)
 else
-# Lastly, for builds of the master branch, we want to append a '-pre',
-# but not to any release name that already has one.
-chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
-appVersion=$(CALICO_VER)-$(GIT_HASH)
+# otherwise, it's a nightly build.
+ifeq ($(RELEASE_STREAM), master)
+# For master, helm requires semantic versioning, so use v0.0
+chartVersion:=v0.0
+appVersion:=$(CALICO_VER)-$(GIT_HASH)
+else
+chartVersion:=$(RELEASE_STREAM)
+appVersion:=$(CALICO_VER)-$(GIT_HASH)
+endif
 endif
 
 charts: chart/tigera-secure-ee-core chart/tigera-secure-ee chart/tigera-operator
