@@ -441,7 +441,7 @@ type bgpPeer struct {
 	ASNum             numorstring.ASNumber `json:"as_num,string"`
 	RRClusterID       string               `json:"rr_cluster_id"`
 	Extensions        map[string]string    `json:"extensions"`
-	Password          string               `json:"password"`
+	Password          *string              `json:"password"`
 	SourceAddr        string               `json:"source_addr"`
 	DirectlyConnected bool                 `json:"directly_connected"`
 	RestartMode       string               `json:"restart_mode"`
@@ -450,18 +450,18 @@ type bgpPeer struct {
 	EnableBFD         bool                 `json:"enable_bfd"`
 }
 
-func (c *client) getPassword(v3res *apiv3.BGPPeer) string {
+func (c *client) getPassword(v3res *apiv3.BGPPeer) *string {
 	if c.secretWatcher != nil && v3res.Spec.Password != nil && v3res.Spec.Password.SecretKeyRef != nil {
 		password, err := c.secretWatcher.GetSecret(
 			v3res.Spec.Password.SecretKeyRef.Name,
 			v3res.Spec.Password.SecretKeyRef.Key,
 		)
 		if err == nil {
-			return password
+			return &password
 		}
 		log.WithError(err).Warningf("Can't read password for BGPPeer %v", v3res.Name)
 	}
-	return ""
+	return nil
 }
 
 func (c *client) updatePeersV1() {
