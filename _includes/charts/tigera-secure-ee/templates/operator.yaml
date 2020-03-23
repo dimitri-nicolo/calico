@@ -409,16 +409,16 @@ spec:
         containers:
           - env:
             - name: ES_JAVA_OPTS
-              value: -Xms1G -Xmx1G
+              value: -Xms1398101K -Xmx1398101K
             name: elasticsearch
             image: {{.Values.elasticsearch.image}}:{{.Values.elasticsearch.tag}}
             resources:
               limits:
                 cpu: "1"
-                memory: 2Gi
+                memory: 4Gi
               requests:
-                cpu: "1"
-                memory: 2Gi
+                cpu: 250m
+                memory: 4Gi
     volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data # note: elasticsearch-data must be the name of the Elasticsearch volume
