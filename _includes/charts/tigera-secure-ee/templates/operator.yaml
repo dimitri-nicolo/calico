@@ -328,17 +328,6 @@ spec:
       serviceAccountName: elastic-operator
       nodeSelector:
         beta.kubernetes.io/os: linux
-      initContainers:
-      - name: elastic-internal-init-os-settings
-        command:
-        - sysctl
-        - -w
-        - vm.max_map_count=262144
-        image: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          privileged: true
-          runAsUser: 0
       containers:
       - image: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
         name: manager
@@ -398,6 +387,32 @@ spec:
       node.master: true
       node.data: true
       node.ingest: true
+    podTemplate:
+      spec:
+        initContainers:
+          - name: elastic-internal-init-os-settings
+            command:
+              - "sysctl"
+              - "-w"
+              - "vm.max_map_count=262144"
+            image: {{.Values.elasticsearch.image}}:{{.Values.elasticsearch.tag}}
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              privileged: true
+              runAsUser: 0
+        containers:
+          - env:
+            - name: ES_JAVA_OPTS
+              value: -Xms1G -Xmx1G
+            name: elasticsearch
+            image: {{.Values.elasticsearch.image}}:{{.Values.elasticsearch.tag}}
+            resources:
+              limits:
+                cpu: "1"
+                memory: 2Gi
+              requests:
+                cpu: "1"
+                memory: 2Gi
     volumeClaimTemplates:
     - metadata:
         name: elasticsearch-data # note: elasticsearch-data must be the name of the Elasticsearch volume
