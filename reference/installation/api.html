@@ -988,6 +988,20 @@ SyslogStoreSpec
 <p>If specified, enables exporting of flow, audit, and DNS logs to syslog.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>splunk</code><br>
+<em>
+<a href="#operator.tigera.io/v1.SplunkStoreSpec">
+SplunkStoreSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, enables exporting of flow, audit, and DNS logs to splunk.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.Auth">Auth
@@ -2062,6 +2076,34 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.SplunkStoreSpec">SplunkStoreSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AdditionalLogStoreSpec">AdditionalLogStoreSpec</a>)
+</p>
+<p>SplunkStoreSpec defines configuration for exporting logs to splunk.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>endpoint</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Location for splunk http event collector end point. example https://1.2.3.4:8088</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.StatusConditionType">StatusConditionType
 (<code>string</code> alias)</h3>
 <p>
@@ -2075,7 +2117,7 @@ string
 (<em>Appears on:</em>
 <a href="#operator.tigera.io/v1.AdditionalLogStoreSpec">AdditionalLogStoreSpec</a>)
 </p>
-<p>SyslogStoreSpec defines configuration for exporting lgos to syslog.</p>
+<p>SyslogStoreSpec defines configuration for exporting logs to syslog.</p>
 <table>
 <thead>
 <tr>

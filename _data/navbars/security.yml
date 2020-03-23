@@ -124,10 +124,8 @@ section:
       path: /security/logs/retention
     - title: Configure Elasticsearch
       path: /security/logs/configure-elastic
-    - title: Archive logs to S3
-      path: /security/logs/elastic/s3-archive
-    - title: Archive logs to syslog
-      path: /security/logs/elastic/syslog
+    - title: Archive logs to storage
+      path: /security/logs/elastic/archive-storage
     - title: Filter flow logs
       path: /security/logs/elastic/filtering
     - title: Filter out DNS logs
