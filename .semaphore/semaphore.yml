@@ -4,12 +4,6 @@ agent:
   machine:
     type: e1-standard-4
     os_image: ubuntu1804
-global_job_config:
-  prologue:
-    commands:
-      # Semaphore is doing shallow clone on a commit without tags.
-      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-      - git fetch --unshallow
 
 blocks:
   - name: 'Testing'
