@@ -277,7 +277,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 			reflect.TypeOf(epUpdate.Key), epUpdate)
 		return
 	}
-	log.Infof("Updating endpoint cache with remote endpoint data %v", epUpdate.Key)
+	log.Debugf("Updating endpoint cache with remote endpoint data %v", epUpdate.Key)
 	return
 }
 
