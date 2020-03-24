@@ -56,8 +56,8 @@ spec:
 
 | Field | Description | Type | Required | Acceptable Values | Default |
 |---|---|---|---|---|---|
-| description | Template for the description field in generated events. See the description section below for more details. | string | yes |
-| summary | Human-readable description of the template. | string | no |
+| description | Human-readable description of the template. | string | yes |
+| summary | Template for the description field in generated events. See the summary section below for more details. `description` is used if this is omitted. | string | no |
 | severity | Severity of the alert for display in Manager. | int | yes | 1 - 100 |
 | dataSet | Which data set to execute the alert against. | string | yes | audit, dns, flows |
 | period | How often the query is run. | duration | no | 1h 2m 3s | 5m |
@@ -166,8 +166,8 @@ kind: GlobalAlert
 metadata:
   name: frequent-dns-responses
 spec:
-  summary: "Monitor for NXDomain"
-  description: "Observed ${sum} NXDomain responses for ${qname}"
+  description: "Monitor for NXDomain"
+  summary: "Observed ${sum} NXDomain responses for ${qname}"
   severity: 100
   dataSet: dns
   query: rcode = NXDomain AND (rtype = A or rtype = AAAA)
@@ -205,19 +205,22 @@ query: "dest_labels=\"application=postgres\" AND source_type=net AND action=allo
 aggregateBy: [dest_namespace, dest_name, source_ip]
 ```
 
-### Description template
+### Summary template
 
-Alerts may include a description template to provide context for the
+Alerts may include a summary template to provide context for the
 alerts in the {{site.prodname}} Manager Alert user interface. Any field
 in the `aggregateBy` section, or the value of the `metric` may be
-substituted in the description using a bracketed variable syntax.
+substituted in the summary using a bracketed variable syntax.
 
 Example:
 
 ```yaml
-description: "Observed ${sum} NXDomain responses for ${qname}"
+summary: "Observed ${sum} NXDomain responses for ${qname}"
 ```
 
+The `description` field is validated in the same manner. If not
+provided, the `description` field is used in place of the `summary`
+field.
 
 ### Period and lookback
 
@@ -269,8 +272,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: http.connections
 spec:
-  summary: "HTTP connections to a target namespace"
-  description: "HTTP connections from ${source_namespace}/${source_name_aggr} to <desired_namespace>/${dest_name_aggr}"
+  description: "HTTP connections to a target namespace"
+  summary: "HTTP connections from ${source_namespace}/${source_name_aggr} to <desired_namespace>/${dest_name_aggr}"
   severity: 50
   dataSet: flows 
   query: dest_namespace="<desired namespace>" AND dest_port=80

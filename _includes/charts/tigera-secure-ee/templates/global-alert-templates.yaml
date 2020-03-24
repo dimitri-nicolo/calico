@@ -3,8 +3,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: policy.pod
 spec:
-  summary: "Alerts on any changes to pods within the cluster"
-  description: "[audit] [privileged access] change detected for pod ${objectRef.namespace}/${objectRef.name}"
+  description: "Alerts on any changes to pods within the cluster"
+  summary: "[audit] [privileged access] change detected for pod ${objectRef.namespace}/${objectRef.name}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -22,8 +22,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: policy.globalnetworkpolicy
 spec:
-  summary: "Alerts on any changes to network policies"
-  description: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
+  description: "Alerts on any changes to network policies"
+  summary: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -41,8 +41,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: policy.globalnetworkset
 spec:
-  summary: "Alerts on any changes to global network sets"
-  description: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
+  description: "Alerts on any changes to global network sets"
+  summary: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -60,8 +60,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: policy.serviceaccount
 spec:
-  summary: "Alerts on any changes to service accounts within the cluster"
-  description: "[audit] [privileged access] change detected for serviceaccount ${objectRef.namespace}/${objectRef.name}"
+  description: "Alerts on any changes to service accounts within the cluster"
+  summary: "[audit] [privileged access] change detected for serviceaccount ${objectRef.namespace}/${objectRef.name}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -79,8 +79,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: network.cloudapi
 spec:
-  summary: "Alerts on access to cloud metadata APIs"
-  description: "[flows] [cloud API] cloud metadata API accessed by ${source_namespace}/${source_name_aggr}"
+  description: "Alerts on access to cloud metadata APIs"
+  summary: "[flows] [cloud API] cloud metadata API accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -99,8 +99,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: network.ssh
 spec:
-  summary: "Alerts on the use of ssh to and from a specific namespace (e.g. default)"
-  description: "[flows] ssh flow in default namespace detected from ${source_namespace}/${source_name_aggr}"
+  description: "Alerts on the use of ssh to and from a specific namespace (e.g. default)"
+  summary: "[flows] ssh flow in default namespace detected from ${source_namespace}/${source_name_aggr}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -119,8 +119,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: network.lateral.access
 spec:
-  summary: "Alerts when pods with a specific label (e.g. app=monitor) accessed by other workloads within the cluster"
-  description: "[flows] [lateral movement] ${source_namespace}/${source_name_aggr} with label app=monitor is accessed"
+  description: "Alerts when pods with a specific label (e.g. app=monitor) accessed by other workloads within the cluster"
+  summary: "[flows] [lateral movement] ${source_namespace}/${source_name_aggr} with label app=monitor is accessed"
   severity: 100
   period: 10m
   lookback: 10m
@@ -139,8 +139,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: network.lateral.originate
 spec:
-  summary: "Alerts when pods with a specific label (e.g. app=monitor) initiate connections to other workloads within the cluster"
-  description: "[flows] [lateral movement] ${source_namespace}/${source_name_aggr} with label app=monitor initiated connection"
+  description: "Alerts when pods with a specific label (e.g. app=monitor) initiate connections to other workloads within the cluster"
+  summary: "[flows] [lateral movement] ${source_namespace}/${source_name_aggr} with label app=monitor initiated connection"
   severity: 100
   period: 10m
   lookback: 10m

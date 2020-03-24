@@ -57,8 +57,8 @@ kind: GlobalAlert
 metadata:
   name: example-flows
 spec:
-  summary: "100 flows Example"
-  description: "Flows example ${count} > 100"
+  description: "100 flows Example"
+  summary: "Flows example ${count} > 100"
   severity: 100
   dataSet: flows
   metric: count
@@ -74,8 +74,8 @@ kind: GlobalAlert
 metadata:
   name: network.ssh
 spec:
-  summary: "ssh flows to default namespace"
-  description: "[flows] ssh flow in default namespace detected from ${source_namespace}/${source_name_aggr}"
+  description: "ssh flows to default namespace"
+  summary: "[flows] ssh flow in default namespace detected from ${source_namespace}/${source_name_aggr}"
   severity: 100
   period: 10m
   lookback: 10m
@@ -96,8 +96,8 @@ kind: GlobalAlert
 metadata:
   name: policy.globalnetworkset
 spec:
-  summary: "Changed globalnetworkset"
-  description: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
+  description: "Changed globalnetworkset"
+  summary: "[audit] [privileged access] change detected for ${objectRef.resource} ${objectRef.name}"
   severity: 100
   period: 10m
   lookback: 10m
