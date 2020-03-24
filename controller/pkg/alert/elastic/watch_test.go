@@ -367,24 +367,32 @@ func TestGenerateDescriptionFunction(t *testing.T) {
 }
 
 func TestActionTransform(t *testing.T) {
-	f := func(description string, severity int) func(*testing.T) {
+	f := func(description, summary string, severity int) func(*testing.T) {
 		return func(t *testing.T) {
 
 			g := NewWithT(t)
 
+			// If summary is present we should be using that
+			expected := description
+			if summary != "" {
+				expected = summary
+			}
+
 			transform := ActionTransform(v3.GlobalAlert{
 				Spec: libcalicov3.GlobalAlertSpec{
 					Description: description,
+					Summary:     summary,
 					Severity:    severity,
 				},
 			})
 
 			fmt.Println(transform.Source)
-			g.Expect(transform.Params["description"]).Should(Equal(description))
+			g.Expect(transform.Params["description"]).Should(Equal(expected))
 			g.Expect(transform.Params["severity"]).Should(Equal(severity))
 			g.Expect(transform.Params["type"]).Should(Equal(AlertEventType))
 		}
 	}
-	t.Run("funny description", f(`description ${foo} "bar"`, 100))
-	t.Run("low severity", f("test", 5))
+	t.Run("funny description", f(`description ${foo} "bar"`, "", 100))
+	t.Run("low severity", f("test", "", 5))
+	t.Run("summary included", f("test", `description ${foo} "bar"`, 100))
 }

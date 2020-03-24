@@ -489,16 +489,23 @@ func actionTransformCode(name string) string {
 }
 
 func ActionTransform(alert v3.GlobalAlert) *elastic.Transform {
+	// Description is filled in from Summary when available. Description otherwise. See CNX-11540
+	description := alert.Spec.Description
+	params := JsonObject{
+		"type":        AlertEventType,
+		"description": alert.Spec.Description,
+		"severity":    alert.Spec.Severity,
+	}
+	if alert.Spec.Summary != "" {
+		description = alert.Spec.Summary
+		params["description"] = alert.Spec.Summary
+	}
 	return &elastic.Transform{
 		elastic.Script{
 			// This doesn't work for nested
 			Language: "painless",
-			Source:   util.PainlessFmt(ResolveCode + GenerateDescriptionFunction(alert.Spec.Description) + actionTransformCode(alert.Name)),
-			Params: JsonObject{
-				"type":        AlertEventType,
-				"description": alert.Spec.Description,
-				"severity":    alert.Spec.Severity,
-			},
+			Source:   util.PainlessFmt(ResolveCode + GenerateDescriptionFunction(description) + actionTransformCode(alert.Name)),
+			Params:   params,
 		},
 	}
 }
