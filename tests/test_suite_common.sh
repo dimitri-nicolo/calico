@@ -259,6 +259,14 @@ EOF
     calicoctl delete node node4
     calicoctl delete bgppeer bgppeer-1
     calicoctl delete bgppeer bgppeer-2
+
+    # Check that passwords were not logged.
+    password_logs="`grep 'password-' $LOGPATH/logd1 || true`"
+    echo "$password_logs"
+    if [ "$password_logs"  ]; then
+	echo "ERROR: passwords were logged"
+	return 1
+    fi
 }
 
 test_bgp_password_deadlock() {
