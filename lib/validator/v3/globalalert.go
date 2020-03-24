@@ -18,7 +18,7 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel) {
 	validateGlobalAlertPeriod(structLevel)
 	validateGlobalAlertLookback(structLevel)
 	validateGlobalAlertQuery(structLevel)
-	validateGlobalAlertDescription(structLevel)
+	validateGlobalAlertDescriptionAndSummary(structLevel)
 	validateGlobalAlertMetric(structLevel)
 
 	/*
@@ -106,24 +106,31 @@ func validateGlobalAlertQuery(structLevel validator.StructLevel) {
 	}
 }
 
-// validateGlobalAlertDescription validates that there are no unreferenced fields in the description
-func validateGlobalAlertDescription(structLevel validator.StructLevel) {
+// validateGlobalAlertDescriptionAndSummary validates that there are no unreferenced fields in the description and summary
+func validateGlobalAlertDescriptionAndSummary(structLevel validator.StructLevel) {
 	s := getGlobalAlertSpec(structLevel)
 
-	if variables, err := extractVariablesFromDescriptionTemplate(s.Description); err != nil {
+	validateGlobalAlertDescriptionOrSummaryContents(s.Description, "Description", structLevel, s)
+	if s.Summary != "" {
+		validateGlobalAlertDescriptionOrSummaryContents(s.Summary, "Summary", structLevel, s)
+	}
+}
+
+func validateGlobalAlertDescriptionOrSummaryContents(description, fieldName string, structLevel validator.StructLevel, s api.GlobalAlertSpec) {
+	if variables, err := extractVariablesFromDescriptionTemplate(description); err != nil {
 		structLevel.ReportError(
 			reflect.ValueOf(s.DataSet),
-			"Description",
+			fieldName,
 			"",
-			reason(fmt.Sprintf("invalid description: %s: %s", s.Description, err)),
+			reason(fmt.Sprintf("invalid %s: %s: %s", strings.ToLower(fieldName), description, err)),
 			"",
 		)
 	} else {
 		for _, key := range variables {
 			if key == "" {
 				structLevel.ReportError(
-					reflect.ValueOf(s.Description),
-					"Description",
+					reflect.ValueOf(description),
+					fieldName,
 					"",
 					reason("empty variable name"),
 					"",
@@ -143,10 +150,10 @@ func validateGlobalAlertDescription(structLevel validator.StructLevel) {
 			}
 			if !found {
 				structLevel.ReportError(
-					reflect.ValueOf(s.Description),
-					"Description",
+					reflect.ValueOf(description),
+					fieldName,
 					"",
-					reason("invalid description: "+s.Description),
+					reason(fmt.Sprintf("invalid %s: %s", strings.ToLower(fieldName), description)),
 					"",
 				)
 			}
