@@ -102,23 +102,11 @@ function do_setup {
     docker network create --subnet=172.31.11.0/24 --ip-range=172.31.11.0/24 --gateway 172.31.11.2 ra1
     docker network create --subnet=172.31.21.0/24 --ip-range=172.31.21.0/24 --gateway 172.31.21.2 rb1
 
-    # Create ToR routers.  (The 'neiljerram/birdy' image was built
-    # from my locally modified projectcalico/bird repo; those changes
-    # are still to be formalised and merged.)
-    docker run -d --privileged --net=ra1 --ip=172.31.11.1 --name=bird-a1 neiljerram/birdy
-    docker run -d --privileged --net=rb1 --ip=172.31.21.1 --name=bird-b1 neiljerram/birdy
+    # Create ToR routers.
+    docker run -d --privileged --net=ra1 --ip=172.31.11.1 --name=bird-a1 ${ROUTER_IMAGE}
+    docker run -d --privileged --net=rb1 --ip=172.31.21.1 --name=bird-b1 ${ROUTER_IMAGE}
     docker network connect --ip=172.31.1.2 uplink bird-a1
     docker network connect --ip=172.31.1.3 uplink bird-b1
-
-    # Enable BFD function in the ToR routers.
-    cat <<EOF | docker exec -i bird-a1 sed -i '2 r /dev/stdin' /etc/bird.conf
-protocol bfd {
-}
-EOF
-    cat <<EOF | docker exec -i bird-b1 sed -i '2 r /dev/stdin' /etc/bird.conf
-protocol bfd {
-}
-EOF
 
     # Configure the ToR routers to peer with each other.
     cat <<EOF | docker exec -i bird-a1 sh -c "cat > /etc/bird/peer-rb1.conf"
@@ -186,18 +174,10 @@ EOF
 	docker network create --subnet=172.31.2.0/24 --ip-range=172.31.2.0/24 uplink2
 	docker network create --subnet=172.31.12.0/24 --ip-range=172.31.12.0/24 --gateway 172.31.12.2 ra2
 	docker network create --subnet=172.31.22.0/24 --ip-range=172.31.22.0/24 --gateway 172.31.22.2 rb2
-	docker run -d --privileged --net=ra2 --ip=172.31.12.1 --name=bird-a2 neiljerram/birdy
-	docker run -d --privileged --net=rb2 --ip=172.31.22.1 --name=bird-b2 neiljerram/birdy
+	docker run -d --privileged --net=ra2 --ip=172.31.12.1 --name=bird-a2 ${ROUTER_IMAGE}
+	docker run -d --privileged --net=rb2 --ip=172.31.22.1 --name=bird-b2 ${ROUTER_IMAGE}
 	docker network connect --ip=172.31.2.2 uplink2 bird-a2
 	docker network connect --ip=172.31.2.3 uplink2 bird-b2
-	cat <<EOF | docker exec -i bird-a2 sed -i '2 r /dev/stdin' /etc/bird.conf
-protocol bfd {
-}
-EOF
-	cat <<EOF | docker exec -i bird-b2 sed -i '2 r /dev/stdin' /etc/bird.conf
-protocol bfd {
-}
-EOF
 	cat <<EOF | docker exec -i bird-a2 sh -c "cat > /etc/bird/peer-rb2.conf"
 protocol bgp rb2 {
   description "Connection to BGP peer";

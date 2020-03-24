@@ -437,7 +437,7 @@ class TestFailoverPodIP(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-        config = FailoverTestConfig(2000, "pod ip", 3)
+        config = FailoverTestConfig(2000, "pod ip", 8)
         self.test = FailoverTest(config)
 
     def tearDown(self):
@@ -471,7 +471,7 @@ class TestFailoverServiceIP(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-        config = FailoverTestConfig(2000, "service ip", 3)
+        config = FailoverTestConfig(2000, "service ip", 8)
         self.test = FailoverTest(config)
 
     def tearDown(self):
@@ -517,7 +517,7 @@ class TestFailoverNodePort(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         # Node Port takes longer time to failover.
-        config = FailoverTestConfig(2000, "node port", 3)
+        config = FailoverTestConfig(2000, "node port", 8)
         self.test = FailoverTest(config)
 
     def tearDown(self):
@@ -553,7 +553,7 @@ class TestFailoverHostAccess(TestBase):
         TestBase.setUp(self)
 
         # host access takes longer time to failover.
-        config = FailoverTestConfig(2000, "host access", 3)
+        config = FailoverTestConfig(2000, "host access", 8)
         self.test = FailoverTest(config)
 
     def tearDown(self):

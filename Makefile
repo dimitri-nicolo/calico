@@ -388,10 +388,7 @@ GCR_IO_PULL_SECRET?=${HOME}/.docker/config.json
 TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
 
 .PHONY: dual-tor-test
-dual-tor-test: cnx-node.tar calico_test.created
-	$(MAKE) dual-tor-setup
-	$(MAKE) dual-tor-run-test
-	$(MAKE) dual-tor-cleanup
+dual-tor-test: cnx-node.tar calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
 .PHONY: dual-tor-setup
 dual-tor-setup: cnx-node.tar calico_test.created
@@ -399,7 +396,8 @@ dual-tor-setup: cnx-node.tar calico_test.created
 	cd tests/kind && make
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup tests/k8st/dual-tor/dualtor.sh
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
+	ROUTER_IMAGE=$(BIRD_IMAGE) tests/k8st/dual-tor/dualtor.sh
 
 DUAL_TOR_ST_TO_RUN=dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture
 .PHONY: dual-tor-run-test
