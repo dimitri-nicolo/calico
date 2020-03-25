@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,6 +57,9 @@ type Interface interface {
 	FelixConfigurations() FelixConfigurationInterface
 	// ClusterInformation returns an interface for managing the cluster information resource.
 	ClusterInformation() ClusterInformationInterface
+	// KubeControllersConfiguration returns an interface for managing the
+	// KubeControllersConfiguration resource.
+	KubeControllersConfiguration() KubeControllersConfigurationInterface
 	// RemoteClusterConfiguration returns an interface for managing the remote cluster configuration resources.
 	RemoteClusterConfigurations() RemoteClusterConfigurationInterface
 	// LicenseKey returns an interface for managing the license key resource.

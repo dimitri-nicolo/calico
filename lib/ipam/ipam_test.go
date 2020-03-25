@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -284,9 +284,10 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 		sentinelIP := net.ParseIP("10.0.0.1")
 
 		It("Should return ResourceNotExist on no valid pool", func() {
-			attrs, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
+			attrs, handle, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
 			Expect(err).To(BeAssignableToTypeOf(cerrors.ErrorResourceDoesNotExist{}))
 			Expect(attrs).To(BeEmpty())
+			Expect(handle).To(BeNil())
 		})
 
 		Context("With valid pool", func() {
@@ -307,12 +308,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			})
 
 			It("Should return ResourceNotExist error on no block", func() {
-				attrs, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
+				attrs, handle, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
 				Expect(err).To(BeAssignableToTypeOf(cerrors.ErrorResourceDoesNotExist{}))
 				Expect(attrs).To(BeEmpty())
+				Expect(handle).To(BeNil())
 			})
 
 			It("Should return correct attributes on allocated ip", func() {
+				handle := "my-test-handle"
 				ipAttr := map[string]string{
 					AttributeNode: hostname,
 					AttributeType: AttributeTypeVXLAN,
@@ -321,13 +324,16 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 					IP:       cnet.IP{sentinelIP},
 					Hostname: hostname,
 					Attrs:    ipAttr,
+					HandleID: &handle,
 				}
 				err := ic.AssignIP(context.Background(), args)
 				Expect(err).NotTo(HaveOccurred())
 
-				attrs, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
+				attrs, returnedHandle, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(attrs).To(Equal(ipAttr))
+				Expect(returnedHandle).NotTo(BeNil())
+				Expect(*returnedHandle).To(Equal(handle))
 			})
 
 			It("Should return ResourceNotExist on unallocated ip", func() {
@@ -345,9 +351,10 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(err).NotTo(HaveOccurred())
 
 				// Block exists but sentinel ip is not allocated.
-				attrs, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
+				attrs, handle, err := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
 				Expect(err).To(BeAssignableToTypeOf(cerrors.ErrorResourceDoesNotExist{}))
 				Expect(attrs).To(BeEmpty())
+				Expect(handle).To(BeNil())
 			})
 		})
 	})
@@ -444,9 +451,10 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 
 		It("Should be able to re-assign the sentinel IP", func() {
 			assignIPutil(ic, sentinelIP, host)
-			attrs, attrErr := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
+			attrs, handle, attrErr := ic.GetAssignmentAttributes(context.Background(), cnet.IP{sentinelIP})
 			Expect(attrErr).NotTo(HaveOccurred())
 			Expect(attrs).To(BeEmpty())
+			Expect(handle).To(BeNil())
 		})
 
 		It("Should fail to assign any more addresses", func() {
@@ -1439,7 +1447,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 		Entry("Assign 1 IPv4 from a configured pool twice (first time)", net.ParseIP("192.168.1.0"), "test-host", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil),
 
 		// - Expect an error returned while assigning the SAME IP again.
-		Entry("Assign 1 IPv4 from a configured pool twice (second time)", net.ParseIP("192.168.1.0"), "test-host", false, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, errors.New("Address already assigned in block")),
+		Entry("Assign 1 IPv4 from a configured pool twice (second time)", net.ParseIP("192.168.1.0"), "test-host", false, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, cerrors.ErrorResourceAlreadyExists{Err: errors.New("Address already assigned in block"), Identifier: "192.168.1.0"}),
 	)
 
 	DescribeTable("ReleaseIPs: requested IPs to be released vs actual unallocated IPs",
