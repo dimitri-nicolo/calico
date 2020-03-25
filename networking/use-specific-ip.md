@@ -1,11 +1,11 @@
 ---
 title: Use a specific IP address with a pod
-description: Specify the IP address for a pod instead of allowing Calico to automatically choose one.
+description: Specify the IP address for a pod instead of allowing Calico Enterprise to automatically choose one.
 ---
 
 ### Big picture
 
-Choose the IP address for a pod instead of allowing Calico to choose automatically.
+Choose the IP address for a pod instead of allowing {{site.prodname}} to choose automatically.
 
 ### Value
 
@@ -15,7 +15,7 @@ Some applications require the use of stable IP addresses. Also, you may want to 
 
 This how-to guide uses the following features: 
 
-- **Calico IPAM**
+- **{{site.prodname}} IPAM**
 - **IPPool** resource
 
 
@@ -27,11 +27,11 @@ The **Kubernetes pod CIDR** is the range of IPs Kubernetes expects pod IPs to be
 
 **IP Pools**
 
-IP pools are ranges of IP addresses from which Calico assigns pod IPs. Static IPs must be in an IP pool.
+IP pools are ranges of IP addresses from which {{site.prodname}} assigns pod IPs. Static IPs must be in an IP pool.
 
 ### Before you begin...
 
-You must be using the Calico IPAM.
+You must be using the {{site.prodname}} IPAM.
 
 If you are not sure, ssh to one of your Kubernetes nodes and examine the CNI configuration.
 
@@ -47,7 +47,7 @@ Look for the entry:
           },
 </pre>
 
-If it is present, you are using the Calico IPAM. If the IPAM is set to something else, or the 10-calico.conflist file does not exist, you cannot use these features in your cluster.
+If it is present, you are using the {{site.prodname}} IPAM. If the IPAM is set to something else, or the 10-calico.conflist file does not exist, you cannot use these features in your cluster.
 
 ### How to
 
@@ -59,10 +59,10 @@ Annotate the pod with cni.projectcalico.org/ipAddrs set to a list of IP addresse
 
 Note the use of the escaped `\"` for the inner double quotes around the addresses.
 
-The address must be within a configured Calico IP pool and not currently in use. The annotation must be present when the pod is created; adding it later has no effect.
+The address must be within a configured {{site.prodname}} IP pool and not currently in use. The annotation must be present when the pod is created; adding it later has no effect.
 
 Note that currently only a single IP address is supported per-pod using this annotation.
 
 ### Above and beyond
 
-For help configuring Calico CNI and Calico IPAM, see [Configuring the Calico CNI Plugins]({{ site.baseurl }}/reference/cni-plugin/configuration).
+For help configuring {{site.prodname}} CNI and {{site.prodname}} IPAM, see [Configuring the {{site.prodname}} CNI Plugins]({{ site.baseurl }}/reference/cni-plugin/configuration).
