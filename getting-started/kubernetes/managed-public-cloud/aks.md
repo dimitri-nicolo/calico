@@ -16,7 +16,7 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 
 #### Create a compatible AKS cluster
 
-Ensure that your AKS cluster that meets the following requirements.
+Ensure that your AKS cluster meets the following requirements.
 
    - *Azure CNI networking is used*. The cluster must be started with the option `--network-plugin azure`.
 
