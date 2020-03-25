@@ -1,56 +1,90 @@
 ---
-title: Upgrading Calico Enterprise from an earlier release on OpenShift
+title: Upgrade Calico Enterprise from an earlier release on OpenShift
 description: Upgrading from an earlier release of Calico Enterprise on OpenShift.
 canonical_url: /maintenance/openshift-upgrade
 show_toc: false
 ---
 
-## Prerequisite
+## Prerequisites
 
 Ensure that your {{site.prodname}} OpenShift cluster is running OpenShift
-version v4.2 or v4.3 and the {{site.prodname}} operator version is v1.0.4.
+version v4.2 or v4.3, and the {{site.prodname}} operator version is v1.2.4 or greater.
 
 **Note**: You can check if you are running the operator by checking for the existence of the operator namespace
-with `oc get ns tigera-operator` or issuing `oc get tigerastatus`,
-if either of those return successfully then your installation is using the operator.
+with `oc get ns tigera-operator` or issuing `oc get tigerastatus`; a successful return means your installation is
+using the operator.
 {: .alert .alert-info}
+
+### Prepare your cluster for the upgrade
+
+During upgrade, the {{site.prodname}} LogStorage CR is temporarily removed so Elasticsearch can be upgraded. Features 
+that depend on LogStorage are temporarily unavailable, including dashboards in the Manager UI. Data ingestion is paused 
+temporarily, but resumes when the LogStorage is up and running again.
+
+To retain data from your current installation (optional), ensure that the currently mounted persistent volumes 
+have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/).
+Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated 
+during upgrade).
+
+
+### Download the new manifests
+
+Make a manifests directory.
+```bash
+mkdir manifests
+```
+
+{% include content/openshift-manifests.md %}
 
 ## Upgrading to {{page.version}} {{site.prodname}}
 
-1. Download the {{site.prodname}} manifests for OpenShift and add them to the generated manifests directory:
+1. Export your current LogStorage CR to a file.
    ```bash
-   mkdir manifests
-   curl {{ "/manifests/ocp/crds/01-crd-installation.yaml" | absolute_url }} -o manifests/01-crd-installation.yaml
-   curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml" | absolute_url }} -o manifests/01-crd-managementclusterconnection.yaml
-   curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute_url }} -o manifests/02-role-tigera-operator.yaml
-   curl {{ "/manifests/ocp/tigera-operator/02-tigera-operator.yaml" | absolute_url }} -o manifests/02-tigera-operator.yaml
+   oc get logstorage tigera-secure -o yaml --export=true > log-storage.yaml
    ```
 
-1. Delete the existing operator deployment:
+1. Delete the LogStorage CR.
    ```bash
-   oc delete deployment -n tigera-operator tigera-operator
+   oc delete -f log-storage.yaml
    ```
 
-1. Delete the existing Elasticsearch secrets. When the new operator is deployed,
-   these secrets will be regenerated.
+1. Verify that Elasticsearch and Kibana are completely removed and that your persistent volumes are no longer bound.
    ```bash
-   oc delete secret -n tigera-operator tigera-ee-compliance-benchmarker-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-compliance-controller-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-compliance-reporter-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-compliance-server-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-compliance-snapshotter-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-curator-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-installer-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-intrusion-detection-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-ee-manager-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-eks-log-forwarder-elasticsearch-access
-   oc delete secret -n tigera-operator tigera-fluentd-elasticsearch-access
+   oc get kibana -n tigera-kibana
+   oc get elasticsearch -n tigera-elasticsearch
+   oc get pv | grep tigera-elasticsearch
+   ```
+   The outputs should look similar to the following:
+   ```
+   No resources found.
+   No resources found.
+   pvc-bd2eef7d   10Gi       RWO            Retain           Released   tigera-elasticsearch/tigera-secure-es-gqmh-elasticsearch-data   tigera-elasticsearch            7m24s
    ```
 
-1. Next, apply the updated manifests.
+1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage 
+   class `tigera-elasticsearch`, make sure it is available again.
+   ```bash
+   PV_NAME=<name-of-your-pv>
+   oc patch pv $PV_NAME -p '{"spec":{"claimRef":null}}'
+   ```
+
+1. Delete outdated CRDs.
+   ```bash
+   oc delete crd trustrelationships.elasticsearch.k8s.elastic.co  \
+   	apmservers.apm.k8s.elastic.co \
+   	elasticsearches.elasticsearch.k8s.elastic.co \
+   	kibanas.kibana.k8s.elastic.co
+   ```
+
+1. Apply the updated manifests.
    ```bash
    oc apply -f manifests/
    ```
+
+1. Apply the LogStorage CR.
+   ```bash
+   oc apply -f log-storage.yaml
+   ```   
 
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
    ```bash
