@@ -89,8 +89,9 @@ type IPSetData struct {
 	// The selector and named port that this IP set represents.  To represent an unfiltered named
 	// port, set selector to AllSelector.  If NamedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
-	Selector    selector.Selector
-	isDomainSet bool
+	Selector         selector.Selector
+	isDomainSet      bool
+	isEgressSelector bool
 
 	// NamedPortProtocol identifies the protocol (TCP or UDP) for a named port IP set.  It is
 	// set to ProtocolNone for a selector-only IP set.
@@ -117,6 +118,9 @@ func (d *IPSetData) UniqueID() string {
 			if d.isDomainSet {
 				// Prefix with "d" instead of "s".
 				d.cachedUID = "d" + selID[1:]
+			} else if d.isEgressSelector {
+				// Prefix with "e" instead of "s".
+				d.cachedUID = "e" + selID[1:]
 			} else {
 				d.cachedUID = selID
 			}
@@ -136,6 +140,9 @@ func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
 	}
 	if d.isDomainSet {
 		return proto.IPSetUpdate_DOMAIN
+	}
+	if d.isDomainSet {
+		return proto.IPSetUpdate_EGRESS_IP
 	}
 	return proto.IPSetUpdate_NET
 }

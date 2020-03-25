@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ type rulesUpdateCallbacks interface {
 type endpointCallbacks interface {
 	OnEndpointTierUpdate(endpointKey model.Key,
 		endpoint interface{},
+		egressIPSetID string,
 		filteredTiers []tierInfo)
 }
 
@@ -256,7 +257,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		log.WithField("ipSet", ipSet).Info("IPSet now active")
 		callbacks.OnIPSetAdded(ipSet.UniqueID(), ipSet.DataplaneProtocolType())
 		if ipSet.Selector != nil {
-			if !ipSet.isDomainSet {
+			if !(ipSet.isDomainSet || ipSet.isEgressSelector) {
 				defer gaugeNumActiveSelectors.Inc()
 			}
 			ipsetMemberIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
@@ -265,7 +266,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	ruleScanner.OnIPSetInactive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now inactive")
 		if ipSet.Selector != nil {
-			if !ipSet.isDomainSet {
+			if !(ipSet.isDomainSet || ipSet.isEgressSelector) {
 				defer gaugeNumActiveSelectors.Dec()
 			}
 			ipsetMemberIndex.DeleteIPSet(ipSet.UniqueID())
@@ -322,6 +323,13 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher, tierDispatcher)
 	// And hook its output to the callbacks.
 	polResolver.RegisterCallback(callbacks)
+
+	// Create and hook up the active egress calculator.
+	activeEgressCalc := NewActiveEgressCalculator()
+	activeEgressCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
+	activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
+	activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
+	activeEgressCalc.OnEgressIPSetIDUpdate = polResolver.OnEgressIPSetIDUpdate
 
 	// Register for host IP updates.
 	//
