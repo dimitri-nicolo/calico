@@ -19,8 +19,6 @@ section:
     path: /networking/custom-bgp-config
   - title: Configure workload access outside cluster
     path: /networking/workloads-outside-cluster
-  - title: Accelerate Istio network performance
-    path: /networking/sidecar-acceleration
 - title: Customize IP address management
   path: /networking/ipam
   section:
