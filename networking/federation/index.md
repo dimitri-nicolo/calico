@@ -1,5 +1,5 @@
 ---
-description: Install Calico for OpenStack.
+description: Federation for Kubernetes
 show_read_time: false
 show_toc: false
 ---
