@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -136,7 +136,7 @@ func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.Resou
 	}
 }
 
-func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates []api.Update) []api.Update {
+func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates []api.Update) (propagatedUpdates []api.Update) {
 	for i, update := range updates {
 		if update.UpdateType == api.UpdateTypeKVUpdated || update.UpdateType == api.UpdateTypeKVNew {
 			switch t := update.Key.(type) {
@@ -165,6 +165,13 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 			case model.ProfileTagsKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
+			case model.ResourceKey:
+				// Don't propagate the v3 Profile resource that the
+				// ProfileUpdateProcessor emits.  We only stream v3 Profile, in
+				// addition to the v1 Profile keys above, for its EgressControl
+				// field, and there's no reason to federate that field between
+				// clusters.
+				continue
 			}
 		} else if update.UpdateType == api.UpdateTypeKVDeleted {
 			switch t := update.Key.(type) {
@@ -185,11 +192,19 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 			case model.ProfileTagsKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
+			case model.ResourceKey:
+				// Don't propagate the v3 Profile resource that the
+				// ProfileUpdateProcessor emits.  We only stream v3 Profile, in
+				// addition to the v1 Profile keys above, for its EgressControl
+				// field, and there's no reason to federate that field between
+				// clusters.
+				continue
 			}
 		}
+		propagatedUpdates = append(propagatedUpdates, updates[i])
 	}
 
-	return updates
+	return
 }
 
 func (_ felixRemoteClusterProcessor) GetCalicoAPIConfig(config *apiv3.RemoteClusterConfiguration) *apiconfig.CalicoAPIConfig {
