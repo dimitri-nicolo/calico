@@ -83,6 +83,12 @@ If your {{site.prodname}} was previously installed using helm, follow these step
    kubectl apply -f {{ "/reference/other-install-methods/kubernetes/installation/helm/calico-enterprise/operator-crds.yaml" | absolute_url }}
    ```
 
+1. Cleanup Elasticsearch operator webhook.
+   ```bash
+   kubectl delete validatingwebhookconfigurations validating-webhook-configuration
+   kubectl delete service -n tigera-eck-operator elastic-webhook-service
+   ```
+
 1. Run the helm upgrade command for `tigera-secure-ee`.
    ```bash
    helm upgrade <helm installation name for tigera-secure-ee> tigera-secure-ee-{% include chart_version_name %}.tgz --set createCustomResources=false

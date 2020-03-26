@@ -76,6 +76,12 @@ mkdir manifests
    	kibanas.kibana.k8s.elastic.co
    ```
 
+1. Cleanup Elasticsearch operator webhook.
+   ```bash
+   oc delete validatingwebhookconfigurations validating-webhook-configuration
+   oc delete service -n tigera-eck-operator elastic-webhook-service
+   ```
+
 1. Apply the updated manifests.
    ```bash
    oc apply -f manifests/

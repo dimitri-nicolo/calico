@@ -66,6 +66,12 @@ the upgrade.
    	kibanas.kibana.k8s.elastic.co
    ```
 
+1. Cleanup Elasticsearch operator webhook.
+   ```bash
+   kubectl delete validatingwebhookconfigurations validating-webhook-configuration
+   kubectl delete service -n tigera-eck-operator elastic-webhook-service
+   ```
+
 1. Download the new operator manifest.
    ```bash
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
