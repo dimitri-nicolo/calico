@@ -44,6 +44,11 @@ EXTRA_DOCKER_ARGS+=-e GOPRIVATE='github.com/tigera/*'
 
 include Makefile.common
 
+# This gets embedded into node as the Calico version, the Enterprise release
+# is based off of. This should be updated everytime a new opensource Calico
+# release is merged into node-private.
+CALICO_VERSION=v3.13.1
+
 ###############################################################################
 CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 BUILD_IMAGE?=tigera/cnx-node
@@ -129,9 +134,16 @@ ST_OPTIONS?=
 # Variables for building the local binaries that go into the image
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 
+# TODO(doublek): The various version variables in use here will need some cleanup.
+# VERSION is used by cmd/calico-ipam and cmd/calico
+# CNXVERSION is used by cmd/calico-node and pkg/startup
+# CALICO_VERSION is used by pkg/startup
+# All these are required for correct version reporting by the various binaries
+# as well as embedding this information within the ClusterInformation resource.
 LDFLAGS=-ldflags "\
-	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(GIT_VERSION) -X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
-	-X main.VERSION=$(CALICO_GIT_VER) \
+	-X $(PACKAGE_NAME)/pkg/startup.CNXVERSION=$(GIT_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/startup.CALICOVERSION=$(CALICO_VERSION) \
+	-X main.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/buildinfo.BuildDate=$(DATE) \
 	-X $(PACKAGE_NAME)/buildinfo.GitRevision=$(GIT_COMMIT)"
@@ -535,15 +547,15 @@ PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs
-	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-tag
-	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-build
+	$(MAKE) CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-tag
+	$(MAKE) CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-build
 	$(MAKE) VERSION=$(VERSION) tag-base-images-all
-	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-verify
+	$(MAKE) CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-verify
 
 	@echo ""
 	@echo "Release build complete. Next, push the produced images."
 	@echo ""
-	@echo "  make CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-publish"
+	@echo "  make CALICO_VERSION=$(CALICO_VERSION_RELEASE) VERSION=$(VERSION) release-publish"
 	@echo ""
 
 ## Produces a git tag for the release.
@@ -623,8 +635,8 @@ endif
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
-ifndef CALICO_GIT_VER_RELEASE
-	$(error CALICO_GIT_VER_RELEASE is undefined - run using make release CALICO_GIT_VER_RELEASE=vX.Y.Z)
+ifndef CALICO_VERSION_RELEASE
+	$(error CALICO_VERSION_RELEASE is undefined - run using make release CALICO_VERSION_RELEASE=vX.Y.Z)
 endif
 
 ###############################################################################
