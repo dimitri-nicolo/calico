@@ -73,4 +73,4 @@ resource and configures the default Calico IP pool. Note the following:
 ### Above and beyond
 
 - [IPPool resource]({{site.baseurl}}/reference/resources/ippool)
-- [calicoctl]({{site.baseurl}}/reference/calicoctl/) to edit the
+- Use [calicoctl]({{site.baseurl}}/reference/calicoctl/) or kubectl to edit the IPPool resource.
