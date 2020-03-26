@@ -8,11 +8,14 @@ import (
 	"golang.org/x/net/context"
 
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+
+	licClient "github.com/tigera/licensing/client"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -87,9 +90,17 @@ func (gc LicenseKeyConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 	lcgLicenseKey := libcalicoObject.(*libcalicoapi.LicenseKey)
 	aapiLicenseKey := aapiObj.(*aapi.LicenseKey)
 	aapiLicenseKey.Spec = lcgLicenseKey.Spec
-	aapiLicenseKey.Status = lcgLicenseKey.Status
 	aapiLicenseKey.TypeMeta = lcgLicenseKey.TypeMeta
 	aapiLicenseKey.ObjectMeta = lcgLicenseKey.ObjectMeta
+	//Decode License information from datastore and return status
+	licClaims, err := licClient.Decode(*lcgLicenseKey)
+	if err == nil {
+		if licClaims.Validate() == licClient.Valid {
+			aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
+				Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
+				MaxNodes: *licClaims.Nodes}
+		}
+	}
 }
 
 func (gc LicenseKeyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
