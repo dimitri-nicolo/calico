@@ -50,27 +50,28 @@ resource and configures the default Calico IP pool. Note the following:
 
 1. Download the custom-resource.yaml file. 
 
-1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation.
+1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation).
+
    **Required values**: `cidr:`
    **Empty values**: Defaulted
 
-  ```
-  apiVersion: operator.tigera.io/v1
-  kind: Installation
-  metadata:
-    name: default
-  spec:
-    calicoNetwork:
-      ipPools:
-        - cidr: "192.168.0.0/16"
-          encapsulation: "IPIP"
-          nodeSelector: "label == 'value'"
-          natOutgoing: "Enabled"
-   ```
+    ```bash
+    apiVersion: operator.tigera.io/v1
+    kind: Installation
+    metadata:
+      name: default
+    spec:
+      calicoNetwork:
+       ipPools:
+          - cidr: "192.168.0.0/16"
+            encapsulation: "IPIP"
+            nodeSelector: "label == 'value'"
+            natOutgoing: "Enabled"
+     ```
 
 1. Apply the manifest and continue with your installation as normal.
 
 ### Above and beyond
 
 - [IPPool resource]({{site.baseurl}}/reference/resources/ippool)
-- [calicoctl]({{site.baseurl}}/reference/calicoctl/) to edit the
+- [calicoctl]({{site.baseurl}}/reference/calicoctl/)
