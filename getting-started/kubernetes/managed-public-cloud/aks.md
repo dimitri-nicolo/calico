@@ -27,7 +27,7 @@ Ensure that your AKS cluster meets the following requirements.
 - Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings. This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see [AKS access control](https://docs.microsoft.com/bs-latn-ba/azure/aks/control-kubeconfig-access).
 
 
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise-get-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#get-a-license-key).
 
 #### Enable transparent mode
 
@@ -118,7 +118,7 @@ The geeky details of what you get:
 ### Above and beyond
 
 - [Video: Everything you need to know about Kubernetes networking on Azure](https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-azure/)
-- [Install calicoctl command line tool]({{ site.baseurl }}/getting-started/calicoctl/install)
+- [Install calicoctl command line tool]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
 - [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)
