@@ -147,10 +147,14 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
      serviceExternalIPs:
      - cidr: x.x.x.x/16
      - cidr: y.y.y.y/32
-EOF
+   EOF
    ```
 
    For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).
+
+1. Assign external IP from specified CIDR to a Kubernetes service via `externalIPs` field of type string array.
+
+   For help see, {% include open-new-window.html text='Kubernetes API reference' url='https://kubernetes.io/docs/reference/kubernetes-api/api-index/' %}.
 
 ### Tutorial
 
