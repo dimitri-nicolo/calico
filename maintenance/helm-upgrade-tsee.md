@@ -86,7 +86,7 @@ If your {{site.prodname}} was previously installed using helm, follow these step
 1. Cleanup Elasticsearch operator webhook.
    ```bash
    kubectl delete validatingwebhookconfigurations validating-webhook-configuration
-   kubectl delete service -n tigera-eck-operator elastic-webhook-service
+   kubectl delete service -n calico-monitoring elastic-webhook-service
    ```
 
 1. Run the helm upgrade command for `tigera-secure-ee`.
