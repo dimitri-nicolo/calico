@@ -7164,8 +7164,7 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 					"expiry": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Expiry is the expiry date of License",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"maxnodes": {
@@ -7179,6 +7178,8 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 				Required: []string{"expiry"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
