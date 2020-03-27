@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -57,13 +58,9 @@ func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Objec
 	}
 
 	aapiLicenseKey := obj.(*calico.LicenseKey)
-	if licClaims.Validate() != licClient.Valid {
+	if licClaims.Validate() == licClient.Valid {
 		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-			Expiry:   fmt.Sprintf("%s", "Expired"),
-			MaxNodes: *licClaims.Nodes}
-	} else {
-		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-			Expiry:   fmt.Sprintf("%s", licClaims.Expiry.Time()),
+			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes}
 	}
 }
@@ -77,13 +74,9 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 	}
 
 	newLicenseKey := obj.(*calico.LicenseKey)
-	if licClaims.Validate() != licClient.Valid {
+	if licClaims.Validate() == licClient.Valid {
 		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-			Expiry:   fmt.Sprintf("%s", "Expired"),
-			MaxNodes: *licClaims.Nodes}
-	} else {
-		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-			Expiry:   fmt.Sprintf("%s", licClaims.Expiry.Time()),
+			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes}
 	}
 }
@@ -123,7 +116,7 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	}
 	newLicenseKey := obj.(*calico.LicenseKey)
 	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-		Expiry:   fmt.Sprintf("%s", licClaims.Expiry.Time()),
+		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 		MaxNodes: *licClaims.Nodes}
 }
 

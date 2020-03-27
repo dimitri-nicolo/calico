@@ -913,7 +913,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 
 	//Check for Certificate Expiry date
-	if lic.Status.Expiry != "2022-03-05 23:59:59 +0000 UTC" {
+	if lic.Status.Expiry.Time.String() != "2022-03-05 23:59:59 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
