@@ -288,7 +288,7 @@ spec:
 ```
 
 Prometheus Operator also supports other manual storage provisioning
-mechanisms. More information can be found [here](https://coreos.com/operators/prometheus/docs/latest/user-guides/storage.html).
+mechanisms. More information can be found [here](https://github.com/coreos/prometheus-operator/blob/c3eb679265b73210e1af1512fb2a99cf67b3c5cf/Documentation/user-guides/storage.md)
 
 Combining storage resource with proper retention time for metrics will ensure
 that Prometheus will use the storage effectively. The `retention` field is used
