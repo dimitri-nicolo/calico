@@ -26,7 +26,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 The following figure shows a host with two network interfaces: eth0 and eth1. We call these **host endpoints (HEPs)**. The host also runs two guest workloads (VMs or containers). We call the virtual interfaces to the guests, **workload endpoints (WEPs)**.  Each has a corresponding configuration object on the {{site.prodname}} API called HostEndpoint and WorkloadEndpoint, respectively. 
 
-The `HostEndpoint API` object is optional, and Calico does not enforce any policy on the HEP if the API object is missing. The `WorkloadEndpoint API` object is required, and is automatically managed by the cluster orchestrator plugin (for example, Kubernetes or OpenStack).
+The `HostEndpoint API` object is optional, and {{site.prodname}} does not enforce any policy on the HEP if the API object is missing. The `WorkloadEndpoint API` object is required, and is automatically managed by the cluster orchestrator plugin (for example, Kubernetes or OpenStack).
 
 Several connections are shown in the figure, numbered 1 through 4. For example, connection 1 ingresses over HEP eth0, is forwarded, and then ingresses Workload A’s WEP. Calico policies select which WEPs or HEPs they apply to. So, for example an ingress policy that selects Workload A’s WEP will apply to connections as shown in number 1.
 

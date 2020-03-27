@@ -5,7 +5,7 @@ description: Define network connectivity for Calico endpoints using policy rules
 
 ### Big picture
 
-Use Calico policy rules and label selectors that match Calico endpoints (pods, OpenStack VMs, and host interfaces) to define network connectivity.
+Use {{site.prodname}} policy rules and label selectors that match {{site.prodname}} endpoints (pods, OpenStack VMs, and host interfaces) to define network connectivity.
 
 ### Value
 
