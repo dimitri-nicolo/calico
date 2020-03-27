@@ -123,7 +123,7 @@ Save this as allow-ssh-maintenace.yaml.
 Apply the policy to the cluster:
 
 <pre>
-calicoctl create -f allow-ssh-maintenance.yaml
+kubectl create -f allow-ssh-maintenance.yaml
 </pre>
 
 Finally, create the host endpoint for the interface that connects to the maintenance network.
@@ -147,7 +147,7 @@ Replace myhost with the node name {{site.prodname}} uses, and the expected IPs w
 Apply the host endpoint to the cluster:
 
 <pre>
-calicoctl create -f hep.yaml
+kubectl create -f hep.yaml
 </pre>
 
 For completeness, you could also create a HostEndpoint for eth0, but because we have not written any policies for the application network yet, you can omit this step.

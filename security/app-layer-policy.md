@@ -44,7 +44,7 @@ To enable the application layer policy, you must enable the **Policy Sync API** 
 In the default **FelixConfiguration**, set the field, `policySyncPathPrefix` to `/var/run/nodeagent`:
 
 ```bash
-kubectl patch felixconfiguration default --type='merge' -p \
+kubectl patch felixconfiguration.p default --type='merge' -p \
     '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
 ```
 
