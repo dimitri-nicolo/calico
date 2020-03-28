@@ -6,7 +6,7 @@ replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200325051631-453e5ec6fe49
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200324201538-01e3cbe6b3af
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200327005725-7aee3b521b2f
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b
 
 	k8s.io/api => k8s.io/api v0.17.2
