@@ -64,6 +64,7 @@ Description:
     * globalThreatFeed
     * hostEndpoint
     * ipPool
+    * kubeControllersConfiguration
     * tier
     * networkPolicy
     * stagedNetworkPolicy

@@ -64,6 +64,7 @@ Description:
     * globalNetworkSet
     * hostEndpoint
     * ipPool
+    * kubeControllersConfiguration
     * networkPolicy
     * stagedNetworkPolicy
     * stagedKubernetesNetworkPolicy
