@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package projectcalico
 
@@ -469,6 +469,29 @@ type FelixConfiguration struct {
 	metav1.ObjectMeta
 
 	Spec calico.FelixConfigurationSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// KubeControllersConfigurationList is a list of KubeControllersConfiguration objects.
+type KubeControllersConfigurationList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []KubeControllersConfiguration
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type KubeControllersConfiguration struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec   calico.KubeControllersConfigurationSpec
+	Status calico.KubeControllersConfigurationStatus
 }
 
 // +genclient:nonNamespaced

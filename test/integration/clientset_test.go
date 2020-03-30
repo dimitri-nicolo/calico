@@ -913,8 +913,9 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 
 	//Check for Certificate Expiry date
-	if lic.Status.Expiry != "2022-03-05 23:59:59 +0000 UTC" {
-		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
+	expectedDate := metav1.Date(2022, 03, 05, 23, 59, 59, 0, time.UTC)
+	if !lic.Status.Expiry.Equal(&expectedDate) {
+		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v != %v\n", lic.Status.Expiry, expectedDate)
 		return fmt.Errorf("License Expiry date don't match")
 	}
 
@@ -2334,6 +2335,161 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 	err = felixConfigClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("felixConfig should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestKubeControllersConfigurationClient exercises the KubeControllersConfiguration client.
+func TestKubeControllersConfigurationClient(t *testing.T) {
+	const name = "test-kubecontrollersconfig"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.KubeControllersConfiguration{}
+			})
+			defer shutdownServer()
+			if err := testKubeControllersConfigurationClient(client); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-kubecontrollersconfig test failed")
+	}
+}
+
+func testKubeControllersConfigurationClient(client calicoclient.Interface) error {
+	kubeControllersConfigClient := client.ProjectcalicoV3().KubeControllersConfigurations()
+	kubeControllersConfig := &v3.KubeControllersConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
+		Status: calico.KubeControllersConfigurationStatus{
+			RunningConfig: calico.KubeControllersConfigurationSpec{
+				Controllers: calico.ControllersConfig{
+					Node: &calico.NodeControllerConfig{
+						SyncLabels: calico.Enabled,
+					},
+				},
+			},
+		},
+	}
+
+	// start from scratch
+	kubeControllersConfigs, err := kubeControllersConfigClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing kubeControllersConfigs (%s)", err)
+	}
+	if kubeControllersConfigs.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	kubeControllersConfigServer, err := kubeControllersConfigClient.Create(kubeControllersConfig)
+	if nil != err {
+		return fmt.Errorf("error creating the kubeControllersConfig '%v' (%v)", kubeControllersConfig, err)
+	}
+	if kubeControllersConfigServer.Name != "default" {
+		return fmt.Errorf("didn't get the same kubeControllersConfig back from the server \n%+v\n%+v", kubeControllersConfig, kubeControllersConfigServer)
+	}
+	if !reflect.DeepEqual(kubeControllersConfigServer.Status, calico.KubeControllersConfigurationStatus{}) {
+		return fmt.Errorf("status was set on create to %#v", kubeControllersConfigServer.Status)
+	}
+
+	kubeControllersConfigs, err = kubeControllersConfigClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing kubeControllersConfigs (%s)", err)
+	}
+	if len(kubeControllersConfigs.Items) != 1 {
+		return fmt.Errorf("expected 1 kubeControllersConfig got %d", len(kubeControllersConfigs.Items))
+	}
+
+	kubeControllersConfigServer, err = kubeControllersConfigClient.Get("default", metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting kubeControllersConfig default (%s)", err)
+	}
+	if kubeControllersConfigServer.Name != "default" &&
+		kubeControllersConfig.ResourceVersion == kubeControllersConfigServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same kubeControllersConfig back from the server \n%+v\n%+v", kubeControllersConfig, kubeControllersConfigServer)
+	}
+
+	kubeControllersConfigUpdate := kubeControllersConfigServer.DeepCopy()
+	kubeControllersConfigUpdate.Spec.HealthChecks = calico.Enabled
+	kubeControllersConfigUpdate.Status.EnvironmentVars = map[string]string{"FOO": "bar"}
+	kubeControllersConfigServer, err = kubeControllersConfigClient.Update(kubeControllersConfigUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating kubeControllersConfig default (%s)", err)
+	}
+	if kubeControllersConfigServer.Spec.HealthChecks != kubeControllersConfigUpdate.Spec.HealthChecks {
+		return errors.New("didn't update spec.content")
+	}
+	if kubeControllersConfigServer.Status.EnvironmentVars != nil {
+		return errors.New("status was updated by Update()")
+	}
+
+	kubeControllersConfigUpdate = kubeControllersConfigServer.DeepCopy()
+	kubeControllersConfigUpdate.Status.EnvironmentVars = map[string]string{"FIZZ": "buzz"}
+	kubeControllersConfigUpdate.Labels = map[string]string{"foo": "bar"}
+	kubeControllersConfigUpdate.Spec.HealthChecks = ""
+	kubeControllersConfigServer, err = kubeControllersConfigClient.UpdateStatus(kubeControllersConfigUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating kubeControllersConfig default (%s)", err)
+	}
+	if !reflect.DeepEqual(kubeControllersConfigServer.Status, kubeControllersConfigUpdate.Status) {
+		return fmt.Errorf("didn't update status. %v != %v", kubeControllersConfigUpdate.Status, kubeControllersConfigServer.Status)
+	}
+	if _, ok := kubeControllersConfigServer.Labels["foo"]; ok {
+		return fmt.Errorf("updatestatus updated labels")
+	}
+	if kubeControllersConfigServer.Spec.HealthChecks == "" {
+		return fmt.Errorf("updatestatus updated spec")
+	}
+
+	err = kubeControllersConfigClient.Delete("default", &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("kubeControllersConfig should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().KubeControllersConfigurations().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching KubeControllersConfigurations (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create, then delete KubeControllersConfigurations
+	kubeControllersConfigServer, err = kubeControllersConfigClient.Create(kubeControllersConfig)
+	if nil != err {
+		return fmt.Errorf("error creating the kubeControllersConfig '%v' (%v)", kubeControllersConfig, err)
+	}
+	err = kubeControllersConfigClient.Delete("default", &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("kubeControllersConfig should be deleted (%s)", err)
+	}
+
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
 	}
 
 	return nil

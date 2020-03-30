@@ -25,6 +25,7 @@ type ProjectcalicoV3Interface interface {
 	GlobalThreatFeedsGetter
 	HostEndpointsGetter
 	IPPoolsGetter
+	KubeControllersConfigurationsGetter
 	LicenseKeysGetter
 	ManagedClustersGetter
 	NetworkPoliciesGetter
@@ -92,6 +93,10 @@ func (c *ProjectcalicoV3Client) HostEndpoints() HostEndpointInterface {
 
 func (c *ProjectcalicoV3Client) IPPools() IPPoolInterface {
 	return newIPPools(c)
+}
+
+func (c *ProjectcalicoV3Client) KubeControllersConfigurations() KubeControllersConfigurationInterface {
+	return newKubeControllersConfigurations(c)
 }
 
 func (c *ProjectcalicoV3Client) LicenseKeys() LicenseKeyInterface {

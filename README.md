@@ -269,19 +269,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   &LicenseKeyList{},
   ```
 
-* Add the resource name (i.e. the resource label that you pass to `kubectl`) to
-  the `GroupMetaFactoryArgs` type, specifically the `RootScopedKinds` field in
-  `pkg/apis/projectcalico/install/install.go`. For example:
-
-  ```
-  RootScopedKinds: sets.NewString(..., "LicenseKey"),
-  ```
-
 * Register the field label conversion anonymous function in `addConversionFuncs()`
   in `pkg/apis/projectcalico/v3/conversion.go`. For example:
 
   ```
-  err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "LicenseKey",
+	err = scheme.AddFieldLabelConversionFunc(schema.GroupVersionKind{"projectcalico.org", "v3", "LicenseKey"},
 		func(label, value string) (string, string, error) {
 			switch label {
 			case "metadata.name":

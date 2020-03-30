@@ -66,6 +66,10 @@ func (c *FakeProjectcalicoV3) IPPools() v3.IPPoolInterface {
 	return &FakeIPPools{c}
 }
 
+func (c *FakeProjectcalicoV3) KubeControllersConfigurations() v3.KubeControllersConfigurationInterface {
+	return &FakeKubeControllersConfigurations{c}
+}
+
 func (c *FakeProjectcalicoV3) LicenseKeys() v3.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }

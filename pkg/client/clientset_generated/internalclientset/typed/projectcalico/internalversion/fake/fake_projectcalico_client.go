@@ -66,6 +66,10 @@ func (c *FakeProjectcalico) IPPools() internalversion.IPPoolInterface {
 	return &FakeIPPools{c}
 }
 
+func (c *FakeProjectcalico) KubeControllersConfigurations() internalversion.KubeControllersConfigurationInterface {
+	return &FakeKubeControllersConfigurations{c}
+}
+
 func (c *FakeProjectcalico) LicenseKeys() internalversion.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }

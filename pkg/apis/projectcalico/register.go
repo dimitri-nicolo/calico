@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package projectcalico
 
@@ -74,6 +74,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&RemoteClusterConfigurationList{},
 		&FelixConfiguration{},
 		&FelixConfigurationList{},
+		&KubeControllersConfiguration{},
+		&KubeControllersConfigurationList{},
 		&ManagedCluster{},
 		&ManagedClusterList{},
 		&ClusterInformation{},

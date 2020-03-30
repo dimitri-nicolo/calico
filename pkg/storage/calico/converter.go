@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -136,6 +136,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		lcg := libcalicoObject.(*libcalicoapi.FelixConfiguration)
 		aapi := &aapi.FelixConfiguration{}
 		FelixConfigurationConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
+	case *libcalicoapi.KubeControllersConfiguration:
+		lcg := libcalicoObject.(*libcalicoapi.KubeControllersConfiguration)
+		aapi := &aapi.KubeControllersConfiguration{}
+		KubeControllersConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	case *libcalicoapi.ManagedCluster:
 		lcg := libcalicoObject.(*libcalicoapi.ManagedCluster)

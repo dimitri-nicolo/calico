@@ -67,6 +67,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection":                  schema_libcalico_go_lib_apis_v3_AuditEventsSelection(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource":                         schema_libcalico_go_lib_apis_v3_AuditResource(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary":                          schema_libcalico_go_lib_apis_v3_AuditSummary(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig":                schema_libcalico_go_lib_apis_v3_AutoHostEndpointConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration":                      schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationList":                  schema_libcalico_go_lib_apis_v3_BGPConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec":                  schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref),
@@ -90,6 +91,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationList":                schema_libcalico_go_lib_apis_v3_ClusterInformationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec":                schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob":                    schema_libcalico_go_lib_apis_v3_CompletedReportJob(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig":                     schema_libcalico_go_lib_apis_v3_ControllersConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort":                          schema_libcalico_go_lib_apis_v3_EndpointPort(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint":               schema_libcalico_go_lib_apis_v3_EndpointsReportEndpoint(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow":                   schema_libcalico_go_lib_apis_v3_EndpointsReportFlow(ref),
@@ -148,6 +150,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolList":                            schema_libcalico_go_lib_apis_v3_IPPoolList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec":                            schema_libcalico_go_lib_apis_v3_IPPoolSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeConfig":                            schema_libcalico_go_lib_apis_v3_KubeConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfiguration":          schema_libcalico_go_lib_apis_v3_KubeControllersConfiguration(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationList":      schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec":      schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus":    schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey":                            schema_libcalico_go_lib_apis_v3_LicenseKey(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList":                        schema_libcalico_go_lib_apis_v3_LicenseKeyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec":                        schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref),
@@ -158,6 +164,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatus":                  schema_libcalico_go_lib_apis_v3_ManagedClusterStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterStatusCondition":         schema_libcalico_go_lib_apis_v3_ManagedClusterStatusCondition(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch":                   schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig":             schema_libcalico_go_lib_apis_v3_NamespaceControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy":                         schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList":                     schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec":                     schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref),
@@ -166,9 +173,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec":                        schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                                  schema_libcalico_go_lib_apis_v3_Node(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":                           schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig":                  schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                              schema_libcalico_go_lib_apis_v3_NodeList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec":                              schema_libcalico_go_lib_apis_v3_NodeSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                               schema_libcalico_go_lib_apis_v3_OrchRef(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig":                schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile":                               schema_libcalico_go_lib_apis_v3_Profile(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileList":                           schema_libcalico_go_lib_apis_v3_ProfileList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec":                           schema_libcalico_go_lib_apis_v3_ProfileSpec(ref),
@@ -186,6 +195,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                            schema_libcalico_go_lib_apis_v3_ResourceID(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                                  schema_libcalico_go_lib_apis_v3_Rule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata":                          schema_libcalico_go_lib_apis_v3_RuleMetadata(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig":        schema_libcalico_go_lib_apis_v3_ServiceAccountControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch":                   schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock":                 schema_libcalico_go_lib_apis_v3_ServiceClusterIPBlock(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock":                schema_libcalico_go_lib_apis_v3_ServiceExternalIPBlock(ref),
@@ -206,6 +216,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierList":                              schema_libcalico_go_lib_apis_v3_TierList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec":                              schema_libcalico_go_lib_apis_v3_TierSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint":                      schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointControllerConfig":      schema_libcalico_go_lib_apis_v3_WorkloadEndpointControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointList":                  schema_libcalico_go_lib_apis_v3_WorkloadEndpointList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec":                  schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/numorstring.Port":                              numorstring.Port{}.OpenAPIDefinition(),
@@ -237,6 +248,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.HostEndpointList":                  schema_pkg_apis_projectcalico_v3_HostEndpointList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.IPPool":                            schema_pkg_apis_projectcalico_v3_IPPool(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.IPPoolList":                        schema_pkg_apis_projectcalico_v3_IPPoolList(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfiguration":      schema_pkg_apis_projectcalico_v3_KubeControllersConfiguration(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfigurationList":  schema_pkg_apis_projectcalico_v3_KubeControllersConfigurationList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.LicenseKey":                        schema_pkg_apis_projectcalico_v3_LicenseKey(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.LicenseKeyList":                    schema_pkg_apis_projectcalico_v3_LicenseKeyList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.ManagedCluster":                    schema_pkg_apis_projectcalico_v3_ManagedCluster(ref),
@@ -2526,6 +2539,25 @@ func schema_libcalico_go_lib_apis_v3_AuditSummary(ref common.ReferenceCallback) 
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_AutoHostEndpointConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoCreate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoCreate enables automatic creation of host endpoints for every node. [Default: Disabled]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3603,6 +3635,51 @@ func schema_libcalico_go_lib_apis_v3_CompletedReportJob(ref common.ReferenceCall
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ControllersConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllersConfig enables and configures individual Kubernetes controllers",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"node": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Node enables and configures the node controller. Enabled by default, set to nil to disable.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig"),
+						},
+					},
+					"policy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Policy enables and configures the policy controller. Enabled by default, set to nil to disable.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig"),
+						},
+					},
+					"workloadEndpoint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkloadEndpoint enables and configures the workload endpoint controller. Enabled by default, set to nil to disable.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointControllerConfig"),
+						},
+					},
+					"serviceAccount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccount enables and configures the service account controller. Enabled by default, set to nil to disable.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig"),
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace enables and configures the namespace controller. Enabled by default, set to nil to disable.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointControllerConfig"},
 	}
 }
 
@@ -7331,6 +7408,180 @@ func schema_libcalico_go_lib_apis_v3_KubeConfig(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_KubeControllersConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeControllersConfiguration contains the configuration for Calico Kubernetes Controllers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the KubeControllersConfiguration.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status of the KubeControllersConfiguration",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeControllersConfigurationList contains a list of KubeControllersConfiguration resources.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfiguration"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeControllersConfigurationSpec contains the values of the Kubernetes controllers configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"logSeverityScreen": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"healthChecks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HealthChecks enables or disables support for health checks [Default: Enabled]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdV3CompactionPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EtcdV3CompactionPeriod is the period between etcdv3 compaction requests. Set to 0 to disable. [Default: 10m]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"controllers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Controllers enables and configures individual Kubernetes controllers",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig"),
+						},
+					},
+				},
+				Required: []string{"controllers"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeControllersConfigurationStatus represents the status of the configuration. It's useful for admins to be able to see the actual config that was applied, which can be modified by environment variables on the kube-controllers process.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"runningConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RunningConfig contains the effective config that is running in the kube-controllers pod, after merging the API resource with any environment variables.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec"),
+						},
+					},
+					"environmentVars": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnvironmentVars contains the environment variables on the kube-controllers that influenced the RunningConfig.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"runningConfig", "environmentVars"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_LicenseKey(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7463,8 +7714,7 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 					"expiry": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Expiry is the expiry date of License",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"maxnodes": {
@@ -7478,6 +7728,8 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 				Required: []string{"expiry"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -7684,6 +7936,26 @@ func schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref common.ReferenceCal
 					"selector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Selector is an optional field that selects a set of resources by label. If both Names and Selector are specified then they are AND'ed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_NamespaceControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NamespaceControllerConfig configures the service account controller, which syncs Kubernetes service accounts to Calico profiles (only used for etcdv3 datastore).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcilerPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8068,6 +8340,41 @@ func schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref common.ReferenceCallback) c
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeControllerConfig configures the node controller, which automatically cleans up configuration for nodes that no longer exist. Optionally, it can create host endpoints for all Kubernetes nodes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcilerPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"syncLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SyncLabels controls whether to copy Kubernetes node labels to Calico nodes. [Default: Enabled]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"hostEndpoint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HostEndpoint controls syncing nodes to host endpoints. Disabled by default, set to nil to disable.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_NodeList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8186,6 +8493,26 @@ func schema_libcalico_go_lib_apis_v3_OrchRef(ref common.ReferenceCallback) commo
 					},
 				},
 				Required: []string{"orchestrator"},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PolicyControllerConfig configures the network policy controller, which syncs Kubernetes policies to Calico policies (only used for etcdv3 datastore).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcilerPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -9149,6 +9476,26 @@ func schema_libcalico_go_lib_apis_v3_RuleMetadata(ref common.ReferenceCallback) 
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_ServiceAccountControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceAccountControllerConfig configures the service account controller, which syncs Kubernetes service accounts to Calico profiles (only used for etcdv3 datastore).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcilerPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10014,6 +10361,26 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_WorkloadEndpointControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkloadEndpointControllerConfig configures the workload endpoint controller, which syncs Kubernetes labels to Calico workload endpoints (only used for etcdv3 datastore).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcilerPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -11320,6 +11687,96 @@ func schema_pkg_apis_projectcalico_v3_IPPoolList(ref common.ReferenceCallback) c
 		},
 		Dependencies: []string{
 			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.IPPool", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_KubeControllersConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_KubeControllersConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeControllersConfigurationList contains a list of KubeControllersConfiguration object.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfiguration"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
