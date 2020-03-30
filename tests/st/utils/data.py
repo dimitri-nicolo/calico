@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+# Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1688,3 +1688,50 @@ globalthreatfeed_get_table_output = """NAME    PERIOD   URL
 name0                                                        
 name1   13.5h    https://notreal.tigera.io/threatfeed        
 name2   24h      https://notreal.tigera.io/threatfeed/rev2"""
+
+#
+# KubeControllersConfiguration
+#
+kubecontrollersconfig_name1_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'KubeControllersConfiguration',
+    'metadata': {
+        'name': 'default',
+    },
+    'spec': {
+        'logSeverityScreen': 'Info',
+        'controllers': {
+            'node': {
+                'syncLabels': 'Enabled',
+                'hostEndpoint': {
+                    'autoCreate': 'Disabled',
+                }
+            }
+        }
+    }
+}
+
+kubecontrollersconfig_name1_rev2 = {
+    'apiVersion': API_VERSION,
+    'kind': 'KubeControllersConfiguration',
+    'metadata': {
+        'name': 'default',
+    },
+    'spec': {
+        'logSeverityScreen': 'Debug',
+        'controllers': {
+            'node': {
+                'syncLabels': 'Enabled',
+                'hostEndpoint': {
+                    'autoCreate': 'Disabled',
+                }
+            },
+            'namespace': {},
+        }
+    },
+    'status': {
+        'environmentVars': {
+            'LOG_LEVEL': 'Info',
+        }
+    }
+}
