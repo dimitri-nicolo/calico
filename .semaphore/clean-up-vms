@@ -19,7 +19,7 @@ set -x
 
 vm_prefix=$1
 project=unique-caldron-775
-zone=europe-west3-c
+zone=us-central1-f
 
 gcloud config set project $project
 gcloud auth activate-service-account --key-file=$HOME/secrets/secret.google-service-account-key.json
