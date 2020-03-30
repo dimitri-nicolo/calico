@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,8 +43,8 @@ type Interface interface {
 	ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, error)
 
 	// GetAssignmentAttributes returns the attributes stored with the given IP address
-	// upon assignment.
-	GetAssignmentAttributes(ctx context.Context, addr cnet.IP) (map[string]string, error)
+	// upon assignment, as well as the handle used for assignment (if any).
+	GetAssignmentAttributes(ctx context.Context, addr cnet.IP) (map[string]string, *string, error)
 
 	// IPsByHandle returns a list of all IP addresses that have been
 	// assigned using the provided handle.

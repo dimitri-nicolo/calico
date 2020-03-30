@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,4 +57,8 @@ const (
 	KindK8sPod       = "Pod"
 	KindFlowPublic   = "Public"
 	KindFlowPrivate  = "Private"
+
+	// Enum options for enable/disable fields
+	Enabled  = "Enabled"
+	Disabled = "Disabled"
 )
