@@ -5,13 +5,13 @@ description: Seamlessly enable Calico Enterprise integration with Istio service 
 
 ### Big picture
 
-{site.prodname}} integrates seamlessly with Istio to enforce network policy within the Istio service mesh.
+Calico integrates seamlessly with Istio to enforce network policy within the Istio service mesh.
 
 ### Value
 
 #### Support security goals
 
-Using {site.prodname}} network policy with Istio enables adoption of a zero trust network model for security, including traffic encryption, multiple enforcement points, and multiple identity criteria for authentication.
+Using Calico network policy with Istio enables adoption of a zero trust network model for security, including traffic encryption, multiple enforcement points, and multiple identity criteria for authentication.
 
 #### Familiar policy language
 
@@ -21,15 +21,15 @@ Users do not need to learn another network policy model when adopting Istio. Kub
 
 This how-to guide uses the following {site.prodname}} features:
 
-**{site.prodname}} integration with Istio**
+**Calico integration with Istio**
 
 ### Before you begin...
 
-[Install {site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/)
+[Install {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes/)
 
 ### How to
 
-After you complete the steps to [enable application layer policy]({{site.baseurl}}/security/app-layer-policy), you are ready to create standard {site.prodname}} network policies with application layer specific attributes.
+After you complete the steps to [enable application layer policy]({{site.baseurl}}/security/app-layer-policy), you are ready to create standard {{site.prodname}} network policies with application layer specific attributes.
 
 ### Above and beyond
 

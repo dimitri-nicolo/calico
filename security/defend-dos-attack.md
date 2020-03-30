@@ -5,15 +5,15 @@ description: Define DoS mitigation rules in Calico Enterprise policy to quickly 
 
 ### Big picture
 
-{{site.prodname}} automatically enforces specific types of blacklist policies at the earliest possible point in the packet processing pipeline, including offloading to NIC hardware whenever possible.
+Calico automatically enforces specific types of blacklist policies at the earliest possible point in the packet processing pipeline, including offloading to NIC hardware whenever possible.
 
 ### Value
 
-During a DoS attack, a cluster can receive massive numbers of connection requests from attackers. The faster these connection requests are dropped, the less flooding and overloading to your hosts. When you define DoS mitigation rules in {{site.prodname}} network policy, {{site.prodname}} enforces the rules as efficiently as possible to minimize the impact.
+During a DoS attack, a cluster can receive massive numbers of connection requests from attackers. The faster these connection requests are dropped, the less flooding and overloading to your hosts. When you define DoS mitigation rules in Calico network policy, Calico enforces the rules as efficiently as possible to minimize the impact.
 
 ### Features
 
-This how-to guide uses the following {{site.prodname}} features:
+This how-to guide uses the following Calico features:
 - **HostEndpoint**(s) as the policy enforcement point
 - **GlobalNetworkSet** to manage blacklisted CIDRs
 - **GlobalNetworkPolicy** to deny ingress traffic from IPs in the global network set
@@ -22,13 +22,13 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Earliest packet processing
 
-The earliest point in the packet processing pipeline that packets can be dropped, depends on the Linux kernel version and the capabilities of the NIC driver and NIC hardware. {{site.prodname}} automatically uses the fastest available option.
+The earliest point in the packet processing pipeline that packets can be dropped, depends on the Linux kernel version and the capabilities of the NIC driver and NIC hardware. Calico automatically uses the fastest available option.
 
-| Processed by... | Used by {{site.prodname}} if...                              | Performance |
+| Processed by... | Used by Calico if...                                         | Performance |
 | --------------- | ------------------------------------------------------------ | ----------- |
 | NIC hardware    | The NIC supports **XDP offload** mode.                       | Fastest     |
 | NIC driver      | The NIC driver supports **XDP native** mode.                 | Faster      |
-| Kernel          | The kernel supports **XDP generic mode** and {{site.prodname}} is configured to explicitly use it. This mode is rarely used and has no performance benefits over iptables raw mode below. To enable, see [Felix Configuration]({{ site.baseurl }}/reference/resources/felixconfig).   | Fast        |
+| Kernel          | The kernel supports **XDP generic mode** and Calico is configured to explicitly use it. This mode is rarely used and has no performance benefits over iptables raw mode below. To enable, see [Felix Configuration]({{ site.baseurl }}/reference/resources/felixconfig).   | Fast        |
 | Kernel          | If none of the modes above are available, **iptables raw** mode is used. | Fast        |
 
 >**Note**: XDP modes require Linux kernel v4.16 or later.
@@ -65,7 +65,7 @@ spec:
 
 #### Step 2: Add CIDRs to blacklist in a global network set
 
-Next, you create a {{site.prodname}} **GlobalNetworkset**, adding the CIDRs that you want to blacklist. In the following example, the global network set blacklists the CIDR ranges **1.2.3.4/32** and **5.6.0.0/16**:
+Next, you create a Calico **GlobalNetworkset**, adding the CIDRs that you want to blacklist. In the following example, the global network set blacklists the CIDR ranges **1.2.3.4/32** and **5.6.0.0/16**:
 
 ```yaml
 apiVersion: projectcalico.org/v3
@@ -82,7 +82,7 @@ spec:
 
 #### Step 3: Create deny incoming traffic global network policy
 
-Finally, create a {{site.prodname}} GlobalNetworkPolicy adding the GlobalNetworkSet label (**dos-blacklist** in the previous step) as a selector to deny ingress traffic. To more quickly enforce the denial of forwarded traffic to the host at the packet level, use the **doNotTrack** and **applyOnForward** options.
+Finally, create a Calico GlobalNetworkPolicy adding the GlobalNetworkSet label (**dos-blacklist** in the previous step) as a selector to deny ingress traffic. To more quickly enforce the denial of forwarded traffic to the host at the packet level, use the **doNotTrack** and **applyOnForward** options.
 
 ```yaml
 apiVersion: projectcalico.org/v3

@@ -1,19 +1,19 @@
 ---
 title: Use HTTP methods and paths in policy rules
-description: Create a Calico Enterprise network policy for Istio-enabled apps to restrict ingress traffic matching HTTP methods or paths.
+description: Create a Calico network policy for Istio-enabled apps to restrict ingress traffic matching HTTP methods or paths.
 ---
 
 ### Big picture
 
-Use {{site.prodname}} network policy for Istio-enabled apps to restrict ingress traffic that matches HTTP methods or paths. 
+Use Calico network policy for Istio-enabled apps to restrict ingress traffic that matches HTTP methods or paths. 
 
 ### Value
 
-Istio is ideal for applying policy for operational goals and for security that operates at the application layer. However, for security goals inside and outside the cluster, {{site.prodname}} network policy is required. Using special {{site.prodname}} network policy designed for Istio-enabled apps, you can restrict ingress traffic inside and outside pods using HTTP methods (for example, GET requests).
+Istio is ideal for applying policy for operational goals and for security that operates at the application layer. However, for security goals inside and outside the cluster, Calico network policy is required. Using special Calico network policy designed for Istio-enabled apps, you can restrict ingress traffic inside and outside pods using HTTP methods (for example, GET requests).
 
 ### Features
 
-This how-to guide uses the following {{site.prodname}} features:
+This how-to guide uses the following Calico features:
 
 - **NetworkPolicy** and **GlobalNetworkPolicy** with http match criteria to restrict traffic using:
   - Standard HTTP methods
@@ -23,7 +23,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### HTTP match criteria: ingress traffic only 
 
-{{site.prodname}} network policy supports restricting traffic based on HTTP methods and paths only for ingress traffic. 
+Calico network policy supports restricting traffic based on HTTP methods and paths only for ingress traffic. 
 
 ### Before you begin...
 
