@@ -64,6 +64,7 @@ type FlowLogsReporter struct {
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
+	stats     *tupleStore
 }
 
 const (
@@ -116,6 +117,7 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
 		logOffset:        logOffset,
+		stats:            NewTupleStore(),
 	}
 }
 
@@ -135,6 +137,7 @@ func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggrega
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
 		logOffset:        logOffset,
+		stats:            NewTupleStore(),
 	}
 }
 
@@ -167,6 +170,7 @@ func (c *FlowLogsReporter) Report(mu MetricUpdate) error {
 			mu.dstEp = nil
 		}
 	}
+
 	for _, agg := range c.aggregators {
 		agg.a.FeedUpdate(mu)
 	}

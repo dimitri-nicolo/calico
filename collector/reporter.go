@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -46,6 +46,22 @@ type MetricValue struct {
 func (mv MetricValue) String() string {
 	return fmt.Sprintf("delta=%v deltaBytes=%v deltaAllowedHTTPReq=%v deltaDeniedHTTPReq=%v",
 		mv.deltaPackets, mv.deltaBytes, mv.deltaAllowedHTTPRequests, mv.deltaDeniedHTTPRequests)
+}
+
+// Increments adds delta values for all counters using another MetricValue
+func (mv *MetricValue) Increment(other MetricValue) {
+	mv.deltaBytes += other.deltaBytes
+	mv.deltaPackets += other.deltaPackets
+	mv.deltaAllowedHTTPRequests += other.deltaAllowedHTTPRequests
+	mv.deltaDeniedHTTPRequests += other.deltaDeniedHTTPRequests
+}
+
+// Reset will set all the counters stored to 0
+func (mv *MetricValue) Reset() {
+	mv.deltaBytes = 0
+	mv.deltaPackets = 0
+	mv.deltaAllowedHTTPRequests = 0
+	mv.deltaDeniedHTTPRequests = 0
 }
 
 type MetricUpdate struct {

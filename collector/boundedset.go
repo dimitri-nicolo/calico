@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -138,12 +138,14 @@ func (set *boundedSet) Reset() {
 // in the combined boundedSet is greater than `maxSize` then only the `totalCount`
 // us incremented.
 func (set *boundedSet) Combine(bs *boundedSet) {
-	bsCount := bs.totalCount.Absolute()
-	for ipk := range bs.ips {
-		set.Add(NetIPFromIpKey(ipk))
-		bsCount--
+	if bs != nil {
+		bsCount := bs.totalCount.Absolute()
+		for ipk := range bs.ips {
+			set.Add(NetIPFromIpKey(ipk))
+			bsCount--
+		}
+		set.totalCount.Increase(bsCount)
 	}
-	set.totalCount.Increase(bsCount)
 }
 
 // ToIPSlice returns a slice of the IP addresses tracked in the boundedSet.
