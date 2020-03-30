@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -53,6 +54,33 @@ func (wc defaultWorkloadEndpointConverter) VethNameForWorkload(namespace, podnam
 	}
 	log.WithField("prefix", prefix).Debugf("Using prefix to create a WorkloadEndpoint veth name")
 	return fmt.Sprintf("%s%s", prefix, hex.EncodeToString(h.Sum(nil))[:11])
+}
+
+// InterfacesForPod is a pass through to defaultInterfaceForPod, returning a list of []*PodInterface with only the default
+// pod interface
+func (wc defaultWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*PodInterface, error) {
+	podInterface, err := wc.defaultInterfaceForPod(pod)
+	if err != nil {
+		return nil, err
+	}
+	return []*PodInterface{podInterface}, err
+}
+
+// DefaultInterfaceForPodForPod retrieves the PodInterface for the default interface and populates it with the default values.
+func (wc defaultWorkloadEndpointConverter) defaultInterfaceForPod(pod *kapiv1.Pod) (*PodInterface, error) {
+	ipNets, err := getPodIPs(pod)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PodInterface{
+		IsDefault:          true,
+		NetworkName:        "k8s-pod-network",
+		InsidePodIfaceName: "eth0",
+		HostSideIfaceName:  wc.VethNameForWorkload(pod.Namespace, pod.Name),
+		InsidePodGW:        net.IPv4(169, 254, 1, 1),
+		IPNets:             ipNets,
+	}, nil
 }
 
 func (wc defaultWorkloadEndpointConverter) PodToWorkloadEndpoints(pod *kapiv1.Pod) ([]*model.KVPair, error) {

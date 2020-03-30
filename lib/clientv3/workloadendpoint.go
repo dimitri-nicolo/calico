@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,22 +18,41 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 )
 
 // WorkloadEndpointInterface has methods to work with WorkloadEndpoint resources.
 type WorkloadEndpointInterface interface {
 	Create(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error)
+	CreateNonDefault(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error)
 	Update(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error)
+	UpdateNonDefault(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error)
 	Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.WorkloadEndpoint, error)
 	Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.WorkloadEndpoint, error)
 	List(ctx context.Context, opts options.ListOptions) (*apiv3.WorkloadEndpointList, error)
 	Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error)
+}
+
+// createNonDefaultInterface is used to check if a the K8sResourceClient implements the CreateNonDefault function
+type createNonDefaultInterface interface {
+	CreateNonDefault(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error)
+}
+
+// updateNonDefaultInterface is used to check if a the K8sResourceClient implements the UpdateNonDefault function
+type updateNonDefaultInterface interface {
+	UpdateNonDefault(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error)
 }
 
 // workloadEndpoints implements WorkloadEndpointInterface
@@ -41,9 +60,9 @@ type workloadEndpoints struct {
 	client client
 }
 
-// Create takes the representation of a WorkloadEndpoint and creates it.  Returns the stored
+// create takes the representation of a WorkloadEndpoint and creates it using the given create function.  Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
-func (r workloadEndpoints) Create(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) create(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions, createFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)) (*apiv3.WorkloadEndpoint, error) {
 	if res != nil {
 		// Since we're about to default some fields, take a (shallow) copy of the input data
 		// before we do so.
@@ -56,16 +75,57 @@ func (r workloadEndpoints) Create(ctx context.Context, res *apiv3.WorkloadEndpoi
 		return nil, err
 	}
 	r.updateLabelsForStorage(res)
-	out, err := r.client.resources.Create(ctx, opts, apiv3.KindWorkloadEndpoint, res)
+	out, err := createResource(ctx, opts, apiv3.KindWorkloadEndpoint, res, createFunc)
 	if out != nil {
 		return out.(*apiv3.WorkloadEndpoint), err
 	}
 	return nil, err
 }
 
-// Update takes the representation of a WorkloadEndpoint and updates it. Returns the stored
+// CreateNonDefault is a function that should be used if the WorkloadEndpoint being created is not the default one. In KDD
+// mode, the default WorkloadEndpoints are "created" different from the additional ones. If the backend client is not a
+// k8s.KubeClient, or the WorkloadEndpoint K8sResourceClient does not implement the createNonDefaultInterface then this
+// function simple calls Create.
+func (r workloadEndpoints) CreateNonDefault(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error) {
+	var createFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
+
+	// Note on this type switching: We could have added CreateNonDefault to the api.Client interface, but that would mean
+	// every implementation of it would have to have this CreateNonDefault function, and it would be a NOOP for every implementation
+	// but the WorkloadEndpoint's clients implementation. This type switching isn't the nicest piece of code, but at the
+	// time of writing this it seems like the best alternative.
+	switch be := r.client.backend.(type) {
+	case *k8s.KubeClient:
+		rClient := be.GetResourceClientFromResourceKind(apiv3.KindWorkloadEndpoint)
+		if rClient == nil {
+			log.Debug("Attempt to 'Create' using kubernetes backend is not supported.")
+			return nil, cerrors.ErrorOperationNotSupported{
+				Identifier: resourceToKVPair(opts, apiv3.KindWorkloadEndpoint, res),
+				Operation:  "Create",
+			}
+		}
+		wepClient, ok := rClient.(createNonDefaultInterface)
+		if ok {
+			createFunc = wepClient.CreateNonDefault
+		} else {
+			// we're purposefully not going to consider this an error if CreateNonDefaultInterface is not implemented
+			createFunc = r.client.backend.Create
+		}
+	default:
+		createFunc = r.client.backend.Create
+	}
+
+	return r.create(ctx, res, opts, createFunc)
+}
+
+// Create takes the representation of a WorkloadEndpoint and creates it.  Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
-func (r workloadEndpoints) Update(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error) {
+func (r workloadEndpoints) Create(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error) {
+	return r.create(ctx, res, opts, r.client.backend.Create)
+}
+
+// update takes the representation of a WorkloadEndpoint and updates it using the given update function. Returns the stored
+// representation of the WorkloadEndpoint, and an error, if there is any.
+func (r workloadEndpoints) update(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions, updateFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)) (*apiv3.WorkloadEndpoint, error) {
 	if res != nil {
 		// Since we're about to default some fields, take a (shallow) copy of the input data
 		// before we do so.
@@ -78,11 +138,53 @@ func (r workloadEndpoints) Update(ctx context.Context, res *apiv3.WorkloadEndpoi
 		return nil, err
 	}
 	r.updateLabelsForStorage(res)
-	out, err := r.client.resources.Update(ctx, opts, apiv3.KindWorkloadEndpoint, res)
+	out, err := updateResource(ctx, opts, apiv3.KindWorkloadEndpoint, res, updateFunc)
 	if out != nil {
 		return out.(*apiv3.WorkloadEndpoint), err
 	}
 	return nil, err
+}
+
+// UpdateNonDefault is a function that should be used if the WorkloadEndpoint being updated is not the default one. In KDD
+// mode, the default WorkloadEndpoints are "updated" different from the additional ones. If the backend client is not a
+// k8s.KubeClient, or the WorkloadEndpoint K8sResourceClient does not implement the updateNonDefaultInterface then this
+// function simple calls Update.
+func (r workloadEndpoints) UpdateNonDefault(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error) {
+	var updateFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
+
+	// Note on this type switching: We could have added UpdateNonDefault to the api.Client interface, but that would mean
+	// every implementation of it would have to have this UpdateNonDefault function, and it would be a NOOP for every implementation
+	// but the WorkloadEndpoint's clients implementation. This type switching isn't the nicest piece of code, but at the
+	// time of writing this it seems like the best alternative.
+	switch be := r.client.backend.(type) {
+	case *k8s.KubeClient:
+		rClient := be.GetResourceClientFromResourceKind(apiv3.KindWorkloadEndpoint)
+		if rClient == nil {
+			log.Debug("Attempt to 'Update' using kubernetes backend is not supported.")
+			return nil, cerrors.ErrorOperationNotSupported{
+				Identifier: resourceToKVPair(opts, apiv3.KindWorkloadEndpoint, res),
+				Operation:  "Update",
+			}
+		}
+
+		wepClient, ok := rClient.(updateNonDefaultInterface)
+		if ok {
+			updateFunc = wepClient.UpdateNonDefault
+		} else {
+			// we're purposefully not going to consider this an error if UpdateNonDefaultInterface is not implemented
+			updateFunc = r.client.backend.Update
+		}
+	default:
+		updateFunc = r.client.backend.Update
+	}
+
+	return r.update(ctx, res, opts, updateFunc)
+}
+
+// Update takes the representation of a WorkloadEndpoint and updates it. Returns the stored
+// representation of the WorkloadEndpoint, and an error, if there is any.
+func (r workloadEndpoints) Update(ctx context.Context, res *apiv3.WorkloadEndpoint, opts options.SetOptions) (*apiv3.WorkloadEndpoint, error) {
+	return r.update(ctx, res, opts, r.client.backend.Update)
 }
 
 // Delete takes name of the WorkloadEndpoint and deletes it. Returns an error if one occurs.
