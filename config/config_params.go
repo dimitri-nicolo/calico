@@ -438,9 +438,8 @@ func (config *Config) OpenstackActive() bool {
 	return false
 }
 
-func (c *Config) EgressIpCheckEnabled() bool {
-	// Disabled for the moment. Will be properly enabled by other PR.
-	return false
+func (c *Config) EgressIPEnabled() bool {
+	return true
 }
 
 func (c *Config) IPSecEnabled() bool {

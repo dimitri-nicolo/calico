@@ -969,13 +969,13 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 				Comment: []string{"To workload, BPF will handle."},
 			})
 		}
-		t.InsertOrAppendRules("INPUT", inputRules)
-		t.InsertOrAppendRules("FORWARD", fwdRules)
+		t.SetRuleInsertions("INPUT", inputRules)
+		t.SetRuleInsertions("FORWARD", fwdRules)
 	}
 
 	for _, t := range d.iptablesNATTables {
 		t.UpdateChains(d.ruleRenderer.StaticNATPostroutingChains(t.IPVersion))
-		t.InsertOrAppendRules("POSTROUTING", []iptables.Rule{{
+		t.SetRuleInsertions("POSTROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPostrouting},
 		}})
 	}
@@ -997,46 +997,46 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	for _, t := range d.iptablesRawTables {
 		rawChains := d.ruleRenderer.StaticRawTableChains(t.IPVersion)
 		t.UpdateChains(rawChains)
-		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
-		t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
+		t.SetRuleInsertions("OUTPUT", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawOutput},
 		}})
 	}
 	for _, t := range d.iptablesFilterTables {
 		filterChains := d.ruleRenderer.StaticFilterTableChains(t.IPVersion)
 		t.UpdateChains(filterChains)
-		t.InsertOrAppendRules("FORWARD", []iptables.Rule{{
+		t.SetRuleInsertions("FORWARD", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainFilterForward},
 		}})
-		t.InsertOrAppendRules("INPUT", []iptables.Rule{{
+		t.SetRuleInsertions("INPUT", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainFilterInput},
 		}})
-		t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
+		t.SetRuleInsertions("OUTPUT", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainFilterOutput},
 		}})
 	}
 	for _, t := range d.iptablesNATTables {
 		t.UpdateChains(d.ruleRenderer.StaticNATTableChains(t.IPVersion))
-		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPrerouting},
 		}})
 		if d.config.EgressIpEnabled {
-			t.AppendRules("PREROUTING", []iptables.Rule{{
+			t.SetRuleAppends("PREROUTING", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainNATPreroutingEgressSetMark},
 			}})
 		}
-		t.InsertOrAppendRules("POSTROUTING", []iptables.Rule{{
+		t.SetRuleInsertions("POSTROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPostrouting},
 		}})
-		t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
+		t.SetRuleInsertions("OUTPUT", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATOutput},
 		}})
 	}
 	for _, t := range d.iptablesMangleTables {
 		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
-		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainManglePrerouting},
 		}})
 	}
