@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ var _ = Describe("Masquerade manager", func() {
 			IptablesMarkScratch1: 0x8,
 			IptablesMarkDrop:     0x10,
 			IptablesMarkIPsec:    0x20,
+			IptablesMarkEgress:   0x40,
 			IptablesMarkEndpoint: 0x11110000,
 		})
 		masqMgr = newMasqManager(ipSets, natTable, ruleRenderer, 1024, 4)

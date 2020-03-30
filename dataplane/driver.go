@@ -63,7 +63,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		markAccept, _ := markBitsManager.NextSingleBitMark()
 		markPass, _ := markBitsManager.NextSingleBitMark()
 		markDrop, _ := markBitsManager.NextSingleBitMark()
-		var markIPsec uint32
+		var markIPsec, markEgressIP uint32
 		if configParams.IPSecEnabled() {
 			log.Info("IPsec enabled, allocating a mark bit")
 			markIPsec, _ = markBitsManager.NextSingleBitMark()
@@ -72,6 +72,16 @@ func StartDataplaneDriver(configParams *config.Config,
 					"Name":     "felix-iptables",
 					"MarkMask": configParams.IptablesMarkMask,
 				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
+			}
+		}
+		if configParams.EgressIpCheckEnabled() {
+			log.Info("Egress IP enabled, allocating a mark bit")
+			markEgressIP, _ = markBitsManager.NextSingleBitMark()
+			if markEgressIP == 0 {
+				log.WithFields(log.Fields{
+					"Name":     "felix-iptables",
+					"MarkMask": configParams.IptablesMarkMask,
+				}).Panic("Failed to allocate a mark bit for Egress IP, not enough mark bits available.")
 			}
 		}
 		// Short-lived mark bits for local calculations within a chain.
@@ -136,6 +146,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkPass:            markPass,
 				IptablesMarkDrop:            markDrop,
 				IptablesMarkIPsec:           markIPsec,
+				IptablesMarkEgress:          markEgressIP,
 				IptablesMarkScratch0:        markScratch0,
 				IptablesMarkScratch1:        markScratch1,
 				IptablesMarkEndpoint:        markEndpointMark,
@@ -150,6 +161,8 @@ func StartDataplaneDriver(configParams *config.Config,
 				VXLANTunnelAddress: configParams.IPv4VXLANTunnelAddr,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
+
+				EgressIpEnabled: configParams.EgressIpCheckEnabled(),
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
@@ -201,6 +214,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPSecLogLevel:              configParams.IPSecLogLevel,
 			IPSecRekeyTime:             configParams.IPSecRekeyTime,
 			IPSecPolicyRefreshInterval: configParams.IPSecPolicyRefreshInterval,
+
+			EgressIpEnabled: configParams.EgressIpCheckEnabled(),
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 			ChildExitedRestartCallback:   childExitedRestartCallback,

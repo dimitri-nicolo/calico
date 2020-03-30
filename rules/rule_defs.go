@@ -47,12 +47,14 @@ const (
 	ChainFailsafeIn  = ChainNamePrefix + "failsafe-in"
 	ChainFailsafeOut = ChainNamePrefix + "failsafe-out"
 
-	ChainNATPrerouting  = ChainNamePrefix + "PREROUTING"
-	ChainNATPostrouting = ChainNamePrefix + "POSTROUTING"
-	ChainNATOutput      = ChainNamePrefix + "OUTPUT"
-	ChainNATOutgoing    = ChainNamePrefix + "nat-outgoing"
+	ChainNATPrerouting              = ChainNamePrefix + "PREROUTING"
+	ChainNATPreroutingEgressSetMark = ChainNamePrefix + "egress-set-mark"
+	ChainNATPostrouting             = ChainNamePrefix + "POSTROUTING"
+	ChainNATOutput                  = ChainNamePrefix + "OUTPUT"
+	ChainNATOutgoing                = ChainNamePrefix + "nat-outgoing"
 
-	ChainManglePrerouting = ChainNamePrefix + "PREROUTING"
+	ChainManglePrerouting                  = ChainNamePrefix + "PREROUTING"
+	ChainManglePreroutingEgressRestoremark = ChainNamePrefix + "egress-restore-mark"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -307,6 +309,7 @@ type Config struct {
 	IptablesMarkPass     uint32
 	IptablesMarkDrop     uint32
 	IptablesMarkIPsec    uint32
+	IptablesMarkEgress   uint32
 	IptablesMarkScratch0 uint32
 	IptablesMarkScratch1 uint32
 	IptablesMarkEndpoint uint32
@@ -352,6 +355,7 @@ type Config struct {
 
 	EnableNflogSize bool
 	IPSecEnabled    bool
+	EgressIpEnabled  bool
 
 	DNSTrustedServers []config.ServerPort
 }
@@ -366,8 +370,9 @@ func (c *Config) validate() {
 	for i := 0; i < myValue.NumField(); i++ {
 		fieldName := myType.Field(i).Name
 		if fieldName == "IptablesMarkNonCaliEndpoint" ||
-			fieldName == "IptablesMarkIPsec" {
-			// These mark bits are only used when needed (by IPVS and IPsec support, respectively) so we allow them to
+			fieldName == "IptablesMarkIPsec" ||
+			fieldName == "IptablesMarkEgress" {
+			// These mark bits are only used when needed (by IPVS, IPsec and Egress IP support, respectively) so we allow them to
 			// be zero.
 			continue
 		}

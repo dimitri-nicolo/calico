@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -225,4 +225,44 @@ func (g NoTrackAction) ToFragment(features *Features) string {
 
 func (g NoTrackAction) String() string {
 	return "NOTRACK"
+}
+
+type SaveConnMarkAction struct {
+	SaveMask     uint32
+	TypeConnMark struct{}
+}
+
+func (c SaveConnMarkAction) ToFragment(features *Features) string {
+	var mask uint32
+	if c.SaveMask == 0 {
+		// If Mask field is ignored, save full mark.
+		mask = 0xffffffff
+	} else {
+		mask = c.SaveMask
+	}
+	return fmt.Sprintf("--jump CONNMARK --save-mark --mark %#x", mask)
+}
+
+func (c SaveConnMarkAction) String() string {
+	return fmt.Sprintf("SaveConnMarkWithMask:%#x", c.SaveMask)
+}
+
+type RestoreConnMarkAction struct {
+	RestoreMask  uint32
+	TypeConnMark struct{}
+}
+
+func (c RestoreConnMarkAction) ToFragment(features *Features) string {
+	var mask uint32
+	if c.RestoreMask == 0 {
+		// If Mask field is ignored, restore full mark.
+		mask = 0xffffffff
+	} else {
+		mask = c.RestoreMask
+	}
+	return fmt.Sprintf("--jump CONNMARK --restore-mark --mark %#x", mask)
+}
+
+func (c RestoreConnMarkAction) String() string {
+	return fmt.Sprintf("RestoreConnMarkWithMask:%#x", c.RestoreMask)
 }

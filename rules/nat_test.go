@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ var _ = Describe("NAT", func() {
 			IPIPTunnelAddress:           nil,
 			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 			IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			IptablesMarkEgress:          0x4,
 			IptablesMarkAccept:          0x8,
 			IptablesMarkPass:            0x10,
 			IptablesMarkScratch0:        0x20,
@@ -310,6 +311,44 @@ var _ = Describe("NAT", func() {
 							NotDestIPSet("cali40all-hosts-net"),
 					},
 				},
+			}))
+		})
+	})
+
+	Describe("with Egress IP enabled", func() {
+		BeforeEach(func() { rrConfigNormal.EgressIpEnabled = true })
+
+		It("should render v4 rules correctly rules when active", func() {
+			Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+				Name: "cali-nat-outgoing",
+				Rules: []Rule{
+					{
+						Action: MasqAction{},
+						Match: Match().
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools").
+							NotMarkMatchesWithMask(rrConfigNormal.IptablesMarkEgress, rrConfigNormal.IptablesMarkEgress),
+					},
+				},
+			}))
+		})
+		It("should render v6 rules correctly rules when active", func() {
+			Expect(renderer.NATOutgoingChain(true, 6)).To(Equal(&Chain{
+				Name: "cali-nat-outgoing",
+				Rules: []Rule{
+					{
+						Action: MasqAction{},
+						Match: Match().
+							SourceIPSet("cali60masq-ipam-pools").
+							NotDestIPSet("cali60all-ipam-pools"),
+					},
+				},
+			}))
+		})
+		It("should render nothing when inactive", func() {
+			Expect(renderer.NATOutgoingChain(false, 4)).To(Equal(&Chain{
+				Name:  "cali-nat-outgoing",
+				Rules: nil,
 			}))
 		})
 	})

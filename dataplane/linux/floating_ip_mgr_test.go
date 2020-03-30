@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 				IPIPTunnelAddress:    nil,
 				IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				IptablesMarkEgress:   0x4,
 				IptablesMarkAccept:   0x8,
 				IptablesMarkPass:     0x10,
 				IptablesMarkScratch0: 0x20,

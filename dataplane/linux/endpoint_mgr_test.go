@@ -671,6 +671,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				IPIPTunnelAddress:           nil,
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				IptablesMarkEgress:          0x4,
 				IptablesMarkAccept:          0x8,
 				IptablesMarkPass:            0x10,
 				IptablesMarkScratch0:        0x20,
