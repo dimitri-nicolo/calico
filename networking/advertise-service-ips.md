@@ -61,7 +61,7 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 
 #### Advertise service cluster IP addresses
 
-1. Determine the service cluster IP range (or ranges, if your cluster is [dual stack]({{ site.baseurl }}/networking/dual-stack).)
+1. Determine the service cluster IP range (or ranges, if your cluster is [dual stack]({{ site.baseurl }}/networking/dual-stack)).
 
    The range(s) for your cluster can be inferred from the `--service-cluster-ip-range` option passed to the Kubernetes API server. For help, see the {% include open-new-window.html text='Kubernetes API server reference guide' url='https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/' %}.
 
@@ -73,16 +73,16 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 
 1. Based on above results, update or create a BGPConfiguration.
 
-   **Update default BGPConfiguration**. 
-     
+   **Update default BGPConfiguration**.
+
      Patch the BGPConfiguration using the following command, using your own service cluster IP CIDR in place of "10.0.0.0/24":
 
    ```bash
    kubectl patch bgpconfiguration.projectcalico.org default -p '{"spec":{"serviceClusterIPs": [{"cidr": "10.0.0.0/24"}]}}'
    ```
 
-   **Create default BGPConfiguration**.  
-     
+   **Create default BGPConfiguration**.
+
      Use the following sample command to create a default BGPConfiguration. Add your CIDR blocks, covering the cluster IPs to be advertised, in the `serviceClusterIPs` field, for example:
 
    ```bash
@@ -131,7 +131,7 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
 1. Based on above results, update or create a BGPConfiguration.
 
    **Update default BGPConfiguration**
-   
+
      Patch the BGPConfiguration using the following command, adding your own service external IP CIDRs:
 
    ```bash
@@ -139,7 +139,7 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
    ```
 
    **Create default BGPConfiguration**
-     
+
      Use the following sample command to create a default BGPConfiguration. Add your CIDR blocks for external IPs to be advertised in the `serviceExternalIPs` field.
 
    ```bash
@@ -157,9 +157,7 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
 
    For help see, [BGP configuration resource]({{ site.baseurl }}/reference/resources/bgpconfig).
 
-1. Assign external IP from specified CIDR to a Kubernetes service via `externalIPs` field of type string array.
-
-   For help see, {% include open-new-window.html text='Kubernetes API reference' url='https://kubernetes.io/docs/reference/kubernetes-api/api-index/' %}.
+1. When configuring a Kubernetes service that you want to be reachable via an external IP, specify that external IP in the service's `externalIPs` field.
 
 ### Tutorial
 
