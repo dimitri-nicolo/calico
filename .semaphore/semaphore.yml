@@ -1,0 +1,25 @@
+version: v1.0
+name: First pipeline
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: Build and Test
+    task:
+      prologue:
+        commands:
+          - chmod 0600 ~/.keys/*
+          - ssh-add ~/.keys/*
+          - checkout
+      jobs:
+        - name: make build
+          commands:
+            - echo "Building binary"
+            - make build
+        - name: make test
+          commands:
+            - echo "Testing"
+            - make test
+      secrets:
+        - name: marvin-github-ssh-private-key
