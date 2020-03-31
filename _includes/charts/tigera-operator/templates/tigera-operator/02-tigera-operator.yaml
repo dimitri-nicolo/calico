@@ -43,6 +43,8 @@ spec:
             - name: TIGERA_OPERATOR_INIT_IMAGE_VERSION
               value: {{.Values.tigeraOperator.version}}
 {{- if eq .Values.installation.kubernetesProvider "openshift" }}
+      imagePullSecrets:
+        - name: tigera-pull-secret
       initContainers:
         - name: create-initial-resources
           image: {{.Values.calicoctl.image}}:{{.Values.calicoctl.tag}}
