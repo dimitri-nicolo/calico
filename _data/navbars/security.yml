@@ -36,6 +36,8 @@ section:
       path: /security/generate-policy-recommendation
     - title: Calico Enterprise policy tutorial
       path: /security/simple-policy-cnx
+    - title: Federate tiers and policies
+      path: /reference/alpha/federation/installation
     - title: Policy for AWS security groups
       path: /security/aws-security-group-integration/
       section:
