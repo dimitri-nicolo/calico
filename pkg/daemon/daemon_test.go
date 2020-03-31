@@ -398,6 +398,10 @@ func (b *mockDatastore) GlobalAlerts() clientv3.GlobalAlertInterface {
 	return nil
 }
 
+func (b *mockDatastore) KubeControllersConfiguration() clientv3.KubeControllersConfigurationInterface{
+	panic("not implemented")
+}
+
 var _ RealClientV3 = (*mockDatastore)(nil)
 
 type dummySyncer struct {
