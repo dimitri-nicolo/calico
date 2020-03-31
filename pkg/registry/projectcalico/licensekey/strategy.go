@@ -58,10 +58,7 @@ func (apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Objec
 	}
 
 	aapiLicenseKey := obj.(*calico.LicenseKey)
-	if licClaims.Validate() != licClient.Valid {
-		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-			MaxNodes: *licClaims.Nodes}
-	} else {
+	if licClaims.Validate() == licClient.Valid {
 		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes}
@@ -77,10 +74,7 @@ func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.
 	}
 
 	newLicenseKey := obj.(*calico.LicenseKey)
-	if licClaims.Validate() != licClient.Valid {
-		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-			MaxNodes: *licClaims.Nodes}
-	} else {
+	if licClaims.Validate() == licClient.Valid {
 		newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 			MaxNodes: *licClaims.Nodes}
@@ -122,7 +116,7 @@ func (apiServerStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 	}
 	newLicenseKey := obj.(*calico.LicenseKey)
 	newLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
-		Expiry:   metav1.Time{licClaims.Expiry.Time()},
+		Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
 		MaxNodes: *licClaims.Nodes}
 }
 
