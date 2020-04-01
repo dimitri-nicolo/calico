@@ -399,6 +399,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
 
     installation:
       enabled: true
+      variant: TigeraSecureEnterprise
       kubernetesProvider: ""
 
     apiServer:
