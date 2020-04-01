@@ -169,6 +169,8 @@ var _ = Describe("Test Pod conversion", func() {
 				Namespace: "default",
 				Annotations: map[string]string{
 					"arbitrary": "annotation",
+					"egress.projectcalico.org/NamespaceSelector": "wblack == 'white'",
+					"egress.projectcalico.org/Selector":          "wred == 'green'",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
@@ -270,6 +272,12 @@ var _ = Describe("Test Pod conversion", func() {
 
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
+
+		// Check egress.
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressControl).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "wblack == 'white'",
+			Selector:          "wred == 'green'",
+		}))
 	})
 
 	It("should parse a Pod with dual stack IPs to a WorkloadEndpoint", func() {
@@ -2453,7 +2461,10 @@ var _ = Describe("Test Namespace conversion", func() {
 					"foo":   "bar",
 					"roger": "rabbit",
 				},
-				Annotations: map[string]string{},
+				Annotations: map[string]string{
+					"egress.projectcalico.org/NamespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/Selector":          "red == 'green'",
+				},
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -2479,6 +2490,12 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(labels["pcns.projectcalico.org/name"]).To(Equal("default"))
 		Expect(labels["pcns.foo"]).To(Equal("bar"))
 		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
+
+		// Check egress.
+		Expect(p.Value.(*apiv3.Profile).Spec.EgressControl).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+		}))
 	})
 
 	It("should parse a Namespace to a Profile with no labels", func() {
