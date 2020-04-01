@@ -149,14 +149,9 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, egress *v3.Eg
 	} else {
 		// Convert egress Selector and NamespaceSelector fields to a single selector
 		// expression in the same way we do for namespaced policy EntityRule selectors.
-		profile.egressSelector = updateprocessors.GetSelector(
-			&v3.EntityRule{
-				Selector:          egress.Selector,
-				NamespaceSelector: egress.NamespaceSelector,
-			},
+		profile.egressSelector = updateprocessors.GetEgressSelector(
+			egress,
 			strings.TrimPrefix(profileID, conversion.NamespaceProfileNamePrefix),
-			false, // matchSGs - not applicable to egress control
-			"egress",
 		)
 	}
 
