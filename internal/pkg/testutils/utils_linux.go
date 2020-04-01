@@ -166,6 +166,16 @@ func CreateContainerNamespace() (containerNs ns.NetNS, containerId string, err e
 	return
 }
 
+func CreateContainerWithIface(netconf, podName, podNamespace, ip, iface string) (containerID string, result *current.Result, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
+	targetNs, containerID, err = CreateContainerNamespace()
+	if err != nil {
+		return "", nil, nil, nil, nil, nil, err
+	}
+
+	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, iface, targetNs)
+	return
+}
+
 func CreateContainer(netconf, podName, podNamespace, ip string) (containerID string, result *current.Result, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
 	targetNs, containerID, err = CreateContainerNamespace()
 	if err != nil {
@@ -187,7 +197,7 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 		containerID = overrideContainerID
 	}
 
-	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", targetNs)
+	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "eth0", targetNs)
 	return
 }
 

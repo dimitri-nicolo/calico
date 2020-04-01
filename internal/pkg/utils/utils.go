@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -92,12 +92,20 @@ func nodenameFromFile(filename string) string {
 
 // CreateOrUpdate creates the WorkloadEndpoint if ResourceVersion is not specified,
 // or Update if it's specified.
-func CreateOrUpdate(ctx context.Context, client client.Interface, wep *api.WorkloadEndpoint) (*api.WorkloadEndpoint, error) {
-	if wep.ResourceVersion != "" {
-		return client.WorkloadEndpoints().Update(ctx, wep, options.SetOptions{})
+func CreateOrUpdate(ctx context.Context, client client.Interface, wep *api.WorkloadEndpoint, isDefault bool) (*api.WorkloadEndpoint, error) {
+	if isDefault {
+		if wep.ResourceVersion != "" {
+			return client.WorkloadEndpoints().Update(ctx, wep, options.SetOptions{})
+		}
+
+		return client.WorkloadEndpoints().Create(ctx, wep, options.SetOptions{})
 	}
 
-	return client.WorkloadEndpoints().Create(ctx, wep, options.SetOptions{})
+	if wep.ResourceVersion != "" {
+		return client.WorkloadEndpoints().UpdateNonDefault(ctx, wep, options.SetOptions{})
+	}
+
+	return client.WorkloadEndpoints().CreateNonDefault(ctx, wep, options.SetOptions{})
 }
 
 // AddIPAM calls through to the configured IPAM plugin.
@@ -579,13 +587,29 @@ func GetIdentifiers(args *skel.CmdArgs, nodename string) (*WEPIdentifiers, error
 	return &epIDs, nil
 }
 
-func GetHandleID(netName, containerID, workload string) string {
+// GetHandleID creates an IPAM handle in the legacy format of <netName>.<containerID>
+func GetLegacyHandleID(netName, containerID, workload string) string {
 	handleID := fmt.Sprintf("%s.%s", netName, containerID)
+
 	logrus.WithFields(logrus.Fields{
 		"HandleID":    handleID,
 		"Network":     netName,
 		"Workload":    workload,
 		"ContainerID": containerID,
+	}).Debug("Generated legacy IPAM handle")
+	return handleID
+}
+
+// GetHandleID creates an IPAM handle from the given parameters. The format will is <netName>.<containerID>.<endpoint>
+func GetHandleID(netName, containerID, workload, endpoint string) string {
+	handleID := fmt.Sprintf("%s.%s.%s", netName, containerID, endpoint)
+
+	logrus.WithFields(logrus.Fields{
+		"HandleID":    handleID,
+		"Network":     netName,
+		"Workload":    workload,
+		"ContainerID": containerID,
+		"Endpoint":    endpoint,
 	}).Debug("Generated IPAM handle")
 	return handleID
 }

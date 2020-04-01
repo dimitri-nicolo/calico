@@ -302,7 +302,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 		}
 
 		// Store allocation to Calico datastore.
-		handleID := utils.GetHandleID("k8s-pod-network", containerID, "")
+		handleID := utils.GetHandleID("k8s-pod-network", containerID, "eth0", "")
 		logCtxt.Info("assinging pod IP to Calico IPAM...")
 		if err = c.IPAM().AssignIP(ctxt, ipam.AssignIPArgs{
 			IP:       *ip,
