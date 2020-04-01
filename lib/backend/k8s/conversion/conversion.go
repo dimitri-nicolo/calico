@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
 var (
@@ -78,6 +79,28 @@ func (c Converter) ParseWorkloadEndpointName(workloadName string) (names.Workloa
 	return names.ParseWorkloadEndpointName(workloadName)
 }
 
+func (c Converter) egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec {
+	egressSelector := annotations[AnnotationEgressSelector]
+	if egressSelector != "" {
+		if _, err := selector.Parse(egressSelector); err != nil {
+			log.WithError(err).Errorf("Invalid selector expression in %v annotation: %v", AnnotationEgressSelector, err)
+			return nil
+		}
+	}
+	egressNamespaceSelector := annotations[AnnotationEgressNamespaceSelector]
+	if egressNamespaceSelector != "" {
+		if _, err := selector.Parse(egressNamespaceSelector); err != nil {
+			log.WithError(err).Errorf("Invalid selector expression in %v annotation: %v", AnnotationEgressNamespaceSelector, err)
+			return nil
+		}
+	}
+	if egressSelector+egressNamespaceSelector == "" {
+		// Neither annotation specified, so no egress spec.
+		return nil
+	}
+	return &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector}
+}
+
 // NamespaceToProfile converts a Namespace to a Calico Profile.  The Profile stores
 // labels from the Namespace which are inherited by the WorkloadEndpoints within
 // the Profile. This Profile also has the default ingress and egress rules, which are both 'allow'.
@@ -94,12 +117,7 @@ func (c Converter) NamespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 	labels[NamespaceLabelPrefix+NameLabel] = ns.Name
 
 	// Propagate egress annotations, if present.
-	var egress *apiv3.EgressSpec
-	egressSelector, _ := ns.Annotations[AnnotationEgressSelector]
-	egressNamespaceSelector, _ := ns.Annotations[AnnotationEgressNamespaceSelector]
-	if egressSelector+egressNamespaceSelector != "" {
-		egress = &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector}
-	}
+	egress := c.egressAnnotationsToV3Spec(ns.Annotations)
 
 	// Create the profile object.
 	name := NamespaceProfileNamePrefix + ns.Name
@@ -375,12 +393,7 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 	}
 
 	// Propagate egress annotations, if present.
-	var egress *apiv3.EgressSpec
-	egressSelector, _ := pod.Annotations[AnnotationEgressSelector]
-	egressNamespaceSelector, _ := pod.Annotations[AnnotationEgressNamespaceSelector]
-	if egressSelector+egressNamespaceSelector != "" {
-		egress = &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector}
-	}
+	egress := c.egressAnnotationsToV3Spec(pod.Annotations)
 
 	// Create the workload endpoint.
 	wep := apiv3.NewWorkloadEndpoint()
