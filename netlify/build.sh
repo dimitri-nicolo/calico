@@ -65,10 +65,15 @@ function build_archives() {
 }
 
 echo "[INFO] building master site"
-build_master
+build_master &
 
 echo "[INFO] building archives"
-build_archives
+build_archives &
+
+echo [INFO] Waiting for master and archive builds to complete: `date` ...
+wait
+echo [INFO] Master and archive builds complete: `date`.
+
 mv _site/sitemap.xml _site/release-legacy-sitemap.xml
 
 echo "[INFO] building current release"
