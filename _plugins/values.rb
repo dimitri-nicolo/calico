@@ -443,6 +443,8 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     configmapReload:
       image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
       tag: #{versions["configmap-reload"].version}
+
+    includeCoreChart: false
     EOF
   else 
     versionsYml = <<~EOF
