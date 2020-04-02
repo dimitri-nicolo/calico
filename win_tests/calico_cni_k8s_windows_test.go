@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/cni-plugin/pkg/dataplane/windows"
+
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/types/current"
 	. "github.com/onsi/ginkgo"
@@ -1361,7 +1363,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
 				_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
-				nwName := utils.CreateNetworkName(networkName, subNet)
+				nwName := windows.CreateNetworkName(networkName, subNet)
 				if nwName != lastNWName {
 					lastNWName = nwName
 					nwsName = append(nwsName, nwName)
@@ -1413,7 +1415,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
 				_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
-				nwName = utils.CreateNetworkName(networkName, subNet)
+				nwName = windows.CreateNetworkName(networkName, subNet)
 				log.Debugf("nwName = %s lastNWName = %s nwsName = %v", nwName, lastNWName, nwsName)
 				if nwName != lastNWName {
 					lastNWName = nwName
@@ -1452,7 +1454,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
 				_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
-				podNwName := utils.CreateNetworkName(networkName, subNet)
+				podNwName := windows.CreateNetworkName(networkName, subNet)
 				log.Debugf("podNwName = %s lastNWName = %s nwsName = %v", podNwName, lastNWName, nwsName)
 				if podNwName != lastNWName {
 					lastNWName = podNwName
@@ -1764,7 +1766,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Spec.IPv4VXLANTunnelAddr).Should(Equal("10.254.112.1"))
 			_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
-			mac, err := utils.GetDRMACAddr(networkName, subNet)
+			mac, err := windows.GetDRMACAddr(networkName, subNet)
 			Expect(mac).ShouldNot(Equal(""))
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Spec.VXLANTunnelMACAddr).Should(Equal(mac.String()))
@@ -1777,7 +1779,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(hnsNetwork.Type).Should(Equal("Overlay"))
 
 			mgmtIP := hnsNetwork.ManagementIP
-			macAddr := utils.GetMacAddr(mgmtIP)
+			macAddr := windows.GetMacAddr(mgmtIP)
 
 			// Ensure host and container endpoints are created
 			hostEP, err := hcsshim.GetHNSEndpointByName("calico-fv_ep")

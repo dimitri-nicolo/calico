@@ -96,6 +96,7 @@ type NetConf struct {
 	EtcdCaCertFile       string            `json:"etcd_ca_cert_file"`
 	ContainerSettings    ContainerSettings `json:"container_settings,omitempty"`
 	IncludeDefaultRoutes bool              `json:"include_default_routes,omitempty"`
+	DataplaneOptions     map[string]interface{} `json:"dataplane_options,omitempty"`
 
 	// Windows-specific configuration.
 

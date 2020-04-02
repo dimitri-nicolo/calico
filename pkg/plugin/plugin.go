@@ -30,6 +30,7 @@ import (
 	cniSpecVersion "github.com/containernetworking/cni/pkg/version"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/dataplane"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"
 	"github.com/projectcalico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -346,8 +347,16 @@ func cmdAdd(args *skel.CmdArgs) error {
 			logger.Infof("Calico CNI using IPs: %s", endpoint.Spec.IPNetworks)
 
 			// 3) Set up the veth
-			hostVethName, contVethMac, err := utils.DoNetworking(
-				ctx, calicoClient, args, conf, result, logger, "", utils.DefaultRoutes)
+			d, err := dataplane.GetDataplane(conf, logger)
+			if err != nil {
+				return err
+			}
+
+			// Select the first 11 characters of the containerID for the host veth.
+			desiredVethName := "cali" + args.ContainerID[:utils.Min(11, len(args.ContainerID))]
+			hostVethName, contVethMac, err := d.DoNetworking(
+				ctx, calicoClient, args, result, desiredVethName, utils.DefaultRoutes, endpoint, map[string]string{})
+
 			if err != nil {
 				// Cleanup IP allocation and return the error.
 				utils.ReleaseIPAllocation(logger, conf, args)
@@ -524,7 +533,12 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	// Clean up namespace by removing the interfaces.
-	err = utils.CleanUpNamespace(args, logger)
+	d, err := dataplane.GetDataplane(conf, logger)
+	if err != nil {
+		return err
+	}
+
+	err = d.CleanUpNamespace(args)
 	if err != nil {
 		logger.WithError(err).Error("Failed to clean up namespace")
 		return err

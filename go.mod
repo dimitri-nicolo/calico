@@ -10,6 +10,7 @@ require (
 	github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
 	github.com/containernetworking/plugins v0.0.0-20180925020009-646dbbace1b1
 	github.com/coreos/go-iptables v0.3.0 // indirect
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/juju/clock v0.0.0-20180808021310-bab88fc67299
@@ -34,6 +35,8 @@ require (
 	github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 // indirect
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
+	golang.org/x/net v0.0.0-20191112182307-2180aed22343
+	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2

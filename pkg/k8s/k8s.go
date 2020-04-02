@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/dataplane"
 	"github.com/projectcalico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
@@ -59,6 +60,11 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		"Namespace":        epIDs.Namespace,
 	})
 
+	d, err := dataplane.GetDataplane(conf, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	logger.Info("Extracted identifiers for CmdAddK8s")
 	if runtime.GOOS == "windows" {
 		// Windows special case: Kubelet has a hacky implementation of GetPodNetworkStatus() that uses a
@@ -75,7 +81,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 			// is a static value. The other requests come from checks on the other containers.
 			// Application containers should be networked with the pause container endpoint to reflect DNS details.
 			logger.Info("Non-pause container specified, doing a lookup-only request.")
-			err = utils.NetworkApplicationContainer(args)
+			err = d.NetworkApplicationContainer(args)
 			if err != nil {
 				logger.WithError(err).Warn("Failed to network container with pause container endpoint.")
 				return result, err
@@ -406,8 +412,8 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	}
 
 	// Whether the endpoint existed or not, the veth needs (re)creating.
-	hostVethName := k8sconversion.VethNameForWorkload(epIDs.Namespace, epIDs.Pod)
-	_, contVethMac, err := utils.DoNetworking(ctx, calicoClient, args, conf, result, logger, hostVethName, routes)
+	desiredVethName := k8sconversion.VethNameForWorkload(epIDs.Namespace, epIDs.Pod)
+	hostVethName, contVethMac, err := d.DoNetworking(ctx, calicoClient, args, result, desiredVethName, routes, endpoint, annot)
 	if err != nil {
 		logger.WithError(err).Error("Error setting up networking")
 		releaseIPAM()
@@ -429,7 +435,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 		var err error
 		for attempts := 3; attempts > 0; attempts-- {
-			err = utils.EnsureVXLANTunnelAddr(ctx, calicoClient, epIDs.Node, subNet, conf)
+			err = d.EnsureVXLANTunnelAddr(ctx, calicoClient, epIDs.Node, subNet)
 			if err != nil {
 				logger.WithError(err).Warn("Failed to set node's VXLAN tunnel IP, node may not receive traffic.  May retry...")
 				time.Sleep(1 * time.Second)
@@ -488,6 +494,11 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 // it means the DEL is for an old sandbox and the pod is still running. We should still clean up IPAM allocations, since they are identified by the
 // container ID rather than the pod name and namespace. If they do match, then we can delete the workload endpoint.
 func CmdDelK8s(ctx context.Context, c calicoclient.Interface, epIDs utils.WEPIdentifiers, args *skel.CmdArgs, conf types.NetConf, logger *logrus.Entry) error {
+	d, err := dataplane.GetDataplane(conf, logger)
+	if err != nil {
+		return err
+	}
+
 	wep, err := c.WorkloadEndpoints().Get(ctx, epIDs.Namespace, epIDs.WEPName, options.GetOptions{})
 	if err != nil {
 		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
@@ -530,7 +541,7 @@ func CmdDelK8s(ctx context.Context, c calicoclient.Interface, epIDs utils.WEPIde
 
 	// Clean up namespace by removing the interfaces.
 	logger.Info("Cleaning up netns")
-	err = utils.CleanUpNamespace(args, logger)
+	err = d.CleanUpNamespace(args)
 	if err != nil {
 		return err
 	}
