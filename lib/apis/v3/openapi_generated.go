@@ -7225,8 +7225,7 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common
 					"etcdV3CompactionPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EtcdV3CompactionPeriod is the period between etcdv3 compaction requests. Set to 0 to disable. [Default: 10m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"controllers": {
@@ -7240,7 +7239,7 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -7655,13 +7654,14 @@ func schema_libcalico_go_lib_apis_v3_NamespaceControllerConfig(ref common.Refere
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8049,8 +8049,7 @@ func schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref common.ReferenceCa
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"syncLabels": {
@@ -8070,7 +8069,7 @@ func schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8207,13 +8206,14 @@ func schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref common.Reference
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9185,13 +9185,14 @@ func schema_libcalico_go_lib_apis_v3_ServiceAccountControllerConfig(ref common.R
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -10073,13 +10074,14 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointControllerConfig(ref common
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
