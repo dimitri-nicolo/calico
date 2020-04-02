@@ -781,6 +781,8 @@ github.com/tigera/licensing v0.0.0-20200319192200-2922adbd39e9 h1:kWRtnncJf07ptD
 github.com/tigera/licensing v0.0.0-20200319192200-2922adbd39e9/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v0.0.0-20200324041600-0753b0f90e1c h1:sQG9yNwKJmKc34d2QQAUFgFb5uQyA1Ylc0bNUc4100A=
 github.com/tigera/licensing v0.0.0-20200324041600-0753b0f90e1c/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
+github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 h1:xM0NXtWnlqB83al1HoHAODwZc2Y/0SzclonznKHw9wQ=
+github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v1.0.1-0.20200319192200-2922adbd39e9 h1:MJNxGuNjm3LUepFhADlK+NmQ45r3c+NTHOT4flWRaas=
 github.com/tigera/licensing v1.0.1-0.20200319192200-2922adbd39e9/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v1.0.1-0.20200324041600-0753b0f90e1c h1:2TEHzxqijRWyl+dror7Kks+dKkIivy0SYUjFPu8bWRc=
