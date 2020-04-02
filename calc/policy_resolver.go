@@ -216,7 +216,7 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 
 	egressIPSetID := ""
 	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
-		egressIPSetID, _ = pr.egressIPSetIDs[key]
+		egressIPSetID = pr.egressIPSetIDs[key]
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)

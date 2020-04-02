@@ -141,7 +141,7 @@ func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
 	if d.isDomainSet {
 		return proto.IPSetUpdate_DOMAIN
 	}
-	if d.isDomainSet {
+	if d.isEgressSelector {
 		return proto.IPSetUpdate_EGRESS_IP
 	}
 	return proto.IPSetUpdate_NET
