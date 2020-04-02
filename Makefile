@@ -98,14 +98,7 @@ endif
 build-all: $(addprefix bin/ingress-collector-,$(VALIDARCHES))
 
 .PHONY: build
-## Build the binary for the current architecture and platform
-# Instead of adding a bin/ingress-collector as a dependency to build, we want
-# 'build' to recursively make bin/ingress-collector. This is intentional!
-# This doesn't affect CI (except slowing down binary building a little) AFIU.
-# The advantage being that it force Make to avoid pruning binary and its
-# dependencies because we are forcing Make to rebuild its internal DAG.
-build:
-	$(MAKE) bin/ingress-collector-$(ARCH)
+build: bin/ingress-collector-$(ARCH)
 
 bin/ingress-collector-amd64: ARCH=amd64
 bin/ingress-collector-arm64: ARCH=arm64
