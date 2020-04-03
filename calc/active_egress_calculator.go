@@ -72,7 +72,7 @@ type epData struct {
 	activeSelector string
 
 	// This endpoint's profile IDs.
-	profileIDs set.Set
+	profileIDs []string
 }
 
 // Information that we track for each active egress selector.
@@ -192,7 +192,15 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, profileExists
 
 		// The remaining possibilities require checking if the endpoint uses the profile
 		// that is changing.
-		if !epData.profileIDs.Contains(profileID) {
+		endpointUsesProfile := func() bool {
+			for _, id := range epData.profileIDs {
+				if id == profileID {
+					return true
+				}
+			}
+			return false
+		}
+		if !endpointUsesProfile() {
 			// Endpoint doesn't use this profile.
 			continue
 		}
@@ -208,14 +216,13 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, profileExists
 			// Spin through endpoint's profiles to find the first one, if any, that
 			// provides an egress selector.
 			epData.activeSelector = ""
-			epData.profileIDs.Iter(func(item interface{}) error {
-				profile := aec.profiles[item.(string)]
+			for _, profileID := range epData.profileIDs {
+				profile := aec.profiles[profileID]
 				if profile.egressSelector != "" {
 					epData.activeSelector = profile.egressSelector
-					return set.StopIteration
+					break
 				}
-				return nil
-			})
+			}
 		}
 
 		// Push selector change to IP set member index and policy resolver.
@@ -242,7 +249,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	// Find or create the data for this endpoint.
 	ep, exists := aec.endpoints[key]
 	if !exists {
-		ep = &epData{profileIDs: set.New()}
+		ep = &epData{}
 		aec.endpoints[key] = ep
 	}
 
@@ -253,8 +260,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	// the profiles, if the endpoint itself doesn't have one.  It's undefined behaviour if more
 	// than one profile specifies an egress selector; we normally expect only one profile to do
 	// this, the one corresponding to the namespace.
-	oldProfileIDs := ep.profileIDs
-	ep.profileIDs = set.New()
+	oldProfileIDs := set.FromArray(ep.profileIDs)
 	ep.localSelector = endpointSelector
 	ep.activeSelector = endpointSelector
 	for _, id := range profileIDs {
@@ -268,11 +274,11 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 			}
 			aec.profiles[id].endpointCount += 1
 		}
-		ep.profileIDs.Add(id)
 		if ep.activeSelector == "" {
 			ep.activeSelector = aec.profiles[id].egressSelector
 		}
 	}
+	ep.profileIDs = profileIDs
 
 	// Reduce reference count for profiles that the endpoint is no longer using.
 	oldProfileIDs.Iter(aec.decEndpointCount)
@@ -299,7 +305,7 @@ func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey)
 	delete(aec.endpoints, key)
 
 	// Reduce reference count for profiles that this endpoint was using.
-	ep.profileIDs.Iter(aec.decEndpointCount)
+	set.FromArray(ep.profileIDs).Iter(aec.decEndpointCount)
 
 	// Decref this endpoint's selector.
 	aec.decRefSelector(ep.activeSelector)
