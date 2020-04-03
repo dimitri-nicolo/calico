@@ -112,7 +112,7 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 			if update.Value != nil {
 				log.Debugf("Updating AEC with profile %v", key)
 				profile := update.Value.(*v3.Profile)
-				aec.updateProfile(key.Name, profile.Spec.EgressControl)
+				aec.updateProfile(key.Name, profile.Spec.EgressGateway)
 			} else {
 				// We never completely delete profile data from this component.  For
 				// our purposes, a profile being deleted is equivalent to it not
@@ -149,7 +149,7 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, egress *v3.Eg
 	} else {
 		// Convert egress Selector and NamespaceSelector fields to a single selector
 		// expression in the same way we do for namespaced policy EntityRule selectors.
-		profile.egressSelector = updateprocessors.GetEgressSelector(
+		profile.egressSelector = updateprocessors.GetEgressGatewaySelector(
 			egress,
 			strings.TrimPrefix(profileID, conversion.NamespaceProfileNamePrefix),
 		)
