@@ -4,7 +4,7 @@ MAINTAINER spike@tigera.io
 USER root
 
 RUN apk add --update --virtual .build-deps \
-        build-base=0.5-r1 ruby-dev=2.5.7-r0 \
+        build-base=0.5-r1 ruby-dev=2.5.8-r0 \
  && gem install \
         fluent-plugin-elasticsearch:4.0.5 fluent-plugin-s3:1.3.0 \
         fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
