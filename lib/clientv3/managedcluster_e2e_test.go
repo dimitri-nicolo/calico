@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package clientv3_test
 
@@ -25,6 +25,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 	ctx := context.Background()
 	name1 := "cluster-1"
 	name2 := "cluster-2"
+	invalidClusterName := "cluster"
 	spec1 := apiv3.ManagedClusterSpec{
 		InstallationManifest: "manifest 1",
 	}
@@ -237,6 +238,21 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 		// Pass two fully populated ManagedClusterSpec instances and expect the series of operations to succeed
 		Entry("Fully populated ManagedClusterSpec instances", name1, name2, spec1, spec2),
 	)
+
+	Describe("ManagedCluster Create", func() {
+		It("should not allow cluster with name \"cluster\"", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: invalidClusterName, ResourceVersion: "12345"},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(ContainSubstring("Invalid name for managed cluster"))
+
+		})
+	})
 
 	Describe("ManagedCluster watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {

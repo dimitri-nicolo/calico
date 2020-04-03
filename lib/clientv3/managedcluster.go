@@ -1,9 +1,11 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package clientv3
 
 import (
 	"context"
+
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -31,6 +33,19 @@ type managedClusters struct {
 func (r managedClusters) Create(ctx context.Context, res *apiv3.ManagedCluster, opts options.SetOptions) (*apiv3.ManagedCluster, error) {
 	if err := validator.Validate(res); err != nil {
 		return nil, err
+	}
+
+	// Management and standalone cluster use *.cluster.* as Elasticsearch index name. Do not allow
+	// the word "cluster" as managed cluster name to maintain separate index for each cluster.
+	var invalidManagedClusterName = "cluster"
+	if res.ObjectMeta.Name == invalidManagedClusterName {
+		return nil, cerrors.ErrorValidation{
+			ErroredFields: []cerrors.ErroredField{{
+				Name:   "Metadata.Name",
+				Reason: "Invalid name for managed cluster, \"cluster\" is a reserved value.",
+				Value:  res.ObjectMeta.Name,
+			}},
+		}
 	}
 
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindManagedCluster, res)
