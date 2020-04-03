@@ -55,6 +55,11 @@ type ActiveEgressCalculator struct {
 type prData struct {
 	// The egress selector for this profile.
 	egressSelector string
+
+	// References: 1 for the defining Profile resource and 1 for each active local endpoints
+	// that uses that profile.
+	profileExists bool
+	endpointCount int
 }
 
 // Information that we track for each active local endpoint.
@@ -112,13 +117,10 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 			if update.Value != nil {
 				log.Debugf("Updating AEC with profile %v", key)
 				profile := update.Value.(*v3.Profile)
-				aec.updateProfile(key.Name, profile.Spec.EgressGateway)
+				aec.updateProfile(key.Name, true, profile.Spec.EgressGateway)
 			} else {
-				// We never completely delete profile data from this component.  For
-				// our purposes, a profile being deleted is equivalent to it not
-				// specifying egress selectors any more.
 				log.Debugf("'Deleting' profile %v from AEC", key)
-				aec.updateProfile(key.Name, nil)
+				aec.updateProfile(key.Name, false, nil)
 			}
 		default:
 			// Ignore other kinds of v3 resource.
@@ -131,13 +133,18 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 	return
 }
 
-func (aec *ActiveEgressCalculator) updateProfile(profileID string, egress *v3.EgressSpec) {
+func (aec *ActiveEgressCalculator) updateProfile(profileID string, profileExists bool, egress *v3.EgressSpec) {
 	// Find or create the data for this profile.
 	profile, exists := aec.profiles[profileID]
 	if !exists {
 		profile = &prData{}
 		aec.profiles[profileID] = profile
 	}
+	if profile.endpointCount == 0 && !profileExists {
+		delete(aec.profiles, profileID)
+		return
+	}
+	profile.profileExists = profileExists
 
 	// Note the existing selector, which may be about to be overwritten.
 	oldSelector := profile.egressSelector
@@ -235,7 +242,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	// Find or create the data for this endpoint.
 	ep, exists := aec.endpoints[key]
 	if !exists {
-		ep = &epData{}
+		ep = &epData{profileIDs: set.New()}
 		aec.endpoints[key] = ep
 	}
 
@@ -246,13 +253,20 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	// the profiles, if the endpoint itself doesn't have one.  It's undefined behaviour if more
 	// than one profile specifies an egress selector; we normally expect only one profile to do
 	// this, the one corresponding to the namespace.
+	oldProfileIDs := ep.profileIDs
 	ep.profileIDs = set.New()
 	ep.localSelector = endpointSelector
 	ep.activeSelector = endpointSelector
 	for _, id := range profileIDs {
-		// Find or create the data for this profile.
-		if _, exists := aec.profiles[id]; !exists {
-			aec.profiles[id] = &prData{}
+		if oldProfileIDs.Contains(id) {
+			// Endpoint was already using this profile.
+			oldProfileIDs.Discard(id)
+		} else {
+			// Find or create the data for this profile.
+			if _, exists := aec.profiles[id]; !exists {
+				aec.profiles[id] = &prData{}
+			}
+			aec.profiles[id].endpointCount += 1
 		}
 		ep.profileIDs.Add(id)
 		if ep.activeSelector == "" {
@@ -260,8 +274,20 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 		}
 	}
 
+	// Reduce reference count for profiles that the endpoint is no longer using.
+	oldProfileIDs.Iter(aec.decEndpointCount)
+
 	// Push selector change to IP set member index and policy resolver.
 	aec.updateEndpointSelector(key, oldSelector, ep.activeSelector)
+}
+
+func (aec *ActiveEgressCalculator) decEndpointCount(item interface{}) error {
+	id := item.(string)
+	aec.profiles[id].endpointCount -= 1
+	if aec.profiles[id].endpointCount == 0 && !aec.profiles[id].profileExists {
+		delete(aec.profiles, id)
+	}
+	return nil
 }
 
 func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey) {
@@ -271,6 +297,9 @@ func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey)
 		return
 	}
 	delete(aec.endpoints, key)
+
+	// Reduce reference count for profiles that this endpoint was using.
+	ep.profileIDs.Iter(aec.decEndpointCount)
 
 	// Decref this endpoint's selector.
 	aec.decRefSelector(ep.activeSelector)
