@@ -182,10 +182,10 @@ update-pins: replace-libcalico-pin update-confd-pin replace-felix-pin replace-ty
 ###############################################################################
 # Building the binary
 ###############################################################################
-build:
-	$(MAKE) $(NODE_CONTAINER_BINARY)
-
-commit-pin-updates: update-pins build git-status git-commit ci
+# build target is called from commit-pin-updates and it is essential that the
+# MAKECMDGOALS remains as "commit-pin-updates" for various go flags to be set
+# appropriately.
+build: $(NODE_CONTAINER_BINARY)
 
 .PHONY: remote-deps
 remote-deps: mod-download
