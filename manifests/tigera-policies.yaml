@@ -1,5 +1,3 @@
----
-
 # Tier containing policies to allow access to Calico Enterprise.
 apiVersion: projectcalico.org/v3
 kind: Tier
