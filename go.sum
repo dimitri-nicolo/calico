@@ -709,6 +709,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200324201538-01e3cbe6b3af h1:b
 github.com/tigera/libcalico-go-private v1.7.2-0.20200324201538-01e3cbe6b3af/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200330205903-19b2b3637426 h1:tn1exO9xZ67SGPctGwRir9nfrocvpiHl9K9dvXRAgOo=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200330205903-19b2b3637426/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8 h1:98Mt2iPDY/cVPvXCmJVHfqjhlxOWx1n07j9TotozbdY=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd h1:vc4h2Gta79wo0bf5XB6tmEY6FQKialn4bsoX5I0ycgA=
 github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd/go.mod h1:ggbUxcPxiZ/svK/Vl5qNfeGkPrKjpiBTqEOpKwKGILo=
 github.com/tigera/licensing v1.0.1-0.20200319192200-2922adbd39e9 h1:MJNxGuNjm3LUepFhADlK+NmQ45r3c+NTHOT4flWRaas=
@@ -729,6 +731,8 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200327163656-4bdbc8989493 h1:p8
 github.com/tigera/typha-private v0.6.0-beta1.0.20200327163656-4bdbc8989493/go.mod h1:u/JmSe3oYVzEkeSNPy5zWTl7IFJ/RLi/Z0USXWBR0IQ=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200331174035-7c72dd5575bd h1:oHHkL50jT8sbIHicYoEEuQ6E+B22wARhbZ+omNSXpX8=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200331174035-7c72dd5575bd/go.mod h1:rZrzDYTpcD3s6afhXt3ryE2tMETgvzdxA2M3he9L3Z0=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200403210659-2b6c37caecda h1:bQrUfv4zjclQ5eUn0XKFaMVYYON4VyhZSAlJO+PyNl0=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200403210659-2b6c37caecda/go.mod h1:dfqZqbsNpD8bpeGLl16Z5PfrjhGuVDqJAuJBBLHHilY=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
