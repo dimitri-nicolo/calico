@@ -310,7 +310,13 @@ fv: proto bin/ingress-collector-$(ARCH)
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean build-all static-checks-custom ut
+ci:
+	# Force ci to always run a clean before running other targets.
+	# This is intentional so that irrespective of where ci is being run from
+	# the ci target will always run a clean.
+	# This change should be reverted when common Makefile runs the ci target
+	# in a way that always runs the "clean" target.
+	$(MAKE) clean build-all static-checks-custom ut
 
 ###############################################################################
 # CD
