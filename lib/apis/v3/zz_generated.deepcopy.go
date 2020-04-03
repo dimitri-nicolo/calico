@@ -3623,8 +3623,8 @@ func (in *ProfileSpec) DeepCopyInto(out *ProfileSpec) {
 			(*out)[key] = val
 		}
 	}
-	if in.EgressControl != nil {
-		in, out := &in.EgressControl, &out.EgressControl
+	if in.EgressGateway != nil {
+		in, out := &in.EgressGateway, &out.EgressGateway
 		*out = new(EgressSpec)
 		**out = **in
 	}
@@ -4696,8 +4696,8 @@ func (in *WorkloadEndpointSpec) DeepCopyInto(out *WorkloadEndpointSpec) {
 		*out = make([]EndpointPort, len(*in))
 		copy(*out, *in)
 	}
-	if in.EgressControl != nil {
-		in, out := &in.EgressControl, &out.EgressControl
+	if in.EgressGateway != nil {
+		in, out := &in.EgressGateway, &out.EgressGateway
 		*out = new(EgressSpec)
 		**out = **in
 	}

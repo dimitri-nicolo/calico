@@ -166,12 +166,19 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
 			case model.ResourceKey:
-				// Don't propagate the v3 Profile resource that the
-				// ProfileUpdateProcessor emits.  We only stream v3 Profile, in
-				// addition to the v1 Profile keys above, for its EgressControl
-				// field, and there's no reason to federate that field between
-				// clusters.
-				continue
+				if t.Kind == apiv3.KindProfile {
+					// Suppress the v3 Profile resource that the
+					// ProfileUpdateProcessor emits.  We only stream v3 Profile,
+					// in addition to the v1 Profile keys above, for its
+					// EgressGateway field, and there's no reason to federate
+					// that field between clusters.
+					continue
+				}
+				// As and when we need to federate v3 resources, we'll need to
+				// decide whether and how to incorporate the remote cluster name.
+				// We may not be able to prefix similarly as for v1, because that
+				// could be confused with v3 namespacing.
+				log.Panic("No prefixing design yet for federated v3 resources")
 			}
 		} else if update.UpdateType == api.UpdateTypeKVDeleted {
 			switch t := update.Key.(type) {
@@ -193,12 +200,11 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
 			case model.ResourceKey:
-				// Don't propagate the v3 Profile resource that the
-				// ProfileUpdateProcessor emits.  We only stream v3 Profile, in
-				// addition to the v1 Profile keys above, for its EgressControl
-				// field, and there's no reason to federate that field between
-				// clusters.
-				continue
+				// See comments for model.ResourceKey just above.
+				if t.Kind == apiv3.KindProfile {
+					continue
+				}
+				log.Panic("No prefixing design yet for federated v3 resources")
 			}
 		}
 		propagatedUpdates = append(propagatedUpdates, updates[i])

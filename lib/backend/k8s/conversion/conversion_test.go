@@ -169,8 +169,8 @@ var _ = Describe("Test Pod conversion", func() {
 				Namespace: "default",
 				Annotations: map[string]string{
 					"arbitrary": "annotation",
-					"egress.projectcalico.org/NamespaceSelector": "wblack == 'white'",
-					"egress.projectcalico.org/Selector":          "wred == 'green'",
+					"egress.projectcalico.org/namespaceSelector": "wblack == 'white'",
+					"egress.projectcalico.org/selector":          "wred == 'green'",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
@@ -274,7 +274,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(wep.Revision).To(Equal("1234"))
 
 		// Check egress.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressControl).To(Equal(&apiv3.EgressSpec{
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "wblack == 'white'",
 			Selector:          "wred == 'green'",
 		}))
@@ -812,8 +812,8 @@ var _ = Describe("Test Pod conversion", func() {
 				Name:      "podA",
 				Namespace: "default",
 				Annotations: map[string]string{
-					"egress.projectcalico.org/NamespaceSelector": "black ~~ 'white'",
-					"egress.projectcalico.org/Selector":          "red == 'green'",
+					"egress.projectcalico.org/namespaceSelector": "black ~~ 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
 			},
 			Spec: kapiv1.PodSpec{
@@ -828,7 +828,7 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure the EgressSpec is nil.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressControl).To(BeNil())
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(BeNil())
 	})
 
 	DescribeTable("AWS security group annotation",
@@ -2487,8 +2487,8 @@ var _ = Describe("Test Namespace conversion", func() {
 					"roger": "rabbit",
 				},
 				Annotations: map[string]string{
-					"egress.projectcalico.org/NamespaceSelector": "black == 'white'",
-					"egress.projectcalico.org/Selector":          "red == 'green'",
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
 			},
 			Spec: kapiv1.NamespaceSpec{},
@@ -2517,7 +2517,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
 
 		// Check egress.
-		Expect(p.Value.(*apiv3.Profile).Spec.EgressControl).To(Equal(&apiv3.EgressSpec{
+		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
 			NamespaceSelector: "black == 'white'",
 			Selector:          "red == 'green'",
 		}))
@@ -2599,8 +2599,8 @@ var _ = Describe("Test Namespace conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "default",
 				Annotations: map[string]string{
-					"egress.projectcalico.org/NamespaceSelector": "black ~~ 'white'",
-					"egress.projectcalico.org/Selector":          "red == 'green'",
+					"egress.projectcalico.org/namespaceSelector": "black ~~ 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
 			},
 			Spec: kapiv1.NamespaceSpec{},
@@ -2609,7 +2609,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		By("converting to a Profile", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(p.Value.(*apiv3.Profile).Spec.EgressControl).To(BeNil())
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(BeNil())
 		})
 	})
 

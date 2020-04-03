@@ -8380,7 +8380,7 @@ func schema_libcalico_go_lib_apis_v3_ProfileSpec(ref common.ReferenceCallback) c
 							},
 						},
 					},
-					"egressControl": {
+					"egressGateway": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Egress control.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec"),
@@ -10296,7 +10296,7 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 							},
 						},
 					},
-					"egressControl": {
+					"egressGateway": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Egress control.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec"),

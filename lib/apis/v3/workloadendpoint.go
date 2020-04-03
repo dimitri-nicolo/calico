@@ -73,7 +73,7 @@ type WorkloadEndpointSpec struct {
 	// Ports contains the endpoint's named ports, which may be referenced in security policy rules.
 	Ports []EndpointPort `json:"ports,omitempty" validate:"dive,omitempty"`
 	// Egress control.
-	EgressControl *EgressSpec `json:"egressControl,omitempty" validate:"omitempty"`
+	EgressGateway *EgressSpec `json:"egressGateway,omitempty" validate:"omitempty"`
 }
 
 type EgressSpec struct {

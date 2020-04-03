@@ -29,8 +29,8 @@ const (
 	// AnnotationPodIPs is similar for the plural PodIPs field.
 	AnnotationPodIPs                  = "cni.projectcalico.org/podIPs"
 	AnnotationSecurityGroups          = "aws.tigera.io/security-groups"
-	AnnotationEgressSelector          = "egress.projectcalico.org/Selector"
-	AnnotationEgressNamespaceSelector = "egress.projectcalico.org/NamespaceSelector"
+	AnnotationEgressSelector          = "egress.projectcalico.org/selector"
+	AnnotationEgressNamespaceSelector = "egress.projectcalico.org/namespaceSelector"
 	SecurityGroupLabelPrefix          = "sg.aws.tigera.io"
 
 	// NameLabel is a label that can be used to match a serviceaccount or namespace

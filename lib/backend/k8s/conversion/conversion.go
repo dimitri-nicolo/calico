@@ -116,9 +116,6 @@ func (c Converter) NamespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 	// based on name within the namespaceSelector.
 	labels[NamespaceLabelPrefix+NameLabel] = ns.Name
 
-	// Propagate egress annotations, if present.
-	egress := c.egressAnnotationsToV3Spec(ns.Annotations)
-
 	// Create the profile object.
 	name := NamespaceProfileNamePrefix + ns.Name
 	profile := apiv3.NewProfile()
@@ -131,7 +128,7 @@ func (c Converter) NamespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 		Ingress:       []apiv3.Rule{{Action: apiv3.Allow}},
 		Egress:        []apiv3.Rule{{Action: apiv3.Allow}},
 		LabelsToApply: labels,
-		EgressControl: egress,
+		EgressGateway: c.egressAnnotationsToV3Spec(ns.Annotations),
 	}
 
 	// Embed the profile in a KVPair.
@@ -392,9 +389,6 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 		}
 	}
 
-	// Propagate egress annotations, if present.
-	egress := c.egressAnnotationsToV3Spec(pod.Annotations)
-
 	// Create the workload endpoint.
 	wep := apiv3.NewWorkloadEndpoint()
 	wep.ObjectMeta = metav1.ObjectMeta{
@@ -415,7 +409,7 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 		IPNetworks:    ipNets,
 		Ports:         endpointPorts,
 		IPNATs:        floatingIPs,
-		EgressControl: egress,
+		EgressGateway: c.egressAnnotationsToV3Spec(pod.Annotations),
 	}
 
 	// Embed the workload endpoint into a KVPair.

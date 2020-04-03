@@ -50,7 +50,7 @@ type ProfileSpec struct {
 	// labels inherited from the profile, the endpoint label values take precedence.
 	LabelsToApply map[string]string `json:"labelsToApply,omitempty" validate:"omitempty,labels"`
 	// Egress control.
-	EgressControl *EgressSpec `json:"egressControl,omitempty" validate:"omitempty"`
+	EgressGateway *EgressSpec `json:"egressGateway,omitempty" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

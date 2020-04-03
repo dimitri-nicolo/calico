@@ -180,10 +180,10 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		Ports:        ports,
 		GenerateName: v3res.GenerateName,
 	}
-	if v3res.Spec.EgressControl != nil {
+	if v3res.Spec.EgressGateway != nil {
 		// Convert egress Selector and NamespaceSelector fields to a single selector
 		// expression in the same way we do for namespaced policy EntityRule selectors.
-		v1value.EgressSelector = GetEgressSelector(v3res.Spec.EgressControl, v3res.Namespace)
+		v1value.EgressSelector = GetEgressGatewaySelector(v3res.Spec.EgressGateway, v3res.Namespace)
 	}
 
 	return v1value, nil

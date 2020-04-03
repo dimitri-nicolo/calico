@@ -153,7 +153,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 				Port:     uint16(8080),
 			},
 		}
-		res.Spec.EgressControl = &apiv3.EgressSpec{
+		res.Spec.EgressGateway = &apiv3.EgressSpec{
 			NamespaceSelector: "black == 'white'",
 			Selector:          "red == 'green'",
 		}

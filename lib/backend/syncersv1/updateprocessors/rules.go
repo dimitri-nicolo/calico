@@ -61,7 +61,7 @@ func GetEntityRuleSelector(er *apiv3.EntityRule, ns string, matchSGs bool, direc
 // match.  The returned expression incorporates the semantics of:
 // - the egress spec's Selector and NamespaceSelector fields
 // - the namespace of the workload endpoint that the egress spec is for.
-func GetEgressSelector(spec *apiv3.EgressSpec, ns string) string {
+func GetEgressGatewaySelector(spec *apiv3.EgressSpec, ns string) string {
 	return getEndpointSelector(spec.NamespaceSelector, spec.Selector, "", "", ns, false, "egress")
 }
 
