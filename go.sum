@@ -708,6 +708,8 @@ github.com/tigera/felix-private v0.0.0-20200331051520-d2e804b4b538 h1:+n9g32ApG9
 github.com/tigera/felix-private v0.0.0-20200331051520-d2e804b4b538/go.mod h1:u4qth3iRN8T6sVxgvsai1AGdyWRgs9sh1UnN5PJpUMw=
 github.com/tigera/felix-private v0.0.0-20200331211609-ba749422dfee h1:WXT90AWC8m4QcLkPMlDyJ1+7eCdTG0Dm58GqS/fT91c=
 github.com/tigera/felix-private v0.0.0-20200331211609-ba749422dfee/go.mod h1:NVZegm2L6bXZxQWzp4DYUm6xtknmMAfnljLjcmpvMvo=
+github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea h1:Ps1lZnHJGVrkoUlgM5R522Iv1/n5na8CUVdh9Ua6QIA=
+github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea/go.mod h1:4zfsxW5N/JiuBpHF79cZgPkKBTe8a1LxWytkIoWyEN4=
 github.com/tigera/libcalico-go-private v0.0.0-20200310204028-59913de27e11 h1:xydC9puVymA/a+qrQG0w3058moQ9OvxH4PdZYeEAE60=
 github.com/tigera/libcalico-go-private v0.0.0-20200310204028-59913de27e11/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11 h1:moxhMENpxz/XO+jFA4NHz0ZS6B4UkSXCRT+WHWhmgSs=
@@ -722,6 +724,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200327005725-7aee3b521b2f h1:x
 github.com/tigera/libcalico-go-private v1.7.2-0.20200327005725-7aee3b521b2f/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200330205903-19b2b3637426 h1:tn1exO9xZ67SGPctGwRir9nfrocvpiHl9K9dvXRAgOo=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200330205903-19b2b3637426/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8 h1:98Mt2iPDY/cVPvXCmJVHfqjhlxOWx1n07j9TotozbdY=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad h1:UI7E4EtDHuAWkn9mbMaSkKOPxVdyI06QGQxBockHt4w=
 github.com/tigera/licensing v0.0.0-20200225180546-5125719fc8ad/go.mod h1:AiC6PlgKVuIN6OJ1uyWtTyoFws7QNNViZhXzIW4Wml4=
