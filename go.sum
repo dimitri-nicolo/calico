@@ -756,6 +756,8 @@ github.com/tigera/lma v0.0.0-20200322190335-74d406d5dc12 h1:QFNP+iChekHE6RFcMXYB
 github.com/tigera/lma v0.0.0-20200322190335-74d406d5dc12/go.mod h1:nINmCySJGDAM/22FVE8Rolb/85EUzAsd9UmxuCou01U=
 github.com/tigera/lma v0.0.0-20200331190505-49c98483121b h1:VIoldJxWKBZSIB5lX9FjBnKCRymmyMUFCEKqQRZJAGQ=
 github.com/tigera/lma v0.0.0-20200331190505-49c98483121b/go.mod h1:Wsntz5Fbz34XPdwjiJE9tV9/WFIUnEgghwXML6sLIgM=
+github.com/tigera/lma v0.0.0-20200404190459-ae48a942fddf h1:OOITRjt9TLtOf2k+b2mYJ88zAzfbuAdPRBJ2ABPcbbg=
+github.com/tigera/lma v0.0.0-20200404190459-ae48a942fddf/go.mod h1:QinUo5qPbjf+jGrrL0GxQLzwEGvqHA9cAEs953JeESA=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
