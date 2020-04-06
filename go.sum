@@ -703,6 +703,8 @@ github.com/tigera/apiserver v0.0.0-20200403004154-2e63d031688d h1:4L3U77ks5dB2PA
 github.com/tigera/apiserver v0.0.0-20200403004154-2e63d031688d/go.mod h1:hXG78jRDlYIG4m7kbKHO2TvQ1h8hiUBdSiPI7VQweYM=
 github.com/tigera/apiserver v0.0.0-20200403203758-ab53c4b6fc95 h1:ZdSTq9X9qeCXrdAZ1VPVNjCn4uDSSz4t/V5SRxUM3SE=
 github.com/tigera/apiserver v0.0.0-20200403203758-ab53c4b6fc95/go.mod h1:4gvdHmBt+Lb2OT/4Zrn8MZ1hYKkWupwtTmqyCU9ur+Q=
+github.com/tigera/apiserver v0.0.0-20200406043105-c5e752dc8e4a h1:eif4ByhHhSdJzsQoZpMUuBQiXMpUD15z7MmB873uCtQ=
+github.com/tigera/apiserver v0.0.0-20200406043105-c5e752dc8e4a/go.mod h1:4gvdHmBt+Lb2OT/4Zrn8MZ1hYKkWupwtTmqyCU9ur+Q=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible h1:CnjILlLeLzSapuAg4jY1go7ICAmeiPuU6xNRWQY5kW8=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/calico-k8sapiserver v2.7.0-0.dev.0.20200107221211-591370b83580+incompatible h1:4J9ChjEz7JqXjkKUEZY51t3O/o1zpWhfK3v0YQnr/X8=
