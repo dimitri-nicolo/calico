@@ -263,6 +263,7 @@ endif
 		( echo "Error: $(BINDIR)/apiserver was not statically linked"; false ) )'
 
 # Build the tigera/cnx-apiserver docker image.
+image: tigera/cnx-apiserver
 .PHONY: tigera/cnx-apiserver
 tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/apiserver
 	rm -rf docker-image/bin
@@ -411,28 +412,47 @@ clean-bin:
 clean-hack-lib:
 	rm -rf hack/lib/
 
-.PHONY: release
-release: clean
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+###############################################################################
+# Release
+###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	# Rebuild all the checked in generated files.  If any weren't the same, then
-	# the dirty check will fail.
-	$(MAKE) .generate_files
+	$(MAKE) image
+	$(MAKE) tag-image IMAGETAG=$(VERSION)
+	# Generate the `latest` images.
+	$(MAKE) tag-image IMAGETAG=latest
 
-	git tag $(VERSION)
-
-	# Check to make sure the tag isn't "dirty"
-	if git describe --tags --dirty | grep dirty; \
-	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
-
-	# Build the apiserver binaries and image
-	$(MAKE) tigera/cnx-apiserver
-
-	# Check that the version output includes the version specified.
-	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
-	# Release is currently supported on darwin / linux only.
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
 	if ! docker run tigera/cnx-apiserver | grep 'Version:\s*$(VERSION)$$'; then \
 	  echo "Reported version:" `docker run tigera/cnx-apiserver` "\nExpected version: $(VERSION)"; \
 	  false; \
@@ -440,20 +460,47 @@ endif
 	  echo "Version check passed\n"; \
 	fi
 
-	# Retag images with correct version and GCR private registry
-	docker tag tigera/cnx-apiserver $(CONTAINER_NAME):$(VERSION)
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
 
-	# Check that images were created recently and that the IDs of the versioned and latest images match
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" tigera/cnx-apiserver
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CONTAINER_NAME):$(VERSION)
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
 
-	@echo "\nNow push the tag and images. Then create a release on Github and"
-	@echo "\nAdd release notes for apiserver. Use this command"
-	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
-	@echo "git push origin $(VERSION)"
-	@echo "gcloud auth configure-docker"
-	@echo "docker push $(CONTAINER_NAME):$(VERSION)"
+	# Push images.
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
 
+	@echo "Finalize the GitHub release based on the pushed tag."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
+
+###############################################################################
+# Utils
+###############################################################################
 .PHONY: kubeadm
 kubeadm:
 	kubeadm reset
