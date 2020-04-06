@@ -258,6 +258,26 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		// Expect EgressIPSetIDUpdate with IP set ID "".
 		cbs.ExpectEgressUpdate(we1Key, "")
 		cbs.ExpectNoMoreCallbacks()
+
+		By("deleting the WorkloadEndpoint")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   we1Key,
+				Value: nil,
+			},
+			UpdateType: api.UpdateTypeKVDeleted,
+		})
+		cbs.ExpectNoMoreCallbacks()
+
+		By("deleting the Profile")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   model.ResourceKey{Kind: v3.KindProfile, Name: "webclient"},
+				Value: nil,
+			},
+			UpdateType: api.UpdateTypeKVDeleted,
+		})
+		cbs.ExpectNoMoreCallbacks()
 	})
 
 	It("generates expected callbacks for multiple WorkloadEndpoints and Profiles", func() {
@@ -354,20 +374,198 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		By("deleting profile A")
 		aec.OnUpdate(api.Update{
 			KVPair: model.KVPair{
-				Key:   model.ResourceKey{Kind: v3.KindProfile, Name: "b"},
+				Key:   model.ResourceKey{Kind: v3.KindProfile, Name: "a"},
 				Value: nil,
 			},
 			UpdateType: api.UpdateTypeKVDeleted,
 		})
 
 		// Expect Inactive for its selector and EgressIPSetIDUpdate ““ for the 5 using WEs.
-		cbs.ExpectInactive(ipSetB)
+		cbs.ExpectInactive(ipSetAPrime)
 		for i := 0; i < 5; i++ {
-			name := fmt.Sprintf("we%v-b", i)
+			name := fmt.Sprintf("we%v-a", i)
 			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, "")
 		}
 		cbs.ExpectNoMoreCallbacks()
+
+		By("deleting the endpoints using profile A")
+		for i := 0; i < 5; i++ {
+			name := fmt.Sprintf("we%v-a", i)
+			aec.OnUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key:   model.WorkloadEndpointKey{WorkloadID: name},
+					Value: nil,
+				},
+				UpdateType: api.UpdateTypeKVDeleted,
+			})
+		}
+		cbs.ExpectNoMoreCallbacks()
+
 	})
+
+	It("ignores unexpected update", func() {
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindNode, Name: "a"},
+				Value: &v3.Node{
+					Spec: v3.NodeSpec{},
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+		cbs.ExpectNoMoreCallbacks()
+
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.HostConfigKey{
+					Hostname: "myhost",
+					Name:     "IPv4VXLANTunnelAddr",
+				},
+				Value: "10.0.0.0",
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+		cbs.ExpectNoMoreCallbacks()
+	})
+
+	It("handles when profile is defined before endpoint", func() {
+
+		By("defining profile A with egress selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindProfile, Name: "a"},
+				Value: &v3.Profile{
+					Spec: v3.ProfileSpec{
+						EgressGateway: &v3.EgressSpec{
+							Selector: "server == 'a'",
+						},
+					},
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+		cbs.ExpectNoMoreCallbacks()
+
+		By("defining an endpoint that uses that profile")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.WorkloadEndpointKey{WorkloadID: "we1"},
+				Value: &model.WorkloadEndpoint{
+					Name:       "we1",
+					ProfileIDs: []string{"a"},
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+		ipSetID := cbs.ExpectActive()
+		cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, ipSetID)
+		cbs.ExpectNoMoreCallbacks()
+
+		By("updating profile with same selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindProfile, Name: "a"},
+				Value: &v3.Profile{
+					Spec: v3.ProfileSpec{
+						EgressGateway: &v3.EgressSpec{
+							Selector: "server == 'a'",
+						},
+						LabelsToApply: map[string]string{"a": "b"},
+					},
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+		cbs.ExpectNoMoreCallbacks()
+
+	})
+
+	It("handles when WorkloadEndpoint and profile both specify selectors", func() {
+
+		By("creating WorkloadEndpoint with profile ID and egress selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: we1Key,
+				Value: &model.WorkloadEndpoint{
+					Name:           "we1",
+					ProfileIDs:     []string{"webclient"},
+					EgressSelector: "black == 'red'",
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+
+		ipSetWE := cbs.ExpectActive()
+		cbs.ExpectEgressUpdate(we1Key, ipSetWE)
+		cbs.ExpectNoMoreCallbacks()
+
+		By("adding Profile with egress selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindProfile, Name: "webclient"},
+				Value: &v3.Profile{
+					Spec: v3.ProfileSpec{
+						EgressGateway: &v3.EgressSpec{
+							Selector: "server == 'bump'",
+						},
+					},
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+
+		// Expect no change.
+		cbs.ExpectNoMoreCallbacks()
+
+		By("updating Profile with different selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindProfile, Name: "webclient"},
+				Value: &v3.Profile{
+					Spec: v3.ProfileSpec{
+						EgressGateway: &v3.EgressSpec{
+							Selector: "server == 'wire'",
+						},
+					},
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+
+		// Expect no change.
+		cbs.ExpectNoMoreCallbacks()
+
+		By("defining 2nd WorkloadEndpoint with no selector and different profile")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: we2Key,
+				Value: &model.WorkloadEndpoint{
+					Name:       "we2",
+					ProfileIDs: []string{"other"},
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+
+		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
+		cbs.ExpectEgressUpdate(we2Key, "")
+		cbs.ExpectNoMoreCallbacks()
+
+		By("changing first profile not to have egress selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindProfile, Name: "webclient"},
+				Value: &v3.Profile{
+					Spec: v3.ProfileSpec{},
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+
+		// Expect no change.
+		cbs.ExpectNoMoreCallbacks()
+	})
+
 })
 
 type testCallbacks struct {
