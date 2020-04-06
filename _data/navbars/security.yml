@@ -13,6 +13,8 @@ section:
     path: /security/tiered-policy
   - title: Create RBAC for tiered policy
     path: /security/rbac-tiered-policies
+  - title: Federate tiers and policies
+    path: /reference/alpha/installation    
   - title: Create staged policy
     path: /security/staged-network-policies
   - title: Preview policy impacts
