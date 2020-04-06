@@ -236,63 +236,6 @@ ifndef BRANCH_NAME
 endif
 	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
 
-
-.PHONY: release
-release: clean clean-release release/calicoq
-
-release/calicoq: $(CALICOQ_GO_FILES) clean
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
-endif
-	git tag $(VERSION)
-
-	# Check to make sure the tag isn't "dirty"
-	if git describe --tags --dirty | grep dirty; \
-	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
-
-	# Build the calicoq binaries and image
-	$(MAKE) binary-containerized RELEASE_BUILD=1
-	$(MAKE) build-image
-
-	# Make the release directory and move over the relevant files
-	mkdir -p release
-	mv $(BINARY) release/calicoq-$(CALICOQ_GIT_DESCRIPTION)
-	ln -f release/calicoq-$(CALICOQ_GIT_DESCRIPTION) release/calicoq
-
-	# Check that the version output includes the version specified.
-	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
-	# Release is currently supported on darwin / linux only.
-	if ! docker run $(BUILD_IMAGE) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(BUILD_IMAGE) version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-	# Retag images with correct version and registry prefix
-	docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)
-
-	# Check that images were created recently and that the IDs of the versioned and latest images match
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(BUILD_IMAGE)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)
-
-	@echo "\nNow push the tag and images."
-	@echo "git push origin $(VERSION)"
-	@echo "gcloud auth configure-docker"
-	@echo "docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)"
-	@echo "\nIf this release version is the newest stable release, also tag and push the"
-	@echo "images with the 'latest' tag"
-	@echo "docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
-	@echo "docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
-
-.PHONY: compress-release
-compressed-release: release/calicoq
-	# Requires "upx" to be in your PATH.
-	# Compress the executable with upx.  We get 4:1 compression with '-8'; the
-	# more agressive --best gives a 0.5% improvement but takes several minutes.
-	upx -8 release/calicoq-$(CALICOQ_GIT_DESCRIPTION)
-	ln -f release/calicoq-$(CALICOQ_GIT_DESCRIPTION) release/calicoq
-
 # Generate the protobuf bindings for Felix.
 .PHONY: felixbackend
 felixbackend: vendor/github.com/projectcalico/felix/proto/felixbackend.proto
@@ -327,7 +270,93 @@ clean:
 	-docker rmi $(BUILD_IMAGE) -f
 	-docker rmi $(CALICO_BUILD) -f
 	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
-	rm -f $(TOOLING_IMAGE_CREATED)
+	-rm -f $(TOOLING_IMAGE_CREATED)
+
+###############################################################################
+# Release
+###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+endif
+
+	$(MAKE) build-image RELEASE_BUILD=1
+	$(MAKE) tag-image IMAGETAG=$(VERSION)
+	# Generate the `latest` images.
+	$(MAKE) tag-image IMAGETAG=latest
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
+	if ! docker run $(BUILD_IMAGE) version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(BUILD_IMAGE) version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
+
+	# Push images.
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
+
+	@echo "Finalize the GitHub release based on the pushed tag."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
 
 ###############################################################################
 # Utils
