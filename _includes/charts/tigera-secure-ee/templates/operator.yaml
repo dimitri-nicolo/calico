@@ -428,7 +428,7 @@ spec:
         resources:
           requests:
             storage: {{.Values.elasticsearch.persistentVolume.capacity}}
-        storageClassName: tigera-elasticsearch
+        storageClassName: {{.Values.elasticsearch.storageClassName}}
 
 ---
 # Webhook server service to validate new Elastic CR's

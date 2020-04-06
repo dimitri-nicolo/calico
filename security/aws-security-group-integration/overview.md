@@ -5,7 +5,7 @@ canonical_url: /security/aws-security-group-integration/
 ---
 
 
-> Note: AWS security group integration is currently only supported when using the manual and helm installation paths.
+> Note: AWS security group integration is currently only supported when using the helm installation path.
 {: .alert .alert-info}
 
 

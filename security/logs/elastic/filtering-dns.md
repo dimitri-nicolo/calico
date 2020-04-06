@@ -11,7 +11,7 @@ configuration.  Use filtering to suppress logs of low significance.
 
 Configure filtering based on how {{site.prodname}} was deployed:
 - [Operator deployment](#operator-deployment)
-- [Manual/Helm deployment](#manualhelm-deployment)
+- [Helm deployment](#helm-deployment)
 
 ### Operator deployment
 
@@ -30,7 +30,7 @@ To enable DNS log filtering, follow these steps:
    kubectl create configmap fluentd-filters -n tigera-operator --from-file=filters
    ```
 
-### Manual/Helm deployment
+### Helm deployment
 
 DNS log filtering is configured in the `tigera-es-config` ConfigMap.
 

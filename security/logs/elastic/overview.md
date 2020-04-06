@@ -19,4 +19,4 @@ In this section we will elaborate on the specifics of the collected data and how
 * [Filtering flow logs](filtering)
 * [Filtering DNS logs](filtering-dns)
 * [Archive logs to storage](archive-storage)
-* [Tracing external IP addresses](ingress)
+* [Tracing external IP addresses]({{site.baseurl}}/security/ingress)

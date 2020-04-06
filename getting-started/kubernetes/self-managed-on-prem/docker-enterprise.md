@@ -1,5 +1,5 @@
 ---
-title: Installing Calico Enterprise on Docker Enterprise
+title: Install Calico Enterprise on Docker Enterprise
 description: Install Calico Enterprise using Docker EE for self-managed on-premises deployments.
 canonical_url: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
 ---
@@ -25,8 +25,7 @@ Install Calico Enterprise in a Docker Enterprise deployed Kubernetes cluster.
 
 #### Gather required resources
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/calico-enterprise#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/calico-enterprise#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry and a license key](../../../getting-started/calico-enterprise)
 
 - Download and install the UCP client bundle for accessing the cluster, instructions can be
   found at [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).
@@ -107,7 +106,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 ### Above and beyond
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+- [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)

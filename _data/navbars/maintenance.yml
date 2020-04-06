@@ -4,7 +4,7 @@ order: 4
 section:
 - title: Adjust log storage size
   path: /maintenance/adjust-log-storage-size
-- title: Upgrading
+- title: Upgrade
   path: /maintenance/upgrading
   section:
   - title: Kubernetes
@@ -20,7 +20,7 @@ section:
   path: /maintenance/decommissioning-a-node
 - title: Monitor Calico component metrics
   path: /maintenance/monitor-component-metrics  
-- title: Deploy and Monitor Calico Enterprise licensing metrics
+- title: Deploy and monitor Calico Enterprise licensing metrics
   path: /maintenance/license-agent
 - title: Component logs
   path: /maintenance/component-logs

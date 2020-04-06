@@ -65,7 +65,7 @@ This how-to guide uses the following {{site.prodname}} features:
    kubectl edit logcollector tigera-secure
    ```
 
-**Manual/Helm deployment**
+**Helm deployment**
 
 {% include content/s3_fluentd.md %}
 
@@ -99,7 +99,7 @@ This how-to guide uses the following {{site.prodname}} features:
    kubectl edit logcollector tigera-secure
    ```
 
-**Manual/Helm deployment**
+**Helm deployment**
 
 {% include content/syslog-fluentd.md %}
 
@@ -144,6 +144,6 @@ This how-to guide uses the following {{site.prodname}} features:
    kubectl edit logcollector tigera-secure
    ```
 
-**Manual/Helm deployment**
+**Helm deployment**
 
 Currently not supported.

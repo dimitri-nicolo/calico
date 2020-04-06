@@ -12,7 +12,7 @@ to limit access to {{ site.prodname }}'s metrics endpoints.
 ## Prerequisites
 
 - {{site.prodname}} is installed with Prometheus metrics reporting enabled.
-- `calicoctl` is [installed in your PATH and configured to access the data store](../../getting-started/calicoctl/install).
+- `calicoctl` is [installed in your PATH and configured to access the data store](../../getting-started/clis/calicoctl/install).
 
 ## Choosing an approach
 
@@ -68,10 +68,10 @@ This example shows how to limit access to the {{site.nodecontainer}} Prometheus 
      - action: Allow
    ```
 
-   Then, use `calicoctl` to apply this policy.
+   Then, use `kubectl` to apply this policy.
 
    ```bash
-   calicoctl apply -f default-host-policy.yaml
+   kubectl apply -f default-host-policy.yaml
    ```
 
 1. List the nodes on which {{site.prodname}} is running with the following command.
@@ -126,10 +126,10 @@ This example shows how to limit access to the {{site.nodecontainer}} Prometheus 
    Note the use of a label to indicate that this host endpoint is running {{site.prodname}}. The
    label matches the selector of the network policy created in step 1.
 
-   Then, use `calicoctl` to apply the host endpoints with the following command.
+   Then, use `kubectl` to apply the host endpoints with the following command.
 
    ```bash
-   calicoctl apply -f host-endpoints.yaml
+   kubectl apply -f host-endpoints.yaml
    ```
 
 1. Create a network policy that restricts access to the {{site.nodecontainer}} Prometheus metrics port.
@@ -169,10 +169,10 @@ This example shows how to limit access to the {{site.nodecontainer}} Prometheus 
    all {{site.prodname}} workload endpoints, host endpoints, and global network sets that do not have the label, as well as any
    other network endpoints unknown to {{site.prodname}}.
 
-   Then, use `calicoctl` to apply this policy.
+   Then, use `kubectl` to apply this policy.
 
    ```bash
-   calicoctl apply -f calico-prometheus-policy.yaml
+   kubectl apply -f calico-prometheus-policy.yaml
    ```
 
 1. Apply labels to any endpoints that should have access to the metrics.
@@ -188,7 +188,7 @@ This example shows how to limit access to the {{site.nodecontainer}} Prometheus 
    ```
 
    If you would like to grant access to a specific IP network, you
-   can create a [global network set](../../reference/resources/globalnetworkset) using `calicoctl`.
+   can create a [global network set](../../reference/resources/globalnetworkset) using `kubectl`.
 
    For example, you might want to grant access to your management subnets.
 
@@ -243,10 +243,10 @@ The ingress rule denies traffic to port 9093 unless the source of traffic has th
 all {{site.prodname}} workload endpoints, host endpoints, and global network sets that do not have the label, as well as any
 other network endpoints unknown to {{site.prodname}}.
 
-Then, use `calicoctl` to apply this policy.
+Then, use `kubectl` to apply this policy.
 
 ```bash
-calicoctl apply -f typha-prometheus-policy.yaml
+kubectl apply -f typha-prometheus-policy.yaml
 ```
 
 ## Using a whitelist approach
@@ -313,11 +313,11 @@ The basic process is as follows:
    Note the use of a label to indicate that this host endpoint is running {{site.prodname}}. The
    label matches the selector of the network policy created in step 1.
 
-   Then, use `calicoctl` to apply the host endpoints with the following command. This will prevent all
+   Then, use `kubectl` to apply the host endpoints with the following command. This will prevent all
    traffic to and from the host endpoints.
 
    ```bash
-   calicoctl apply -f host-endpoints.yaml
+   kubectl apply -f host-endpoints.yaml
    ```
 
    > **Note**: {{site.prodname}} allows some traffic as a failsafe even after applying this policy. This can
@@ -359,10 +359,10 @@ The basic process is as follows:
    The ingress rule alows traffic to port 9091 from any source with the label `calico-prometheus-access: true`, meaning
    all {{site.prodname}} workload endpoints, host endpoints, and global network sets that have the label will be allowed access.
 
-   Then, use `calicoctl` to apply this policy.
+   Then, use `kubectl` to apply this policy.
 
    ```bash
-   calicoctl apply -f calico-prometheus-policy.yaml
+   kubectl apply -f calico-prometheus-policy.yaml
    ```
 
 1. Apply labels to any endpoints that should have access to the metrics.
@@ -378,7 +378,7 @@ The basic process is as follows:
    ```
 
    If you would like to grant access to a specific IP address in your network, you
-   can create a [global network set](../../reference/resources/globalnetworkset) using `calicoctl`.
+   can create a [global network set](../../reference/resources/globalnetworkset) using `kubectl`.
 
    For example, creating the following network set would grant access to a host with IP 172.15.0.101.
 
@@ -427,8 +427,8 @@ This policy selects all endpoints that have the label `running-calico: true`, an
 The ingress rule alows traffic to port 9093 from any source with the label `calico-prometheus-access: true`, meaning
 all {{site.prodname}} workload endpoints, host endpoints, and global network sets that have the label will be allowed access.
 
-Then, use `calicoctl` to apply this policy.
+Then, use `kubectl` to apply this policy.
 
 ```bash
-calicoctl apply -f typha-prometheus-policy.yaml
+kubectl apply -f typha-prometheus-policy.yaml
 ```

@@ -1,6 +1,6 @@
 ## Installing {{include.cli}} as a container on a single host
 
-1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials).
+1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
 1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
 
@@ -46,4 +46,4 @@
    {: .no-select-button}
 
 **Next step**:
-[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/getting-started/{{include.cli}}/configure/).
+[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/getting-started/clis/{{include.cli}}/configure/).

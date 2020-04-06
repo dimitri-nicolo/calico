@@ -75,9 +75,10 @@ Please note that, to try this and the following examples in your own cluster:
    API service in your cluster (which you can see with `kubectl get svc --all-namespaces -o wide`).
 
 -  You should replace the `cluster` and date parts of the full index name (here
-   `tigera_secure_ee_dns.cluster.20190711`) with the [configured cluster name in your cluster and
+   `tigera_secure_ee_dns.cluster.20190711`) with the configured cluster name in your cluster and
    the date of the data that you want to search
-   through](../configure-elastic#customizing-the-index-names-when-sharing-elasticsearch-clusters).
+   through. The cluster name can be retrieved from the `clusterName` field in the ConfigMap
+   retrieved with `kubectl get configmap -n tigera-operator tigera-secure-elasticsearch -o yaml`.
 
 -  You will need to run curl from a host or pod that is allowed by {{site.prodname}} policy to
    connect to the Elasticsearch API service.  In our non-production demo setup

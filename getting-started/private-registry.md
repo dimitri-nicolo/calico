@@ -1,5 +1,5 @@
 ---
-title: Installing from a private registry
+title: Install from a private registry
 description: Install and configure Calico Enterprise in a private registry. 
 ---
 
@@ -22,7 +22,7 @@ An **image pull secret** is used in Kubernetes to deploy container images from a
 ### Before you begin...
 
 - Configure pull access to your private registry
-- [Configure pull access to Tigera's private container registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials).
+- [Configure pull access to Tigera's private container registry]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
 ### How to
 
