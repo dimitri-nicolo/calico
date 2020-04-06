@@ -1,16 +1,4 @@
 // Copyright (c) 2020 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package calc
 
@@ -106,7 +94,7 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 		if update.Value != nil {
 			log.Debugf("Updating AEC with endpoint %v", key)
 			endpoint := update.Value.(*model.WorkloadEndpoint)
-			aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector)
+			aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector, update.UpdateType)
 		} else {
 			log.Debugf("Deleting endpoint %v from AEC", key)
 			aec.deleteEndpoint(key)
@@ -226,12 +214,12 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, profileExists
 		}
 
 		// Push selector change to IP set member index and policy resolver.
-		aec.updateEndpointSelector(key, oldEpSelector, epData.activeSelector)
+		aec.updateEndpointSelector(key, oldEpSelector, epData.activeSelector, false)
 	}
 }
 
-func (aec *ActiveEgressCalculator) updateEndpointSelector(key model.WorkloadEndpointKey, old, new string) {
-	if new == old {
+func (aec *ActiveEgressCalculator) updateEndpointSelector(key model.WorkloadEndpointKey, old, new string, newEndpoint bool) {
+	if new == old && !newEndpoint {
 		return
 	}
 
@@ -245,7 +233,7 @@ func (aec *ActiveEgressCalculator) updateEndpointSelector(key model.WorkloadEndp
 	aec.OnEgressIPSetIDUpdate(key, egressIPSetID)
 }
 
-func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, endpointSelector string) {
+func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, endpointSelector string, updateType api.UpdateType) {
 	// Find or create the data for this endpoint.
 	ep, exists := aec.endpoints[key]
 	if !exists {
@@ -284,7 +272,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	oldProfileIDs.Iter(aec.decEndpointCount)
 
 	// Push selector change to IP set member index and policy resolver.
-	aec.updateEndpointSelector(key, oldSelector, ep.activeSelector)
+	aec.updateEndpointSelector(key, oldSelector, ep.activeSelector, updateType == api.UpdateTypeKVNew)
 }
 
 func (aec *ActiveEgressCalculator) decEndpointCount(item interface{}) error {
