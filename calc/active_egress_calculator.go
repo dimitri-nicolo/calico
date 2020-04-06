@@ -305,6 +305,7 @@ func (aec *ActiveEgressCalculator) incRefSelector(selector string) {
 	}
 	selData, exists := aec.selectors[selector]
 	if !exists {
+		log.Debugf("Selector: %v", selector)
 		sel, err := sel.Parse(selector)
 		if err != nil {
 			// Should have been validated further back in the pipeline.

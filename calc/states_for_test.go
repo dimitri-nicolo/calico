@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/net"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Pre-defined datastore states.  Each State object wraps up the complete state
@@ -1226,6 +1230,163 @@ var vxlanTunnelIPDelete = vxlanWithBlock.withKVUpdates(
 		Type: proto.RouteType_WORKLOADS_NODE,
 	},
 ).withVTEPs()
+
+// Egress IP.
+var (
+	egressSelector        = "egress-provider == 'true'"
+	egressProfileSelector = "(projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
+	gatewayKey            = WorkloadEndpointKey{
+		Hostname:       remoteHostname,
+		WorkloadID:     "gw1",
+		EndpointID:     "ep1",
+		OrchestratorID: "orch",
+	}
+	gatewayEndpoint = &WorkloadEndpoint{
+		Name:     "gw1",
+		IPv4Nets: []net.IPNet{mustParseNet("137.0.0.1/32")},
+		Labels: map[string]string{
+			"egress-provider":             "true",
+			"projectcalico.org/namespace": "egress",
+		},
+	}
+
+	endpointWithOwnEgressGatewayID = WorkloadEndpointKey{
+		Hostname:       localHostname,
+		WorkloadID:     "wep1o",
+		EndpointID:     "ep1",
+		OrchestratorID: "orch",
+	}
+	endpointWithOwnEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:           "wep1o",
+				EgressSelector: egressSelector,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressIPSetID(
+		"orch/wep1o/ep1",
+		egressSelectorID(egressSelector),
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		"137.0.0.1/32",
+	},
+	).withName("endpointWithOwnEgressGateway")
+
+	endpointWithProfileEgressGatewayID = WorkloadEndpointKey{
+		Hostname:       localHostname,
+		WorkloadID:     "wep1p",
+		EndpointID:     "ep1",
+		OrchestratorID: "orch",
+	}
+	endpointWithProfileEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: ResourceKey{Name: "egress", Kind: v3.KindProfile},
+			Value: &v3.Profile{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "egress",
+				},
+				Spec: v3.ProfileSpec{
+					EgressGateway: &v3.EgressSpec{
+						Selector: "egress-provider == 'true'",
+					},
+				},
+			},
+		},
+		KVPair{
+			Key: endpointWithProfileEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:       "wep1p",
+				ProfileIDs: []string{"egress"},
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1p/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressIPSetID(
+		"orch/wep1p/ep1",
+		egressSelectorID(egressProfileSelector),
+	).withIPSet(egressSelectorID(egressProfileSelector), []string{
+		"137.0.0.1/32",
+	},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
+	).withName("endpointWithProfileEgressGateway")
+
+	endpointWithoutOwnEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name: "wep1o",
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withName("endpointWithoutOwnEgressGateway")
+
+	endpointWithoutProfileEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: ResourceKey{Name: "egress", Kind: v3.KindProfile},
+			Value: &v3.Profile{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "egress",
+				},
+				Spec: v3.ProfileSpec{},
+			},
+		},
+		KVPair{
+			Key: endpointWithProfileEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:       "wep1p",
+				ProfileIDs: []string{"egress"},
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: gatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: gatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1p/ep1",
+		[]mock.TierInfo{},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "egress"},
+	).withName("endpointWithoutProfileEgressGateway")
+)
 
 type StateList []State
 

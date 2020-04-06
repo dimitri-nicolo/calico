@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ type MockDataplane struct {
 	endpointToPolicyOrder          map[string][]TierInfo
 	endpointToUntrackedPolicyOrder map[string][]TierInfo
 	endpointToPreDNATPolicyOrder   map[string][]TierInfo
+	endpointEgressIPSetID          map[string]string
 	endpointToAllPolicyIDs         map[string][]proto.PolicyID
 	endpointToProfiles             map[string][]string
 	serviceAccounts                map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
@@ -169,6 +170,18 @@ func (d *MockDataplane) EndpointToPreDNATPolicyOrder() map[string][]TierInfo {
 
 	return copyPolOrder(d.endpointToPreDNATPolicyOrder)
 }
+func (d *MockDataplane) EndpointEgressIPSetID() map[string]string {
+	d.Lock()
+	defer d.Unlock()
+
+	localCopy := map[string]string{}
+	for k, v := range d.endpointEgressIPSetID {
+		if v != "" {
+			localCopy[k] = v
+		}
+	}
+	return localCopy
+}
 
 func (d *MockDataplane) ServiceAccounts() map[proto.ServiceAccountID]*proto.ServiceAccountUpdate {
 	d.Lock()
@@ -241,6 +254,7 @@ func NewMockDataplane() *MockDataplane {
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
+		endpointEgressIPSetID:          make(map[string]string),
 		endpointToProfiles:             make(map[string][]string),
 		endpointToAllPolicyIDs:         make(map[string][]proto.PolicyID),
 		serviceAccounts:                make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
@@ -357,6 +371,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		d.endpointToPolicyOrder[id.String()] = tierInfos
 		d.endpointToUntrackedPolicyOrder[id.String()] = []TierInfo{}
 		d.endpointToPreDNATPolicyOrder[id.String()] = []TierInfo{}
+		d.endpointEgressIPSetID[id.String()] = event.Endpoint.EgressIpSetId
 		d.endpointToAllPolicyIDs[id.String()] = allPolsIDs
 
 		// Check that all the profiles referenced by the endpoint are already present, which
@@ -373,6 +388,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		delete(d.endpointToPolicyOrder, id.String())
 		delete(d.endpointToUntrackedPolicyOrder, id.String())
 		delete(d.endpointToPreDNATPolicyOrder, id.String())
+		delete(d.endpointEgressIPSetID, id.String())
 		delete(d.endpointToProfiles, id.String())
 		delete(d.endpointToAllPolicyIDs, id.String())
 	case *proto.HostEndpointUpdate:

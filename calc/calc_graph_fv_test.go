@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -172,6 +172,7 @@ var baseTests = []StateList{
 		localEp1WithOneTierPolicy123,
 		localEpsWithNonMatchingProfile,
 		localEpsWithTagInheritProfile,
+		endpointWithOwnEgressGateway,
 		localEpsWithPolicy,
 		localEpsWithPolicyUpdatedIPs,
 		hostEp1WithPolicy,
@@ -204,6 +205,7 @@ var baseTests = []StateList{
 		localEpsWithUpdatedProfileNegatedTags,
 		localEpsWithPolicy,
 		localEp1WithNamedPortPolicyNoSelector,
+		endpointWithProfileEgressGateway,
 		localEpsWithPolicyUpdatedIPs,
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
@@ -214,6 +216,7 @@ var baseTests = []StateList{
 
 	// And another.
 	{localEpsWithProfile,
+		endpointWithProfileEgressGateway,
 		localEp1WithOneTierPolicy123,
 		localEpsWithNonMatchingProfile,
 		localEpsWithTagInheritProfile,
@@ -319,6 +322,14 @@ var baseTests = []StateList{
 
 		// Add it back again.
 		vxlanWithMAC,
+	},
+
+	// Egress IP states.
+	{
+		endpointWithOwnEgressGateway,
+		endpointWithProfileEgressGateway,
+		endpointWithoutOwnEgressGateway,
+		endpointWithoutProfileEgressGateway,
 	},
 }
 
@@ -565,6 +576,9 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 		state.Name)
 	Expect(mockDataplane.EndpointToPreDNATPolicyOrder()).To(Equal(state.ExpectedPreDNATEndpointPolicyOrder),
 		"Pre-DNAT endpoint policy order incorrect after moving to state: %v",
+		state.Name)
+	Expect(mockDataplane.EndpointEgressIPSetID()).To(Equal(state.ExpectedEndpointEgressIPSetID),
+		"Endpoint egress IP set IDs incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.ActiveUntrackedPolicies()).To(Equal(state.ExpectedUntrackedPolicyIDs),
 		"Untracked policies incorrect after moving to state: %v",
