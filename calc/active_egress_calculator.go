@@ -241,7 +241,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 		aec.endpoints[key] = ep
 	}
 
-	// Note the existing (net) selector, which may be about to be overwritten.
+	// Note the existing active selector, which may be about to be overwritten.
 	oldSelector := ep.activeSelector
 
 	// Update and create profile data for this endpoint.  Also inherit an egress selector from
