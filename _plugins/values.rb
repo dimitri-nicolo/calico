@@ -357,6 +357,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       persistentVolume:
         capacity: 10Gi
       nodeCount: 1
+      storageClassName: tigera-elasticsearch
     
     intrusionDetectionController:
       image: #{imageRegistry}#{versions["intrusion-detection-controller"].image}
