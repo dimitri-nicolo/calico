@@ -5,6 +5,35 @@ then
     echo "Unsupported command: $1"
     exit 1
 fi
+shift 1
+
+SINCE=0s  # Only return logs newer than relative duration such as 5s, 2m, or 3h. Defaults to all logs.
+
+# Parse optional flag(s):
+#   --since=relative_duration (e.g. 10s, 5m)
+
+while (( "$#" )); do
+  case "$1" in
+    --since=*)
+      str=$1
+      SINCE="${str#*=}"    # grab everything after '='
+      shift 1
+
+      if [[ ! $SINCE =~ ^[0-9]+[smh]$ ]]; then
+          echo "invalid relative duration, try 10s, 5m, or 1h"
+          exit 1
+      fi
+      ;;
+    -*|--*=) # unsupported flags
+      echo "Error: Unsupported flag $1" >&2
+      exit 1
+      ;;
+    *) # unsupported argument
+      echo "Error: Unsupported argument $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 # Check pre-requisites, like a functioning kubectl.
 if [ "$(which kubectl)" == "" ]; then echo "Unable to locate kubectl in PATH"; fi
@@ -55,13 +84,13 @@ kubectl get ipamhandles -o yaml > ${tmp}/ipam/ipamhandles.txt
 
 # Get operator logs. 
 echo "Collecting tigera-operator logs..."
-kubectl logs -n tigera-operator -l k8s-app=tigera-operator > ${tmp}/tigera-operator.logs
+kubectl logs --since=$SINCE -n tigera-operator -l k8s-app=tigera-operator > ${tmp}/tigera-operator.logs
 
 # Get typha logs.
 echo "Collecting calico/typha logs..."
 mkdir -p ${tmp}/typhas
 for typha in $(kubectl get pods -n calico-system -l k8s-app=calico-typha -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
-	kubectl logs -n calico-system $typha > ${tmp}/typhas/${typha}.log
+	kubectl logs --since=$SINCE -n calico-system $typha > ${tmp}/typhas/${typha}.log
 done
 
 # Get per-node logs and network information.
@@ -69,7 +98,7 @@ mkdir -p ${tmp}/nodes
 for node in $(kubectl get pods -n calico-system -l k8s-app=calico-node -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
 	echo "Collecting logs for node: $node"
 	mkdir -p ${tmp}/nodes/${node}
-	kubectl logs -n calico-system $node > ${tmp}/nodes/${node}/${node}.log
+	kubectl logs --since=$SINCE -n calico-system $node > ${tmp}/nodes/${node}/${node}.log
 	kubectl exec -n calico-system -t $node -- iptables-save -c > ${tmp}/nodes/${node}/iptables-save.txt
 	kubectl exec -n calico-system -t $node -- ip route > ${tmp}/nodes/${node}/iproute.txt
 done

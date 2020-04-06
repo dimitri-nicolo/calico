@@ -18,13 +18,20 @@ sudo curl -o /usr/local/bin/kubectl-calico {{site.url}}/{{page.version}}/mainten
 Make it executable:
 
 ```
-chmod +x /usr/local/bin/kubectl-calico
+sudo chmod +x /usr/local/bin/kubectl-calico
 ```
 
 Then, create a diagnostics bundle.
 
 ```
 kubectl calico diags
+```
+
+Optionally only collect logs that are newer than a relative duration. The relative duration
+may be specified in seconds, minutes or hours. Default is to collect all logs. For example:
+
+```
+kubectl calico diags --since=1h
 ```
 
 To report a problem, contact Tigera Support.
