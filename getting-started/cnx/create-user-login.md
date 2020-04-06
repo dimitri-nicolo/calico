@@ -1,5 +1,5 @@
 ---
-title: Log in to Calico Enterprise Manager UI
+title: Configure user authentication and log in
 description: Create a user login using an authentication method, and log in to Calico Enterprise Manager with default roles. 
 ---
 
@@ -9,8 +9,7 @@ Configure an authentication method, create a user with access to the manager UI,
 
 ### Before you begin...
 
-Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/) and have setup
-[access to the Manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/) and have set up [access to the Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 
 ### Concepts
 
@@ -31,7 +30,7 @@ Users must have appropriate RBAC to access resources in the UI. We provide the f
 - **tigera-ui-user**: Allows basic UI access.
 - **tigera-network-admin**: Allows UI access, plus the ability to create and modify resources, view compliance reports, and more.
 
-If you would like additional roles, see this [document]({{site.baseurl}}/reference/cnx/rbac-tiered-policies).
+If you would like additional roles, see this [document]({{site.baseurl}}/security/rbac-tiered-policies).
 
 ### How to
 
@@ -174,5 +173,5 @@ kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-t
 
 ### Above and beyond
 
-- [Configuring RBAC for tiered policies]({{site.baseurl}}/reference/cnx/rbac-tiered-policies)
-- [Configuring Calico Enterprise RBAC for Elasticsearch]({{site.baseurl}}/reference/cnx/rbac-elasticsearch)
+- [Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)
+- [Configure Calico Enterprise RBAC for Elasticsearch]({{site.baseurl}}/security/logs/rbac-elasticsearch)

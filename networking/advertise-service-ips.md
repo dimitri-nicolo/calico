@@ -56,8 +56,8 @@ If your {{site.prodname}} deployment is configured to peer with BGP routers outs
 
 ### How to
 
-- [Advertise service cluster IP addresses](#advertise-service-cluster-IP-addresses)
-- [Advertise service external IP addresses](#advertise-service-external-IP-addresses)
+- [Advertise service cluster IP addresses](#advertise-service-cluster-ip-addresses)
+- [Advertise service external IP addresses](#advertise-service-external-ip-addresses)
 
 #### Advertise service cluster IP addresses
 

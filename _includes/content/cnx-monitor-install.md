@@ -23,7 +23,7 @@
 
 Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
-**Prerequisite**: `calicoctl` [installed]({{site.baseurl}}/getting-started/calicoctl/install) and [configured]({{site.baseurl}}/getting-started/calicoctl/configure/). We recommend [installing]({{site.baseurl}}/getting-started/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
+**Prerequisite**: `calicoctl` [installed]({{site.baseurl}}/getting-started/clis/calicoctl/install) and [configured]({{site.baseurl}}/getting-started/clis/calicoctl/configure/). We recommend [installing]({{site.baseurl}}/getting-started/clis/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
 Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 

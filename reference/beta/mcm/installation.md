@@ -168,7 +168,7 @@ Regardless of the service type you choose, you must ensure it obeys the followin
 
 Let’s take a quick look at viewing the management cluster and managed clusters in {{site.prodname}} Manager.
 
-1. Log in to the {{site.prodname}} Manager. For more information on how to access the Manager, see [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager).
+1. Log in to the {{site.prodname}} Manager. For more information on how to access the Manager, see [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager).
 
 2. In the right-hand side of the top navigation bar, you can toggle between the various clusters that are currently registered with the management plane. Clicking it displays a drop-down menu where you can pick the cluster you want to manage.
 
@@ -342,11 +342,11 @@ To ensure a user logged in to the {{site.prodname}} Manager in the management pl
 
 {{site.prodname}} uses [Kubernetes user impersonation](https://kubernetes.io/rbac/#user-impersonation) when sending requests from the management plane down in to a managed cluster. It is assumed that the user logged in to the management plane has a corresponding user with the same name in the managed cluster.
 
-{{site.prodname}} provides some default cluster roles that you can assign to your users. For more information on how to assign the default cluster roles to your users, see [Log in to Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/create-user-login).
+{{site.prodname}} provides some default cluster roles that you can assign to your users. For more information on how to assign the default cluster roles to your users, see [Log in to Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx/create-user-login).
 
 ###### Access log data in Kibana for a specific managed cluster
 
-1. Log in to the {{site.prodname}} Manager. For more information on how to access the Manager, see [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager).
+1. Log in to the {{site.prodname}} Manager. For more information on how to access the Manager, see [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager).
 2. Click on Kibana from the side navigation.
 3. Log in to the Kibana dashboard. For more information on how to log in to your Kibana dashboard, see [Accessing logs from Kibana]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana)
 4. Navigate to Discovery view and filter logs by managed cluster indexes. Select a type of log (e.g. audit, dns, events, flow). Then, from the “Available Fields” section in the side panel, select the `_index` field.
@@ -419,8 +419,8 @@ The rule below allows access to any cluster for all log types.
 
 ### Above and beyond
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
-- [Log in to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/create-user-login)
+- [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- [Log in to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/create-user-login)
 - [Accessing logs from Kibana]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana)
 - [Installation API reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)
 - [ManagementClusterConnection resource reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementClusterConnection)

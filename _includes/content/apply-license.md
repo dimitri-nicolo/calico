@@ -1,7 +1,7 @@
 ## Applying your license key
 
 {% if include.cli == 'calicoctl' %}
-1. [Install calicoctl]({{site.baseurl}}/getting-started/calicoctl/install#installing-calicoctl-as-a-kubernetes-pod).
+1. [Install calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/install#installing-calicoctl-as-a-kubernetes-pod).
 {% endif %}
 
 1. Use the following command to apply your [license key]({{site.baseurl}}/reference/resources/licensekey).

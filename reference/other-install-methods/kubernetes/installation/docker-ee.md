@@ -23,8 +23,8 @@ For a test environment, a minimum of 3 nodes is required. For a production envir
 
 - Ensure that your Docker Enterprise cluster also meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements).
 
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials)
-  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key)
+  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
 ## Install the Kubectl CLI Tool
 Install the Kubernetes command-line tool, kubectl, to deploy and manage applications on Kubernetes.
@@ -158,7 +158,7 @@ kubectl get pods --all-namespaces
     > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
     > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
     > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-    > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/reference/cnx/rbac-tiered-policies) documentation
+    > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/security/rbac-tiered-policies) documentation
     > for more details.
     {: .alert .alert-info}
 
@@ -177,8 +177,7 @@ kubectl get pods --all-namespaces
 
     - Edit the cnx.yaml file and modify the `ConfigMap` named `tigera-cnx-manager-config`
       by setting the value of `tigera.cnx-manager.authentication-type` to `Token`.
-      Refer to [Bearer tokens]({{site.baseurl}}/reference/cnx/authentication#bearer-tokens)
-      for more information. Also refer to Kubernetes' [Putting a bearer token in a request](https://kubernetes.io/docs/admin/authentication/#putting-a-bearer-token-in-a-request){:target="_blank"}
+      Also refer to Kubernetes' [Putting a bearer token in a request](https://kubernetes.io/docs/admin/authentication/#putting-a-bearer-token-in-a-request){:target="_blank"}
       for further details.<br>
 
 1. Create a secret containing a TLS certificate and the private key used to

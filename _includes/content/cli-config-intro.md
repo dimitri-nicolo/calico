@@ -23,8 +23,8 @@ file, it will check a specific set of environment variables.
 Refer to the section that corresponds to your datastore type for a full set of options
 and examples.
 
-- [etcd datastore]({{site.baseurl}}/getting-started/{{include.cli}}/configure/etcd)
-- [Kubernetes API datastore]({{site.baseurl}}/getting-started/{{include.cli}}/configure/kdd)
+- [etcd datastore]({{site.baseurl}}/getting-started/clis/{{include.cli}}/configure/etcd)
+- [Kubernetes API datastore]({{site.baseurl}}/getting-started/clis/{{include.cli}}/configure/kdd)
 
 > **Note**: When running `{{ include.cli }}` inside a container, any environment variables and
 > configuration files must be passed to the container so they are available to

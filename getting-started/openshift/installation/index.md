@@ -1,5 +1,5 @@
 ---
-title: Installing an OpenShift v4 cluster with Calico Enterprise
+title: Install an OpenShift v4 cluster with Calico Enterprise
 description: Install Calico Enterprise on an OpenShift v4 cluster.
 canonical_url: '/getting-started/openshift/installation'
 ---
@@ -19,8 +19,7 @@ to install {{site.prodname}}.
 
 - Ensure that your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements).
 
-- Ensure that you have the [private registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials)
-  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
+- Ensure that you have the [private registry credentials and license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 - **If installing on AWS**, ensure that you have {% include open-new-window.html text='configured an AWS account' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html' %} appropriate for OpenShift v4,
   and have {% include open-new-window.html text='set up your AWS credentials' url='https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html' %}.
@@ -155,7 +154,7 @@ oc create -f {{ "/manifests/tigera-policies-openshift.yaml" | absolute_url }}
 
 ### Above and beyond
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+- [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)

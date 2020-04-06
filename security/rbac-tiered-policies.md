@@ -1,7 +1,7 @@
 ---
 title: Configure RBAC for tiered policies
 description: Configure RBAC to control access to policies and tiers. 
-canonical_url: /reference/cnx/rbac-tiered-policies
+canonical_url: /security/rbac-tiered-policies
 show_toc: false
 ---
 
@@ -73,7 +73,7 @@ Where:
 
 **Required**
 
-A **tigera-network-admin** role with full permissions to create and modify resources. See [Log in to {{site.prodname}} Enterprise Manager]({{site.baseurl}}/getting-started/create-user-login).
+A **tigera-network-admin** role with full permissions to create and modify resources. See [Log in to {{site.prodname}} Enterprise Manager]({{site.baseurl}}/getting-started/cnx/create-user-login).
 
 **Recommended**
 

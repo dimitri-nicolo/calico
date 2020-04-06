@@ -1,4 +1,5 @@
 ---
+title: Configure calicoq
 description: Configure calicoq for etcd or Kubernetes API datastore.  
 show_read_time: false
 show_toc: false

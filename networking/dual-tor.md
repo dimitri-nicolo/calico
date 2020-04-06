@@ -289,7 +289,7 @@ resource.  The following settings are recommended for dual ToR configurations.
 To do that, you will need to:
 
 1. Install and configure
-   [calicoctl]({{site.baseurl}}/getting-started/calicoctl/install).
+   [calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/install).
 
 2. Set the correct AS number on each {{site.prodname}} node.
 
