@@ -712,11 +712,11 @@ var _ = Describe("Config", func() {
 })
 
 type mockKCC struct {
-	get       *v3.KubeControllersConfiguration
-	geterror  error
-	update    *v3.KubeControllersConfiguration
-	create    *v3.KubeControllersConfiguration
-	watchchan chan watch.Event
+	get        *v3.KubeControllersConfiguration
+	geterror   error
+	update     *v3.KubeControllersConfiguration
+	create     *v3.KubeControllersConfiguration
+	watchchan  chan watch.Event
 	watchcount int
 }
 

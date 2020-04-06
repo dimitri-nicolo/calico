@@ -483,10 +483,6 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.needLicenseMonitoring = true
 	}
 	if cfg.Controllers.ElasticsearchConfiguration != nil {
-		//kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
-		//if err != nil {
-		//	log.WithError(err).Fatal("failed to build kubernetes client config")
-		//}
 
 		esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
 		if err != nil {
@@ -506,10 +502,6 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 	}
 	if cfg.Controllers.ManagedCluster != nil {
 		// We only want these clients created if the managedcluster controller type is enabled
-		//kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
-		//if err != nil {
-		//	log.WithError(err).Fatal("failed to build kubernetes client config")
-		//}
 		kubeconfig := cfg.Controllers.ManagedCluster.RESTConfig
 
 		esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
