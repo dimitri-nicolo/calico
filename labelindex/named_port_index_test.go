@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package labelindex_test
 
 import (
+	"github.com/projectcalico/felix/ip"
 	. "github.com/projectcalico/felix/labelindex"
 
 	. "github.com/onsi/ginkgo"
@@ -131,6 +132,50 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			Expect(set).To(HaveLen(1))
 		})
 	})
+
+	Describe("Egress IP", func() {
+		It("should only match an egress IP set against workload endpoints", func() {
+			uut.OnUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.WorkloadEndpointKey{WorkloadID: "we1"},
+					Value: &model.WorkloadEndpoint{
+						Labels: map[string]string{"villain": "ghost"},
+						IPv4Nets: []calinet.IPNet{
+							{IPNet: net.IPNet{
+								IP:   net.IP{192, 168, 4, 10},
+								Mask: net.IPMask{255, 255, 255, 0},
+							}},
+						},
+					},
+				},
+			})
+			uut.OnUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.NetworkSetKey{Name: "scary-ns"},
+					Value: &model.NetworkSet{
+						Nets: []calinet.IPNet{
+							{IPNet: net.IPNet{
+								IP:   net.IP{192, 168, 20, 1},
+								Mask: net.IPMask{255, 255, 0, 0},
+							}},
+						},
+						Labels:     map[string]string{"villain": "ghost"},
+						ProfileIDs: []string{"doo"},
+					},
+				},
+			})
+			s, err := selector.Parse("villain == 'ghost'")
+			Expect(err).ToNot(HaveOccurred())
+			uut.UpdateIPSet("e:villains", s, ProtocolNone, "")
+			set, ok := recorder.ipsets["e:villains"]
+			Expect(ok).To(BeTrue())
+			Expect(set).To(HaveLen(1))
+			cidr, err := ip.CIDRFromString("192.168.4.10/32")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(set).To(HaveKey(IPSetMember{CIDR: cidr}))
+		})
+	})
+
 })
 
 type testRecorder struct {
