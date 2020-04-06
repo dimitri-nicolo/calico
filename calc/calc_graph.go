@@ -257,7 +257,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		log.WithField("ipSet", ipSet).Info("IPSet now active")
 		callbacks.OnIPSetAdded(ipSet.UniqueID(), ipSet.DataplaneProtocolType())
 		if ipSet.Selector != nil {
-			if !(ipSet.isDomainSet || ipSet.isEgressSelector) {
+			if !(ipSet.isDomainSet || ipSet.IsEgressSelector) {
 				defer gaugeNumActiveSelectors.Inc()
 			}
 			ipsetMemberIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
@@ -266,7 +266,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	ruleScanner.OnIPSetInactive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now inactive")
 		if ipSet.Selector != nil {
-			if !(ipSet.isDomainSet || ipSet.isEgressSelector) {
+			if !(ipSet.isDomainSet || ipSet.IsEgressSelector) {
 				defer gaugeNumActiveSelectors.Dec()
 			}
 			ipsetMemberIndex.DeleteIPSet(ipSet.UniqueID())

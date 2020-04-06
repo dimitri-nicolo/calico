@@ -590,7 +590,7 @@ func (tc *testCallbacks) OnEgressIPSetIDUpdate(key model.WorkloadEndpointKey, eg
 
 func (tc *testCallbacks) ExpectActive() string {
 	Expect(len(tc.activeCalls)).To(BeNumerically(">=", 1))
-	Expect(tc.activeCalls[0].isEgressSelector).To(BeTrue())
+	Expect(tc.activeCalls[0].IsEgressSelector).To(BeTrue())
 	ipSetID := tc.activeCalls[0].cachedUID
 	Expect(ipSetID).To(HavePrefix("e:"))
 	tc.activeCalls = tc.activeCalls[1:]
@@ -599,7 +599,7 @@ func (tc *testCallbacks) ExpectActive() string {
 
 func (tc *testCallbacks) ExpectInactive(id string) {
 	Expect(len(tc.inactiveCalls)).To(BeNumerically(">=", 1))
-	Expect(tc.inactiveCalls[0].isEgressSelector).To(BeTrue())
+	Expect(tc.inactiveCalls[0].IsEgressSelector).To(BeTrue())
 	Expect(tc.inactiveCalls[0].cachedUID).To(Equal(id))
 	tc.inactiveCalls = tc.inactiveCalls[1:]
 }

@@ -313,7 +313,7 @@ func (aec *ActiveEgressCalculator) incRefSelector(selector string) {
 		}
 		selData = &esData{ipSet: &IPSetData{
 			Selector:         sel,
-			isEgressSelector: true,
+			IsEgressSelector: true,
 		}}
 		aec.selectors[selector] = selData
 		aec.OnIPSetActive(selData.ipSet)
