@@ -4,134 +4,40 @@ order: 3
 section:
 - title: Adopt a zero trust network model for security
   path: /security/adopt-zero-trust
-- title: Get started with policy
-  path: /security/get-started
+- title: Get started with Calico Enterprise Manager
+  path: /security/get-started-cem
+- title: Calico Enterprise network policy
+  path: /security/calico-enterprise-policy
   section:
-  - title: Calico policy
-    path: /security/calico-policy
-    section:
-    - title: Get started with Calico network policy
-      path: /security/calico-network-policy
-  - title: Kubernetes policy
-    path: /security/kubernetes-policy
-    section:
-    - title: Get started with Kubernetes network policy
-      path: /security/kubernetes-network-policy
-    - title: Kubernetes policy, demo
-      path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
-    - title: Kubernetes policy, basic tutorial
-      path: /security/tutorials/kubernetes-policy-basic
-    - title: Kubernetes policy, advanced tutorial
-      path: /security/tutorials/kubernetes-policy-advanced
-  - title: Calico Enterprise network policy
-    path: /security/calico-enterprise-policy
-    section:
-    - title: Create tiered policy
-      path: /security/tiered-policy
-    - title: Create staged policy
-      path: /security/staged-network-policies
-    - title: Preview policy impacts
-      path: /security/policy-impact-preview
-    - title: Generate policy recommendation
-      path: /security/generate-policy-recommendation
-    - title: Calico Enterprise policy tutorial
-      path: /security/simple-policy-cnx
-    - title: Policy for AWS security groups
-      path: /security/aws-security-group-integration/
-      section:
-      - title: Overview
-        path: /security/aws-security-group-integration/overview
-      - title: Interconnect your VPC and cluster
-        path: /security/aws-security-group-integration/interconnection
-      - title: Enable pods to access VPC members
-        path: /security/aws-security-group-integration/pod-access
-      - title: Enable VPC members to access pods
-        path: /security/aws-security-group-integration/vpc-member-access
-      - title: Enable access to AWS metadata
-        path: /security/aws-security-group-integration/metadata-access
-      - title: Manage tiers associated with security group integration
-        path: /security/aws-security-group-integration/tier-management
-      - title: Host endpoints
-        path: /security/aws-security-group-integration/host-endpoints
-  - title: Enable default deny
-    path: /security/kubernetes-default-deny
-- title: Policy rules
-  path: /security/policy-rules
-  section:
-  - title: Basic rules
-    path: /security/policy-rules-overview
-  - title: Namespace rules
-    path: /security/namespace-policy
-  - title: Service accounts rules
-    path: /security/service-accounts
-  - title: External IPs or networks rules
-    path: /security/external-ips-policy
-  - title: ICMP/ping rules
-    path: /security/icmp-ping
-  - title: Use domain names in policy rules
-    path: /security/domain-based-policy
-- title: Policy for hosts
-  path: /security/hosts
-  section:
-  - title: Protect hosts
-    path: /security/protect-hosts
-  - title: Protect host tutorial
-    path: /security/tutorials/protect-hosts
-  - title: Apply policy to host forwarded traffic
-    path: /security/host-forwarded-traffic
-- title: Policy for services
-  path: /security/services
-  section:
-  - title: Apply policy to Kubernetes node ports
-    path: /security/kubernetes-node-ports
-  - title: Apply policy to services exposed externally as cluster IPs
-    path: /security/services-cluster-ips
-- title: Policy for Istio
-  path: /security/istio
-  section:
-  - title: Enable network policy for Istio
-    path: /security/app-layer-policy
-  - title: Enforce network policy using Istio
-    path: /security/enforce-policy-istio
-  - title: Use HTTP methods and paths in policy rules
-    path: /security/http-methods
-  - title: Enforce network policy using Istio tutorial
-    path: /security/tutorials/app-layer-policy/enforce-policy-istio
-- title: Policy for extreme traffic
-  path: /security/extreme-traffic
-  section:
-  - title: Enable extreme high-connection workloads
-    path: /security/high-connection-workloads
-  - title: Defend against DoS attacks
-    path: /security/defend-dos-attack
-- title: Logs
-  path: /security/logs/
-  section:
-  - title: Elasticsearch logs
-    path: /security/logs/elastic/
+  - title: Create tiered policy
+    path: /security/tiered-policy
+  - title: Create RBAC for tiered policy
+    path: /security/rbac-tiered-policies
+  - title: Create staged policy
+    path: /security/staged-network-policies
+  - title: Preview policy impacts
+    path: /security/policy-impact-preview
+  - title: Generate policy recommendation
+    path: /security/generate-policy-recommendation
+  - title: Calico Enterprise policy tutorial
+    path: /security/simple-policy-cnx
+  - title: Policy for AWS security groups
+    path: /security/aws-security-group-integration/
     section:
     - title: Overview
-      path: /security/logs/elastic/overview
-    - title: Access Elasticsearch logs
-      path: /security/logs/elastic/view
-    - title: Flow logs
-      path: /security/logs/elastic/flow
-    - title: Audit logs
-      path: /security/logs/elastic/ee-audit
-    - title: DNS logs
-      path: /security/logs/elastic/dns
-    - title: Configure data retention
-      path: /security/logs/retention
-    - title: Configure Elasticsearch
-      path: /security/logs/configure-elastic
-    - title: Archive logs to storage
-      path: /security/logs/elastic/archive-storage
-    - title: Filter flow logs
-      path: /security/logs/elastic/filtering
-    - title: Filter out DNS logs
-      path: /security/logs/elastic/filtering-dns
-  - title: iptables logs
-    path: /security/logs/iptables
+      path: /security/aws-security-group-integration/overview
+    - title: Interconnect your VPC and cluster
+      path: /security/aws-security-group-integration/interconnection
+    - title: Enable pods to access VPC members
+      path: /security/aws-security-group-integration/pod-access
+    - title: Enable VPC members to access pods
+      path: /security/aws-security-group-integration/vpc-member-access
+    - title: Enable access to AWS metadata
+      path: /security/aws-security-group-integration/metadata-access
+    - title: Manage tiers associated with security group integration
+      path: /security/aws-security-group-integration/tier-management
+    - title: Host endpoints
+      path: /security/aws-security-group-integration/host-endpoints
 - title: Threat detection and prevention
   path: /security/threat-detection-and-prevention/
   section:
@@ -155,8 +61,8 @@ section:
   - title: Trace and block suspicious domains
     path: /security/threat-detection-and-prevention/suspicious-domains
   - title: Trace and block external IP addresses
-    path: /security/logs/elastic/ingress  
-  - title: Tor-VPN feeds and Dashboard
+    path: /security/ingress
+  - title: Trace anonymous communication using Tor-VPN feeds
     path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
 - title: Compliance reports
   path: /security/compliance-reports/
@@ -167,6 +73,104 @@ section:
     path: /security/compliance-managed-cloud
   - title: Configure CIS benchmark reports
     path: /security/compliance-reports-cis
+- title: Logs
+  path: /security/logs/
+  section:
+  - title: Elasticsearch logs
+    path: /security/logs/elastic/
+    section:
+    - title: Overview
+      path: /security/logs/elastic/overview
+    - title: Configure RBAC for Elasticsearch logs and events
+      path: /security/logs/rbac-elasticsearch
+    - title: Access Elasticsearch logs
+      path: /security/logs/elastic/view
+    - title: Flow logs
+      path: /security/logs/elastic/flow
+    - title: Audit logs
+      path: /security/logs/elastic/ee-audit
+    - title: DNS logs
+      path: /security/logs/elastic/dns
+    - title: Configure data retention
+      path: /security/logs/retention
+    - title: Archive logs to storage
+      path: /security/logs/elastic/archive-storage
+    - title: Filter flow logs
+      path: /security/logs/elastic/filtering
+    - title: Filter out DNS logs
+      path: /security/logs/elastic/filtering-dns
+  - title: iptables logs
+    path: /security/logs/iptables
+- title: Get started with Calico and Kubernetes policies
+  path: /security/get-started
+  section:
+  - title: Calico policy
+    path: /security/calico-policy
+    section:
+    - title: Get started with Calico network policy
+      path: /security/calico-network-policy
+  - title: Kubernetes policy
+    path: /security/kubernetes-policy
+    section:
+    - title: Get started with Kubernetes network policy
+      path: /security/kubernetes-network-policy
+    - title: Kubernetes policy, demo
+      path: /security/tutorials/kubernetes-policy-demo/kubernetes-demo
+    - title: Kubernetes policy, basic tutorial
+      path: /security/tutorials/kubernetes-policy-basic
+    - title: Kubernetes policy, advanced tutorial
+      path: /security/tutorials/kubernetes-policy-advanced
+  - title: Enable default deny
+    path: /security/kubernetes-default-deny
+  - title: Policy rules
+    path: /security/policy-rules
+    section:
+    - title: Basic rules
+      path: /security/policy-rules-overview
+    - title: Namespace rules
+      path: /security/namespace-policy
+    - title: Service accounts rules
+      path: /security/service-accounts
+    - title: External IPs or networks rules
+      path: /security/external-ips-policy
+    - title: ICMP/ping rules
+      path: /security/icmp-ping
+    - title: Use domain names in policy rules
+      path: /security/domain-based-policy
+  - title: Policy for hosts
+    path: /security/hosts
+    section:
+    - title: Protect hosts
+      path: /security/protect-hosts
+    - title: Protect host tutorial
+      path: /security/tutorials/protect-hosts
+    - title: Apply policy to host forwarded traffic
+      path: /security/host-forwarded-traffic
+  - title: Policy for services
+    path: /security/services
+    section:
+    - title: Apply policy to Kubernetes node ports
+      path: /security/kubernetes-node-ports
+    - title: Apply policy to services exposed externally as cluster IPs
+      path: /security/services-cluster-ips
+  - title: Policy for Istio
+    path: /security/istio
+    section:
+    - title: Enable network policy for Istio
+      path: /security/app-layer-policy
+    - title: Enforce network policy using Istio
+      path: /security/enforce-policy-istio
+    - title: Use HTTP methods and paths in policy rules
+      path: /security/http-methods
+    - title: Enforce network policy using Istio tutorial
+      path: /security/tutorials/app-layer-policy/enforce-policy-istio
+  - title: Policy for extreme traffic
+    path: /security/extreme-traffic
+    section:
+    - title: Enable extreme high-connection workloads
+      path: /security/high-connection-workloads
+    - title: Defend against DoS attacks
+      path: /security/defend-dos-attack
 - title: Secure Calico Enterprise component communications
   path: /security/comms/
   section:

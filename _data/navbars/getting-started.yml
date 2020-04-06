@@ -2,8 +2,6 @@ title: "Install Calico Enterprise"
 path: /getting-started/
 order: 1
 section:
-- title: Get a license
-  path: /getting-started/calico-enterprise
 - title: Kubernetes
   path: /getting-started/kubernetes/
   section:
@@ -59,8 +57,14 @@ section:
       path: /getting-started/openshift/requirements
     - title: Installation
       path: /getting-started/openshift/installation/
+  - title: Install from a private registry
+    path: /getting-started/private-registry
+  - title: Configure storage for logs and reports
+    path: /getting-started/create-storage
   - title: Upgrade from Calico to Calico Enterprise
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
+  - title: Get a license
+    path: /getting-started/calico-enterprise
   - title: System requirements
     path: /getting-started/kubernetes/requirements
 - title: Non-cluster hosts
@@ -77,42 +81,43 @@ section:
       path: /getting-started/bare-metal/installation/container
     - title: Binary install
       path: /getting-started/bare-metal/installation/binary
-      
-- title: calicoctl
-  path: /getting-started/calicoctl/
+- title: CLIs
+  path: /getting-started/clis
   section:
-  - title: Install calicoctl
-    path: /getting-started/calicoctl/install
-  - title: Configure calicoctl
-    path: /getting-started/calicoctl/configure/
+  - title: calicoctl
+    path: /getting-started/clis/calicoctl/
     section:
-    - title: Overview
-      path: /getting-started/calicoctl/configure/overview
-    - title: Configure calicoctl to connect to an etcd datastore
-      path: /getting-started/calicoctl/configure/etcd
-    - title: Configure calicoctl to connect to the Kubernetes API datastore
-      path: /getting-started/calicoctl/configure/kdd
+    - title: Install calicoctl
+      path: /getting-started/clis/calicoctl/install
+    - title: Configure calicoctl
+      path: /getting-started/clis/calicoctl/configure/
+      section:
+      - title: Overview
+        path: /getting-started/clis/calicoctl/configure/overview
+      - title: Configure calicoctl to connect to an etcd datastore
+        path: /getting-started/clis/calicoctl/configure/etcd
+      - title: Configure calicoctl to connect to the Kubernetes API datastore
+        path: /getting-started/clis/calicoctl/configure/kdd
 
-- title: calicoq
-  path: /getting-started/calicoq/
+  - title: calicoq
+    path: /getting-started/clis/calicoq/
+    section:
+    - title: Install calicoq
+      path: /getting-started/clis/calicoq/installing
+    - title: Configure calicoq
+      path: /getting-started/clis/calicoq/configure/
+      section:
+      - title: Overview
+        path: /getting-started/clis/calicoq/configure/overview
+      - title: etcd datastore options
+        path: /getting-started/clis/calicoq/configure/etcd
+      - title: Kubernetes API datastore options
+        path: /getting-started/clis/calicoq/configure/kdd
+
+- title: Calico Enterprise Manager user interface
+  path: /getting-started/cnx
   section:
-  - title: Installing calicoq
-    path: /getting-started/calicoq/installing
-  - title: Configuring calicoq
-    path: /getting-started/calicoq/configure/
-    section:
-    - title: Overview
-      path: /getting-started/calicoq/configure/overview
-    - title: etcd datastore options
-      path: /getting-started/calicoq/configure/etcd
-    - title: Kubernetes API datastore options
-      path: /getting-started/calicoq/configure/kdd
-
-- title: Install from a private registry
-  path: /getting-started/private-registry
-- title: Configure storage for logs and reports
-  path: /getting-started/create-storage
-- title: Configure access to the manager UI
-  path: /getting-started/access-the-manager
-- title: Log in to the manager UI
-  path: /getting-started/create-user-login
+  - title: Configure access to Calico Enterprise Manager
+    path: /getting-started/cnx/access-the-manager
+  - title: Configure user authentication and log in
+    path: /getting-started/cnx/create-user-login

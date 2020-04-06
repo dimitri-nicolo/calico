@@ -70,8 +70,8 @@ It is easy to manage both **Kubernetes network policies** alongside your **{{sit
 
 **Required**
 
-- A Kubernetes cluster installed and configured with [Calico Enterprise]({{site.baseurl}}/getting-started/) and [CLIs are installed and configured]({{site.baseurl}}/getting-started/calicoctl/)
-- If you use {{site.prodname}} Manager, users require authentication to log in [Configure user authentication to Calico Enterprise Manager]({{site.baseurl}}/getting-started/create-user-login)
+- A Kubernetes cluster installed and configured with [Calico Enterprise]({{site.baseurl}}/getting-started/) and [CLIs are installed and configured]({{site.baseurl}}/getting-started/clis/calicoctl/)
+- If you use {{site.prodname}} Manager, users require authentication to log in [Configure user authentication to Calico Enterprise Manager]({{site.baseurl}}/getting-started/cnx/create-user-login)
 
 ### How to
 
@@ -139,6 +139,6 @@ Use `kubectl` to create, modify, or delete Kubernetes network policies as you no
 ### Above and beyond
 
 - [Tier]({{site.baseurl}}/reference/resources/tier)
-- [Configure RBAC for tiered policies]({{site.baseurl}}/reference/cnx/rbac-tiered-policies)
+- [Configure RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies)
 - [Preview policy impacts]({{site.baseurl}}/security/policy-impact-preview)
 - [Create staged policies]({{site.baseurl}}/security/staged-network-policies)

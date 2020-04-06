@@ -25,9 +25,7 @@ Ensure that your AKS cluster meets the following requirements.
 #### Gather required resources
 
 - Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings. This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see [AKS access control](https://docs.microsoft.com/bs-latn-ba/azure/aks/control-kubeconfig-access).
-
-
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise-get-the-private-registry-credentials) and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#get-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 #### Enable transparent mode
 

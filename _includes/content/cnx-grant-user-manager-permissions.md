@@ -38,4 +38,4 @@
 {%- endif %}
    ```
 
-   To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.baseurl}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.
+   To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.baseurl}}/security/rbac-tiered-policies){:target="_blank"}.

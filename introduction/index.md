@@ -8,7 +8,7 @@ custom_css: css/intro.css
 
 <div id="why-use-calico-1" class="row">
   <div class="col-md-6">
-    <img style="max-width: 330px" class="img-responsive center-block" src="/images/felix_icon.png">
+    <img style="max-width: 330px" class="img-responsive center-block" src="{{site.baseurl}}/images/calico_enterprise_logo.png">
   </div>
   <div class="col-md-6">
     <h3 id="what-is" style="margin-top: 5px">What is {{site.prodname}}?</h3>

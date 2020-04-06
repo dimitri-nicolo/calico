@@ -1,47 +1,3 @@
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-elasticsearch
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-compliance
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-prometheus
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-guardian
-spec:
-  podSelector:
-    matchLabels: {}
-
----
-
 # Tier containing policies to allow access to Calico Enterprise.
 apiVersion: projectcalico.org/v3
 kind: Tier
@@ -233,5 +189,62 @@ spec:
       source:
         namespaceSelector: projectcalico.org/name == 'tigera-compliance'
         selector: k8s-app == 'compliance-controller'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-intrusion-detection'
+        selector: k8s-app == 'intrusion-detection-controller'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-intrusion-detection'
+        selector: job-name == 'intrusion-detection-es-job-installer'
 
 ---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-elasticsearch
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-compliance
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-prometheus
+spec:
+  podSelector:
+    matchLabels: {}
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+  namespace: tigera-guardian
+spec:
+  podSelector:
+    matchLabels: {}

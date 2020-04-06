@@ -106,7 +106,7 @@ kubefedctl enable stagednetworkpolicies.crd.projectcalico.org
 Run the following command on the **host cluster** to enable Kubernetes API for network policies.
 
 ```
-kubefedctl enable networkpolicies.k8s.io --federated-group networkpolicies.k8s.io
+kubefedctl enable networkpolicies.networking.k8s.io --federated-group networkpolicies.networking.k8s.io
 ```
 
 Run the following command on the **host cluster** to add get, create, list, delete operations to the _kubefed_ clusterrole.
@@ -114,7 +114,7 @@ Run the following command on the **host cluster** to add get, create, list, dele
 ```
 kubectl patch clusterrole kubefed-role --type='json' -p='[{"op": "add", "path": "/rules/1", "value": {
 "apiGroups": [
-"networkpolicies.k8s.io"
+"networkpolicies.networking.k8s.io"
 ],
 "resources": [
 "*"

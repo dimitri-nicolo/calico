@@ -16,8 +16,8 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 - Ensure that your EKS nodes meet [system node requirements.]({{site.baseurl}}/getting-started/kubernetes/requirements)
 
-- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#obtain-the-private-registry-credentials)
-  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key)
+  and a [license key]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
 - To follow the TLS certificate and key creation instructions below you'll need openssl.
 

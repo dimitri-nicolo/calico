@@ -1,5 +1,5 @@
 ---
-title: Installing Calico Enterprise on a Rancher Kubernetes Engine cluster
+title: Install Calico Enterprise on a Rancher Kubernetes Engine cluster
 description: Install Calico Enterprise on a Rancher Kubernetes Engine cluster.
 canonical_url: '/getting-started/kubernetes/index'
 ---
@@ -24,8 +24,7 @@ Install {{side.prodname}} as the required CNI for networking and/or network poli
 
 #### Gather required resources
 
-- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/calico-enterprise#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/calico-enterprise#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry and a license key](../../../getting-started/calico-enterprise).
 
 - Ensure you have a kubectl environment with access to your cluster
   - Use [Rancher kubectl Shell](https://rancher.com/docs/rancher/v2.x/en/cluster-admin/cluster-access/kubectl/) for access
@@ -100,7 +99,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 ### Above and beyond
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/access-the-manager)
+- [Configure access to Calico Enterprise Manager]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 - [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)

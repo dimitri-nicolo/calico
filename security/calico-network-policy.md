@@ -269,6 +269,3 @@ Spec:
 - For an alternative to using IP addresses or CIDRs in policy, see [Network sets]({{ site.baseurl }}/reference/resources/networkset) 
 - For details on the calicoctl command line tool, see [calicoctl user reference]({{ site.baseurl }}/reference/calicoctl/overview)
 - For details on how to stage network policy, see [Staged network policies]({{site.baseurl}}/security/staged-network-policies) 
-- {% include enterprise_icon.html %}[Compliance and threat detection with Calico Enterprise]({{site.baseurl}}/security/calico-enterprise/network-visibility)
-- {% include enterprise_icon.html %}[Network visibility with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/network-visibility)
-- {% include enterprise_icon.html %}[Advanced compliance controls with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/compliance)
