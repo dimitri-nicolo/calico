@@ -357,6 +357,8 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       persistentVolume:
         capacity: 10Gi
       nodeCount: 1
+      # Change this value to override the storage class used by Elasticsearch nodes. We recommend choosing a storage
+      # class dedicated to Calico Enterprise only to ensure data retention after upgrades.
       storageClassName: tigera-elasticsearch
     
     intrusionDetectionController:
