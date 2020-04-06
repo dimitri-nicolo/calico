@@ -4,6 +4,7 @@ package elasticsearchconfiguration
 
 import (
 	"fmt"
+	"github.com/projectcalico/kube-controllers/pkg/config"
 
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 
@@ -67,6 +68,7 @@ type esConfigController struct {
 	clusterName string
 	r           *reconciler
 	worker      worker.Worker
+	cfg config.ElasticsearchCfgControllerCfg
 }
 
 func New(
@@ -75,7 +77,8 @@ func New(
 	managedK8sCLI kubernetes.Interface,
 	managementK8sCLI kubernetes.Interface,
 	esK8sCLI relasticsearch.RESTClient,
-	management bool) controller.Controller {
+	management bool,
+	cfg config.ElasticsearchCfgControllerCfg) controller.Controller {
 	r := &reconciler{
 		clusterName:      clusterName,
 		esServiceURL:     esServiceURL,
@@ -142,10 +145,11 @@ func New(
 		clusterName: clusterName,
 		r:           r,
 		worker:      w,
+		cfg: cfg,
 	}
 }
 
-func (c *esConfigController) Run(threadiness int, reconcilerPeriod string, stop chan struct{}) {
+func (c *esConfigController) Run(stop chan struct{}) {
 	logger := log.WithField("cluster", c.clusterName)
 	logger.Info("Starting Elasticsearch configuration controller")
 	// kick off the reconciler so we know all the es credentials are created
@@ -153,7 +157,7 @@ func (c *esConfigController) Run(threadiness int, reconcilerPeriod string, stop 
 		logger.WithError(err).Error("failed initial reconcile")
 	}
 
-	go c.worker.Run(threadiness, stop)
+	go c.worker.Run(c.cfg.NumberOfWorkers, stop)
 
 	<-stop
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/labelindex"
 	rcache "github.com/projectcalico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/kube-controllers/pkg/config"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -67,6 +68,8 @@ type federatedServicesController struct {
 	// Syncer callback decoupler ensures syncer callbacks are serialized. This avoids the need
 	// for locking our datastructures.
 	decoupler *calc.SyncerCallbacksDecoupler
+
+	cfg config.GenericControllerConfig
 }
 
 // serviceInfo contains the details about a single service on a cluster. In particular it contains the various
@@ -109,7 +112,7 @@ type federatedServiceConfig struct {
 }
 
 // NewFederatedServicesController returns a controller which manages FederatedServices objects.
-func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernetes.Clientset, c client.Interface) controller.Controller {
+func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernetes.Clientset, c client.Interface, cfg config.GenericControllerConfig) controller.Controller {
 	fec := &federatedServicesController{
 		calicoClient:  c,
 		ctx:           ctx,
@@ -118,6 +121,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 		allServices:   make(map[serviceID]*serviceInfo),
 		dirtyServices: set.New(),
 		decoupler:     calc.NewSyncerCallbacksDecoupler(),
+		cfg:           cfg,
 	}
 
 	// Function returns map of kubernetes services that are owned by the federated services controller.
@@ -163,7 +167,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 }
 
 // Run starts the controller.
-func (c *federatedServicesController) Run(threadiness int, reconcilerPeriod string, stopCh chan struct{}) {
+func (c *federatedServicesController) Run(stopCh chan struct{}) {
 	defer uruntime.HandleCrash()
 
 	log.Info("Starting FederatedServices controller")
@@ -180,11 +184,11 @@ func (c *federatedServicesController) Run(threadiness int, reconcilerPeriod stri
 		// The startFederating call blocks until the syncer has finished its initial sync. At this point the reconciler
 		// cache will have been programmed with the current required set of data.  Start the Kubernetes reconciler
 		// cache to fix up any deltas between the required and configured data.
-		c.cache.Run(reconcilerPeriod)
+		c.cache.Run(c.cfg.ReconcilerPeriod.String())
 		defer c.cache.GetQueue().ShutDown()
 
 		// Start a number of worker threads to read from the queue.
-		for i := 0; i < threadiness; i++ {
+		for i := 0; i < c.cfg.NumberOfWorkers; i++ {
 			go c.runWorker()
 		}
 		log.Info("FederatedServices controller is now running")

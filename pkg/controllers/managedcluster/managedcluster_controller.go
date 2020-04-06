@@ -5,6 +5,8 @@ package managedcluster
 import (
 	"fmt"
 
+	"github.com/projectcalico/kube-controllers/pkg/config"
+
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
@@ -32,6 +34,7 @@ type managedClusterController struct {
 	managedClusterWorker worker.Worker
 	mgmtChangeWorker     worker.Worker
 	calicoCLI            *tigeraapi.Clientset
+	cfg                  config.ManagedClusterControllerConfig
 }
 
 func New(
@@ -40,8 +43,7 @@ func New(
 	managementK8sCLI *kubernetes.Clientset,
 	calicok8sCLI *tigeraapi.Clientset,
 	esk8sCLI relasticsearch.RESTClient,
-	threadiness int,
-	reconcilerPeriod string) controller.Controller {
+	cfg config.ManagedClusterControllerConfig) controller.Controller {
 
 	mcReconciler := &managedClusterESControllerReconciler{
 		createManagedK8sCLI:      createManagedk8sCLI,
@@ -50,8 +52,7 @@ func New(
 		calicoCLI:                calicok8sCLI,
 		esK8sCLI:                 esk8sCLI,
 		managedClustersStopChans: make(map[string]chan struct{}),
-		threadiness:              threadiness,
-		reconcilerPeriod:         reconcilerPeriod,
+		cfg:                      cfg.ElasticConfig,
 	}
 	mgmtChangeReconciler := newManagementClusterChangeReconciler(managementK8sCLI, calicok8sCLI, esk8sCLI, mcReconciler.listenForRebootNotify())
 	// Watch the ManagedCluster resources for changes
@@ -90,12 +91,13 @@ func New(
 		managedClusterWorker: managedClusterWorker,
 		mgmtChangeWorker:     mgmtChangeWorker,
 		calicoCLI:            calicok8sCLI,
+		cfg:                  cfg,
 	}
 }
 
-func (c *managedClusterController) Run(threadiness int, reconcilerPeriod string, stop chan struct{}) {
-	go c.managedClusterWorker.Run(threadiness, stop)
-	go c.mgmtChangeWorker.Run(threadiness, stop)
+func (c *managedClusterController) Run(stop chan struct{}) {
+	go c.managedClusterWorker.Run(c.cfg.NumberOfWorkers, stop)
+	go c.mgmtChangeWorker.Run(c.cfg.NumberOfWorkers, stop)
 
 	<-stop
 }
