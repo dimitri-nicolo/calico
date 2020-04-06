@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -55,6 +55,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewRemoteClusterConfigurationStorage(opts)
 	case "projectcalico.org/felixconfigurations":
 		return NewFelixConfigurationStorage(opts)
+	case "projectcalico.org/kubecontrollersconfigurations":
+		return NewKubeControllersConfigurationStorage(opts)
 	case "projectcalico.org/managedclusters":
 		return NewManagedClusterStorage(opts)
 	case "projectcalico.org/clusterinformations":

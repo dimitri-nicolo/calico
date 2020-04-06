@@ -56,6 +56,10 @@ type HostEndpointListerExpansion interface{}
 // IPPoolLister.
 type IPPoolListerExpansion interface{}
 
+// KubeControllersConfigurationListerExpansion allows custom methods to be added to
+// KubeControllersConfigurationLister.
+type KubeControllersConfigurationListerExpansion interface{}
+
 // LicenseKeyListerExpansion allows custom methods to be added to
 // LicenseKeyLister.
 type LicenseKeyListerExpansion interface{}

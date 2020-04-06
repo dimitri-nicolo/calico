@@ -248,6 +248,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.HostEndpointList":                  schema_pkg_apis_projectcalico_v3_HostEndpointList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.IPPool":                            schema_pkg_apis_projectcalico_v3_IPPool(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.IPPoolList":                        schema_pkg_apis_projectcalico_v3_IPPoolList(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfiguration":      schema_pkg_apis_projectcalico_v3_KubeControllersConfiguration(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfigurationList":  schema_pkg_apis_projectcalico_v3_KubeControllersConfigurationList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.LicenseKey":                        schema_pkg_apis_projectcalico_v3_LicenseKey(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.LicenseKeyList":                    schema_pkg_apis_projectcalico_v3_LicenseKeyList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.ManagedCluster":                    schema_pkg_apis_projectcalico_v3_ManagedCluster(ref),
@@ -7524,8 +7526,7 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common
 					"etcdV3CompactionPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EtcdV3CompactionPeriod is the period between etcdv3 compaction requests. Set to 0 to disable. [Default: 10m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"controllers": {
@@ -7539,7 +7540,7 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationSpec(ref common
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -7954,13 +7955,14 @@ func schema_libcalico_go_lib_apis_v3_NamespaceControllerConfig(ref common.Refere
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8348,8 +8350,7 @@ func schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref common.ReferenceCa
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"syncLabels": {
@@ -8369,7 +8370,7 @@ func schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref common.ReferenceCa
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8506,13 +8507,14 @@ func schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref common.Reference
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9484,13 +9486,14 @@ func schema_libcalico_go_lib_apis_v3_ServiceAccountControllerConfig(ref common.R
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -10372,13 +10375,14 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointControllerConfig(ref common
 					"reconcilerPeriod": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -11685,6 +11689,96 @@ func schema_pkg_apis_projectcalico_v3_IPPoolList(ref common.ReferenceCallback) c
 		},
 		Dependencies: []string{
 			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.IPPool", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_KubeControllersConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.KubeControllersConfigurationStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_KubeControllersConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeControllersConfigurationList contains a list of KubeControllersConfiguration object.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfiguration"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.KubeControllersConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 

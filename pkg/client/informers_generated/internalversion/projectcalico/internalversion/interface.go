@@ -36,6 +36,8 @@ type Interface interface {
 	HostEndpoints() HostEndpointInformer
 	// IPPools returns a IPPoolInformer.
 	IPPools() IPPoolInformer
+	// KubeControllersConfigurations returns a KubeControllersConfigurationInformer.
+	KubeControllersConfigurations() KubeControllersConfigurationInformer
 	// LicenseKeys returns a LicenseKeyInformer.
 	LicenseKeys() LicenseKeyInformer
 	// ManagedClusters returns a ManagedClusterInformer.
@@ -132,6 +134,11 @@ func (v *version) HostEndpoints() HostEndpointInformer {
 // IPPools returns a IPPoolInformer.
 func (v *version) IPPools() IPPoolInformer {
 	return &iPPoolInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// KubeControllersConfigurations returns a KubeControllersConfigurationInformer.
+func (v *version) KubeControllersConfigurations() KubeControllersConfigurationInformer {
+	return &kubeControllersConfigurationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // LicenseKeys returns a LicenseKeyInformer.

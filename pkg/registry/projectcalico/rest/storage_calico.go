@@ -38,6 +38,7 @@ import (
 	calicogthreatfeed "github.com/tigera/apiserver/pkg/registry/projectcalico/globalthreatfeed"
 	calicohostendpoint "github.com/tigera/apiserver/pkg/registry/projectcalico/hostendpoint"
 	calicoippool "github.com/tigera/apiserver/pkg/registry/projectcalico/ippool"
+	calicokubecontrollersconfig "github.com/tigera/apiserver/pkg/registry/projectcalico/kubecontrollersconfig"
 	calicolicensekey "github.com/tigera/apiserver/pkg/registry/projectcalico/licensekey"
 	calicomanagedcluster "github.com/tigera/apiserver/pkg/registry/projectcalico/managedcluster"
 	calicopolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/networkpolicy"
@@ -506,6 +507,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	kubeControllersConfigsRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("kubecontrollersconfigurations"))
+	if err != nil {
+		return nil, err
+	}
+	kubeControllersConfigsOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   kubeControllersConfigsRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicokubecontrollersconfig.EmptyObject(),
+			ScopeStrategy: calicokubecontrollersconfig.NewStrategy(scheme),
+			NewListFunc:   calicokubecontrollersconfig.NewList,
+			GetAttrsFunc:  calicokubecontrollersconfig.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: kubeControllersConfigsRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	managedClusterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("managedclusters"))
 	if err != nil {
 		return nil, err
@@ -600,6 +622,14 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["profiles"] = rESTInPeace(calicoprofile.NewREST(scheme, *profileOpts))
 	storage["remoteclusterconfigurations"] = rESTInPeace(calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts))
 	storage["felixconfigurations"] = rESTInPeace(calicofelixconfig.NewREST(scheme, *felixConfigOpts))
+
+	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	storage["kubecontrollersconfigurations"] = kubeControllersConfigsStorage
+	storage["kubecontrollersconfigurations/status"] = kubeControllersConfigsStatusStorage
 
 	managedClusterStorage, managedClusterStatusStorage, err := calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
 	if err != nil {
