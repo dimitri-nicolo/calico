@@ -3,11 +3,11 @@ module github.com/tigera/es-proxy
 go 1.13
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200406043105-c5e752dc8e4a
-	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200404083203-fdd38cb411be
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200404190459-ae48a942fddf
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200407051551-f35754c9f968
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200406225356-95f7a04212f6
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200406203422-d0dfe7ea63a5
+	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200407084616-c445527cc89d
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200406190433-4300a33068d6
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -54,7 +54,7 @@ require (
 	github.com/tigera/compliance v0.0.0-20200321083204-39304111550f
 	github.com/tigera/lma v0.0.0-20200321212149-273f27b4c88b
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	k8s.io/api v0.17.2
-	k8s.io/apimachinery v0.17.2
+	k8s.io/api v0.17.3
+	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v11.0.0+incompatible
 )
