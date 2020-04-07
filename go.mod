@@ -26,7 +26,7 @@ require (
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200406225356-95f7a04212f6
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.17.2
