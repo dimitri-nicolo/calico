@@ -94,7 +94,7 @@ func (c Converter) egressAnnotationsToV3Spec(annotations map[string]string) *api
 			return nil
 		}
 	}
-	if egressSelector+egressNamespaceSelector == "" {
+	if egressSelector == "" && egressNamespaceSelector == "" {
 		// Neither annotation specified, so no egress spec.
 		return nil
 	}
