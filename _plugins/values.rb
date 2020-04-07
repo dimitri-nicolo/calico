@@ -433,8 +433,10 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       registry: #{versions.fetch("tigera-operator").registry}
 
     calicoctl:
+      enabled: false
       image: #{imageRegistry}#{versions["calicoctl"].image}
       tag: #{versions["calicoctl"].version}
+      binPath: /bin
 
     prometheusOperator:
       image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
