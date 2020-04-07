@@ -84,6 +84,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetInactive for old selector.
 		cbs.ExpectInactive(ipSetID2)
+		cbs.ExpectEgressUpdate(we1Key, "")
 		cbs.ExpectNoMoreCallbacks()
 	})
 
@@ -120,7 +121,8 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVUpdated,
 		})
 
-		// Expect no change.
+		// Expect EgressUpdate for that endpoint.
+		cbs.ExpectEgressUpdate(we1Key, "")
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #2")
@@ -133,6 +135,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
+		cbs.ExpectEgressUpdate(we2Key, "")
 		cbs.ExpectInactive(ipSetID)
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -151,7 +154,6 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
-		cbs.ExpectEgressUpdate(we1Key, "")
 		cbs.ExpectNoMoreCallbacks()
 
 		By("adding Profile with egress selector")
@@ -296,7 +298,6 @@ var _ = Describe("ActiveEgressCalculator", func() {
 					},
 					UpdateType: api.UpdateTypeKVNew,
 				})
-				cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, "")
 			}
 		}
 		cbs.ExpectNoMoreCallbacks()
@@ -547,8 +548,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 
-		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
-		cbs.ExpectEgressUpdate(we2Key, "")
+		// Expect no callbacks.
 		cbs.ExpectNoMoreCallbacks()
 
 		By("changing first profile not to have egress selector")
@@ -589,27 +589,27 @@ func (tc *testCallbacks) OnEgressIPSetIDUpdate(key model.WorkloadEndpointKey, eg
 }
 
 func (tc *testCallbacks) ExpectActive() string {
-	Expect(len(tc.activeCalls)).To(BeNumerically(">=", 1))
-	Expect(tc.activeCalls[0].IsEgressSelector).To(BeTrue())
+	ExpectWithOffset(1, len(tc.activeCalls)).To(BeNumerically(">=", 1), "Expected OnIPSetActive call")
+	ExpectWithOffset(1, tc.activeCalls[0].IsEgressSelector).To(BeTrue(), "Expected IP set for an egress selector")
 	ipSetID := tc.activeCalls[0].cachedUID
-	Expect(ipSetID).To(HavePrefix("e:"))
+	ExpectWithOffset(1, ipSetID).To(HavePrefix("e:"))
 	tc.activeCalls = tc.activeCalls[1:]
 	return ipSetID
 }
 
 func (tc *testCallbacks) ExpectInactive(id string) {
-	Expect(len(tc.inactiveCalls)).To(BeNumerically(">=", 1))
-	Expect(tc.inactiveCalls[0].IsEgressSelector).To(BeTrue())
-	Expect(tc.inactiveCalls[0].cachedUID).To(Equal(id))
+	ExpectWithOffset(1, len(tc.inactiveCalls)).To(BeNumerically(">=", 1), "Expected OnIPSetInactive call")
+	ExpectWithOffset(1, tc.inactiveCalls[0].IsEgressSelector).To(BeTrue(), "Expected IP set for an egress selector")
+	ExpectWithOffset(1, tc.inactiveCalls[0].cachedUID).To(Equal(id))
 	tc.inactiveCalls = tc.inactiveCalls[1:]
 }
 
 func (tc *testCallbacks) ExpectEgressUpdate(key model.WorkloadEndpointKey, id string) {
-	Expect(tc.egressUpdateKeys).To(ContainElement(key))
+	ExpectWithOffset(1, tc.egressUpdateKeys).To(ContainElement(key), "Expected OnEgressIPSetIDUpdate call")
 	keyPos := -1
 	for i, uk := range tc.egressUpdateKeys {
 		if uk == key {
-			Expect(tc.egressUpdateIDs[i]).To(Equal(id))
+			ExpectWithOffset(1, tc.egressUpdateIDs[i]).To(Equal(id))
 			keyPos = i
 			break
 		}
@@ -620,8 +620,8 @@ func (tc *testCallbacks) ExpectEgressUpdate(key model.WorkloadEndpointKey, id st
 }
 
 func (tc *testCallbacks) ExpectNoMoreCallbacks() {
-	Expect(len(tc.activeCalls)).To(BeZero())
-	Expect(len(tc.inactiveCalls)).To(BeZero())
-	Expect(len(tc.egressUpdateKeys)).To(BeZero())
-	Expect(len(tc.egressUpdateIDs)).To(BeZero())
+	ExpectWithOffset(1, len(tc.activeCalls)).To(BeZero(), "Expected no more OnIPSetActive calls")
+	ExpectWithOffset(1, len(tc.inactiveCalls)).To(BeZero(), "Expected no more OnIPSetInactive calls")
+	ExpectWithOffset(1, len(tc.egressUpdateKeys)).To(BeZero(), "Expected no more OnEgressIPSetIDUpdate calls")
+	ExpectWithOffset(1, len(tc.egressUpdateIDs)).To(BeZero(), "Expected no more OnEgressIPSetIDUpdate calls")
 }

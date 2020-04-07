@@ -228,7 +228,11 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 }
 
 func (pr *PolicyResolver) OnEgressIPSetIDUpdate(key model.WorkloadEndpointKey, egressIPSetID string) {
-	pr.egressIPSetIDs[key] = egressIPSetID
+	if egressIPSetID != "" {
+		pr.egressIPSetIDs[key] = egressIPSetID
+	} else {
+		delete(pr.egressIPSetIDs, key)
+	}
 	pr.dirtyEndpoints.Add(key)
 	pr.maybeFlush()
 }
