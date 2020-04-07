@@ -68,6 +68,9 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		var err error
 		kfConfigFile, err = ioutil.TempFile("", "ginkgo-policycontroller")
 		Expect(err).NotTo(HaveOccurred())
+		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+		err = kfConfigFile.Chmod(os.ModePerm)
+		Expect(err).NotTo(HaveOccurred())
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
 		_, err = kfConfigFile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())
