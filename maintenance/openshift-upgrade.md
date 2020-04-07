@@ -52,7 +52,7 @@ mkdir manifests
    ```bash
    oc get kibana -n tigera-kibana
    oc get elasticsearch -n tigera-elasticsearch
-   oc get pv | grep tigera-elasticsearch
+   oc get pv | grep tigera
    ```
    The outputs should look similar to the following:
    ```
@@ -62,7 +62,8 @@ mkdir manifests
    ```
 
 1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage 
-   class `tigera-elasticsearch`, make sure it is available again.
+   class that you specified in `log-storage.yaml`, make sure it is available again. By default the storage class name is 
+   `tigera-elasticsearch`.
    ```bash
    PV_NAME=<name-of-your-pv>
    oc patch pv $PV_NAME -p '{"spec":{"claimRef":null}}'

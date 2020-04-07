@@ -41,7 +41,7 @@ the upgrade.
 1. Verify that Elasticsearch and Kibana are completely removed and that your persistent volumes are no longer bound.
    ```bash
    kubectl get kibana -n tigera-kibana
-   kubectl get elasticsearch -n tigera-elasticsearch
+   kubectl get elasticsearch -n tigera
    kubectl get pv | grep tigera-elasticsearch
    ```
    The outputs should look similar to the following:
@@ -52,7 +52,8 @@ the upgrade.
    ```
 
 1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage 
-   class `tigera-elasticsearch`, make sure it is available again.
+   class that you specified in `log-storage.yaml`, make sure it is available again. By default the storage class name is 
+   `tigera-elasticsearch`.
    ```bash
    PV_NAME=<name-of-your-pv>
    kubectl patch pv $PV_NAME -p '{"spec":{"claimRef":null}}'
