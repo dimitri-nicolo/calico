@@ -29,11 +29,11 @@ require (
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	gopkg.in/square/go-jose.v2 v2.4.1
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
-	gopkg.in/yaml.v2 v2.2.5
-	k8s.io/apimachinery v0.17.2
+	gopkg.in/yaml.v2 v2.2.8
+	k8s.io/apimachinery v0.17.3
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200406181047-f28a0c5c05f7
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200406225356-95f7a04212f6
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
