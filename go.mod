@@ -18,13 +18,13 @@ require (
 	gopkg.in/ini.v1 v1.44.0 // indirect
 
 	// k8s.io/apimachinery 1.16.3 is at 72ed19daf4bb
-	k8s.io/apimachinery v0.17.2
+	k8s.io/apimachinery v0.17.3
 
 	// k8s.io/client-go 1.16.3 is at 6c5935290e33
-	k8s.io/client-go v0.17.2
+	k8s.io/client-go v0.17.3
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200407132847-869937d9abd9
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
