@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,28 +78,30 @@ type NetConf struct {
 		IPv4Pools  []string `json:"ipv4_pools,omitempty"`
 		IPv6Pools  []string `json:"ipv6_pools,omitempty"`
 	} `json:"ipam,omitempty"`
-	Args                 Args              `json:"args"`
-	MTU                  int               `json:"mtu"`
-	Nodename             string            `json:"nodename"`
-	NodenameFile         string            `json:"nodename_file"`
-	NodenameFileOptional bool              `json:"nodename_file_optional"`
-	DatastoreType        string            `json:"datastore_type"`
-	EtcdEndpoints        string            `json:"etcd_endpoints"`
-	EtcdDiscoverySrv     string            `json:"etcd_discovery_srv"`
-	LogLevel             string            `json:"log_level"`
-	Policy               Policy            `json:"policy"`
-	Kubernetes           Kubernetes        `json:"kubernetes"`
-	FeatureControl       FeatureControl    `json:"feature_control"`
-	EtcdScheme           string            `json:"etcd_scheme"`
-	EtcdKeyFile          string            `json:"etcd_key_file"`
-	EtcdCertFile         string            `json:"etcd_cert_file"`
-	EtcdCaCertFile       string            `json:"etcd_ca_cert_file"`
-	ContainerSettings    ContainerSettings `json:"container_settings,omitempty"`
-	IncludeDefaultRoutes bool              `json:"include_default_routes,omitempty"`
+	Args                 Args                   `json:"args"`
+	MTU                  int                    `json:"mtu"`
+	Nodename             string                 `json:"nodename"`
+	NodenameFile         string                 `json:"nodename_file"`
+	NodenameFileOptional bool                   `json:"nodename_file_optional"`
+	DatastoreType        string                 `json:"datastore_type"`
+	EtcdEndpoints        string                 `json:"etcd_endpoints"`
+	EtcdDiscoverySrv     string                 `json:"etcd_discovery_srv"`
+	LogLevel             string                 `json:"log_level"`
+	Policy               Policy                 `json:"policy"`
+	Kubernetes           Kubernetes             `json:"kubernetes"`
+	FeatureControl       FeatureControl         `json:"feature_control"`
+	EtcdScheme           string                 `json:"etcd_scheme"`
+	EtcdKeyFile          string                 `json:"etcd_key_file"`
+	EtcdCertFile         string                 `json:"etcd_cert_file"`
+	EtcdCaCertFile       string                 `json:"etcd_ca_cert_file"`
+	ContainerSettings    ContainerSettings      `json:"container_settings,omitempty"`
+	IncludeDefaultRoutes bool                   `json:"include_default_routes,omitempty"`
 	DataplaneOptions     map[string]interface{} `json:"dataplane_options,omitempty"`
 
 	// Windows-specific configuration.
-
+	// WindowsPodDeletionTimestampTimeout defines number of seconds before a pod deletion timestamp timeout and
+	// should be removed from registry. Default: 600 seconds
+	WindowsPodDeletionTimestampTimeout int `json:"windows_pod_deletion_timestamp_timeout,omitempty"`
 	// WindowsUseSingleNetwork disables the use of multiple IPAM blocks on a single host and forces
 	// a static HNS network name.
 	WindowsUseSingleNetwork bool `json:"windows_use_single_network,omitempty"`
