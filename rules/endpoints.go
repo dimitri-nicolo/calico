@@ -483,6 +483,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
 		//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
 		// No profile matched the packet: drop it.
+		//if dropIfNoProfilesMatched {
 		rules = append(rules, Rule{
 			Match: Match(),
 			Action: NflogAction{
@@ -492,6 +493,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			},
 		})
 		rules = append(rules, r.DropRules(Match(), "Drop if no profiles matched")...)
+		//}
 	}
 
 	return &Chain{
