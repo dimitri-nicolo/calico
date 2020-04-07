@@ -40,19 +40,43 @@ func RulesAPIV2ToBackend(ars []apiv3.Rule, ns string, matchSGs bool) []model.Rul
 	return brs
 }
 
-// entityRuleAPIV2ToBackend collects the ordered set of selectors for the EntityRule:
-// (serviceAccountSelector) && (selector)
-// It also returns the namespace selector to use
-func entityRuleAPIV2TOBackend(er *apiv3.EntityRule, ns string) (nsSelector, selector string) {
+// Form and return a single selector expression for all the endpoints that an EntityRule should
+// match.  The returned expression incorporates the semantics of:
+// - the EntityRule's Selector, NamespaceSelector and ServiceAccounts fields
+// - the namespace or global-ness of the policy that the EntityRule is part of
+// - SG matching, if SG matching is enabled
+// - endpoints for a namespaced policy being limited to the namespace (or to selected namespaces) as
+//   soon as _any_ of the selector fields are used, including NotSelector.
+func GetEntityRuleSelector(er *apiv3.EntityRule, ns string, matchSGs bool, direction string) string {
+	saSelector := ""
+	if er.ServiceAccounts != nil {
+		// A service account selector was given - the rule applies to all serviceaccount
+		// which match this selector.
+		saSelector = parseServiceAccounts(er.ServiceAccounts)
+	}
+	return getEndpointSelector(er.NamespaceSelector, er.Selector, saSelector, er.NotSelector, ns, matchSGs, direction)
+}
+
+// Form and return a single selector expression for all the endpoints that an EgressSpec should
+// match.  The returned expression incorporates the semantics of:
+// - the egress spec's Selector and NamespaceSelector fields
+// - the namespace of the workload endpoint that the egress spec is for.
+func GetEgressGatewaySelector(spec *apiv3.EgressSpec, ns string) string {
+	return getEndpointSelector(spec.NamespaceSelector, spec.Selector, "", "", ns, false, "egress")
+}
+
+func getEndpointSelector(namespaceSelector, endpointSelector, serviceAccountSelector, notSelector, ns string, matchSGs bool, direction string) string {
+
+	var nsSelector, selector string
 
 	// Determine which namespaces are impacted by this entityRule.
-	if er.NamespaceSelector != "" {
+	if namespaceSelector != "" {
 		// A namespace selector was given - the rule applies to all namespaces
 		// which match this selector.
-		nsSelector = parseSelectorAttachPrefix(er.NamespaceSelector, conversion.NamespaceLabelPrefix)
+		nsSelector = parseSelectorAttachPrefix(namespaceSelector, conversion.NamespaceLabelPrefix)
 
 		// We treat "all()" as "select all namespaces". Since in the v1 data model "all()" will select
-		// all endpoints, translate this to an equivalent expressions which means select any workload that
+		// all endpoints, translate this to an equivalent expression which means select any workload that
 		// is in a namespace.
 		nsSelector = strings.Replace(nsSelector, "all()", "has(projectcalico.org/namespace)", -1)
 
@@ -68,18 +92,12 @@ func entityRuleAPIV2TOBackend(er *apiv3.EntityRule, ns string) (nsSelector, sele
 
 	var selectors []string
 
-	// Determine which service account selector.
-	if er.ServiceAccounts != nil {
-		// A service account selector was given - the rule applies to all serviceaccount
-		// which match this selector.
-		saSelector := parseServiceAccounts(er.ServiceAccounts)
-		if saSelector != "" {
-			selectors = append(selectors, saSelector)
-		}
+	if serviceAccountSelector != "" {
+		selectors = append(selectors, serviceAccountSelector)
 	}
 
-	if er.Selector != "" {
-		selectors = append(selectors, er.Selector)
+	if endpointSelector != "" {
+		selectors = append(selectors, endpointSelector)
 	}
 
 	if len(selectors) > 0 {
@@ -94,7 +112,43 @@ func entityRuleAPIV2TOBackend(er *apiv3.EntityRule, ns string) (nsSelector, sele
 		}
 	}
 
-	return
+	// If configured to also allow from security groups and the selector selects a security group, then
+	// generate a selector clause that allows from that security group.
+	var sgSelector string
+	if matchSGs && strings.Contains(selector, conversion.SecurityGroupLabelPrefix) {
+		// Build an additional selector clause which matches the given source selector for non-k8s
+		// things in security groups. To do that, we need to remove the orchestrator limitation from the selector.
+		orchMatch := "projectcalico.org/orchestrator == 'k8s' && "
+		s := strings.Replace(selector, orchMatch, "", 1)
+		sgSelector = fmt.Sprintf("(%s)", s)
+	}
+
+	// We need to namespace the rule's selector when converting to a v1 object.
+	// This occurs when the selector (and/or SA Selector), NotSelector, or NamespaceSelector
+	// is provided and either this is a namespaced NetworkPolicy object, or a
+	// NamespaceSelector was defined.
+	if nsSelector != "" && (selector != "" || notSelector != "" || namespaceSelector != "") {
+		logCxt := log.WithFields(log.Fields{
+			"Namespace":         ns,
+			"Selector(s)":       selector,
+			"NamespaceSelector": nsSelector,
+			"NotSelector":       notSelector,
+		})
+		logCxt.Debugf("Update %v Selector to include namespace", direction)
+		if selector != "" {
+			selector = fmt.Sprintf("(%s) && (%s)", nsSelector, selector)
+		} else {
+			selector = nsSelector
+		}
+	}
+
+	// If a SG selector is enabled, then add it in.
+	if sgSelector != "" {
+		log.Debugf("Including security group selector in %v selector", direction)
+		selector = fmt.Sprintf("%s || %s", selector, sgSelector)
+	}
+
+	return selector
 }
 
 // RuleAPIToBackend converts an API Rule structure to a Backend Rule structure.
@@ -110,73 +164,8 @@ func RuleAPIV2ToBackend(ar apiv3.Rule, ns string, matchSGs bool) model.Rule {
 		notICMPType = ar.NotICMP.Type
 	}
 
-	sourceNSSelector, sourceSelector := entityRuleAPIV2TOBackend(&ar.Source, ns)
-
-	// If configured to also allow from security groups and the selector selects a security group, then
-	// generate a selector clause that allows from that security group.
-	var srcSGSelector string
-	if matchSGs && strings.Contains(sourceSelector, conversion.SecurityGroupLabelPrefix) {
-		// Build an additional selector clause which matches the given source selector for non-k8s
-		// things in security groups. To do that, we need to remove the orchestrator limitation from the selector.
-		orchMatch := "projectcalico.org/orchestrator == 'k8s' && "
-		s := strings.Replace(sourceSelector, orchMatch, "", 1)
-		srcSGSelector = fmt.Sprintf("(%s)", s)
-	}
-
-	// We need to namespace the rule's selector when converting to a v1 object.
-	// This occurs when the selector (and/or SA Selector), NotSelector, or NamespaceSelector
-	// is provided and either this is a namespaced NetworkPolicy object, or a
-	// NamespaceSelector was defined.
-	if sourceNSSelector != "" && (sourceSelector != "" || ar.Source.NotSelector != "" || ar.Source.NamespaceSelector != "") {
-		logCxt := log.WithFields(log.Fields{
-			"Namespace":         ns,
-			"Selector(s)":       sourceSelector,
-			"NamespaceSelector": sourceNSSelector,
-			"NotSelector":       ar.Source.NotSelector,
-		})
-		logCxt.Debug("Update source Selector to include namespace")
-		if sourceSelector != "" {
-			sourceSelector = fmt.Sprintf("(%s) && (%s)", sourceNSSelector, sourceSelector)
-		} else {
-			sourceSelector = sourceNSSelector
-		}
-	}
-
-	// If a SG selector is enabled, then add it in for the source selector.
-	if srcSGSelector != "" {
-		log.Debug("Including security group selector in source selector.")
-		sourceSelector = fmt.Sprintf("%s || %s", sourceSelector, srcSGSelector)
-	}
-
-	// Do the same as above but for the destination selector.
-	destNSSelector, destSelector := entityRuleAPIV2TOBackend(&ar.Destination, ns)
-	var destSGSelector string
-	if matchSGs && strings.Contains(destSelector, conversion.SecurityGroupLabelPrefix) {
-		// Build an additional selector clause which matches the given dest selector for non-k8s
-		// things in security groups. To do that, we need to remove the orchestrator limitation from the selector.
-		orchMatch := "projectcalico.org/orchestrator == 'k8s' && "
-		s := strings.Replace(destSelector, orchMatch, "", 1)
-		destSGSelector = fmt.Sprintf("(%s)", s)
-	}
-	if destNSSelector != "" && (destSelector != "" || ar.Destination.NotSelector != "" || ar.Destination.NamespaceSelector != "") {
-		logCxt := log.WithFields(log.Fields{
-			"Namespace":         ns,
-			"Selector(s)":       destSelector,
-			"NamespaceSelector": destNSSelector,
-			"NotSelector":       ar.Destination.NotSelector,
-		})
-		logCxt.Debug("Update Destination Selector to include namespace")
-		if destSelector != "" {
-			destSelector = fmt.Sprintf("(%s) && (%s)", destNSSelector, destSelector)
-		} else {
-			destSelector = destNSSelector
-		}
-	}
-	// If a SG selector is enabled, then add it in for the destination selector.
-	if destSGSelector != "" {
-		log.Debug("Including security group selector in destination selector.")
-		destSelector = fmt.Sprintf("%s || %s", destSelector, destSGSelector)
-	}
+	sourceSelector := GetEntityRuleSelector(&ar.Source, ns, matchSGs, "source")
+	destSelector := GetEntityRuleSelector(&ar.Destination, ns, matchSGs, "destination")
 
 	var srcServiceAcctMatch, dstServiceAcctMatch apiv3.ServiceAccountMatch
 	if ar.Source.ServiceAccounts != nil {
@@ -254,7 +243,7 @@ func parseServiceAccounts(sam *apiv3.ServiceAccountMatch) string {
 	names := strings.Join(sam.Names, "', '")
 	selectors := fmt.Sprintf("%s in { '%s' }", apiv3.LabelServiceAccount, names)
 
-	// Normailize it now
+	// Normalize it now
 	parsedSelector, err := parser.Parse(selectors)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to parse service account Names: %s", selectors)

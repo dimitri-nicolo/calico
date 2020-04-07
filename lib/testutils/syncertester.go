@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -208,19 +208,24 @@ func (st *SyncerTester) ExpectCacheSize(size int) {
 // just the value will be compared (useful for Kubernetes node backed resources where the
 // revision number is not stable).
 func (st *SyncerTester) ExpectData(kvp model.KVPair) {
+	st.ExpectDataSanitized(kvp, func(v interface{}) interface{} { return v })
+}
+func (st *SyncerTester) ExpectDataSanitized(kvp model.KVPair, sanitizer func(v interface{}) interface{}) {
 	key, err := model.KeyToDefaultPath(kvp.Key)
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to convert key to default path: %v", kvp.Key))
 
 	if kvp.Revision == "" {
 		value := func() interface{} {
-			return st.GetCacheValue(key)
+			return sanitizer(st.GetCacheValue(key))
 		}
 		EventuallyWithOffset(1, value, 6*time.Second, time.Millisecond).Should(Equal(kvp.Value),
 			fmt.Sprintf("Timed out waiting for %v to equal expected value", key))
 		ConsistentlyWithOffset(1, value).Should(Equal(kvp.Value), "KVPair data was incorrect")
 	} else {
 		kv := func() interface{} {
-			return st.GetCacheKVPair(key)
+			kv := st.GetCacheKVPair(key)
+			kv.Value = sanitizer(kv.Value)
+			return kv
 		}
 		EventuallyWithOffset(1, kv, 6*time.Second, time.Millisecond).Should(Equal(kvp),
 			fmt.Sprintf("Timed out waiting for %v to equal expected value @ rev %v", key, kvp.Revision))
@@ -260,7 +265,7 @@ func (st *SyncerTester) ExpectNoData(k model.Key) {
 }
 
 // GetCacheValue returns the value of the KVPair from the cache.
-func (st *SyncerTester) GetCacheKVPair(k string) interface{} {
+func (st *SyncerTester) GetCacheKVPair(k string) model.KVPair {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	return st.cache[k]

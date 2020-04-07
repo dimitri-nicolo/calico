@@ -61,6 +61,20 @@ func defaultKubernetesResource() []model.KVPair {
 			},
 		})
 
+		// Expect corresponding v3 Profile resource.
+		out = append(out, model.KVPair{
+			Key: model.ResourceKey{Name: "kns." + ns, Kind: apiv3.KindProfile},
+			Value: &apiv3.Profile{
+				Spec: apiv3.ProfileSpec{
+					Ingress: []apiv3.Rule{{Action: "Allow"}},
+					Egress:  []apiv3.Rule{{Action: "Allow"}},
+					LabelsToApply: map[string]string{
+						"pcns.projectcalico.org/name": ns,
+					},
+				},
+			},
+		})
+
 		// Expect profile rules for the default serviceaccount in each namespace.
 		out = append(out, model.KVPair{
 			Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + ns + ".default"}},
@@ -78,6 +92,18 @@ func defaultKubernetesResource() []model.KVPair {
 				"pcsa.projectcalico.org/name": "default",
 			},
 		})
+
+		// Expect corresponding v3 Profile resource.
+		out = append(out, model.KVPair{
+			Key: model.ResourceKey{Name: "ksa." + ns + ".default", Kind: apiv3.KindProfile},
+			Value: &apiv3.Profile{
+				Spec: apiv3.ProfileSpec{
+					LabelsToApply: map[string]string{
+						"pcsa.projectcalico.org/name": "default",
+					},
+				},
+			},
+		})
 	}
 
 	// in addition, there is a hard-coded default profile that allows everything.
@@ -86,6 +112,15 @@ func defaultKubernetesResource() []model.KVPair {
 		Value: &model.ProfileRules{
 			InboundRules:  []model.Rule{{Action: "allow"}},
 			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	})
+	out = append(out, model.KVPair{
+		Key: model.ResourceKey{Name: "default", Kind: apiv3.KindProfile},
+		Value: &apiv3.Profile{
+			Spec: apiv3.ProfileSpec{
+				Ingress: []apiv3.Rule{{Action: "Allow"}},
+				Egress:  []apiv3.Rule{{Action: "Allow"}},
+			},
 		},
 	})
 	return out
@@ -129,6 +164,18 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 		}
 	})
 
+	v3Sanitizer := func(v interface{}) interface{} {
+		// We expect two kinds of `model.Resource` over the Felix syncer: Nodes and
+		// Profiles.  We don't care about anything more than the spec.
+		switch val := v.(type) {
+		case *apiv3.Node:
+			v = &apiv3.Node{Spec: val.Spec}
+		case *apiv3.Profile:
+			v = &apiv3.Profile{Spec: val.Spec}
+		}
+		return v
+	}
+
 	Describe("Felix syncer functionality", func() {
 		It("should receive the synced after return all current data", func() {
 			syncer := felixsyncer.New(be, config.Spec, syncTester)
@@ -149,7 +196,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/nodes/127.0.0.1")
 
 				for _, r := range defaultKubernetesResource() {
-					syncTester.ExpectData(r)
+					syncTester.ExpectDataSanitized(r, v3Sanitizer)
 				}
 				syncTester.ExpectCacheSize(expectedCacheSize)
 			}

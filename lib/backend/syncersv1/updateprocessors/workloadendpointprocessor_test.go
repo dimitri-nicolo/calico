@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -153,6 +153,10 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 				Port:     uint16(8080),
 			},
 		}
+		res.Spec.EgressGateway = &apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+		}
 
 		kvps, err = up.Process(&model.KVPair{
 			Key:      v3WorkloadEndpointKey2,
@@ -184,6 +188,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 							Port:     uint16(8080),
 						},
 					},
+					EgressSelector: "(pcns.black == \"white\") && (red == 'green')",
 				},
 				Revision: "1234",
 			},

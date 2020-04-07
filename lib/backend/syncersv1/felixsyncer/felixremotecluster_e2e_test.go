@@ -32,6 +32,38 @@ func setWatchIntervals(listRetryInterval, watchPollInterval time.Duration) {
 	watchersyncer.WatchPollInterval = watchPollInterval
 }
 
+func commonSanitizer(callersUpdate *api.Update) *api.Update {
+	u := *callersUpdate
+	u.Revision = ""
+	u.TTL = 0
+
+	// We expect two kinds of `model.Resource` over the Felix syncer:
+	// Nodes and Profiles.  We don't care about anything more than the
+	// spec.
+	if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+		switch val := u.KVPair.Value.(type) {
+		case *apiv3.Node:
+			u.KVPair.Value = &apiv3.Node{Spec: val.Spec}
+
+			// In KDD mode, we receive periodic updates of the
+			// node resource. We can't guess when these will
+			// happen, so just ignore them. It's a race
+			// condition and not one that we want to cause a
+			// failure.
+			if u.UpdateType == api.UpdateTypeKVUpdated {
+				return nil
+			}
+		case *apiv3.Profile:
+			u.KVPair.Value = &apiv3.Profile{Spec: val.Spec}
+		default:
+			// Unhandled v3 resource type.
+			Expect(false).To(BeTrue())
+		}
+	}
+
+	return &u
+}
+
 var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection failures", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
 	ctx := context.Background()
@@ -137,24 +169,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
 			// RemoteClusterStatus error. Compare with the expected events.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
+				u := commonSanitizer(callersUpdate)
 				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
 					if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
 						// The error has the expected prefix. Substitute the actual error for the prefix so that the
@@ -162,8 +177,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						r.Error = errPrefix
 					}
 				}
-
-				return &u
+				return u
 			})
 		},
 
@@ -317,24 +331,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
 			// RemoteClusterStatus error. Compare with the expected events.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
+				u := commonSanitizer(callersUpdate)
 				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
 					// Need to clip off the exact client error
 					// ex: "Get http://foobarbaz:1000/api/v1/namespaces: ..."
@@ -348,8 +345,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						r.Error = errPrefix
 					}
 				}
-
-				return &u
+				return u
 			})
 		},
 
@@ -434,27 +430,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
-				return &u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 
 			By("Deleting the RemoteClusterConfiguration")
 			_, err = c.RemoteClusterConfigurations().Delete(ctx, "etcd-timeout", options.DeleteOptions{ResourceVersion: rcc.ResourceVersion})
@@ -728,27 +704,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
-				return &u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 		})
 	})
 })
@@ -880,27 +836,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
-				return &u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 
 			By("Deleting the remote cluster configuration")
 			_, outError = localClient.RemoteClusterConfigurations().Delete(
@@ -919,27 +855,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
-				return &u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 		})
 	})
 })
@@ -1071,27 +987,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
-				u := *callersUpdate
-				u.Revision = ""
-				u.TTL = 0
-
-				// We only support a single `model.Resource` over the syncer right now. The Node object
-				// that comes from the Felix syncer. We don't care about anything more than the spec.
-				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
-					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
-					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
-
-					// In KDD mode, we receive periodic updates of the node resource. We can't guess when these will
-					// happen, so just ignore them. It's a race condition and not one that we want to cause
-					// a failure.
-					if u.UpdateType == api.UpdateTypeKVUpdated {
-						return nil
-					}
-				}
-
-				return &u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 
 			By("Updating the remote cluster config (but without changing the syncer connection config)")
 			// Just re-apply the last settings.
@@ -1120,12 +1016,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
-				u.Revision = ""
-				u.TTL = 0
-
-				return u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 
 			By("Updating the remote cluster config so that it is not longer valid for the syncer")
 			// To update the RCC so that it is no longer valid, we access the backend client and set a rogue datastore
@@ -1153,12 +1044,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
-			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
-				u.Revision = ""
-				u.TTL = 0
-
-				return u
-			})
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 
 			By("Deleting the remote cluster")
 			// To update the RCC so that it is no longer valid, we access the backend client and set a rogue datastore

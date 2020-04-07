@@ -169,6 +169,8 @@ var _ = Describe("Test Pod conversion", func() {
 				Namespace: "default",
 				Annotations: map[string]string{
 					"arbitrary": "annotation",
+					"egress.projectcalico.org/namespaceSelector": "wblack == 'white'",
+					"egress.projectcalico.org/selector":          "wred == 'green'",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
@@ -270,6 +272,12 @@ var _ = Describe("Test Pod conversion", func() {
 
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
+
+		// Check egress.
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "wblack == 'white'",
+			Selector:          "wred == 'green'",
+		}))
 	})
 
 	It("should parse a Pod with dual stack IPs to a WorkloadEndpoint", func() {
@@ -796,6 +804,31 @@ var _ = Describe("Test Pod conversion", func() {
 
 		// Make sure the GenerateName information is correct.
 		Expect(wep.Value.(*apiv3.WorkloadEndpoint).GenerateName).To(Equal(gname))
+	})
+
+	It("should convert without egress control when egress annotations are invalid", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black ~~ 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+				},
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName: "nodeA",
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+			},
+		}
+
+		wep, err := c.PodToWorkloadEndpoint(&pod)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure the EgressSpec is nil.
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.EgressGateway).To(BeNil())
 	})
 
 	DescribeTable("AWS security group annotation",
@@ -2453,7 +2486,10 @@ var _ = Describe("Test Namespace conversion", func() {
 					"foo":   "bar",
 					"roger": "rabbit",
 				},
-				Annotations: map[string]string{},
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+				},
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -2479,6 +2515,12 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(labels["pcns.projectcalico.org/name"]).To(Equal("default"))
 		Expect(labels["pcns.foo"]).To(Equal("bar"))
 		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
+
+		// Check egress.
+		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+		}))
 	})
 
 	It("should parse a Namespace to a Profile with no labels", func() {
@@ -2549,6 +2591,25 @@ var _ = Describe("Test Namespace conversion", func() {
 		By("converting to a Profile", func() {
 			_, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	It("should convert without egress control when egress annotations are invalid", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black ~~ 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		By("converting to a Profile", func() {
+			p, err := c.NamespaceToProfile(&ns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(BeNil())
 		})
 	})
 
