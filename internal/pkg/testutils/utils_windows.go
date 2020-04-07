@@ -11,14 +11,15 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/projectcalico/cni-plugin/pkg/dataplane/windows"
+
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	types020 "github.com/containernetworking/cni/pkg/types/020"
 	"github.com/containernetworking/cni/pkg/types/current"
-	version "github.com/mcuadros/go-version"
-	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/mcuadros/go-version"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"
 	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -303,7 +304,8 @@ func NetworkPod(
 		"Pod":         podName,
 		"Namespace":   netns,
 	})
-	_, _, err = utils.DoNetworking(ctx, calicoClient, args, conf, result, logger, "", nil)
+	d := windows.NewWindowsDataplane(conf, logger)
+	_, _, err = d.DoNetworking(ctx, calicoClient, args, result, "", nil, nil, nil)
 	return err
 }
 
@@ -328,10 +330,10 @@ func CreateNetwork(netconf string) (*hcsshim.HNSNetwork, error) {
 		logger.WithField("name", conf.Name).Info("Overriding network name, only a single IPAM block will be supported on this host")
 		networkName = conf.Name
 	} else {
-		networkName = utils.CreateNetworkName(conf.Name, subNet)
+		networkName = windows.CreateNetworkName(conf.Name, subNet)
 	}
 
-	hnsNetwork, err := utils.EnsureNetworkExists(networkName, subNet, result, logger)
+	hnsNetwork, err := windows.EnsureNetworkExists(networkName, subNet, result, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
 		return nil, err
@@ -357,7 +359,7 @@ func CreateEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HN
 	})
 
 	epName := hnsNetwork.Name + "_ep"
-	hnsEndpoint, err := utils.CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
+	hnsEndpoint, err := windows.CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
 	if err != nil {
 		logger.Errorf("Unable to create host hns endpoint %s", epName)
 		return nil, err
