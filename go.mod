@@ -5,8 +5,8 @@ go 1.13
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200403193804-6ff5076fc1c8
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200407051551-f35754c9f968
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200406225356-95f7a04212f6
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b
 
 	k8s.io/api => k8s.io/api v0.17.2
@@ -64,9 +64,9 @@ require (
 	gopkg.in/ini.v1 v1.48.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.2.5
-	k8s.io/api v0.17.2
-	k8s.io/apimachinery v0.17.2
-	k8s.io/apiserver v0.17.2
+	k8s.io/api v0.17.3
+	k8s.io/apimachinery v0.17.3
+	k8s.io/apiserver v0.17.3
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v1.0.0
 )
