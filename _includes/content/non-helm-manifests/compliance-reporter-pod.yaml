@@ -14,7 +14,7 @@ spec:
     - key: node-role.kubernetes.io/master
       effect: NoSchedule
   imagePullSecrets:
-    - name: cnx-pull-secret
+    - name: tigera-pull-secret
   containers:
   - name: reporter
     # Modify this image name, if you have re-tagged the image and are using a local
