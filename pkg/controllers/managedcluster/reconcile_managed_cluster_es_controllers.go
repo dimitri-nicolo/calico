@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/projectcalico/kube-controllers/pkg/config"
+
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 
 	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
@@ -29,8 +31,7 @@ type managedClusterESControllerReconciler struct {
 	// it. The exists of this channel can tell us if we have a controller for a ManagedCluster and the only action we would
 	// want to take on one is to stop it
 	managedClustersStopChans map[string]chan struct{}
-	threadiness              int
-	reconcilerPeriod         string
+	cfg                      config.ElasticsearchCfgControllerCfg
 }
 
 // Reconcile finds the ManagedCluster resource specified by the name and either adds, removes, or recreates the elasticsearch
@@ -110,10 +111,10 @@ func (c *managedClusterESControllerReconciler) addManagedClusterWatch(name strin
 		panic(fmt.Sprintf("a watch for managed cluster %s already exists", name))
 	}
 
-	esCredsController := elasticsearchconfiguration.New(name, c.esServiceURL, managedK8sCLI, c.managementK8sCLI, c.esK8sCLI, false)
+	esCredsController := elasticsearchconfiguration.New(name, c.esServiceURL, managedK8sCLI, c.managementK8sCLI, c.esK8sCLI, false, c.cfg)
 
 	stop := make(chan struct{})
-	go esCredsController.Run(c.threadiness, c.reconcilerPeriod, stop)
+	go esCredsController.Run(stop)
 	c.managedClustersStopChans[name] = stop
 }
 

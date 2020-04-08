@@ -17,6 +17,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/projectcalico/kube-controllers/pkg/config"
 	"reflect"
 	"strings"
 	"sync"
@@ -53,13 +54,15 @@ type serviceController struct {
 	endpointConverter       converter.Converter
 	resourceCache           rcache.ResourceCache
 	sync.Mutex
+	cfg config.GenericControllerConfig
 }
 
 // NewServiceController returns a controller which manages Service objects.
-func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, c client.Interface) controller.Controller {
+func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, c client.Interface, cfg config.GenericControllerConfig) controller.Controller {
 	sc := &serviceController{
 		calicoClient: c,
 		ctx:          ctx,
+		cfg: cfg,
 	}
 
 	// set up service informer
@@ -353,7 +356,7 @@ func (c *serviceController) deleteFromDatastore(key string) error {
 }
 
 // Run starts the controller.
-func (c *serviceController) Run(threadiness int, reconcilerPeriod string, stopCh chan struct{}) {
+func (c *serviceController) Run(stopCh chan struct{}) {
 	defer uruntime.HandleCrash()
 
 	// Start the Kubernetes informer, which will start syncing with the Kubernetes API.
@@ -371,12 +374,12 @@ func (c *serviceController) Run(threadiness int, reconcilerPeriod string, stopCh
 
 	// Start the resource cache - this will trigger the queueing of any keys
 	// that are out of sync onto the resource cache event queue.
-	c.resourceCache.Run(reconcilerPeriod)
+	c.resourceCache.Run(c.cfg.ReconcilerPeriod.String())
 
 	// Start a number of worker threads to read from the queue. Each worker
 	// will pull keys off the resource cache event queue and sync them to the
 	// Calico datastore.
-	for i := 0; i < threadiness; i++ {
+	for i := 0; i < c.cfg.NumberOfWorkers; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 	log.Info("Service controller is now running")

@@ -137,32 +137,31 @@ func main() {
 	log.AddHook(&logutils.ContextHook{})
 
 	// Attempt to load configuration.
-	config := new(config.Config)
-	if err := config.Parse(); err != nil {
+	cfg := new(config.Config)
+	if err := cfg.Parse(); err != nil {
 		log.WithError(err).Fatal("Failed to parse config")
 	}
-	log.WithField("config", config).Info("Loaded configuration from environment")
+	log.WithField("config", cfg).Info("Loaded configuration from environment")
 
 	// Set the log level based on the loaded configuration.
-	logLevel, err := log.ParseLevel(config.LogLevel)
+	logLevel, err := log.ParseLevel(cfg.LogLevel)
 	if err != nil {
 		logLevel = log.InfoLevel
 	}
 	log.SetLevel(logLevel)
 
 	// Build clients to be used by the controllers.
-	k8sClientset, calicoClient, err := getClients(config.Kubeconfig)
+	k8sClientset, calicoClient, err := getClients(cfg.Kubeconfig)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to start")
 	}
 
 	stop := make(chan struct{})
-	defer close(stop)
 
 	// Create the context.
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	if !config.DoNotInitializeCalico {
+	if !cfg.DoNotInitializeCalico {
 		log.Info("Ensuring Calico datastore is initialized")
 		initCtx, cancelInit := context.WithTimeout(ctx, 10*time.Second)
 		defer cancelInit()
@@ -175,141 +174,72 @@ func main() {
 	controllerCtrl := &controllerControl{
 		ctx:              ctx,
 		controllerStates: make(map[string]*controllerState),
-		config:           config,
 		stop:             stop,
 		licenseMonitor:   monitor.New(calicoClient.(backendClientAccessor).Backend()),
+	}
+
+	var runCfg config.RunConfig
+	// flannelmigration doesn't use the datastore config API
+	v, ok := os.LookupEnv(config.EnvEnabledControllers)
+	if ok && strings.Contains(v, "flannelmigration") {
+		if strings.Trim(v, " ,") != "flannelmigration" {
+			log.WithField(config.EnvEnabledControllers, v).Fatal("flannelmigration must be the only controller running")
+		}
+		// Attempt to load Flannel configuration.
+		flannelConfig := new(flannelmigration.Config)
+		if err := flannelConfig.Parse(); err != nil {
+			log.WithError(err).Fatal("Failed to parse Flannel config")
+		}
+		log.WithField("flannelConfig", flannelConfig).Info("Loaded Flannel configuration from environment")
+
+		flannelMigrationController := flannelmigration.NewFlannelMigrationController(ctx, k8sClientset, calicoClient, flannelConfig)
+		controllerCtrl.controllerStates["FlannelMigration"] = &controllerState{controller: flannelMigrationController}
+
+		// Set some global defaults for flannelmigration
+		// Note that we now ignore the HEALTH_ENABLED environment variable in the case of flannel migration
+		runCfg.HealthEnabled = true
+		runCfg.LogLevelScreen = logLevel
+
+		// this channel will never receive, and thus flannelmigration will never
+		// restart due to a config change.
+		controllerCtrl.restart = make(chan config.RunConfig)
+	} else {
+		log.Info("Getting initial config snapshot from datastore")
+		cCtrlr := config.NewRunConfigController(ctx, *cfg, calicoClient.KubeControllersConfiguration())
+		runCfg = <-cCtrlr.ConfigChan()
+		log.Info("Got initial config snapshot")
+		log.Debugf("Initial config: %+v", runCfg)
+
+		// any subsequent changes trigger a restart
+		controllerCtrl.restart = cCtrlr.ConfigChan()
+		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient)
 	}
 
 	// Create the status file. We will only update it if we have healthchecks enabled.
 	s := status.New(status.DefaultStatusFile)
 
-	for _, controllerType := range strings.Split(config.EnabledControllers, ",") {
-		switch controllerType {
-		case "workloadendpoint":
-			podController := pod.NewPodController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates["Pod"] = &controllerState{
-				controller:  podController,
-				threadiness: config.WorkloadEndpointWorkers,
-			}
-		case "profile", "namespace":
-			namespaceController := namespace.NewNamespaceController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates["Namespace"] = &controllerState{
-				controller:  namespaceController,
-				threadiness: config.ProfileWorkers,
-			}
-		case "policy":
-			policyController := networkpolicy.NewPolicyController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates["NetworkPolicy"] = &controllerState{
-				controller:  policyController,
-				threadiness: config.PolicyWorkers,
-			}
-		case "node":
-			nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient, config)
-			controllerCtrl.controllerStates["Node"] = &controllerState{
-				controller:  nodeController,
-				threadiness: config.NodeWorkers,
-			}
-		case "service":
-			serviceController := service.NewServiceController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates["Service"] = &controllerState{
-				controller:  serviceController,
-				threadiness: config.ServiceWorkers,
-			}
-		case "serviceaccount":
-			serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates["ServiceAccount"] = &controllerState{
-				controller:  serviceAccountController,
-				threadiness: config.ProfileWorkers,
-			}
-		case "federatedservices":
-			federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates["FederatedServices"] = &controllerState{
-				controller:     federatedEndpointsController,
-				licenseFeature: features.FederatedServices,
-				threadiness:    config.FederatedServicesWorkers,
-			}
-			controllerCtrl.needLicenseMonitoring = true
-		case "elasticsearchconfiguration":
-			kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
-			if err != nil {
-				log.WithError(err).Fatal("failed to build kubernetes client config")
-			}
-
-			esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
-			if err != nil {
-				log.WithError(err).Fatal("failed to build elasticsearch rest client")
-			}
-
-			controllerCtrl.controllerStates["ElasticsearchConfiguration"] = &controllerState{
-				threadiness: config.ManagedClusterWorkers,
-				controller:  elasticsearchconfiguration.New("cluster", resource.ElasticsearchServiceURL, k8sClientset, k8sClientset, esK8sREST, true),
-			}
-		case "managedcluster":
-			// We only want these clients created if the managedcluster controller type is enabled
-			kubeconfig, err := clientcmd.BuildConfigFromFlags("", config.Kubeconfig)
-			if err != nil {
-				log.WithError(err).Fatal("failed to build kubernetes client config")
-			}
-
-			esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
-			if err != nil {
-				log.WithError(err).Fatal("failed to build elasticsearch rest client")
-			}
-
-			calicoV3Client, err := tigeraapi.NewForConfig(kubeconfig)
-			if err != nil {
-				log.WithError(err).Fatal("failed to build calico v3 clientset")
-			}
-
-			controllerCtrl.controllerStates["ManagedCluster"] = &controllerState{
-				threadiness: config.ManagedClusterWorkers,
-				controller: managedcluster.New(
-					func(clustername string) (kubernetes.Interface, error) {
-						kubeconfig.Host = config.VoltronServiceURL
-						kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-							return &addHeaderRoundTripper{
-								headers: map[string][]string{"x-cluster-id": {clustername}},
-								rt:      rt,
-							}
-						}
-						kubeconfig.TLSClientConfig = rest.TLSClientConfig{
-							Insecure: true,
-						}
-						return kubernetes.NewForConfig(kubeconfig)
-					},
-					resource.ElasticsearchServiceURL,
-					k8sClientset, calicoV3Client, esK8sREST, config.ManagedClusterElasticsearchConfigurationWorkers, config.ReconcilerPeriod),
-			}
-		case "flannelmigration":
-			// Attempt to load Flannel configuration.
-			flannelConfig := new(flannelmigration.Config)
-			if err := flannelConfig.Parse(); err != nil {
-				log.WithError(err).Fatal("Failed to parse Flannel config")
-			}
-			log.WithField("flannelConfig", flannelConfig).Info("Loaded Flannel configuration from environment")
-
-			flannelMigrationController := flannelmigration.NewFlannelMigrationController(ctx, k8sClientset, calicoClient, flannelConfig)
-			controllerCtrl.controllerStates["FlannelMigration"] = &controllerState{
-				controller: flannelMigrationController,
-			}
-		default:
-			log.Fatalf("Invalid controller '%s' provided.", controllerType)
-		}
-	}
-
-	if config.DatastoreType == "etcdv3" {
+	if cfg.DatastoreType == "etcdv3" {
 		// If configured to do so, start an etcdv3 compaction.
-		go startCompactor(ctx, config)
+		go startCompactor(ctx, runCfg.EtcdV3CompactionPeriod)
 	}
 
 	// Run the health checks on a separate goroutine.
-	if config.HealthEnabled {
+	if runCfg.HealthEnabled {
 		log.Info("Starting status report routine")
 		go runHealthChecks(ctx, s, k8sClientset, calicoClient)
 	}
 
-	// Run the controllers. This runs indefinitely.
+	// Run the controllers. This runs until a config or license change triggers a restart
 	controllerCtrl.RunControllers()
+
+	// Shut down compaction, healthChecks, and configController
+	cancel()
+
+	// TODO: it would be nice here to wait until everything shuts down cleanly
+	//       but many of our controllers are based on cache.ResourceCache which
+	//       runs forever once it is started.  It needs to be enhanced to respect
+	//       the stop channel passed to the controllers.
+	os.Exit(configChangedRC)
 }
 
 // Run the controller health checks.
@@ -317,8 +247,15 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 	s.SetReady("CalicoDatastore", false, "initialized to false")
 	s.SetReady("KubeAPIServer", false, "initialized to false")
 
-	// Loop forever and perform healthchecks.
+	// Loop until context expires and perform healthchecks.
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			// carry on
+		}
+
 		// skip healthchecks if configured
 		// Datastore HealthCheck
 		healthCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -370,11 +307,7 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 }
 
 // Starts an etcdv3 compaction goroutine with the given config.
-func startCompactor(ctx context.Context, config *config.Config) {
-	interval, err := time.ParseDuration(config.CompactionPeriod)
-	if err != nil {
-		log.WithError(err).Fatal("Invalid compact interval")
-	}
+func startCompactor(ctx context.Context, interval time.Duration) {
 
 	if interval.Nanoseconds() == 0 {
 		log.Info("Disabling periodic etcdv3 compaction")
@@ -383,6 +316,12 @@ func startCompactor(ctx context.Context, config *config.Config) {
 
 	// Kick off a periodic compaction of etcd, retry until success.
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			// carry on
+		}
 		etcdClient, err := newEtcdV3Client()
 		if err != nil {
 			log.WithError(err).Error("Failed to start etcd compaction routine, retry in 1m")
@@ -491,15 +430,117 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 type controllerControl struct {
 	ctx                   context.Context
 	controllerStates      map[string]*controllerState
-	config                *config.Config
 	stop                  chan struct{}
+	restart               <-chan config.RunConfig
 	licenseMonitor        monitor.LicenseMonitor
 	needLicenseMonitoring bool
+	shortLicensePolling   bool
 }
 
-// Runs all the controllers. Calls a hard exit to restart the controller process if
-// a license change invalidates a running controller.
+// Object for keeping track of Controller information.
+type controllerState struct {
+	controller     controller.Controller
+	running        bool
+	licenseFeature string
+}
+
+func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig, k8sClientset *kubernetes.Clientset, calicoClient client.Interface) {
+	cc.shortLicensePolling = cfg.ShortLicensePolling
+
+	if cfg.Controllers.WorkloadEndpoint != nil {
+		podController := pod.NewPodController(ctx, k8sClientset, calicoClient, *cfg.Controllers.WorkloadEndpoint)
+		cc.controllerStates["Pod"] = &controllerState{controller: podController}
+	}
+
+	if cfg.Controllers.Namespace != nil {
+		namespaceController := namespace.NewNamespaceController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Namespace)
+		cc.controllerStates["Namespace"] = &controllerState{controller: namespaceController}
+	}
+	if cfg.Controllers.Policy != nil {
+		policyController := networkpolicy.NewPolicyController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Policy)
+		cc.controllerStates["NetworkPolicy"] = &controllerState{controller: policyController}
+	}
+	if cfg.Controllers.Node != nil {
+		nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Node)
+		cc.controllerStates["Node"] = &controllerState{controller: nodeController}
+	}
+	if cfg.Controllers.ServiceAccount != nil {
+		serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient, *cfg.Controllers.ServiceAccount)
+		cc.controllerStates["ServiceAccount"] = &controllerState{controller: serviceAccountController}
+	}
+
+	// Calico Enterprise controllers:
+	if cfg.Controllers.Service != nil {
+		serviceController := service.NewServiceController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Service)
+		cc.controllerStates["Service"] = &controllerState{controller: serviceController}
+	}
+	if cfg.Controllers.FederatedServices != nil {
+		federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient, *cfg.Controllers.FederatedServices)
+		cc.controllerStates["FederatedServices"] = &controllerState{
+			controller:     federatedEndpointsController,
+			licenseFeature: features.FederatedServices,
+		}
+		cc.needLicenseMonitoring = true
+	}
+	if cfg.Controllers.ElasticsearchConfiguration != nil {
+
+		esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build elasticsearch rest client")
+		}
+
+		cc.controllerStates["ElasticsearchConfiguration"] = &controllerState{
+			controller: elasticsearchconfiguration.New(
+				"cluster",
+				resource.ElasticsearchServiceURL,
+				k8sClientset,
+				k8sClientset,
+				esK8sREST,
+				true,
+				*cfg.Controllers.ElasticsearchConfiguration),
+		}
+	}
+	if cfg.Controllers.ManagedCluster != nil {
+		// We only want these clients created if the managedcluster controller type is enabled
+		kubeconfig := cfg.Controllers.ManagedCluster.RESTConfig
+
+		esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build elasticsearch rest client")
+		}
+
+		calicoV3Client, err := tigeraapi.NewForConfig(kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build calico v3 clientset")
+		}
+
+		cc.controllerStates["ManagedCluster"] = &controllerState{
+			controller: managedcluster.New(
+				func(clustername string) (kubernetes.Interface, error) {
+					kubeconfig.Host = cfg.Controllers.ManagedCluster.VoltronServiceURL
+					kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+						return &addHeaderRoundTripper{
+							headers: map[string][]string{"x-cluster-id": {clustername}},
+							rt:      rt,
+						}
+					}
+					kubeconfig.TLSClientConfig = rest.TLSClientConfig{
+						Insecure: true,
+					}
+					return kubernetes.NewForConfig(kubeconfig)
+				},
+				resource.ElasticsearchServiceURL,
+				k8sClientset,
+				calicoV3Client,
+				esK8sREST,
+				*cfg.Controllers.ManagedCluster),
+		}
+	}
+}
+
+// Runs all the controllers and blocks until we get a restart.
 func (cc *controllerControl) RunControllers() {
+
 	// Instantiate the license monitor values
 	lCtx, cancel := context.WithTimeout(cc.ctx, 10*time.Second)
 	err := cc.licenseMonitor.RefreshLicense(lCtx)
@@ -508,7 +549,7 @@ func (cc *controllerControl) RunControllers() {
 		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
 	}
 
-	if cc.config.DebugUseShortPollIntervals {
+	if cc.shortLicensePolling {
 		log.Info("Using short license poll interval for FV")
 		cc.licenseMonitor.SetPollInterval(1 * time.Second)
 	}
@@ -536,31 +577,37 @@ func (cc *controllerControl) RunControllers() {
 		}()
 	}
 
-	// Start the controllers then wait indefinitely for license changes to come through to update the controllers as needed.
 	for {
 		for controllerType, cs := range cc.controllerStates {
 			missingLicense := cs.licenseFeature != "" && !cc.licenseMonitor.GetFeatureStatus(cs.licenseFeature)
 			if !cs.running && !missingLicense {
 				// Run the controller
 				log.Infof("Started the %s controller", controllerType)
-				go cs.controller.Run(cs.threadiness, cc.config.ReconcilerPeriod, cc.stop)
+				go cs.controller.Run(cc.stop)
 				cs.running = true
 			} else if cs.running && missingLicense {
 				// Restart the controller since the updated license has less functionality than before.
 				log.Warn("License was changed, shutting down the controllers")
-				os.Exit(configChangedRC)
+				close(cc.stop)
+				return
 			}
 		}
 
-		// Wait until an update is made to see if we need to make changes to the running sets of controllers.
-		<-licenseChangedChan
+		// Block until we are cancelled, get new license info, or get a new configuration
+		select {
+		case <-cc.ctx.Done():
+			log.Warn("context cancelled")
+			close(cc.stop)
+			return
+		case <-cc.restart:
+			log.Warn("configuration changed; restarting")
+			// TODO: handle this more gracefully, like tearing down old controllers and starting new ones
+			close(cc.stop)
+			return
+		case <-licenseChangedChan:
+			log.Info("license status has changed")
+			// go back to top of loop to compute if the license change requires a restart
+			continue
+		}
 	}
-}
-
-// Object for keeping track of Controller information.
-type controllerState struct {
-	controller     controller.Controller
-	running        bool
-	licenseFeature string
-	threadiness    int
 }

@@ -146,8 +146,8 @@ func (c *flannelMigrationController) StopController(msg string) {
 }
 
 // Run starts the migration controller. It does start-of-day preparation
-// and then run entire migration process. We ignore reconcilerPeriod and threadiness.
-func (c *flannelMigrationController) Run(threadiness int, reconcilerPeriod string, stopCh chan struct{}) {
+// and then run entire migration process.
+func (c *flannelMigrationController) Run(stopCh chan struct{}) {
 	defer uruntime.HandleCrash()
 
 	c.waitBeforeStart()
