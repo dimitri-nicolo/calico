@@ -49,6 +49,14 @@ module Jekyll
       imageNames = context.registers[:site].config["imageNames"]
       versions = context.registers[:site].data["versions"]
 
+
+      if context.registers[:site].data["versions"][0].has_key?("dockerRepo")
+          imageRegistry = context.registers[:site].data["versions"][0]["dockerRepo"]
+        unless imageRegistry.end_with? "/"
+          imageRegistry = imageRegistry << "/"
+        end
+      end
+
       vs = parse_versions(versions)
 
       versionsYml = gen_values(vs, imageNames, imageRegistry, @chart, true)
