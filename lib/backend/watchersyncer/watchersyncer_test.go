@@ -72,6 +72,7 @@ var (
 		Revision: "abcdef12345",
 	}
 	notSupported = cerrors.ErrorOperationNotSupported{}
+	notExists    = cerrors.ErrorResourceDoesNotExist{}
 	genError     = errors.New("Generic error")
 )
 
@@ -113,6 +114,24 @@ var _ = Describe("Test the backend datastore multi-watch syncer", func() {
 		rs.clientWatchResponse(r1, notSupported)
 		rs.ExpectStatusUnchanged()
 		rs.clientWatchResponse(r1, notSupported)
+		rs.ExpectStatusUnchanged()
+	})
+
+	It("should not change status if watch returns multiple ErrorResourceDoesNotExist errors", func() {
+		rs := newWatcherSyncerTester([]watchersyncer.ResourceType{r1})
+		rs.ExpectStatusUpdate(api.WaitForDatastore)
+		rs.clientListResponse(r1, emptyList)
+		rs.ExpectStatusUpdate(api.ResyncInProgress)
+		rs.ExpectStatusUpdate(api.InSync)
+		rs.clientWatchResponse(r1, notExists)
+		rs.ExpectStatusUnchanged()
+		rs.clientWatchResponse(r1, notExists)
+		rs.ExpectStatusUnchanged()
+		rs.clientWatchResponse(r1, notExists)
+		rs.ExpectStatusUnchanged()
+		rs.clientWatchResponse(r1, notExists)
+		rs.ExpectStatusUnchanged()
+		rs.clientWatchResponse(r1, notExists)
 		rs.ExpectStatusUnchanged()
 	})
 
