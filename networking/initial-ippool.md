@@ -53,7 +53,7 @@ resource and configures the default Calico IP pool. Note the following:
 1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation).
 
    **Required values**: `cidr:`<br>
-   **Empty values**: Defaulted</br>
+   **Empty values**: Defaulted </br>
 
     ```bash
     apiVersion: operator.tigera.io/v1
