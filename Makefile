@@ -294,6 +294,8 @@ $(BUILD_IMAGE_BENCHMARKER): bin/benchmarker-$(ARCH) register
 	cp bin/benchmarker-$(ARCH) docker-image/benchmarker/bin/
 	git clone https://github.com/aquasecurity/kube-bench tmp/kube-bench/
 	cd tmp/kube-bench/ && git checkout $(KUBE_BENCH_VERSION)
+	awk '/proxy:/ { print; print "    optional: true"; next }1' tmp/kube-bench/cfg/config.yaml > tmp/kube-bench/cfg/config.yaml.new
+	mv tmp/kube-bench/cfg/config.yaml.new tmp/kube-bench/cfg/config.yaml
 	cp -r tmp/kube-bench/cfg docker-image/benchmarker
 	rm -rf tmp/kube-bench
 	docker build --pull -t $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/benchmarker/Dockerfile.$(ARCH) docker-image/benchmarker
