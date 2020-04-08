@@ -1,5 +1,5 @@
 ---
-title: Interoperate with legacy firewalls using IP ranges
+title: Restrict a pod to use an IP in specfic range.
 description: Restrict the IP address chosen for a pod to a specific range of IP addresses.
 ---
 
