@@ -2,4 +2,4 @@
 LOGDIR=/var/log/calico/bird
 mkdir -p $LOGDIR
 # Prefix each line with a timestamp
-tee >(svlogd -tt $LOGDIR)
+tee >(svlogd -ttt $LOGDIR)
