@@ -63,7 +63,7 @@ If you have a {{site.prodname}} clusters that are not connected, you can:
 
 #### Install KubeFed and CLIs
 
-The first step is to deploy KubeFed on the host cluster and KubeFed CLI locally. KubeFed is installed as a Helm chart. Follow the steps from the installation guide for [KubeFed](https://github.com/kubernetes-sigs/kubefed/blob/master/charts/kubefed/README.md)
+The first step is to deploy KubeFed on the host cluster and KubeFed CLI locally. KubeFed is installed as a Helm chart. Follow the steps from the installation guide for [KubeFed](https://github.com/kubernetes-sigs/kubefed/blob/master/charts/kubefed/README.md).
 
 >**Note**. You should see the following two charts. Regardless of the output shown, you still need kubefed-charts/kubefed-0.1.0-rc6 to install kubefed V2.
 {: .alert .alert-info}
