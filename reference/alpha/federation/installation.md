@@ -4,6 +4,7 @@ description: Create federated tiers and policies that apply across clusters or a
 ---
 >**Warning**: This feature is experimental.  Experimental features may change significantly or not be supported in future releases.
 {: .alert .alert-danger} 
+
 ### Big picture
 
 Create federated tiers and policies that apply across clusters or a group of clusters.
@@ -22,7 +23,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Federation tools
 
-One way to achieve federation with {site.prodname}} tiers and policies is to use [KubeFed](https://github.com/kubernetes-sigs/kubefed), which allows you to configure multiple Kubernetes clusters from a single set of APIs in a host cluster. You need to determine which {site.prodname}} cluster will be the host cluster, and the member clusters.
+One way to achieve federation with {{site.prodname}} tiers and policies is to use [KubeFed](https://github.com/kubernetes-sigs/kubefed), which allows you to configure multiple Kubernetes clusters from a single set of APIs in a host cluster. You need to determine which {{site.prodname}} cluster will be the host cluster, and the member clusters.
 
 - _Host cluster_ 
  
@@ -35,21 +36,21 @@ As for permissions, host cluster users have full control over the federated reso
 
 ![](../../../images/alpha/federation/kubefed.png)
 
-#### Implementing federation on Calico Enterprise clusters
+#### Implementing federation on {{site.prodname}} clusters
  
-If you have a {site.prodname}} clusters that are not connected, you can:
+If you have a {{site.prodname}} clusters that are not connected, you can:
 
 - Configure one cluster as a KubeFed host
 - Configure federating APIs and RBAC for KubeFed
-- Turn on feature flag in {site.prodname}} Manager 
+- Turn on feature flag in {{site.prodname}} Manager 
 
 ### Before you begin...
 
-- {site.prodname}} standalone clusters (or multi-clustered management (MCM) clusters). For help, see the [Quickstart quide]({{site.baseurl}}/getting-started/kubernetes/quickstart#install-kubernetes) or [ Set up multi-cluster management]({{site.baseurl}}/reference/beta/mcm/installation).
+- {{site.prodname}} standalone clusters (or multi-clustered management (MCM) clusters). For help, see the [Quickstart quide]({{site.baseurl}}/getting-started/kubernetes/quickstart#install-kubernetes) or [ Set up multi-cluster management]({{site.baseurl}}/reference/beta/mcm/installation).
 - kubectl is installed
-- You have configured access to the {site.prodname}} Manager
+- You have configured access to the {{site.prodname}} Manager
 - Helm is installed
-- You have experience configuring {site.prodname}} [tiered policies]({{site.baseurl}}/security/tiered-policy)
+- You have experience configuring {{site.prodname}} [tiered policies]({{site.baseurl}}/security/tiered-policy)
 
 ### How To
 
@@ -78,7 +79,7 @@ Make sure you have installed [kubefedctl](https://github.com/kubernetes-sigs/kub
 
 #### Register clusters
 
-To register the host and the member clusters, specify both the role -_-cluster-context_ and the control plane using _--host-cluster-context_. For help, see [cluster registration](https://github.com/kubernetes-sigs/kubefed/blob/master/docs/cluster-registration.md)
+To register the host and the member clusters, specify both the role -_-cluster-context_ and the control plane using _--host-cluster-context_. For help, see [cluster registration](https://github.com/kubernetes-sigs/kubefed/blob/master/docs/cluster-registration.md).
 
 ```
 kubefedctl join host --cluster-context host \
@@ -89,7 +90,7 @@ kubefedctl join member --cluster-context member \
 
 The two clusters will join the federation as long as they are discoverable. The host cluster issues health checks to determine if a member cluster is up and running. The host cluster issues health checks to the API server of the member cluster.
 
-#### Enable Federation of APIs
+#### Enable federation of APIs
 
 Run the following command on the host cluster to enable federation for Kubernetes and Calico APIs.
 
@@ -149,7 +150,7 @@ kubectl patch clusterrole kubefed-role --type='json' -p='[{"op": "add", "path": 
 }]'
 ```
 
-#### Configure RBAC for Federation
+#### Configure RBAC for federation
 
 Run the following command on the host cluster to allow kubefed-controller to monitor and propagate federated resources.
 
@@ -188,7 +189,7 @@ EOF
 kubectl create clusterrolebinding binding-kubefed-controller --clusterrole kubefed-controller-role --serviceaccount kube-federation-system:kubefed-controller
 ```
 
-Run the following command on the host cluster to allow the service account you are using to log in into Calico Enterprise Manager to get, create, and delete network policies.
+Run the following command on the host cluster to allow the service account you are using to log in to Calico Enterprise Manager to get, create, and delete network policies.
 
 ```
 cat <<EOF | kubectl apply -f -
@@ -215,7 +216,7 @@ kubectl create clusterrolebinding clusterrole-kubefed-binding-ui-user --clusterr
 
 #### Enable federation in Calico Enterprise Manager
 
-Run the  following command from the host cluster to enable the enriched UI for federation
+Run the  following command from the host cluster to enable the enriched UI for federation.
 
 ```
 kubectl patch deployment -n tigera-manager tigera-manager --patch \
@@ -224,11 +225,11 @@ kubectl patch deployment -n tigera-manager tigera-manager --patch \
 
 #### Manage federated resources in Calico Enterprise Manager
 
-With federation configured, all you need to do is create **federated tiers and network policies** in {site.prodname}} Manager. You manage federated resources in {site.prodname}} Manager alongside non-federated resources. They use the same CI/CD workflow of create, preview, and stage.
+With federation configured, all you need to do is create **federated tiers and network policies** in {{site.prodname}} Manager. You manage federated resources in {{site.prodname}} Manager alongside non-federated resources. They use the same CI/CD workflow of create, preview, and stage.
 
 ![](../../../images/alpha/federation/view_fed.png)
 
-Here are a few differences and limitations to note:
+Note these differences and limitations:
 
 - Federated resources can only be created on a host cluster. 
 - Editing and deleting are disabled for member clusters.
@@ -236,13 +237,13 @@ Here are a few differences and limitations to note:
 - A network policy acts in the scope of a single cluster; operations between clusters is not enforced.
 - There is no cross-cluster statistics or metrics display -- only cluster-level metrics. For example, there are no cross-cluster global reports, flow charts, policy preview, or federated policy metrics.
 
-##### Create a federated tier
+**Create a federated tier**
 
 Specifying a federated policy is done simply by selecting the radio button, **Federated**. As with non-federated tiers, you enforce the ordering for federated resources to ensure its consistency across clusters. In addition to this, you select the placement of the federated tier. You can only select clusters that have been previously joined as part of federation.
 
 ![](../../../images/alpha/federation/create_fed_tier.png)
 
-##### Create a network policy
+**Create a network policy**
 
 To create a federated network policy, add a new policy to any tiers. You can define ingress and egress rules as normal, and they are applied to pods based on label selectors.
 
