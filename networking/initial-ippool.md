@@ -27,7 +27,7 @@ The **Kubernetes pod CIDR** is the expected IP address range for pod IPs.  It is
 
 #### Tigera Operator and IP pools
 
-[Calico IP pools]({{site.baseurl}}/reference/resources/ippool) are ranges of IP addresses that Calico uses to assign to pods; the ranges must within the [Kubernetes pod CIDR](#kubernetes-pod-cidr). 
+[Calico IP pools]({{site.baseurl}}/reference/resources/ippool) are ranges of IP addresses that Calico uses to assign to pods; the ranges must within the Kubernetes pod CIDR. 
 
 The Tigera Operator reads the [Installation]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)
 resource and configures the default Calico IP pool. Note the following:
@@ -42,7 +42,7 @@ resource and configures the default Calico IP pool. Note the following:
 
 ### Before you begin...
 
-- Verify that your IP pool is within the [Kubernetes pod CIDR](#kubernetes-pod-cidr)
+- Verify that your IP pool is within the Kubernetes pod CIDR
 - If you are using encapsulation (IP in IP or VXLAN), ensure that the traffic is allowed on your network
 - You are making these changes for a cluster that has not yet had {{site.prodname}} deployed.
 
@@ -50,27 +50,28 @@ resource and configures the default Calico IP pool. Note the following:
 
 1. Download the custom-resource.yaml file. 
 
-1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation.
-   **Required values**: `cidr:`
-   **Empty values**: Defaulted
+1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation).
 
-  ```
-  apiVersion: operator.tigera.io/v1
-  kind: Installation
-  metadata:
-    name: default
-  spec:
-    calicoNetwork:
-      ipPools:
-        - cidr: "192.168.0.0/16"
-          encapsulation: "IPIP"
-          nodeSelector: "label == 'value'"
-          natOutgoing: "Enabled"
-   ```
+   **Required values**: `cidr:`<br>
+   **Empty values**: Defaulted </br>
+
+    ```bash
+    apiVersion: operator.tigera.io/v1
+    kind: Installation
+    metadata:
+      name: default
+    spec:
+      calicoNetwork:
+       ipPools:
+          - cidr: "192.168.0.0/16"
+            encapsulation: "IPIP"
+            nodeSelector: "label == 'value'"
+            natOutgoing: "Enabled"
+     ```
 
 1. Apply the manifest and continue with your installation as normal.
 
 ### Above and beyond
 
-- [IPPool resource]({{site.baseurl}}/reference/resources/ippool)
-- Use [calicoctl]({{site.baseurl}}/reference/calicoctl/) or kubectl to edit the IPPool resource.
+- [IP pool resource]({{site.baseurl}}/reference/resources/ippool)
+- Use [calicoctl]({{site.baseurl}}/reference/calicoctl/) or `kubectl` to edit the IPPool resource.
