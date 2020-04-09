@@ -38,13 +38,13 @@ require (
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
-	k8s.io/api v0.17.2
-	k8s.io/apimachinery v0.17.2
-	k8s.io/client-go v0.17.2
+	k8s.io/api v0.17.3
+	k8s.io/apimachinery v0.17.3
+	k8s.io/client-go v0.17.3
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200403193804-6ff5076fc1c8
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200408235326-2d87c5556638
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
