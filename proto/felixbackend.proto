@@ -180,6 +180,7 @@ message IPSetUpdate {
     IP_AND_PORT = 1;  // Each member is "<IP>,(tcp|udp):port".
     NET = 2;          // Each member is a CIDR in dotted-decimal or IPv6 format.
     DOMAIN = 3;       // Each member is a domain name.
+    EGRESS_IP = 4;    // Each member is an egress IP.
   }
   IPSetType type = 3;
 }
@@ -376,6 +377,7 @@ message WorkloadEndpoint {
   repeated TierInfo tiers = 7;
   repeated NatInfo ipv4_nat = 8;
   repeated NatInfo ipv6_nat = 9;
+  string egress_ip_set_id = 10;
 }
 
 message WorkloadEndpointRemove {

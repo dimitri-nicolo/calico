@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ type State struct {
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
+	ExpectedEndpointEgressIPSetID        map[string]string
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
@@ -77,6 +78,7 @@ func NewState() State {
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
+		ExpectedEndpointEgressIPSetID:        make(map[string]string),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
 	}
@@ -97,6 +99,9 @@ func (s State) Copy() State {
 	}
 	for k, v := range s.ExpectedPreDNATEndpointPolicyOrder {
 		cpy.ExpectedPreDNATEndpointPolicyOrder[k] = v
+	}
+	for k, v := range s.ExpectedEndpointEgressIPSetID {
+		cpy.ExpectedEndpointEgressIPSetID[k] = v
 	}
 
 	cpy.ExpectedPolicyIDs = s.ExpectedPolicyIDs.Copy()
@@ -189,6 +194,16 @@ func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTi
 		newState.ExpectedEndpointPolicyOrder[id] = tiers
 		newState.ExpectedUntrackedEndpointPolicyOrder[id] = untrackedTiers
 		newState.ExpectedPreDNATEndpointPolicyOrder[id] = preDNATTiers
+	}
+	return newState
+}
+
+func (s State) withEndpointEgressIPSetID(id, egressIPSetID string) State {
+	newState := s.Copy()
+	if egressIPSetID != "" {
+		newState.ExpectedEndpointEgressIPSetID[id] = egressIPSetID
+	} else {
+		delete(newState.ExpectedEndpointEgressIPSetID, id)
 	}
 	return newState
 }

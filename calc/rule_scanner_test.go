@@ -34,6 +34,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/hash"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -329,6 +330,25 @@ var _ = Describe("ParsedRule", func() {
 		sort.Strings(prFields)
 		sort.Strings(protoFields)
 		Expect(prFields).To(Equal(protoFields))
+	})
+})
+
+var _ = Describe("IPSetData for egress IP", func() {
+
+	var d *IPSetData
+
+	BeforeEach(func() {
+		sel, err := selector.Parse("all()")
+		Expect(err).NotTo(HaveOccurred())
+		d = &IPSetData{Selector: sel, IsEgressSelector: true}
+	})
+
+	It("has UniqueID beginning with e:", func() {
+		Expect(d.UniqueID()).To(HavePrefix("e:"))
+	})
+
+	It("has dataplane type EGRESS_IP", func() {
+		Expect(d.DataplaneProtocolType()).To(Equal(proto.IPSetUpdate_EGRESS_IP))
 	})
 })
 

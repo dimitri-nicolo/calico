@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ type PolicyResolver struct {
 	endpointIDToPolicyIDs multidict.IfaceToIface
 	sortedTierData        []*tierInfo
 	endpoints             map[model.Key]interface{}
+	egressIPSetIDs        map[model.WorkloadEndpointKey]string
 	dirtyEndpoints        set.Set
 	sortRequired          bool
 	policySorter          *PolicySorter
@@ -62,7 +63,7 @@ type PolicyResolver struct {
 }
 
 type PolicyResolverCallbacks interface {
-	OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, filteredTiers []tierInfo)
+	OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, egressIPSetID string, filteredTiers []tierInfo)
 }
 
 func NewPolicyResolver() *PolicyResolver {
@@ -70,6 +71,7 @@ func NewPolicyResolver() *PolicyResolver {
 		policyIDToEndpointIDs: multidict.NewIfaceToIface(),
 		endpointIDToPolicyIDs: multidict.NewIfaceToIface(),
 		endpoints:             make(map[model.Key]interface{}),
+		egressIPSetIDs:        make(map[model.WorkloadEndpointKey]string),
 		dirtyEndpoints:        set.New(),
 		policySorter:          NewPolicySorter(),
 		Callbacks:             []PolicyResolverCallbacks{},
@@ -96,6 +98,9 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 			pr.endpoints[key] = update.Value
 		} else {
 			delete(pr.endpoints, key)
+			if wlKey, ok := key.(model.WorkloadEndpointKey); ok {
+				delete(pr.egressIPSetIDs, wlKey)
+			}
 		}
 		pr.dirtyEndpoints.Add(key)
 		gaugeNumActiveEndpoints.Set(float64(len(pr.endpoints)))
@@ -178,7 +183,7 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		log.Debugf("Endpoint is unknown, sending nil update")
 		for _, cb := range pr.Callbacks {
 			cb.OnEndpointTierUpdate(endpointID.(model.Key),
-				nil, []tierInfo{})
+				nil, "", []tierInfo{})
 		}
 		return nil
 	}
@@ -209,10 +214,25 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		}
 	}
 
+	egressIPSetID := ""
+	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
+		egressIPSetID = pr.egressIPSetIDs[key]
+	}
+
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
 	for _, cb := range pr.Callbacks {
 		cb.OnEndpointTierUpdate(endpointID.(model.Key),
-			endpoint, applicableTiers)
+			endpoint, egressIPSetID, applicableTiers)
 	}
 	return nil
+}
+
+func (pr *PolicyResolver) OnEgressIPSetIDUpdate(key model.WorkloadEndpointKey, egressIPSetID string) {
+	if egressIPSetID != "" {
+		pr.egressIPSetIDs[key] = egressIPSetID
+	} else {
+		delete(pr.egressIPSetIDs, key)
+	}
+	pr.dirtyEndpoints.Add(key)
+	pr.maybeFlush()
 }

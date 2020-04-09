@@ -54,6 +54,7 @@ type EventSequencer struct {
 	pendingProfileUpdates        map[model.ProfileRulesKey]*ParsedRules
 	pendingProfileDeletes        set.Set
 	pendingEndpointUpdates       map[model.Key]interface{}
+	pendingEndpointEgressUpdates map[model.Key]string
 	pendingEndpointTierUpdates   map[model.Key][]tierInfo
 	pendingEndpointDeletes       set.Set
 	pendingHostIPUpdates         map[string]*net.IP
@@ -116,6 +117,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingProfileUpdates:        map[model.ProfileRulesKey]*ParsedRules{},
 		pendingProfileDeletes:        set.New(),
 		pendingEndpointUpdates:       map[model.Key]interface{}{},
+		pendingEndpointEgressUpdates: map[model.Key]string{},
 		pendingEndpointTierUpdates:   map[model.Key][]tierInfo{},
 		pendingEndpointDeletes:       set.New(),
 		pendingHostIPUpdates:         map[string]*net.IP{},
@@ -389,11 +391,13 @@ func ModelHostEndpointToProto(ep *model.HostEndpoint, tiers, untrackedTiers, pre
 
 func (buf *EventSequencer) OnEndpointTierUpdate(key model.Key,
 	endpoint interface{},
+	egressIPSetID string,
 	filteredTiers []tierInfo,
 ) {
 	if endpoint == nil {
 		// Deletion. Squash any queued updates.
 		delete(buf.pendingEndpointUpdates, key)
+		delete(buf.pendingEndpointEgressUpdates, key)
 		delete(buf.pendingEndpointTierUpdates, key)
 		if buf.sentEndpoints.Contains(key) {
 			// We'd previously sent an update, so we need to send a deletion.
@@ -403,6 +407,7 @@ func (buf *EventSequencer) OnEndpointTierUpdate(key model.Key,
 		// Update.
 		buf.pendingEndpointDeletes.Discard(key)
 		buf.pendingEndpointUpdates[key] = endpoint
+		buf.pendingEndpointEgressUpdates[key] = egressIPSetID
 		buf.pendingEndpointTierUpdates[key] = filteredTiers
 	}
 }
@@ -413,13 +418,15 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		switch key := key.(type) {
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
+			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
+			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key]
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: key.OrchestratorID,
 					WorkloadId:     key.WorkloadID,
 					EndpointId:     key.EndpointID,
 				},
-				Endpoint: ModelWorkloadEndpointToProto(wlep, tiers),
+				Endpoint: protoEp,
 			})
 		case model.HostEndpointKey:
 			hep := endpoint.(*model.HostEndpoint)
@@ -434,6 +441,7 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		buf.sentEndpoints.Add(key)
 		// And clean up the pending buffer.
 		delete(buf.pendingEndpointUpdates, key)
+		delete(buf.pendingEndpointEgressUpdates, key)
 		delete(buf.pendingEndpointTierUpdates, key)
 	}
 }

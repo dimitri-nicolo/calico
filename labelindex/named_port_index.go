@@ -138,6 +138,7 @@ type ipSetData struct {
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
 	isDomainSet       bool
+	isEgressSelector  bool
 
 	// memberToRefCount stores a reference count for each member in the IP set.  Reference counts
 	// may be >1 if an IP address is shared by more than one endpoint.
@@ -217,7 +218,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 			log.Debugf("Updating NamedPortIndex with endpoint %v", key)
 			endpoint := update.Value.(*model.WorkloadEndpoint)
 			profileIDs := endpoint.ProfileIDs
-			idx.UpdateEndpointOrSet(
+			idx.updateEndpointOrSet(
 				key,
 				endpoint.Labels,
 				extractCIDRsFromWorkloadEndpoint(endpoint),
@@ -226,7 +227,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				nil)
 		} else {
 			log.Debugf("Deleting endpoint %v from NamedPortIndex", key)
-			idx.DeleteEndpoint(key)
+			idx.deleteEndpoint(key)
 		}
 	case model.HostEndpointKey:
 		if update.Value != nil {
@@ -234,7 +235,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 			log.Debugf("Updating NamedPortIndex for host endpoint %v", key)
 			endpoint := update.Value.(*model.HostEndpoint)
 			profileIDs := endpoint.ProfileIDs
-			idx.UpdateEndpointOrSet(
+			idx.updateEndpointOrSet(
 				key,
 				endpoint.Labels,
 				extractCIDRsFromHostEndpoint(endpoint),
@@ -243,7 +244,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				nil)
 		} else {
 			log.Debugf("Deleting host endpoint %v from NamedPortIndex", key)
-			idx.DeleteEndpoint(key)
+			idx.deleteEndpoint(key)
 		}
 	case model.NetworkSetKey:
 		if update.Value != nil {
@@ -251,7 +252,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 			log.Debugf("Updating NamedPortIndex for network set %v", key)
 			netSet := update.Value.(*model.NetworkSet)
 			profileIDs := netSet.ProfileIDs
-			idx.UpdateEndpointOrSet(
+			idx.updateEndpointOrSet(
 				key,
 				netSet.Labels,
 				extractCIDRsFromNetworkSet(netSet),
@@ -260,25 +261,25 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				netSet.AllowedEgressDomains)
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)
-			idx.DeleteEndpoint(key)
+			idx.deleteEndpoint(key)
 		}
 	case model.ProfileLabelsKey:
 		if update.Value != nil {
 			log.Debugf("Updating NamedPortIndex for profile labels %v", key)
 			labels := update.Value.(map[string]string)
-			idx.UpdateParentLabels(key.Name, labels)
+			idx.updateParentLabels(key.Name, labels)
 		} else {
 			log.Debugf("Removing profile labels %v from NamedPortIndex", key)
-			idx.DeleteParentLabels(key.Name)
+			idx.deleteParentLabels(key.Name)
 		}
 	case model.ProfileTagsKey:
 		if update.Value != nil {
 			log.Debugf("Updating NamedPortIndex for profile tags %v", key)
 			labels := update.Value.([]string)
-			idx.UpdateParentTags(key.Name, labels)
+			idx.updateParentTags(key.Name, labels)
 		} else {
 			log.Debugf("Removing profile tags %v from NamedPortIndex", key)
-			idx.DeleteParentTags(key.Name)
+			idx.deleteParentTags(key.Name)
 		}
 	}
 	return
@@ -384,6 +385,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		namedPortProtocol: namedPortProtocol,
 		memberToRefCount:  map[IPSetMember]uint64{},
 		isDomainSet:       strings.HasPrefix(ipSetID, "d"),
+		isEgressSelector:  strings.HasPrefix(ipSetID, "e"),
 	}
 	idx.ipSetDataByID[ipSetID] = newIPSetData
 
@@ -393,7 +395,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 			// Endpoint doesn't match.
 			continue
 		}
-		contrib := idx.CalculateEndpointContribution(epData, newIPSetData)
+		contrib := idx.calculateEndpointContribution(epID, epData, newIPSetData)
 		if len(contrib) == 0 {
 			continue
 		}
@@ -440,7 +442,7 @@ func (idx *SelectorAndNamedPortIndex) DeleteIPSet(id string) {
 	delete(idx.ipSetDataByID, id)
 }
 
-func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
+func (idx *SelectorAndNamedPortIndex) updateEndpointOrSet(
 	id interface{},
 	labels map[string]string,
 	nets []ip.CIDR,
@@ -501,12 +503,12 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 
 		// If we get here, something about the endpoint has changed.  Calculate the old endpoint's
 		// contribution to the IP sets that it matched.
-		oldIPSetContributions = idx.RecalcCachedContributions(oldEndpointData)
+		oldIPSetContributions = idx.recalcCachedContributions(id, oldEndpointData)
 	}
 
 	// Calculate and compare the contribution of the new endpoint to IP sets.  Emit events for
 	// new contributions and then mop up deletions.
-	idx.scanEndpointAgainstAllIPSets(newEndpointData, oldIPSetContributions)
+	idx.scanEndpointAgainstAllIPSets(id, newEndpointData, oldIPSetContributions)
 
 	// Record the new endpoint data.
 	idx.endpointDataByID[id] = newEndpointData
@@ -523,17 +525,18 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 }
 
 func (idx *SelectorAndNamedPortIndex) scanEndpointAgainstAllIPSets(
+	epID interface{},
 	epData *endpointData,
 	oldIPSetContributions map[string][]IPSetMember,
 ) {
 	for ipSetID, ipSetData := range idx.ipSetDataByID {
 		// Remove any previous match from the endpoint's cache.  We'll re-add it below if the match
-		// is still correct.  (This is a no-op when we're called from UpdateEndpointOrSet(), which always
+		// is still correct.  (This is a no-op when we're called from updateEndpointOrSet(), which always
 		// creates a new endpointData struct.)
 		epData.RemoveMatchingIPSetID(ipSetID)
 
 		if ipSetData.selector.EvaluateLabels(epData) {
-			newIPSetContribution := idx.CalculateEndpointContribution(epData, ipSetData)
+			newIPSetContribution := idx.calculateEndpointContribution(epID, epData, ipSetData)
 			if len(newIPSetContribution) > 0 {
 				// Record the match in the index.  This allows us to quickly recalculate the
 				// contribution of this endpoint later.
@@ -572,14 +575,14 @@ func (idx *SelectorAndNamedPortIndex) scanEndpointAgainstAllIPSets(
 	}
 }
 
-func (idx *SelectorAndNamedPortIndex) DeleteEndpoint(id interface{}) {
+func (idx *SelectorAndNamedPortIndex) deleteEndpoint(id interface{}) {
 	log.Debug("SelectorAndNamedPortIndex deleting endpoint", id)
 	oldEndpointData := idx.endpointDataByID[id]
 	if oldEndpointData == nil {
 		return
 	}
 
-	oldIPSetContributions := idx.RecalcCachedContributions(oldEndpointData)
+	oldIPSetContributions := idx.recalcCachedContributions(id, oldEndpointData)
 	for ipSetID, contributions := range oldIPSetContributions {
 		// Decref all the old members.  If they hit 0 references, then the member has been
 		// removed so we emit an event.
@@ -606,7 +609,7 @@ func (idx *SelectorAndNamedPortIndex) DeleteEndpoint(id interface{}) {
 	}
 }
 
-func (idx *SelectorAndNamedPortIndex) UpdateParentLabels(parentID string, labels map[string]string) {
+func (idx *SelectorAndNamedPortIndex) updateParentLabels(parentID string, labels map[string]string) {
 	parentData := idx.getOrCreateParent(parentID)
 	if reflect.DeepEqual(parentData.labels, labels) {
 		log.WithField("parentID", parentID).Debug("Skipping no-op update to parent labels")
@@ -626,7 +629,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateParentLabels(parentID string, labels
 	)
 }
 
-func (idx *SelectorAndNamedPortIndex) UpdateParentTags(parentID string, tags []string) {
+func (idx *SelectorAndNamedPortIndex) updateParentTags(parentID string, tags []string) {
 	parentData := idx.getOrCreateParent(parentID)
 	if reflect.DeepEqual(parentData.tags, tags) {
 		log.WithField("parentID", parentID).Debug("Skipping no-op update to parent labels")
@@ -647,7 +650,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateParentTags(parentID string, tags []s
 }
 
 func (idx *SelectorAndNamedPortIndex) updateParent(parentData *npParentData, applyUpdate, revertUpdate func()) {
-	for _, epData := range idx.endpointDataByID {
+	for epID, epData := range idx.endpointDataByID {
 		if !epData.HasParent(parentData) {
 			continue
 		}
@@ -656,27 +659,28 @@ func (idx *SelectorAndNamedPortIndex) updateParent(parentData *npParentData, app
 		// is a no-op on the first loop but keeping it here, rather than at the bottom of the loop
 		// makes it harder to accidentally skip it with a well-intentioned "continue".)
 		revertUpdate()
-		oldIPSetContributions := idx.RecalcCachedContributions(epData)
+		oldIPSetContributions := idx.recalcCachedContributions(epID, epData)
 
 		// Apply the update to the parent while we calculate this endpoint's new contribution.
 		applyUpdate()
-		idx.scanEndpointAgainstAllIPSets(epData, oldIPSetContributions)
+		idx.scanEndpointAgainstAllIPSets(epID, epData, oldIPSetContributions)
 	}
 
 	// Defensive: make sure we leave the update applied to the parent.
 	applyUpdate()
 }
 
-func (idx *SelectorAndNamedPortIndex) DeleteParentLabels(parentID string) {
+func (idx *SelectorAndNamedPortIndex) deleteParentLabels(parentID string) {
 	// Defer to the update function, which implements the endpoint scanning logic.
-	idx.UpdateParentLabels(parentID, nil)
+	idx.updateParentLabels(parentID, nil)
 	idx.discardParentIfEmpty(parentID)
 }
 
-// CalculateEndpointContribution calculates the given endpoint's contribution to the given IP set.
+// calculateEndpointContribution calculates the given endpoint's contribution to the given IP set.
 // If the IP set represents a named port then the returned members will have a named port component.
 // Returns nil if the endpoint doesn't contribute to the IP set.
-func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointData, ipSetData *ipSetData) (contrib []IPSetMember) {
+func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface{}, d *endpointData, ipSetData *ipSetData) (contrib []IPSetMember) {
+
 	if ipSetData.namedPortProtocol != ProtocolNone {
 		// This IP set represents a named port match, calculate the cross product of
 		// matching named ports by IP address or domain.
@@ -697,19 +701,22 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 			})
 		}
 	} else {
-		// Non-named port match, simply return the CIDRs.
-		for _, addr := range d.nets {
-			contrib = append(contrib, IPSetMember{
-				CIDR: addr,
-			})
+		_, endpointIsWorkload := id.(model.WorkloadEndpointKey)
+		if endpointIsWorkload || !ipSetData.isEgressSelector {
+			// Non-named port match, simply return the CIDRs.
+			for _, addr := range d.nets {
+				contrib = append(contrib, IPSetMember{
+					CIDR: addr,
+				})
+			}
 		}
 	}
 	return
 }
 
-// RecalcCachedContributions uses the cached set of matching IP set IDs in the endpoint
+// recalcCachedContributions uses the cached set of matching IP set IDs in the endpoint
 // struct to quickly recalculate the endpoint's contribution to all IP sets.
-func (idx *SelectorAndNamedPortIndex) RecalcCachedContributions(epData *endpointData) map[string][]IPSetMember {
+func (idx *SelectorAndNamedPortIndex) recalcCachedContributions(epID interface{}, epData *endpointData) map[string][]IPSetMember {
 	if epData.cachedMatchingIPSetIDs == nil {
 		return nil
 	}
@@ -717,14 +724,14 @@ func (idx *SelectorAndNamedPortIndex) RecalcCachedContributions(epData *endpoint
 	epData.cachedMatchingIPSetIDs.Iter(func(item interface{}) error {
 		ipSetID := item.(string)
 		ipSetData := idx.ipSetDataByID[ipSetID]
-		contrib[ipSetID] = idx.CalculateEndpointContribution(epData, ipSetData)
+		contrib[ipSetID] = idx.calculateEndpointContribution(epID, epData, ipSetData)
 		return nil
 	})
 	return contrib
 }
 
-func (idx *SelectorAndNamedPortIndex) DeleteParentTags(parentID string) {
-	idx.UpdateParentTags(parentID, nil)
+func (idx *SelectorAndNamedPortIndex) deleteParentTags(parentID string) {
+	idx.updateParentTags(parentID, nil)
 	idx.discardParentIfEmpty(parentID)
 }
 

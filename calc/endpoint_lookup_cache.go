@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -133,7 +133,7 @@ func (ec *EndpointLookupsCache) RegisterWith(remoteEndpointDispatcher *dispatche
 // and corresponding IP address relationship. The difference between this handler and the OnUpdate
 // handler (below) is this method records tier information for local endpoints while this information
 // is ignored for remote endpoints.
-func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, filteredTiers []tierInfo) {
+func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, egressIPSetID string, filteredTiers []tierInfo) {
 	switch k := key.(type) {
 	case model.WorkloadEndpointKey:
 		if ep == nil {

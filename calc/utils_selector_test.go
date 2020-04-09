@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,4 +46,9 @@ func namedPortID(selector, protocol, portName string) string {
 	selID := selectorID(selector)
 	idToHash := selID + "," + protocol + "," + portName
 	return hash.MakeUniqueID("n", idToHash)
+}
+
+func egressSelectorID(selStr string) string {
+	selID := selectorID(selStr)
+	return "e" + selID[1:]
 }

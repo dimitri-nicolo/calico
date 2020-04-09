@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,19 +163,19 @@ func (l *InheritIndex) OnUpdate(update api.Update) (_ bool) {
 		if update.Value != nil {
 			log.Debugf("Updating InheritIndex for profile labels %v", key)
 			labels := update.Value.(map[string]string)
-			l.UpdateParentLabels(key.Name, labels)
+			l.updateParentLabels(key.Name, labels)
 		} else {
 			log.Debugf("Removing profile labels %v from InheritIndex", key)
-			l.DeleteParentLabels(key.Name)
+			l.deleteParentLabels(key.Name)
 		}
 	case model.ProfileTagsKey:
 		if update.Value != nil {
 			log.Debugf("Updating InheritIndex for profile tags %v", key)
 			labels := update.Value.([]string)
-			l.UpdateParentTags(key.Name, labels)
+			l.updateParentTags(key.Name, labels)
 		} else {
 			log.Debugf("Removing profile tags %v from InheritIndex", key)
-			l.DeleteParentTags(key.Name)
+			l.deleteParentTags(key.Name)
 		}
 	}
 	return
@@ -210,6 +210,7 @@ func (idx *InheritIndex) DeleteSelector(id interface{}) {
 	delete(idx.selectorsById, id)
 }
 
+// Public only for UT purposes.
 func (idx *InheritIndex) UpdateLabels(id interface{}, labels map[string]string, parentIDs []string) {
 	log.Debug("Inherit index updating labels for ", id)
 	log.Debug("Num dirty items ", idx.dirtyItemIDs.Len(), " items")
@@ -245,6 +246,7 @@ func (idx *InheritIndex) UpdateLabels(id interface{}, labels map[string]string, 
 	log.Debug("Num ending dirty items ", idx.dirtyItemIDs.Len(), " items")
 }
 
+// Public only for UT purposes.
 func (idx *InheritIndex) DeleteLabels(id interface{}) {
 	log.Debug("Inherit index deleting labels for ", id)
 	oldItemData := idx.itemDataByID[id]
@@ -313,13 +315,13 @@ func (idx *InheritIndex) onItemParentsUpdate(id interface{}, oldParents, newPare
 	}
 }
 
-func (idx *InheritIndex) UpdateParentLabels(parentID string, labels map[string]string) {
+func (idx *InheritIndex) updateParentLabels(parentID string, labels map[string]string) {
 	parent := idx.getOrCreateParent(parentID)
 	parent.labels = labels
 	idx.flushChildren(parentID)
 }
 
-func (idx *InheritIndex) DeleteParentLabels(parentID string) {
+func (idx *InheritIndex) deleteParentLabels(parentID string) {
 	parent := idx.parentDataByParentID[parentID]
 	if parent == nil {
 		return
@@ -329,13 +331,13 @@ func (idx *InheritIndex) DeleteParentLabels(parentID string) {
 	idx.flushChildren(parentID)
 }
 
-func (idx *InheritIndex) UpdateParentTags(parentID string, tags []string) {
+func (idx *InheritIndex) updateParentTags(parentID string, tags []string) {
 	parent := idx.getOrCreateParent(parentID)
 	parent.tags = tags
 	idx.flushChildren(parentID)
 }
 
-func (idx *InheritIndex) DeleteParentTags(parentID string) {
+func (idx *InheritIndex) deleteParentTags(parentID string) {
 	parentData := idx.parentDataByParentID[parentID]
 	if parentData == nil {
 		return
