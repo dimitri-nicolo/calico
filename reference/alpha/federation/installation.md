@@ -2,7 +2,7 @@
 title: Federate tiers and policies
 description: Create federated tiers and policies that apply across clusters or a group of clusters.
 ---
->**Warning**: This feature is experimental.  Experimental features may change significantly or become unsupported in future releases.”
+>**Warning**: This feature is experimental.  Experimental features may change significantly or not be supported in future releases.
 {: .alert .alert-danger} 
 ### Big picture
 
@@ -16,12 +16,13 @@ If you plan to deploy multiple clusters, federating tiers and policies can exten
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- Tier
+- **Tier** resource
 
 ### Concepts
 
 #### Federation tools
-One way to achieve federation with Calico Enterprise tiers and policies is to use [KubeFed](https://github.com/kubernetes-sigs/kubefed), which allows you to configure multiple Kubernetes clusters from a single set of APIs in a host cluster. You need to determine which Calico Enterprise cluster will be the host cluster, and the member clusters.
+
+One way to achieve federation with {site.prodname}} tiers and policies is to use [KubeFed](https://github.com/kubernetes-sigs/kubefed), which allows you to configure multiple Kubernetes clusters from a single set of APIs in a host cluster. You need to determine which {site.prodname}} cluster will be the host cluster, and the member clusters.
 
 - _Host cluster_ 
  
@@ -36,21 +37,19 @@ As for permissions, host cluster users have full control over the federated reso
 
 #### Implementing federation on Calico Enterprise clusters
  
-If you have a Calico Enterprise clusters that are not connected, you can:
+If you have a {site.prodname}} clusters that are not connected, you can:
 
- ```
 - Configure one cluster as a KubeFed host
 - Configure federating APIs and RBAC for KubeFed
-- Turn on feature flag in Calico Enterprise Manager 
-```
+- Turn on feature flag in {site.prodname}} Manager 
 
 ### Before you begin...
 
-- Calico Enterprise standalone clusters (or multi-clustered management (MCM) clusters). For help, see the [Quick Start quide]({{site.baseurl}}/getting-started/kubernetes/quickstart#install-kubernetes) or [ Set up multi-cluster management]({{site.baseurl}}/reference/beta/mcm/installation).
+- {site.prodname}} standalone clusters (or multi-clustered management (MCM) clusters). For help, see the [Quickstart quide]({{site.baseurl}}/getting-started/kubernetes/quickstart#install-kubernetes) or [ Set up multi-cluster management]({{site.baseurl}}/reference/beta/mcm/installation).
 - kubectl is installed
-- You have configured access to the Calico Enterprise Manager
+- You have configured access to the {site.prodname}} Manager
 - Helm is installed
-- You have experience configuring Calico Enterprise [tiered policies]({{site.baseurl}}/security/tiered-policy)
+- You have experience configuring {site.prodname}} [tiered policies]({{site.baseurl}}/security/tiered-policy)
 
 ### How To
 
@@ -67,13 +66,13 @@ The first step is to deploy KubeFed on the host cluster and KubeFed CLI locally.
 
 >**Note**. You should see the following two charts. Regardless of the output shown, you still need kubefed-charts/kubefed-0.1.0-rc6 to install kubefed V2.
 {: .alert .alert-info}
+
 ```
 helm search kubefed
 NAME                        	CHART VERSION	APP VERSION	DESCRIPTION                        
 kubefed-charts/kubefed      	0.1.0-rc6    	           	KubeFed helm chart                 
 kubefed-charts/federation-v2	0.0.10       	           	Kubernetes Federation V2 helm chart
 ```
-
 
 Make sure you have installed [kubefedctl](https://github.com/kubernetes-sigs/kubefed/blob/cfdc37323e8540a814e5c1d88b453b84b327cfd1/docs/installation.md#kubefedctl-cli).
 
@@ -225,7 +224,7 @@ kubectl patch deployment -n tigera-manager tigera-manager --patch \
 
 #### Manage federated resources in Calico Enterprise Manager
 
-With federation configured, all you need to do is create **federated tiers and network policies** in Calico Enterprise Manager. You manage federated resources in Calico Enterprise Manager alongside non-federated resources. They use the same CI/CD workflow of create, preview, and stage.
+With federation configured, all you need to do is create **federated tiers and network policies** in {site.prodname}} Manager. You manage federated resources in {site.prodname}} Manager alongside non-federated resources. They use the same CI/CD workflow of create, preview, and stage.
 
 ![](../../../images/alpha/federation/view_fed.png)
 
@@ -245,7 +244,7 @@ Specifying a federated policy is done simply by selecting the radio button, **Fe
 
 ##### Create a network policy
 
-To create a federated network policy, add a new policy to any tiers. You can define Ingress and Egress rules as normal, and they are applied to pods based on label selectors.
+To create a federated network policy, add a new policy to any tiers. You can define ingress and egress rules as normal, and they are applied to pods based on label selectors.
 
 ![](../../../images/alpha/federation/create_fed_pol.png)
 
