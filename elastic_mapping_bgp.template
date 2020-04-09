@@ -1,0 +1,18 @@
+{
+	"template": "tigera_secure_ee_bgp*",
+	"settings": {
+		"number_of_shards": 1,
+		"number_of_replicas": 0
+	},
+	"mappings": {
+		"properties": {
+			"logtime": {
+				"type": "date",
+				"format": "yyyy-MM-dd'T'HH:mm:ss"
+			},
+			"message": {
+				"type": "keyword"
+			}
+		}
+	}
+}
