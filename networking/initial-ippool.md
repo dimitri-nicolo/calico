@@ -49,11 +49,9 @@ resource and configures the default Calico IP pool. Note the following:
 ### How to
 
 1. Download the custom-resource.yaml file. 
-
-1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation).
-
-   **Required values**: `cidr:`<br>
-   **Empty values**: Defaulted </br>
+1. Edit the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation).  
+   **Required values**: `cidr:`   
+   **Empty values**: Defaulted 
 
     ```bash
     apiVersion: operator.tigera.io/v1
