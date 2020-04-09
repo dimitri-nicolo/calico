@@ -82,7 +82,7 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 		if update.Value != nil {
 			log.Debugf("Updating AEC with endpoint %v", key)
 			endpoint := update.Value.(*model.WorkloadEndpoint)
-			aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector, update.UpdateType)
+			aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector)
 		} else {
 			log.Debugf("Deleting endpoint %v from AEC", key)
 			aec.deleteEndpoint(key)
@@ -183,7 +183,7 @@ func (aec *ActiveEgressCalculator) updateEndpointSelector(key model.WorkloadEndp
 	aec.OnEgressIPSetIDUpdate(key, egressIPSetID)
 }
 
-func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, endpointSelector string, updateType api.UpdateType) {
+func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, endpointSelector string) {
 	// Find or create the data for this endpoint.
 	ep, exists := aec.endpoints[key]
 	if !exists {
@@ -194,10 +194,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	// Note the existing active selector, which may be about to be overwritten.
 	oldSelector := ep.activeSelector
 
-	// Update and create profile data for this endpoint.  Also inherit an egress selector from
-	// the profiles, if the endpoint itself doesn't have one.  It's undefined behaviour if more
-	// than one profile specifies an egress selector; we normally expect only one profile to do
-	// this, the one corresponding to the namespace.
+	// Inherit an egress selector from the profiles, if the endpoint itself doesn't have one.
 	ep.localSelector = endpointSelector
 	ep.activeSelector = endpointSelector
 	if ep.activeSelector == "" {
