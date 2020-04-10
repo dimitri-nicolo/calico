@@ -3,7 +3,7 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: calicoctl-install
-  namespace: calico-system
+  namespace: kube-system
   labels:
     k8s-app: calicoctl-install
 spec:
@@ -51,6 +51,7 @@ spec:
           args:
             - "-c"
             - |
+                set -e
                 cp /calicoctl /host/bindir/calicoctl.bin
 
                 cat <<EOF>/host/bindir/calicoctl
