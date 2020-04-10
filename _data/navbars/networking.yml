@@ -13,6 +13,8 @@ section:
     path: /networking/dual-tor
   - title: Configure overlay networking
     path: /networking/vxlan-ipip
+  - title: Advertise Kubernetes service IP addresses
+    path: /networking/advertise-service-ips
   - title: Configure MTU to maximize network performance
     path: /networking/mtu
   - title: Custom BGP configuration
@@ -32,8 +34,6 @@ section:
      path: /networking/dual-stack
    - title: Enable IPv6-only addressing
      path: /networking/ipv6
-   - title: Advertise Kubernetes service IP addresses
-     path: /networking/advertise-service-ips
    - title: Add a floating IP to a pod
      path: /networking/add-floating-ip
    - title: Use specific IP address for a pod
@@ -42,7 +42,7 @@ section:
      path: /networking/assign-ip-addresses-topology
    - title: Migrate from one IP pool to another
      path: /networking/migrate-pools
-   - title: Restrict a pod to use an IP in specific range
+   - title: Restrict a pod to use an IP address in a specific range
      path: /networking/legacy-firewalls
 - title: Federation for Kubernetes
   path: /networking/federation/

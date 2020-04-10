@@ -426,6 +426,17 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     # key is the filename of the template and value is the contents of the template.
     bgp: {}
 
+    certs:
+      node:
+        key:
+        cert:
+        commonName:
+      typha:
+        key:
+        cert:
+        commonName:
+        caBundle:
+
     # Configuration for the tigera operator
     tigeraOperator:
       image: #{versions.fetch("tigera-operator").image}
@@ -434,7 +445,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
 
     calicoctl:
       image: #{imageRegistry}#{versions["calicoctl"].image}
-      tag: #{versions["calicoctl"].version}
+      tag: #{versions.fetch("calicoctl")}
 
     prometheusOperator:
       image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}

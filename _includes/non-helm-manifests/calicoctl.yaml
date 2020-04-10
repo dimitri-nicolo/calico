@@ -75,6 +75,7 @@ rules:
       - globalnetworksets
       - remoteclusterconfigurations
       - ippools
+      - kubecontrollersconfigurations
       - networkpolicies
       - networksets
       - tiers
