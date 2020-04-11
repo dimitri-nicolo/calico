@@ -31,10 +31,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200409043501-7bc3a6c84c7f
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200409113644-3e6f39c9224b
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200410215127-a22fbdd8173d
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200410051554-08a3ac031475
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200409223125-f1969535eacb
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200409102455-041dd897f4c9
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200410163348-f0d8542d9f93
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
