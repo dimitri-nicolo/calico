@@ -42,10 +42,10 @@ var (
 type RouteRules struct {
 	logCxt *log.Entry
 
-	ipVersion uint8
-	priority  int
+	IPVersion int
+	Priority  int
 
-	// Routing table indexes which is exclusively targeted by rules of this structure.
+	// Routing table indexes which is exclusively managed by us.
 	tableIndexSet set.Set
 
 	netlinkFamily  int
@@ -56,6 +56,11 @@ type RouteRules struct {
 	// Current netlink handle, or nil if we need to reconnect.
 	cachedNetlinkHandle HandleIface
 
+	// Rules match function checks if two rules are equal.
+	// For example, egress ip manager considers two rules are equal if they
+	// have same FWMark , source ip matching condition and go to same table index.
+    equalRuleFunc RulesMatchFunc
+
 	// activeRules holds rules which should be programmed.
 	activeRules set.Set
 	inSync      bool
@@ -64,10 +69,11 @@ type RouteRules struct {
 	newNetlinkHandle func() (HandleIface, error)
 }
 
-func New(ipVersion uint8, priority int, tableIndexSet set.Set, netlinkTimeout time.Duration) (*RouteRules, error) {
+func New(ipVersion int, priority int, tableIndexSet set.Set, f RulesMatchFunc, netlinkTimeout time.Duration) (*RouteRules, error) {
 	return NewWithShims(
 		ipVersion,
 		priority,
+		f,
 		tableIndexSet,
 		netlinkTimeout,
 		newNetlinkHandle,
@@ -76,8 +82,9 @@ func New(ipVersion uint8, priority int, tableIndexSet set.Set, netlinkTimeout ti
 
 // NewWithShims is a test constructor, which allows netlink, time to be replaced by shims.
 func NewWithShims(
-	ipVersion uint8,
+	ipVersion int,
 	priority int,
+	f RulesMatchFunc,
 	tableIndexSet set.Set,
 	netlinkTimeout time.Duration,
 	newNetlinkHandle func() (HandleIface, error),
@@ -111,8 +118,9 @@ func NewWithShims(
 		logCxt: log.WithFields(log.Fields{
 			"ipVersion": ipVersion,
 		}),
-		ipVersion:        ipVersion,
-		priority:         priority,
+		IPVersion:        ipVersion,
+		Priority:         priority,
+		equalRuleFunc:    f,
 		tableIndexSet:    tableIndexSet,
 		netlinkFamily:    family,
 		newNetlinkHandle: newNetlinkHandle,
@@ -120,13 +128,13 @@ func NewWithShims(
 	}, nil
 }
 
-// Return an active nlRule if it is equal to a given nlRule.
+// Return an active nlRule if it is equal to a given nlRule based on RulesMatchFunc.
 // Return nil if no active nlRule exists.
-func (r *RouteRules) getActiveRule(rule *Rule) *Rule {
+func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 	var active *Rule
 	r.activeRules.Iter(func(item interface{}) error {
 		p := item.(*Rule)
-		if p.Equal(rule) {
+		if f(p, rule) {
 			active = p
 			return set.StopIteration
 		}
@@ -136,17 +144,17 @@ func (r *RouteRules) getActiveRule(rule *Rule) *Rule {
 	return active
 }
 
-// Set a nlRule. Add to activeRules if it does not already exist.
-func (r *RouteRules) SetRule(rule *Rule) {
-	if r.getActiveRule(rule) == nil {
+// Set a nlRule. Add to activeRules if it does not already exist depends on RulesMatchFunc.
+func (r *RouteRules) SetRule(rule *Rule, f RulesMatchFunc) {
+	if r.getActiveRule(rule, f) == nil {
 		r.activeRules.Add(rule)
 		r.inSync = false
 	}
 }
 
-// Remove a nlRule. Do nothing if nlRule not exists.
-func (r *RouteRules) RemoveRule(rule *Rule) {
-	if p := r.getActiveRule(rule); p != nil {
+// Remove a nlRule. Do nothing if nlRule not exists depends on RulesMatchFunc.
+func (r *RouteRules) RemoveRule(rule *Rule, f RulesMatchFunc) {
+	if p := r.getActiveRule(rule, f); p != nil {
 		r.activeRules.Discard(p)
 		r.inSync = false
 	}
@@ -219,12 +227,15 @@ func (r *RouteRules) Apply() error {
 	toAdd := r.activeRules
 	toRemove := set.New()
 	for _, nlRule := range nlRules {
-		dataplaneRule := FromNetlinkRule(&nlRule)
-		if activeRule := r.getActiveRule(dataplaneRule); r != nil {
-			// rule exists both in activeRules and dataplaneRules.
-			toAdd.Discard(activeRule)
-		} else {
-			toRemove.Add(dataplaneRule)
+		if r.tableIndexSet.Contains(nlRule.Table) {
+			// Table index of the rule is managed by us.
+			dataplaneRule := fromNetlinkRule(&nlRule)
+			if activeRule := r.getActiveRule(dataplaneRule, r.equalRuleFunc); r != nil {
+				// rule exists both in activeRules and dataplaneRules.
+				toAdd.Discard(activeRule)
+			} else {
+				toRemove.Add(dataplaneRule)
+			}
 		}
 	}
 

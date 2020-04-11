@@ -48,7 +48,7 @@ func NewRule(family, priority int) *Rule {
 	return r
 }
 
-func FromNetlinkRule(nlRule *netlink.Rule) *Rule {
+func fromNetlinkRule(nlRule *netlink.Rule) *Rule {
 	return &Rule{nlRule: nlRule}
 }
 
@@ -62,16 +62,6 @@ func (r *Rule) LogCxt() *log.Entry {
 		"src":      r.nlRule.Src.String(),
 		"GoTable":  r.nlRule.Table,
 	})
-}
-
-func (r *Rule) Equal(p *Rule) bool {
-	return (r.nlRule.Priority == p.nlRule.Priority) &&
-		(r.nlRule.Family == p.nlRule.Family) &&
-		(r.nlRule.Invert == p.nlRule.Invert) &&
-		(r.nlRule.Mark == p.nlRule.Mark) &&
-		(r.nlRule.Mask == p.nlRule.Mask) &&
-		(r.nlRule.Src.String() == p.nlRule.Src.String()) &&
-		(r.nlRule.Table == p.nlRule.Table)
 }
 
 func (r *Rule) markMatchesWithMask(mark, mask uint32) *Rule {
@@ -108,4 +98,20 @@ func (r *Rule) Not() *Rule {
 func (r *Rule) GoToTable(index int) *Rule {
 	r.nlRule.Table = index
 	return r
+}
+
+// Functions to check if two rules has same matching condition (and table index to go to).
+type RulesMatchFunc func(r, p *Rule) bool
+
+func RulesMatchSrcFWMark(r, p *Rule) bool {
+	return (r.nlRule.Priority == p.nlRule.Priority) &&
+		(r.nlRule.Family == p.nlRule.Family) &&
+		(r.nlRule.Invert == p.nlRule.Invert) &&
+		(r.nlRule.Mark == p.nlRule.Mark) &&
+		(r.nlRule.Mask == p.nlRule.Mask) &&
+		(r.nlRule.Src.String() == p.nlRule.Src.String())
+}
+
+func RulesMatchSrcFWMarkTable(r, p *Rule) bool {
+	return RulesMatchSrcFWMark(r, p) && (r.nlRule.Table == p.nlRule.Table)
 }
