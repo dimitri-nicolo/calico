@@ -98,10 +98,11 @@ type L2Target struct {
 }
 
 type Target struct {
-	Type    TargetType
-	CIDR    ip.CIDR
-	GW      ip.Addr
-	DestMAC net.HardwareAddr
+	Type      TargetType
+	CIDR      ip.CIDR
+	GW        ip.Addr
+	DestMAC   net.HardwareAddr
+	MultiPath []ip.Addr
 }
 
 func (t Target) Equal(t2 Target) bool {
@@ -717,6 +718,13 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 
 	if target.GW != nil {
 		route.Gw = target.GW.AsNetIP()
+	} else if len(target.MultiPath) > 0 {
+		// Multipath routes
+		hops := []*netlink.NexthopInfo{}
+		for _, h := range target.MultiPath {
+			hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP()})
+		}
+		route.MultiPath = hops
 	}
 
 	if target.Type == TargetTypeVXLAN || target.Type == TargetTypeNoEncap {

@@ -15,10 +15,10 @@
 package intdataplane
 
 import (
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"net"
-	"sync"
 	"syscall"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -28,19 +28,38 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/golang-collections/collections/stack"
+	"golang.org/x/sys/unix"
+
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
-	"golang.org/x/sys/unix"
 )
 
 // Egress IP manager watches EgressIPSet and WEP updates.
-// One WEP defines one ip rule which matches WEP IP to egress routing table.
+// One WEP defines one route rule which maps WEP IP to an egress routing table.
 // One EgressIPSet defines one egress routing table which consists of ECMP routes.
-// One ECMP route defines one vxlan L2 route (static ARP and FDB entry)
-
-// Egress IP manager also ensures vxlan interface is configured according to the configuration.
+// One ECMP route is associated with one vxlan L2 route (static ARP and FDB entry)
+//
+//
+//            WEP  WEP  WEP                    WEP  WEP  WEP
+//              \   |   /                        \   |   /
+//               \  |  / (Match Src FWMark)       \  |  /
+//                \ | /                            \ | /
+//          Route Table (EgressIPSet)           Route Table n
+//             <Index 200>                        <Index n>
+//               default                           default
+//                / | \                              /  \
+//               /  |  \                            /    \
+//              /   |   \                          /      \
+// L3 route GatewayIP...GatewayIP_n            GatewayIP...GatewayIP_n
+//
+// L2 routes  ARP/FDB...ARP/FDB                   ARP/FDB...ARP/FDB
+//
+// All Routing Rules are managed by a routerule instance.
+// Each routing table is managed by a routetable instance for both L3 and L2 routes.
+//
+// Egress IP manager ensures vxlan interface is configured according to the configuration.
 
 const (
 	invalidTableIndex = 0xffff
@@ -48,15 +67,10 @@ const (
 
 var (
 	TableIndexRunout = errors.New("no table index left")
+	defaultCidr, _   = ip.ParseCIDROrIP("0.0.0.0/0")
 )
 
 type egressIPManager struct {
-	sync.Mutex
-
-	// Main routing table for L2 routes.
-	// mainRT     routetable.RouteTable
-
-	fwmark     uint32
 	routerules *routerule.RouteRules
 
 	// Routing table index stack.
@@ -136,7 +150,6 @@ func newEgressIPManagerWithShims(
 	}
 
 	return &egressIPManager{
-		fwmark:                  0x400,
 		routerules:              rr,
 		tableIndexStack:         tableIndexStack,
 		tableIndexToRouteTable:  map[int]*routetable.RouteTable{},
@@ -219,7 +232,7 @@ func (m *egressIPManager) workloadToRulesWithoutTable(workload *proto.WorkloadEn
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
 		rule := routerule.NewRule(m.routerules.IPVersion, m.routerules.Priority)
-		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.fwmark))
+		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress))
 	}
 	return rules
 }
@@ -230,9 +243,44 @@ func (m *egressIPManager) workloadToRules(workload *proto.WorkloadEndpoint, tabl
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
 		rule := routerule.NewRule(m.routerules.IPVersion, m.routerules.Priority)
-		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.fwmark).GoToTable(tableIndex))
+		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress).GoToTable(tableIndex))
 	}
 	return rules
+}
+
+// Set L3 and L2 routes for an EgressIPSet.
+func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.Set) {
+	// Set L2 route first.
+	var l2routes []routetable.L2Target
+	ips.Iter(func(item interface{}) error {
+		ipString := item.(string)
+		l2routes = append(l2routes, routetable.L2Target{
+			// remote VTEP mac is generated based on gateway pod ip.
+			VTEPMAC: stringToMac(ipString),
+			GW:      ip.FromString(ipString),
+			IP:      ip.FromString(ipString),
+		})
+		return nil
+	})
+	logrus.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
+	rTable.SetL2Routes(m.vxlanDevice, l2routes)
+
+	// Set L3 route.
+	multipath := []ip.Addr{}
+	ips.Iter(func(item interface{}) error {
+		ipString := item.(string)
+		multipath = append(multipath, ip.FromString(ipString))
+		return nil
+	})
+
+	route := routetable.Target{
+		Type:      routetable.TargetTypeVXLAN,
+		CIDR:      defaultCidr,
+		MultiPath: multipath,
+	}
+
+	logrus.WithField("ecmproute", route).Debug("Egress ip manager sending ECMP VXLAN L3 updates")
+	rTable.SetRoutes(m.vxlanDevice, []routetable.Target{route})
 }
 
 func (m *egressIPManager) CompleteDeferredWork() error {
@@ -245,7 +293,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	m.dirtyEgressIPSet.Iter(func(item interface{}) error {
 		id := item.(string)
 
-		if _, found := m.activeEgressIPSet[id]; !found {
+		if ips, found := m.activeEgressIPSet[id]; !found {
 			// EgressIPSet been removed.
 			index := m.egressIPSetToTableIndex[id]
 			rTable := m.tableIndexToRouteTable[index]
@@ -262,10 +310,12 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			m.tableIndexStack.Push(index)
 			delete(m.egressIPSetToTableIndex, id)
 		} else {
+			var rTable *routetable.RouteTable
 			if m.egressIPSetToTableIndex[id] == invalidTableIndex {
 				// EgressIPSet been added. No table index yet.
 				if m.tableIndexStack.Len() == 0 {
-					// Run out of egress routing table. Log error and Panic. TODO: send to black hole table
+					// Run out of egress routing table. Log error and Panic.
+					// TODO: send to black hole table?
 					return errors.New("Run out of egress ip route table")
 				}
 
@@ -273,13 +323,16 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				m.egressIPSetToTableIndex[id] = index
 				if m.tableIndexToRouteTable[index] == nil {
 					// Allocate a routetable if it does not exists.
-					routeTable := routetable.New([]string{"vxlan.calico"}, 4, true, m.dpConfig.NetlinkTimeout, m.dpConfig.DeviceRouteSourceAddress,
+					rTable = routetable.New([]string{m.vxlanDevice}, 4, index, true, m.dpConfig.NetlinkTimeout, nil,
 						m.dpConfig.DeviceRouteProtocol, true)
-					m.tableIndexToRouteTable[index] = routeTable
+					m.tableIndexToRouteTable[index] = rTable
+				} else {
+					rTable = m.tableIndexToRouteTable[index]
 				}
 			}
 
-			// Add ECMP routes for EgressIPSet.
+			// Add L3 and L2 routes for EgressIPSet.
+			m.setL3L2Routes(rTable, ips)
 
 		}
 
@@ -308,7 +361,8 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				IPSetId := workload.EgressIpSetId
 				index := m.egressIPSetToTableIndex[IPSetId]
 				if index == 0 {
-					// EgressIPSet update has not been done yet.
+					// Have not received latest EgressIPSet update or WEP update is out of date.
+					// TODO: Is it possible? How to handle this?
 					// The update stays in pendingWlEpUpdates and will be processed later.
 					continue
 				}
@@ -328,6 +382,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 						m.routerules.RemoveRule(r, routerule.RulesMatchSrcFWMark)
 					}
 				}
+				delete(m.activeWlEndpoints, id)
 				delete(m.pendingWlEpUpdates, id)
 			}
 		}
@@ -478,4 +533,15 @@ func (m *egressIPManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTu
 	}
 
 	return nil
+}
+
+func stringToMac(s string) net.HardwareAddr {
+	hasher := sha1.New()
+	_, err := hasher.Write([]byte(s))
+	if err != nil {
+		logrus.WithError(err).WithField("string", s).Panic("Failed to write hash for string")
+	}
+	sha := hasher.Sum(nil)
+	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
+	return hw
 }

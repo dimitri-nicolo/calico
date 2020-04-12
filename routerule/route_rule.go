@@ -18,8 +18,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"golang.org/x/sys/unix"
 )
@@ -144,7 +145,7 @@ func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 	return active
 }
 
-// Set a Rule. Add to activeRules if it does not already exist depends on RulesMatchFunc.
+// Set a Rule. Add to activeRules if it does not already exist based on RulesMatchFunc.
 func (r *RouteRules) SetRule(rule *Rule, f RulesMatchFunc) {
 	if r.getActiveRule(rule, f) == nil {
 		r.activeRules.Add(rule)
@@ -152,7 +153,7 @@ func (r *RouteRules) SetRule(rule *Rule, f RulesMatchFunc) {
 	}
 }
 
-// Remove a Rule. Do nothing if Rule not exists depends on RulesMatchFunc.
+// Remove a Rule. Do nothing if Rule not exists depends based on RulesMatchFunc.
 func (r *RouteRules) RemoveRule(rule *Rule, f RulesMatchFunc) {
 	if p := r.getActiveRule(rule, f); p != nil {
 		r.activeRules.Discard(p)
