@@ -59,7 +59,7 @@ type RouteRules struct {
 	// Rules match function checks if two rules are equal.
 	// For example, egress ip manager considers two rules are equal if they
 	// have same FWMark , source ip matching condition and go to same table index.
-    equalRuleFunc RulesMatchFunc
+	equalRuleFunc RulesMatchFunc
 
 	// activeRules holds rules which should be programmed.
 	activeRules set.Set
@@ -128,8 +128,8 @@ func NewWithShims(
 	}, nil
 }
 
-// Return an active nlRule if it is equal to a given nlRule based on RulesMatchFunc.
-// Return nil if no active nlRule exists.
+// Return an active Rule if it matches a given Rule based on RulesMatchFunc.
+// Return nil if no active Rule exists.
 func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 	var active *Rule
 	r.activeRules.Iter(func(item interface{}) error {
@@ -144,7 +144,7 @@ func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 	return active
 }
 
-// Set a nlRule. Add to activeRules if it does not already exist depends on RulesMatchFunc.
+// Set a Rule. Add to activeRules if it does not already exist depends on RulesMatchFunc.
 func (r *RouteRules) SetRule(rule *Rule, f RulesMatchFunc) {
 	if r.getActiveRule(rule, f) == nil {
 		r.activeRules.Add(rule)
@@ -152,7 +152,7 @@ func (r *RouteRules) SetRule(rule *Rule, f RulesMatchFunc) {
 	}
 }
 
-// Remove a nlRule. Do nothing if nlRule not exists depends on RulesMatchFunc.
+// Remove a Rule. Do nothing if Rule not exists depends on RulesMatchFunc.
 func (r *RouteRules) RemoveRule(rule *Rule, f RulesMatchFunc) {
 	if p := r.getActiveRule(rule, f); p != nil {
 		r.activeRules.Discard(p)
