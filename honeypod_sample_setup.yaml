@@ -51,8 +51,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.ip.enum
 spec:
-  summary: "Alerts on Honeypod accessed via IP enumeration"
-  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
+  description: "Alerts on Honeypod accessed via IP enumeration"
+  summary: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
@@ -74,8 +74,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.port.scan
 spec:
-  summary: "Alerts on Honeypod accessed via port scan"
-  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  description: "Alerts on Honeypod accessed via port scan"
+  summary: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1"'
@@ -156,8 +156,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.fake.svc
 spec:
-  summary: "Alerts on Honeypod accessed via fake debug service"
-  description: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
+  description: "Alerts on Honeypod accessed via fake debug service"
+  summary: "[Honeypod] Fake debug service accessed by ${source_namespace}/${source_name_aggr} on port 8080"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-3" AND dest_port="8080"'
@@ -221,8 +221,8 @@ kind: GlobalAlertTemplate
 metadata:
   name: honeypod.vuln.svc
 spec:
-  summary: "Alerts on Honeypod accessed via vulnerable (MySQL) service"
-  description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
+  description: "Alerts on Honeypod accessed via vulnerable (MySQL) service"
+  summary: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
   query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4"'
