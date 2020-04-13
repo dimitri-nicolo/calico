@@ -87,7 +87,8 @@ ES_PROXY_GIT_TAG?=$(shell git describe --tags)
 VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(ES_PROXY_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
 	-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(ES_PROXY_GIT_TAG) \
-	-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(ES_PROXY_GIT_COMMIT)
+	-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(ES_PROXY_GIT_COMMIT) \
+	-X main.VERSION=$(ES_PROXY_VERSION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -313,8 +314,8 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(PUSH_IMAGES):$(VERSION)-$(ARCH) /es-proxy --version | grep '^$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(PUSH_IMAGES):$(VERSION)-$(ARCH) /es-proxy --version` "\nExpected version: $(VERSION)"; \
+	if ! docker run $(PUSH_IMAGES):$(VERSION)-$(ARCH) --version | grep '^$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(PUSH_IMAGES):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \
