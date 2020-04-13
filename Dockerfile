@@ -34,7 +34,8 @@ COPY filters /fluentd/etc/filters
 ENV COMPLIANCE_LOG_FILE=/var/log/calico/compliance/compliance.*.reports.log
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
-ENV BGP_LOG_FILE=/var/log/calico/bird/current
+ENV BIRD_LOG_FILE=/var/log/calico/bird/current
+ENV BIRD6_LOG_FILE=/var/log/calico/bird6/current
 ENV POS_DIR=/var/log/calico
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200

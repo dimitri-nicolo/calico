@@ -12,6 +12,12 @@
 			},
 			"message": {
 				"type": "keyword"
+			},
+			"bird_type": {
+				"type": "keyword"
+			},
+			"hostname": {
+				"type": "keyword"
 			}
 		}
 	}
