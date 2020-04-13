@@ -67,7 +67,7 @@ BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/nul
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
-GIT_VERSION            = $(shell git describe --tags --dirty --always --long)
+GIT_VERSION_LONG       = $(shell git describe --tags --dirty --always --long)
 
 # Flags for building the binaries.
 #
@@ -272,7 +272,7 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) tag-images push-images IMAGETAG=${BRANCH_NAME}
-	$(MAKE) tag-images push-images IMAGETAG=${GIT_VERSION}
+	$(MAKE) tag-images push-images IMAGETAG=${GIT_VERSION_LONG}
 
 # ensure we have a real imagetag
 imagetag:
@@ -313,3 +313,93 @@ run-voltron:
 run-guardian:
 	GUARDIAN_VOLTRON_URL=127.0.0.1:5555 go run cmd/guardian/main.go
 
+###############################################################################
+# Release
+###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+endif
+
+	$(MAKE) images
+	$(MAKE) tag-images IMAGETAG=$(VERSION)
+	# Generate the `latest` images.
+	$(MAKE) tag-images IMAGETAG=latest
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs $(addsuffix -release-verify,$(COMPONENTS))
+
+## Verify a single component
+## This expands to component-release-verify and is only valid for the components
+## defined in COMPONENTS.
+$(addsuffix -release-verify,$(COMPONENTS)): %-release-verify: release-prereqs
+	# Check the reported version is correct
+	if ! docker run $(PUSH_REPO)/tigera/$*:$(VERSION) --version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(PUSH_REPO)/tigera/$*:$(VERSION) --version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
+
+	# Push images.
+	$(MAKE) push-images IMAGETAG=$(VERSION)
+
+	@echo "Finalize the GitHub release based on the pushed tag."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	$(MAKE) push-images IMAGETAG=latest
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
