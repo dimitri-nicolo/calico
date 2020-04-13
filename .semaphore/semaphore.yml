@@ -7,19 +7,7 @@ agent:
 
 execution_time_limit:
   # Semaphore's default is 1 hour, and these tests take about that time or a little longer
-  minutes: 60
-
-auto_cancel:
-  running:
-    when: "branch != 'master'"
-  queued:
-    when: "branch != 'master'"
-
-promotions:
-- name: Cleanup
-  pipeline_file: cleanup.yml
-  auto_promote:
-    when: "result = 'stopped'"
+  minutes: 70
 
 global_job_config:
   secrets:
@@ -33,8 +21,21 @@ global_job_config:
       - chmod 0600 ~/.keys/*
       # Add the key to the ssh agent:
       - ssh-add ~/.keys/*
-      # Login to docker in order to pull images.
+      # confirm tigera-dev-ci.json exists so we don't hang during docker login
+      - if [ ! -e /home/semaphore/tigera-dev-ci.json ]; then echo tigera-dev-ci.json does not exist && exit 1; else echo tigera-dev-ci.json exists, continuing; fi      # Login to docker in order to pull images.
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+
+auto_cancel:
+  running:
+    when: "branch != 'master'"
+  queued:
+    when: "branch != 'master'"
+
+promotions:
+- name: Cleanup
+  pipeline_file: cleanup.yml
+  auto_promote:
+    when: "result = 'stopped'"
 
 blocks:
 - name: Build
