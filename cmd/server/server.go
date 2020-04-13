@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -16,7 +17,28 @@ import (
 	"github.com/tigera/es-proxy/pkg/server"
 )
 
+// This is filled out during the build process (using git describe output)
+var VERSION string
+var version bool
+
+func PrintVersion() error {
+        fmt.Println(VERSION)
+        return nil
+}
+
+func init() {
+        // Add a flag to check the version.
+        flag.BoolVar(&version, "version", false, "Display version")
+}
+
 func main() {
+
+        flag.Parse()
+        if version {
+                PrintVersion()
+                os.Exit(0)
+        }
+
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
 	log.SetFormatter(&logutils.Formatter{})
