@@ -219,10 +219,10 @@ fv-no-setup:
 .PHONY: clean
 clean: clean-bin clean-build-image
 clean-build-image:
-	docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1 || true
+	-docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1
 
 clean-bin:
-	rm -rf $(BINDIR) bin
+	-rm -rf $(BINDIR) bin
 
 
 .PHONY: signpost
@@ -272,17 +272,31 @@ endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
-##############################################################################
+###############################################################################
 # Release
-##############################################################################
+###############################################################################
 PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-GIT_VERSION?=$(shell git describe --tags --dirty)
-ifndef VERSION
-	BUILD_VERSION = $(GIT_VERSION)
-else
-	BUILD_VERSION = $(VERSION)
-endif
 
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
 
 ## Produces a clean build of release artifacts at the specified version.
 release-build: release-prereqs clean
@@ -292,22 +306,48 @@ ifneq ($(VERSION), $(GIT_VERSION))
 endif
 
 	$(MAKE) image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
+	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
+	$(MAKE) tag-images-all IMAGETAG=latest
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	for img in quay.io/$(BUILD_IMAGE):$(VERSION)-$(ARCH); do \
-	  if docker run $$img --version | grep -q '$(VERSION)$$'; \
-	  then \
-	    echo "Check successful. ($$img)"; \
-	  else \
-	    echo "Incorrect version in docker image $$img!"; \
-	    exit 1; \
-	  fi \
-	done; \
+	if ! docker run $(PUSH_IMAGES):$(VERSION)-$(ARCH) /es-proxy --version | grep '^$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(PUSH_IMAGES):$(VERSION)-$(ARCH) /es-proxy --version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
+
+	# Push images.
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
+
+	@echo "Finalize the GitHub release based on the pushed tag."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
