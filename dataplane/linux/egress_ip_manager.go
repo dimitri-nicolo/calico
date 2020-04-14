@@ -230,7 +230,7 @@ func (m *egressIPManager) workloadToRulesMatchSrcFWMark(workload *proto.Workload
 	rules := []*routerule.Rule{}
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
-		rule := routerule.NewRule(m.routerules.IPVersion, m.routerules.Priority)
+		rule := routerule.NewRule(4, m.dpConfig.EgressIpRoutingRulePriority)
 		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress))
 	}
 	return rules
@@ -241,7 +241,7 @@ func (m *egressIPManager) workloadToFullRules(workload *proto.WorkloadEndpoint, 
 	rules := []*routerule.Rule{}
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
-		rule := routerule.NewRule(m.routerules.IPVersion, m.routerules.Priority)
+		rule := routerule.NewRule(4, m.dpConfig.EgressIpRoutingRulePriority)
 		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress).GoToTable(tableIndex))
 	}
 	return rules
@@ -399,37 +399,51 @@ func (m *egressIPManager) GetRouteRules() []routeRules {
 	return []routeRules{m.routerules}
 }
 
+func stringToMac(s string) net.HardwareAddr {
+	hasher := sha1.New()
+	_, err := hasher.Write([]byte(s))
+	if err != nil {
+		logrus.WithError(err).WithField("string", s).Panic("Failed to write hash for string")
+	}
+	sha := hasher.Sum(nil)
+	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
+	return hw
+}
+
+// TODO: How we get parent device IP? We do not have a local VTEP updates.
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	logrus.Info("VXLAN tunnel device thread started.")
-	for {
-		localVTEP := m.getLocalVTEP()
-		if localVTEP == nil {
-			logrus.Debug("Missing local VTEP information, retrying...")
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		if parent, err := m.getLocalVTEPParent(); err != nil {
-			logrus.WithError(err).Warn("Failed configure VXLAN tunnel device, retrying...")
-			time.Sleep(1 * time.Second)
-			continue
-		} else {
-			if m.getNoEncapRouteTable() == nil {
-				noEncapRouteTable := m.noEncapRTConstruct([]string{parent.Attrs().Name}, 4, false, m.dpConfig.NetlinkTimeout, m.dpConfig.DeviceRouteSourceAddress,
-					m.noEncapProtocol, false)
-				m.setNoEncapRouteTable(noEncapRouteTable)
+	/*
+		for {
+			localVTEP := m.getLocalVTEP()
+			if localVTEP == nil {
+				logrus.Debug("Missing local VTEP information, retrying...")
+				time.Sleep(1 * time.Second)
+				continue
 			}
-		}
 
-		err := m.configureVXLANDevice(mtu, localVTEP)
-		if err != nil {
-			logrus.WithError(err).Warn("Failed configure VXLAN tunnel device, retrying...")
-			time.Sleep(1 * time.Second)
-			continue
+			if parent, err := m.getLocalVTEPParent(); err != nil {
+				logrus.WithError(err).Warn("Failed configure VXLAN tunnel device, retrying...")
+				time.Sleep(1 * time.Second)
+				continue
+			} else {
+				if m.getNoEncapRouteTable() == nil {
+					noEncapRouteTable := m.noEncapRTConstruct([]string{parent.Attrs().Name}, 4, false, m.dpConfig.NetlinkTimeout, m.dpConfig.DeviceRouteSourceAddress,
+						m.noEncapProtocol, false)
+					m.setNoEncapRouteTable(noEncapRouteTable)
+				}
+			}
+
+			err := m.configureVXLANDevice(mtu, localVTEP)
+			if err != nil {
+				logrus.WithError(err).Warn("Failed configure VXLAN tunnel device, retrying...")
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			logrus.Info("VXLAN tunnel device configured")
+			time.Sleep(wait)
 		}
-		logrus.Info("VXLAN tunnel device configured")
-		time.Sleep(wait)
-	}
+	*/
 }
 
 // getParentInterface returns the parent interface for the given local VTEP based on IP address. This link returned is nil
@@ -539,15 +553,4 @@ func (m *egressIPManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTu
 	}
 
 	return nil
-}
-
-func stringToMac(s string) net.HardwareAddr {
-	hasher := sha1.New()
-	_, err := hasher.Write([]byte(s))
-	if err != nil {
-		logrus.WithError(err).WithField("string", s).Panic("Failed to write hash for string")
-	}
-	sha := hasher.Sum(nil)
-	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
-	return hw
 }
