@@ -127,7 +127,7 @@ ${kubectl} -n kube-system create secret generic cnx-pull-secret \
 
 echo "Install Calico and Calicoctl for dualstack"
 ${kubectl} apply -f $TEST_DIR/infra/etcd.yaml
-cp $TEST_DIR/infra/calico-etcd.yaml $TEST_DIR/infra/calico.yaml
+cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml
 enable_dual_stack $TEST_DIR/infra/calico.yaml
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml
 # Install Calicoctl on master node, avoid network disruption during bgp configuration.
