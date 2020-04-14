@@ -69,8 +69,15 @@ var (
 	defaultCidr, _   = ip.ParseCIDROrIP("0.0.0.0/0")
 )
 
+type routeRules interface {
+	SetRule(rule *routerule.Rule, f routerule.RulesMatchFunc)
+	RemoveRule(rule *routerule.Rule, f routerule.RulesMatchFunc)
+	QueueResync()
+	Apply() error
+}
+
 type egressIPManager struct {
-	routerules *routerule.RouteRules
+	routerules routeRules
 
 	// Routing table index stack.
 	tableIndexStack *stack.Stack
@@ -377,6 +384,19 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	}
 
 	return nil
+}
+
+func (m *egressIPManager) GetRouteTables() []routeTable {
+	rts := []routeTable{}
+	for _, t := range m.tableIndexToRouteTable {
+		rts = append(rts, t)
+	}
+
+	return rts
+}
+
+func (m *egressIPManager) GetRouteRules() []routeRules {
+	return []routeRules{m.routerules}
 }
 
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {

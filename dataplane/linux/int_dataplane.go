@@ -257,6 +257,7 @@ type InternalDataplane struct {
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
+	managersWithRouteRules  []ManagerWithRouteRules
 	ruleRenderer            rules.RuleRenderer
 
 	lookupCache *calc.LookupsCache
@@ -826,6 +827,11 @@ type ManagerWithRouteTables interface {
 	GetRouteTables() []routeTable
 }
 
+type ManagerWithRouteRules interface {
+	Manager
+	GetRouteRules() []routeRules
+}
+
 func (d *InternalDataplane) routeTables() []routeTable {
 	var rts []routeTable
 	for _, mrts := range d.managersWithRouteTables {
@@ -835,11 +841,24 @@ func (d *InternalDataplane) routeTables() []routeTable {
 	return rts
 }
 
+func (d *InternalDataplane) routeRules() []routeRules {
+	var rrs []routeRules
+	for _, mrrs := range d.managersWithRouteRules {
+		rrs = append(rrs, mrrs.GetRouteRules()...)
+	}
+
+	return rrs
+}
+
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
 	switch mgr := mgr.(type) {
 	case ManagerWithRouteTables:
 		log.WithField("manager", mgr).Debug("registering ManagerWithRouteTables")
 		d.managersWithRouteTables = append(d.managersWithRouteTables, mgr)
+
+	case ManagerWithRouteRules:
+		log.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
+		d.managersWithRouteRules = append(d.managersWithRouteRules, mgr)
 	}
 	d.allManagers = append(d.allManagers, mgr)
 }
@@ -1472,6 +1491,10 @@ func (d *InternalDataplane) apply() {
 			// Queue a resync on the next Apply().
 			r.QueueResync()
 		}
+		for _, r := range d.routeRules() {
+			// Queue a resync on the next Apply().
+			r.QueueResync()
+		}
 		d.forceRouteRefresh = false
 	}
 
@@ -1512,6 +1535,22 @@ func (d *InternalDataplane) apply() {
 		}(r)
 	}
 
+	// Update the routing rules in parallel with the other updates.  We'll wait for it to finish
+	// before we return.
+	var rulesWG sync.WaitGroup
+	for _, r := range d.routeRules() {
+		rulesWG.Add(1)
+		go func(r routeRules) {
+			err := r.Apply()
+			if err != nil {
+				log.Warn("Failed to synchronize routing rules, will retry...")
+				d.dataplaneNeedsSync = true
+			}
+			d.reportHealth()
+			rulesWG.Done()
+		}(r)
+	}
+
 	// Wait for the IP sets update to finish.  We can't update iptables until it has.
 	ipSetsWG.Wait()
 
@@ -1548,6 +1587,9 @@ func (d *InternalDataplane) apply() {
 
 	// Wait for the route updates to finish.
 	routesWG.Wait()
+
+	// Wait for the rule updates to finish.
+	rulesWG.Wait()
 
 	// And publish and status updates.
 	d.endpointStatusCombiner.Apply()
