@@ -410,45 +410,24 @@ func stringToMac(s string) net.HardwareAddr {
 	return hw
 }
 
-// TODO: How we get parent device IP? We do not have a local VTEP updates.
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
-	logrus.Info("VXLAN tunnel device thread started.")
-	/*
-		for {
-			localVTEP := m.getLocalVTEP()
-			if localVTEP == nil {
-				logrus.Debug("Missing local VTEP information, retrying...")
-				time.Sleep(1 * time.Second)
-				continue
-			}
+	logrus.Info("egress ip VXLAN tunnel device thread started.")
 
-			if parent, err := m.getLocalVTEPParent(); err != nil {
-				logrus.WithError(err).Warn("Failed configure VXLAN tunnel device, retrying...")
-				time.Sleep(1 * time.Second)
-				continue
-			} else {
-				if m.getNoEncapRouteTable() == nil {
-					noEncapRouteTable := m.noEncapRTConstruct([]string{parent.Attrs().Name}, 4, false, m.dpConfig.NetlinkTimeout, m.dpConfig.DeviceRouteSourceAddress,
-						m.noEncapProtocol, false)
-					m.setNoEncapRouteTable(noEncapRouteTable)
-				}
-			}
-
-			err := m.configureVXLANDevice(mtu, localVTEP)
-			if err != nil {
-				logrus.WithError(err).Warn("Failed configure VXLAN tunnel device, retrying...")
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			logrus.Info("VXLAN tunnel device configured")
-			time.Sleep(wait)
+	for {
+		err := m.configureVXLANDevice(mtu)
+		if err != nil {
+			logrus.WithError(err).Warn("Failed configure egress ip VXLAN tunnel device, retrying...")
+			time.Sleep(1 * time.Second)
+			continue
 		}
-	*/
+		logrus.Info("egress ip VXLAN tunnel device configured")
+		time.Sleep(wait)
+	}
 }
 
-// getParentInterface returns the parent interface for the given local VTEP based on IP address. This link returned is nil
+// getParentInterface returns the parent interface for the given local NodeIP based on IP address. This link returned is nil
 // if, and only if, an error occurred
-func (m *egressIPManager) getParentInterface(localVTEP *proto.VXLANTunnelEndpointUpdate) (netlink.Link, error) {
+func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
 	links, err := m.nlHandle.LinkList()
 	if err != nil {
 		return nil, err
@@ -459,45 +438,42 @@ func (m *egressIPManager) getParentInterface(localVTEP *proto.VXLANTunnelEndpoin
 			return nil, err
 		}
 		for _, addr := range addrs {
-			if addr.IPNet.IP.String() == localVTEP.ParentDeviceIp {
+			if addr.IPNet.IP.Equal(m.dpConfig.NodeIP) {
 				logrus.Debugf("Found parent interface: %s", link)
 				return link, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("Unable to find parent interface with address %s", localVTEP.ParentDeviceIp)
+	return nil, fmt.Errorf("Unable to find parent interface with address %s", m.dpConfig.NodeIP)
 }
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
-func (m *egressIPManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTunnelEndpointUpdate) error {
+func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	logCxt := logrus.WithFields(logrus.Fields{"device": m.vxlanDevice})
-	logCxt.Debug("Configuring VXLAN tunnel device")
-	parent, err := m.getParentInterface(localVTEP)
+	logCxt.Debug("Configuring egress ip VXLAN tunnel device")
+	parent, err := m.getParentInterface()
 	if err != nil {
 		return err
 	}
-	mac, err := net.ParseMAC(localVTEP.Mac)
-	if err != nil {
-		return err
-	}
+
+	// Egress ip vxlan device does not need to have tunnel address and mac
 	vxlan := &netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:         m.vxlanDevice,
-			HardwareAddr: mac,
+			Name: m.vxlanDevice,
 		},
 		VxlanId:      m.vxlanID,
 		Port:         m.vxlanPort,
 		VtepDevIndex: parent.Attrs().Index,
-		SrcAddr:      ip.FromString(localVTEP.ParentDeviceIp).AsNetIP(),
+		SrcAddr:      m.dpConfig.NodeIP,
 	}
 
 	// Try to get the device.
 	link, err := m.nlHandle.LinkByName(m.vxlanDevice)
 	if err != nil {
-		logrus.WithError(err).Info("Failed to get VXLAN tunnel device, assuming it isn't present")
+		logrus.WithError(err).Info("Failed to get egress ip VXLAN tunnel device, assuming it isn't present")
 		if err := m.nlHandle.LinkAdd(vxlan); err == syscall.EEXIST {
 			// Device already exists - likely a race.
-			logrus.Debug("VXLAN device already exists, likely created by someone else.")
+			logrus.Debug("egress ip VXLAN device already exists, likely created by someone else.")
 		} else if err != nil {
 			// Error other than "device exists" - return it.
 			return err
@@ -506,7 +482,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTu
 		// The device now exists - requery it to check that the link exists and is a vxlan device.
 		link, err = m.nlHandle.LinkByName(m.vxlanDevice)
 		if err != nil {
-			return fmt.Errorf("can't locate created vxlan device %v", m.vxlanDevice)
+			return fmt.Errorf("can't locate created egress ip vxlan device %v", m.vxlanDevice)
 		}
 	}
 
@@ -541,11 +517,6 @@ func (m *egressIPManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTu
 			logCxt.Info("Updated vxlan tunnel MTU")
 		}
 	}
-
-	// Make sure the IP address is configured.
-	//if err := m.ensureV4AddressOnLink(localVTEP.Ipv4Addr, link); err != nil {
-	//return fmt.Errorf("failed to ensure address of interface: %s", err)
-	//}
 
 	// And the device is up.
 	if err := m.nlHandle.LinkSetUp(link); err != nil {
