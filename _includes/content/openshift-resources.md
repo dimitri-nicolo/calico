@@ -1,5 +1,4 @@
 Download the {{site.prodname}} custom resources for OpenShift and add them to the manifests directory:
-
 ```bash
 curl {{ "/manifests/ocp/01-cr-installation.yaml" | absolute_url }} -o manifests/01-cr-installation.yaml
 curl {{ "/manifests/ocp/01-cr-apiserver.yaml" | absolute_url }} -o manifests/01-cr-apiserver.yaml

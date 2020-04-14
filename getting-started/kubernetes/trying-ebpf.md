@@ -25,6 +25,8 @@ The new eBPF dataplane mode has several advantages over standard linux networkin
   
 Trying out the tech preview will give you a taste of these benefits and an opportunity to give feedback to the {{site.prodname}} team. 
 
+To learn more and see performance metrics from our test environment, see the blog, {% include open-new-window.html text='Introducing the Calico eBPF dataplane' url='https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/' %}.
+
 ### Features
 
 This how-to guide uses the following {{site.prodname}} features:

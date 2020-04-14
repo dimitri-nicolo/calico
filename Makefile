@@ -38,7 +38,7 @@ HP_IGNORE_LOCAL_DIRS="/v2.0/"
 
 ##############################################################################
 # Version information used for cutting a release.
-RELEASE_STREAM?=
+RELEASE_STREAM := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title' | grep --only-matching --extended-regexp '(v[0-9]+\.[0-9]+)|master')
 
 CHART?=calico
 REGISTRY?=gcr.io/unique-caldron-775/cnx/
@@ -259,10 +259,6 @@ kubeval: _site
 	rm filtered.out
 
 helm-tests: vendor bin/helm values.yaml
-ifndef RELEASE_STREAM
-	# Default the version to master if not set
-	$(eval RELEASE_STREAM = master)
-endif
 	mkdir -p .go-pkg-cache && \
 		docker run --rm \
 		--net=host \
@@ -342,7 +338,7 @@ release: release-prereqs
 	@echo ""
 	@echo "Release build complete. Next, push the release."
 	@echo ""
-	@echo "  make RELEASE_STREAM=$(RELEASE_STREAM) release-publish"
+	@echo "  make release-publish"
 	@echo ""
 
 ## Produces a git tag for the release.
@@ -402,9 +398,6 @@ endif
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
-ifndef RELEASE_STREAM
-	$(error RELEASE_STREAM is undefined - run using make release RELEASE_STREAM=vX.Y)
-endif
 	@if [ $(CALICO_VER) != $(NODE_VER) ]; then \
 		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
 		exit 1; fi
@@ -532,11 +525,7 @@ bin/helm:
 # Build values.yaml for all charts
 .PHONY: values.yaml
 values.yaml: _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-secure-ee/values.yaml _includes/charts/tigera-operator/values.yaml
-_includes/charts/%/values.yaml:
-ifndef RELEASE_STREAM
-	# Default the version to master if not set
-	$(eval RELEASE_STREAM = master)
-endif
+_includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \

@@ -78,6 +78,8 @@ section:
       path: /reference/resources/ippool
     - title: License key
       path: /reference/resources/licensekey
+    - title: Kubernetes controllers configuration
+      path: /reference/resources/kubecontrollersconfig
     - title: Network policy
       path: /reference/resources/networkpolicy
     - title: Network set
