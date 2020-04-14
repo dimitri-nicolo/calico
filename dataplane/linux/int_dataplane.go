@@ -184,7 +184,10 @@ type Config struct {
 	IPSecLogLevel              string
 	IPSecRekeyTime             time.Duration
 
-	EgressIpEnabled bool
+	EgressIpEnabled                bool
+	EgressIpRoutingRulePriority    int
+	EgressIpFirstRoutingTableIndex int
+	EgressIpRoutingTablesCount     int
 
 	// Optional stats collector
 	Collector collector.Collector
@@ -438,6 +441,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Warnf("Failed to query VXLAN device")
 		} else if err = netlink.LinkDel(link); err != nil {
 			log.WithError(err).Error("Failed to delete unwanted VXLAN device")
+		}
+	}
+
+	if config.EgressIpEnabled {
+		egressIpManager := newEgressIPManager("vxlan.calico.egress", config)
+		go egressIPManager.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
+		dp.RegisterManager(egressIpManager)
+	} else {
+		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
+		log.Info("Checking if we need to clean up the egress VXLAN device")
+		if link, err := netlink.LinkByName("vxlan.calico.egress"); err != nil && err != syscall.ENODEV {
+			log.WithError(err).Warnf("Failed to query egress VXLAN device")
+		} else if err = netlink.LinkDel(link); err != nil {
+			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
 		}
 	}
 

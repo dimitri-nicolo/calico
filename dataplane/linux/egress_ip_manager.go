@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"syscall"
+	"time"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
@@ -28,8 +29,6 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/golang-collections/collections/stack"
-	"golang.org/x/sys/unix"
-
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routerule"
@@ -108,11 +107,10 @@ type egressIPManager struct {
 func newEgressIPManager(
 	deviceName string,
 	dpConfig Config,
-) (*egressIPManager, error) {
+) *egressIPManager {
 	nlHandle, _ := netlink.NewHandle()
 
 	return newEgressIPManagerWithShims(
-		0, 0,
 		deviceName,
 		dpConfig,
 		nlHandle,
@@ -120,20 +118,12 @@ func newEgressIPManager(
 }
 
 func newEgressIPManagerWithShims(
-	firstTableIndex, tableCount int,
 	deviceName string,
 	dpConfig Config,
 	nlHandle netlinkHandle,
-) (*egressIPManager, error) {
-
-	// Check and push available table index to stack.
-	if firstTableIndex == 0 {
-		return nil, errors.New("routing table index is zero")
-	}
-	if (firstTableIndex + tableCount) > unix.RT_TABLE_COMPAT {
-		return nil, errors.New("routing table index out of range")
-	}
-
+) *egressIPManager {
+	firstTableIndex := dpConfig.EgressIpFirstRoutingTableIndex
+	tableCount := dpConfig.EgressIpRoutingTablesCount
 	// Prepare table index stack for allocation.
 	tableIndexStack := stack.New()
 	// Prepare table index set to be passed to routerules.
@@ -144,9 +134,11 @@ func newEgressIPManagerWithShims(
 	}
 
 	// Create routerules to manage routing rules.
-	rr, err := routerule.New(4, 1000, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, dpConfig.NetlinkTimeout)
+	rr, err := routerule.New(4, dpConfig.EgressIpRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, dpConfig.NetlinkTimeout)
 	if err != nil {
-		return nil, err
+		// table index has been checked by config.
+		// This should not happen.
+		log.Panicf("error creating routerule instance")
 	}
 
 	return &egressIPManager{
@@ -157,12 +149,12 @@ func newEgressIPManagerWithShims(
 		pendingWlEpUpdates:      make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		activeEgressIPSet:       make(map[string]set.Set),
 		vxlanDevice:             deviceName,
-		vxlanID:                 dpConfig.RulesConfig.VXLANVNI,
-		vxlanPort:               dpConfig.RulesConfig.VXLANPort,
+		vxlanID:                 dpConfig.RulesConfig.EgressIpVXLANVNI,
+		vxlanPort:               dpConfig.RulesConfig.EgressIpVXLANPort,
 		dirtyEgressIPSet:        set.New(),
 		dpConfig:                dpConfig,
 		nlHandle:                nlHandle,
-	}, nil
+	}
 }
 
 func (m *egressIPManager) OnUpdate(msg interface{}) {
@@ -227,7 +219,7 @@ func (m *egressIPManager) handleEgressIPSetDeltaUpdate(ipSetId string, membersRe
 }
 
 // Construct arrays of routing rules without table value (matching conditions only) related to a workload.
-func (m *egressIPManager) workloadToRulesWithoutTable(workload *proto.WorkloadEndpoint) []*routerule.Rule {
+func (m *egressIPManager) workloadToRulesMatchSrcFWMark(workload *proto.WorkloadEndpoint) []*routerule.Rule {
 	rules := []*routerule.Rule{}
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
@@ -238,7 +230,7 @@ func (m *egressIPManager) workloadToRulesWithoutTable(workload *proto.WorkloadEn
 }
 
 // Construct arrays of full routing rules related to a workload.
-func (m *egressIPManager) workloadToRules(workload *proto.WorkloadEndpoint, tableIndex int) []*routerule.Rule {
+func (m *egressIPManager) workloadToFullRules(workload *proto.WorkloadEndpoint, tableIndex int) []*routerule.Rule {
 	rules := []*routerule.Rule{}
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
@@ -250,8 +242,9 @@ func (m *egressIPManager) workloadToRules(workload *proto.WorkloadEndpoint, tabl
 
 // Set L3 and L2 routes for an EgressIPSet.
 func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.Set) {
-	// Set L2 route first.
-	var l2routes []routetable.L2Target
+	l2routes := []routetable.L2Target{}
+	multipath := []ip.Addr{}
+
 	ips.Iter(func(item interface{}) error {
 		ipString := item.(string)
 		l2routes = append(l2routes, routetable.L2Target{
@@ -260,19 +253,15 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 			GW:      ip.FromString(ipString),
 			IP:      ip.FromString(ipString),
 		})
-		return nil
-	})
-	logrus.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
-	rTable.SetL2Routes(m.vxlanDevice, l2routes)
-
-	// Set L3 route.
-	multipath := []ip.Addr{}
-	ips.Iter(func(item interface{}) error {
-		ipString := item.(string)
 		multipath = append(multipath, ip.FromString(ipString))
 		return nil
 	})
 
+	// Set L2 route.
+	logrus.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
+	rTable.SetL2Routes(m.vxlanDevice, l2routes)
+
+	// Set L3 route.
 	route := routetable.Target{
 		Type:      routetable.TargetTypeVXLAN,
 		CIDR:      defaultCidr,
@@ -333,7 +322,6 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 
 			// Add L3 and L2 routes for EgressIPSet.
 			m.setL3L2Routes(rTable, ips)
-
 		}
 
 		// Remove id from dirtyEgressIPSet.
@@ -350,7 +338,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				logCxt.Info("Updating endpoint routing rule.")
 				if oldWorkload != nil && oldWorkload.EgressIpSetId != workload.EgressIpSetId {
 					logCxt.Debug("EgressIPSet changed, cleaning up old state")
-					for _, r := range m.workloadToRulesWithoutTable(oldWorkload) {
+					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
 						m.routerules.RemoveRule(r, routerule.RulesMatchSrcFWMark)
 					}
 				}
@@ -369,7 +357,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 
 				// Set rules for new workload.
 				// Pass full Rules to SetRule.
-				for _, r := range m.workloadToRules(workload, index) {
+				for _, r := range m.workloadToFullRules(workload, index) {
 					m.routerules.SetRule(r, routerule.RulesMatchSrcFWMarkTable)
 				}
 				m.activeWlEndpoints[id] = workload
@@ -378,7 +366,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				logCxt.Info("Workload removed, deleting its rules.")
 
 				if oldWorkload != nil {
-					for _, r := range m.workloadToRulesWithoutTable(oldWorkload) {
+					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
 						m.routerules.RemoveRule(r, routerule.RulesMatchSrcFWMark)
 					}
 				}
@@ -391,7 +379,6 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	return nil
 }
 
-/*
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	logrus.Info("VXLAN tunnel device thread started.")
 	for {
@@ -424,7 +411,6 @@ func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 		time.Sleep(wait)
 	}
 }
-*/
 
 // getParentInterface returns the parent interface for the given local VTEP based on IP address. This link returned is nil
 // if, and only if, an error occurred

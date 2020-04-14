@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/idalloc"
@@ -348,6 +350,11 @@ type Config struct {
 
 	RouteTableRange idalloc.IndexRange `config:"route-table-range;1-250;die-on-fail"`
 
+	EgressIpEnabled             bool `config:"bool;false"`
+	EgressIpVXLANPort           int  `config:"int;4790"`
+	EgressIpVXLANVNI            int  `config:"int;4097"`
+	EgressIpRoutingRulePriority int  `config:"int;100"`
+
 	// State tracking.
 
 	// nameToSource tracks where we loaded each config param from.
@@ -438,7 +445,15 @@ func (config *Config) OpenstackActive() bool {
 	return false
 }
 
-func (c *Config) EgressIPEnabled() bool {
+func (c *Config) EgressIPCheckEnabled() bool {
+	if !c.EgressIpEnabled {
+		return false
+	}
+
+	if (c.EgressIpFirstRoutingTableIndex + c.EgressIpRoutingTablesCount) > unix.RT_TABLE_COMPAT {
+		log.Panicf("routing table index for egress ip out of range. start %d, count %d",
+			c.EgressIpFirstRoutingTableIndex, c.EgressIpRoutingTablesCount)
+	}
 	return true
 }
 

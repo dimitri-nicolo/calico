@@ -357,7 +357,10 @@ type Config struct {
 
 	EnableNflogSize bool
 	IPSecEnabled    bool
-	EgressIpEnabled bool
+
+	EgressIpEnabled   bool
+	EgressIpVXLANPort int
+	EgressIpVXLANVNI  int
 
 	DNSTrustedServers []config.ServerPort
 }
