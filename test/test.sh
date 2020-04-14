@@ -52,6 +52,7 @@ function checkConfiguration() {
 
 
 STANDARD_ENV_VARS=$(cat << EOM
+NODENAME=test-node-name
 ELASTIC_INDEX_SUFFIX=test-cluster-name
 ELASTIC_FLOWS_INDEX_SHARDS=5
 ELASTIC_DNS_INDEX_SHARDS=5
@@ -200,6 +201,7 @@ SPLUNK_HEC_HOST=splunk.eng.tigera.com
 SPLUNK_HEC_PORT=8088
 SPLUNK_PROTOCOL=https
 SPLUNK_FLUSH_INTERVAL=5
+NODENAME=test-node-name
 EOM
 )
 

@@ -94,7 +94,7 @@ cp /fluentd/etc/outputs/out-es-bgp.conf /fluentd/etc/output_bgp/out-es.conf
 
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-  for x in flows dns tsee_audit kube_audit; do
+  for x in flows dns tsee_audit kube_audit bgp; do
     setup_secure_es_conf $x
   done
 fi
