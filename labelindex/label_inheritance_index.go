@@ -163,10 +163,10 @@ func (l *InheritIndex) OnUpdate(update api.Update) (_ bool) {
 		if update.Value != nil {
 			log.Debugf("Updating InheritIndex for profile labels %v", key)
 			labels := update.Value.(map[string]string)
-			l.updateParentLabels(key.Name, labels)
+			l.UpdateParentLabels(key.Name, labels)
 		} else {
 			log.Debugf("Removing profile labels %v from InheritIndex", key)
-			l.deleteParentLabels(key.Name)
+			l.DeleteParentLabels(key.Name)
 		}
 	case model.ProfileTagsKey:
 		if update.Value != nil {
@@ -210,7 +210,6 @@ func (idx *InheritIndex) DeleteSelector(id interface{}) {
 	delete(idx.selectorsById, id)
 }
 
-// Public only for UT purposes.
 func (idx *InheritIndex) UpdateLabels(id interface{}, labels map[string]string, parentIDs []string) {
 	log.Debug("Inherit index updating labels for ", id)
 	log.Debug("Num dirty items ", idx.dirtyItemIDs.Len(), " items")
@@ -246,7 +245,6 @@ func (idx *InheritIndex) UpdateLabels(id interface{}, labels map[string]string, 
 	log.Debug("Num ending dirty items ", idx.dirtyItemIDs.Len(), " items")
 }
 
-// Public only for UT purposes.
 func (idx *InheritIndex) DeleteLabels(id interface{}) {
 	log.Debug("Inherit index deleting labels for ", id)
 	oldItemData := idx.itemDataByID[id]
@@ -315,13 +313,13 @@ func (idx *InheritIndex) onItemParentsUpdate(id interface{}, oldParents, newPare
 	}
 }
 
-func (idx *InheritIndex) updateParentLabels(parentID string, labels map[string]string) {
+func (idx *InheritIndex) UpdateParentLabels(parentID string, labels map[string]string) {
 	parent := idx.getOrCreateParent(parentID)
 	parent.labels = labels
 	idx.flushChildren(parentID)
 }
 
-func (idx *InheritIndex) deleteParentLabels(parentID string) {
+func (idx *InheritIndex) DeleteParentLabels(parentID string) {
 	parent := idx.parentDataByParentID[parentID]
 	if parent == nil {
 		return
