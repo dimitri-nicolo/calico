@@ -82,7 +82,7 @@ section:
     - title: Binary install
       path: /getting-started/bare-metal/installation/binary
 - title: CLIs
-  path: /getting-started/clis
+  path: /getting-started/clis/
   section:
   - title: calicoctl
     path: /getting-started/clis/calicoctl/
@@ -115,7 +115,7 @@ section:
         path: /getting-started/clis/calicoq/configure/kdd
 
 - title: Calico Enterprise Manager user interface
-  path: /getting-started/cnx
+  path: /getting-started/cnx/
   section:
   - title: Configure access to Calico Enterprise Manager
     path: /getting-started/cnx/access-the-manager

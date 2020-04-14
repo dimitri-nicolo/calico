@@ -6,8 +6,6 @@ section:
   path: /reference/installation/api
 - title: Set up multi-cluster management
   path: /reference/beta/mcm/installation
-- title: Federate tiers and policies
-  path: /reference/alpha/federation/installation
 - title: calicoctl
   path: /reference/calicoctl/
   section:
@@ -80,6 +78,8 @@ section:
       path: /reference/resources/ippool
     - title: License key
       path: /reference/resources/licensekey
+    - title: Kubernetes controllers configuration
+      path: /reference/resources/kubecontrollersconfig
     - title: Network policy
       path: /reference/resources/networkpolicy
     - title: Network set

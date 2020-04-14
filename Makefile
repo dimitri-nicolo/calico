@@ -38,7 +38,7 @@ HP_IGNORE_LOCAL_DIRS="/v2.0/"
 
 ##############################################################################
 # Version information used for cutting a release.
-RELEASE_STREAM?=
+RELEASE_STREAM := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title' | grep --only-matching --extended-regexp '(v[0-9]+\.[0-9]+)|master')
 
 CHART?=calico
 REGISTRY?=gcr.io/unique-caldron-775/cnx/
@@ -259,10 +259,6 @@ kubeval: _site
 	rm filtered.out
 
 helm-tests: vendor bin/helm values.yaml
-ifndef RELEASE_STREAM
-	# Default the version to master if not set
-	$(eval RELEASE_STREAM = master)
-endif
 	mkdir -p .go-pkg-cache && \
 		docker run --rm \
 		--net=host \
@@ -342,7 +338,7 @@ release: release-prereqs
 	@echo ""
 	@echo "Release build complete. Next, push the release."
 	@echo ""
-	@echo "  make RELEASE_STREAM=$(RELEASE_STREAM) release-publish"
+	@echo "  make release-publish"
 	@echo ""
 
 ## Produces a git tag for the release.
@@ -402,9 +398,6 @@ endif
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
-ifndef RELEASE_STREAM
-	$(error RELEASE_STREAM is undefined - run using make release RELEASE_STREAM=vX.Y)
-endif
 	@if [ $(CALICO_VER) != $(NODE_VER) ]; then \
 		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
 		exit 1; fi
@@ -532,39 +525,28 @@ bin/helm:
 # Build values.yaml for all charts
 .PHONY: values.yaml
 values.yaml: _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-secure-ee/values.yaml _includes/charts/tigera-operator/values.yaml
-_includes/charts/%/values.yaml:
-ifndef RELEASE_STREAM
-	# Default the version to master if not set
-	$(eval RELEASE_STREAM = master)
-endif
+_includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
 	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
 # The following chunk of conditionals sets the Version of the helm chart. 
-# Helm requires strict semantic versioning.
-# There are several use cases this code seeks to accomodate:
-# - For master directory, we hardcode the version to v0.0.0
-# - For master branch of any other directory, we should append '-pre' to the
-#   latest revision release (CALICO_VER) if it's not already appended,
-#   e.g. 'v2.4.0-pre'
-# - When building release artifacts, allow the ability to override '-pre' with an
-#   integer, e.g. 'v2.4.0-1'
-ifeq ($(RELEASE_STREAM), master)
-# For master, helm requires semantic versioning, so use v0.0.0
-chartVersion:=v0.0.0
-appVersion:=master-$(GIT_HASH)
-else ifdef CHART_RELEASE
-# When cutting a final package, use CHART_RELEASE to append a increasing integer.
-# eg. 'make charts.yaml RELEASE_STREAM=v2.4 CHART_RELEASE=0' would produce v2.4.0-0
-chartVersion=$(CALICO_VER)-$(CHART_RELEASE)
+# Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
+ifdef CHART_RELEASE
+# the presence of CHART_RELEASE indicates we're trying to cut an official chart release.
+chartVersion:=$(CALICO_VER)-$(CHART_RELEASE)
 appVersion:=$(CALICO_VER)
 else
-# Lastly, for builds of the master branch, we want to append a '-pre',
-# but not to any release name that already has one.
-chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
-appVersion=$(CALICO_VER)-$(GIT_HASH)
+# otherwise, it's a nightly build.
+ifeq ($(RELEASE_STREAM), master)
+# For master, helm requires semantic versioning, so use v0.0
+chartVersion:=v0.0
+appVersion:=$(CALICO_VER)-$(GIT_HASH)
+else
+chartVersion:=$(RELEASE_STREAM)
+appVersion:=$(CALICO_VER)-$(GIT_HASH)
+endif
 endif
 
 charts: chart/tigera-secure-ee-core chart/tigera-secure-ee chart/tigera-operator
