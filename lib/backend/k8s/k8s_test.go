@@ -2906,35 +2906,15 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 	})
 })
 
-var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testutils.DatastoreK8s, func(cfg apiconfig.CalicoAPIConfig) {
+var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testutils.DatastoreK8sInline, func(cfg apiconfig.CalicoAPIConfig) {
 	var (
 		c *k8s.KubeClient
 	)
 
 	BeforeEach(func() {
-		inlineCfgSpec := apiconfig.CalicoAPIConfigSpec{
-			DatastoreType: apiconfig.Kubernetes,
-			KubeConfig: apiconfig.KubeConfig{
-				KubeconfigInline: fmt.Sprintf(`
-apiVersion: v1
-clusters:
-- cluster:
-    insecure-skip-tls-verify: true
-    server: %s
-  name: cluster-local
-contexts:
-- context:
-    cluster: cluster-local
-    user: ""
-  name: cluster-local
-current-context: cluster-local
-kind: Config
-preferences: {}
-`, cfg.Spec.KubeConfig.K8sAPIEndpoint),
-			},
-		}
+		Expect(cfg.Spec.KubeConfig.KubeconfigInline).NotTo(BeEmpty())
 		// Create a client
-		client, err := k8s.NewKubeClient(&inlineCfgSpec)
+		client, err := k8s.NewKubeClient(&cfg.Spec)
 		Expect(err).NotTo(HaveOccurred())
 		c = client.(*k8s.KubeClient)
 	})
