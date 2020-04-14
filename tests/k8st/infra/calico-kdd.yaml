@@ -331,6 +331,7 @@ subjects:
   name: calico-kube-controllers
   namespace: kube-system
 ---
+# Source: tigera-secure-ee-core/templates/cluster-role.yaml
 # Include a clusterrole for the calico-node DaemonSet,
 # and bind it to the calico-node serviceaccount.
 kind: ClusterRole
@@ -339,25 +340,36 @@ metadata:
   name: calico-node
 rules:
   # The CNI plugin needs to get pods, nodes, and namespaces.
-  # node startup needs to get configmaps.
   - apiGroups: [""]
     resources:
       - pods
       - nodes
       - namespaces
-      - configmaps
     verbs:
       - get
   - apiGroups: [""]
     resources:
-      - endpoints
       - secrets
+    verbs:
+      # Needed when configuring bgp password in bgppeer
+      - watch
+      - list
+      - get
+  - apiGroups: [""]
+    resources:
+      - endpoints
       - services
     verbs:
       # Used to discover service IPs for advertisement.
       - watch
       - list
-      # Used to discover Typhas.
+      # Used to discover Typhas and trusted DNS services.
+      - get
+  # Pod CIDR auto-detection on kubeadm needs access to config maps.
+  - apiGroups: [""]
+    resources:
+      - configmaps
+    verbs:
       - get
   - apiGroups: [""]
     resources:
@@ -400,12 +412,15 @@ rules:
       - ippools
       - ipamblocks
       - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
       - globalnetworksets
       - networkpolicies
-      - networksets
+      - stagedkubernetesnetworkpolicies
+      - stagednetworkpolicies
       - clusterinformations
       - hostendpoints
       - blockaffinities
+      - networksets
     verbs:
       - get
       - list
@@ -427,7 +442,7 @@ rules:
       - get
       - list
       - watch
-  # These permissions are only required for upgrade from v2.6, and can
+  # These permissions are only requried for upgrade from v2.6, and can
   # be removed after upgrade or on fresh installations.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -436,6 +451,23 @@ rules:
     verbs:
       - create
       - update
+  # Keep TSEE CRDs separate to facilitate easier merges from projectcalico/calico
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - licensekeys
+      - remoteclusterconfigurations
+      - tiers
+    verbs:
+      - get
+      - list
+      - watch
+  # Typha needs to be able to create tiers
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - tiers
+    verbs:
+      - update
+      - create
   # These permissions are required for Calico CNI to perform IPAM allocations.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
