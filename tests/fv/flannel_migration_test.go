@@ -105,6 +105,10 @@ var _ = Describe("flannel-migration-controller FV test", func() {
 		kconfigfile, err = ioutil.TempFile("", "ginkgo-migrationcontroller")
 		Expect(err).NotTo(HaveOccurred())
 
+		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+		err = kconfigfile.Chmod(os.ModePerm)
+		Expect(err).NotTo(HaveOccurred())
+
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
 		_, err = kconfigfile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())

@@ -63,6 +63,9 @@ var _ = Describe("Auto Hostendpoint tests", func() {
 		kconfigFile, err = ioutil.TempFile("", "ginkgo-nodecontroller")
 		Expect(err).NotTo(HaveOccurred())
 		//defer os.Remove(kconfigFile.Name())
+		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+		err = kconfigFile.Chmod(os.ModePerm)
+		Expect(err).NotTo(HaveOccurred())
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
 		_, err = kconfigFile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())

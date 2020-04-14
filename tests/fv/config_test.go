@@ -62,6 +62,9 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
 		_, err = kconfigFile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())
+		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+		err = kconfigFile.Chmod(os.ModePerm)
+		Expect(err).NotTo(HaveOccurred())
 
 		k8sClient, err = testutils.GetK8sClient(kconfigFile.Name())
 		Expect(err).NotTo(HaveOccurred())

@@ -256,6 +256,9 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		// Write out a kubeconfig file for the local API server, and create a k8s client.
 		lkubeconfig, err := ioutil.TempFile("", "ginkgo-localcluster")
 		Expect(err).NotTo(HaveOccurred())
+		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+		err = lkubeconfig.Chmod(os.ModePerm)
+		Expect(err).NotTo(HaveOccurred())
 		localKubeconfig = lkubeconfig.Name()
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, localApiserver.IP)
 		_, err = lkubeconfig.Write([]byte(data))
@@ -276,6 +279,9 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		// Write out a kubeconfig file for the remote API server.
 		rkubeconfig, err := ioutil.TempFile("", "ginkgo-remotecluster")
+		Expect(err).NotTo(HaveOccurred())
+		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
+		err = rkubeconfig.Chmod(os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
 		remoteKubeconfig = rkubeconfig.Name()
 		data = fmt.Sprintf(testutils.KubeconfigTemplate, remoteApiserver.IP)
