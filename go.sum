@@ -744,6 +744,7 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200409102455-041dd897f4c9 h1:25
 github.com/tigera/typha-private v0.6.0-beta1.0.20200409102455-041dd897f4c9/go.mod h1:5pC6y7N3iSZqRz4oQpgWpzOIzjHdjfolJl6yWxPjAFM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200410163348-f0d8542d9f93 h1:it/Mdch3gKsvdswBHsPSXJPZCgbnzHi41j5pjQH5lf8=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200410163348-f0d8542d9f93/go.mod h1:9Ctl2UfXtHh3vj7o2jtsbnsn+bVL5qdee61WR5jEA1c=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200413211414-dc9f5ce2eda6 h1:HIGng9cXB6UB4SdwydUwdZudRTAjvl3gU8fanhqMnMI=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200413211414-dc9f5ce2eda6/go.mod h1:9Ctl2UfXtHh3vj7o2jtsbnsn+bVL5qdee61WR5jEA1c=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
