@@ -131,7 +131,7 @@ cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml
 enable_dual_stack $TEST_DIR/infra/calico.yaml
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml
 # Install Calicoctl on master node, avoid network disruption during bgp configuration.
-cat ${TEST_DIR}/infra/calicoctl-etcd.yaml | \
+cat ${TEST_DIR}/infra/calicoctl.yaml | \
     sed 's,beta.kubernetes.io/os: linux,beta.kubernetes.io/os: linux\n  nodeName: kind-control-plane,' | \
     ${kubectl} apply -f -
 echo
