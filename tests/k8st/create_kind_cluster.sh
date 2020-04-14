@@ -81,7 +81,7 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   disableDefaultCNI: true
-  podSubnet: "192.168.0.0/16,fd00:10:244::/64"
+  podSubnet: "192.168.128.0/17,fd00:10:244::/64"
   ipFamily: DualStack
 nodes:
 # the control plane node
