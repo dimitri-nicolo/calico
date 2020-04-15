@@ -557,6 +557,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200409101828-0b3104e7a08e h1:m
 github.com/tigera/libcalico-go-private v1.7.2-0.20200409101828-0b3104e7a08e/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200409223125-f1969535eacb h1:VXl+QLO2OHTrbSeNOihU12TxUGtSHTqMVHctMsRB3FI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200409223125-f1969535eacb/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200415140238-a18ed5d03446 h1:NjPRMwjpiMiT62hbQ8TMVOybk3CfaaX8+WVmpJuJzW0=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200415140238-a18ed5d03446/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
