@@ -107,6 +107,8 @@ type egressIPManager struct {
 	vxlanID     int
 	vxlanPort   int
 
+	NodeIP net.IP
+
 	nlHandle netlinkHandle
 	dpConfig Config
 }
@@ -188,6 +190,11 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		m.pendingWlEpUpdates[*msg.Id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
 		m.pendingWlEpUpdates[*msg.Id] = nil
+	case *proto.HostMetadataUpdate:
+		if msg.Hostname == m.dpConfig.FelixHostname {
+			log.WithField("hostanme", msg.Hostname).Debug("Local host update")
+			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
+		}
 	}
 }
 
@@ -438,13 +445,13 @@ func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
 			return nil, err
 		}
 		for _, addr := range addrs {
-			if addr.IPNet.IP.Equal(m.dpConfig.NodeIP) {
+			if addr.IPNet.IP.Equal(m.NodeIP) {
 				logrus.Debugf("Found parent interface: %s", link)
 				return link, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("Unable to find parent interface with address %s", m.dpConfig.NodeIP)
+	return nil, fmt.Errorf("Unable to find parent interface with address %s", m.NodeIP.String())
 }
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
@@ -464,7 +471,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		VxlanId:      m.vxlanID,
 		Port:         m.vxlanPort,
 		VtepDevIndex: parent.Attrs().Index,
-		SrcAddr:      m.dpConfig.NodeIP,
+		SrcAddr:      m.NodeIP,
 	}
 
 	// Try to get the device.
