@@ -309,6 +309,7 @@ var _ = Describe("ListenAndProxy", func() {
 
 				closed := false
 				go func() {
+					defer GinkgoRecover()
 					_, err := listener.Accept()
 					// This tests that the connection is blocked by the proxy until a previous connection is closed
 					Expect(closed).Should(BeTrue())

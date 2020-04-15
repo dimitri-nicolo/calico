@@ -84,7 +84,6 @@ func New(addr string, opts ...Option) (*Client, error) {
 					&tls.Config{
 						Certificates: []tls.Certificate{*tunnelCert},
 						RootCAs:      tunnelRootCAs,
-						ServerName:   "voltron",
 					},
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
 				)

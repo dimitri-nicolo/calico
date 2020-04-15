@@ -299,7 +299,7 @@ var _ = Describe("TLS Stream", func() {
 	})
 
 	It("should  create a cert for client", func() {
-		clnCert, err = test.CreateSignedX509Cert("guardian", srvCert)
+		clnCert, err = test.CreateSignedX509Cert("guardian", srvCert, []string{"127.0.0.1"})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(clnCert.Subject.CommonName).To(Equal("guardian"))
 	})
