@@ -1,6 +1,6 @@
 ---
 title: IP pool
-description: API for this Calico resource.
+description: API for this Calico Enterprise resource.
 canonical_url: '/reference/resources/ippool'
 ---
 
@@ -9,6 +9,8 @@ endpoint IPs to be assigned.
 
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `ippool`, `ippools`, `ipp`, `ipps`, `pool`, `pools`.
+
+For `kubectl` commands, the following case-insensitive aliases may be used to specify the resource type on the CLI: `ippool.projectcalico.org`, `ippools.projectcalico.org` as well as abbreviations such as `ippool.p` and `ippools.p`.
 
 ### Sample YAML
 
@@ -46,7 +48,7 @@ spec:
 | nodeSelector | Selects the nodes that {{site.prodname}} IPAM should assign addresses from this pool to. | | [selector](#node-selector) | all() |
 
 > **Important**: Do not use a custom `blockSize` until **all** {{site.prodname}} components have been updated to a version that
-> supports it (at least v3.3.0).  Older versions of components do not understand the field so they may corrupt the
+> supports it (at least v2.3.0).  Older versions of components do not understand the field so they may corrupt the
 > IP pool by creating blocks of incorrect size.
 {: .alert .alert-danger}
 
@@ -59,8 +61,7 @@ subnet. The subnet of each node is configured on the node resource (which may be
 determined when running the `{{site.nodecontainer}}` service).
 
 For details on configuring IP-in-IP on your deployment, please refer to
-[Configuring IP-in-IP]({{ site.baseurl }}/networking/vxlan-ipip).
-
+[Configuring IP-in-IP]({{site.baseurl}}/networking/vxlan-ipip).
 
 > **Note**: Setting `natOutgoing` is recommended on any IP Pool with `ipip` enabled.
 When `ipip` is enabled without `natOutgoing` routing between Workloads and
@@ -95,7 +96,7 @@ Reducing the block size from the default (e.g., using `28` for IPv4 to give 16 a
 {% include content/selectors.md %}
 
 For details on configuring IP pool node selectors, please read the
-[Assign IP addresses based on topology guide.]({{ site.baseurl }}/networking/assign-ip-addresses-topology).
+[Assign IP addresses based on topology guide.]({{site.baseurl}}/networking/assign-ip-addresses-topology).
 
 > **Note**: The pool's `disabled` field takes higher precedence than
 > `nodeSelector`. This means that {{site.prodname}} IPAM will not allocate any

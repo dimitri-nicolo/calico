@@ -1,6 +1,6 @@
 ---
-title: Configuring the Calico Kubernetes controllers
-description: Calico Kubernetes controllers monitor the Kubernetes API and perform actions based on cluster state.
+title: Configuring the Calico Enterprise Kubernetes controllers
+description: Calico Enterprise Kubernetes controllers monitor the Kubernetes API and perform actions based on cluster state.
 ---
 
 The {{site.prodname}} Kubernetes controllers are deployed in a Kubernetes cluster. The different controllers monitor the Kubernetes API
@@ -10,15 +10,24 @@ The controllers are primarily configured through environment variables. When run
 the controllers as a Kubernetes pod, this is accomplished through the pod manifest `env`
 section.
 
-## The {{page.imageNames["calico/kube-controllers"]}} container
+## The {{site.imageNames["kubeControllers"]}} container
 
-The `{{page.imageNames["calico/kube-controllers"]}}` container includes the following controllers:
+The `{{site.imageNames["kubeControllers"]}}` container includes the following controllers:
 
 1. policy controller: watches network policies and programs {{site.prodname}} policies.
 1. namespace controller: watches namespaces and programs {{site.prodname}} profiles.
 1. serviceaccount controller: watches service accounts and programs {{site.prodname}} profiles.
 1. workloadendpoint controller: watches for changes to pod labels and updates {{site.prodname}} workload endpoints.
 1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}.
+1. federation controller: watches Kubernetes services and endpoints locally and across all remote clusters, and programs
+   Kubernetes endpoints for any locally configured service that specifies a service federation selector annotation.
+
+The {{site.prodname}} Kubernetes manifests run these controllers in two different deployments:
+1. calico-kube-controllers
+   - This runs the policy, namespace, serviceaccount, workloadendpoint, and node controllers within the same pod
+1. tigera-federation-controller
+   - This runs the federation controller only
+   - This is only included in the manifests that enable {{site.prodname}} federation
 
 The {{site.prodname}} Kubernetes manifests run these controllers within a single pod in the `calico-kube-controllers` deployment.
 
@@ -140,6 +149,17 @@ The controller must have read access to the Kubernetes API to monitor `ServiceAc
 The service account controller is enabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
 This controller is only valid when using etcd as the {{site.prodname}} datastore.
+
+### Federation controller
+
+The federation controller syncs Kubernetes federated endpoint changes to the {{site.prodname}} datastore.
+The controller must have read access to the Kubernetes API to monitor `Service` and `Endpoints` events, and must
+also have write access to update `Endpoints`.
+
+The federation controller is disabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
+
+This controller is valid for all {{site.prodname}} datastore types. For more details refer to the
+[Configuring federated services]({{site.baseurl}}/networking/federation/services-controller) usage guide.
 
 [in-cluster-config]: https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
 [kubeconfig]: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/

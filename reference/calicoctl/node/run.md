@@ -89,7 +89,7 @@ Options:
                            [default: /var/log/calico]
      --node-image=<DOCKER_IMAGE_NAME>
                            Docker image to use for Calico's per-node container.
-                           [default: {{page.registry}}{{page.imageNames["calico/node"]}}:latest]
+                           [default: {{page.registry}}{{site.imageNames["node"]}}:latest]
      --backend=(bird|none)
                            Specify which networking backend to use.  When set
                            to "none", Calico node runs in policy only mode.
@@ -154,7 +154,7 @@ Enabling IPv6 forwarding
 Increasing conntrack limit
 Running the following command:
 
-docker run --net=host --privileged --name={{site.noderunning}} -d --restart=always -e ETCD_SCHEME=http -e HOSTNAME=calico -e ETCD_AUTHORITY=127.0.0.1:2379 -e AS= -e NO_DEFAULT_POOLS= -e ETCD_ENDPOINTS= -e IP= -e IP6= -e CALICO_NETWORKING_BACKEND=bird -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/calico:/var/run/calico -v /lib/modules:/lib/modules -v /var/log/calico:/var/log/calico -v /run/docker/plugins:/run/docker/plugins {{page.registry}}{{page.imageNames["calico/node"]}}:{{site.data.versions.first.title}}
+docker run --net=host --privileged --name={{site.noderunning}} -d --restart=always -e ETCD_SCHEME=http -e HOSTNAME=calico -e ETCD_AUTHORITY=127.0.0.1:2379 -e AS= -e NO_DEFAULT_POOLS= -e ETCD_ENDPOINTS= -e IP= -e IP6= -e CALICO_NETWORKING_BACKEND=bird -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/calico:/var/run/calico -v /lib/modules:/lib/modules -v /var/log/calico:/var/log/calico -v /run/docker/plugins:/run/docker/plugins {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions.first.title}}
 
 Waiting for etcd connection...
 Using configured IPv4 address: 192.0.2.0
@@ -193,7 +193,7 @@ To set the autodetection method for IPv6, use the `--ip6-autodetection-method` o
 > **Note**: If you are starting the `{{site.nodecontainer}}` container directly (and not using the
 > `calicoctl run` helper command), the options are passed in environment
 > variables. These are described in
-> [Configuring `{{site.nodecontainer}}`]({{ site.baseurl }}/reference/node/configuration).
+> [Configuring `{{site.nodecontainer}}`]({{site.baseurl}}/reference/node/configuration).
 {: .alert .alert-info}
 
 **first-found**
@@ -328,7 +328,7 @@ terminating `,` character does not need to be specified for those cases.
                          [default: /var/log/calico]
    --node-image=<DOCKER_IMAGE_NAME>
                          Docker image to use for Calico's per-node container.
-                         [default: {{page.registry}}{{page.imageNames["calico/node"]}}:latest]
+                         [default: {{page.registry}}{{site.imageNames["node"]}}:latest]
    --backend=(bird|none)
                          Specify which networking backend to use.  When set
                          to "none", Calico node runs in policy only mode.
@@ -371,4 +371,4 @@ terminating `,` character does not need to be specified for those cases.
 -  [Installing calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
 -  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
--  [Policy]({{ site.baseurl }}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [Policy]({{site.baseurl}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

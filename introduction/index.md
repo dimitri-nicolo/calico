@@ -1,6 +1,6 @@
 ---
-title: About Calico
-description: The value of using Calico for networking and network policy for workloads and hosts.
+title: About Calico Enterprise
+description: The value of using Calico Enterprise for networking and network policy for workloads and hosts.
 show_title: false
 canonical_url: '/introduction/index'
 custom_css: css/intro.css
@@ -8,12 +8,13 @@ custom_css: css/intro.css
 
 <div id="why-use-calico-1" class="row">
   <div class="col-md-6">
-    <img style="max-width: 330px" class="img-responsive center-block" src="/images/felix_icon.png">
+    <img style="max-width: 330px" class="img-responsive center-block" src="{{site.baseurl}}/images/calico_enterprise_logo.png">
   </div>
   <div class="col-md-6">
     <h3 id="what-is" style="margin-top: 5px">What is {{site.prodname}}?</h3>
-    <p>{{site.prodname}} is an open source networking and network security solution for containers, virtual machines, and native host-based workloads. {{site.prodname}} supports a broad range of platforms including Kubernetes, OpenShift, Docker EE, OpenStack, and bare metal services.</p>
-    <p>{{site.prodname}} combines flexible networking capabilities with run-anywhere security enforcement to provide a solution with native Linux kernel performance and true cloud-native scalability. {{site.prodname}} provides developers and cluster operators with a consistent experience and set of capabilities whether running in public cloud or on-prem, on a single node or across a multi-thousand node cluster.</p>
+    <p> Modern applications are more distributed, dynamically orchestrated, and run across multi-cloud infrastructure. To protect workloads and enforce compliance, connectivity must be established and secured in a highly dynamic environment that includes microservices, containers, and virtual machines. </p>
+<p>{{site.prodname}} provides secure application connectivity across multi-cloud and legacy environments, with the enterprise control and compliance capabilities required for mission-critical deployments.</p>
+<p>Designed from the ground up as cloud-native software, {{site.prodname}} builds on leading open source projects like <a href="https://docs.projectcalico.org/">Calico</a>. It connects and secures container, virtual machine, and bare metal host workloads in public cloud and private data centers. </p>
   </div>
 </div>
 
@@ -109,13 +110,3 @@ custom_css: css/intro.css
 </div>
 
 <hr/>
-
-<div id="why-use-calico-9" class="row">
-  <div class="col-md-6">
-    <img class="img-responsive center-block" src="/images/intro/tigera.png">
-  </div>
-  <div class="col-md-6">
-    <h3 id="contributor-community" style="margin-top: 5px">A contributor community backed by the Tigera team</h3>
-    <p>The {{site.prodname}} open source project has been supported by 150+ contributors across a broad range of companies.  In addition {{site.prodname}} is backed by Tigera, founded by the original {{site.prodname}} engineering team, and committed to maintaining {{site.prodname}} as the leading standard for Kubernetes network security.</p>
-  </div>
-</div>

@@ -1,6 +1,6 @@
 ---
 title: Assign IP addresses based on topology
-description: Configure Calico to use specific IP pools for different topologies including zone, rack, or region. 
+description: Configure Calico Enterprise to use specific IP pools for different topologies including zone, rack, or region. 
 canonical_url: '/networking/assign-ip-addresses-topology'
 ---
 
@@ -185,4 +185,4 @@ default-ipv4-ippool   192.168.0.0/16   true   Always     false      all()
 
 ### Above and beyond
 
-[Calico IPAM]({{ site.baseurl }}/reference/cni-plugin/configuration)
+[Calico IPAM]({{site.baseurl}}/reference/cni-plugin/configuration)

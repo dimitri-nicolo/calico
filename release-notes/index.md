@@ -1,8 +1,10 @@
 ---
 title: Release notes
 description: What's new, and why features provide value for upgrading.
-canonical_url: '/release-notes/index'
+canonical_url: '/release-notes/'
 ---
+<div class="git-hash" id="{{site.data['hash']}}">
+</div>
 
 The following table shows component versioning for {{site.prodname}}  **{{ page.version }}**.
 
@@ -10,10 +12,7 @@ The following table shows component versioning for {{site.prodname}}  **{{ page.
 To select a different version, click **Releases** in the top-right navigation bar.
 
 {% for release in site.data.versions %}
-## {{ release.title }}
-{% unless release.title == "master" %}
-[Release archive](https://github.com/projectcalico/calico/releases/download/{{ release.title }}/release-{{ release.title }}.tgz) with Kubernetes manifests, Docker images and binaries.
-{% endunless %}
+## Calico Enterprise {{ release.title }}
 
 {% if release.note %}
 {{ release.note }}
@@ -21,17 +20,13 @@ To select a different version, click **Releases** in the top-right navigation ba
 {% include release-notes/{{release.title}}-release-notes.md %}
 {% endif %}
 
+## Component Versions
+
 | Component              | Version |
 |------------------------|---------|
 {% for component in release.components %}
 {%- capture component_name %}{{ component[0] }}{% endcapture -%}
-
-{%- comment -%}Use the imageName for the component, if it has one, for better readability{%- endcomment -%}
-{%- if page.imageNames[component_name] -%}
-    {%- assign component_name = page.imageNames[component_name] -%}
-{%- endif -%}
-
-| {{ component_name }}   | [{{ component[1].version }}]({% include component_url component=component_name release=release %}) |
+| {{ component_name }}   | {{ component[1].version }} |
 {% endfor %}
 
 {% endfor %}

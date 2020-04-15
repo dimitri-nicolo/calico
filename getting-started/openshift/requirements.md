@@ -1,7 +1,7 @@
 ---
 title: System requirements
-description: Review the requirements for using OpenShift with Calico.
-canonical_url: /getting-started/openshift/requirements
+description: Review requirements for using OpenShift with Calico Enterprise.
+canonical_url: '/getting-started/openshift/requirements'
 ---
 
 {% include content/reqs-sys.md orch="OpenShift" %}
@@ -10,7 +10,7 @@ canonical_url: /getting-started/openshift/requirements
 
 {{site.prodname}} {{page.version}} supports:
 
-- OpenShift Container Platform 4.2+
+- OpenShift Container Platform 4.2, 4.3
 
 Refer to the OpenShift documentation for additional requirements.
 

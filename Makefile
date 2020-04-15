@@ -1,4 +1,5 @@
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
+GIT_HASH=$(shell git rev-parse --short=7 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 IMAGES_FILE=
 JEKYLL_VERSION=pages
@@ -23,20 +24,29 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
 PACKAGE_NAME?=github.com/projectcalico/calico
 
+GO_BUILD_VER?=v0.20
+CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+LOCAL_USER_ID?=$(shell id -u $$USER)
+PACKAGE_NAME?=github.com/projectcalico/calico
+
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yq.v2"
 YAML_CMD:=$(shell which yq.v2 || echo docker run --rm -i mikefarah/yq:2.4.2 yq)
 
 # Local directories to ignore when running htmlproofer
-HP_IGNORE_LOCAL_DIRS="/v1.5/,/v1.6/,/v2.0/,/v2.1/,/v2.2/,/v2.3/,/v2.4/,/v2.5/,/v2.6/,/v3.0/"
+HP_IGNORE_LOCAL_DIRS="/v2.0/"
 
 ##############################################################################
 # Version information used for cutting a release.
 RELEASE_STREAM := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title' | grep --only-matching --extended-regexp '(v[0-9]+\.[0-9]+)|master')
 
+CHART?=calico
+REGISTRY?=gcr.io/unique-caldron-775/cnx/
+DOCS_TEST_CONTAINER?=tigera/docs-test
+
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title')
-NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/node.version')
+NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.cnx-node.version')
 CTL_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calicoctl.version')
 CNI_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/cni.version')
 KUBE_CONTROLLERS_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/kube-controllers.version')
@@ -47,13 +57,22 @@ TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.t
 
 ##############################################################################
 
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
+
+.PHONY: install-git-hooks
+## Install Git hooks
+install-git-hooks:
+	./install-git-hooks
+	
+## Serve a local view of your current site on port 4000
 serve: bin/helm
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.
 	# When set to 'pages', jekyll starts in safe mode which means it will not
 	# load any plugins. Since we're no longer running in github-pages, but would
 	# like to use a docker image that comes preloaded with all the github-pages plugins,
 	# its ok to override this variable.
-	docker run --rm \
+	docker run --rm -t -i \
 	  -v $$PWD/bin/helm:/usr/local/bin/helm:ro \
 	  -v $$PWD:/srv/jekyll \
 	  -e JEKYLL_DOCKER_TAG="" \
@@ -63,7 +82,7 @@ serve: bin/helm
 
 .PHONY: build
 _site build: bin/helm
-	docker run --rm \
+	docker run --rm -t -i \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
 	-v $$PWD/bin/helm:/usr/local/bin/helm:ro \
@@ -75,13 +94,14 @@ _site build: bin/helm
 ## Clean enough that a new release build will be clean
 clean:
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
+	rm -rf stderr.out filtered.out docs_test.created bin
 
 ########################################################################################################################
 # Builds locally checked out code using local versions of libcalico, felix, and confd.
 #
 # Example commands:
 #
-#       # Make a build of your locally checked out code with custom registry.
+#	# Make a build of your locally checked out code with custom registry.
 #	make dev-clean dev-image REGISTRY=caseydavenport
 #
 #	# Build a set of manifests using the produced images.
@@ -185,7 +205,7 @@ dev-versions-yaml:
 "      version: master\\n"\
 "     flannel:\\n"\
 "      version: v0.11.1\\n"\
-"     calico/dikastes:\\n"\
+"     dikastes:\\n"\
 "      version: $$APP_POLICY_VER\\n"\
 "     flexvol:\\n"\
 "      version: $$POD2DAEMON_VER\\n" > pinned_versions.yml;
@@ -193,19 +213,45 @@ dev-versions-yaml:
 ###############################################################################
 # CI / test targets
 ###############################################################################
+.PHONY: docs_test.created
+docs_test.created:
+	docker build -t $(DOCS_TEST_CONTAINER) -f docs_test/Dockerfile.python .
 
-ci: htmlproofer kubeval helm-tests
+.PHONY: test
+test: docs_test.created
+	docker run --rm \
+		-v $(PWD):/code \
+		-e RELEASE_STREAM=$(RELEASE_STREAM) \
+		-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
+		-e GITHUB_API_TOKEN=$(GITHUB_ACCESS_TOKEN) \
+		-e DOCS_URL=$(DOCS_URL) \
+		-e GIT_HASH=$(GIT_HASH) \
+		$(DOCS_TEST_CONTAINER) sh -c \
+		"nosetests . -e "$(EXCLUDE_REGEX)" \
+		-v -s --with-xunit \
+		--xunit-file='/code/tests/report/nosetests.xml' \
+		--with-timer $(EXTRA_NOSE_ARGS)"
+
+ci: clean htmlproofer kubeval helm-tests
 
 htmlproofer: _site
-	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(PWD)/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --assume-extension --check-html --empty-alt-ignore --file-ignore $(HP_IGNORE_LOCAL_DIRS) --internal_domains "docs.projectcalico.org" --disable_external --allow-hash-href
+	# Run htmlproofer, failing if we hit any errors.
+	./htmlproofer.sh
 
 kubeval: _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
-	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(config\|allow-istio-pilot\|30-policy\|istio-app-layer-policy\|istio-inject-configmap.*\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
+	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|upgrade-calico-3.10\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
 
 	# Filter out error loading schema for non-standard resources.
+	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out > filtered.out
+
 	# Filter out error reading empty secrets (which we use for e.g. etcd secrets and seem to work).
-	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out | grep -v "invalid Secret" > filtered.out
+	-grep -v "invalid Secret" filtered.out > filtered.out
+
+	# Filter out error reading calico networkpolicy since kubeval thinks they're kubernetes networkpolicies and
+	# complains when it doesn't have a podSelector. Unfortunately, this also filters out networkpolicy failures.
+	# TODO: don't filter out k8s networkpolicy errors
+	-grep -v "invalid NetworkPolicy" filtered.out > filtered.out
 
 	# Display the errors with context and fail if there were any.
 	-rm stderr.out
@@ -221,7 +267,7 @@ helm-tests: vendor bin/helm values.yaml
 		-v $$(pwd)/bin/helm:/usr/local/bin/helm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico $(GINKGO_ARGS)
+		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-ee $(GINKGO_ARGS)
 
 ###############################################################################
 # Docs automation
@@ -231,7 +277,7 @@ helm-tests: vendor bin/helm values.yaml
 HP_IGNORE_URLS=/docs.openshift.org/
 
 check_external_links: _site
-	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(PWD)/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --external_only --file-ignore $(HP_IGNORE_LOCAL_DIRS) --assume-extension --url-ignore $(HP_IGNORE_URLS) --internal_domains "docs.projectcalico.org"
+	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(PWD)/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --external_only --file-ignore $(HP_IGNORE_LOCAL_DIRS) --assume-extension --url-ignore $(HP_IGNORE_URLS) --internal_domains "docs.tigera.io"
 
 strip_redirects:
 	find \( -name '*.md' -o -name '*.html' \) -exec sed -i'' '/redirect_from:/d' '{}' \;
@@ -255,6 +301,29 @@ endif
 update_canonical_urls:
 	# Looks through all directories and replaces previous latest release version numbers in canonical URLs with new
 	python release-scripts/update-canonical-urls.py
+
+# Copy a docs change from ORIG_VERSION (default master) to a specified version.
+# The docs change copied is all modifications from the master branch.
+backport_docs_change:
+ifndef VERSION
+	$(error VERSION is undefined - run using make backport_docs_change VERSION=vX.Y)
+endif  
+ifndef ORIG_VERSION
+	# Backporting changes from master.
+	$(eval ORIG_VERSION = master)
+endif
+	# (Note that ... indicates the diff from the merge-base.)
+	git diff master...HEAD -- $(ORIG_VERSION) > backport_main.patch
+	git diff master...HEAD -- _includes/$(ORIG_VERSION) > backport_includes.patch
+	git diff master...HEAD -- _data/`echo $(ORIG_VERSION) | tr . _` > backport_data.patch
+	git diff master...HEAD -- _plugins/$(ORIG_VERSION) > backport_helm_values.patch
+
+	-git apply --3way -p2 --directory=$(VERSION) backport_main.patch
+	-git apply --3way -p3 --directory=_includes/$(VERSION) backport_includes.patch
+	-git apply --3way -p3 --directory=_data/`echo $(VERSION) | tr . _` backport_data.patch
+	-git apply --3way -p3 --directory=_plugins/$(VERSION) backport_helm_values.patch
+	# "error: unrecognized input" can be ignored if you didn't modify those directories.
+	# "error: patch failed" means you will need to manually patch certain directories.
 
 ###############################################################################
 # Release targets
@@ -312,7 +381,7 @@ release-publish: release-prereqs
 	@echo ""
 
 ## Generates release notes for the given version.
-release-notes: #release-prereqs
+release-notes: 
 	VERSION=$(CALICO_VER) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./release-scripts/generate-release-notes.py
 
 update-authors:
@@ -347,7 +416,7 @@ RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
 # a different location, but we still need to package them up for patch
 # releases.
 DEFAULT_MANIFEST_SRC=./_site/manifests
-OLD_VERSIONS := v3.0 v3.1 v3.2 v3.3 v3.4 v3.5 v3.6
+OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4 
 ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
 DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation
 endif
@@ -450,15 +519,46 @@ bin/helm:
 	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
+###############################################################################
+# Helm
+###############################################################################
+# Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml: _includes/charts/calico/values.yaml _includes/charts/tigera-operator/values.yaml
+values.yaml: _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-secure-ee/values.yaml _includes/charts/tigera-operator/values.yaml
 _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --chart $* > $@
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
-## Create the vendor directory
+# The following chunk of conditionals sets the Version of the helm chart. 
+# Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
+ifdef CHART_RELEASE
+# the presence of CHART_RELEASE indicates we're trying to cut an official chart release.
+chartVersion:=$(CALICO_VER)-$(CHART_RELEASE)
+appVersion:=$(CALICO_VER)
+else
+# otherwise, it's a nightly build.
+ifeq ($(RELEASE_STREAM), master)
+# For master, helm requires semantic versioning, so use v0.0
+chartVersion:=v0.0
+appVersion:=$(CALICO_VER)-$(GIT_HASH)
+else
+chartVersion:=$(RELEASE_STREAM)
+appVersion:=$(CALICO_VER)-$(GIT_HASH)
+endif
+endif
+
+charts: chart/tigera-secure-ee-core chart/tigera-secure-ee chart/tigera-operator
+chart/%: _includes/charts/%/values.yaml
+	mkdir -p bin
+	helm package ./_includes/charts/$* \
+	--save=false \
+	--destination ./bin/ \
+	--version $(chartVersion) \
+	--app-version $(appVersion)
+
+ ## Create the vendor directory
 vendor: glide.yaml
 	# Ensure that the glide cache directory exists.
 	mkdir -p $(HOME)/.glide

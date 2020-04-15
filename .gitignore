@@ -10,9 +10,20 @@ _site
 .releasedata
 nosetests.xml
 Gemfile.lock
+publish-cnx-docs.yaml
 _output/
+/*.out
 bin
 vendor
+backport*.patch
+.vscode
+
+#tests
+docs_test.created
+core.tgz
+ee.tgz
+.noseids
+
 pinned_versions.yml
 pinned_images.yml
 

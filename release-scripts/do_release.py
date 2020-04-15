@@ -23,6 +23,7 @@ Options:
 
 """
 import os
+import re
 import shutil
 
 from docopt import docopt
@@ -32,6 +33,20 @@ def release():
     new_version = arguments.get("--new-version")
     if not new_version:
         new_version = raw_input("New Calico version? (vX.Y): ")
+
+    # replace index.html default version
+    index_html = open('index.html').read()
+    index_html = index_html.replace('master/introduction', '%s/introduction' % new_version)
+    updated = open('index.html', 'w')
+    updated.write(index_html)
+    updated.close()
+
+    # replace _includes/version_warning.html default version
+    warning_html = open('_includes/version_warning.html').read()
+    warning_html = re.sub("{{site.baseurl}}/(v[0-9].[0-9]{1,3})", '{{site.baseurl}}/%s' % new_version, warning_html)
+    warning_updated = open('_includes/version_warning.html', 'w')
+    warning_updated.write(warning_html)
+    warning_updated.close()
 
     # Check if any of the new version dirs exist already
     new_dirs = ["./%s" % new_version,
@@ -50,6 +65,22 @@ def release():
     shutil.copytree("./_data/master", "./_data/%s" % new_version.replace(".", "_"))
     shutil.copytree("./_includes/master", "./_includes/%s" % new_version, symlinks=True)
     shutil.copytree("./_plugins/master", "./_plugins/%s" % new_version)
+
+    # replace _plugins/values.rb default version
+    helm_values = open('_plugins/%s/values.rb' % new_version).read()
+    helm_values = re.sub('gen_values_master', 'gen_values_%s' % new_version.replace('.', '_'), helm_values)
+    helm_values = re.sub('gen_chart_specific_values_master', 'gen_chart_specific_values_%s' % new_version.replace('.', '_'), helm_values)
+    helm_values_updated = open('_plugins/%s/values.rb' % new_version, 'w')
+    helm_values_updated.write(helm_values)
+    helm_values_updated.close()
+
+    # replace _includes/v2.5/charts/tigera-secure-ee-core/templates/NOTES.txt default version
+    chart_name = "tigera-secure-ee"
+    helm_notes = open('_includes/%s/charts/%s-core/templates/NOTES.txt' % (new_version, chart_name)).read()
+    helm_notes = re.sub('docs.tigera.io/master', 'docs.tigera.io/%s' % new_version, helm_notes)
+    helm_notes_updated = open('_includes/%s/charts/%s-core/templates/NOTES.txt' % (new_version, chart_name), 'w')
+    helm_notes_updated.write(helm_notes)
+    helm_notes_updated.close()
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)

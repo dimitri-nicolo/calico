@@ -42,7 +42,7 @@ ExecStart=/usr/bin/docker run --net=host --privileged \
  -v /lib/modules:/lib/modules \
  -v /var/run/calico:/var/run/calico \
  -v /etc/pki:/pki \
- {{page.registry}}{{page.imageNames["calico/node"]}}:{{site.data.versions.first.title}}
+ {{page.registry}}{% include component_image component="cnx-node" %}
 
 ExecStop=-/usr/bin/docker stop {{site.noderunning}}
 

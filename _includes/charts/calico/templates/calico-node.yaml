@@ -1,6 +1,7 @@
-# This manifest installs the {{ include "nodeName" . }} container, as well
-# as the CNI plugins and network config on
-# each master and worker node in a Kubernetes cluster.
+{{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
+# as well as the CNI plugins and network config on
+{{- end }}
+# on each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -21,18 +22,29 @@ spec:
       labels:
         k8s-app: {{include "nodeName" . }}
       annotations:
+{{- if .Values.node.prometheusMetricsPort }}
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: {{ .Values.node.prometheusMetricsPort | quote }}
+{{- end }}
         # This, along with the CriticalAddonsOnly toleration below,
         # marks the pod as a critical add-on, ensuring it gets
         # priority scheduling and that its resources are reserved
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
+        # This contains a hash of the {{include "variant_name" . | lower}}-config ConfigMap
+        # and can be updated to trigger a rolling update if the ConfigMap is updated.
+        calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
+{{- if .Values.bgp }}
+        custom-bgp-configmap-hash: {{ tuple "custom-bgp-config.yaml" . | include "calico.hash" }}
+{{- end }}
+{{- if .Values.typha.enabled }}
+        felix-typha-cert-hash: {{ tuple "calico-typha-certs.yaml" . | include "calico.hash" }}
+{{- end }}
+{{- tuple .Values.node "calico-node" | include "calico.sec_app_profile" | indent 8 }}
+{{- tuple .Values.cni "install-cni" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       nodeSelector:
         kubernetes.io/os: linux
-{{- if .Values.flannel_migration}}
-        # Only run Calico on nodes that have been migrated.
-        projectcalico.org/node-network-during-migration: calico
-{{- end}}
       hostNetwork: true
       tolerations:
         # Make sure {{include "nodeName" . }} gets scheduled on all nodes.
@@ -48,49 +60,18 @@ spec:
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
       priorityClassName: system-node-critical
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       initContainers:
-{{- if and (eq .Values.network "calico") (eq .Values.datastore "kubernetes") }}
-        # This container performs upgrade from host-local IPAM to calico-ipam.
-        # It can be deleted if this is a fresh installation, or if you have already
-        # upgraded to use calico-ipam.
-        - name: upgrade-ipam
-          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
-          command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
-          env:
-{{- if .Values.bpf }}
-            # Overrides for kubernetes API server host/port.  Needed in BPF mode.
-            - name: KUBERNETES_SERVICE_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: kubernetes_service_host
-            - name: KUBERNETES_SERVICE_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: kubernetes_service_port
-{{- end }}
-            - name: KUBERNETES_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: CALICO_NETWORKING_BACKEND
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: calico_backend
-          volumeMounts:
-            - mountPath: /var/lib/cni/networks
-              name: host-local-net-dir
-            - mountPath: /host/opt/cni/bin
-              name: cni-bin-dir
-          securityContext:
-            privileged: true
-{{- end }}
+{{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks")  }}
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
+          image: {{ join ":" (list .Values.cni.image .Values.cni.tag) }}
           command: ["/install-cni.sh"]
           env:
 {{- if .Values.bpf }}
@@ -122,26 +103,6 @@ spec:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: etcd_endpoints
-  {{- if eq .Values.network "flannel" }}
-            # Location of the CA certificate for etcd.
-            - name: ETCD_CA_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: ETCD_KEY_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: ETCD_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-  {{- end }}
 {{- else if eq .Values.datastore "kubernetes" }}
             # Set the hostname based on the k8s node name.
             - name: KUBERNETES_NODE_NAME
@@ -172,23 +133,21 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {{- end }}
-          securityContext:
-            privileged: true
+{{- end }}
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: {{.Values.flexvol.image}}:{{.Values.flexvol.tag}}
+          image: {{ join ":" (list .Values.flexvol.image .Values.flexvol.tag) }}
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
-          securityContext:
-            privileged: true
       containers:
-        # Runs {{ include "nodeName" . }} container on each Kubernetes node.  This
+        # Runs cnx-node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{.Values.node.image}}:{{.Values.node.tag}}
+          image: {{ join ":" (list .Values.node.image .Values.node.tag) }}
+{{ tuple .Values.node.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
 {{- if .Values.bpf }}
             # Overrides for kubernetes API server host/port.  Needed in BPF mode.
@@ -277,26 +236,55 @@ spec:
               value: "autodetect"
             # {{- if .Values.bpf }} For best performance, disable {{- else }} Enable {{- end }} IPIP
             - name: CALICO_IPV4POOL_IPIP
-              value: "{{- if .Values.bpf -}} Never {{- else -}} Always {{- end -}}"
+              value: "{{- if .Values.bpf -}} Never {{- else -}} {{ .Values.initialPool.ipIpMode }} {{- end -}}"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: veth_mtu
-{{- else if eq .Values.network "flannel" }}
+{{- else if eq .Values.network "ecs" }}
             # Don't enable BGP.
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
+            - name: FELIX_INTERFACEPREFIX
+              value: "eni"
+            # This will make Felix honor AWS VPC CNI's mangle table
+            # rules.
+            - name: FELIX_IPTABLESMANGLEALLOWACTION
+              value: Return
             # Cluster type to identify the deployment type
             - name: CLUSTER_TYPE
-              value: "k8s,canal"
-            # Period, in seconds, at which felix re-applies all iptables state
-            - name: FELIX_IPTABLESREFRESHINTERVAL
-              value: "60"
-            # No IP address needed.
-            - name: IP
-              value: ""
+              value: "k8s,ecs"
+            - name: NO_DEFAULT_POOLS
+              value: "true"
+{{- else if eq .Values.network "aks" }}
+            # Don't enable BGP.
+            - name: CALICO_NETWORKING_BACKEND
+              value: "none"
+            - name: FELIX_INTERFACEPREFIX
+              value: "azv"
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,aks"
+            - name: NO_DEFAULT_POOLS
+              value: "true"
+{{- else if eq .Values.network "gke" }}
+            # Don't enable BGP.  We're relying on native GKE CNI.
+            - name: CALICO_NETWORKING_BACKEND
+              value: "none"
+            - name: FELIX_INTERFACEPREFIX
+              value: "gke"
+            # GKE CNI has its own iptables rules, defer to those after ours have run.
+            - name: FELIX_IPTABLESMANGLEALLOWACTION
+              value: "Return"
+            - name: FELIX_IPTABLESFILTERALLOWACTION
+              value: "Return"
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,gke"
+            - name: NO_DEFAULT_POOLS
+              value: "true"
 {{- else }}
             # Don't enable BGP.
             - name: CALICO_NETWORKING_BACKEND
@@ -305,11 +293,13 @@ spec:
             - name: CLUSTER_TYPE
               value: "k8s"
 {{- end }}
+{{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks") }}
             # The default IPv4 pool to create on startup if none exists. Pod IPs will be
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.
-            # - name: CALICO_IPV4POOL_CIDR
-            #   value: "192.168.0.0/16"
+            - name: CALICO_IPV4POOL_CIDR
+              value: "{{ .Values.initialPool.cidr }}"
+{{- end }}
             # Disable file logging so `kubectl logs` works.
             - name: CALICO_DISABLE_FILE_LOGGING
               value: "true"
@@ -321,17 +311,72 @@ spec:
               value: "false"
             # Set Felix logging to "info"
             - name: FELIX_LOGSEVERITYSCREEN
-              value: "info"
+              value: {{ .Values.node.logLevel }}
             - name: FELIX_HEALTHENABLED
               value: "true"
+            # Additional Felix configuration options
+{{- if .Values.node.prometheusMetricsPort }}
+            # Enable Tigera Secure EE Prometheus denied packet reporting
+            - name: FELIX_PROMETHEUSREPORTERENABLED
+              value: "true"
+            # Make Tigera Secure EE Prometheus metrics available on port 9081
+            - name: FELIX_PROMETHEUSREPORTERPORT
+              value: {{ .Values.node.prometheusMetricsPort | quote }}
+{{- else }}
+            # Enable Tigera Secure EE Prometheus denied packet reporting
+            - name: FELIX_PROMETHEUSREPORTERENABLED
+              value: "false"
+{{- end }}
+            # Enable Tigera Secure EE Flow Log generation
+            - name: FELIX_FLOWLOGSFILEENABLED
+              value: "true"
+            # Include endpoint labels in Tigera Secure EE Flow Log
+            - name: FELIX_FLOWLOGSFILEINCLUDELABELS
+              value: "true"
+            # Include policies in Tigera Secure EE Flow Log
+            - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
+              value: "true"
+            # Enable processing network sets in EE Flow Logs
+            - name: FELIX_FLOWLOGSENABLENETWORKSETS
+              value: "true"
+            # Enable Tigera Secure EE DNS Log generation, with a limit of 1000 logs per node per 5 minutes
+            - name: FELIX_DNSLOGSFILEENABLED
+              value: "true"
+            - name: FELIX_DNSLOGSFILEPERNODELIMIT
+              value: "1000"
+{{- if .Values.typha.enabled }}
+            # Location of the CA bundle Felix uses to authenticate Typha; volume mount
+            - name: FELIX_TYPHACAFILE
+              value: /calico-typha-ca/caBundle
+            # Common name on the Typha certificate; used to verify we are talking to an authentic typha
+            - name: FELIX_TYPHACN
+              value: {{.Values.typha.tls.typhaCommonName}}
+            # Location of the client certificate for connecting to Typha; volume mount
+            - name: FELIX_TYPHACERTFILE
+              value: /calico-felix-certs/felix.crt
+            # Location of the client certificate key for connecting to Typha; volume mount
+            - name: FELIX_TYPHAKEYFILE
+              value: /calico-felix-certs/felix.key
+{{- end }}
+            # Sets Default Security Groups if tigera-aws-config exists
+            - name: TIGERA_DEFAULT_SECURITY_GROUPS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: default_sgs
+                  optional: true
+            # Sets Pod Security Group if tigera-aws-config exists
+            - name: TIGERA_POD_SECURITY_GROUP
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-aws-config
+                  key: pod_sg
+                  optional: true
 {{- if .Values.node.env }}
 {{ toYaml .Values.node.env | indent 12 }}
 {{- end }}
           securityContext:
             privileged: true
-          resources:
-            requests:
-              cpu: 250m
           livenessProbe:
             exec:
               command:
@@ -348,15 +393,8 @@ spec:
             exec:
               command:
               - /bin/calico-node
-              - -felix-ready
-{{- if not .Values.flannel_migration }}
               - -bird-ready
-{{- end }}
-{{- else if eq .Values.network "flannel" }}
-            httpGet:
-              path: /readiness
-              port: 9099
-              host: localhost
+              - -felix-ready
 {{- else }}
             exec:
               command:
@@ -377,9 +415,27 @@ spec:
             - mountPath: /var/lib/calico
               name: var-lib-calico
               readOnly: false
+            - mountPath: /var/log/calico
+              name: var-log-calico
+              readOnly: false
+{{- if .Values.typha.enabled }}
+            - mountPath: "/calico-typha-ca"
+              name: calico-typha-ca
+              readOnly: true
+            - mountPath: /calico-felix-certs
+              name: calico-felix-certs
+              readOnly: true
+{{- end }}
 {{- if eq .Values.datastore "etcd" }}
             - mountPath: /calico-secrets
               name: etcd-certs
+{{- end }}
+{{- if .Values.bgp }}
+  {{- range $key, $value := .Values.bgp }}
+            - name: bird-templates
+              mountPath: /etc/calico/confd/templates/{{ $key }}
+              subPath: {{ $key }}
+  {{- end }}
 {{- end }}
             - name: policysync
               mountPath: /var/run/nodeagent
@@ -390,122 +446,8 @@ spec:
               mountPath: /sys/fs/
               mountPropagation: Bidirectional
 {{- end }}
-{{- if eq .Values.network "flannel" }}
-  {{- if eq .Values.datastore "kubernetes" }}
-        # This container runs flannel using the kube-subnet-mgr backend
-        # for allocating subnets.
-        - name: kube-flannel
-          image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
-          command: [ "/opt/bin/flanneld", "--ip-masq", "--kube-subnet-mgr" ]
-          securityContext:
-            privileged: true
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: FLANNELD_IFACE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: canal_iface
-            - name: FLANNELD_IP_MASQ
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: masquerade
-{{- if .Values.flannel.env }}
-{{ toYaml .Values.flannel.env | indent 12 }}
-{{- end }}
-          volumeMounts:
-          - mountPath: /run/xtables.lock
-            name: xtables-lock
-            readOnly: false
-          - name: flannel-cfg
-            mountPath: /etc/kube-flannel/
-  {{- else if eq .Values.datastore "etcd" }}
-        # Runs the flannel daemon to enable vxlan networking between
-        # container hosts.
-        - name: flannel
-          image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
-          env:
-            # The location of the etcd cluster.
-            - name: FLANNELD_ETCD_ENDPOINTS
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_endpoints
-            # Location of the CA certificate for etcd.
-            - name: ETCD_CA_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: ETCD_KEY_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: ETCD_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-            # Location of the CA certificate for etcd.
-            - name: FLANNELD_ETCD_CAFILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: FLANNELD_ETCD_KEYFILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: FLANNELD_ETCD_CERTFILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-            # The interface flannel should run on.
-            - name: FLANNELD_IFACE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: canal_iface
-            # Perform masquerade on traffic leaving the pod cidr.
-            - name: FLANNELD_IP_MASQ
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: masquerade
-            # Write the subnet.env file to the mounted directory.
-            - name: FLANNELD_SUBNET_FILE
-              value: "/run/flannel/subnet.env"
-{{- if .Values.flannel.env }}
-{{ toYaml .Values.flannel.env | indent 12 }}
-{{- end }}
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - mountPath: /etc/resolv.conf
-              name: resolv
-            - mountPath: /run/flannel
-              name: run-flannel
-            - mountPath: /calico-secrets
-              name: etcd-certs
-  {{- end }}
-{{- end }}
       volumes:
-        # Used by {{ include "nodeName" . }}.
+        # Used by cnx-node.
         - name: lib-modules
           hostPath:
             path: /lib/modules
@@ -519,33 +461,25 @@ spec:
           hostPath:
             path: /run/xtables.lock
             type: FileOrCreate
+{{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
 {{- if .Values.bpf }}
         - name: sysfs
           hostPath:
             path: /sys/fs/
             type: DirectoryOrCreate
 {{- end }}
-{{- if and (eq .Values.network "flannel") (eq .Values.datastore "kubernetes") }}
-        # Used by flannel.
-        - name: flannel-cfg
-          configMap:
-            name: canal-config
-{{- else if and (eq .Values.network "flannel") (eq .Values.datastore "etcd") }}
-        # Used by flannel.
-        - name: run-flannel
-          hostPath:
-            path: /run/flannel
-        - name: resolv
-          hostPath:
-            path: /etc/resolv.conf
-{{- end }}
         # Used to install CNI.
         - name: cni-bin-dir
           hostPath:
+{{- if eq .Values.platform "gke" }}
+            path: /home/kubernetes/bin
+{{- else }}
             path: /opt/cni/bin
+{{- end }}
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
+{{- end }}
 {{- if eq .Values.datastore "etcd" }}
         # Mount in the etcd TLS secrets with mode 400.
         # See https://kubernetes.io/docs/concepts/configuration/secret/
@@ -570,7 +504,32 @@ spec:
         - name: flexvol-driver-host
           hostPath:
             type: DirectoryOrCreate
+{{- if eq .Values.platform "gke" }}
+            path: /home/kubernetes/flexvolume/nodeagent~uds
+{{- else if eq .Values.platform "aks" }}
+            path: /etc/kubernetes/volumeplugins/nodeagent~uds
+{{- else }}
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
+{{- end }}
+{{- if .Values.bgp }}
+        - name: bird-templates
+          configMap:
+            name: bgp-templates
+{{- end }}
+        # Used for calico logs
+        - name: var-log-calico
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/log/calico
+{{- if .Values.typha.enabled }}
+        - name: calico-typha-ca
+          configMap:
+            name: calico-typha-ca
+        - name: calico-felix-certs
+          secret:
+            secretName: calico-felix-certs
+{{- end }}
+
 ---
 
 apiVersion: v1
@@ -578,35 +537,3 @@ kind: ServiceAccount
 metadata:
   name: {{include "nodeName" . }}
   namespace: kube-system
-
-{{- if and (eq .Values.datastore "etcd") (eq .Values.network "flannel") }}
----
-
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: canal
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: canal
-subjects:
-- kind: ServiceAccount
-  name: canal-node
-  namespace: kube-system
-
----
-
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: canal
-rules:
-  - apiGroups: [""]
-    resources:
-      - pods
-      - nodes
-      - namespaces
-    verbs:
-      - get
-{{- end }}

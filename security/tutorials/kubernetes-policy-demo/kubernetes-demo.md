@@ -9,7 +9,7 @@ running on Kubernetes.  It then configures network policy on each service.
 ## Prerequisites
 
 To create a Kubernetes cluster which supports the Kubernetes network policy API, follow
-one of our [getting started guides]({{ site.baseurl }}/getting-started/).
+one of our [getting started guides]({{site.baseurl}}/getting-started/).
 
 ## Running the stars example
 
@@ -88,7 +88,7 @@ kubectl create -f {{ "/security/tutorials/kubernetes-policy-demo/policies/fronte
 The client can now access the frontend, but not the backend.  Neither the frontend nor the backend
 can initiate connections to the client.  The frontend can still access the backend.
 
-To use {{site.prodname}} to enforce egress policy on Kubernetes pods, see [the advanced policy demo]({{ site.baseurl }}/security/tutorials/kubernetes-policy-advanced).
+To use {{site.prodname}} to enforce egress policy on Kubernetes pods, see [the advanced policy demo]({{site.baseurl}}/security/tutorials/kubernetes-policy-advanced).
 
 ### 6) (Optional) Clean up the demo environment
 

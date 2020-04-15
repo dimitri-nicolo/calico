@@ -1,6 +1,6 @@
 ---
 title: Typha
-description: Typha is the component for scaling Kubernetes deployments.
+description: Typha is the Calico component for scaling Kubernetes deployments.
 show_read_time: false
 show_toc: false
 ---

@@ -1,18 +1,18 @@
 ---
 title: Profile
-description: API for this Calico resource.
+description: API for this Calico Enterprise resource.
 canonical_url: '/reference/resources/profile'
 ---
 
-Profiles provide a way to group multiple endpoints so that they inherit a shared set of labels. For historic reasons, Profiles can also include
-policy rules, but that feature is deprecated in favor of the much more
-flexible [NetworkPolicy]({{ site.baseurl }}/reference/resources/networkpolicy) and
-[GlobalNetworkPolicy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy) resources.
+A profile resource (`Profile`) represents a set of rules which are applied
+to the individual endpoints to which this profile has been assigned.
 
 Each {{site.prodname}} endpoint or host endpoint can be assigned to zero or more profiles.
 
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `profile`, `profiles`, `pro`, `pros`.
+
+This resource is not supported in `kubectl`.
 
 ### Sample YAML
 

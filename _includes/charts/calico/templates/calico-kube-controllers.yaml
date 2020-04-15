@@ -23,9 +23,18 @@ spec:
         k8s-app: calico-kube-controllers
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
+{{- if eq .Values.datastore "etcd" }}
+        # This contains a hash of the {{include "variant_name" . | lower}}-config ConfigMap
+        # and can be updated to trigger a rolling update if the ConfigMap is updated.
+        calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
+{{- end }}
+{{- tuple .Values.kubeControllers "calico-kube-controllers" | include "calico.sec_app_profile" | indent 8 }}
     spec:
       nodeSelector:
         kubernetes.io/os: linux
+{{ if .Values.controlPlaneNodeSelector }}
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
         - key: CriticalAddonsOnly
@@ -34,13 +43,20 @@ spec:
           effect: NoSchedule
       serviceAccountName: calico-kube-controllers
       priorityClassName: system-cluster-critical
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
 {{- if eq .Values.datastore "etcd" }}
       # The controllers must run in the host network namespace so that
       # it isn't governed by policy that would prevent it from working.
       hostNetwork: true
       containers:
         - name: calico-kube-controllers
-          image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
+          image: {{ join ":" (list .Values.kubeControllers.image .Values.kubeControllers.tag) }}
+{{ tuple .Values.kubeControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -91,13 +107,17 @@ spec:
 {{- else if eq .Values.network "calico" }}
       containers:
         - name: calico-kube-controllers
-          image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
+          image: {{ join ":" (list .Values.kubeControllers.image .Values.kubeControllers.tag) }}
+{{ tuple .Values.kubeControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS
-              value: node
+              value: node,service
             - name: DATASTORE_TYPE
               value: kubernetes
+{{- if .Values.kubeControllers.env }}
+{{ toYaml .Values.kubeControllers.env | indent 12 }}
+{{- end }}
           readinessProbe:
             exec:
               command:

@@ -1,0 +1,21 @@
+---
+layout: null
+---
+
+# This manifest adds the additional Calico Enterprise components to a cluster
+# that has already had the Calico part of Calico Enterprise deployed.
+# - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
+#   from that file, so if you are not using the provided hosted Calico
+#   manifest you must update references to those resources in this file.
+# - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
+#   apiregistration section below to use your TLS certs for secure communication
+#   between the Calico Enterprise API server and Kubernetes API server.
+
+{% helm --execute templates/cnx-api.yaml --execute templates/cnx-api-certs.yaml %}
+datastore: etcd
+apiserver:
+  runAsPrivileged: true
+# Add the imagePullSecret calico-pull-secret since that is the pull secret our ansible scripts create in openshift-ansible
+imagePullSecrets:
+  calico-pull-secret: ""
+{% endhelm %}

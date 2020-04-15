@@ -1,0 +1,8 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee secure-es --execute templates/monitor-calico.yaml %}
+createCustomResources: false
+elasticTseeInstaller:
+  enable: true
+{% endhelm %}

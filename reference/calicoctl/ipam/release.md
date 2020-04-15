@@ -1,6 +1,6 @@
 ---
 title: calicoctl ipam
-description: Command to release an IP address from Calico IP management.
+description: Command to release an IP address from Calico Enterprise IP management.
 canonical_url: '/reference/calicoctl/ipam/release'
 ---
 

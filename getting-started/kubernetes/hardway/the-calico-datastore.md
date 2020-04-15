@@ -51,12 +51,14 @@ kubectl apply -f crds.yaml
 
 To interact directly with the {{site.prodname}} datastore, use the `calicoctl` client tool.
 
+Resources availble through `calicoctl` are now natively available through `kubectl`. Please view the current resource definition pages for more information.
+
 ### Install
 
 1. Download the `calicoctl` binary to a Linux host with access to Kubernetes.
 
    ```bash
-   wget https://github.com/projectcalico/calicoctl/releases/download/v3.8.0/calicoctl
+   wget https://github.com/projectcalico/calicoctl/releases/download/v3.13.0/calicoctl
    chmod +x calicoctl
    sudo mv calicoctl /usr/local/bin/
    ```

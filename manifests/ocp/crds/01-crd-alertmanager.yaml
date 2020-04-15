@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm tigera-operator --execute templates/crds/01-crd-alertmanager.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}

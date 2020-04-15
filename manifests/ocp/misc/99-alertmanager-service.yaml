@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm tigera-operator --execute templates/misc/99-alertmanager-service.yaml %}
+installation:
+  kubernetesProvider: openshift
+{% endhelm %}

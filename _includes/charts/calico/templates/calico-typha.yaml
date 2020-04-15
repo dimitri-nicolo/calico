@@ -1,22 +1,24 @@
-{{- if and (eq .Values.datastore "kubernetes") .Values.typha.enabled -}}
+{{- if .Values.typha.enabled -}}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
+# It is a requirement when using Kubernetes API datastore with more than 50 nodes, or when
+# using the Federated Identity feature with any datastore type.
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: calico-typha
+  name: {{include "typha_service_name" . }}
   namespace: kube-system
   labels:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 spec:
   ports:
     - port: 5473
       protocol: TCP
-      targetPort: calico-typha
+      targetPort: {{include "typha_service_name" . }}
       name: calico-typha
   selector:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 
 ---
 
@@ -25,35 +27,60 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: calico-typha
+  name: {{include "typha_service_name" . }}
   namespace: kube-system
   labels:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 spec:
   # Number of Typha replicas.  To enable Typha, set this to a non-zero value *and* set the
   # typha_service_name variable in the calico-config ConfigMap above.
   #
-  # We recommend using Typha if you have more than 50 nodes.  Above 100 nodes it is essential
-  # (when using the Kubernetes datastore).  Use one replica for every 100-200 nodes.  In
-  # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
+  # We recommend using Typha if you have more than 50 nodes or if you are using Federated Endpoint Identity.
+  # Above 100 nodes it is essential (when using the Kubernetes datastore).  Use one replica for every 100-200
+  # nodes.  In production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      k8s-app: calico-typha
+      k8s-app: {{include "typha_service_name" . }}
   template:
     metadata:
       labels:
-        k8s-app: calico-typha
+        k8s-app: {{include "typha_service_name" . }}
       annotations:
         # This, along with the CriticalAddonsOnly toleration below, marks the pod as a critical
         # add-on, ensuring it gets priority scheduling and that its resources are reserved
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
         cluster-autoscaler.kubernetes.io/safe-to-evict: 'true'
+        felix-typha-cert-hash: {{ tuple "calico-typha-certs.yaml" . | include "calico.hash" }}
+  {{- if eq .Values.datastore "etcd" }}
+        # This contains a hash of the {{include "variant_name" . | lower}}-config ConfigMap
+        # and can be updated to trigger a rolling update if the ConfigMap is updated.
+        calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
+  {{- end }}
+{{- tuple .Values.typha "calico-typha" | include "calico.sec_app_profile" | indent 8 }}
     spec:
+      # For HA and to avoid port clashes, avoid scheduling multiple Typha instances on the same node.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: k8s-app
+                  operator: In
+                  values:
+                  # Avoid all variants of Typha that may be running.
+                  - calico-typha
+                  - calico-typha-ee
+              topologyKey: kubernetes.io/hostname
       nodeSelector:
         kubernetes.io/os: linux
+{{ if .Values.controlPlaneNodeSelector }}
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
       hostNetwork: true
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
@@ -62,18 +89,54 @@ spec:
       # Since Calico can't network a pod until Typha is up, we need to run Typha itself
       # as a host-networked pod.
       serviceAccountName: calico-node
+  {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+    {{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+    {{- end }}
+  {{- end }}
       priorityClassName: system-cluster-critical
-      # fsGroup allows using projected serviceaccount tokens as described here kubernetes/kubernetes#82573 
+      # fsGroup allows using projected serviceaccount tokens as described here kubernetes/kubernetes#82573
       securityContext:
         fsGroup: 65534
       containers:
-      - image: {{ .Values.typha.image }}:{{.Values.typha.tag }}
-        name: calico-typha
+      - name: calico-typha
+        image: {{ join ":" (list .Values.typha.image .Values.typha.tag) }}
+{{ tuple .Values.typha.resources | include "calico.resourceLimits" | indent 8 -}}
+        volumeMounts:
+        - name: calico-typha-ca
+          mountPath: "/calico-typha-ca"
+          readOnly: true
+        - name: calico-typha-certs
+          mountPath: "/calico-typha-certs"
+          readOnly: true
+  {{- if .Values.federation.enabled }}
+        # These lines enable a secrets volume for use with federated endpoint identity. Add
+        # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
+        - name: tigera-federation-remotecluster
+          mountPath: "/etc/tigera-federation-remotecluster"
+          readOnly: true
+  {{- end }}
+  {{- if eq .Values.datastore "etcd" }}
+        - name: etcd-certs
+          mountPath:  "/calico-secrets"
+          readOnly: true
+  {{- end }}
         ports:
         - containerPort: 5473
-          name: calico-typha
+          name: {{include "typha_service_name" . }}
           protocol: TCP
         env:
+  {{- if eq .Values.network "ecs" }}
+          - name: FELIX_INTERFACEPREFIX
+            value: "eni"
+  {{- else if eq .Values.network "aks" }}
+          - name: FELIX_INTERFACEPREFIX
+            value: "azv"
+  {{- else if eq .Values.network "gke" }}
+          - name: FELIX_INTERFACEPREFIX
+            value: "gke"
+  {{- end }}
 {{- if .Values.bpf }}
           # Overrides for kubernetes API server host/port.  Needed in BPF mode.
           - name: KUBERNETES_SERVICE_HOST
@@ -99,24 +162,80 @@ spec:
           # connections.
           - name: TYPHA_CONNECTIONREBALANCINGMODE
             value: "kubernetes"
+  {{- if eq .Values.datastore "etcd" }}
+          - name: TYPHA_DATASTORETYPE
+            value: "etcdv3"
+          # The location of the etcd cluster.
+          - name: TYPHA_ETCDENDPOINTS
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_endpoints
+          # Location of the CA certificate for etcd.
+          - name: TYPHA_ETCDCAFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_ca
+          # Location of the client key for etcd.
+          - name: TYPHA_ETCDKEYFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_key
+          # Location of the client certificate for etcd.
+          - name: TYPHA_ETCDCERTFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_cert
+  {{- else if eq .Values.datastore "kubernetes" }}
+          # Use Kubernetes API as the backing datastore.
           - name: TYPHA_DATASTORETYPE
             value: "kubernetes"
+  {{- end }}
           - name: TYPHA_HEALTHENABLED
             value: "true"
-{{- if eq .Values.ipam "host-local" }}
+  {{- if eq .Values.ipam "host-local" }}
           # Configure route aggregation based on pod CIDR.
           - name: USE_POD_CIDR
             value: "true"
-{{- end }}
+  {{- end }}
+          # Sets Default Security Groups if tigera-aws-config exists
+          - name: TIGERA_DEFAULT_SECURITY_GROUPS
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-aws-config
+                key: default_sgs
+                optional: true
+          # Sets Pod Security Group if tigera-aws-config exists
+          - name: TIGERA_POD_SECURITY_GROUP
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-aws-config
+                key: pod_sg
+                optional: true
+          # Location of the CA bundle Typha uses to authenticate Felix; volume mount
+          - name: TYPHA_CAFILE
+            value: /calico-typha-ca/caBundle
+          # Common name on the Felix certificate
+          - name: TYPHA_CLIENTCN
+            value: {{ .Values.typha.tls.felixCommonName }}
+          # Location of the server certificate for Typha; volume mount
+          - name: TYPHA_SERVERCERTFILE
+            value: /calico-typha-certs/typha.crt
+          # Location of the server certificate key for Typha; volume mount
+          - name: TYPHA_SERVERKEYFILE
+            value: /calico-typha-certs/typha.key
           # Uncomment these lines to enable prometheus metrics.  Since Typha is host-networked,
           # this opens a port on the host, which may need to be secured.
           #- name: TYPHA_PROMETHEUSMETRICSENABLED
           #  value: "true"
           #- name: TYPHA_PROMETHEUSMETRICSPORT
           #  value: "9093"
-{{- if .Values.typha.env }}
+  {{- if .Values.typha.env }}
 {{ toYaml .Values.typha.env | indent 10 }}
-{{- end }}
+  {{- end }}
         livenessProbe:
           httpGet:
             path: /liveness
@@ -124,15 +243,35 @@ spec:
             host: localhost
           periodSeconds: 30
           initialDelaySeconds: 30
-        securityContext:
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
         readinessProbe:
           httpGet:
             path: /readiness
             port: 9098
             host: localhost
           periodSeconds: 10
+      volumes:
+      - name: calico-typha-ca
+        configMap:
+          name: calico-typha-ca
+      - name: calico-typha-certs
+        secret:
+          secretName: calico-typha-certs
+  {{- if .Values.federation.enabled }}
+      # These lines enable a secrets volume for use with federated endpoint identity. Add
+      # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
+      # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
+      - name: tigera-federation-remotecluster
+        secret:
+          secretName: tigera-federation-remotecluster
+          defaultMode: 0400
+  {{- end }}
+  {{- if eq .Values.datastore "etcd" }}
+      # Mount in the etcd TLS secrets with mode 400.
+      # See https://kubernetes.io/docs/concepts/configuration/secret/
+      - name: etcd-certs
+        secret:
+          secretName: calico-etcd-secrets
+  {{- end }}
 
 ---
 
@@ -141,13 +280,252 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: calico-typha
+  name: {{include "typha_service_name" . }}
   namespace: kube-system
   labels:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: calico-typha
-{{- end -}}
+      k8s-app: {{include "typha_service_name" . }}
+
+  {{- if .Values.typha.autoscale }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: typha-cpha
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: typha-cpha
+subjects:
+  - kind: ServiceAccount
+    name: typha-cpha
+    namespace: kube-system
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: typha-cpha
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calico-typha-horizontal-autoscaler
+  namespace: kube-system
+data:
+  ladder: |-
+    {
+      "coresToReplicas": [],
+      "nodesToReplicas":
+      [
+        [1, 1],
+        [10, 2],
+        [100, 3],
+        [250, 4],
+        [500, 5],
+        [1000, 6],
+        [1500, 7],
+        [2000, 8]
+      ]
+    }
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-typha-horizontal-autoscaler
+  namespace: kube-system
+  labels:
+    k8s-app: calico-typha-horizontal-autoscaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: calico-typha-horizontal-autoscaler
+  template:
+    metadata:
+      labels:
+        k8s-app: calico-typha-horizontal-autoscaler
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
+      containers:
+        - image: {{ join ":" (list .Values.cpHorizontalAutoscaler.image .Values.cpHorizontalAutoscaler.tag) }}
+          name: autoscaler
+          command:
+            - /cluster-proportional-autoscaler
+            - --namespace=kube-system
+            - --configmap=calico-typha-horizontal-autoscaler
+            - --target=deployment/calico-typha
+            - --logtostderr=true
+            - --v=2
+          resources:
+            requests:
+              cpu: 10m
+            limits:
+              cpu: 10m
+      serviceAccountName: typha-cpha
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: typha-cpha
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: typha-cpha
+subjects:
+  - kind: ServiceAccount
+    name: typha-cpha
+    namespace: kube-system
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: typha-cpha
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+  - apiGroups: ["extensions"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "update"]
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: typha-cpha
+  namespace: kube-system
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calico-typha-vertical-autoscaler
+  namespace: kube-system
+data:
+  typha-autoscaler: |-
+    {
+      "calico-typha": {
+        "requests": {
+          "cpu": {
+            "base": "120m",
+            "step": "80m",
+            "nodesPerStep": 10,
+            "max": "1000m"
+          }
+        }
+      }
+    }
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-typha-vertical-autoscaler
+  namespace: kube-system
+  labels:
+    k8s-app: calico-typha-vertical-autoscaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: calico-typha-vertical-autoscaler
+  template:
+    metadata:
+      labels:
+        k8s-app: calico-typha-vertical-autoscaler
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+{{ if .Values.controlPlaneNodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.controlPlaneNodeSelector | indent 8 }}
+{{- end }}
+      containers:
+        - image: {{ join ":" (list .Values.cpVerticalAutoscaler.image .Values.cpVerticalAutoscaler.tag) }}
+          name: autoscaler
+          command:
+            - /cpvpa
+            - --target=deployment/calico-typha
+            - --namespace=kube-system
+            - --logtostderr=true
+            - --poll-period-seconds=30
+            - --v=2
+            - --config-file=/etc/config/typha-autoscaler
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config
+      volumes:
+        - name: config
+          configMap:
+            name: calico-typha-vertical-autoscaler
+      serviceAccountName: calico-typha-cpva
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: calico-typha-cpva
+subjects:
+  - kind: ServiceAccount
+    name: calico-typha-cpva
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: calico-typha-cpva
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: calico-typha-cpva
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+  - apiGroups: ["apps", "extensions"]
+    resources: ["deployments", "daemonsets"]
+    verbs: ["patch"]
+
+---
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: calico-typha-cpva
+  namespace: kube-system
+
+  {{- end }}
+{{- end }}

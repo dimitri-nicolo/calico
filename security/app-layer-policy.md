@@ -1,6 +1,6 @@
 ---
-title: Enable Calico application layer policy for Istio
-description: Enable Calico application layer policy for Istio service mesh.
+title: Enabling Calico Enterprise application layer policy for Istio
+description: Enable Calico Enterprise application layer policy for Istio service mesh.
 canonical_url: '/security/app-layer-policy'
 ---
 
@@ -25,7 +25,7 @@ For a tutorial on how application layer policy provides second-factor authentica
 **Required**
 
 - [{{site.prodname}} is installed]({{site.baseurl}}/getting-started/kubernetes/)
-- [calicoctl is installed and configured]({{site.baseurl}}/getting-started/clis/calicoctl/install)
+- Make sure that you've installed *kubectl*.
 - Kubernetes 1.15 or older (Istio 1.1.7 does not support Kubernetes 1.16+).
 See this [issue](https://github.com/projectcalico/calico/issues/2943) for details and workaround.
 
@@ -44,8 +44,8 @@ To enable the application layer policy, you must enable the **Policy Sync API** 
 In the default **FelixConfiguration**, set the field, `policySyncPathPrefix` to `/var/run/nodeagent`:
 
 ```bash
-calicoctl patch FelixConfiguration default --patch \
-   '{"spec": {"policySyncPathPrefix": "/var/run/nodeagent"}}'
+kubectl patch felixconfiguration.p default --type='merge' -p \
+    '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
 ```
 
 #### Install Istio
@@ -76,7 +76,7 @@ kubectl patch configmap -n istio-system istio-sidecar-injector --patch "$(cat is
 ```
 [View sample manifest]({{ "/manifests/alp/istio-inject-configmap-1.3.5.yaml" | absolute_url }}){:target="_blank"}
 
-If you installed a different version of Istio, substitute 1.4.2 in the above URL for your Istio version. We have predefined `ConfigMaps` for Istio versions 1.1.0 through 1.1.17, 1.2.0 through 1.2.9, 1.3.0 through 1.3.5, and 1.4.0 through 1.4.2. To customize the standard sidecar injector `ConfigMap` or understand the changes we have made, see [Customizing the manifests]({{site.baseurl}}/getting-started/kubernetes/installation/config-options).
+If you installed a different version of Istio, substitute 1.4.2 in the above URL for your Istio version. We have predefined `ConfigMaps` for Istio versions 1.1.0 through 1.1.17, 1.2.0 through 1.2.9, 1.3.0 through 1.3.5, and 1.4.0 through 1.4.2. To customize the standard sidecar injector `ConfigMap` or understand the changes we have made, see [Customizing the manifests]({{ site.baseurl }}/reference/other-install-methods/kubernetes/installation/config-options).
 
 #### Add Calico authorization services to the mesh
 

@@ -1,6 +1,6 @@
 ---
 title: Amazon Web Services
-description: Advantages of using Calico in AWS.
+description: Advantages of using Calico Enterprise in AWS.
 canonical_url: '/reference/public-cloud/aws'
 ---
 
@@ -24,7 +24,7 @@ use {{site.prodname}} across multiple different VPC subnets or [peered VPCs](htt
 in addition to disabling src/dst checks as described above you must also enable IPIP encapsulation and outgoing NAT
 on your {{site.prodname}} IP pools.
 
-See the [IP pool configuration reference]({{ site.baseurl }}/reference/resources/ippool)
+See the [IP pool configuration reference]({{site.baseurl}}/reference/resources/ippool)
 for information on how to configure {{site.prodname}} IP pools.
 
 By default, {{site.prodname}}'s IPIP encapsulation applies to all container-to-container traffic.  However,
@@ -36,7 +36,7 @@ to enable IPIP and set the mode to "CrossSubnet".
 
 > **Note**: This feature was introduced in {{site.prodname}} v2.1, if your deployment was created with
 > an older version of {{site.prodname}}, or if you if you are unsure whether your deployment
-> is configured correctly, follow the [Configuring IP-in-IP guide]({{ site.baseurl }}/networking/vxlan-ipip)
+> is configured correctly, follow the [Configuring IP-in-IP guide]({{site.baseurl}}/networking/vxlan-ipip)
 > which discusses this in more detail.
 >
 {: .alert .alert-info}
@@ -59,7 +59,7 @@ EOF
 ## Enabling workload-to-WAN traffic
 
 To allow {{site.prodname}} networked containers to reach resources outside of AWS,
-you must configure outgoing NAT on your [{{site.prodname}} IP pool]({{ site.baseurl }}/reference/resources/ippool).
+you must configure outgoing NAT on your [{{site.prodname}} IP pool]({{site.baseurl}}/reference/resources/ippool).
 
 AWS will perform outbound NAT on any traffic which has the source address of an EC2 virtual
 machine instance.  By enabling outgoing NAT on your {{site.prodname}} IP pool, {{site.prodname}} will
@@ -81,3 +81,90 @@ spec:
   natOutgoing: true
 EOF
 ```
+
+## Using AWS networking
+
+{{site.prodname}} supports the AWS VPC CNI plugin, which creates ENI interfaces for the pods that fall within the VPC of
+the cluster. Routing to these pods is automatically handled by AWS.
+
+We recommend using the AWS VPC CNI plugin with [federation](../../networking/federation/index) as it provides seamless IP connectivity
+between your AWS cluster and a remote cluster. Ensure that you use version 1.1 or later.
+
+Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
+
+1. Download the AWS VPC CNI manifest.
+
+   ```bash
+   curl \
+   https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/v1.3/aws-k8s-cni.yaml \
+   -O
+   ```
+
+1. By default, the AWS CNI plugin performs SNAT for any packet routed outside the VPC. You must disable SNAT
+   on external packets to allow clusters in other VPCs or connected via VPN to communicate with pods.
+
+   > **Important**: Required for [federation](../../networking/federation/index).
+   {: .alert .alert-danger}
+
+   To disable SNAT on external packets, open the AWS VPC CNI manifest in your favorite editor
+   and add an `AWS_VPC_K8S_CNI_EXTERNALSNAT` environment variable set to `true` in the `aws-node` container.
+   An example follows.
+
+   ```yaml
+   kind: DaemonSet
+   apiVersion: apps/v1
+   # kubernetes versions before 1.9.0 should use extensions/v1beta1
+   metadata:
+     name: aws-node
+     namespace: kube-system
+     labels:
+       k8s-app: aws-node
+   spec:
+     updateStrategy:
+       type: RollingUpdate
+     selector:
+       matchLabels:
+         k8s-app: aws-node
+     template:
+       metadata:
+         labels:
+           k8s-app: aws-node
+         annotations:
+           scheduler.alpha.kubernetes.io/critical-pod: ''
+       spec:
+         serviceAccountName: aws-node
+         hostNetwork: true
+         tolerations:
+         - operator: Exists
+         containers:
+         - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon-k8s-cni:v1.3.4
+           imagePullPolicy: Always
+           ports:
+           - containerPort: 61678
+             name: metrics
+           name: aws-node
+           env:
+             - name: AWS_VPC_K8S_CNI_LOGLEVEL
+               value: DEBUG
+             - name: MY_NODE_NAME
+               valueFrom:
+                 fieldRef:
+                   fieldPath: spec.nodeName
+             - name: AWS_VPC_K8S_CNI_EXTERNALSNAT
+               value: "true"
+   ...
+   ```
+
+   > **Note**: For details see the
+   > [Amazon VPC CNI Plugin Version 1.1](https://aws.amazon.com/blogs/opensource/vpc-cni-plugin-v1-1-available)
+   > release notes.
+   {: .alert .alert-info}
+
+1. Apply the manifest using kubectl.
+
+   ```bash
+   kubectl apply -f aws-k8s-cni.yaml
+   ```
+
+1. Follow the standard {{site.prodname}} instructions to install [{{site.prodname}} for policy only]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/other),
+   making sure to download the correct manifest.

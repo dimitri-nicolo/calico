@@ -4,6 +4,8 @@ order: 5
 section:
 - title: Installation
   path: /reference/installation/api
+- title: Set up multi-cluster management
+  path: /reference/beta/mcm/installation
 - title: calicoctl
   path: /reference/calicoctl/
   section:
@@ -60,14 +62,22 @@ section:
       path: /reference/resources/bgppeer
     - title: Felix configuration
       path: /reference/resources/felixconfig
+    - title: Global alert
+      path: /reference/resources/globalalert
     - title: Global network policy
       path: /reference/resources/globalnetworkpolicy
     - title: Global network set
       path: /reference/resources/globalnetworkset
+    - title: Global report
+      path: /reference/resources/globalreport
+    - title: Global threat feed
+      path: /reference/resources/globalthreatfeed
     - title: Host endpoint
       path: /reference/resources/hostendpoint
     - title: IP pool
       path: /reference/resources/ippool
+    - title: License key
+      path: /reference/resources/licensekey
     - title: Kubernetes controllers configuration
       path: /reference/resources/kubecontrollersconfig
     - title: Network policy
@@ -78,6 +88,16 @@ section:
       path: /reference/resources/node
     - title: Profile
       path: /reference/resources/profile
+    - title: Remote cluster configuration
+      path: /reference/resources/remoteclusterconfiguration
+    - title: Staged global network policy
+      path: /reference/resources/stagedglobalnetworkpolicy
+    - title: Staged Kubernetes network policy
+      path: /reference/resources/stagedkubernetesnetworkpolicy
+    - title: Staged network policy
+      path: /reference/resources/stagednetworkpolicy
+    - title: Tier
+      path: /reference/resources/tier
     - title: Workload endpoint
       path: /reference/resources/workloadendpoint
 - title: Configuring etcd RBAC
@@ -95,8 +115,25 @@ section:
     path: /reference/etcd-rbac/kubernetes-advanced
   - title: Calico key and path prefixes
     path: /reference/etcd-rbac/calico-etcdv3-paths
-- title: calico/node
+- title: cnx-node
   path: /reference/node/configuration
+- title: calicoq
+  path: /reference/calicoq/
+  section:
+  - title: Overview
+    path: /reference/calicoq/overview
+  - title: Selectors
+    path: /reference/calicoq/selectors
+  - title: Endpoint
+    path: /reference/calicoq/endpoint
+  - title: Eval
+    path: /reference/calicoq/eval
+  - title: Host
+    path: /reference/calicoq/host
+  - title: Policy
+    path: /reference/calicoq/policy
+  - title: Version
+    path: /reference/calicoq/version
 - title: Felix
   path: /reference/felix/
   section:
@@ -113,10 +150,25 @@ section:
     path: /reference/typha/configuration
 - title: Dikastes
   path: /reference/dikastes/configuration
-- title: Calico CNI plugins
+- title: Compliance reports
+  path: /reference/compliance-reports/
+  section:
+    - title: Overview
+      path: /reference/compliance-reports/overview
+    - title: Inventory report
+      path: /reference/compliance-reports/inventory
+    - title: Network access report
+      path: /reference/compliance-reports/network-access
+    - title: Policy audit report
+      path: /reference/compliance-reports/policy-audit
+    - title: CIS Benchmark
+      path: /reference/compliance-reports/cis-benchmark
+- title: Calico Enterprise CNI plugins
   path: /reference/cni-plugin/configuration
-- title: Calico Kubernetes controllers
+- title: Calico Enterprise Kubernetes controllers
   path: /reference/kube-controllers/configuration
+# - title: REST API Reference
+#   path: /reference/cnx/apidocs
 - title: Configuration on public clouds
   path: /reference/public-cloud/
   section:
@@ -126,8 +178,6 @@ section:
     path: /reference/public-cloud/azure
   - title: Google Compute Engine
     path: /reference/public-cloud/gce
-  - title: IBM Cloud
-    path: /reference/public-cloud/ibm
 - title: Host endpoints
   path: /reference/host-endpoints/
   section:
@@ -154,33 +204,33 @@ section:
   section:
   - title: Introduction
     path: /reference/architecture/overview
+  - title: cnx-node
+    path: /reference/architecture/components
   - title: Data path
     path: /reference/architecture/data-path
   - title: Network design
     path: /reference/architecture/design/
     section: 
-      - title: Calico over Ethernet fabrics
-        path: /reference/architecture/design/l2-interconnect-fabric
-      - title: Calico over IP fabrics
-        path: /reference/architecture/design/l3-interconnect-fabric
+    - title: Calico Enterprise over Ethernet fabrics
+      path: /reference/architecture/design/l2-interconnect-fabric
+    - title: Calico Enterprise over IP fabrics
+      path: /reference/architecture/design/l3-interconnect-fabric
 - title: Frequently asked questions
   path: /reference/faq
-- title: Getting involved
-  path: /reference/involved
-- title: Attributions
-  path: /reference/legal/
+- title: Other installation methods
+  path: /reference/other-install-methods/
   section:
-  - title: Application layer policy attributions
-    path: /reference/legal/alp
-  - title: calicoctl attributions
-    path: /reference/legal/calicoctl
-  - title: CNI plugin attributions
-    path: /reference/legal/cni
-  - title: confd attributions
-    path: /reference/legal/confd
-  - title: Felix attributions
-    path: /reference/legal/felix
-  - title: calico/node attributions
-    path: /reference/legal/node
-  - title: Typha attributions
-    path: /reference/legal/typha
+  - title: Helm
+    path: /reference/other-install-methods/kubernetes/installation/helm/
+  # TODO: This is old content that needs refreshing in order to work with the operator.
+  - title: Configure metrics 
+    path: /reference/other-install-methods/security/metrics/
+    section:
+    - title: Overview
+      path: /reference/other-install-methods/security/metrics/overview
+    - title: Policy metrics in Prometheus
+      path: /reference/other-install-methods/security/metrics/metrics
+    - title: Configuring Prometheus
+      path: /reference/other-install-methods/security/configuration/prometheus
+    - title: Configuring Alertmanager
+      path: /reference/other-install-methods/security/configuration/alertmanager

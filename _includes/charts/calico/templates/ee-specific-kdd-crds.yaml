@@ -1,0 +1,6 @@
+{{- if eq .Values.datastore "kubernetes" -}}
+{{ range $path, $_ := .Files.Glob "crds/ee-kdd/*" }}
+{{ $.Files.Get $path }}
+---
+{{- end -}}
+{{- end -}}

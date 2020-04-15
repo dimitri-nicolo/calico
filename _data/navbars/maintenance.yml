@@ -2,17 +2,26 @@ title: "Maintenance"
 path: /maintenance/
 order: 4
 section:
+- title: Adjust log storage size
+  path: /maintenance/adjust-log-storage-size
 - title: Upgrade
   path: /maintenance/upgrading
   section:
   - title: Kubernetes
-    path: /maintenance/kubernetes-upgrade
-  - title: OpenStack
-    path: /maintenance/openstack-upgrade
+    path: /maintenance/kubernetes-upgrade-tsee/
+    section:
+    - title: Operator Upgrade
+      path: /maintenance/kubernetes-upgrade-tsee/operator
+  - title: OpenShift
+    path: /maintenance/openshift-upgrade
+  - title: Helm
+    path: /maintenance/helm-upgrade-tsee
 - title: Decommission a node
   path: /maintenance/decommissioning-a-node
 - title: Monitor Calico component metrics
   path: /maintenance/monitor-component-metrics  
+- title: Deploy and monitor Calico Enterprise licensing metrics
+  path: /maintenance/license-agent
 - title: Component logs
   path: /maintenance/component-logs
 - title: Troubleshooting

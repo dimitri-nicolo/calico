@@ -19,10 +19,21 @@ module Jekyll
       super
 
       @chart = "calico"
+      if extra_args.start_with?("tigera-secure-ee")
+        @chart = "tigera-secure-ee"
+        extra_args.slice! "tigera-secure-ee"
+      end
       if extra_args.start_with?("tigera-operator")
         @chart = "tigera-operator"
         extra_args.slice! "tigera-operator"
       end
+
+      @mock_es = false
+      if extra_args.start_with?(" secure-es")
+        @mock_es = true
+        extra_args.slice! " secure-es"
+      end
+
       @extra_args = extra_args
     end
     def render(context)
@@ -38,9 +49,17 @@ module Jekyll
       imageNames = context.registers[:site].config["imageNames"]
       versions = context.registers[:site].data["versions"]
 
+
+      if context.registers[:site].data["versions"][0].has_key?("dockerRepo")
+          imageRegistry = context.registers[:site].data["versions"][0]["dockerRepo"]
+        unless imageRegistry.end_with? "/"
+          imageRegistry = imageRegistry << "/"
+        end
+      end
+
       vs = parse_versions(versions)
 
-      versionsYml = gen_values(vs, imageNames, imageRegistry, @chart)
+      versionsYml = gen_values(vs, imageNames, imageRegistry, @chart, true)
 
       tv = Tempfile.new("temp_versions.yml")
       tv.write(versionsYml)
@@ -51,7 +70,28 @@ module Jekyll
       cmd = """helm template _includes/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path} \
+        --set node.resources.requests.cpu='250m' \
+        --set manager.service.type=NodePort \
+        --set manager.service.nodePort=30003 \
+        --set alertmanager.service.type=NodePort \
+        --set alertmanager.service.nodePort=30903 \
+        --set prometheus.scrapeTargets.node.service.type=NodePort \
+        --set prometheus.scrapeTargets.node.service.nodePort=30909 \
+        --set kibana.service.type=NodePort \
+        --set kibana.service.nodePort=30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
+
+      if @chart == "calico" or @chart == "tigera-secure-ee"
+        # static rendered manifests for the 'tigera-secure-ee-core' (calico) and
+        # 'tigera-secure-ee' chart should configure components to use an imagePullSecret
+        # named 'cnx-pull-secret'.
+        cmd +=  " --set imagePullSecrets.cnx-pull-secret=''"
+      end
+
+      # Add mock elasticsearch settings if required for rendering in the docs.
+      if @mock_es
+        cmd = mock_elastic_settings(cmd)
+      end
 
       cmd += " " + @extra_args.to_s
 
@@ -63,6 +103,21 @@ module Jekyll
       t.unlink
       tv.unlink
       return out
+    end
+    def mock_elastic_settings(cmd)
+      cmd += " " + """--set elasticsearch.host='__ELASTICSEARCH_HOST__' \
+        --set elasticsearch.tls.ca=fake \
+        --set elasticsearch.fluentd.password=fake \
+        --set elasticsearch.manager.password=fake \
+        --set elasticsearch.curator.password=fake \
+        --set elasticsearch.compliance.benchmarker.password=fake \
+        --set elasticsearch.compliance.controller.password=fake \
+        --set elasticsearch.compliance.reporter.password=fake \
+        --set elasticsearch.compliance.snapshotter.password=fake \
+        --set elasticsearch.compliance.server.password=fake \
+        --set elasticsearch.intrusionDetection.password=fake \
+        --set elasticsearch.elasticInstaller.password=fake"""
+      return cmd
     end
   end
 end

@@ -24,7 +24,7 @@ command.
 
 ```
 Usage:
-  calicoctl delete ( (<KIND> [<NAME...>]) |
+  calicoctl delete ( (<KIND> [<NAME>]) |
                    --filename=<FILE>)
                    [--skip-not-exists] [--config=<CONFIG>] [--namespace=<NS>]
 
@@ -32,12 +32,11 @@ Examples:
   # Delete a policy using the type and name specified in policy.yaml.
   calicoctl delete -f ./policy.yaml
 
-
   # Delete a policy based on the type and name in the YAML passed into stdin.
   cat policy.yaml | calicoctl delete -f -
 
-  # Delete policies with names "foo" and "bar"
-  calicoctl delete policy foo bar
+  # Delete policy with name "foo"
+  calicoctl delete policy foo
 
 Options:
   -h --help                 Show this screen.
@@ -49,7 +48,7 @@ Options:
                             configuration in YAML or JSON format.
                             [default: /etc/calico/calicoctl.cfg]
   -n --namespace=<NS>       Namespace of the resource.
-                            Only applicable to NetworkPolicy and WorkloadEndpoint.
+                            Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
                             Uses the default namespace if not specified.
 
 Description:
@@ -65,6 +64,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
+    * tier
     * networkPolicy
     * node
     * profile
@@ -145,4 +145,4 @@ Description:
 -  [Installing calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install).
 -  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{ site.baseurl }}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

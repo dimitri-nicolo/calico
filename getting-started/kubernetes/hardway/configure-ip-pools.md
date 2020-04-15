@@ -63,15 +63,15 @@ nodes can use the pools.
 
 Add these pools to {{site.prodname}}
 
-```bash
-calicoctl create -f pool1.yaml
-calicoctl create -f pool2.yaml
+```
+kubectl create -f pool1.yaml
+kubectl create -f pool2.yaml
 ```
 
 Verify the pools are created by
 
-```bash
-calicoctl get ippools
+```
+kubectl get ippools.projectcalico.org
 ```
 
 You should see output similar to

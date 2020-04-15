@@ -1,6 +1,6 @@
 ---
 title: Managed public cloud
-description: Enable Calico on EKS, GKE, AKS, or IKS.
+description: Enable Calico on EKS, GKE, or AKS.
 show_read_time: false
 show_toc: false
 canonical_url: '/getting-started/kubernetes/managed-public-cloud/index'

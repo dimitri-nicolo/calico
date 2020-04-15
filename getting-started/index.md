@@ -1,6 +1,6 @@
 ---
-title: Install Calico
-description: Install Calico on nodes and hosts for popular orchestrators, and install the calicoctl command line interface (CLI) tool. 
+title: Install Calico Enterprise
+description: Install Calico Enterprise on nodes and hosts for popular orchestrators, and install the calicoctl command line interface (CLI) tool. 
 canonical_url: '/getting-started/index'
 show_read_time: false
 show_toc: false

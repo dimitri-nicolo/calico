@@ -1,0 +1,25 @@
+---
+title: Upgrade from Calico to Calico Enterprise
+description: Steps to upgrade from open source Calico to Calico Enterprise.
+canonical_url: /getting-started/kubernetes/upgrade/upgrade-to-tsee
+---
+
+{% assign calico_minor_version = site.data.versions.first["calico"].minor_version %}
+
+## Prerequisite
+Ensure that your Kubernetes cluster is running with open source Calico on the latest {{ calico_minor_version | append: '.x' }}
+release. If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/{{calico_minor_version}}/maintenance/kubernetes-upgrade) before continuing.
+
+
+If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee)
+instead.
+
+## Upgrade Calico to {{site.prodname}}
+
+For clusters with a `Kubernetes` datastore, follow the operator-based installation instructions for {{site.prodname}}
+for your platform. For Kubernetes clusters, see [quickstart](../quickstart).
+
+Upgrades for clusters with an `etcdv3` datastore are not supported.
+
+> **Note**: Operator-based upgrades from open source Calico are not recommended for production clusters due to limited testing.
+{: .alert .alert-info}

@@ -1,6 +1,6 @@
 ---
 title: BGP configuration
-description: API for this Calico resource.
+description: API for this Calico Enterprise resource.
 canonical_url: '/reference/resources/bgpconfig'
 ---
 
@@ -9,6 +9,8 @@ specific node.
 
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `bgpconfiguration`, `bgpconfig`, `bgpconfigurations`, `bgpconfigs`.
+
+For `kubectl` commands, the following case-insensitive aliases may be used to specify the resource type on the CLI: `bgpconfiguration.projectcalico.org`, `bgpconfigurations.projectcalico.org` as well as abbreviations such as `bgpconfiguration.p` and `bgpconfigurations.p`.
 
 ### Sample YAML
 
@@ -46,6 +48,7 @@ spec:
 | logSeverityScreen | Global log level | Debug, Info, Warning, Error, Fatal | string | `Info` |
 | nodeToNodeMeshEnabled | Full BGP node-to-node mesh. Only valid on the global `default` BGPConfiguration. | true, false  | string | true |
 | asNumber | The default local AS Number that {{site.prodname}} should use when speaking with BGP peers. Only valid on the global `default` BGPConfiguration; to set a per-node override, use the `bgp` field on the [Node resource](./node). | A valid AS Number, may be specified in dotted notation. | integer/string | 64512 |
+| extensions | Additional mapping of keys and values. Used for setting values in custom BGP configurations. | valid strings for both keys and values | map | |
 | serviceClusterIPs | The CIDR blocks for Kubernetes Service Cluster IPs to be advertised over BGP. Only valid on the global `default` BGPConfiguration: will be ignored otherwise. | A list of valid IPv4 CIDR blocks. | List of `cidr: XXX.XXX.XXX.XXX/XX` values. | Empty List |
 | serviceExternalIPs | The CIDR blocks for Kubernetes Service External IPs to be advertised over BGP. Kubernetes Service External IPs will only be advertised if they are within one of these blocks. Only valid on the global `default` BGPConfiguration: will be ignored otherwise. | A list of valid IPv4 CIDR blocks. | List of `cidr: XXX.XXX.XXX.XXX/XX` values. | Empty List |
 

@@ -20,12 +20,12 @@ The easiest way to get outbound connectivity is to turn on NAT Outgoing on all
 {{site.prodname}} pools you want to be able to access the internet.
 
 ```bash
-calicoctl get ipPool
+kubectl get ipPool.projectcalico.org
 ```
 
 ### For each pool that needs connectivity:
 ```bash
-cat <<EOF | calicoctl apply -f -
+cat << EOF | kubectl apply -f -
 - apiVersion: projectcalico.org/v3
   kind: IPPool
   metadata:
@@ -65,9 +65,9 @@ A common scenario is for your container hosts to be on their own isolated layer
 that network is via a router, which also is the default router for all the
 container hosts.
 
-![hosts-on-layer-2-network]({{site.baseurl}}/images/hosts-on-layer-2-network.png)
+![hosts-on-layer-2-network]({{site.url}}/images/hosts-on-layer-2-network.png)
 
-See the [BGP peering document]({{ site.baseurl }}/networking/bgp)
+See the [BGP peering document]({{site.baseurl}}/networking/bgp)
 for information on how to set up the `{{site.nodecontainer}}` sides of the sessions.
 Consult the documentation for your BGP capable switch/router to set up the
 switch sides of the sessions.
@@ -82,6 +82,6 @@ to discuss your environment.
 ### Orchestrator specific
 
 {{site.prodname}} supports a number of orchestrator specific options for inbound
-connectivity, such as Kubernetes service IPs, or OpenStack floating IPs.
+connectivity, such as Kubernetes service IPs.
 
-Consult the [documentation for your orchestrator]({{ site.baseurl }}/getting-started/) for more information.
+Consult the [documentation for your orchestrator]({{site.baseurl}}/getting-started/) for more information.

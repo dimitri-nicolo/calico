@@ -118,8 +118,8 @@ kubectl create clusterrolebinding network-admins --clusterrole=network-admin --g
 
 Test Nik's access by creating a global network set
 
-```bash
-KUBECONFIG=./nik.kubeconfig calicoctl apply -f - <<EOF
+```
+KUBECONFIG=./nik.kubeconfig kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkSet
 metadata:
@@ -134,7 +134,7 @@ EOF
 Verify the global network set exists
 
 ```bash
-KUBECONFIG=./nik.kubeconfig calicoctl get globalnetworkset -o wide
+KUBECONFIG=./nik.kubeconfig kubectl get globalnetworkset.projectcalico.org -o wide
 ```
 
 Result
@@ -148,7 +148,7 @@ niks-set   110.120.130.0/24,210.220.230.0/24
 Delete the global network set
 
 ```bash
-KUBECONFIG=./nik.kubeconfig calicoctl delete globalnetworkset niks-set
+KUBECONFIG=./nik.kubeconfig kubectl delete globalnetworkset.projectcalico.org niks-set
 ```
 
 ## Service owner
@@ -240,7 +240,7 @@ kubectl create rolebinding -n sam network-service-owner-sam --clusterrole=networ
 Sam cannot create global network set resources (like Nik can as network admin)
 
 ```bash
-KUBECONFIG=./sam.kubeconfig calicoctl get globalnetworkset -o wide
+KUBECONFIG=./sam.kubeconfig kubectl get globalnetworkset.projectcalico.org -o wide
 ```
 
 Result
@@ -253,7 +253,7 @@ connection is unauthorized: globalnetworksets.crd.projectcalico.org is forbidden
 However, Sam can create resources in their own namespace
 
 ```bash
-KUBECONFIG=./sam.kubeconfig calicoctl apply -f - <<EOF
+KUBECONFIG=./sam.kubeconfig kubectl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: NetworkSet
 metadata:
@@ -269,7 +269,7 @@ EOF
 Verify the resource exists
 
 ```bash
-KUBECONFIG=./sam.kubeconfig calicoctl get networksets -n sam
+KUBECONFIG=./sam.kubeconfig kubectl get networksets.projectcalico.org -n sam
 ```
 
 Result
@@ -283,7 +283,7 @@ sam         sams-set
 Delete the NetworkSet
 
 ```bash
-KUBECONFIG=./sam.kubeconfig calicoctl delete networkset sams-set -n sam
+KUBECONFIG=./sam.kubeconfig kubectl delete networkset.projectcalico.org sams-set -n sam
 ```
 
 ## Next

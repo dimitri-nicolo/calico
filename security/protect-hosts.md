@@ -1,6 +1,6 @@
 ---
 title: Protect hosts
-description: Calico network policy not only protects workloads, but also hosts. Create a Calico network policies to restrict traffic to/from hosts.
+description: Calico Enterprise network policy not only protects workloads, but also hosts. Create a Calico Enterprise network policies to restrict traffic to/from hosts.
 ---
 
 ### Big picture
@@ -69,7 +69,7 @@ If you are already running {{site.prodname}} for Kubernetes, you are good to go.
 
 To avoid inadvertently cutting all host connectivity because of non-existent or misconfigured network policy, {{site.prodname}} uses failsafe rules that open specific ports on all host endpoints.
 
-Review the following table to determine if the defaults work for your implementation. If not, change the default ports using the parameters, **FailsafeInboundHostPorts** and **FailsafeOutboundHostPorts** in [Configuring Felix]({{ site.baseurl }}/reference/felix/configuration#environment-variables).
+Review the following table to determine if the defaults work for your implementation. If not, change the default ports using the parameters, **FailsafeInboundHostPorts** and **FailsafeOutboundHostPorts** in [Configuring Felix]({{site.baseurl}}/reference/felix/configuration#environment-variables).
 
 | Port   | Protocol | Direction           |              Purpose                           |
 |--------|----------|---------------------|------------------------------------------------|
@@ -184,7 +184,7 @@ To change this parameter for all hosts, edit the **FelixConfiguration** object n
 
 ### Above and beyond
 
-- [Apply policy to Kubernetes node ports]({{ site.baseurl }}/security/kubernetes-node-ports)
-- [Defend against DoS attacks]({{ site.baseurl }}/security/defend-dos-attack)
-- [Global network policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy)
-- [Host endpoint]({{ site.baseurl }}/reference/resources/hostendpoint)
+- [Apply policy to Kubernetes node ports]({{site.baseurl}}/security/kubernetes-node-ports)
+- [Defend against DoS attacks]({{site.baseurl}}/security/defend-dos-attack)
+- [Global network policy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
+- [Host endpoint]({{site.baseurl}}/reference/resources/hostendpoint)

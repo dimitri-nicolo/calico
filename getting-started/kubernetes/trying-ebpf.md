@@ -62,7 +62,7 @@ In the tech preview release, eBPF mode has the following pre-requisites:
 ### How to
 
 - [Set up a suitable cluster](#set-up-a-suitable-cluster)
-- [Install Calico on nodes](#install-calico-on-nodes)
+- [Install Calico Enterprise on nodes](#install-calico-enterprise-on-nodes)
 - [Toggle between eBPF and the standard linux networking pipeline](#toggle-between-ebpf-and-the-standard-linux-networking-pipeline)
 
 #### Set up a suitable cluster
@@ -222,6 +222,16 @@ To re-enable BPF mode:
 > **Warning!** Switching between eBPF and standard linux networking can cause long-lived flows to be silently dropped since the two dataplane modes do not share connection-tracking state.
 {: .alert .alert-danger }
 
-### Send us feedback
+### Next steps
 
-We want to hear about your experience, so please don’t hesitate to connect with us via the {% include open-new-window.html text='Calico Users Slack' url='http://slack.projectcalico.org/' %} group.
+**Tools**
+
+- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/install)
+
+**Networking**
+
+- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
+
+**Security**
+
+- [Secure pods with Calico network policy]({{site.baseurl}}/security/calico-network-policy)

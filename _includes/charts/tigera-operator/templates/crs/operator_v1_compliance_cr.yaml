@@ -1,0 +1,11 @@
+{{ if .Values.compliance.enabled }}
+{{ $spec := omit .Values.compliance "enabled" }}
+
+apiVersion: operator.tigera.io/v1
+kind: Compliance
+metadata:
+  name: tigera-secure
+spec:
+{{ $spec | toYaml | indent 2 }}
+
+{{ end }}

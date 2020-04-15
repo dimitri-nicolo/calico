@@ -56,7 +56,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
-    * networkPolicy
+    * tier
     * networkSet
     * node
     * profile
@@ -126,4 +126,4 @@ Description:
 -  [Installing calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
 -  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{ site.baseurl }}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

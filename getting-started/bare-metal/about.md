@@ -1,6 +1,6 @@
 ---
 title: About non-cluster hosts
-description: Secure hosts not in a cluster by installing Calico with networking and/or networking policy enabled.
+description: Secure hosts not in a cluster by installing Calico Enterprise with networking and/or networking policy enabled.
 canonical_url: '/getting-started/bare-metal/about'
 ---
 
@@ -10,14 +10,14 @@ Secure hosts not in a cluster by installing {{site.prodname}} with networking an
 
 ### Value
 
-Not all hosts in your environment run virtualized workloads (i.e. containers managed by Kubernetes or OpenShift, or VMs managed by OpenStack). There may be physical machines or legacy applications that you cannot move into an orchestrated cluster that need to communicate securely with workloads in your cluster. Whether you have a thousand machines or ten, {{site.prodname}} lets you enforce policy on them using the same robust {{site.prodname}} network policy that is used for workloads. 
+Not all hosts in your environment run virtualized workloads (i.e. containers managed by Kubernetes or OpenShift). There may be physical machines or legacy applications that you cannot move into an orchestrated cluster that need to communicate securely with workloads in your cluster. Whether you have a thousand machines or ten, {{site.prodname}} lets you enforce policy on them using the same robust {{site.prodname}} network policy that is used for workloads.
 
 
 ### Concepts
 
 #### Workloads and Hosts
 
-We use the term workload to mean a pod or VM running as a guest on a computer with {{site.prodname}} installed. If your cluster is a Kubernetes or OpenShift cluster, workloads are pods, if your cluster is an OpenStack cluster, workloads are VMs. 
+We use the term workload to mean a pod. If your cluster is a Kubernetes or OpenShift cluster, workloads are pods.
 
 We use the term host to mean a computer where {{site.prodname}} is installed. These include computers that are part of a cluster and “host” workloads, as well as computers that are not part of the cluster and run applications directly, which we call "non-cluster" hosts.  {{site.prodname}} does not handle the networking from host to host ({{site.prodname}} assumes this is set up), but it can be used to handle networking between hosts and workloads.  {{site.prodname}} can also provide network policy for hosts, regardless of whether or not the hosts run any workloads.  This guide focuses on non-cluster hosts.
 
@@ -52,5 +52,4 @@ Using {{site.prodname}}, you can secure network interfaces of the host; these in
 | Install method                                                       | Networking | Policy |
 |----------------------------------------------------------------------|------------|--------|
 | [Docker container](./installation/container)                         | ✓          | ✓      |
-| [Binary install with package manager](./installation/binary-mgr)     |            | ✓      |
-| [Binary install without package manager](./installation/binary)      |            | ✓      |
+| [Binary install](./installation/binary)                              |            | ✓      |

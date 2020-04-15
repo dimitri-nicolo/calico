@@ -39,7 +39,7 @@ Here is the pre-DNAT policy that we need to disallow incoming external traffic
 in general:
 
 ```bash
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 - apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:
@@ -87,11 +87,11 @@ are in use in your own cluster.
 We also need policy to allow _egress_ traffic through each node's external
 interface.  Otherwise, when we define host endpoints for those interfaces, no
 egress traffic will be allowed from local processes (except for traffic that is
-allowed by the [failsafe rules]({{ site.baseurl }}/reference/host-endpoints/failsafe). Because there is no default-deny
+allowed by the [failsafe rules]({{site.baseurl}}/reference/host-endpoints/failsafe). Because there is no default-deny
 rule for forwarded traffic, forwarded traffic will be allowed for host endpoints.
 
 ```
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 - apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:
@@ -126,7 +126,7 @@ endpoint with a `host-endpoint` label, so we should include that label in our
 definitions.  For example, for `eth0` on `node1`:
 
 ```bash
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 - apiVersion: projectcalico.org/v3
   kind: HostEndpoint
   metadata:
@@ -141,9 +141,9 @@ EOF
 
 After defining host endpoints for each node, you should find that internal
 cluster communications are all still working as normal—for example, that you
-can successfully execute commands like `calicoctl get hep` and `calicoctl get
-pol`—but that it is impossible to connect into the cluster from outside
-(except for any [failsafe rules]({{ site.baseurl }}/reference/host-endpoints/failsafe).  
+can successfully execute commands like `kubectl get hostendpoints.p` and `kubectl get
+globalnetworkpolicy.p`—but that it is impossible to connect into the cluster from outside
+(except for any [failsafe rules]({{site.baseurl}}/reference/host-endpoints/failsafe).  
 For example, if the
 cluster includes a Kubernetes Service that is exposed as NodePort 31852, you
 should find, at this point, that that NodePort works from within the cluster,
@@ -153,7 +153,7 @@ To open a pinhole for that NodePort, for external access, you can configure a
 pre-DNAT policy like this:
 
 ```bash
-calicoctl apply -f - <<EOF
+kubectl apply -f - <<EOF
 - apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:

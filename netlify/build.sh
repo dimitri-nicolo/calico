@@ -37,7 +37,7 @@ function build() {
     echo "[DEBUG] building branch $1 into dir $2"
     TEMP_DIR=$(mktemp -d)
 
-    git clone --depth=1 https://github.com/projectcalico/calico -b $1 $TEMP_DIR
+    git clone --depth=1 https://$GH_DEPLOY_TOKEN@github.com/tigera/calico-private -b $1 $TEMP_DIR
 
     pushd $TEMP_DIR
     jekyll build --config $JEKYLL_CONFIG,$EXTRA_CONFIG --baseurl=$2 --destination _site/$2
@@ -65,10 +65,21 @@ function build_archives() {
 }
 
 echo "[INFO] building master site"
-build_master
+build_master > /tmp/master.log 2>&1 &
 
 echo "[INFO] building archives"
-build_archives
+build_archives > /tmp/archives.log 2>&1 &
+
+echo [INFO] Waiting for master and archive builds to complete: `date` ...
+wait
+echo [INFO] Master and archive builds complete: `date`.
+
+echo Output from master build ...
+cat /tmp/master.log
+
+echo Output from archive build ...
+cat /tmp/archives.log
+
 mv _site/sitemap.xml _site/release-legacy-sitemap.xml
 
 echo "[INFO] building current release"

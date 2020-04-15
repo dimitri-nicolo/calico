@@ -60,6 +60,21 @@ The full list of parameters which can be set is as follows.
 
 The Kubernetes API datastore driver reads its configuration from Kubernetes-provided environment variables.
 
+#### {{site.prodname}} specific configuration
+
+| Setting                      | Environment variable               | Default | Meaning                                 |
+|------------------------------|------------------------------------|---------|-----------------------------------------|
+| `PrometheusMetricsCertFile`  | `TYPHA_PROMETHEUSMETRICSCERTFILE`  | None    | Certificate for encrypting Typha Prometheus metrics.  |
+| `PrometheusMetricsKeyFile`   | `TYPHA_PROMETHEUSMETRICSKEYFILE`   | None    | Private key for encrypting Typha Prometheus metrics.  |
+| `PrometheusMetricsCAFile`    | `TYPHA_PROMETHEUSMETRICSCAFILE`    | None    | Trusted CA file for clients attempting to read Typha Prometheus metrics.  |
+
+When the `PrometheusMetrics...File` parameters are set, Typha's
+Prometheus port is TLS-secured such that only a validated client can
+read Prometheus metrics, and the data is encrypted in transit.  A
+valid client must then connect over HTTPS and present a certificate
+that is signed by one of the trusted CAs in the
+`PrometheusMetricsCAFile` setting.
+
 ##### Environment variables
 
 | Environment   | Description | Schema |
@@ -77,4 +92,4 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `ServerKeyFile`         | `TYPHA_SERVERKEYFILE`  | Path to the file containing the private key matching the Typha server certificate. Example: `/etc/typha/key.pem` (optional) | string |
 
 For more information on how to use and set these variables, refer to
-[Connections from Felix to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-felix-to-typha-kubernetes).
+[Connections from Node to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-node-to-typha-kubernetes).

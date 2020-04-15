@@ -164,6 +164,7 @@ at the same time that subcomponent release branches are cut, often well before t
        path: .
      values:
        version: vX.Y
+       sitemap: true
    ```
 
 1. If appropriate, update the list of tested versions for different platforms in the appropriate documents.
@@ -207,8 +208,6 @@ at the same time that subcomponent release branches are cut, often well before t
 
 This section describes how to create a new major or minor release. It assumes that the release branch has already been created
 as described in the section above.
-
-- Move current release to the archives
 
 1. Checkout the previously created release branch.
 
@@ -358,3 +357,8 @@ release notes for a given version, perform the following steps.
 
    - [Example release notes for a major/minor release](https://github.com/projectcalico/calico/blob/v3.1.0/_includes/v3.1/release-notes/v3.1.0-release-notes.md)
    - [Example release notes for a patch release](https://github.com/projectcalico/calico/blob/7d5594dbca14cb1b765b65eb11bdd8239d23dfb3/_includes/v3.0/release-notes/v3.0.5-release-notes.md)
+
+### Updating CNX Documentation
+Currently, updating the CNX documentation requires two manual steps:
+* `make publish-cnx-docs`
+* `gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml`

@@ -1,0 +1,48 @@
+version: v1.0
+name: Build Helm Charts
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+global_job_config:
+  prologue:
+    commands:
+      - chmod 0600 ~/.keys/*
+      - ssh-add ~/.keys/*
+      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+      - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+      - checkout
+      - make bin/helm
+      - sudo install -m +x ./bin/helm /usr/local/bin/
+      - sudo helm init --client-only
+      - sudo helm plugin install https://github.com/viglesiasce/helm-gcs.git
+      - sudo helm repo add tigera gs://tigera-helm-charts
+  secrets:
+    - name: marvin-github-ssh-private-key
+    - name: banzai-secrets
+
+blocks:
+  - name: "Build helm charts"
+    dependencies: []
+    task:
+      jobs:
+        - name: Build helm charts for master branch
+          commands:
+            - make charts RELEASE_STREAM=master
+  - name: "Push helm charts"
+    dependencies: ["Build helm charts"]
+    run:
+      when: "branch = 'master'"
+    task:
+      jobs:
+        - name: Push helm charts for master branch
+          commands:
+            - make charts RELEASE_STREAM=master
+            - |
+              for chart in ./bin/*.tgz; do
+                  sudo helm gcs push $chart gs://tigera-helm-charts
+              done
+
+execution_time_limit:
+  hours: 2

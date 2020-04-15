@@ -20,10 +20,13 @@ spec:
   nodeSelector:
     kubernetes.io/os: linux
   hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
+  - name: calico-pull-secret
   serviceAccountName: calicoctl
   containers:
   - name: calicoctl
-    image: {{page.registry}}{{page.imageNames["calicoctl"]}}:{{site.data.versions.first.components["calicoctl"].version}}
+    image: {{page.registry}}{% include component_image component="calicoctl" %}
     command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
     env:
     - name: DATASTORE_TYPE
@@ -32,7 +35,7 @@ spec:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: calicoctl
 rules:
@@ -66,13 +69,16 @@ rules:
       - bgppeers
       - bgpconfigurations
       - clusterinformations
+      - licensekeys
       - felixconfigurations
       - globalnetworkpolicies
       - globalnetworksets
+      - remoteclusterconfigurations
       - ippools
       - kubecontrollersconfigurations
       - networkpolicies
       - networksets
+      - tiers
       - hostendpoints
       - ipamblocks
       - blockaffinities
@@ -87,12 +93,13 @@ rules:
     resources:
       - networkpolicies
     verbs:
+      - watch
       - get
       - list
 
 ---
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: calicoctl

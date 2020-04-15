@@ -1,66 +1,49 @@
-## Installing calicoctl as a container on a single host
+## Installing {{include.cli}} as a container on a single host
 
-To install `calicoctl` as a container on a single host, log into the
-target host and issue the following command.
+1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
-```
-docker pull {{page.registry}}{{page.imageNames["calicoctl"]}}:{{site.data.versions.first.title}}
-```
+1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
+
+   ```bash
+   vi ~/.docker/config.json
+   ```
+
+1. Depending on the existing contents of the file, edit it in one of the following ways.
+
+   - **New file**: Paste in the entire contents of the `config.json` file from Tigera.
+
+   - **Existing file without quay.io object**: Add the following lines from the `config.json` inside the `"auth"` object.
+
+     ```json
+     "quay.io": {
+       "auth": "<ROBOT-TOKEN-VALUE>",
+       "email": ""
+     }
+     ```
+
+   - **Existing file with quay.io object**: Add the following lines from the `config.json` inside the `"quay.io"` object.
+
+     ```json
+     "auth": "<ROBOT-TOKEN-VALUE>",
+     "email": ""
+     ```
+
+1. Save and close the file.
+
+1. Use the following commands to pull the `{{include.cli}}` image from the Tigera
+   registry.
+
+   ```bash
+   docker pull {{page.registry}}{% include component_image component=include.cli %}
+   ```
+
+1. Confirm that the image has loaded by typing `docker images`.
+{%- assign c = site.data.versions.first.components[include.cli] %}
+   ```bash
+   REPOSITORY                TAG               IMAGE ID       CREATED         SIZE
+   {{ c.image }}    {{ c.version }}            e07d59b0eb8a   2 minutes ago   42MB
+   ```
+   {: .no-select-button}
 
 **Next step**:
-
-[Configure `calicoctl` to connect to your datastore](configure).
-
-
-## Installing calicoctl as a Kubernetes pod
-
-
-Use the YAML that matches your datastore type to deploy the `calicoctl` container to your nodes.
-
-- **etcd**
-
-   ```
-   kubectl apply -f {{ "/manifests/calicoctl-etcd.yaml" | absolute_url }}
-   ```
-
-   > **Note**: You can also
-   > [view the YAML in a new tab]({{ "/manifests/calicoctl-etcd.yaml" | absolute_url }}){:target="_blank"}.
-   {: .alert .alert-info}
-
-- **Kubernetes API datastore**
-
-   ```
-   kubectl apply -f {{ "/manifests/calicoctl.yaml" | absolute_url }}
-   ```
-
-   > **Note**: You can also
-   > [view the YAML in a new tab]({{ "/manifests/calicoctl.yaml" | absolute_url }}){:target="_blank"}.
-   {: .alert .alert-info}
-
-You can then run commands using kubectl as shown below.
-
-```
-kubectl exec -ti -n kube-system calicoctl -- /calicoctl get profiles -o wide
-```
-
-An example response follows.
-
-```bash
-NAME                 TAGS
-kns.default          kns.default
-kns.kube-system      kns.kube-system
-```
-{: .no-select-button}
-
-We recommend setting an alias as follows.
-
-```
-alias calicoctl="kubectl exec -i -n kube-system calicoctl /calicoctl -- "
-```
-
-   > **Note**: In order to use the `calicoctl` alias
-   > when reading manifests, redirect the file into stdin, for example:
-   > ```
-   > calicoctl create -f - < my_manifest.yaml
-   > ```
-   {: .alert .alert-info}
+[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/getting-started/clis/{{include.cli}}/configure/).

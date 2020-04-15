@@ -1,6 +1,6 @@
 ---
 title: Docker container install
-description: Install Calico on non-cluster hosts using a Docker container.
+description: Install Calico Enterprise on non-cluster hosts using a Docker container.
 canonical_url: '/getting-started/bare-metal/installation/container'
 ---
 

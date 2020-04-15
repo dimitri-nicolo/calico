@@ -55,7 +55,7 @@ Calico network policies apply to **endpoints**. In Kubernetes, each pod is a Cal
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: allow-tcp-port-6379
   namespace: production
 ```
 
@@ -120,7 +120,7 @@ In the following example, ingress traffic to endpoints in the **namespace: produ
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: allow-tcp-port-6379
   namespace: production
 spec:
   selector: color == 'red'
@@ -140,7 +140,7 @@ To allow ingress traffic from endpoints in other namespaces, use a **namespaceSe
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: allow-tcp-port-6379
   namespace: production
 spec:
   selector: color == 'red'
@@ -250,7 +250,7 @@ In the following example, incoming TCP traffic to an application is denied, and 
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 Metadata:
-  name: allow-tcp-6379
+  name: allow-tcp-port-6379
   namespace: production
 Spec:
   selector: role == 'database'
@@ -273,6 +273,4 @@ Spec:
 - For additional Calico network policy features, see [Calico network policy]({{ site.baseurl }}/reference/resources/networkpolicy) and [Calico global network policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy)
 - For an alternative to using IP addresses or CIDRs in policy, see [Network sets]({{ site.baseurl }}/reference/resources/networkset) 
 - For details on the calicoctl command line tool, see [calicoctl user reference]({{ site.baseurl }}/reference/calicoctl/overview)
-- {% include enterprise_icon.html %}[Network visibility with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/network-visibility)
-- {% include enterprise_icon.html %}[Advanced compliance controls with Calico Enterprise]({{ site.baseurl }}/security/calico-enterprise/compliance)
-
+- For details on how to stage network policy, see [Staged network policies]({{site.baseurl}}/security/staged-network-policies) 

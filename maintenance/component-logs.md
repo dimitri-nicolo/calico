@@ -49,14 +49,14 @@ of the `{{site.nodecontainer}}` logging directory.
 * The Info level (default) only enabled "debug {states}" logging. This is for protocol state changes (protocol going up, down, starting, stopping etc.)
 * The Warning, Error and Fatal levels all turn off bird debug logging completely.
 
-See [BGP Configuration Resource](/reference/resources/bgpconfig)
+See [BGP Configuration Resource]({{site.baseurl}}/reference/resources/bgpconfig)
 for details on how to modify the logging level. For example:
 
 
 1. Get the current bgpconfig settings.
 
    ```bash
-   calicoctl get bgpconfig -o yaml > bgp.yaml
+   kubectl get bgpconfiguration.projectcalico.org -o yaml > bgp.yaml
    ```
 
 1. Modify logSeverityScreen to desired value.
@@ -72,7 +72,7 @@ for details on how to modify the logging level. For example:
 1. Replace the current bgpconfig settings.
 
    ```bash
-   calicoctl replace -f bgp.yaml
+   kubectl replace -f bgp.yaml
    ```
 
 ### Felix
@@ -85,7 +85,7 @@ logging directory.
 1. Get the current felixconfig settings.
 
    ```bash
-   calicoctl get felixconfig -o yaml > felix.yaml
+   kubectl get felixconfiguration.projectcalico.org default -o yaml > felix.yaml
    ```
 
 1. Modify logSeverityScreen to desired value.
@@ -101,7 +101,7 @@ logging directory.
 1. Replace the current felixconfig settings.
 
    ```bash
-   calicoctl replace -f felix.yaml
+   kubectl replace -f felix.yaml
    ```
 
 ### confd

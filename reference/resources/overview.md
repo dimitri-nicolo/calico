@@ -1,6 +1,6 @@
 ---
 title: Resource definitions
-description: Calico resources (APIs) that you can manage using calicoctl.
+description: Calico Enterprise resources (APIs) that you can manage using calicoctl.
 canonical_url: '/reference/resources/index'
 ---
 
@@ -45,18 +45,19 @@ spec:
 
 The following resources are supported:
 
-- [BGPConfiguration]({{ site.baseurl }}/reference/resources/bgpconfig)
-- [BGPPeer]({{ site.baseurl }}/reference/resources/bgppeer)
-- [FelixConfiguration]({{ site.baseurl }}/reference/resources/felixconfig)
-- [GlobalNetworkPolicy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy)
-- [GlobalNetworkSet]({{ site.baseurl }}/reference/resources/globalnetworkset)
-- [HostEndpoint]({{ site.baseurl }}/reference/resources/hostendpoint)
-- [IPPool]({{ site.baseurl }}/reference/resources/ippool)
-- [NetworkPolicy]({{ site.baseurl }}/reference/resources/networkpolicy)
-- [NetworkSet]({{ site.baseurl }}/reference/resources/networkset)
-- [Node]({{ site.baseurl }}/reference/resources/node)
-- [Profile]({{ site.baseurl }}/reference/resources/profile)
-- [WorkloadEndpoint]({{ site.baseurl }}/reference/resources/workloadendpoint)
+- [BGPConfiguration]({{site.baseurl}}/reference/resources/bgpconfig)
+- [BGPPeer]({{site.baseurl}}/reference/resources/bgppeer)
+- [FelixConfiguration]({{site.baseurl}}/reference/resources/felixconfig)
+- [GlobalNetworkPolicy]({{site.baseurl}}/reference/resources/globalnetworkpolicy)
+- [GlobalNetworkSet]({{site.baseurl}}/reference/resources/globalnetworkset)
+- [HostEndpoint]({{site.baseurl}}/reference/resources/hostendpoint)
+- [IPPool]({{site.baseurl}}/reference/resources/ippool)
+- [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy)
+- [NetworkSet]({{site.baseurl}}/reference/resources/networkset)
+- [Node]({{site.baseurl}}/reference/resources/node)
+- [Profile]({{site.baseurl}}/reference/resources/profile)
+- [Tier]({{site.url}}/reference/resources/tier)
+- [WorkloadEndpoint]({{site.baseurl}}/reference/resources/workloadendpoint)
 
 ### Resource name requirements
 

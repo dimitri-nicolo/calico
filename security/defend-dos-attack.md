@@ -1,11 +1,11 @@
 ---
 title: Defend against DoS attacks
-description: Define DoS mitigation rules in Calico policy to quickly drop connections when under attack. Learn how rules use eBPF and XDP, including hardware offload when available.
+description: Define DoS mitigation rules in Calico Enterprise policy to quickly drop connections when under attack. Learn how rules use eBPF and XDP, including hardware offload when available.
 ---
 
-### Big picture 
+### Big picture
 
-Calico automatically enforces specific types of blacklist policies at the earliest possible point in the packet processing pipeline, including offloading to NIC hardware whenever possible. 
+Calico automatically enforces specific types of blacklist policies at the earliest possible point in the packet processing pipeline, including offloading to NIC hardware whenever possible.
 
 ### Value
 
@@ -80,9 +80,9 @@ spec:
   - "5.6.0.0/16"
 ```
 
-#### Step 3: Create deny incoming traffic global network policy 
+#### Step 3: Create deny incoming traffic global network policy
 
-Finally, create a Calico GlobalNetworkPolicy adding the GlobalNetworkSet label (**dos-blacklist** in the previous step) as a selector to deny ingress traffic. To more quickly enforce the denial of forwarded traffic to the host at the packet level, use the **doNotTrack** and **applyOnForward** options. 
+Finally, create a Calico GlobalNetworkPolicy adding the GlobalNetworkSet label (**dos-blacklist** in the previous step) as a selector to deny ingress traffic. To more quickly enforce the denial of forwarded traffic to the host at the packet level, use the **doNotTrack** and **applyOnForward** options.
 
 ```yaml
 apiVersion: projectcalico.org/v3

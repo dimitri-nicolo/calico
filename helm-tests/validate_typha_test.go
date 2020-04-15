@@ -95,16 +95,16 @@ var _ = Describe("Typha Helm Chart", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("Does not create the calico-typha deployment", func() {
-			Expect(resources["Deployment,kube-system,calico-typha"]).To(BeNil())
+		It("Creates the calico-typha deployment", func() {
+			Expect(resources["Deployment,kube-system,calico-typha"]).NotTo(BeNil())
 		})
 
-		It("Does not creates the calico-typha service", func() {
-			Expect(resources["Service,kube-system,calico-typha"]).To(BeNil())
+		It("Creates the calico-typha service", func() {
+			Expect(resources["Service,kube-system,calico-typha"]).NotTo(BeNil())
 		})
 
-		It("Does not create the calico-typha pod disruption budget", func() {
-			Expect(resources["PodDisruptionBudget,kube-system,calico-typha"]).To(BeNil())
+		It("Creates the calico-typha pod disruption budget", func() {
+			Expect(resources["PodDisruptionBudget,kube-system,calico-typha"]).NotTo(BeNil())
 		})
 
 	})
@@ -113,7 +113,7 @@ var _ = Describe("Typha Helm Chart", func() {
 		values := HelmValues{
 			Datastore: "etcd",
 			Typha: TyphaSettings{
-				Enabled: true,
+				Enabled: false,
 			},
 			Etcd: EtcdSettings{
 				Endpoints: "http://127.0.0.1:2379",
@@ -130,7 +130,7 @@ var _ = Describe("Typha Helm Chart", func() {
 			Expect(resources["Deployment,kube-system,calico-typha"]).To(BeNil())
 		})
 
-		It("Does not creates the calico-typha service", func() {
+		It("Does not create the calico-typha service", func() {
 			Expect(resources["Service,kube-system,calico-typha"]).To(BeNil())
 		})
 

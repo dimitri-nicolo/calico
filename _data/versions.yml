@@ -1,25 +1,129 @@
 - title: master
   note: ""
   tigera-operator:
-   image: tigera/operator
-   registry: quay.io
-   version: release-v1.3
+    image: tigera/operator
+    version: master
+    registry: quay.io
+  calico:
+    minor_version: v3.13
   components:
-     typha:
+    cnx-manager:
+      image: tigera/cnx-manager
       version: master
-     calicoctl:
+    voltron:
+      image: tigera/voltron
       version: master
-     calico/node:
+    cnx-apiserver:
+      image: tigera/cnx-apiserver
       version: master
-     calico/cni:
+    cnx-queryserver:
+      image: tigera/cnx-queryserver
       version: master
-     calico/kube-controllers:
+    cnx-kube-controllers:
+      image: tigera/kube-controllers
       version: master
-     networking-calico:
+    calicoq:
+      image: tigera/calicoq
       version: master
-     flannel:
-      version: v0.11.0
-     calico/dikastes:
+    typha:
+      image: tigera/typha
       version: master
-     flexvol:
+    calicoctl:
+      image: tigera/calicoctl
       version: master
+    cnx-node:
+      image: tigera/cnx-node
+      version: master
+    dikastes:
+      image: tigera/dikastes
+      version: master
+    fluentd:
+      image: tigera/fluentd
+      version: master
+    es-proxy:
+      image: tigera/es-proxy
+      version: master
+    eck-kibana:
+      version: 7.3.2
+    kibana:
+      image: tigera/kibana
+      version: 7.3
+    elasticsearch-operator:
+      registry: docker.elastic.co
+      image: eck/eck-operator
+      version: 1.0.1
+    elasticsearch:
+      registry: docker.elastic.co
+      image: elasticsearch/elasticsearch
+      version: 7.3.2
+    cloud-controllers:
+      image: tigera/cloud-controllers
+      version: master
+    elastic-tsee-installer:
+      image: tigera/intrusion-detection-job-installer
+      version: master
+    es-curator:
+      image: tigera/es-curator
+      version: master
+    intrusion-detection-controller:
+      image: tigera/intrusion-detection-controller
+      version: master
+    compliance-controller:
+      image: tigera/compliance-controller
+      version: master
+    compliance-reporter:
+      image: tigera/compliance-reporter
+      version: master
+    compliance-snapshotter:
+      image: tigera/compliance-snapshotter
+      version: master
+    compliance-server:
+      image: tigera/compliance-server
+      version: master
+    compliance-benchmarker:
+      image: tigera/compliance-benchmarker
+      version: master
+    ingress-collector:
+      image: tigera/ingress-collector
+      version: master
+    license-agent:
+      image: tigera/license-agent
+      version: master
+    # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
+    # to the docs & manifest tooling not to default to the tigera registry.
+    calico/cni:
+      image: calico/cni
+      version: master
+      registry: quay.io
+    prometheus-operator:
+      image: coreos/prometheus-operator
+      version: v0.34.0
+      registry: quay.io
+    prometheus:
+      image: prometheus/prometheus
+      version: v2.7.1
+      registry: quay.io
+    alertmanager:
+      image: prometheus/alertmanager
+      version: v0.16.1
+      registry: quay.io
+    prometheus-config-reloader:
+      image: coreos/prometheus-config-reloader
+      version: v0.34.0
+      registry: quay.io
+    configmap-reload:
+      image: coreos/configmap-reload
+      version: v0.0.1
+      registry: quay.io
+    flexvol:
+      image: calico/pod2daemon-flexvol
+      version: master
+      registry: quay.io
+    cpHorizontalAutoscaler:
+      image: google-containers/cluster-proportional-autoscaler-amd64
+      version: 1.1.2-r2
+      registry: gcr.io
+    cpVerticalAutoscaler:
+      image: google-containers/cpvpa-amd64
+      version: v0.6.0
+      registry: gcr.io

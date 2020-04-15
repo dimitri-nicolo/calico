@@ -1,23 +1,31 @@
 ---
 title: Global network policy
-description: API for this Calico resource.
+description: API for this Calico Enterprise resource.
 canonical_url: '/reference/resources/globalnetworkpolicy'
 ---
 
 A global network policy resource (`GlobalNetworkPolicy`) represents an ordered set of rules which are applied
 to a collection of endpoints that match a [label selector](#selector).
 
-`GlobalNetworkPolicy` is not a namespaced resource. `GlobalNetworkPolicy` applies to [workload endpoint resources]({{ site.baseurl }}/reference/resources/workloadendpoint) in all namespaces, and to [host endpoint resources]({{ site.baseurl }}/reference/resources/hostendpoint).
+`GlobalNetworkPolicy` is not a namespaced resource. `GlobalNetworkPolicy` applies to [workload endpoint resources]({{site.baseurl}}/reference/resources/workloadendpoint) in all namespaces, and to [host endpoint resources]({{site.baseurl}}/reference/resources/hostendpoint).
 Select a namespace in a `GlobalNetworkPolicy` in the standard selector by using
 `projectcalico.org/namespace` as the label name and a `namespace` name as the
 value to compare against, e.g., `projectcalico.org/namespace == "default"`.
-See [network policy resource]({{ site.baseurl }}/reference/resources/networkpolicy) for namespaced network policy.
+See [network policy resource]({{site.baseurl}}/reference/resources/networkpolicy) for namespaced network policy.
 
 `GlobalNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
-take precedence over [Profile resources]({{ site.baseurl }}/reference/resources/profile) if any are defined.
+take precedence over [Profile resources]({{site.baseurl}}/reference/resources/profile) if any are defined.
+
+GlobalNetworkPolicies are organized into [tiers]({{site.baseurl}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+next [tier]({{site.baseurl}}/reference/resources/tier), to enable hierarchical security policy.
 
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `globalnetworkpolicy`, `globalnetworkpolicies`, `gnp`, `gnps`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`globalnetworkpolicy.projectcalico.org`, `globalnetworkpolicies.projectcalico.org` and abbreviations such as
+`globalnetworkpolicy.p` and `globalnetworkpolicies.p`.
 
 ### Sample YAML
 
@@ -28,8 +36,9 @@ This sample policy allows TCP traffic from `frontend` endpoints to port 6379 on
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: internal-access.allow-tcp-6379
 spec:
+  tier: internal-access
   selector: role == 'database'
   types:
   - Ingress
@@ -63,6 +72,7 @@ spec:
 | Field                  | Description                                                                                                                                                                                                                          | Accepted Values     | Schema                | Default                                       |
 |------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|-----------------------|-----------------------------------------------|
 | order                  | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first.                                                                                                                                  |                     | float                 |                                               |
+| tier                   | Name of the [tier]({{site.baseurl}}/reference/resources/tier) this policy belongs to.                                                                                                                                                |                     | string                |  `default`                                    |
 | selector               | Selects the endpoints to which this policy applies.                                                                                                                                                                                  |                     | [selector](#selector) | all()                                         |
 | serviceAccountSelector | Selects the service account(s) to which this policy applies. Select all service accounts in the cluster with a specific name using the `projectcalico.org/name` label.                                                               |                     | [selector](#selector) | all()                                         |
 | namespaceSelector      | Selects the namespace(s) to which this policy applies. Select a specific namespace by name using the `projectcalico.org/name` label.                                                                                                 |                     | [selector](#selector) | all()                                         |
@@ -83,10 +93,10 @@ spec:
  | Yes                   | Yes                  | `Ingress, Egress`   |
 
 \*\* The `doNotTrack` and `preDNAT` and `applyOnForward` fields are meaningful
-only when applying policy to a [host endpoint]({{ site.baseurl }}/reference/resources/hostendpoint).
+only when applying policy to a [host endpoint]({{site.baseurl}}/reference/resources/hostendpoint).
 
 Only one of `doNotTrack` and `preDNAT` may be set to `true` (in a given policy). If they are both `false`, or when applying the policy to a
-[workload endpoint]({{ site.baseurl }}/reference/resources/workloadendpoint),
+[workload endpoint]({{site.baseurl}}/reference/resources/workloadendpoint),
 the policy is enforced after connection tracking and any DNAT.
 
 `applyOnForward` must be set to `true` if either `doNotTrack` or `preDNAT` is
@@ -106,7 +116,7 @@ for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host e
 
 #### EntityRule
 
-{% include content/entityrule.md %}
+{% include content/entityrule.md global="true" %}
 
 #### Selector
 
@@ -130,7 +140,6 @@ in order to use the following match criteria.
 >  * Only ingress policy is supported. Egress policy must not contain any application layer policy match clauses.
 >  * Rules must have the action `Allow` if they contain application layer policy match clauses.
 {: .alert .alert-info}
-
 
 #### HTTPMatch
 

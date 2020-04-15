@@ -1,6 +1,6 @@
 ---
 title: Binary install without package manager
-description: Install Calico binary on non-cluster hosts without a package manager.
+description: Install Calico Enterprise binary on non-cluster hosts without a package manager.
 canonical_url: '/getting-started/bare-metal/installation/binary'
 ---
 
@@ -28,26 +28,29 @@ This step requires Docker, but it can be run from any machine with Docker instal
 1. Use the following command to download the {{site.nodecontainer}} image.
 
    ```bash
+   docker pull {{page.registry}}{% include component_image component="cnx-node" %}
    docker pull {{site.nodecontainer}}:{{site.data.versions.first.components["calico/node"].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
+{%- assign n = site.data.versions.first.components["cnx-node"] %}
 
-   ```bash
-   REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
-   {{site.nodecontainer}}      {{site.data.versions.first.components["calico/node"].version}}        e07d59b0eb8a   2 minutes ago   42MB
    ```
+   REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
+   {{page.registry}}{{ n.image }}      {{ n.version }}        e07d59b0eb8a   2 minutes ago   42MB
+   ```
+   {: .no-select-button}
 
 1. Create a temporary {{site.nodecontainer}} container.
 
    ```bash
-   docker create --name container {{site.nodecontainer}}:{{site.data.versions.first.components["calico/node"].version}}
+   docker create --name container {{page.registry}}{% include component_image component="cnx-node" %}
    ```
 
 1. Copy the calico-node binary from the container to the local file system.
 
    ```bash
-   docker cp container:/bin/calico-node calico-node
+   docker cp container:/bin/calico-node {{site.nodecontainer}}
    ```
 
 1. Delete the temporary container.
@@ -58,8 +61,8 @@ This step requires Docker, but it can be run from any machine with Docker instal
 
 1. Set the extracted binary file to be executable.
 
-   ```
-   chmod +x calico-node
+   ```bash
+   chmod +x {{site.nodecontainer}}
    ```
 
 #### Step 2: Copy the `calico-node` binary
@@ -87,13 +90,69 @@ file:
     User=root
     EnvironmentFile=/etc/calico/calico.env
     ExecStartPre=/usr/bin/mkdir -p /var/run/calico
-    ExecStart=/usr/local/bin/calico-node -felix
+    ExecStart=/usr/local/bin/{{site.nodecontainer}} -felix
     KillMode=process
     Restart=on-failure
     LimitNOFILE=32000
 
     [Install]
     WantedBy=multi-user.target
+
+Or, for upstart:
+
+    description "Felix (Calico agent)"
+    author "Project Calico Maintainers <maintainers@projectcalico.org>"
+
+    start on stopped rc RUNLEVEL=[2345]
+    stop on runlevel [!2345]
+
+    limit nofile 32000 32000
+
+    respawn
+    respawn limit 5 10
+
+    chdir /var/run
+
+    pre-start script
+      mkdir -p /var/run/calico
+      chown root:root /var/run/calico
+    end script
+
+    exec /usr/local/bin/{{site.nodecontainer}} -felix
+
+## Configure Felix
+
+Optionally, you can create a file at `/etc/calico/felix.cfg` to
+configure Felix. The configuration file as well as other options for
+configuring Felix (including environment variables) are described in
+[this]({{site.baseurl}}/reference/felix/configuration) document.
+
+Felix tries to detect whether IPv6 is available on your platform but
+the detection can fail on older (or more unusual) systems.  If Felix
+exits soon after startup with `ipset` or `iptables` errors try
+setting the `Ipv6Support` setting to `false`.
+
+### Etcd 
+
+If you are configuring Felix in etcd mode and etcd is not running
+on the local machine, it's essential to configure the `EtcdAddr` or
+`EtcdEndpoints` setting to tell Felix how to reach etcd.
+
+### Kubernetes datastore
+
+If you are configuring Felix to interact with a Kubernetes datastore,
+it is essential to set the `DatastoreType` setting to `kubernetes`.
+You will also need to set the environment variable `CALICO_KUBECONFIG`
+to point to a valid kubeconfig for your kubernetes cluster and
+`CALICO_NETWORKING_BACKEND` to `none`.
+
+> **Note**: Felix only works in policy-only mode when running
+in Kubernetes datastore mode. This means that pod networking is
+disabled on the baremetal host Felix is running on but policy can
+still be used to secure the host.
+{: .alert .alert-info}
+
+## Start Felix
 
 Once you've configured Felix, start it up via your init system.
 
@@ -104,3 +163,20 @@ service calico-felix start
 
 {% include content/felix-init-datastore.md %}
 
+For debugging, it's sometimes useful to run Felix manually and tell it
+to emit its logs to screen. You can accomplish that using the appropriate
+command depending on what mode Felix is running in.
+
+### Etcd
+
+```bash
+ETCD_ENDPOINTS=http://<YOUR_ECTD_HOST_IP>:2379 FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
+```
+> **Note**: Add the `ETCD_ENDPOINTS` Env and replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration when etcd isn't running locally.
+{: .alert .alert-info}
+
+### Kubernetes datastore
+
+```bash
+FELIX_DATASTORETYPE=kubernetes CALICO_KUBECONFIG=<YOUR_KUBECONFIG_PATH> FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
+```

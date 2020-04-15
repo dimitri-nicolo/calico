@@ -1,6 +1,6 @@
 ---
 title: System requirements
-description: Review requirements before installing Calico to ensure success. 
+description: Review requirements before installing Calico Enterprise on nodes to ensure success. 
 canonical_url: '/getting-started/kubernetes/requirements'
 ---
 
@@ -12,11 +12,11 @@ canonical_url: '/getting-started/kubernetes/requirements'
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
 
-- 1.14
-- 1.15
-- 1.16
+- v1.15
+- v1.16
+- v1.17
 
-Other versions are likely to work, but we do not actively test {{site.prodname}}
+Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
 
 #### CNI plug-in enabled
@@ -35,8 +35,6 @@ use {{site.prodname}} networking.
 
 {{site.prodname}} supports the following kube-proxy modes:
 - `iptables` (default)
-- `ipvs` Requires Kubernetes >=v1.9.3. Refer to
-  [Enabling IPVS in Kubernetes](../../networking/enabling-ipvs) for more details.
 
 #### IP pool configuration
 

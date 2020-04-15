@@ -47,7 +47,7 @@ Options:
                                configuration in YAML or JSON format.
                                [default: /etc/calico/calicoctl.cfg]
   -n --namespace=<NS>          Namespace of the resource.
-                               Only applicable to NetworkPolicy and WorkloadEndpoint.
+                               Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
                                Uses the default namespace if not specified.
   -a --all-namespaces          If present, list the requested object(s) across
                                all namespaces.
@@ -69,7 +69,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
-    * networkPolicy
+    * tier
     * networkSet
     * node
     * profile
@@ -196,7 +196,7 @@ Response:
 ```
 NAME        IPS
 endpoint1   1.2.3.4,0:bb::aa
-myhost-eth0                           
+myhost-eth0
 ```
 {: .no-select-button}
 
@@ -262,4 +262,4 @@ endpoint1,eth0,
 -  [Installing calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install).
 -  [Resources]({{ site.baseurl }}/reference/resources/overview) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{ site.baseurl }}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

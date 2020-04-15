@@ -6,7 +6,7 @@ canonical_url: '/maintenance/decommissioning-a-node'
 
 ### About decommissioning nodes
 
-If you are running the [node controller]({{ site.baseurl }}/reference/kube-controllers/configuration)
+If you are running the [node controller]({{site.baseurl}}/reference/kube-controllers/configuration)
 or using the Kubernetes API datastore in policy-only mode, you do not need to manually decommission nodes.
 
 In other configurations, you may need to manually decommission a node for one

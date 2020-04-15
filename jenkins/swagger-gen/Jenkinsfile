@@ -1,0 +1,289 @@
+#!groovy
+pipeline {
+    agent { label 'slave'}
+    environment {
+        IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver"
+        WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
+
+        // ----- CNX installer data follows (used for obtaining the swager API) -----
+        GOOGLE_APPLICATION_CREDENTIALS = "/etc/secrets/account.json"
+
+        // Jenkins job info
+        SANE_JOB_NAME = "${env.JOB_BASE_NAME}".replace('.', '-').toLowerCase()
+
+        // Terraform base settings
+        TF_VAR_google_project = 'unique-caldron-775'
+        TF_VAR_google_region = 'us-central1'
+        TF_VAR_zone = 'us-central1-f'
+        TF_VAR_prefix = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}"
+        TF_VAR_node_preemptible = 'false'
+        TF_VAR_master_disk_size = '20'
+        TF_VAR_num_nodes = '0'
+
+        // Use the minimum supported version of Kubernetes to determine the API.
+        K8S_RELEASE = "stable-1.10"
+        USE_EXTERNAL_ETCD = ""
+
+        // Slack message params
+        BUILD_INFO = "https://wavetank.tigera.io/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_NAME}/${env.BUILD_NUMBER}/pipeline"
+        SLACK_MSG = "${BUILD_INFO}\n"
+        slack_alert_channel = 'ci-notifications-cnx'
+
+        // install-cnx.sh settings
+        DATASTORE = "kubernetes"
+
+        // The docs version that we are updating.
+        DOCS_VERSION = "master"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                dir('_cp') {
+                  // All docs versions are contained within the master git branch - this is what we need to update.
+                  git(url: 'git@github.com:tigera/calico-private.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                }
+            }
+        }
+
+        stage('Initialize') {
+            steps {
+                dir('_process') {
+                    git(url: 'git@github.com:tigera/process.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                    script {
+                        def status = sh (returnStatus: true, script: "./k8s_version.sh ${K8S_RELEASE} > k8s_version")
+                        if ( status == 1 ){
+                            currentBuild.result = "UNSTABLE"
+                            echo "Current build status: ${currentBuild.result}"
+                            return
+                        }
+                        env.TF_VAR_kubernetes_version = readFile('k8s_version').trim()
+                    }
+                }
+                script {
+                    currentBuild.description = """\
+                    K8S_RELEASE=${K8S_RELEASE}
+                    TF_VAR_kubernetes_version=${env.TF_VAR_kubernetes_version}
+                    BUILD_INFO=${env.BUILD_INFO}""".stripIndent()
+                }
+            }
+        }
+
+        stage('Provision Cluster') {
+            steps {
+                dir('_crc') {
+                    git(url: 'git@github.com:tigera/calico-ready-clusters.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                    dir('kubeadm/1.6/') {
+                        withCredentials([file(credentialsId: 'registry-viewer-account-json', variable: 'DOCKER_AUTH')]) {
+                            sh "cp $DOCKER_AUTH docker_auth.json"
+                            sh "terraform init"
+                            sh "make master_ssh_key"
+                            sh "terraform apply -auto-approve"
+                            // Remove the taint from master, but expect an error as this command tries to remove the taint from nodes (which do not have it).
+                            sh '$(terraform output master_connect_command) /usr/bin/kubectl taint nodes --all node-role.kubernetes.io/master- || true'
+                        }
+                    }
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed during Terraform provisioning!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+
+        stage('Install CNX') {
+            steps {
+                dir('_crc/kubeadm/1.6') {
+                    // install script requires 'jq'
+                    sh '$(terraform output master_connect_command) "sudo apt-get install -y jq"'
+
+                    // download the installer script from the appropriate docs version
+                    sh '$(terraform output master_connect_command) "curl --compressed -O https://docs.tigera.io/${DOCS_VERSION}/getting-started/kubernetes/install-cnx.sh"'
+
+                    sh '$(terraform output master_connect_command) "chmod +x ./install-cnx.sh"'
+
+                    // Create docker auth file to allow pulls from quay.io/tigera
+                    withCredentials([file(credentialsId: 'quay-read-json', variable: 'KEY')]) {
+                        sh "cp $KEY config.json"
+                        sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no config.json \$(terraform output master_connect):~/config.json"
+                        sh "rm -f config.json"
+                    }
+
+                    // Create a CNX license file
+                    withCredentials([file(credentialsId: 'cnx-license-key', variable: 'KEY')]) {
+                        sh "cp $KEY license.yaml"
+                        sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no license.yaml \$(terraform output master_connect):~/license.yaml"
+                        sh "rm -f license.yaml"
+                    }
+
+                    // Start installation process, don't prompt the user. Since we download the appropriate version of
+                    // the installer, there is no need to explicitly specify the version on the CLI.
+                    sh '$(terraform output master_connect_command) "DATASTORE=$DATASTORE ./install-cnx.sh -q -l license.yaml"'
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed to install CNX with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+
+        stage('Obtaining full swagger.json') {
+            steps {
+                dir('_crc/kubeadm/1.6') {
+                    withCredentials([file(credentialsId: 'quay-read-json', variable: 'KEY')]) {
+                        // CNX is installed and running. Pull the swagger.json file.
+                        sh '$(terraform output master_connect_command) "curl -k https://127.0.0.1:6443/swagger.json -O"'  // Pull full swagger.json from APIS.
+                        sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \$(terraform output master_connect):~/swagger.json swagger.json"
+                    }
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed to create swagger.json with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+
+        stage('Simplify swagger.json'){
+            steps{
+                // Build the container used to run the calico-swagger cleanup.
+                dir('_cp') {
+                    sh 'docker build -t swagger-gen:latest $PWD/jenkins/swagger-gen/'
+                }
+
+                // Run calico-swagger over the full swagger.json to clean up the swagger specifically for our docs.
+                dir('_crc/kubeadm/1.6') {
+                    sh 'docker run -v $PWD:/tmp:rw swagger-gen:latest app /tmp/swagger.json /tmp/calico-swagger.json'
+                }
+            }
+        }
+
+        stage('Create or checkout branch') {
+            steps{
+                dir('_cp') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
+                        // Check if the the Jenkins branch exists and if it does then check that branch out, otherwise
+                        // create a new branch.
+                        sh '''
+                            git config user.name "Marvin Robot"
+                            git config user.email "marvin@tigera.io"
+                        '''
+
+                        script {
+                            env.BRANCH_EXISTS = sh(returnStatus: true, script: 'GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-${DOCS_VERSION}-swagger-build') == 0
+                            echo "Branch exists: ${env.BRANCH_EXISTS}"
+                            if (env.BRANCH_EXISTS == "true") {
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout JENKINS-${DOCS_VERSION}-swagger-build''')
+                            } else {
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout -b JENKINS-${DOCS_VERSION}-swagger-build''')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Push branch if updated'){
+            steps{
+                // Copy across the updated swagger file.
+                sh 'cp _crc/kubeadm/1.6/calico-swagger.json _cp/${DOCS_VERSION}/calico-swagger.json'
+
+                dir('_cp') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
+                        // Only push the branch if there are changes to push.  Multiple changes may accumulate in a single
+                        // branch. Whoever is reviewing the PR can always squash the commits if they prefer, or if they delete
+                        // the PR and the branch then the next autogeneration will effectively squash the changes.
+                        script {
+                            env.SWAGGER_CHANGED = sh(returnStatus: true, script: 'git diff --exit-code') != 0
+                            echo "Swagger file modified: ${env.SWAGGER_CHANGED}"
+                            if (env.SWAGGER_CHANGED == "true") {
+                                sh(script:'''git add . && git commit -m "${DOCS_VERSION} calico-swagger.json update" && GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-${DOCS_VERSION}-swagger-build''')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Create PR if required') {
+            steps {
+                script {
+                    env.CREATE_PR = env.SWAGGER_CHANGED == "true" && env.BRANCH_EXISTS == "false"
+                    echo "Create PR: ${env.CREATE_PR}"
+                }
+
+                dir('_pr') {
+                    // If creating a PR download hub to assist with the PR creation
+                    script {
+                        if (env.CREATE_PR == "true") {
+                            sh(script:'wget https://github.com/github/hub/releases/download/v2.4.0/hub-linux-amd64-2.4.0.tgz')
+                            sh(script:'tar -xvzf hub-linux-amd64-2.4.0.tgz')
+                        }
+                    }
+                }
+
+                dir('_cp') {
+                    withCredentials([usernamePassword(credentialsId: 'marvin-tigera', passwordVariable: 'TOKEN', usernameVariable: 'USER')]) {
+                        // If creating a PR use the downloaded hub binary to assist with the PR creation
+                        script {
+                            if (env.CREATE_PR == "true") {
+                                sh(script: "GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS ${DOCS_VERSION}: automatic swagger update\n\nThis is an automated PR generated by a Jenkins job.\nEOF")
+                            }
+                        }
+                    }
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed to create PR for updated swagger!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            dir('_crc/kubeadm/1.6') {
+                sh '$(terraform output master_connect_command) "kubectl get po -n kube-system -o wide"'
+                sh '$(terraform output master_connect_command) "kubectl logs -n kube-system -l k8s-app=cnx-manager --container=cnx-manager"'
+                sh '$(terraform output master_connect_command) "kubectl describe po -n kube-system -l k8s-app=cnx-manager"'
+                sh 'terraform destroy -force'
+            }
+            echo "Removing checked-out sub-directories"
+            sh 'rm -rf _crc'
+            sh 'rm -rf _cp'
+        }
+        success {
+            echo "Yay, we passed."
+        }
+        changed { // Notify only on change to success
+            script {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
+                    GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
+                    if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
+                        msg = "Passing again ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        slackSend message: msg, color: "good", channel: "${env.slack_alert_channel}"
+                    }
+                }
+           }
+        }
+        failure {
+            echo "Boo, we failed."
+            script {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
+                    GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
+                    if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
+                        msg = "Still failing ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                    } else {
+                        msg = "New failure ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                    }
+                    slackSend message: msg, color: "danger", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+    }
+}

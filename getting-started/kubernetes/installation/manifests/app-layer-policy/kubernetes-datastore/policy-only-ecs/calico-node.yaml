@@ -1,0 +1,13 @@
+---
+layout: null
+---
+{% helm --execute templates/calico-node.yaml %}
+datastore: kubernetes
+network: ecs
+typha:
+  enabled: true
+app_layer_policy:
+  enabled: true
+  configured: true
+variant_name: Calico
+{% endhelm %}

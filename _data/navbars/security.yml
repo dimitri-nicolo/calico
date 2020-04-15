@@ -4,7 +4,106 @@ order: 3
 section:
 - title: Adopt a zero trust network model for security
   path: /security/adopt-zero-trust
-- title: Get started with policy
+- title: Get started with Calico Enterprise Manager
+  path: /security/get-started-cem
+- title: Calico Enterprise network policy
+  path: /security/calico-enterprise-policy
+  section:
+  - title: Create tiered policy
+    path: /security/tiered-policy
+  - title: Create RBAC for tiered policy
+    path: /security/rbac-tiered-policies
+  - title: Federate tiers and policies
+    path: /reference/alpha/federation/installation    
+  - title: Create staged policy
+    path: /security/staged-network-policies
+  - title: Preview policy impacts
+    path: /security/policy-impact-preview
+  - title: Generate policy recommendation
+    path: /security/generate-policy-recommendation
+  - title: Calico Enterprise policy tutorial
+    path: /security/simple-policy-cnx
+  - title: Policy for AWS security groups
+    path: /security/aws-security-group-integration/
+    section:
+    - title: Overview
+      path: /security/aws-security-group-integration/overview
+    - title: Interconnect your VPC and cluster
+      path: /security/aws-security-group-integration/interconnection
+    - title: Enable pods to access VPC members
+      path: /security/aws-security-group-integration/pod-access
+    - title: Enable VPC members to access pods
+      path: /security/aws-security-group-integration/vpc-member-access
+    - title: Enable access to AWS metadata
+      path: /security/aws-security-group-integration/metadata-access
+    - title: Manage tiers associated with security group integration
+      path: /security/aws-security-group-integration/tier-management
+    - title: Host endpoints
+      path: /security/aws-security-group-integration/host-endpoints
+- title: Threat detection and prevention
+  path: /security/threat-detection-and-prevention/
+  section:
+  - title: Alerts
+    path: /security/threat-detection-and-prevention/alerts
+  - title: Anomaly detection
+    path: /security/threat-detection-and-prevention/anomaly-detection/
+    section:
+    - title: Overview
+      path: /security/threat-detection-and-prevention/anomaly-detection/overview
+    - title: Enable anomaly detection
+      path: /security/threat-detection-and-prevention/anomaly-detection/enabling
+    - title: View anomalies
+      path: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
+    - title: Anomaly detection job descriptions
+      path: /security/threat-detection-and-prevention/anomaly-detection/job-descriptions
+    - title: Customize anomaly detection jobs
+      path: /security/threat-detection-and-prevention/anomaly-detection/customizing
+  - title: Trace and block suspicious IPs
+    path: /security/threat-detection-and-prevention/suspicious-IPs
+  - title: Trace and block suspicious domains
+    path: /security/threat-detection-and-prevention/suspicious-domains
+  - title: Trace and block external IP addresses
+    path: /security/ingress
+  - title: Trace anonymous communication using Tor-VPN feeds
+    path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
+- title: Compliance reports
+  path: /security/compliance-reports/
+  section:
+  - title: Configure compliance reports
+    path: /security/compliance-reports/overview
+  - title: Configure compliance reports for managed cloud providers
+    path: /security/compliance-managed-cloud
+  - title: Configure CIS benchmark reports
+    path: /security/compliance-reports-cis
+- title: Logs
+  path: /security/logs/
+  section:
+  - title: Elasticsearch logs
+    path: /security/logs/elastic/
+    section:
+    - title: Overview
+      path: /security/logs/elastic/overview
+    - title: Configure RBAC for Elasticsearch logs and events
+      path: /security/logs/rbac-elasticsearch
+    - title: Access Elasticsearch logs
+      path: /security/logs/elastic/view
+    - title: Flow logs
+      path: /security/logs/elastic/flow
+    - title: Audit logs
+      path: /security/logs/elastic/ee-audit
+    - title: DNS logs
+      path: /security/logs/elastic/dns
+    - title: Configure data retention
+      path: /security/logs/retention
+    - title: Archive logs to storage
+      path: /security/logs/elastic/archive-storage
+    - title: Filter flow logs
+      path: /security/logs/elastic/filtering
+    - title: Filter out DNS logs
+      path: /security/logs/elastic/filtering-dns
+  - title: iptables logs
+    path: /security/logs/iptables
+- title: Get started with Calico and Kubernetes policies
   path: /security/get-started
   section:
   - title: Calico policy
@@ -12,8 +111,6 @@ section:
     section:
     - title: Get started with Calico network policy
       path: /security/calico-network-policy
-    - title: Get started with Calico network policy for OpenStack
-      path: /security/network-policy-openstack
   - title: Kubernetes policy
     path: /security/kubernetes-policy
     section:
@@ -25,78 +122,75 @@ section:
       path: /security/tutorials/kubernetes-policy-basic
     - title: Kubernetes policy, advanced tutorial
       path: /security/tutorials/kubernetes-policy-advanced
-  - title: Enable default deny 
-    path: /security/kubernetes-default-deny    
-- title: Policy rules
-  path: /security/policy-rules
-  section:
-  - title: Basic rules
-    path: /security/policy-rules-overview
-  - title: Namespace rules
-    path: /security/namespace-policy
-  - title: Service accounts rules
-    path: /security/service-accounts
-  - title: External IPs or networks rules
-    path: /security/external-ips-policy
-  - title: ICMP/ping rules
-    path: /security/icmp-ping
-- title: Policy for hosts
-  path: /security/hosts
-  section:
-  - title: Protect hosts
-    path: /security/protect-hosts
-  - title: Protect host tutorial
-    path: /security/tutorials/protect-hosts
-  - title: Apply policy to host forwarded traffic
-    path: /security/host-forwarded-traffic
-- title: Policy for services
-  path: /security/services
-  section:
-  - title: Apply policy to Kubernetes node ports
-    path: /security/kubernetes-node-ports
-  - title: Apply policy to services exposed externally as cluster IPs
-    path: /security/services-cluster-ips
-- title: Policy for Istio
-  path: /security/istio
-  section:
-  - title: Enable network policy for Istio
-    path: /security/app-layer-policy
-  - title: Enforce network policy using Istio
-    path: /security/enforce-policy-istio
-  - title: Use HTTP methods and paths in policy rules
-    path: /security/http-methods
-  - title: Enforce network policy using Istio tutorial
-    path: /security/tutorials/app-layer-policy/enforce-policy-istio
-- title: Policy for extreme traffic
-  path: /security/extreme-traffic
-  section:
-  - title: Enable extreme high-connection workloads
-    path: /security/high-connection-workloads
-  - title: Defend against DoS attacks
-    path: /security/defend-dos-attack
-- title: Secure Calico component communications
+  - title: Enable default deny
+    path: /security/kubernetes-default-deny
+  - title: Policy rules
+    path: /security/policy-rules
+    section:
+    - title: Basic rules
+      path: /security/policy-rules-overview
+    - title: Namespace rules
+      path: /security/namespace-policy
+    - title: Service accounts rules
+      path: /security/service-accounts
+    - title: External IPs or networks rules
+      path: /security/external-ips-policy
+    - title: ICMP/ping rules
+      path: /security/icmp-ping
+    - title: Use domain names in policy rules
+      path: /security/domain-based-policy
+  - title: Policy for hosts
+    path: /security/hosts
+    section:
+    - title: Protect hosts
+      path: /security/protect-hosts
+    - title: Protect host tutorial
+      path: /security/tutorials/protect-hosts
+    - title: Apply policy to host forwarded traffic
+      path: /security/host-forwarded-traffic
+  - title: Policy for services
+    path: /security/services
+    section:
+    - title: Apply policy to Kubernetes node ports
+      path: /security/kubernetes-node-ports
+    - title: Apply policy to services exposed externally as cluster IPs
+      path: /security/services-cluster-ips
+  - title: Policy for Istio
+    path: /security/istio
+    section:
+    - title: Enable network policy for Istio
+      path: /security/app-layer-policy
+    - title: Enforce network policy using Istio
+      path: /security/enforce-policy-istio
+    - title: Use HTTP methods and paths in policy rules
+      path: /security/http-methods
+    - title: Enforce network policy using Istio tutorial
+      path: /security/tutorials/app-layer-policy/enforce-policy-istio
+  - title: Policy for extreme traffic
+    path: /security/extreme-traffic
+    section:
+    - title: Enable extreme high-connection workloads
+      path: /security/high-connection-workloads
+    - title: Defend against DoS attacks
+      path: /security/defend-dos-attack
+- title: Secure Calico Enterprise component communications
   path: /security/comms/
   section:
+  - title: Provide TLS certificates for the manager UI
+    path: /security/comms/manager-tls
+  - title: Provide TLS certificates for log storage
+    path: /security/comms/log-storage-tls
+  - title: Provide TLS certificates for Kibana
+    path: /security/comms/kibana-tls
   - title: Configure encryption and authentication
     path: /security/comms/crypto-auth
+  - title: Provide TLS certificates for the API server
+    path: /security/comms/apiserver-tls
+  - title: Provide TLS certificates for Typha and Node
+    path: /security/comms/typha-node-tls
   - title: Schedule Typha for scaling to well-known nodes
     path: /security/comms/reduce-nodes
-  - title: Secure Calico Prometheus endpoints
+  - title: Secure Calico Enterprise Prometheus endpoints
     path: /security/comms/secure-metrics
-- title: Calico Enterprise
-  path: /security/calico-enterprise/
-  section:
-  - title: Network visibility
-    path: /security/calico-enterprise/network-visibility
-  - title: Advanced egress access controls 
-    path: /security/calico-enterprise/egress-access-controls
-  - title: Advanced compliance controls 
-    path: /security/calico-enterprise/compliance
-  - title: Federation
-    path: /security/calico-enterprise/federation
-  - title: Threat defense
-    path: /security/calico-enterprise/threat-defense
-  - title: User console
-    path: /security/calico-enterprise/user-console
-  - title: Policy workflow
-    path: /security/calico-enterprise/policy-workflow
+  - title: Secure BGP sessions
+    path: /security/comms/secure-bgp

@@ -60,11 +60,11 @@ component needs access to in etcd to function successfully.
 > operation requires root privileges on the etcd cluster. You should
 > [configure auto-compaction](https://etcd.io/docs/v3.3.12/op-guide/maintenance/)
 > on your etcd cluster and
-> [disable `calico/kube-controllers` periodic compaction](/reference/kube-controllers/configuration).
+> [disable `calico/kube-controllers` periodic compaction]({{site.baseurl}}/reference/kube-controllers/configuration).
 {: .alert .alert-info}
 
 
-## OpenStack Calico driver for Neutron
+## calico/kube-controllers
 
 | Path                                      | Access |
 |-------------------------------------------|--------|
@@ -76,14 +76,6 @@ component needs access to in etcd to function successfully.
 | /calico/openstack/v2/\*                   |   RW   |
 | /calico/felix/v1/\*                       |   R    |
 | /calico/felix/v2/\*                       |   R    |
-
-## OpenStack Calico DHCP agent
-
-| Path                                      | Access |
-|-------------------------------------------|--------|
-| /calico/resources/v3/projectcalico.org/\* |   R    |
-| /calico/dhcp/v1/\*                        |   R    |
-| /calico/dhcp/v2/\*                        |   R    |
 
 ## calicoctl (read only access)
 

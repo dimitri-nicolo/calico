@@ -32,8 +32,8 @@
     function initializeInstantSearch(currentDocVersion, inputSelector, resultsSelector, paginationSelector) {
         var search = instantsearch({
             appId: 'BH4D9OD16A',
-            apiKey: '99def7ba73ea2430f7f42383148fe57a',
-            indexName: 'projectcalico',
+            apiKey: 'dafa9b5f25919295327a45e10a47bde5',
+            indexName: 'tigera',
             routing: false,
             searchParameters: {
                 hitsPerPage: 10,

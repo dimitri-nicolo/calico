@@ -1,15 +1,13 @@
 ## Node requirements
 
-- x86-64 processor
+- AMD64 processor with at least 2 cores, 8.0GB RAM and 20 GB free disk space
 
 - Linux kernel 3.10 or later with [required dependencies](#kernel-dependencies).
   The following distributions have the required kernel, its dependencies, and are
-  known to work well with {{site.prodname}} and {{include.orch}}.
-  - RedHat Linux 7{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
+  known to work well with {{site.prodname}} and {{include.orch}}.{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
   - CentOS 7
-  - CoreOS Container Linux stable
   - Ubuntu 16.04
-  - Debian 8
+  - Debian 9
   {% endif %}{% if include.orch == "OpenShift" %}
   - RedHat Container OS
   {% endif %}{% if include.orch == "OpenStack" %}
@@ -26,6 +24,9 @@
   > [Preventing NetworkManager from controlling {{site.prodname}} interfaces]({{ site.baseurl }}/maintenance/troubleshooting#configure-networkmanager)
   > before installing {{site.prodname}}.
   {: .alert .alert-info}
+
+- In order to properly run Elasticsearch, nodes must be configured according to the
+  [Elasticsearch system configuration documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/system-config.html){:target="_blank"}
 
 ## Key/value store
 
@@ -49,19 +50,26 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 | Configuration                                                | Host(s)              | Connection type | Port/protocol |
 |--------------------------------------------------------------|----------------------|-----------------|---------------|
 | {{site.prodname}} networking (BGP)                           | All                  | Bidirectional   | TCP 179 |
-| {{site.prodname}} networking with IP-in-IP enabled (default) | All                  | Bidirectional   | IP-in-IP, often represented by its protocol number `4` |
+| {{site.prodname}} networking in IP-in-IP mode (default mode) | All                  | Bidirectional   | IP-in-IP, often represented by its protocol number `4` |
 {%- if include.orch == "OpenShift" %}
 | {{site.prodname}} networking with VXLAN enabled              | All                  | Bidirectional   | UDP 4789 |
 | Typha access                                                 | Typha agent hosts    | Incoming        | TCP 5473 (default) |
 | All                                                         | kube-apiserver host  | Incoming        | Often TCP 443 or 8443\* |
+| etcd datastore                                               | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
 {%- else if include.orch == "Kubernetes" %}
 | {{site.prodname}} networking with VXLAN enabled              | All                  | Bidirectional   | UDP 4789 |
 | {{site.prodname}} networking with Typha enabled              | Typha agent hosts    | Incoming        | TCP 5473 (default) |
-| flannel networking (VXLAN)                                   | All                  | Bidirectional   | UDP 4789 |
 | All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 6443\* |
 | etcd datastore                                               | etcd hosts           | Incoming        | {% include open-new-window.html text='Officially' url='http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt' %}  TCP 2379 but can vary |
 {%- else %}
 | All                                                          | etcd hosts           | Incoming        | {% include open-new-window.html text='Officially' url='http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt' %}  TCP 2379 but can vary |
+{%- endif %}
+{%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
+| All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)
+| All                                                          | agent hosts         | Incoming        | TCP 9081 (default)
+| All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)
+| All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)
+| All                                                          | {{site.prodname}} Manager host | Incoming | TCP 30003 and 9443 (defaults)
 {%- endif %}
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
 

@@ -1,6 +1,6 @@
 ---
-title: Enforce Calico network policy using Istio (tutorial)
-description: Learn how Calico integrates with Istio to provide fine-grained access control using Calico network policies enforced within the service mesh and network layer.
+title: Enforce Calico Enterprise network policy using Istio (tutorial)
+description: Learn how Calico Enterprise integrates with Istio to provide fine-grained access control using Calico Enterprise network policies enforced within the service mesh and network layer.
 canonical_url: '/security/tutorials/app-layer-policy/enforce-policy-istio'
 ---
 
@@ -11,7 +11,7 @@ This tutorial sets up a microservices application, then demonstrates how to use 
 1. Build a Kubernetes cluster.
 2. Install Calico on Kubernetes:
   - If Calico is not installed on Kubernetes, see [Calico on Kubernetes]({{ site.baseurl }}/getting-started/kubernetes/quickstart).
-  - If Calico is already installed on Kubernetes, verify that [Calico networking]({{ site.baseurl }}/getting-started/kubernetes/installation/) (or a non-Calico CNI) and Calico network policy are installed. 
+  - If Calico is already installed on Kubernetes, verify that [Calico networking]({{ site.baseurl }}/reference/other-install-methods/kubernetes/installation/) (or a non-Calico CNI) and Calico network policy are installed. 
 3. Install the [calicoctl command line tool]({{ site.baseurl }}/getting-started/clis/calicoctl/install).   
   **Note**: Ensure calicoctl is configured to connect with your datastore.  
 4. [Enable application layer policy]({{site.baseurl}}/security/app-layer-policy).  
@@ -185,7 +185,7 @@ Return to your web browser and refresh to confirm the new balance.
 We can mitigate both of the above deficiencies with a {{site.prodname}} policy.
 
     wget {{ "/security/tutorials/app-layer-policy/manifests/30-policy.yaml" | absolute_url }}
-    calicoctl create -f 30-policy.yaml
+    kubectl create -f 30-policy.yaml
 
 > **Note**: You can also
 > [view the manifest in your browser](manifests/30-policy.yaml){:target="_blank"}.

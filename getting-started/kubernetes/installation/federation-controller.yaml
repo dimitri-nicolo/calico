@@ -1,0 +1,6 @@
+---
+layout: null
+---
+{% helm --execute templates/tigera-federation-controller.yaml %}
+datastore: etcd
+{% endhelm %}
