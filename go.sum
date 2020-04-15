@@ -733,6 +733,8 @@ github.com/tigera/compliance v0.0.0-20200408084422-a792b615976c h1:zyWc6JuL9DYxg
 github.com/tigera/compliance v0.0.0-20200408084422-a792b615976c/go.mod h1:IF8Ixw5H5OkRZx2PYENFxUuecX05LiKuGyX5Kpf4Dcs=
 github.com/tigera/compliance v0.0.0-20200409083939-97a32524fc71 h1:yzpWXDMNJfkkwGL2E0VIZ4IW92WUcWO/XY20L9cIris=
 github.com/tigera/compliance v0.0.0-20200409083939-97a32524fc71/go.mod h1:NllljVHq7HWjhyGgAfoyl7ryEx+MMEd3iIZ67J07w2w=
+github.com/tigera/compliance v0.0.0-20200415083613-cf071576b5d9 h1:vjTXrvVH6KCVrBs1I0YCP5GUCUw0H6y3hbBQmA7Teww=
+github.com/tigera/compliance v0.0.0-20200415083613-cf071576b5d9/go.mod h1:22iq3st9zbOkJr0veJDOHZwmRc62neYz/l1tyGJUf+s=
 github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88 h1:dXeMb8xlhjz7hKBB24h//knVNbJiiWFtxZLSUZyhQLI=
 github.com/tigera/felix-private v0.0.0-20200318014531-3f44cbe94f88/go.mod h1:Wc4LaDyEeaY4JLoWz/iv/pYSockBULWvyQfZrk4Wxdo=
 github.com/tigera/felix-private v0.0.0-20200321051644-defc44521de1 h1:l3u/6gD4+82UnG2fl6m2/51tlCtmOp4vFiTQY0099Ac=
@@ -747,6 +749,8 @@ github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea h1:Ps1lZnHJGV
 github.com/tigera/felix-private v0.0.0-20200403234312-901077b0ebea/go.mod h1:4zfsxW5N/JiuBpHF79cZgPkKBTe8a1LxWytkIoWyEN4=
 github.com/tigera/felix-private v0.0.0-20200407051551-f35754c9f968 h1:HRvA8oaqDz3iY06Ga79kvtmo9suWpvDKwWU6uTV0IoU=
 github.com/tigera/felix-private v0.0.0-20200407051551-f35754c9f968/go.mod h1:otGLrKWyGECIV4lMQGMjpMd+DIfSbZ4PD/4QD+7Ke6s=
+github.com/tigera/felix-private v0.0.0-20200415003436-babb43054a98 h1:QWqqSCSfamhFE90qED/I8I6wmivNaf64bZXqBAsfyGU=
+github.com/tigera/felix-private v0.0.0-20200415003436-babb43054a98/go.mod h1:9GL/6JkLXBuSHBJK3ewqp35SRUMCry7RNsvjzMWOJGs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2 h1:rMHGas5ArplOYB6S41+pgm+Y3BHaNZ3pMvEAMyHXNec=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200330205903-19b2b3637426 h1:tn1exO9xZ67SGPctGwRir9nfrocvpiHl9K9dvXRAgOo=
@@ -759,6 +763,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200407132847-869937d9abd9 h1:v
 github.com/tigera/libcalico-go-private v1.7.2-0.20200407132847-869937d9abd9/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200408235326-2d87c5556638 h1:JYOxEVOAYkMFvU3u4JNQUhVUl/DMwSjpWKpkQCEqRQs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200408235326-2d87c5556638/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200409223125-f1969535eacb h1:VXl+QLO2OHTrbSeNOihU12TxUGtSHTqMVHctMsRB3FI=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200409223125-f1969535eacb/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd h1:vc4h2Gta79wo0bf5XB6tmEY6FQKialn4bsoX5I0ycgA=
 github.com/tigera/licensing v0.0.0-20200312171700-7915aacf10cd/go.mod h1:ggbUxcPxiZ/svK/Vl5qNfeGkPrKjpiBTqEOpKwKGILo=
@@ -766,6 +772,8 @@ github.com/tigera/licensing v1.0.1-0.20200319192200-2922adbd39e9 h1:MJNxGuNjm3LU
 github.com/tigera/licensing v1.0.1-0.20200319192200-2922adbd39e9/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v1.0.1-0.20200324041600-0753b0f90e1c h1:2TEHzxqijRWyl+dror7Kks+dKkIivy0SYUjFPu8bWRc=
 github.com/tigera/licensing v1.0.1-0.20200324041600-0753b0f90e1c/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
+github.com/tigera/licensing v1.0.1-0.20200331233106-fb744365c2e5 h1:QFl5iToDPni+G7IXYHCzDYmmaW3Hi1Dnw6ZP1wjWs2Q=
+github.com/tigera/licensing v1.0.1-0.20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/lma v0.0.0-20200123220144-edc759a0a7b8/go.mod h1:OHcY7YcS7IXUd2hTFGqAUns2qzyfe7V4lNUbjfR+CLg=
 github.com/tigera/lma v0.0.0-20200227192215-10278780fefe h1:JxX4i/Dav+0toxyIWFLUmbkqFLwdngkNvMHvZBEJHlw=
 github.com/tigera/lma v0.0.0-20200227192215-10278780fefe/go.mod h1:Qd/7hfGQyW5W3XW9nhll6eadqufKUB/0AMJlbfgISiA=
@@ -782,6 +790,8 @@ github.com/tigera/lma v0.0.0-20200406190433-4300a33068d6 h1:BUY9RkHIalTrwlJPhGBZ
 github.com/tigera/lma v0.0.0-20200406190433-4300a33068d6/go.mod h1:HBTfTBWrb+2duMGfEoyvZr2QwpYq4+NG5Uu3Ax74Bc0=
 github.com/tigera/lma v0.0.0-20200407190437-33dac3f382ff h1:Z2nRrSXfwPcd4pRvPf7h9kT59UvMjd5UsCFdxSr3ydw=
 github.com/tigera/lma v0.0.0-20200407190437-33dac3f382ff/go.mod h1:91vuWaYlYaxtaeYYKuQE/uslLxXYqRXGdGxik/a1NMM=
+github.com/tigera/lma v0.0.0-20200410020428-b2f99248814c h1:1zvIMdW7x2hyKq14jWDiaEYaaLB9LnWH1Fd3bEig8nA=
+github.com/tigera/lma v0.0.0-20200410020428-b2f99248814c/go.mod h1:vGoBnW22RNXh/ZUgJCeoR8y5bRl8qESznITsBn4ievY=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
