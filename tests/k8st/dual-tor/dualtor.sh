@@ -53,7 +53,7 @@ function install_tsee() {
     # Install using manifests which are Calico open source
     # Install Calico, with correct pod CIDR and without IP-in-IP.
     cat ${tmpd}/calico.yaml | \
-        sed 's,192.168.0.0/16,10.244.0.0/16,' | \
+        sed 's,192.168.128.0/17,10.244.0.0/16,' | \
         sed 's,"Always","Never",' | \
         sed 's,image: .*calico/node:.*,image: tigera/cnx-node:latest-amd64,' | \
         ${kubectl} apply -f -
@@ -299,7 +299,7 @@ EOF
 
     # Disable the full mesh and configure Calico nodes to peer instead
     # with their ToR.
-    cat << EOF >> ${tmpd}/bgp.yaml
+    cat << EOF | ${kubectl} exec -ti -n kube-system calicoctl -- /calicoctl apply -f -
 apiVersion: projectcalico.org/v3
 kind: BGPConfiguration
 metadata:
@@ -334,10 +334,6 @@ spec:
   restartMode: LongLivedGracefulRestart
   birdGatewayMode: DirectIfDirectlyConnected
 EOF
-
-    ${kubectl} cp ${tmpd}/bgp.yaml calicoctl:/tmp/bgp.yaml -n kube-system
-    ${kubectl} exec -t -n kube-system calicoctl -- /calicoctl apply -f /tmp/bgp.yaml
-    rm ${tmpd}/bgp.yaml
 
     # Correspondingly, configure the ToR end of those peerings.
     cat <<EOF | docker exec -i bird-a1 sh -c "cat > /etc/bird/nodes-ra1.conf"
@@ -394,7 +390,7 @@ EOF
     if ${DUAL}; then
         echo "song DUAL setup"
 	# Similar peering config for the second plane.
-        cat << EOF >> ${tmpd}/bgp.yaml
+        cat << EOF | ${kubectl} exec -it -n kube-system calicoctl -- /calicoctl apply -f -
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
@@ -421,9 +417,6 @@ spec:
   restartMode: LongLivedGracefulRestart
   birdGatewayMode: DirectIfDirectlyConnected
 EOF
-        ${kubectl} cp ${tmpd}/bgp.yaml calicoctl:/tmp/bgp.yaml -n kube-system
-        ${kubectl} exec -t -n kube-system calicoctl -- /calicoctl apply -f /tmp/bgp.yaml
-        rm ${tmpd}/bgp.yaml
         echo "song DUAL setup done"
 
 	cat <<EOF | docker exec -i bird-a2 sh -c "cat > /etc/bird/nodes-ra2.conf"
@@ -492,7 +485,7 @@ EOF
     docker exec kind-worker3 ip r
 
     # Setup ippool for loopback addresses.
-    cat << EOF >> ${tmpd}/ippool.yaml
+    cat << EOF | ${kubectl} exec -it -n kube-system calicoctl -- /calicoctl apply -f -
 apiVersion: projectcalico.org/v3
 kind: IPPool
 metadata:
@@ -513,10 +506,6 @@ spec:
   disabled: true
   nodeSelector: all()
 EOF
-
-    ${kubectl} cp ${tmpd}/ippool.yaml calicoctl:/tmp/ippool.yaml -n kube-system
-    ${kubectl} exec -t -n kube-system calicoctl -- /calicoctl apply -f /tmp/ippool.yaml
-    rm ${tmpd}/ippool.yaml
 
     # For the nodes in rack A...
     for n in kind-control-plane kind-worker; do

@@ -81,7 +81,7 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   disableDefaultCNI: true
-  podSubnet: "192.168.0.0/16,fd00:10:244::/64"
+  podSubnet: "192.168.128.0/17,fd00:10:244::/64"
   ipFamily: DualStack
 nodes:
 # the control plane node
@@ -126,12 +126,11 @@ ${kubectl} -n kube-system create secret generic cnx-pull-secret \
    --type=kubernetes.io/dockerconfigjson
 
 echo "Install Calico and Calicoctl for dualstack"
-${kubectl} apply -f $TEST_DIR/infra/etcd.yaml
-cp $TEST_DIR/infra/calico-etcd.yaml $TEST_DIR/infra/calico.yaml
+cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml
 enable_dual_stack $TEST_DIR/infra/calico.yaml
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml
 # Install Calicoctl on master node, avoid network disruption during bgp configuration.
-cat ${TEST_DIR}/infra/calicoctl-etcd.yaml | \
+cat ${TEST_DIR}/infra/calicoctl.yaml | \
     sed 's,beta.kubernetes.io/os: linux,beta.kubernetes.io/os: linux\n  nodeName: kind-control-plane,' | \
     ${kubectl} apply -f -
 echo
