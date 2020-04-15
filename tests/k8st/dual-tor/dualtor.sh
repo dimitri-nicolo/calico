@@ -53,7 +53,7 @@ function install_tsee() {
     # Install using manifests which are Calico open source
     # Install Calico, with correct pod CIDR and without IP-in-IP.
     cat ${tmpd}/calico.yaml | \
-        sed 's,192.168.0.0/16,10.244.0.0/16,' | \
+        sed 's,192.168.128.0/17,10.244.0.0/16,' | \
         sed 's,"Always","Never",' | \
         sed 's,image: .*calico/node:.*,image: tigera/cnx-node:latest-amd64,' | \
         ${kubectl} apply -f -

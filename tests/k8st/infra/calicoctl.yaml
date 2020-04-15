@@ -78,6 +78,7 @@ rules:
       - ipamblocks
       - blockaffinities
       - ipamhandles
+      - tiers
     verbs:
       - create
       - get
@@ -105,4 +106,3 @@ subjects:
 - kind: ServiceAccount
   name: calicoctl
   namespace: kube-system
-
