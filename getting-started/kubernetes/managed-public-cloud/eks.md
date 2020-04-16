@@ -15,6 +15,8 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
+- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components.
+
 ### How to
 
 1. [Install {{site.prodname}}](#install-calico-enterprise)
