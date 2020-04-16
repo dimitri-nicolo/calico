@@ -1634,7 +1634,7 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 				"StagedKubernetesNetworkPolicySpec", "", reason("Spec fields should all be zero-value if stagedAction is Delete"), "")
 		}
 	} else {
-		c := calicoconversion.Converter{}
+		c := calicoconversion.NewConverter()
 		_, v1np := api.ConvertStagedKubernetesPolicyToK8SEnforced(&staged)
 		npKVPair, err := c.K8sNetworkPolicyToCalico(v1np)
 		if err != nil {
