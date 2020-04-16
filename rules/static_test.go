@@ -59,6 +59,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkScratch0:        0x40,
 					IptablesMarkScratch1:        0x80,
 					IptablesMarkDrop:            0x200,
+					IptablesMarkEgress:          0x400,
 					IptablesMarkEndpoint:        0xff000,
 					IptablesMarkNonCaliEndpoint: 0x1000,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
@@ -521,6 +522,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkPass:            0x20,
 					IptablesMarkScratch0:        0x40,
 					IptablesMarkScratch1:        0x80,
+					IptablesMarkEgress:          0x400,
 					IptablesMarkEndpoint:        epMark,
 					IptablesMarkNonCaliEndpoint: 0x1000,
 					IptablesMarkDrop:            0x200,
@@ -899,6 +901,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,
 				IptablesMarkScratch1:        0x80,
+				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x1000,
 				IptablesMarkDrop:            0x200,
@@ -999,6 +1002,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch0:         0x40,
 				IptablesMarkScratch1:         0x80,
 				IptablesMarkDrop:             0x200,
+				IptablesMarkEgress:           0x400,
 				IptablesMarkEndpoint:         0xff000,
 				IptablesMarkNonCaliEndpoint:  0x1000,
 			}
@@ -1103,6 +1107,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch0:         0x40,
 				IptablesMarkScratch1:         0x80,
 				IptablesMarkDrop:             0x200,
+				IptablesMarkEgress:           0x400,
 				IptablesMarkEndpoint:         0xff000,
 				IptablesMarkNonCaliEndpoint:  0x1000,
 				IptablesFilterAllowAction:    "RETURN",
@@ -1161,6 +1166,85 @@ var _ = Describe("Static", func() {
 		})
 	})
 
+	Describe("with Egress IP enabled", func() {
+		BeforeEach(func() {
+			conf = Config{
+				WorkloadIfacePrefixes:       []string{"tap"},
+				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				EgressIpEnabled:             true,
+				IptablesMarkAccept:          0x10,
+				IptablesMarkPass:            0x20,
+				IptablesMarkScratch0:        0x40,
+				IptablesMarkScratch1:        0x80,
+				IptablesMarkDrop:            0x200,
+				IptablesMarkEgress:          0x400,
+				IptablesMarkEndpoint:        0xff000,
+				IptablesMarkNonCaliEndpoint: 0x1000,
+			}
+		})
+
+		It("IPv4: Should return expected NAT prerouting chain", func() {
+			Expect(rr.StaticNATPreroutingChains(4)).To(Equal([]*Chain{
+				{
+					Name: "cali-PREROUTING",
+					Rules: []Rule{
+						{Action: JumpAction{Target: "cali-fip-dnat"}},
+					},
+				},
+				{
+					Name: "cali-egress-set-mark",
+					Rules: []Rule{
+						{
+							Action: SetMaskedMarkAction{Mark: 0x400, Mask: 0x400},
+							Match: Match().
+								SourceIPSet("cali40all-ipam-pools").
+								NotDestIPSet("cali40all-ipam-pools").
+								NotDestIPSet("cali40all-hosts-net"),
+							Comment: []string{"Set mark for egress packet"},
+						},
+						{
+							Match:  Match().MarkSingleBitSet(0x400),
+							Action: SaveConnMarkAction{},
+							Comment: []string{"Save mark for egress connection"},
+						},
+					},
+				},
+			}))
+		})
+
+		It("IPv6: Should return expected NAT prerouting chain", func() {
+			Expect(rr.StaticNATPreroutingChains(6)).To(Equal([]*Chain{
+				{
+					Name: "cali-PREROUTING",
+					Rules: []Rule{
+						{Action: JumpAction{Target: "cali-fip-dnat"}},
+					},
+				},
+			}))
+		})
+
+		It("IPv4: Should return expected mangle PREROUTING chain", func() {
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-egress-restore-mark")).To(Equal(&Chain{
+				Name: "cali-egress-restore-mark",
+				Rules: []Rule{
+					{
+						Match: Match().SourceIPSet("cali40all-ipam-pools"),
+						Action: RestoreConnMarkAction{
+							RestoreMask: 0x400,
+						},
+						Comment: []string{"Restore connmark for pod traffic"},
+					},
+				},
+			}))
+		})
+
+		It("IPv6: Should return expected mangle PREROUTING chain", func() {
+			var nilChain *Chain
+			Expect(findChain(rr.StaticMangleTableChains(6), "cali-egress-restore-mark")).To(Equal(nilChain))
+		})
+	})
+
 	Describe("with RETURN accept action", func() {
 		epMark := uint32(0xff000)
 		BeforeEach(func() {
@@ -1173,6 +1257,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch0:        0x40,
 				IptablesMarkScratch1:        0x80,
 				IptablesMarkDrop:            0x200,
+				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        epMark,
 				IptablesMarkNonCaliEndpoint: 0x1000,
 				IptablesFilterAllowAction:   "RETURN",
@@ -1264,6 +1349,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch0:        0x40,
 				IptablesMarkScratch1:        0x80,
 				IptablesMarkDrop:            0x100,
+				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x2000,
 			}
@@ -1411,6 +1497,7 @@ var _ = Describe("DropRules", func() {
 				IptablesMarkScratch0:        0x40,
 				IptablesMarkScratch1:        0x80,
 				IptablesMarkDrop:            0x200,
+				IptablesMarkEgress:          0x400,
 				IptablesMarkEndpoint:        0xff000,
 				IptablesMarkNonCaliEndpoint: 0x1000,
 			}

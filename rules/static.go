@@ -771,10 +771,41 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chai
 		})
 	}
 
-	return []*Chain{{
+	chains := []*Chain{{
 		Name:  ChainNATPrerouting,
 		Rules: rules,
 	}}
+
+	if ipVersion  == 4 && r.EgressIpEnabled {
+		var egressRules []Rule
+
+		// Set mark on first packet from a pod to destinations other than pod or host.
+		egressRules = append(egressRules,
+			Rule{
+				Match: Match().
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
+					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
+					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)),
+				Action: SetMaskedMarkAction{
+					Mark: r.IptablesMarkEgress,
+					Mask: r.IptablesMarkEgress},
+				Comment: []string{"Set mark for egress packet"},
+			},
+		)
+
+		// Save mark to connmark which is used to be restored for subsequent packets in the same connection.
+		egressRules = append(egressRules,
+			Rule{
+				Match: Match().MarkSingleBitSet(r.IptablesMarkEgress),
+				Action: SaveConnMarkAction{},
+				Comment: []string{"Save mark for egress connection"},
+			},
+		)
+
+		chains = append(chains, &Chain{Name: ChainNATPreroutingEgressSetMark, Rules: egressRules})
+	}
+
+	return chains
 }
 
 func (r *DefaultRuleRenderer) StaticNATPostroutingChains(ipVersion uint8) []*Chain {
@@ -848,11 +879,33 @@ func (r *DefaultRuleRenderer) StaticNATOutputChains(ipVersion uint8) []*Chain {
 	}}
 }
 
-func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains []*Chain) {
-	return []*Chain{
+func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) []*Chain {
+	var chains []*Chain
+
+	// Make Egress chain at the top.
+	if ipVersion == 4 && r.EgressIpEnabled {
+		var rules []Rule
+
+		// Restore ConnMark for pod traffic.
+		rules = append(rules,
+			Rule{
+				Match: Match().SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
+				Action: RestoreConnMarkAction{
+					RestoreMask: r.IptablesMarkEgress,
+				},
+				Comment: []string{"Restore connmark for pod traffic"},
+			},
+		)
+
+		chains = append(chains, &Chain{Name: ChainManglePreroutingEgressRestoremark, Rules: rules})
+	}
+
+	chains = append(chains,
 		r.failsafeInChain("mangle"),
 		r.StaticManglePreroutingChain(ipVersion),
-	}
+	)
+
+	return chains
 }
 
 func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *Chain {
