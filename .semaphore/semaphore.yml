@@ -55,6 +55,15 @@ blocks:
     - name: "make cd"
       commands:
       - if [ -z SEMAPHORE_GIT_PR_NUMBER ]; then make image cd; fi
+    - name: "make windows"
+      commands:
+      - if [ -z SEMAPHORE_GIT_PR_NUMBER ]; then make build-windows-archive; fi
+      - artifact push workflow ${WINDOWS_ZIP_WILDCARD} --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+      env_vars:
+        - name: SEMAPHORE_ARTIFACT_EXPIRY
+          value: 1w
+        - name: WINDOWS_ZIP_WILDCARD
+          value: "./dist/tigera-calico-windows*.zip"
 
 # If tests have passed, then update pins and try to commit them.
 # We'll only do this on scheduled builds, where we have credentials to do so.
