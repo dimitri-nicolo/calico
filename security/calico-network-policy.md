@@ -97,6 +97,11 @@ The Kubernetes network policy specification defines the following behavior:
 
 For compatibility with Kubernetes, **Calico network policy** follows the same behavior for Kubernetes pods.  For other endpoint types (VMs, host interfaces), Calico network policy is default deny. That is, only traffic specifically allowed by network policy is allowed, even if no network policies apply to the endpoint.
 
+### Before you begin
+
+`calicoctl` must be **installed** and **configured** before use. `calicoctl` will use etcd as the datastore by default, but many {{site.prodname}} installation manifests configure Kubernetes as the datastore. You can find more information on how to configure `calicoctl` in the following link:
+
+- [Configure `calicoctl`]({{ site.baseurl }}/getting-started/clis/calicoctl/configure/overview)
 
 ### How to
 
