@@ -792,6 +792,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20200408235326-2d87c5556638 h1:keP
 github.com/tigera/libcalico-go-private v0.0.0-20200408235326-2d87c5556638/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v0.0.0-20200409223125-f1969535eacb h1:rh8a4BeV0lC0KmEQ4Drhgw0LdOLyrnVNX2VWDYWUnCQ=
 github.com/tigera/libcalico-go-private v0.0.0-20200409223125-f1969535eacb/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
+github.com/tigera/libcalico-go-private v0.0.0-20200415140238-a18ed5d03446 h1:idt5Sbd00LYDkQ85t+4S7OuLoMeE2WLId1aKPW7Fqtw=
+github.com/tigera/libcalico-go-private v0.0.0-20200415140238-a18ed5d03446/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11 h1:moxhMENpxz/XO+jFA4NHz0ZS6B4UkSXCRT+WHWhmgSs=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200310204028-59913de27e11/go.mod h1:Qc02tAz0HSmCeGDiiALehQJFKTWOaYQdlIH/T1eYsI8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200319165815-dcfd07befeb2 h1:rMHGas5ArplOYB6S41+pgm+Y3BHaNZ3pMvEAMyHXNec=
@@ -828,6 +830,7 @@ github.com/tigera/typha-private v0.0.0-20200407230043-2242c8068e32/go.mod h1:Hmk
 github.com/tigera/typha-private v0.0.0-20200409102455-041dd897f4c9/go.mod h1:5pC6y7N3iSZqRz4oQpgWpzOIzjHdjfolJl6yWxPjAFM=
 github.com/tigera/typha-private v0.0.0-20200410163348-f0d8542d9f93/go.mod h1:9Ctl2UfXtHh3vj7o2jtsbnsn+bVL5qdee61WR5jEA1c=
 github.com/tigera/typha-private v0.0.0-20200413211414-dc9f5ce2eda6/go.mod h1:9Ctl2UfXtHh3vj7o2jtsbnsn+bVL5qdee61WR5jEA1c=
+github.com/tigera/typha-private v0.0.0-20200415163518-c61b63543f4e/go.mod h1:4xNF7Z4vXorhHx9FxUg4iEsFPYJtf5ZpS4J6tMcwxtI=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200310211350-635f510eff35 h1:ZSmd0ruPly9wFuWeGGDgJns0NRDWkt/bg+1M4U5rPkM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200310211350-635f510eff35/go.mod h1:/QYKyuPnD0YE9/qgyGtyGlNXehxRbs9OnMmD7Y1HWHI=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200319184751-e12d75794b87 h1:F7AmoeZoVg1JTRfVonk8x1ualXfvhX+PpWL+EmNFXdQ=
