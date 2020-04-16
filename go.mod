@@ -3,6 +3,7 @@ module github.com/projectcalico/node
 go 1.13
 
 require (
+	github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4 // indirect
 	github.com/kelseyhightower/confd v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
