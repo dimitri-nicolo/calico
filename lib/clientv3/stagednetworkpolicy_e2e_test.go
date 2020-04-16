@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ var _ = testutils.E2eDatastoreDescribe("StagedNetworkPolicy tests", testutils.Da
 			} else {
 				// Resource version for KDD is a combination of both the CRD and K8s NP backed
 				// resources separated by a slash.
-				rv = conversion.Converter{}.JoinNetworkPolicyRevisions("1234", "5678")
+				rv = conversion.NewConverter().JoinNetworkPolicyRevisions("1234", "5678")
 			}
 			_, outError := c.StagedNetworkPolicies().Update(ctx, &apiv3.StagedNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, CreationTimestamp: metav1.Now(), UID: "test-fail-networkpolicy"},

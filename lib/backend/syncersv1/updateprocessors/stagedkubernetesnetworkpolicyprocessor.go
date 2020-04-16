@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func ConvertStagedKubernetesNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (mod
 		return model.PolicyKey{}, errors.New("Missing Name or Namespace field to create a v1 StagedKubernetesNetworkPolicy Key")
 	}
 
-	c := conversion.Converter{}
+	c := conversion.NewConverter()
 	name := c.StagedKubernetesNetworkPolicyToStagedName(v3key.Name)
 
 	tier, err := names.TierFromPolicyName(name)
@@ -62,7 +62,7 @@ func ConvertStagedKubernetesNetworkPolicyV3ToV1Value(val interface{}) (interface
 
 	//From StagedK8s to networkingv1
 	_, v1np := apiv3.ConvertStagedKubernetesPolicyToK8SEnforced(staged)
-	c := conversion.Converter{}
+	c := conversion.NewConverter()
 	kvp, err := c.K8sNetworkPolicyToCalico(v1np)
 	if err != nil {
 		return nil, err
