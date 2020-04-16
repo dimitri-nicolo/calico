@@ -1266,6 +1266,21 @@ HostPortsType
 Default: Enabled</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>multiInterfaceMode</code><br>
+<em>
+<a href="#operator.tigera.io/v1.MultiInterfaceMode">
+MultiInterfaceMode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MultiInterfaceMode configures what will configure multiple interface per pod. Only valid for Calico Enterprise installations.
+Default: None</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.ClusterManagementType">ClusterManagementType
@@ -2068,6 +2083,12 @@ Auth
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.MultiInterfaceMode">MultiInterfaceMode
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec</a>)
+</p>
 <h3 id="operator.tigera.io/v1.NATOutgoingType">NATOutgoingType
 (<code>string</code> alias)</h3>
 <p>
