@@ -446,15 +446,8 @@ func (config *Config) OpenstackActive() bool {
 }
 
 func (c *Config) EgressIPCheckEnabled() bool {
-	if !c.EgressIPEnabled {
-		return false
-	}
-
-	if (c.EgressIPFirstRoutingTableIndex + c.EgressIPRoutingTablesCount) > unix.RT_TABLE_COMPAT {
-		log.Panicf("routing table index for egress ip out of range. start %d, count %d",
-			c.EgressIPFirstRoutingTableIndex, c.EgressIPRoutingTablesCount)
-	}
-	return true
+	// This will be replaced by EgressIP enable parameter from control plane.
+	return c.EgressIPEnabled
 }
 
 func (c *Config) IPSecEnabled() bool {
@@ -723,6 +716,10 @@ func (config *Config) Validate() (err error) {
 		if problems != nil {
 			err = errors.New("IPsec is misconfigured: " + strings.Join(problems, "; "))
 		}
+	}
+
+	if (config.EgressIPFirstRoutingTableIndex + config.EgressIPRoutingTablesCount) > unix.RT_TABLE_COMPAT {
+		err = errors.New("routing table index for egress ip out of range")
 	}
 
 	if config.CloudWatchLogsReporterEnabled {

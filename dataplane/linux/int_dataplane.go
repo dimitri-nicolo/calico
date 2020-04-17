@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/projectcalico/felix/bpf/state"
 	"github.com/projectcalico/felix/bpf/tc"
 
@@ -425,7 +427,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.RulesConfig.VXLANEnabled {
 		routeTableVXLAN := routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, 0)
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC)
 
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
@@ -641,7 +643,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		interfaceRegexes[i] = "^" + r + ".*"
 	}
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
-		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, 0)
+		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -715,7 +717,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		routeTableV6 := routetable.New(
 			interfaceRegexes, 6, false, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, 0)
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
@@ -851,14 +853,16 @@ func (d *InternalDataplane) routeRules() []routeRules {
 }
 
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
-	switch mgr := mgr.(type) {
-	case ManagerWithRouteTables:
+	tableMgr, ok := mgr.(ManagerWithRouteTables)
+	if ok {
 		log.WithField("manager", mgr).Debug("registering ManagerWithRouteTables")
-		d.managersWithRouteTables = append(d.managersWithRouteTables, mgr)
+		d.managersWithRouteTables = append(d.managersWithRouteTables, tableMgr)
+	}
 
-	case ManagerWithRouteRules:
+	rulesMgr, ok := mgr.(ManagerWithRouteRules)
+	if ok {
 		log.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
-		d.managersWithRouteRules = append(d.managersWithRouteRules, mgr)
+		d.managersWithRouteRules = append(d.managersWithRouteRules, rulesMgr)
 	}
 	d.allManagers = append(d.allManagers, mgr)
 }

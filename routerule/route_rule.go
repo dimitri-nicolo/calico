@@ -57,10 +57,16 @@ type RouteRules struct {
 	// Current netlink handle, or nil if we need to reconnect.
 	cachedNetlinkHandle HandleIface
 
-	// Rules match function checks if two rules are equal.
-	// For example, egress ip manager considers two rules are equal if they
+	// Rules match function for rule update.
+	// For rule updates, it would generally need to match all fields concerned.
+	// For example, egress ip manager considers two rules are matching if they
 	// have same FWMark , source ip matching condition and go to same table index.
-	equalRuleFunc RulesMatchFunc
+	matchForUpdate RulesMatchFunc
+	// Rules match function for rule remove.
+	// For rule remove, it would generally just to match some fields concerned.
+	// For example, egress ip manager considers two rules are matching if they
+	// have same FWMark , source ip matching condition.
+	matchForRemove RulesMatchFunc
 
 	// activeRules holds rules which should be programmed.
 	activeRules set.Set
@@ -70,23 +76,25 @@ type RouteRules struct {
 	newNetlinkHandle func() (HandleIface, error)
 }
 
-func New(ipVersion int, priority int, tableIndexSet set.Set, f RulesMatchFunc, netlinkTimeout time.Duration) (*RouteRules, error) {
+func New(ipVersion int, priority int, tableIndexSet set.Set, updateFunc, removeFunc RulesMatchFunc, netlinkTimeout time.Duration) (*RouteRules, error) {
 	return NewWithShims(
 		ipVersion,
 		priority,
-		f,
 		tableIndexSet,
+		updateFunc,
+		removeFunc,
 		netlinkTimeout,
 		newNetlinkHandle,
 	)
 }
 
-// NewWithShims is a test constructor, which allows netlink, time to be replaced by shims.
+// NewWithShims is a test constructor, which allows netlink to be replaced by shims.
 func NewWithShims(
 	ipVersion int,
 	priority int,
-	f RulesMatchFunc,
 	tableIndexSet set.Set,
+	updateFunc RulesMatchFunc,
+	removeFunc RulesMatchFunc,
 	netlinkTimeout time.Duration,
 	newNetlinkHandle func() (HandleIface, error),
 ) (*RouteRules, error) {
@@ -121,7 +129,8 @@ func NewWithShims(
 		}),
 		IPVersion:        ipVersion,
 		Priority:         priority,
-		equalRuleFunc:    f,
+		matchForUpdate:   updateFunc,
+		matchForRemove:	  removeFunc,
 		tableIndexSet:    tableIndexSet,
 		netlinkFamily:    family,
 		newNetlinkHandle: newNetlinkHandle,
@@ -145,17 +154,17 @@ func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 	return active
 }
 
-// Set a Rule. Add to activeRules if it does not already exist based on RulesMatchFunc.
-func (r *RouteRules) SetRule(rule *Rule, f RulesMatchFunc) {
-	if r.getActiveRule(rule, f) == nil {
+// Set a Rule. Add to activeRules if it does not already exist based on matchForUpdate function.
+func (r *RouteRules) SetRule(rule *Rule) {
+	if r.getActiveRule(rule, r.matchForUpdate) == nil {
 		r.activeRules.Add(rule)
 		r.inSync = false
 	}
 }
 
-// Remove a Rule. Do nothing if Rule not exists depends based on RulesMatchFunc.
-func (r *RouteRules) RemoveRule(rule *Rule, f RulesMatchFunc) {
-	if p := r.getActiveRule(rule, f); p != nil {
+// Remove a Rule. Do nothing if Rule not exists depends based on matchForRemove function.
+func (r *RouteRules) RemoveRule(rule *Rule) {
+	if p := r.getActiveRule(rule, r.matchForRemove); p != nil {
 		r.activeRules.Discard(p)
 		r.inSync = false
 	}
@@ -231,7 +240,7 @@ func (r *RouteRules) Apply() error {
 		if r.tableIndexSet.Contains(nlRule.Table) {
 			// Table index of the rule is managed by us.
 			dataplaneRule := fromNetlinkRule(&nlRule)
-			if activeRule := r.getActiveRule(dataplaneRule, r.equalRuleFunc); r != nil {
+			if activeRule := r.getActiveRule(dataplaneRule, r.matchForUpdate); r != nil {
 				// rule exists both in activeRules and dataplaneRules.
 				toAdd.Discard(activeRule)
 			} else {
@@ -248,7 +257,7 @@ func (r *RouteRules) Apply() error {
 			rule.LogCxt().WithError(err).Warnf("Failed to remove rule from dataplane.")
 			updatesFailed = true
 		} else {
-			rule.LogCxt().Infof("Rule removed from dataplane.")
+			rule.LogCxt().Debugf("Rule removed from dataplane.")
 		}
 		return nil
 	})
@@ -258,9 +267,9 @@ func (r *RouteRules) Apply() error {
 		if err := nl.RuleAdd(rule.nlRule); err != nil {
 			rule.LogCxt().WithError(err).Warnf("Failed to add rule from dataplane.")
 			updatesFailed = true
-			return UpdateFailed
+			return nil
 		} else {
-			rule.LogCxt().Infof("Rule added to dataplane.")
+			rule.LogCxt().Debugf("Rule added to dataplane.")
 		}
 		return nil
 	})

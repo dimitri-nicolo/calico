@@ -1,21 +1,8 @@
 // Copyright (c) 2020 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package intdataplane
 
 import (
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"net"
@@ -24,7 +11,6 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
@@ -49,9 +35,9 @@ import (
 //          Route Table (EgressIPSet)           Route Table n
 //             <Index 200>                        <Index n>
 //               default                           default
-//                / | \                              /  \
-//               /  |  \                            /    \
-//              /   |   \                          /      \
+//                / | \                              / | \
+//               /  |  \                            /  |  \
+//              /   |   \                          /   |   \
 // L3 route GatewayIP...GatewayIP_n            GatewayIP...GatewayIP_n
 //
 // L2 routes  ARP/FDB...ARP/FDB                   ARP/FDB...ARP/FDB
@@ -66,8 +52,8 @@ var (
 )
 
 type routeRules interface {
-	SetRule(rule *routerule.Rule, f routerule.RulesMatchFunc)
-	RemoveRule(rule *routerule.Rule, f routerule.RulesMatchFunc)
+	SetRule(rule *routerule.Rule)
+	RemoveRule(rule *routerule.Rule)
 	QueueResync()
 	Apply() error
 }
@@ -113,7 +99,10 @@ func newEgressIPManager(
 	deviceName string,
 	dpConfig Config,
 ) *egressIPManager {
-	nlHandle, _ := netlink.NewHandle()
+	nlHandle, err := netlink.NewHandle()
+	if err != nil {
+		log.WithError(err).Panic("Failed to get netlink handle.")
+	}
 
 	return newEgressIPManagerWithShims(
 		deviceName,
@@ -139,7 +128,7 @@ func newEgressIPManagerWithShims(
 	}
 
 	// Create routerules to manage routing rules.
-	rr, err := routerule.New(4, dpConfig.EgressIPRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, dpConfig.NetlinkTimeout)
+	rr, err := routerule.New(4, dpConfig.EgressIPRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, routerule.RulesMatchSrcFWMark, dpConfig.NetlinkTimeout)
 	if err != nil {
 		// table index has been checked by config.
 		// This should not happen.
@@ -149,8 +138,8 @@ func newEgressIPManagerWithShims(
 	return &egressIPManager{
 		routerules:              rr,
 		tableIndexStack:         tableIndexStack,
-		tableIndexToRouteTable:  map[int]*routetable.RouteTable{},
-		egressIPSetToTableIndex: map[string]int{},
+		tableIndexToRouteTable:  make(map[int]*routetable.RouteTable),
+		egressIPSetToTableIndex: make(map[string]int),
 		pendingWlEpUpdates:      make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		activeEgressIPSet:       make(map[string]set.Set),
 		vxlanDevice:             deviceName,
@@ -188,7 +177,7 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		m.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.HostMetadataUpdate:
 		if msg.Hostname == m.dpConfig.FelixHostname {
-			log.WithField("hostanme", msg.Hostname).Debug("Local host update")
+			log.WithField("hostname", msg.Hostname).Debug("Local host update")
 			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
 		}
 	}
@@ -196,22 +185,11 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 
 func (m *egressIPManager) handleEgressIPSetUpdate(msg *proto.IPSetUpdate) {
 	log.Infof("Update whole EgressIP set: msg=%v", msg)
-
-	if _, found := m.activeEgressIPSet[msg.Id]; found {
-		log.Info("EgressIP IPSetUpdate for existing IP set")
-		membersToRemove := []string{}
-		membersToAdd := msg.Members
-
-		m.handleEgressIPSetDeltaUpdate(msg.Id, membersToRemove, membersToAdd)
-		return
-	}
-
 	m.activeEgressIPSet[msg.Id] = set.FromArray(msg.Members)
 }
 
 func (m *egressIPManager) handleEgressIPSetRemove(msg *proto.IPSetRemove) {
 	log.Infof("Remove whole EgressIP set: msg=%v", msg)
-
 	delete(m.activeEgressIPSet, msg.Id)
 }
 
@@ -258,7 +236,7 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 		ipString := item.(string)
 		l2routes = append(l2routes, routetable.L2Target{
 			// remote VTEP mac is generated based on gateway pod ip.
-			VTEPMAC: stringToMac(ipString),
+			VTEPMAC: ipStringToMac(ipString),
 			GW:      ip.FromString(ipString),
 			IP:      ip.FromString(ipString),
 		})
@@ -267,7 +245,7 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 	})
 
 	// Set L2 route.
-	logrus.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
+	log.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
 	rTable.SetL2Routes(m.vxlanDevice, l2routes)
 
 	// Set L3 route.
@@ -277,13 +255,13 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 		MultiPath: multipath,
 	}
 
-	logrus.WithField("ecmproute", route).Debug("Egress ip manager sending ECMP VXLAN L3 updates")
+	log.WithField("ecmproute", route).Debug("Egress ip manager sending ECMP VXLAN L3 updates")
 	rTable.SetRoutes(m.vxlanDevice, []routetable.Target{route})
 }
 
 func (m *egressIPManager) CompleteDeferredWork() error {
 	if m.dirtyEgressIPSet.Len() == 0 && len(m.pendingWlEpUpdates) == 0 {
-		logrus.Debug("No change since last application, nothing to do")
+		log.Debug("No change since last application, nothing to do")
 		return nil
 	}
 
@@ -296,39 +274,36 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			// EgressIPSet been removed.
 			rTable := m.tableIndexToRouteTable[currentIndex]
 			if !ipsetToIndexExists || rTable == nil {
-				// Something wrong, this should not happen. return error and panic.
-				return errors.New("Removing an egress IPSet with invalid table index")
+				// Something wrong, this should not happen. Panic.
+				log.Panic("Removing an egress IPSet with invalid table index")
 			}
 
 			// Remove routes.
-			logrus.WithField("tableindex", currentIndex).Debug("EgressIPManager remove routes.")
+			log.WithField("tableindex", currentIndex).Debug("EgressIPManager remove routes.")
 			rTable.SetRoutes(m.vxlanDevice, nil)
 
 			// Once routes pending being removed, we can safely push table index back to stack.
 			m.tableIndexStack.Push(currentIndex)
 			delete(m.egressIPSetToTableIndex, id)
 		} else {
-			var rTable *routetable.RouteTable
 			if !ipsetToIndexExists {
 				// EgressIPSet been added. No table index yet.
 				if m.tableIndexStack.Len() == 0 {
-					// Run out of egress routing table. Log error and Panic.
-					// TODO: send to black hole table?
-					return errors.New("Run out of egress ip route table")
+					// Run out of egress routing table. Panic.
+					log.Panic("Run out of egress ip route table")
 				}
 
 				index := m.tableIndexStack.Pop().(int)
 				if m.tableIndexToRouteTable[index] == nil {
 					// Allocate a routetable if it does not exists.
-					rTable = routetable.New([]string{m.vxlanDevice}, 4, index, true, m.dpConfig.NetlinkTimeout, nil,
+					m.tableIndexToRouteTable[index] = routetable.New([]string{m.vxlanDevice}, 4, index, true, m.dpConfig.NetlinkTimeout, nil,
 						m.dpConfig.DeviceRouteProtocol, true)
-					m.tableIndexToRouteTable[index] = rTable
 				}
 				m.egressIPSetToTableIndex[id] = index
 				currentIndex = index
 			}
 
-			rTable = m.tableIndexToRouteTable[currentIndex]
+			rTable := m.tableIndexToRouteTable[currentIndex]
 
 			// Add L3 and L2 routes for EgressIPSet.
 			m.setL3L2Routes(rTable, ips)
@@ -338,8 +313,9 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		return set.RemoveItem
 	})
 
+	stop := false
 	// Work out WEP updates.
-	for len(m.pendingWlEpUpdates) > 0 {
+	for len(m.pendingWlEpUpdates) > 0 && !stop {
 		// Handle pending workload endpoint updates.
 		for id, workload := range m.pendingWlEpUpdates {
 			logCxt := log.WithField("id", id)
@@ -349,7 +325,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				if oldWorkload != nil && oldWorkload.EgressIPSetId != workload.EgressIPSetId {
 					logCxt.Debug("EgressIPSet changed, cleaning up old state")
 					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
-						m.routerules.RemoveRule(r, routerule.RulesMatchSrcFWMark)
+						m.routerules.RemoveRule(r)
 					}
 				}
 
@@ -360,15 +336,14 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				index := m.egressIPSetToTableIndex[IPSetId]
 				if index == 0 {
 					// Have not received latest EgressIPSet update or WEP update is out of date.
-					// TODO: Is it possible? How to handle this?
 					// The update stays in pendingWlEpUpdates and will be processed later.
-					continue
+					stop = true
 				}
 
 				// Set rules for new workload.
 				// Pass full Rules to SetRule.
 				for _, r := range m.workloadToFullRules(workload, index) {
-					m.routerules.SetRule(r, routerule.RulesMatchSrcFWMarkTable)
+					m.routerules.SetRule(r)
 				}
 				m.activeWlEndpoints[id] = workload
 				delete(m.pendingWlEpUpdates, id)
@@ -377,7 +352,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 
 				if oldWorkload != nil {
 					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
-						m.routerules.RemoveRule(r, routerule.RulesMatchSrcFWMark)
+						m.routerules.RemoveRule(r)
 					}
 				}
 				delete(m.activeWlEndpoints, id)
@@ -402,28 +377,25 @@ func (m *egressIPManager) GetRouteRules() []routeRules {
 	return []routeRules{m.routerules}
 }
 
-func stringToMac(s string) net.HardwareAddr {
-	hasher := sha1.New()
-	_, err := hasher.Write([]byte(s))
-	if err != nil {
-		logrus.WithError(err).WithField("string", s).Panic("Failed to write hash for string")
-	}
-	sha := hasher.Sum(nil)
-	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
+func ipStringToMac(s string) net.HardwareAddr {
+	ip := ip.FromString(s).AsNetIP()
+	// Any MAC address that has the values 2, 3, 6, 7, A, B, E, or F
+	// as the second most significant nibble are locally administered.
+	hw := net.HardwareAddr(append([]byte{0xa2, 0x2a}, ip...))
 	return hw
 }
 
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
-	logrus.Info("egress ip VXLAN tunnel device thread started.")
+	log.Info("egress ip VXLAN tunnel device thread started.")
 
 	for {
 		err := m.configureVXLANDevice(mtu)
 		if err != nil {
-			logrus.WithError(err).Warn("Failed configure egress ip VXLAN tunnel device, retrying...")
+			log.WithError(err).Warn("Failed configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		logrus.Info("egress ip VXLAN tunnel device configured")
+		log.Info("egress ip VXLAN tunnel device configured")
 		time.Sleep(wait)
 	}
 }
@@ -442,7 +414,7 @@ func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
 		}
 		for _, addr := range addrs {
 			if addr.IPNet.IP.Equal(m.NodeIP) {
-				logrus.Debugf("Found parent interface: %s", link)
+				log.Debugf("Found parent interface: %s", link)
 				return link, nil
 			}
 		}
@@ -452,7 +424,7 @@ func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
 func (m *egressIPManager) configureVXLANDevice(mtu int) error {
-	logCxt := logrus.WithFields(logrus.Fields{"device": m.vxlanDevice})
+	logCxt := log.WithFields(log.Fields{"device": m.vxlanDevice})
 	logCxt.Debug("Configuring egress ip VXLAN tunnel device")
 	parent, err := m.getParentInterface()
 	if err != nil {
@@ -473,10 +445,10 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	// Try to get the device.
 	link, err := m.nlHandle.LinkByName(m.vxlanDevice)
 	if err != nil {
-		logrus.WithError(err).Info("Failed to get egress ip VXLAN tunnel device, assuming it isn't present")
+		log.WithError(err).Info("Failed to get egress ip VXLAN tunnel device, assuming it isn't present")
 		if err := m.nlHandle.LinkAdd(vxlan); err == syscall.EEXIST {
 			// Device already exists - likely a race.
-			logrus.Debug("egress ip VXLAN device already exists, likely created by someone else.")
+			log.Debug("egress ip VXLAN device already exists, likely created by someone else.")
 		} else if err != nil {
 			// Error other than "device exists" - return it.
 			return err
@@ -493,7 +465,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	// already. Check for mismatched configuration. If they don't match, recreate the device.
 	if incompat := vxlanLinksIncompat(vxlan, link); incompat != "" {
 		// Existing device doesn't match desired configuration - delete it and recreate.
-		logrus.Warningf("%q exists with incompatable configuration: %v; recreating device", vxlan.Name, incompat)
+		log.Warningf("%q exists with incompatible configuration: %v; recreating device", vxlan.Name, incompat)
 		if err = m.nlHandle.LinkDel(link); err != nil {
 			return fmt.Errorf("failed to delete interface: %v", err)
 		}
@@ -513,7 +485,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	attrs := link.Attrs()
 	oldMTU := attrs.MTU
 	if oldMTU != mtu {
-		logCxt.WithFields(logrus.Fields{"old": oldMTU, "new": mtu}).Info("VXLAN device MTU needs to be updated")
+		logCxt.WithFields(log.Fields{"old": oldMTU, "new": mtu}).Info("VXLAN device MTU needs to be updated")
 		if err := m.nlHandle.LinkSetMTU(link, mtu); err != nil {
 			log.WithError(err).Warn("Failed to set vxlan tunnel device MTU")
 		} else {
