@@ -448,13 +448,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.EgressIPEnabled {
-		egressIpMgr := newEgressIPManager("vxlan.calico.egress", config)
+		egressIpMgr := newEgressIPManager("calico.egress", config)
 		go egressIpMgr.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
 		dp.RegisterManager(egressIpMgr)
 	} else {
 		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
 		log.Info("Checking if we need to clean up the egress VXLAN device")
-		if link, err := netlink.LinkByName("vxlan.calico.egress"); err != nil && err != syscall.ENODEV {
+		if link, err := netlink.LinkByName("calico.egress"); err != nil && err != syscall.ENODEV {
 			log.WithError(err).Warnf("Failed to query egress VXLAN device")
 		} else if err = netlink.LinkDel(link); err != nil {
 			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
