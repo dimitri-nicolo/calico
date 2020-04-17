@@ -69,7 +69,11 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 | All                                                          | agent hosts         | Incoming        | TCP 9081 (default)
 | All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)
 | All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)
-| All                                                          | {{site.prodname}} Manager host | Incoming | TCP 30003 and 9443 (defaults)
+| All                                                          | ECK operator hosts  | Incoming        | TCP 9443 (default)
+| All                                                          | Elasticsearch hosts | Incoming        | TCP 9200 (default)
+| All                                                          | Kibana hosts        | Incoming        | TCP 5601 (default)
+| All                                                          | {{site.prodname}} Manager host | Incoming | TCP 9443 (default)
+| All                                                          | {{site.prodname}} Compliance server host | Incoming | TCP 5443 (default)
 {%- endif %}
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
 
