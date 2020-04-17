@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,15 +43,17 @@ var _ = Describe("PodConverter private", func() {
 			},
 		}
 
-		wepData, err := c.Convert(&pod)
+		wepDataList, err := c.Convert(&pod)
 		By("not generating a conversion error", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		wepData := wepDataList[0]
+
 		// Assert that the returned name / namespace is correct.
 		By("returning a WorkloadEndpointData with the correct key information", func() {
-			Expect(wepData.(converter.WorkloadEndpointData).PodName).To(Equal("podA"))
-			Expect(wepData.(converter.WorkloadEndpointData).Namespace).To(Equal("default"))
+			Expect(wepData.PodName).To(Equal("podA"))
+			Expect(wepData.Namespace).To(Equal("default"))
 		})
 
 		// Assert that GetKey returns the right value.
@@ -61,7 +63,7 @@ var _ = Describe("PodConverter private", func() {
 		})
 
 		By("returning a WorkloadEndpointData with correctly convert AWS SG label", func() {
-			Expect(wepData.(converter.WorkloadEndpointData).Labels).Should(
+			Expect(wepData.Labels).Should(
 				HaveKeyWithValue(k8sconversion.SecurityGroupLabelPrefix+"/sg-test", ""))
 		})
 	})
