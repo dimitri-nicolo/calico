@@ -360,6 +360,14 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       # Change this value to override the storage class used by Elasticsearch nodes. We recommend choosing a storage
       # class dedicated to Calico Enterprise only to ensure data retention after upgrades from versions before v2.8.0.
       storageClassName: tigera-elasticsearch
+      # NodeSelector gives you more control over the nodes that Elasticsearch will run on. The contents of NodeSelector will
+      # be added to the PodSpec of the Elasticsearch nodes. For the pod to be eligible to run on a node, the node must have
+      # each of the indicated key-value pairs as labels.
+      #
+      # E.g.
+      # nodeSelector:
+      #   my-node: ssd-data-node
+      nodeSelector: {}
     
     intrusionDetectionController:
       image: #{imageRegistry}#{versions["intrusion-detection-controller"].image}

@@ -395,6 +395,12 @@ spec:
         - name: {{ $key }}
 {{- end }}
 {{- end }}
+{{- if .Values.elasticsearch.nodeSelector }}
+        nodeSelector:
+{{- range $key, $value := .Values.elasticsearch.nodeSelector }}
+          {{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
         initContainers:
           - name: elastic-internal-init-os-settings
             command:
