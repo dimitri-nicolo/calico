@@ -412,8 +412,9 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	}
 
 	// Whether the endpoint existed or not, the veth needs (re)creating.
-	desiredVethName := k8sconversion.VethNameForWorkload(epIDs.Namespace, epIDs.Pod)
+	desiredVethName := k8sconversion.NewConverter().VethNameForWorkload(epIDs.Namespace, epIDs.Pod)
 	hostVethName, contVethMac, err := d.DoNetworking(ctx, calicoClient, args, result, desiredVethName, routes, endpoint, annot)
+
 	if err != nil {
 		logger.WithError(err).Error("Error setting up networking")
 		releaseIPAM()
@@ -854,12 +855,13 @@ func getK8sPodInfo(client *kubernetes.Clientset, podName, podNamespace string) (
 		return nil, nil, nil, nil, "", err
 	}
 
-	var c k8sconversion.Converter
-	kvp, err := c.PodToWorkloadEndpoint(pod)
+	c := k8sconversion.NewConverter()
+	kvps, err := c.PodToWorkloadEndpoints(pod)
 	if err != nil {
 		return nil, nil, nil, nil, "", err
 	}
 
+	kvp := kvps[0]
 	ports = kvp.Value.(*api.WorkloadEndpoint).Spec.Ports
 	labels = kvp.Value.(*api.WorkloadEndpoint).Labels
 	profiles = kvp.Value.(*api.WorkloadEndpoint).Spec.Profiles
