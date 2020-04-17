@@ -18,13 +18,14 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Pre-defined datastore states.  Each State object wraps up the complete state
