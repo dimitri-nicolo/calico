@@ -280,7 +280,9 @@ github.com/tigera/libcalico-go-private v0.0.0-20200406225356-95f7a04212f6 h1:Jlt
 github.com/tigera/libcalico-go-private v0.0.0-20200406225356-95f7a04212f6/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v0.0.0-20200409223125-f1969535eacb h1:rh8a4BeV0lC0KmEQ4Drhgw0LdOLyrnVNX2VWDYWUnCQ=
 github.com/tigera/libcalico-go-private v0.0.0-20200409223125-f1969535eacb/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
+github.com/tigera/libcalico-go-private v0.0.0-20200415140238-a18ed5d03446 h1:idt5Sbd00LYDkQ85t+4S7OuLoMeE2WLId1aKPW7Fqtw=
 github.com/tigera/libcalico-go-private v0.0.0-20200415140238-a18ed5d03446/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
+github.com/tigera/libcalico-go-private v0.0.0-20200416182706-b8193f845c4a/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 h1:xM0NXtWnlqB83al1HoHAODwZc2Y/0SzclonznKHw9wQ=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
@@ -294,6 +296,7 @@ github.com/tigera/typha-private v0.0.0-20200410163348-f0d8542d9f93 h1:Ah4AFTpvdh
 github.com/tigera/typha-private v0.0.0-20200410163348-f0d8542d9f93/go.mod h1:9Ctl2UfXtHh3vj7o2jtsbnsn+bVL5qdee61WR5jEA1c=
 github.com/tigera/typha-private v0.0.0-20200413211414-dc9f5ce2eda6 h1:2P0HTzOMOFg7Sv4Q0H3T533OLaYj639buj7Cpf9kbgk=
 github.com/tigera/typha-private v0.0.0-20200413211414-dc9f5ce2eda6/go.mod h1:9Ctl2UfXtHh3vj7o2jtsbnsn+bVL5qdee61WR5jEA1c=
+github.com/tigera/typha-private v0.0.0-20200415163518-c61b63543f4e h1:ZsEvexTfwmLJoJa9ETBIhCdXqXSF73P/9vHHyJkt/TE=
 github.com/tigera/typha-private v0.0.0-20200415163518-c61b63543f4e/go.mod h1:4xNF7Z4vXorhHx9FxUg4iEsFPYJtf5ZpS4J6tMcwxtI=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
