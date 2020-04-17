@@ -1,8 +1,9 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2020 Tigera, Inc. All rights reserved.
 
 package v3
 
 import (
+	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,7 +29,12 @@ type RemoteClusterConfiguration struct {
 // RemoteClusterConfigurationSpec contains the values of describing the cluster.
 type RemoteClusterConfigurationSpec struct {
 	// Indicates the datastore to use. If unspecified, defaults to etcdv3
-	DatastoreType string `json:"datastoreType" validate:"datastoreType"`
+	DatastoreType string `json:"datastoreType,omitempty" validate:"omitempty,datastoreType"`
+
+	// Specifies a Secret to read for the RemoteClusterconfiguration.
+	// If defined all datastore configuration in this struct will be cleared
+	// and overwritten with the appropriate fields in the Secret.
+	ClusterAccessSecret *k8sv1.ObjectReference `json:"clusterAccessSecret,omitempty" validate:"omitempty,clusterAccessSecret"`
 
 	// Inline the ectd config fields
 	EtcdConfig `json:",inline"`
@@ -38,7 +44,7 @@ type RemoteClusterConfigurationSpec struct {
 }
 
 type EtcdConfig struct {
-	// A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.
+	// A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.  [Default: ]
 	EtcdEndpoints string `json:"etcdEndpoints,omitempty" validate:"omitempty,etcdEndpoints"`
 	// User name for RBAC. Valid if DatastoreType is etcdv3.
 	EtcdUsername string `json:"etcdUsername,omitempty" validate:"omitempty"`
@@ -50,6 +56,10 @@ type EtcdConfig struct {
 	EtcdCertFile string `json:"etcdCertFile,omitempty" validate:"omitempty,file"`
 	// Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.
 	EtcdCACertFile string `json:"etcdCACertFile,omitempty" validate:"omitempty,file"`
+	// These config file parameters are to support inline certificates, keys and CA / Trusted certificate.
+	EtcdKey    string `json:"etcdKey,omitempty" ignored:"true"`
+	EtcdCert   string `json:"etcdCert,omitempty" ignored:"true"`
+	EtcdCACert string `json:"etcdCACert,omitempty" ignored:"true"`
 }
 
 type KubeConfig struct {
@@ -66,6 +76,9 @@ type KubeConfig struct {
 	// Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.
 	K8sAPIToken              string `json:"k8sAPIToken,omitempty" validate:"omitempty"`
 	K8sInsecureSkipTLSVerify bool   `json:"k8sInsecureSkipTLSVerify,omitempty" validate:"omitempty"`
+	// This is an alternative to Kubeconfig and if specified overrides Kubeconfig.
+	// This contains the contents that would normally be in the file pointed at by Kubeconfig.
+	KubeconfigInline string `json:"kubeconfigInline,omitempty" ignored:"true"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

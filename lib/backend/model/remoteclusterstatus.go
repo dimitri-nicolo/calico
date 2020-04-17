@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2020 Tigera, Inc. All rights reserved.
 
 package model
 
@@ -57,6 +57,7 @@ const (
 	RemoteClusterResyncInProgress
 	RemoteClusterInSync
 	RemoteClusterConfigChangeRestartRequired
+	RemoteClusterConfigIncomplete
 )
 
 func (r RemoteClusterStatusType) String() string {
@@ -71,6 +72,8 @@ func (r RemoteClusterStatusType) String() string {
 		return "InSync"
 	case RemoteClusterConfigChangeRestartRequired:
 		return "ConfigChangeRestartRequired"
+	case RemoteClusterConfigIncomplete:
+		return "ConfigIncomplete"
 	default:
 		return "Unknown"
 	}

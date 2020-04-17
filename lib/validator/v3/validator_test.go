@@ -2310,6 +2310,58 @@ func init() {
 			}, false,
 		),
 
+		Entry("should accept Secret reference",
+			api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.RemoteClusterConfigurationSpec{
+					ClusterAccessSecret: &k8sv1.ObjectReference{
+						Namespace: "anything", Name: "name",
+					},
+				},
+			}, true,
+		),
+		Entry("disallow Secret reference and DatastoreType",
+			api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.RemoteClusterConfigurationSpec{
+					ClusterAccessSecret: &k8sv1.ObjectReference{
+						Namespace: "anything", Name: "name",
+					},
+					DatastoreType: "kubernetes",
+				},
+			}, false,
+		),
+		Entry("disallow Secret reference and kubeconfig",
+			api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.RemoteClusterConfigurationSpec{
+					ClusterAccessSecret: &k8sv1.ObjectReference{
+						Namespace: "anything", Name: "name",
+					},
+					KubeConfig: api.KubeConfig{K8sAPIEndpoint: "https://127.0.0.1:880"},
+				},
+			}, false,
+		),
+		Entry("disallow Secret reference and etcdConfig",
+			api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.RemoteClusterConfigurationSpec{
+					ClusterAccessSecret: &k8sv1.ObjectReference{
+						Namespace: "anything", Name: "name",
+					},
+					EtcdConfig: api.EtcdConfig{EtcdEndpoints: "http://123.123.123.123:2379,https://1.1.1.1:123"},
+				},
+			}, false,
+		),
+
 		Entry("disallow HTTP in egress rule",
 			&api.NetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},

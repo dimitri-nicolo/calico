@@ -225,6 +225,8 @@ func init() {
 	registerFieldValidator("etcdEndpoints", validateEtcdEndpoints)
 	registerFieldValidator("k8sEndpoint", validateK8sEndpoint)
 
+	registerFieldValidator("clusterAccessSecret", validateClusterAccessSecret)
+
 	registerStructValidator(validate, validateProtocol, numorstring.Protocol{})
 	registerStructValidator(validate, validateProtoPort, api.ProtoPort{})
 	registerStructValidator(validate, validatePort, numorstring.Port{})
@@ -829,6 +831,17 @@ func validateK8sEndpoint(fl validator.FieldLevel) bool {
 	return k8sEndpointRegex.MatchString(s)
 }
 
+func validateClusterAccessSecret(fl validator.FieldLevel) bool {
+	or := fl.Field().Interface().(k8sv1.ObjectReference)
+	s := k8sv1.Secret{}
+	log.Debugf("Validate clusterAccessSecret")
+	if or.Kind != s.GetObjectKind().GroupVersionKind().Kind {
+		log.Debugf("Only Secret references are allowed for a ClusterAccessSecret")
+		return false
+	}
+	return true
+}
+
 func validateEtcdEndpoints(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate Etcd Endpoints: %s", s)
@@ -1006,6 +1019,23 @@ func validateHostEndpointSpec(structLevel validator.StructLevel) {
 
 func validateRemoteClusterConfigSpec(structLevel validator.StructLevel) {
 	h := structLevel.Current().Interface().(api.RemoteClusterConfigurationSpec)
+
+	if h.ClusterAccessSecret != nil {
+		emptyRCC := api.RemoteClusterConfigurationSpec{}
+		emptyRCC.ClusterAccessSecret = h.ClusterAccessSecret
+
+		if !reflect.DeepEqual(h, emptyRCC) {
+			structLevel.ReportError(reflect.ValueOf(h),
+				"RemoteClusterConfigurationSpec", "", reason("When ClusterAccessSecret is set all other fields should not be set."), "")
+
+		}
+		return
+	}
+
+	if !datastoreType.MatchString(h.DatastoreType) {
+		structLevel.ReportError(reflect.ValueOf(h.DatastoreType),
+			"DatastoreType", "", reason("DatastoreType is invalid"), "")
+	}
 
 	// An etcdv3 remote cluster may also have kubernetes datastore configuration for the federation
 	// controller.  However, a kubernetes datastore should not have etcdv3 configuration specified.

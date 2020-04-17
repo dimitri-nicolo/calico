@@ -110,6 +110,9 @@ func (st *SyncerTester) OnUpdates(updates []api.Update) {
 			Expect(err).NotTo(HaveOccurred())
 			switch u.UpdateType {
 			case api.UpdateTypeKVDeleted:
+				log.WithFields(log.Fields{
+					"Key": k,
+				}).Info("Handling delete cache entry")
 				Expect(st.cache).To(HaveKey(k))
 				delete(st.cache, k)
 			case api.UpdateTypeKVNew:
@@ -125,8 +128,17 @@ func (st *SyncerTester) OnUpdates(updates []api.Update) {
 					"Key":   k,
 					"Value": u.KVPair.Value,
 				}).Info("Handling modified cache entry")
-				Expect(st.cache).To(HaveKey(k))
-				Expect(u.Value).NotTo(BeNil())
+				//var rcc v3.RemoteClusterConfiguration
+				//switch t := u.Key.(type) {
+				//default:
+				//case model.ResourceKey:
+				//	if t.Kind == v3.KindRemoteClusterConfiguration {
+				//		rcc = u.Value.(v3.RemoteClusterConfiguration)
+				//	}
+				//}
+				//Expect(st.cache).To(HaveKey(k), fmt.Sprintf("Update is %+v, %+v", k, rcc))
+				Expect(st.cache).To(HaveKey(k), fmt.Sprintf("Update is %+q: %+v", k, u.KVPair.Value))
+				Expect(u.Value).NotTo(BeNil(), fmt.Sprintf("Update is %+v", u))
 				st.cache[k] = u.KVPair
 			}
 
@@ -379,6 +391,7 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	updates := st.updates
+	log.Infof("In updates of %v", updates)
 	st.updates = nil
 	st.onUpdates = nil
 
