@@ -32,7 +32,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20170622225139-7ff1ba29eca2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 // indirect
+	github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1 // indirect
 	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
 	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343
