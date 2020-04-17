@@ -1062,7 +1062,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPrerouting},
 		}})
-		if d.config.EgressIPEnabled {
+		if t.IPVersion == 4 && d.config.EgressIPEnabled {
 			t.AppendRules("PREROUTING", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainNATPreroutingEgress},
 			}})
@@ -1076,7 +1076,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	}
 	for _, t := range d.iptablesMangleTables {
 		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
-		if d.config.EgressIPEnabled {
+		if t.IPVersion == 4 && d.config.EgressIPEnabled {
 			t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgress},
 			}})
