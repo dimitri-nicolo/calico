@@ -705,6 +705,10 @@ func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface
 		if endpointIsWorkload || !ipSetData.isEgressSelector {
 			// Non-named port match, simply return the CIDRs.
 			for _, addr := range d.nets {
+				if ipSetData.isEgressSelector && addr.Version() != 4 {
+					// For egress IP, only IPv4 addresses are useful.
+					continue
+				}
 				contrib = append(contrib, IPSetMember{
 					CIDR: addr,
 				})
