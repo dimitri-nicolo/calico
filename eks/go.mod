@@ -9,5 +9,6 @@ require (
 	github.com/olivere/elastic/v7 v7.0.7
 	github.com/onsi/gomega v1.7.0
 	github.com/sirupsen/logrus v1.4.2
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 	k8s.io/apiserver v0.0.0-20191018030144-550b75f0da71
 )
