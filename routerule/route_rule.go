@@ -132,6 +132,7 @@ func NewWithShims(
 		matchForUpdate:   updateFunc,
 		matchForRemove:	  removeFunc,
 		tableIndexSet:    tableIndexSet,
+		activeRules:      set.New(),
 		netlinkFamily:    family,
 		newNetlinkHandle: newNetlinkHandle,
 		netlinkTimeout:   netlinkTimeout,
