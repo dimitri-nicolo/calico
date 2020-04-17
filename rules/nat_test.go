@@ -316,7 +316,7 @@ var _ = Describe("NAT", func() {
 	})
 
 	Describe("with Egress IP enabled", func() {
-		BeforeEach(func() { rrConfigNormal.EgressIpEnabled = true })
+		BeforeEach(func() { rrConfigNormal.EgressIPEnabled = true })
 
 		It("should render v4 rules correctly rules when active", func() {
 			Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{

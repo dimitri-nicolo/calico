@@ -2786,7 +2786,7 @@ type WorkloadEndpoint struct {
 	Tiers         []*TierInfo `protobuf:"bytes,7,rep,name=tiers" json:"tiers,omitempty"`
 	Ipv4Nat       []*NatInfo  `protobuf:"bytes,8,rep,name=ipv4_nat,json=ipv4Nat" json:"ipv4_nat,omitempty"`
 	Ipv6Nat       []*NatInfo  `protobuf:"bytes,9,rep,name=ipv6_nat,json=ipv6Nat" json:"ipv6_nat,omitempty"`
-	EgressIpSetId string      `protobuf:"bytes,10,opt,name=egress_ip_set_id,json=egressIpSetId,proto3" json:"egress_ip_set_id,omitempty"`
+	EgressIPSetId string      `protobuf:"bytes,10,opt,name=egress_ip_set_id,json=egressIpSetId,proto3" json:"egress_ip_set_id,omitempty"`
 }
 
 func (m *WorkloadEndpoint) Reset()                    { *m = WorkloadEndpoint{} }
@@ -2857,9 +2857,9 @@ func (m *WorkloadEndpoint) GetIpv6Nat() []*NatInfo {
 	return nil
 }
 
-func (m *WorkloadEndpoint) GetEgressIpSetId() string {
+func (m *WorkloadEndpoint) GetEgressIPSetId() string {
 	if m != nil {
-		return m.EgressIpSetId
+		return m.EgressIPSetId
 	}
 	return ""
 }
@@ -6314,11 +6314,11 @@ func (m *WorkloadEndpoint) MarshalTo(dAtA []byte) (int, error) {
 			i += n
 		}
 	}
-	if len(m.EgressIpSetId) > 0 {
+	if len(m.EgressIPSetId) > 0 {
 		dAtA[i] = 0x52
 		i++
-		i = encodeVarintFelixbackend(dAtA, i, uint64(len(m.EgressIpSetId)))
-		i += copy(dAtA[i:], m.EgressIpSetId)
+		i = encodeVarintFelixbackend(dAtA, i, uint64(len(m.EgressIPSetId)))
+		i += copy(dAtA[i:], m.EgressIPSetId)
 	}
 	return i, nil
 }
@@ -8737,7 +8737,7 @@ func (m *WorkloadEndpoint) Size() (n int) {
 			n += 1 + l + sovFelixbackend(uint64(l))
 		}
 	}
-	l = len(m.EgressIpSetId)
+	l = len(m.EgressIPSetId)
 	if l > 0 {
 		n += 1 + l + sovFelixbackend(uint64(l))
 	}
@@ -14614,7 +14614,7 @@ func (m *WorkloadEndpoint) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 10:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field EgressIpSetId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field EgressIPSetId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -14639,7 +14639,7 @@ func (m *WorkloadEndpoint) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.EgressIpSetId = string(dAtA[iNdEx:postIndex])
+			m.EgressIPSetId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

@@ -163,9 +163,10 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
 
-				EgressIpEnabled:   configParams.EgressIPCheckEnabled(),
-				EgressIpVXLANPort: configParams.EgressIpVXLANPort,
-				EgressIpVXLANVNI:  configParams.EgressIpVXLANVNI,
+				EgressIPEnabled:   configParams.EgressIPCheckEnabled(),
+				EgressIPVXLANPort: configParams.EgressIPVXLANPort,
+				EgressIPVXLANVNI:  configParams.EgressIPVXLANVNI,
+				EgressIPInterface: "vxlan.calico.egress",
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
@@ -218,10 +219,10 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPSecRekeyTime:             configParams.IPSecRekeyTime,
 			IPSecPolicyRefreshInterval: configParams.IPSecPolicyRefreshInterval,
 
-			EgressIpEnabled:                configParams.EgressIPCheckEnabled(),
-			EgressIpRoutingRulePriority:    configParams.EgressIpRoutingRulePriority,
-			EgressIpFirstRoutingTableIndex: configParams.EgressIpFirstRoutingTableIndex,
-			EgressIpRoutingTablesCount:     configParams.EgressIpRoutingTablesCount,
+			EgressIPEnabled:                configParams.EgressIPCheckEnabled(),
+			EgressIPRoutingRulePriority:    configParams.EgressIPRoutingRulePriority,
+			EgressIPFirstRoutingTableIndex: configParams.EgressIPFirstRoutingTableIndex,
+			EgressIPRoutingTablesCount:     configParams.EgressIPRoutingTablesCount,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 			ChildExitedRestartCallback:   childExitedRestartCallback,

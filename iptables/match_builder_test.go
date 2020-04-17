@@ -63,7 +63,9 @@ var _ = DescribeTable("MatchBuilder",
 	Entry("ConntrackOrigDstPort", Match().ConntrackOrigDstPort(53), "-m conntrack --ctorigdstport 53"),
 	// Interfaces.
 	Entry("InInterface", Match().InInterface("tap1234abcd"), "--in-interface tap1234abcd"),
+	Entry("NotInInterface", Match().NotInInterface("tap1234abcd"), "! --in-interface tap1234abcd"),
 	Entry("OutInterface", Match().OutInterface("tap1234abcd"), "--out-interface tap1234abcd"),
+	Entry("NotOutInterface", Match().NotOutInterface("tap1234abcd"), "! --out-interface tap1234abcd"),
 	// Address types.
 	Entry("SrcAddrType limit iface", Match().SrcAddrType(AddrTypeLocal, true), "-m addrtype --src-type LOCAL --limit-iface-out"),
 	Entry("SrcAddrType no limit iface", Match().SrcAddrType(AddrTypeLocal, false), "-m addrtype --src-type LOCAL"),

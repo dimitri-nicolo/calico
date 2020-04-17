@@ -132,8 +132,8 @@ func newEgressIPManagerWithShims(
 	dpConfig Config,
 	nlHandle netlinkHandle,
 ) *egressIPManager {
-	firstTableIndex := dpConfig.EgressIpFirstRoutingTableIndex
-	tableCount := dpConfig.EgressIpRoutingTablesCount
+	firstTableIndex := dpConfig.EgressIPFirstRoutingTableIndex
+	tableCount := dpConfig.EgressIPRoutingTablesCount
 	// Prepare table index stack for allocation.
 	tableIndexStack := stack.New()
 	// Prepare table index set to be passed to routerules.
@@ -144,7 +144,7 @@ func newEgressIPManagerWithShims(
 	}
 
 	// Create routerules to manage routing rules.
-	rr, err := routerule.New(4, dpConfig.EgressIpRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, dpConfig.NetlinkTimeout)
+	rr, err := routerule.New(4, dpConfig.EgressIPRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, dpConfig.NetlinkTimeout)
 	if err != nil {
 		// table index has been checked by config.
 		// This should not happen.
@@ -159,8 +159,8 @@ func newEgressIPManagerWithShims(
 		pendingWlEpUpdates:      make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		activeEgressIPSet:       make(map[string]set.Set),
 		vxlanDevice:             deviceName,
-		vxlanID:                 dpConfig.RulesConfig.EgressIpVXLANVNI,
-		vxlanPort:               dpConfig.RulesConfig.EgressIpVXLANPort,
+		vxlanID:                 dpConfig.RulesConfig.EgressIPVXLANVNI,
+		vxlanPort:               dpConfig.RulesConfig.EgressIPVXLANPort,
 		dirtyEgressIPSet:        set.New(),
 		dpConfig:                dpConfig,
 		nlHandle:                nlHandle,
@@ -238,7 +238,7 @@ func (m *egressIPManager) workloadToRulesMatchSrcFWMark(workload *proto.Workload
 	rules := []*routerule.Rule{}
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
-		rule := routerule.NewRule(4, m.dpConfig.EgressIpRoutingRulePriority)
+		rule := routerule.NewRule(4, m.dpConfig.EgressIPRoutingRulePriority)
 		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress))
 	}
 	return rules
@@ -249,7 +249,7 @@ func (m *egressIPManager) workloadToFullRules(workload *proto.WorkloadEndpoint, 
 	rules := []*routerule.Rule{}
 	for _, s := range workload.Ipv4Nets {
 		cidr := ip.MustParseCIDROrIP(s)
-		rule := routerule.NewRule(4, m.dpConfig.EgressIpRoutingRulePriority)
+		rule := routerule.NewRule(4, m.dpConfig.EgressIPRoutingRulePriority)
 		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress).GoToTable(tableIndex))
 	}
 	return rules
@@ -351,7 +351,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			oldWorkload := m.activeWlEndpoints[id]
 			if workload != nil {
 				logCxt.Info("Updating endpoint routing rule.")
-				if oldWorkload != nil && oldWorkload.EgressIpSetId != workload.EgressIpSetId {
+				if oldWorkload != nil && oldWorkload.EgressIPSetId != workload.EgressIPSetId {
 					logCxt.Debug("EgressIPSet changed, cleaning up old state")
 					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
 						m.routerules.RemoveRule(r, routerule.RulesMatchSrcFWMark)
@@ -361,7 +361,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				// We are not checking if workload state is active or not,
 				// There is no big downside if we populate routing rule for
 				// an inactive workload.
-				IPSetId := workload.EgressIpSetId
+				IPSetId := workload.EgressIPSetId
 				index := m.egressIPSetToTableIndex[IPSetId]
 				if index == 0 {
 					// Have not received latest EgressIPSet update or WEP update is out of date.

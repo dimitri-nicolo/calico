@@ -184,10 +184,10 @@ type Config struct {
 	IPSecLogLevel              string
 	IPSecRekeyTime             time.Duration
 
-	EgressIpEnabled                bool
-	EgressIpRoutingRulePriority    int
-	EgressIpFirstRoutingTableIndex int
-	EgressIpRoutingTablesCount     int
+	EgressIPEnabled                bool
+	EgressIPRoutingRulePriority    int
+	EgressIPFirstRoutingTableIndex int
+	EgressIPRoutingTablesCount     int
 
 	// Optional stats collector
 	Collector collector.Collector
@@ -445,7 +445,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	if config.EgressIpEnabled {
+	if config.EgressIPEnabled {
 		egressIpMgr := newEgressIPManager("vxlan.calico.egress", config)
 		go egressIpMgr.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
 		dp.RegisterManager(egressIpMgr)
@@ -1058,7 +1058,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPrerouting},
 		}})
-		if d.config.EgressIpEnabled {
+		if d.config.EgressIPEnabled {
 			t.AppendRules("PREROUTING", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainNATPreroutingEgress},
 			}})
@@ -1072,7 +1072,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	}
 	for _, t := range d.iptablesMangleTables {
 		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
-		if d.config.EgressIpEnabled {
+		if d.config.EgressIPEnabled {
 			t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgress},
 			}})

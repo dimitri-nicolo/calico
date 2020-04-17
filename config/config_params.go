@@ -350,10 +350,10 @@ type Config struct {
 
 	RouteTableRange idalloc.IndexRange `config:"route-table-range;1-250;die-on-fail"`
 
-	EgressIpEnabled             bool `config:"bool;false"`
-	EgressIpVXLANPort           int  `config:"int;4790"`
-	EgressIpVXLANVNI            int  `config:"int;4097"`
-	EgressIpRoutingRulePriority int  `config:"int;100"`
+	EgressIPEnabled             bool `config:"bool;false"`
+	EgressIPVXLANPort           int  `config:"int;4790"`
+	EgressIPVXLANVNI            int  `config:"int;4097"`
+	EgressIPRoutingRulePriority int  `config:"int;100"`
 
 	// State tracking.
 
@@ -446,13 +446,13 @@ func (config *Config) OpenstackActive() bool {
 }
 
 func (c *Config) EgressIPCheckEnabled() bool {
-	if !c.EgressIpEnabled {
+	if !c.EgressIPEnabled {
 		return false
 	}
 
-	if (c.EgressIpFirstRoutingTableIndex + c.EgressIpRoutingTablesCount) > unix.RT_TABLE_COMPAT {
+	if (c.EgressIPFirstRoutingTableIndex + c.EgressIPRoutingTablesCount) > unix.RT_TABLE_COMPAT {
 		log.Panicf("routing table index for egress ip out of range. start %d, count %d",
-			c.EgressIpFirstRoutingTableIndex, c.EgressIpRoutingTablesCount)
+			c.EgressIPFirstRoutingTableIndex, c.EgressIPRoutingTablesCount)
 	}
 	return true
 }

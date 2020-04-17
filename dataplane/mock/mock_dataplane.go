@@ -371,7 +371,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		d.endpointToPolicyOrder[id.String()] = tierInfos
 		d.endpointToUntrackedPolicyOrder[id.String()] = []TierInfo{}
 		d.endpointToPreDNATPolicyOrder[id.String()] = []TierInfo{}
-		d.endpointEgressIPSetID[id.String()] = event.Endpoint.EgressIpSetId
+		d.endpointEgressIPSetID[id.String()] = event.Endpoint.EgressIPSetId
 		d.endpointToAllPolicyIDs[id.String()] = allPolsIDs
 
 		// Check that all the profiles referenced by the endpoint are already present, which

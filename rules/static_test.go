@@ -1214,7 +1214,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:       []string{"tap"},
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				EgressIpEnabled:             true,
+				EgressIPEnabled:             true,
 				IptablesMarkAccept:          0x10,
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,

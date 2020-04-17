@@ -776,7 +776,7 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chai
 		Rules: rules,
 	}}
 
-	if ipVersion == 4 && r.EgressIpEnabled {
+	if ipVersion == 4 && r.EgressIPEnabled {
 		var egressRules []Rule
 
 		// Set mark on first packet from a pod to destinations other than pod or host.
@@ -880,7 +880,7 @@ func (r *DefaultRuleRenderer) StaticNATOutputChains(ipVersion uint8) []*Chain {
 }
 
 func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains []*Chain) {
-	if ipVersion == 4 && r.EgressIpEnabled {
+	if ipVersion == 4 && r.EgressIPEnabled {
 		var rules []Rule
 
 		// Restore ConnMark for pod traffic.

@@ -378,7 +378,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 			},
 			Endpoint: &proto.WorkloadEndpoint{
 				Name:          "we1",
-				EgressIpSetId: "e:abcdef",
+				EgressIPSetId: "e:abcdef",
 				Ipv4Nets:      []string{},
 				Ipv6Nets:      []string{},
 				Ipv4Nat:       []*proto.NatInfo{},
@@ -401,7 +401,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 			},
 			Endpoint: &proto.WorkloadEndpoint{
 				Name:          "we1",
-				EgressIpSetId: "",
+				EgressIPSetId: "",
 				Ipv4Nets:      []string{},
 				Ipv6Nets:      []string{},
 				Ipv4Nat:       []*proto.NatInfo{},
