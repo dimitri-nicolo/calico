@@ -11,9 +11,9 @@
 				"format": "yyyy-MM-dd'T'HH:mm:ss"
 			},
 			"message": {
-				"type": "keyword"
+				"type": "text"
 			},
-			"bird_type": {
+			"ip_version": {
 				"type": "keyword"
 			},
 			"hostname": {
