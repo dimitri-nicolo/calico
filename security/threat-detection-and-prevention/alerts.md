@@ -118,7 +118,7 @@ for common tasks that can then be modified to suit your needs.
 ### Above and beyond
 
 For all global alert and template options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
-To troubleshoot alerts, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshooting)
+To troubleshoot alerts, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshoot/troubleshooting)
 
 [flow]: ../logs/elastic/flow
 [dns]: ../logs/elastic/dns
