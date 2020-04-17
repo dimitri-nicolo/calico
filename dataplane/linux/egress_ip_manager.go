@@ -29,6 +29,7 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/golang-collections/collections/stack"
+
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routerule"

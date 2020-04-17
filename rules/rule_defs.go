@@ -47,14 +47,14 @@ const (
 	ChainFailsafeIn  = ChainNamePrefix + "failsafe-in"
 	ChainFailsafeOut = ChainNamePrefix + "failsafe-out"
 
-	ChainNATPrerouting              = ChainNamePrefix + "PREROUTING"
-	ChainNATPreroutingEgressSetMark = ChainNamePrefix + "egress-set-mark"
-	ChainNATPostrouting             = ChainNamePrefix + "POSTROUTING"
-	ChainNATOutput                  = ChainNamePrefix + "OUTPUT"
-	ChainNATOutgoing                = ChainNamePrefix + "nat-outgoing"
+	ChainNATPrerouting       = ChainNamePrefix + "PREROUTING"
+	ChainNATPreroutingEgress = ChainNamePrefix + "egress"
+	ChainNATPostrouting      = ChainNamePrefix + "POSTROUTING"
+	ChainNATOutput           = ChainNamePrefix + "OUTPUT"
+	ChainNATOutgoing         = ChainNamePrefix + "nat-outgoing"
 
-	ChainManglePrerouting                  = ChainNamePrefix + "PREROUTING"
-	ChainManglePreroutingEgressRestoremark = ChainNamePrefix + "egress-restore-mark"
+	ChainManglePrerouting       = ChainNamePrefix + "PREROUTING"
+	ChainManglePreroutingEgress = ChainNamePrefix + "egress"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
