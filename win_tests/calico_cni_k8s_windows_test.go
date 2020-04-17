@@ -314,7 +314,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				}
 
 				wrkload, err := ids.CalculateWorkloadEndpointName(false)
-				interfaceName := k8sconversion.VethNameForWorkload(nsName, name)
+				interfaceName := k8sconversion.NewConverter().VethNameForWorkload(nsName, name)
 				Expect(err).NotTo(HaveOccurred())
 				log.Debugf("interfaceName : %v", interfaceName)
 
