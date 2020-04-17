@@ -60,11 +60,6 @@ import (
 // Each routing table is managed by a routetable instance for both L3 and L2 routes.
 //
 // Egress IP manager ensures vxlan interface is configured according to the configuration.
-
-const (
-	invalidTableIndex = 0xffff
-)
-
 var (
 	TableIndexRunout = errors.New("no table index left")
 	defaultCidr, _   = ip.ParseCIDROrIP("0.0.0.0/0")
@@ -212,7 +207,6 @@ func (m *egressIPManager) handleEgressIPSetUpdate(msg *proto.IPSetUpdate) {
 	}
 
 	m.activeEgressIPSet[msg.Id] = set.FromArray(msg.Members)
-	m.egressIPSetToTableIndex[msg.Id] = invalidTableIndex
 }
 
 func (m *egressIPManager) handleEgressIPSetRemove(msg *proto.IPSetRemove) {
@@ -297,25 +291,25 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	m.dirtyEgressIPSet.Iter(func(item interface{}) error {
 		id := item.(string)
 
+		currentIndex, ipsetToIndexExists := m.egressIPSetToTableIndex[id]
 		if ips, found := m.activeEgressIPSet[id]; !found {
 			// EgressIPSet been removed.
-			index := m.egressIPSetToTableIndex[id]
-			rTable := m.tableIndexToRouteTable[index]
-			if index == 0 || rTable == nil {
+			rTable := m.tableIndexToRouteTable[currentIndex]
+			if !ipsetToIndexExists || rTable == nil {
 				// Something wrong, this should not happen. return error and panic.
 				return errors.New("Removing an egress IPSet with invalid table index")
 			}
 
 			// Remove routes.
-			logrus.WithField("tableindex", index).Debug("EgressIPManager remove routes.")
+			logrus.WithField("tableindex", currentIndex).Debug("EgressIPManager remove routes.")
 			rTable.SetRoutes(m.vxlanDevice, nil)
 
 			// Once routes pending being removed, we can safely push table index back to stack.
-			m.tableIndexStack.Push(index)
+			m.tableIndexStack.Push(currentIndex)
 			delete(m.egressIPSetToTableIndex, id)
 		} else {
 			var rTable *routetable.RouteTable
-			if m.egressIPSetToTableIndex[id] == invalidTableIndex {
+			if !ipsetToIndexExists {
 				// EgressIPSet been added. No table index yet.
 				if m.tableIndexStack.Len() == 0 {
 					// Run out of egress routing table. Log error and Panic.
@@ -324,16 +318,17 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				}
 
 				index := m.tableIndexStack.Pop().(int)
-				m.egressIPSetToTableIndex[id] = index
 				if m.tableIndexToRouteTable[index] == nil {
 					// Allocate a routetable if it does not exists.
 					rTable = routetable.New([]string{m.vxlanDevice}, 4, index, true, m.dpConfig.NetlinkTimeout, nil,
 						m.dpConfig.DeviceRouteProtocol, true)
 					m.tableIndexToRouteTable[index] = rTable
-				} else {
-					rTable = m.tableIndexToRouteTable[index]
 				}
+				m.egressIPSetToTableIndex[id] = index
+				currentIndex = index
 			}
+
+			rTable = m.tableIndexToRouteTable[currentIndex]
 
 			// Add L3 and L2 routes for EgressIPSet.
 			m.setL3L2Routes(rTable, ips)
