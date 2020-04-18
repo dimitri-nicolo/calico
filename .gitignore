@@ -11,3 +11,5 @@ cscope.*
 hack/lib/*
 Makefile.common*
 docker-image/bin/
+.generate_execs
+.generate_files

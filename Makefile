@@ -8,7 +8,7 @@ LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 # Used only when doing local build
 LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
 
-build: ut
+build: tigera/cnx-apiserver
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -116,14 +116,15 @@ update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-licensing-pin
 ###############################################################################
 # This section contains the code generation stuff
 ###############################################################################
-.generate_exes: $(BINDIR)/defaulter-gen \
-                $(BINDIR)/deepcopy-gen \
-                $(BINDIR)/conversion-gen \
-                $(BINDIR)/client-gen \
-                $(BINDIR)/lister-gen \
-                $(BINDIR)/informer-gen \
-                $(BINDIR)/openapi-gen
-	touch $@
+.PHONY: gen-execs
+gen-execs .generate_execs: $(BINDIR)/defaulter-gen \
+            $(BINDIR)/deepcopy-gen \
+            $(BINDIR)/conversion-gen \
+            $(BINDIR)/client-gen \
+            $(BINDIR)/lister-gen \
+            $(BINDIR)/informer-gen \
+            $(BINDIR)/openapi-gen
+	touch .generate_execs
 
 $(BINDIR)/defaulter-gen: vendor/.up-to-date
 	$(DOCKER_RUN) $(CALICO_BUILD) \
@@ -154,7 +155,8 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 	    sh -c '$(GIT_CONFIG_SSH) go build -o $@ vendor/k8s.io/code-generator/cmd/openapi-gen/*.go'
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
-.generate_files: .generate_exes
+.PHONY: gen-files
+gen-files .generate_files: .generate_execs
 	# Generate defaults
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) $(BINDIR)/defaulter-gen \
@@ -192,7 +194,7 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3,k8s.io/api/core/v1,k8s.io/api/networking/v1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/version,k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/util/intstr,github.com/projectcalico/libcalico-go/lib/apis/v3,github.com/projectcalico/libcalico-go/lib/apis/v1,github.com/projectcalico/libcalico-go/lib/numorstring" \
 		--output-package "$(PACKAGE_NAME)/pkg/openapi"'
-	touch $@
+	touch .generate_files
 
 ###############################################################################
 # ensure we have a real imagetag
@@ -406,7 +408,7 @@ clean-generated:
 
 clean-bin:
 	rm -rf $(BINDIR) \
-	    .generate_exes \
+	    .generate_execs \
 	    docker-image/bin
 
 clean-hack-lib:
