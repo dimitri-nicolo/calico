@@ -551,6 +551,8 @@ github.com/tigera/licensing v0.0.0-20200324041600-0753b0f90e1c h1:sQG9yNwKJmKc34
 github.com/tigera/licensing v0.0.0-20200324041600-0753b0f90e1c/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 h1:xM0NXtWnlqB83al1HoHAODwZc2Y/0SzclonznKHw9wQ=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
+github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1 h1:xglpgGtP0Sww8sSSWti6B+a2TGZ3Td95wOw4u9BD73M=
+github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
