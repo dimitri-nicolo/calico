@@ -739,6 +739,8 @@ github.com/tigera/licensing v1.0.1-0.20200324041600-0753b0f90e1c h1:2TEHzxqijRWy
 github.com/tigera/licensing v1.0.1-0.20200324041600-0753b0f90e1c/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v1.0.1-0.20200331233106-fb744365c2e5 h1:QFl5iToDPni+G7IXYHCzDYmmaW3Hi1Dnw6ZP1wjWs2Q=
 github.com/tigera/licensing v1.0.1-0.20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
+github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 h1:xkS+YSPj//0GV+0XM3V0+9c0eV5umXU7/PPXxw95luE=
+github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR9BwogBGNV3t3jEKY3sz/Hebb630=
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320/go.mod h1:erKr0bew1q/9lZOLYs49JrRBaUBIj/zAfJylAmcrGD0=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be h1:hNMFGLnP0DCUPSNnPSQwEkPQwuGn5y2QrQzx2+ue7lY=
@@ -765,6 +767,7 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200415163518-c61b63543f4e h1:Uh
 github.com/tigera/typha-private v0.6.0-beta1.0.20200415163518-c61b63543f4e/go.mod h1:4xNF7Z4vXorhHx9FxUg4iEsFPYJtf5ZpS4J6tMcwxtI=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200416215002-419c85191aba h1:VmBVmCTK83BKUh68ihXdGR64ywkUhPb3bZN/J4axjKw=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200416215002-419c85191aba/go.mod h1:3fIjzzUg5Wrvz8MxZd9ULf6fxJvZVml9tHIWoXVX7SY=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200417141004-1a2474251e84/go.mod h1:3fIjzzUg5Wrvz8MxZd9ULf6fxJvZVml9tHIWoXVX7SY=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
@@ -1068,6 +1071,7 @@ gopkg.in/yaml.v2 v2.2.3/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.5 h1:ymVxjfMaHvXD8RqPRmzHHsB3VvucivSkIAvJFDI5O3c=
 gopkg.in/yaml.v2 v2.2.5/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gotest.tools v2.1.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 gotest.tools/gotestsum v0.3.5/go.mod h1:Mnf3e5FUzXbkCfynWBGOwLssY7gTQgCHObK9tMpAriY=
