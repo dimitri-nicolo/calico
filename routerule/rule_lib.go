@@ -34,8 +34,12 @@ func NewRule(family, priority int) *Rule {
 	return r
 }
 
-func fromNetlinkRule(nlRule *netlink.Rule) *Rule {
+func FromNetlinkRule(nlRule *netlink.Rule) *Rule {
 	return &Rule{nlRule: nlRule}
+}
+
+func (r *Rule) NetLinkRule() *netlink.Rule {
+	return r.nlRule
 }
 
 func (r *Rule) LogCxt() *log.Entry {

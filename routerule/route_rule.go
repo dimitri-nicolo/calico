@@ -130,7 +130,7 @@ func NewWithShims(
 		IPVersion:        ipVersion,
 		Priority:         priority,
 		matchForUpdate:   updateFunc,
-		matchForRemove:	  removeFunc,
+		matchForRemove:   removeFunc,
 		tableIndexSet:    tableIndexSet,
 		activeRules:      set.New(),
 		netlinkFamily:    family,
@@ -157,6 +157,10 @@ func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 
 // Set a Rule. Add to activeRules if it does not already exist based on matchForUpdate function.
 func (r *RouteRules) SetRule(rule *Rule) {
+	if !r.tableIndexSet.Contains(rule.nlRule.Table) {
+		log.WithField("tableindex", rule.nlRule.Table).Panic("Unknown Table Index")
+	}
+
 	if r.getActiveRule(rule, r.matchForUpdate) == nil {
 		r.activeRules.Add(rule)
 		r.inSync = false
@@ -240,7 +244,7 @@ func (r *RouteRules) Apply() error {
 	for _, nlRule := range nlRules {
 		if r.tableIndexSet.Contains(nlRule.Table) {
 			// Table index of the rule is managed by us.
-			dataplaneRule := fromNetlinkRule(&nlRule)
+			dataplaneRule := FromNetlinkRule(&nlRule)
 			if activeRule := r.getActiveRule(dataplaneRule, r.matchForUpdate); r != nil {
 				// rule exists both in activeRules and dataplaneRules.
 				toAdd.Discard(activeRule)

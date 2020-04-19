@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"syscall"
 	"time"
 
@@ -142,6 +143,7 @@ func newEgressIPManagerWithShims(
 		egressIPSetToTableIndex: make(map[string]int),
 		pendingWlEpUpdates:      make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		activeEgressIPSet:       make(map[string]set.Set),
+		activeWlEndpoints:       make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		vxlanDevice:             deviceName,
 		vxlanID:                 dpConfig.RulesConfig.EgressIPVXLANVNI,
 		vxlanPort:               dpConfig.RulesConfig.EgressIPVXLANPort,
@@ -233,7 +235,7 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 	multipath := []ip.Addr{}
 
 	ips.Iter(func(item interface{}) error {
-		ipString := item.(string)
+		ipString := strings.Split(item.(string), "/")[0]
 		l2routes = append(l2routes, routetable.L2Target{
 			// remote VTEP mac is generated based on gateway pod ip.
 			VTEPMAC: ipStringToMac(ipString),
@@ -244,19 +246,32 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 		return nil
 	})
 
-	// Set L2 route.
-	log.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
-	rTable.SetL2Routes(m.vxlanDevice, l2routes)
-
-	// Set L3 route.
-	route := routetable.Target{
-		Type:      routetable.TargetTypeVXLAN,
-		CIDR:      defaultCidr,
-		MultiPath: multipath,
+	if len(l2routes) > 0 {
+		// Set L2 route.
+		log.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
+		rTable.SetL2Routes(m.vxlanDevice, l2routes)
 	}
 
-	log.WithField("ecmproute", route).Debug("Egress ip manager sending ECMP VXLAN L3 updates")
-	rTable.SetRoutes(m.vxlanDevice, []routetable.Target{route})
+	if len(multipath) > 0 {
+		// Set L3 route.
+		route := routetable.Target{
+			Type:      routetable.TargetTypeVXLAN,
+			CIDR:      defaultCidr,
+			MultiPath: multipath,
+		}
+		log.WithField("ecmproute", route).Debug("Egress ip manager sending ECMP VXLAN L3 updates")
+		rTable.SetRoutes(m.vxlanDevice, []routetable.Target{route})
+	} else {
+		// Set unreachable
+		route := routetable.Target{
+			Type:      routetable.TargetTypeUnreachable,
+			CIDR:      defaultCidr,
+		}
+
+		// TODO: Should based on latest OS routetable code.
+		log.WithField("ecmproute", route).Debug("Egress ip manager sending unreachable upates")
+		rTable.SetRoutes("NoInterface", []routetable.Target{route})
+	}
 }
 
 func (m *egressIPManager) CompleteDeferredWork() error {
@@ -378,10 +393,10 @@ func (m *egressIPManager) GetRouteRules() []routeRules {
 }
 
 func ipStringToMac(s string) net.HardwareAddr {
-	ip := ip.FromString(s).AsNetIP()
+	ipAddr := ip.FromString(s).AsNetIP()
 	// Any MAC address that has the values 2, 3, 6, 7, A, B, E, or F
 	// as the second most significant nibble are locally administered.
-	hw := net.HardwareAddr(append([]byte{0xa2, 0x2a}, ip...))
+	hw := net.HardwareAddr(append([]byte{0xa2, 0x2a}, ipAddr...))
 	return hw
 }
 

@@ -77,9 +77,10 @@ const (
 	TargetTypeNoEncap TargetType = "noencap"
 
 	// The following target types should be used with InterfaceNone.
-	TargetTypeBlackhole TargetType = "blackhole"
-	TargetTypeProhibit  TargetType = "prohibit"
-	TargetTypeThrow     TargetType = "throw"
+	TargetTypeBlackhole   TargetType = "blackhole"
+	TargetTypeProhibit    TargetType = "prohibit"
+	TargetTypeThrow       TargetType = "throw"
+	TargetTypeUnreachable TargetType = "unreachable"
 )
 
 const (
@@ -141,6 +142,28 @@ const (
 	updateTypeFullResync updateType = iota
 	updateTypeDelta
 )
+
+func (t Target) EqualGWOrMultiPath(linkIndex int, r netlink.Route) bool {
+	if t.GW != nil {
+		if !r.Gw.Equal(t.GW.AsNetIP()) {
+			return false
+		}
+	}
+
+	if len(t.MultiPath) != len(r.MultiPath) {
+		return false
+	}
+	for i, tm := range t.MultiPath {
+		rm := r.MultiPath[i]
+		if rm.LinkIndex != linkIndex {
+			return false
+		}
+		if !rm.Gw.Equal(tm.AsNetIP()) {
+			return false
+		}
+	}
+	return true
+}
 
 type RouteTable struct {
 	logCxt *log.Entry
@@ -838,6 +861,13 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 				(route.Gw != nil && expectedTarget.GW == nil) ||
 				(route.Gw != nil && expectedTarget.GW != nil && !route.Gw.Equal(expectedTarget.GW.AsNetIP())) {
 				routeProblems = append(routeProblems, "incorrect gateway")
+			}
+		}
+
+		// Check if GW or Multipath info has changed.
+		if t, ok := expectedTargets[dest]; ok {
+			if !t.EqualGWOrMultiPath(linkAttrs.Index, route) {
+				routeProblems = append(routeProblems, "GW or Multiplath incorrect")
 			}
 		}
 		if len(routeProblems) == 0 {
