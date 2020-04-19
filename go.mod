@@ -21,12 +21,12 @@ require (
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v1.0.1-0.20200331233106-fb744365c2e5
+	github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200415003436-babb43054a98
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200415140238-a18ed5d03446
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.17.2
