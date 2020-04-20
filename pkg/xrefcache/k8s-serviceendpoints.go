@@ -102,7 +102,9 @@ func (v *versionedK8sServiceEndpoints) getIPAndEndpointIDs() (set.Set, error) {
 }
 
 func newServiceEndpointsHandler() resourceHandler {
-	return &serviceEndpointsHandler{}
+	return &serviceEndpointsHandler{
+		converter: conversion.NewConverter(),
+	}
 }
 
 type serviceEndpointsHandler struct {
