@@ -84,7 +84,9 @@ func (v *versionedK8sServiceAccount) GetCalicoV3Profile() *apiv3.Profile {
 
 // newServiceAccountHandler creates a resourceHandler used to handle the ServiceAccounts cache.
 func newServiceAccountHandler() resourceHandler {
-	return &serviceAccountHandler{}
+	return &serviceAccountHandler{
+		converter: conversion.NewConverter(),
+	}
 }
 
 // serviceAccountHandler implements the resourceHandler.

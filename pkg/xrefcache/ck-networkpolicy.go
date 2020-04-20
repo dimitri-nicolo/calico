@@ -418,7 +418,10 @@ func (v *versionedCalicoStagedKubernetesNetworkPolicy) IsStaged() bool {
 
 // newNetworkPolicyHandler creates a new handler used for the NetworkPolicy cache.
 func newNetworkPolicyHandler(cfg *config.Config) resourceHandler {
-	return &networkPolicyHandler{includeStaged: cfg.IncludeStagedNetworkPolicies}
+	return &networkPolicyHandler{
+		includeStaged: cfg.IncludeStagedNetworkPolicies,
+		converter:     conversion.NewConverter(),
+	}
 }
 
 // networkPolicyHandler implements the resourceHandler interface for the NetworkPolicy cache.

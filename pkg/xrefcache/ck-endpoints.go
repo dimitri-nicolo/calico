@@ -295,6 +295,7 @@ func newEndpointHandler(config *config.Config) resourceHandler {
 		podIstioContainerRegex:     podIstioContainerRegex,
 		podIstioInitContainerRegex: podIstioInitContainerRegex,
 		includeStaged:              config.IncludeStagedNetworkPolicies,
+		converter:                  conversion.NewConverter(),
 	}
 }
 
@@ -374,7 +375,7 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 	case *corev1.Pod:
 		// If pod status is being archived then we will have the actual pod status to hand and can ignore completed
 		// or failed pods.
-		if c.converter.IsFinished(in) {
+		if conversion.IsFinished(in) {
 			id := resources.GetResourceID(in)
 			log.Debugf("Pod status indicates finished: %s is %s", id, in.Status.Phase)
 			return nil, cerrors.ErrorResourceDoesNotExist{
@@ -405,11 +406,15 @@ func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedR
 			in.Spec.NodeName = fakePodNodeName
 		}
 
-		kvp, err := c.converter.PodToWorkloadEndpoint(in)
+		kvps, err := c.converter.PodToWorkloadEndpoints(in)
 		if err != nil {
 			return nil, err
 		}
 		log.WithField("id", resources.GetResourceID(in)).Debug("Converted Pod to Calico WEP")
+
+		// This needs to be re evaluated to handle multi WorkloadEndpoints being returned in the multi-NICs case (ticket
+		// SAAS-833)
+		kvp := kvps[0]
 
 		v3, ok := kvp.Value.(*apiv3.WorkloadEndpoint)
 		if !ok {

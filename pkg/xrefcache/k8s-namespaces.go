@@ -81,7 +81,9 @@ func (v *versionedK8sNamespace) GetCalicoV3Profile() *apiv3.Profile {
 
 // newNamespacesHandler creates a resourceHandler used to handle the Namespaces cache.
 func newNamespacesHandler() resourceHandler {
-	return &namespaceHandler{}
+	return &namespaceHandler{
+		converter: conversion.NewConverter(),
+	}
 }
 
 // namespaceHandler implements the resourceHandler.
