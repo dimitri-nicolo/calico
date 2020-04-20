@@ -9,35 +9,57 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 
 ### Before you begin
 
+- [Gather required resources](#gather-required-resources)
 - [Create a compatible AKS cluster](#create-a-compatible-aks-cluster)
-- [Gather the necessary resources](#gather-required-resources)
-- [Enable transparent mode](#enable-transparent-mode)
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 - Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components.
+
+#### Gather required resources
+
+- Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings. This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see [AKS access control](https://docs.microsoft.com/en-us/azure/aks/control-kubeconfig-access).
+- Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 #### Create a compatible AKS cluster
 
 Ensure that your AKS cluster meets the following requirements.
 
-   - *Azure CNI networking is used*. The cluster must be started with the option `--network-plugin azure`.
+  - Azure CNI networking plugin is used with transparent mode
+  - Network policy is not set. This is to avoid conflicts between other network policy providers in the cluster and {{site.prodname}}.
 
-   - *Network policy is disabled*. This is to avoid conflicts between other network policy providers in the cluster and {{site.prodname}}.
+##### Using Azure Resource Manager (ARM) template
 
-#### Gather required resources
+AKS clusters created using [ARM templates](https://azure.microsoft.com/en-us/resources/templates/?resourceType=Microsoft.Containerservice&term=AKS) can leverage native support for enabling Azure CNI plugin with transparent mode
 
-- Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings. This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see [AKS access control](https://docs.microsoft.com/bs-latn-ba/azure/aks/control-kubeconfig-access).
-- Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
-
-#### Enable transparent mode
-
-> **Note**: In a future release, AKS will support cluster creation with the Azure CNI plugin in transparent mode. Until then, follow these manual steps to work around this limitation.
+> NOTE: ARM templates must create resources using [Microsoft.ContainerService apiVersion 2020-02-01](https://docs.microsoft.com/en-us/azure/templates/microsoft.containerservice/2020-02-01/managedclusters) or newer
 {: .alert .alert-info}
 
-1. Create the following daemon set to update the Azure CNI plugin so that it operates in transparent mode.
+1. Enable network mode using the `aks-preview` extension
 
+   ```sh
+   az extension add --name aks-preview
+   az feature register -n AKSNetworkModePreview --namespace Microsoft.ContainerService
+   az provider register -n Microsoft.ContainerService
    ```
+
+2. Create cluster using `az deployment group create` with the values:
+
+   ```json
+   "networkProfile": {
+    "networkPlugin": "azure",
+    "networkMode": "transparent"
+   }
+   ```
+
+##### Using Azure CLI
+
+1. Create cluster using `az aks create` with the option `--network-plugin azure`
+
+1. Create the following daemon set to update Azure CNI plugin so that it operates in transparent mode
+
+   ```sh
    kubectl apply -f https://raw.githubusercontent.com/jonielsen/istioworkshop/master/03-TigeraSecure-Install/bridge-to-transparent.yaml
    ```
+
 > **Note**: After the manifest is applied, nodes are rebooted one by one with the status, `SchedulingDisabled`. Wait until all nodes are in `Ready` status before continuing to the next step.
 {: .alert .alert-info}
 
