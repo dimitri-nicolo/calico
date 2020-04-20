@@ -85,7 +85,7 @@ func loadKeys() (interface{}, interface{}, error) {
 	return pubKey, privKey, nil
 }
 
-func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate, san []string) ([]byte, error) {
+func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate) ([]byte, error) {
 	templ := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		Subject:               pkix.Name{CommonName: clusterID},
@@ -95,7 +95,7 @@ func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate, san [
 		IsCA:                  isCA,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
-		DNSNames:              san,
+		DNSNames:              []string{"voltron"},
 	}
 	if isCA {
 		templ.KeyUsage |= x509.KeyUsageCertSign
@@ -118,20 +118,20 @@ func createX509Cert(clusterID string, isCA bool, parent *x509.Certificate, san [
 // CreateSelfSignedX509Cert creates a self-signed certificate using predefined
 // keys that includes the given cluster ID
 func CreateSelfSignedX509Cert(clusterID string, isCA bool) (*x509.Certificate, error) {
-	bytes, _ := createX509Cert(clusterID, isCA, nil, []string{"127.0.0.1"})
+	bytes, _ := createX509Cert(clusterID, isCA, nil)
 	return x509.ParseCertificate(bytes)
 }
 
 // CreateSelfSignedX509CertBinary creates a self-signed certificate using predefined
 // keys that includes the given cluster ID
 func CreateSelfSignedX509CertBinary(clusterID string, isCA bool) ([]byte, error) {
-	return createX509Cert(clusterID, isCA, nil, []string{"127.0.0.1"})
+	return createX509Cert(clusterID, isCA, nil)
 }
 
 // CreateSignedX509Cert creates a cert signed by a parent cert using predefined
 // keys that includes the given cluster ID
-func CreateSignedX509Cert(clusterID string, parent *x509.Certificate, san []string) (*x509.Certificate, error) {
-	bytes, _ := createX509Cert(clusterID, false, parent, san)
+func CreateSignedX509Cert(clusterID string, parent *x509.Certificate) (*x509.Certificate, error) {
+	bytes, _ := createX509Cert(clusterID, false, parent)
 	return x509.ParseCertificate(bytes)
 }
 
