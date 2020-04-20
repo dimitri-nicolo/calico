@@ -92,6 +92,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec":                schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob":                    schema_libcalico_go_lib_apis_v3_CompletedReportJob(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig":                     schema_libcalico_go_lib_apis_v3_ControllersConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec":                            schema_libcalico_go_lib_apis_v3_EgressSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort":                          schema_libcalico_go_lib_apis_v3_EndpointPort(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint":               schema_libcalico_go_lib_apis_v3_EndpointsReportEndpoint(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow":                   schema_libcalico_go_lib_apis_v3_EndpointsReportFlow(ref),
@@ -3680,6 +3681,32 @@ func schema_libcalico_go_lib_apis_v3_ControllersConfig(ref common.ReferenceCallb
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointControllerConfig"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_EgressSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"namespaceSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NamespaceSelector",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -8654,11 +8681,17 @@ func schema_libcalico_go_lib_apis_v3_ProfileSpec(ref common.ReferenceCallback) c
 							},
 						},
 					},
+					"egressGateway": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Egress control.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
 	}
 }
 
@@ -10564,11 +10597,17 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 							},
 						},
 					},
+					"egressGateway": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Egress control.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"},
 	}
 }
 

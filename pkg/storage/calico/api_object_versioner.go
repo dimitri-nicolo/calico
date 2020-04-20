@@ -31,7 +31,7 @@ func (a APIObjectVersioner) ObjectResourceVersion(obj runtime.Object) (uint64, e
 		return 0, nil
 	}
 	if strings.ContainsRune(version, '/') == true {
-		conv := conversion.Converter{}
+		conv := conversion.NewConverter()
 		crdNPRev, k8sNPRev, _ := conv.SplitNetworkPolicyRevision(version)
 		if crdNPRev == "" && k8sNPRev != "" {
 			reason := "kubernetes network policies must be managed through the kubernetes API"
