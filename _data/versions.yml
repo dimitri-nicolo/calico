@@ -89,12 +89,11 @@
     license-agent:
       image: tigera/license-agent
       version: master
+    tigera-cni:
+      image: tigera/cni
+      version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
-    calico/cni:
-      image: calico/cni
-      version: master
-      registry: quay.io
     prometheus-operator:
       image: coreos/prometheus-operator
       version: v0.34.0
