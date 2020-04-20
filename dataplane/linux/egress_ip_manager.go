@@ -246,11 +246,9 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 		return nil
 	})
 
-	if len(l2routes) > 0 {
-		// Set L2 route.
-		log.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
-		rTable.SetL2Routes(m.vxlanDevice, l2routes)
-	}
+	// Set L2 route. If there is no l2route target, old entries will be removed.
+	log.WithField("l2routes", l2routes).Debug("Egress ip manager sending L2 updates")
+	rTable.SetL2Routes(m.vxlanDevice, l2routes)
 
 	if len(multipath) > 0 {
 		// Set L3 route.
@@ -264,8 +262,8 @@ func (m *egressIPManager) setL3L2Routes(rTable *routetable.RouteTable, ips set.S
 	} else {
 		// Set unreachable
 		route := routetable.Target{
-			Type:      routetable.TargetTypeUnreachable,
-			CIDR:      defaultCidr,
+			Type: routetable.TargetTypeUnreachable,
+			CIDR: defaultCidr,
 		}
 
 		// TODO: Should based on latest OS routetable code.
@@ -328,51 +326,48 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		return set.RemoveItem
 	})
 
-	stop := false
 	// Work out WEP updates.
-	for len(m.pendingWlEpUpdates) > 0 && !stop {
-		// Handle pending workload endpoint updates.
-		for id, workload := range m.pendingWlEpUpdates {
-			logCxt := log.WithField("id", id)
-			oldWorkload := m.activeWlEndpoints[id]
-			if workload != nil {
-				logCxt.Info("Updating endpoint routing rule.")
-				if oldWorkload != nil && oldWorkload.EgressIPSetId != workload.EgressIPSetId {
-					logCxt.Debug("EgressIPSet changed, cleaning up old state")
-					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
-						m.routerules.RemoveRule(r)
-					}
+	// Handle pending workload endpoint updates.
+	for id, workload := range m.pendingWlEpUpdates {
+		logCxt := log.WithField("id", id)
+		oldWorkload := m.activeWlEndpoints[id]
+		if workload != nil {
+			logCxt.Info("Updating endpoint routing rule.")
+			if oldWorkload != nil && oldWorkload.EgressIPSetId != workload.EgressIPSetId {
+				logCxt.Debug("EgressIPSet changed, cleaning up old state")
+				for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
+					m.routerules.RemoveRule(r)
 				}
-
-				// We are not checking if workload state is active or not,
-				// There is no big downside if we populate routing rule for
-				// an inactive workload.
-				IPSetId := workload.EgressIPSetId
-				index := m.egressIPSetToTableIndex[IPSetId]
-				if index == 0 {
-					// Have not received latest EgressIPSet update or WEP update is out of date.
-					// The update stays in pendingWlEpUpdates and will be processed later.
-					stop = true
-				}
-
-				// Set rules for new workload.
-				// Pass full Rules to SetRule.
-				for _, r := range m.workloadToFullRules(workload, index) {
-					m.routerules.SetRule(r)
-				}
-				m.activeWlEndpoints[id] = workload
-				delete(m.pendingWlEpUpdates, id)
-			} else {
-				logCxt.Info("Workload removed, deleting its rules.")
-
-				if oldWorkload != nil {
-					for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
-						m.routerules.RemoveRule(r)
-					}
-				}
-				delete(m.activeWlEndpoints, id)
-				delete(m.pendingWlEpUpdates, id)
 			}
+
+			// We are not checking if workload state is active or not,
+			// There is no big downside if we populate routing rule for
+			// an inactive workload.
+			IPSetId := workload.EgressIPSetId
+			index := m.egressIPSetToTableIndex[IPSetId]
+			if index == 0 {
+				// Have not received latest EgressIPSet update or WEP update is out of date.
+				// The update stays in pendingWlEpUpdates and will be processed later.
+				continue
+			}
+
+			// Set rules for new workload.
+			// Pass full Rules to SetRule.
+			for _, r := range m.workloadToFullRules(workload, index) {
+				m.routerules.SetRule(r)
+			}
+			m.activeWlEndpoints[id] = workload
+			delete(m.pendingWlEpUpdates, id)
+		} else {
+			logCxt.Info("Workload removed, deleting its rules.")
+
+			if oldWorkload != nil {
+				for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
+					m.routerules.RemoveRule(r)
+				}
+			}
+			delete(m.activeWlEndpoints, id)
+			delete(m.pendingWlEpUpdates, id)
 		}
 	}
 

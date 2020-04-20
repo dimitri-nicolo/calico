@@ -148,6 +148,10 @@ func (t Target) EqualGWOrMultiPath(linkIndex int, r netlink.Route) bool {
 		if !r.Gw.Equal(t.GW.AsNetIP()) {
 			return false
 		}
+	} else {
+		if len(r.Gw) > 0 {
+			return false
+		}
 	}
 
 	if len(t.MultiPath) != len(r.MultiPath) {
@@ -867,7 +871,7 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 		// Check if GW or Multipath info has changed.
 		if t, ok := expectedTargets[dest]; ok {
 			if !t.EqualGWOrMultiPath(linkAttrs.Index, route) {
-				routeProblems = append(routeProblems, "GW or Multiplath incorrect")
+				routeProblems = append(routeProblems, "GW or multipath incorrect")
 			}
 		}
 		if len(routeProblems) == 0 {
