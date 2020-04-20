@@ -167,6 +167,17 @@ EOF
 
 fi
 
+MULTI_INTERFACE_MODE=${MULTI_INTERFACE_MODE:-}
+
+# If set write the multi interface mode to disk so the CNI plugin can read it
+if [ "$MULTI_INTERFACE_MODE" != "" ];
+then
+  touch /host/etc/cni/net.d/calico_multi_interface_mode
+  echo "$MULTI_INTERFACE_MODE" > /host/etc/cni/net.d/calico_multi_interface_mode
+else
+  rm -f /host/etc/cni/net.d/calico_multi_interface_mode
+fi
+
 # Insert any of the supported "auto" parameters.
 grep "__KUBERNETES_SERVICE_HOST__" $TMP_CONF && sed -i s/__KUBERNETES_SERVICE_HOST__/"${KUBERNETES_SERVICE_HOST}"/g $TMP_CONF
 grep "__KUBERNETES_SERVICE_PORT__" $TMP_CONF && sed -i s/__KUBERNETES_SERVICE_PORT__/"${KUBERNETES_SERVICE_PORT}"/g $TMP_CONF

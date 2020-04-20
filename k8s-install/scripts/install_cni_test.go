@@ -195,6 +195,27 @@ var _ = Describe("install-cni.sh tests", func() {
 			close(done)
 		}, 60)
 
+		It("should write the value of MULTI_INTERFACE_MODE to disk", func(done Done) {
+			err := runCniContainer(
+				"-e", "MULTI_INTERFACE_MODE=test",
+			)
+			Expect(err).NotTo(HaveOccurred())
+			content, err := ioutil.ReadFile("tmp/net.d/calico_multi_interface_mode")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(strings.TrimSpace(string(content))).Should(Equal("test"))
+			close(done)
+		}, 60)
+
+		It("should remove the calico_multi_interface_mode file if MULTI_INTERFACE_MODE isn't set", func(done Done) {
+			Expect(ioutil.WriteFile("tmp/net.d/calico_multi_interface_mode", []byte("test"), 0755)).ShouldNot(HaveOccurred())
+			Expect(runCniContainer()).NotTo(HaveOccurred())
+
+			_, err := os.Stat("tmp/net.d/calico_multi_interface_mode")
+			Expect(err).Should(HaveOccurred())
+			Expect(os.IsNotExist(err)).Should(BeTrue())
+			close(done)
+		}, 60)
+
 		It("should use CNI_NETWORK_CONFIG_FILE over CNI_NETWORK_CONFIG", func(done Done) {
 			err := runCniContainer(
 				"-e", "CNI_NETWORK_CONFIG='oops, I used the CNI_NETWORK_CONFIG'",
