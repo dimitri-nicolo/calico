@@ -1,4 +1,5 @@
-FROM ubuntu:19.04 as ubuntu
+FROM ubuntu:20.04 as ubuntu
+
 # Get the latest trusted CA bundle.
 RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates -f
 
