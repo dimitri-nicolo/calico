@@ -127,16 +127,14 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		return nil, err
 	}
 
-	if o.EnableAdmissionController {
-		if err := o.RecommendedOptions.CoreAPI.ApplyTo(serverConfig); err != nil {
-			return nil, err
-		}
+	if err := o.RecommendedOptions.CoreAPI.ApplyTo(serverConfig); err != nil {
+		return nil, err
+	}
 
-		if initializers, err := o.RecommendedOptions.ExtraAdmissionInitializers(serverConfig); err != nil {
-			return nil, err
-		} else if err := o.RecommendedOptions.Admission.ApplyTo(&serverConfig.Config, serverConfig.SharedInformerFactory, serverConfig.ClientConfig, o.RecommendedOptions.FeatureGate, initializers...); err != nil {
-			return nil, err
-		}
+	if initializers, err := o.RecommendedOptions.ExtraAdmissionInitializers(serverConfig); err != nil {
+		return nil, err
+	} else if err := o.RecommendedOptions.Admission.ApplyTo(&serverConfig.Config, serverConfig.SharedInformerFactory, serverConfig.ClientConfig, o.RecommendedOptions.FeatureGate, initializers...); err != nil {
+		return nil, err
 	}
 
 	config := &apiserver.Config{
