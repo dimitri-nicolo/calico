@@ -34,14 +34,7 @@ replace (
 )
 
 require (
-	github.com/cloudflare/cfssl v0.0.0-20180726162950-56268a613adf // indirect
-	github.com/coreos/etcd v3.3.17+incompatible // indirect
-	github.com/coreos/rkt v1.30.0 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
-	github.com/godbus/dbus v4.1.0+incompatible // indirect
-	github.com/google/certificate-transparency-go v1.0.21 // indirect
-	github.com/heketi/rest v0.0.0-20180404230133-aa6a65207413 // indirect
-	github.com/heketi/utils v0.0.0-20170317161834-435bc5bdfa64 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
