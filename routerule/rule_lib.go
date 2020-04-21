@@ -27,9 +27,9 @@ type Rule struct {
 	nlRule *netlink.Rule
 }
 
-func NewRule(family, priority int) *Rule {
+func NewRule(ipVersion, priority int) *Rule {
 	r := &Rule{nlRule: netlink.NewRule()}
-	r.nlRule.Family = family
+	r.nlRule.Family = ipVersionToNetlinkFamily(ipVersion)
 	r.nlRule.Priority = priority
 	return r
 }
@@ -50,7 +50,7 @@ func (r *Rule) LogCxt() *log.Entry {
 		"Mark":     r.nlRule.Mark,
 		"Mask":     r.nlRule.Mask,
 		"src":      r.nlRule.Src.String(),
-		"GoTable":  r.nlRule.Table,
+		"Table":    r.nlRule.Table,
 	})
 }
 
@@ -88,6 +88,11 @@ func (r *Rule) Not() *Rule {
 func (r *Rule) GoToTable(index int) *Rule {
 	r.nlRule.Table = index
 	return r
+}
+
+func (r *Rule) Copy() *Rule {
+	nlRule := *r.NetLinkRule()
+	return &Rule{nlRule: &nlRule}
 }
 
 // Functions to check if two rules has same matching condition (and table index to go to).

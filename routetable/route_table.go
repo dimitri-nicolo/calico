@@ -303,6 +303,10 @@ func NewWithShims(
 	}
 }
 
+func (r *RouteTable) Index() int {
+	return r.tableIndex
+}
+
 func (r *RouteTable) OnIfaceStateChanged(ifaceName string, state ifacemonitor.State) {
 	logCxt := r.logCxt.WithField("ifaceName", ifaceName)
 	if !r.ifacePrefixRegexp.MatchString(ifaceName) {

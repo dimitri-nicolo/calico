@@ -116,13 +116,6 @@ func NewWithShims(
 		return nil, TableIndexFailed
 	}
 
-	family := unix.AF_INET
-	if ipVersion == 6 {
-		family = unix.AF_INET6
-	} else if ipVersion != 4 {
-		log.WithField("ipVersion", ipVersion).Panic("Unknown IP version")
-	}
-
 	return &RouteRules{
 		logCxt: log.WithFields(log.Fields{
 			"ipVersion": ipVersion,
@@ -133,7 +126,7 @@ func NewWithShims(
 		matchForRemove:   removeFunc,
 		tableIndexSet:    tableIndexSet,
 		activeRules:      set.New(),
-		netlinkFamily:    family,
+		netlinkFamily:    ipVersionToNetlinkFamily(ipVersion),
 		newNetlinkHandle: newNetlinkHandle,
 		netlinkTimeout:   netlinkTimeout,
 	}, nil
@@ -220,6 +213,15 @@ func (r *RouteRules) closeNetlinkHandle() {
 	r.cachedNetlinkHandle = nil
 }
 
+func (r *RouteRules) PrintCurrentRules() {
+	log.WithField("count", r.activeRules.Len()).Info("summary of active rules")
+	r.activeRules.Iter(func(item interface{}) error {
+		p := item.(*Rule)
+		p.LogCxt().Info("active rule")
+		return nil
+	})
+}
+
 func (r *RouteRules) Apply() error {
 	if r.inSync {
 		return nil
@@ -239,13 +241,16 @@ func (r *RouteRules) Apply() error {
 	}
 
 	// Work out two sets, rules to add and rules to remove.
-	toAdd := r.activeRules
+	toAdd := r.activeRules.Copy()
 	toRemove := set.New()
 	for _, nlRule := range nlRules {
+		// Give each loop a fresh copy of nlRule since we would need to use pointer later.
+		nlRule := nlRule
 		if r.tableIndexSet.Contains(nlRule.Table) {
 			// Table index of the rule is managed by us.
+			// Be careful, do not use &nlRule below as it remain same value through iterations.
 			dataplaneRule := FromNetlinkRule(&nlRule)
-			if activeRule := r.getActiveRule(dataplaneRule, r.matchForUpdate); r != nil {
+			if activeRule := r.getActiveRule(dataplaneRule, r.matchForUpdate); activeRule != nil {
 				// rule exists both in activeRules and dataplaneRules.
 				toAdd.Discard(activeRule)
 			} else {
@@ -286,4 +291,14 @@ func (r *RouteRules) Apply() error {
 
 	r.inSync = true
 	return nil
+}
+
+func ipVersionToNetlinkFamily(ipVersion int) int {
+	family := unix.AF_INET
+	if ipVersion == 6 {
+		family = unix.AF_INET6
+	} else if ipVersion != 4 {
+		log.WithField("ipVersion", ipVersion).Panic("Unknown IP version")
+	}
+	return family
 }

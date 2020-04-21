@@ -589,12 +589,18 @@ func chainsForIfaces(ifaceTierNames []string,
 }
 
 type mockRouteTable struct {
+	index           int
 	currentRoutes   map[string][]routetable.Target
 	currentL2Routes map[string][]routetable.L2Target
 }
 
+func (t *mockRouteTable) Index() int {
+	return t.index
+}
+
 func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target) {
 	log.WithFields(log.Fields{
+		"index":     t.index,
 		"ifaceName": ifaceName,
 		"targets":   targets,
 	}).Debug("SetRoutes")
@@ -603,6 +609,7 @@ func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target
 
 func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Target) {
 	log.WithFields(log.Fields{
+		"index":     t.index,
 		"ifaceName": ifaceName,
 		"targets":   targets,
 	}).Debug("SetL2Routes")
@@ -617,6 +624,10 @@ func (t *mockRouteTable) Apply() error {
 
 func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Target) {
 	Expect(t.currentRoutes[ifaceName]).To(Equal(expected))
+}
+
+func (t *mockRouteTable) checkL2Routes(ifaceName string, expected []routetable.L2Target) {
+	Expect(t.currentL2Routes[ifaceName]).To(Equal(expected))
 }
 
 type statusReportRecorder struct {
@@ -701,6 +712,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 			mangleTable = newMockTable("mangle")
 			filterTable = newMockTable("filter")
 			routeTable = &mockRouteTable{
+				index:         0,
 				currentRoutes: map[string][]routetable.Target{},
 			}
 			mockProcSys = &testProcSys{state: map[string]string{}}

@@ -15,38 +15,27 @@
 package routerule_test
 
 import (
-	. "github.com/projectcalico/felix/routerule"
-
 	"errors"
 	"fmt"
 	"net"
 	"strings"
-	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
+
+	. "github.com/projectcalico/felix/routerule"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/testutils"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 var (
-	FelixRouteProtocol = syscall.RTPROT_BOOT
-
 	simulatedError = errors.New("dummy error")
-	notFound       = errors.New("not found")
 	alreadyExists  = errors.New("already exists")
-
-	mac1 = testutils.MustParseMAC("00:11:22:33:44:51")
-	mac2 = testutils.MustParseMAC("00:11:22:33:44:52")
-
-	ip1  = ip.MustParseCIDROrIP("10.0.0.1/32").ToIPNet()
-	ip2  = ip.MustParseCIDROrIP("10.0.0.2/32").ToIPNet()
-	ip13 = ip.MustParseCIDROrIP("10.0.1.3/32").ToIPNet()
 )
 
 var _ = Describe("RouteRules Construct", func() {
@@ -56,9 +45,7 @@ var _ = Describe("RouteRules Construct", func() {
 			ruleKeyToRule:   map[string]netlink.Rule{},
 			addedRuleKeys:   set.New(),
 			deletedRuleKeys: set.New(),
-			updatedRuleKeys: set.New(),
 		}
-
 	})
 
 	It("should not be constructable with no table index", func() {
@@ -131,14 +118,15 @@ var _ = Describe("RouteRules", func() {
 			ruleKeyToRule:   map[string]netlink.Rule{},
 			addedRuleKeys:   set.New(),
 			deletedRuleKeys: set.New(),
-			updatedRuleKeys: set.New(),
 		}
 
 		tableIndexSet := set.New()
 		tableIndexSet.Add(1)
 		tableIndexSet.Add(10)
 		tableIndexSet.Add(250)
-		rrs, err := NewWithShims(
+
+		var err error
+		rrs, err = NewWithShims(
 			4,
 			100,
 			tableIndexSet,
@@ -151,51 +139,68 @@ var _ = Describe("RouteRules", func() {
 		Expect(rrs).ToNot(BeNil())
 	})
 
-	Describe("with existing cali and nonCali rules", func() {
+	Context("with existing cali and nonCali rules", func() {
 		var cali1Rule, cali2Rule, nonCaliRule netlink.Rule
 		BeforeEach(func() {
 			// Calico rule in both control plane and dataplane.
 			cali1Rule = netlink.Rule{
-				Priority: 100,
-				Family:   4,
-				Src:      mustParseCIDR("10.0.0.1/32"),
-				Mark:     0x100,
-				Mask:     0x100,
-				Table:    1,
-				Invert:   true,
+				Priority:          100,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.1/32"),
+				Mark:              0x100,
+				Mask:              0x100,
+				Table:             1,
+				Invert:            true,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
 			}
 			dataplane.addMockRule(&cali1Rule)
+			Expect(rrs).ToNot(BeNil())
+
+			// Set rule to control plane.
 			rrs.SetRule(FromNetlinkRule(&cali1Rule))
 
 			// Calico rule in dataplane only.
 			cali2Rule = netlink.Rule{
-				Priority: 100,
-				Family:   4,
-				Src:      mustParseCIDR("10.0.0.2/32"),
-				Mark:     0x200,
-				Mask:     0x200,
-				Table:    10,
-				Invert:   true,
+				Priority:          100,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.2/32"),
+				Mark:              0x200,
+				Mask:              0x200,
+				Table:             10,
+				Invert:            false,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
 			}
 			dataplane.addMockRule(&cali2Rule)
 
 			// Non Calico rule in dataplane only.
 			nonCaliRule = netlink.Rule{
-				Priority: 100,
-				Family:   4,
-				Src:      mustParseCIDR("10.0.0.1/32"),
-				Mark:     0x800,
-				Mask:     0x800,
-				Table:    90,
-				Invert:   true,
+				Priority:          100,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.1/32"),
+				Mark:              0x800,
+				Mask:              0x800,
+				Table:             90,
+				Invert:            true,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
 			}
 			dataplane.addMockRule(&nonCaliRule)
 		})
 
 		It("should remove Calico rule not in control plane", func() {
+			rrs.QueueResync()
 			err := rrs.Apply()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dataplane.ruleKeyToRule).To(ConsistOf(cali1Rule, nonCaliRule))
+			Expect(dataplane.deletedRuleKeys.Contains("10.0.0.2/32-0x200")).To(BeTrue())
 		})
 		It("should add rule with correct table index", func() {
 			rule := NewRule(4, 100).
@@ -203,14 +208,48 @@ var _ = Describe("RouteRules", func() {
 				MatchFWMark(0x400).
 				GoToTable(250)
 			rrs.SetRule(rule)
+			netlinkRule := netlink.Rule{
+				Priority:          100,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.3/32"),
+				Mark:              0x400,
+				Mask:              0x400,
+				Table:             250,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
+			}
 			err := rrs.Apply()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(dataplane.ruleKeyToRule).To(ConsistOf(cali1Rule, rule.NetLinkRule(), nonCaliRule))
+			Expect(dataplane.ruleKeyToRule).To(ConsistOf(cali1Rule, netlinkRule, nonCaliRule))
+			Expect(dataplane.addedRuleKeys.Contains("10.0.0.3/32-0x400")).To(BeTrue())
 		})
-		It("should panic addimg rule with table index not managed by calico", func() {
+		It("should update rule with updated table index", func() {
+			rule := NewRule(4, 100).
+				MatchSrcAddress(*mustParseCIDR("10.0.0.2/32")).
+				MatchFWMark(0x200).
+				GoToTable(250)
+			rrs.SetRule(rule)
+			netlinkRule := netlink.Rule{
+				Priority:          100,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.2/32"),
+				Mark:              0x200,
+				Mask:              0x200,
+				Table:             250,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
+			}
 			err := rrs.Apply()
 			Expect(err).ToNot(HaveOccurred())
-			Expect(dataplane.ruleKeyToRule).To(ConsistOf(nonCaliRule))
+			Expect(dataplane.ruleKeyToRule).To(ConsistOf(cali1Rule, netlinkRule, nonCaliRule))
+			Expect(dataplane.addedRuleKeys.Contains("10.0.0.2/32-0x200")).To(BeTrue())
+			Expect(dataplane.deletedRuleKeys.Contains("10.0.0.2/32-0x200")).To(BeTrue())
+		})
+		It("should panic adding rule with table index not managed by calico", func() {
 			rule := NewRule(4, 100).
 				MatchSrcAddress(*mustParseCIDR("10.0.0.3/32")).
 				MatchFWMark(0x400).
@@ -219,15 +258,17 @@ var _ = Describe("RouteRules", func() {
 		})
 		It("should remove rule", func() {
 			rule := NewRule(4, 100).
+				Not().
 				MatchSrcAddress(*mustParseCIDR("10.0.0.1/32")).
 				MatchFWMark(0x100)
 			rrs.RemoveRule(rule)
 			err := rrs.Apply()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dataplane.ruleKeyToRule).To(ConsistOf(nonCaliRule))
+			Expect(dataplane.deletedRuleKeys.Contains("10.0.0.1/32-0x100")).To(BeTrue())
 		})
 
-		Describe("with a persistent failure to connect", func() {
+		Context("with a persistent failure to connect", func() {
 			BeforeEach(func() {
 				dataplane.PersistentlyFailToConnect = true
 			})
@@ -246,9 +287,13 @@ var _ = Describe("RouteRules", func() {
 		for _, failFlags := range failureScenarios {
 			failFlags := failFlags
 			desc := fmt.Sprintf("with some rules added and failures: %v", failFlags)
-			Describe(desc, func() {
+			Context(desc, func() {
 				BeforeEach(func() {
-					rrs.SetRule(NewRule(4, 100))
+					rule := NewRule(4, 100).
+						MatchSrcAddress(*mustParseCIDR("10.0.0.3/32")).
+						MatchFWMark(0x400).
+						GoToTable(250)
+					rrs.SetRule(rule)
 					dataplane.failuresToSimulate = failFlags
 				})
 				JustBeforeEach(func() {
@@ -270,36 +315,24 @@ var _ = Describe("RouteRules", func() {
 					Expect(dataplane.failuresToSimulate).To(Equal(failNone))
 				})
 				It("should keep correct rule", func() {
-					Expect(dataplane.ruleKeyToRule["1-10.0.0.1/32"]).To(Equal(netlink.Rule{
-						LinkIndex: 1,
-						Dst:       &ip1,
-						Type:      syscall.RTN_UNICAST,
-						Protocol:  FelixRuleProtocol,
-						Scope:     netlink.SCOPE_LINK,
-					}))
-					Expect(dataplane.addedRuleKeys.Contains("1-10.0.0.1/32")).To(BeFalse())
+					Expect(dataplane.ruleKeyToRule["10.0.0.1/32-0x100"]).To(Equal(cali1Rule))
 				})
 				It("should add new rule", func() {
-					Expect(dataplane.ruleKeyToRule["2-10.0.0.2/32"]).To(Equal(netlink.Rule{
-						LinkIndex: 2,
-						Dst:       &ip2,
-						Type:      syscall.RTN_UNICAST,
-						Protocol:  FelixRuleProtocol,
-						Scope:     netlink.SCOPE_LINK,
+					Expect(dataplane.ruleKeyToRule["10.0.0.3/32-0x400"]).To(Equal(netlink.Rule{
+						Priority:          100,
+						Family:            unix.AF_INET,
+						Src:               mustParseCIDR("10.0.0.3/32"),
+						Mark:              0x400,
+						Mask:              0x400,
+						Table:             250,
+						Goto:              -1,
+						Flow:              -1,
+						SuppressIfgroup:   -1,
+						SuppressPrefixlen: -1,
 					}))
-				})
-				It("should update changed rule", func() {
-					Expect(dataplane.ruleKeyToRule["3-10.0.1.3/32"]).To(Equal(netlink.Rule{
-						LinkIndex: 3,
-						Dst:       &ip13,
-						Type:      syscall.RTN_UNICAST,
-						Protocol:  FelixRuleProtocol,
-						Scope:     netlink.SCOPE_LINK,
-					}))
-					Expect(dataplane.deletedRuleKeys.Contains("3-10.0.0.3/32")).To(BeTrue())
 				})
 				It("should have expected number of rules at the end", func() {
-					Expect(len(dataplane.ruleKeyToRule)).To(Equal(4),
+					Expect(len(dataplane.ruleKeyToRule)).To(Equal(3),
 						fmt.Sprintf("Wrong number of rules %v: %v",
 							len(dataplane.ruleKeyToRule),
 							dataplane.ruleKeyToRule))
@@ -382,7 +415,6 @@ type mockDataplane struct {
 	ruleKeyToRule   map[string]netlink.Rule
 	addedRuleKeys   set.Set
 	deletedRuleKeys set.Set
-	updatedRuleKeys set.Set
 
 	NumNewNetlinkCalls int
 	NetlinkOpen        bool
@@ -475,7 +507,6 @@ func (d *mockDataplane) RuleDel(rule *netlink.Rule) error {
 	// Rule was deleted, but is planned on being readded
 	if _, ok := d.ruleKeyToRule[key]; ok {
 		delete(d.ruleKeyToRule, key)
-		d.updatedRuleKeys.Add(key)
 		return nil
 	} else {
 		return nil
@@ -483,7 +514,7 @@ func (d *mockDataplane) RuleDel(rule *netlink.Rule) error {
 }
 
 func keyForRule(rule *netlink.Rule) string {
-	key := fmt.Sprintf("%s-%#x-%#x", rule.Src.String(), rule.Mark, rule.Mask)
+	key := fmt.Sprintf("%s-%#x", rule.Src.String(), rule.Mark)
 	log.WithField("ruleKey", key).Debug("Calculated rule key")
 	return key
 }
