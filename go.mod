@@ -6,9 +6,9 @@ require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.1 // indirect
 	github.com/Microsoft/hcsshim v0.8.6
-	github.com/aws/aws-sdk-go v1.16.26
+	github.com/aws/aws-sdk-go v1.30.10
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
-	github.com/containernetworking/plugins v0.8.2
+	github.com/containernetworking/plugins v0.8.5
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
@@ -30,7 +30,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v0.0.0-20191223184832-a0e1c4693271
 	github.com/projectcalico/typha v3.8.2+incompatible
