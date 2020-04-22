@@ -273,8 +273,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			syncTester.ExpectStatusUpdate(api.InSync, connTimeout)
 
 			By("Checking we received the event messages for the remote cluster")
-			// We should receive Connecting and 3 ConnectionFaileds
-			// There will be 1 ConnectionFailed for each watchercache that is created for this test
+			// We should receive Connecting and ConnectionFailed
 			expectedEvents := []api.Update{
 				{
 					KVPair: model.KVPair{
@@ -284,26 +283,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						},
 					},
 					UpdateType: api.UpdateTypeKVNew,
-				},
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: name},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterConnectionFailed,
-							Error:  errPrefix,
-						},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
-				},
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: name},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterConnectionFailed,
-							Error:  errPrefix,
-						},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
 				},
 				{
 					KVPair: model.KVPair{
