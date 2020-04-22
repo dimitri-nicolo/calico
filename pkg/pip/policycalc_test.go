@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/config"
@@ -50,6 +51,27 @@ var (
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
+			},
+		},
+	}
+
+	protoTCP = numorstring.ProtocolFromString("TCP")
+
+	// Network policy update
+	npr1 = &v3.NetworkPolicy{
+		TypeMeta: resources.TypeCalicoNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tier1.np",
+			Namespace: "ns1",
+		},
+		Spec: v3.NetworkPolicySpec{
+			Tier:     "tier1",
+			Selector: "has(hello1)",
+			Ingress: []v3.Rule{
+				v3.Rule{
+					Action:   v3.Allow,
+					Protocol: &protoTCP,
+				},
 			},
 		},
 	}
@@ -157,6 +179,36 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 			ResourceID: resources.GetResourceID(pr3),
 			Resource:   pr3,
 		}})
+	})
+
+	It("Handles setting of network policy", func() {
+		By("Sending set updates for network policy")
+		modified, err := pip.ApplyPIPPolicyChanges(xc, []pip.ResourceChange{{
+			Action:   "update",
+			Resource: npr1,
+		}})
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Checking the enforced policies have been updated")
+		ce := xc.Get(resources.GetResourceID(pr1))
+		Expect(ce).ToNot(BeNil())
+		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
+		Expect(ok).To(BeTrue())
+		Expect(p1.Spec.Selector).To(Equal("has(hello1)"))
+
+		By("Checking the impacted set")
+		// Only pr1 is modified.
+		Expect(modified.IsModified(pr1)).To(BeTrue())
+		Expect(modified.IsModified(pr2)).To(BeFalse())
+		Expect(modified.IsModified(pr3)).To(BeFalse())
+		// No staged policy updates
+		Expect(modified.UseStaged(pr1)).To(BeFalse())
+		Expect(modified.UseStaged(pr2)).To(BeFalse())
+		Expect(modified.UseStaged(pr3)).To(BeFalse())
+		// These are all sets not deletes.
+		Expect(modified.IsDeleted(pr1)).To(BeFalse())
+		Expect(modified.IsDeleted(pr2)).To(BeFalse())
+		Expect(modified.IsDeleted(pr3)).To(BeFalse())
 	})
 
 	It("Handles setting of staged policy sets (staged policies do not exist)", func() {
