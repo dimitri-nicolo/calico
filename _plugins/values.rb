@@ -553,8 +553,8 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     # Configuration for setting up Calico CNI.
     cni:
       # cni does not use imageRegistry as it is an external OS image
-      image: #{versions["calico/cni"].registry}/#{versions["calico/cni"].image}
-      tag: #{versions["calico/cni"].version}
+      image: #{versions["tigera-cni"].registry}/#{versions["tigera-cni"].image}
+      tag: #{versions["tigera-cni"].version}
       env:
         # Optional environment variables for configuring Calico CNI.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
