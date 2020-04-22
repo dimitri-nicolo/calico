@@ -16,8 +16,8 @@ require (
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
-	k8s.io/api v0.17.2
-	k8s.io/apimachinery v0.17.2
+	k8s.io/api v0.17.3
+	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v8.0.0+incompatible
 )
 
@@ -27,34 +27,34 @@ replace (
 	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
 	github.com/containernetworking/plugins => github.com/containernetworking/plugins v0.0.0-20180925020009-646dbbace1b1
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200401041722-25c17f32ff2a
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200401042503-1a21e160c7a7
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200331211609-ba749422dfee
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200330205903-19b2b3637426
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200331174035-7c72dd5575bd
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200417191056-3f9654137d4f
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200417162525-e725ff206290
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200416215002-419c85191aba
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
-	k8s.io/api => k8s.io/api v0.17.2
+	k8s.io/api => k8s.io/api v0.17.3
 
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.3
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.17.2
 	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340
-	k8s.io/apiserver => k8s.io/apiserver v0.17.2
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.17.2
-	k8s.io/client-go => k8s.io/client-go v0.17.2
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.17.2
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.17.2
-	k8s.io/code-generator => k8s.io/code-generator v0.17.2
-	k8s.io/component-base => k8s.io/component-base v0.17.2
-	k8s.io/cri-api => k8s.io/cri-api v0.17.2
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.17.2
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.17.2
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.17.2
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.17.2
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.17.2
-	k8s.io/kubectl => k8s.io/kubectl v0.17.2
-	k8s.io/kubelet => k8s.io/kubelet v0.17.2
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.17.2
-	k8s.io/metrics => k8s.io/metrics v0.17.2
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.17.2
+	k8s.io/apiserver => k8s.io/apiserver v0.17.3
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.17.3
+	k8s.io/client-go => k8s.io/client-go v0.17.3
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.17.3
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.17.3
+	k8s.io/code-generator => k8s.io/code-generator v0.17.3
+	k8s.io/component-base => k8s.io/component-base v0.17.3
+	k8s.io/cri-api => k8s.io/cri-api v0.17.3
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.17.3
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.17.3
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.17.3
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.17.3
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.17.3
+	k8s.io/kubectl => k8s.io/kubectl v0.17.3
+	k8s.io/kubelet => k8s.io/kubelet v0.17.3
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.17.3
+	k8s.io/metrics => k8s.io/metrics v0.17.3
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.17.3
 )
