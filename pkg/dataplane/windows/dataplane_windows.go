@@ -698,7 +698,7 @@ func (d *windowsDataplane) createAndAttachContainerEP(args *skel.CmdArgs,
 	attempts := 3
 	for {
 		d.logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
-		hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
+		hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, args.Netns, func() (*hcsshim.HNSEndpoint, error) {
 			hnsEP := &hcsshim.HNSEndpoint{
 				Name:           endpointName,
 				VirtualNetwork: hnsNetwork.Id,

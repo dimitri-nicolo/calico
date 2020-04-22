@@ -3,19 +3,15 @@ module github.com/projectcalico/cni-plugin
 go 1.12
 
 require (
-	github.com/Microsoft/go-winio v0.4.11 // indirect
-	github.com/Microsoft/hcsshim v0.0.0-20190402014724-5f3c4ba7af30
-	github.com/alexflint/go-filemutex v0.0.0-20171022225611-72bdc8eae2ae // indirect
+	github.com/Microsoft/hcsshim v0.8.6
 	github.com/buger/jsonparser v0.0.0-20180808090653-f4dd9f5a6b44
-	github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
-	github.com/containernetworking/plugins v0.0.0-20180925020009-646dbbace1b1
-	github.com/coreos/go-iptables v0.3.0 // indirect
+	github.com/containernetworking/cni v0.7.1
+	github.com/containernetworking/plugins v0.8.5
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/juju/clock v0.0.0-20180808021310-bab88fc67299
 	github.com/juju/errors v0.0.0-20180806074554-22422dad46e1
-	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
 	github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf
 	github.com/juju/retry v0.0.0-20180821225755-9058e192b216 // indirect
 	github.com/juju/testing v0.0.0-20190723135506-ce30eb24acd2 // indirect
@@ -29,12 +25,10 @@ require (
 	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
-	github.com/safchain/ethtool v0.0.0-20170622225139-7ff1ba29eca2 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1 // indirect
-	github.com/vishvananda/netlink v0.0.0-20170630184320-6e453822d85e
-	github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7 // indirect
+	github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 // indirect
+	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
@@ -45,6 +39,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200421230545-4b8ce69b960d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200422162302-4314cc5f335e
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )

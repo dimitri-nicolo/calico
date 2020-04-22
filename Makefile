@@ -3,6 +3,10 @@ GO_BUILD_VER=v0.34
 
 GIT_USE_SSH = true
 
+# This excludes deprecation checks. libcalico-go-private has deprecated VethNameForWorkload but libcalico-go has not, so
+# to the drift between public and private to a minimum we just disable the deprecation checks.
+LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclude SA1019
+
 # This needs to be evaluated before the common makefile is included.
 # This var contains some default values that the common makefile may append to.
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cni
