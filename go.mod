@@ -5,9 +5,9 @@ go 1.13
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200320201809-cf61025a1d7b
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200422041113-2b9f3dbe5ff3
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200421230545-4b8ce69b960d
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200421235523-112604167a7b
 
 	k8s.io/api => k8s.io/api v0.17.2
 
@@ -57,7 +57,7 @@ require (
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cobra v0.0.6
 	github.com/tigera/apiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
-	github.com/tigera/lma v0.0.0-20200321212149-273f27b4c88b
+	github.com/tigera/lma v0.0.0-20200422002544-17d0fbe77b34
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
