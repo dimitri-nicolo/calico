@@ -291,6 +291,10 @@ type FelixConfigurationSpec struct {
 
 	// BPFEnabled, if enabled Felix will use the BPF dataplane. [Default: false]
 	BPFEnabled *bool `json:"bpfEnabled,omitempty" validate:"omitempty"`
+	// BPFDisableUnprivileged, if enabled, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable
+	// unprivileged use of BPF.  This ensures that unprivileged users cannot access Calico's BPF maps and
+	// cannot insert their own BPF programs to interfere with Calico's. [Default: true]
+	BPFDisableUnprivileged *bool `json:"bpfDisableUnprivileged,omitempty" validate:"omitempty"`
 	// BPFLogLevel controls the log level of the BPF programs when in BPF dataplane mode.  One of "Off", "Info", or
 	// "Debug".  The logs are emitted to the BPF trace pipe, accessible with the command `tc exec bpf debug`.
 	// [Default: Off].
@@ -488,6 +492,20 @@ type FelixConfigurationSpec struct {
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.
 	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`
+
+	// RouteSource configures where Felix gets its routing information.
+	// - WorkloadIPs: use workload endpoints to construct routes.
+	// - CalicoIPAM: the default - use IPAM data to contruct routes.
+	RouteSource string `json:"routeSource,omitempty" validate:"omitempty,routeSource"`
+
+	// Calico programs additional Linux route tables for various purposes.  RouteTableRange
+	// specifies the indices of the route tables that Calico should use.
+	RouteTableRange *RouteTableRange `json:"routeTableRange,omitempty" validate:"omitempty"`
+}
+
+type RouteTableRange struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.
