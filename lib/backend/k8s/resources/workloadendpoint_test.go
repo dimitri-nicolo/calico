@@ -16,10 +16,14 @@ package resources_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
+
+	nettypes "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/resources"
@@ -143,6 +147,55 @@ var _ = Describe("WorkloadEndpointClient", func() {
 			})
 		})
 	})
+	Describe("CreateNonDefault", func() {
+		It("doesn't update the Pod for the WorkloadEndpoint", func() {
+			k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "simplePod",
+					Namespace: "testNamespace",
+				},
+				Spec: k8sapi.PodSpec{
+					NodeName: "test-node",
+				},
+			})
+
+			wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)
+			wepIDs := names.WorkloadEndpointIdentifiers{
+				Orchestrator: "k8s",
+				Node:         "test-node",
+				Pod:          "simplePod",
+				Endpoint:     "eth0",
+			}
+
+			wepName, err := wepIDs.CalculateWorkloadEndpointName(false)
+			Expect(err).ShouldNot(HaveOccurred())
+			wep := &apiv3.WorkloadEndpoint{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      wepName,
+					Namespace: "testNamespace",
+				},
+				Spec: apiv3.WorkloadEndpointSpec{
+					IPNetworks: []string{"192.168.91.117/32", "192.168.91.118/32"},
+				},
+			}
+
+			kvp := &model.KVPair{
+				Key: model.ResourceKey{
+					Name:      wep.Name,
+					Namespace: wep.Namespace,
+					Kind:      apiv3.KindWorkloadEndpoint,
+				},
+				Value: wep,
+			}
+
+			_, err = wepClient.CreateNonDefault(context.Background(), kvp)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			pod, err := k8sClient.CoreV1().Pods("testNamespace").Get("simplePod", metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(pod.GetAnnotations()).Should(BeNil())
+		})
+	})
 	Describe("Update", func() {
 		Context("WorkloadEndpoint has no IPs set", func() {
 			It("does not set the cni.projectcalico.org/podIP and cni.projectcalico.org/podIPs annotations", func() {
@@ -246,6 +299,57 @@ var _ = Describe("WorkloadEndpointClient", func() {
 			})
 		})
 	})
+
+	Describe("UpdateNonDefault", func() {
+		It("doesn't update the Pod for the WorkloadEndpoint", func() {
+			k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "simplePod",
+					Namespace: "testNamespace",
+				},
+				Spec: k8sapi.PodSpec{
+					NodeName: "test-node",
+				},
+			})
+
+			wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)
+			wepIDs := names.WorkloadEndpointIdentifiers{
+				Orchestrator: "k8s",
+				Node:         "test-node",
+				Pod:          "simplePod",
+				Endpoint:     "eth0",
+			}
+
+			wepName, err := wepIDs.CalculateWorkloadEndpointName(false)
+			Expect(err).ShouldNot(HaveOccurred())
+			wep := &apiv3.WorkloadEndpoint{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      wepName,
+					Namespace: "testNamespace",
+				},
+				Spec: apiv3.WorkloadEndpointSpec{
+					IPNetworks: []string{"192.168.91.117/32", "192.168.91.118/32"},
+				},
+			}
+
+			kvp := &model.KVPair{
+				Key: model.ResourceKey{
+					Name:      wep.Name,
+					Namespace: wep.Namespace,
+					Kind:      apiv3.KindWorkloadEndpoint,
+				},
+				Value: wep,
+			}
+
+			_, err = wepClient.UpdateNonDefault(context.Background(), kvp)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			pod, err := k8sClient.CoreV1().Pods("testNamespace").Get("simplePod", metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(pod.GetAnnotations()).Should(BeNil())
+		})
+	})
+
 	Describe("Get", func() {
 		It("gets the WorkloadEndpoint using the given name", func() {
 			k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
@@ -576,6 +680,902 @@ var _ = Describe("WorkloadEndpointClient", func() {
 		})
 	})
 })
+
+var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
+	BeforeEach(func() {
+		Expect(os.Setenv("MULTI_INTERFACE_MODE", "multus")).ShouldNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(os.Setenv("MULTI_INTERFACE_MODE", "")).ShouldNot(HaveOccurred())
+	})
+
+	Describe("Get", func() {
+		Context("no CNCF annotations on Pod", func() {
+			It("gets the default WorkloadEndpoint using the default interface name", func() {
+				k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "simplePod",
+						Namespace: "testNamespace",
+					},
+					Spec: k8sapi.PodSpec{
+						NodeName: "test-node",
+					},
+				})
+
+				wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)
+				wepIDs := names.WorkloadEndpointIdentifiers{
+					Orchestrator: "k8s",
+					Node:         "test-node",
+					Pod:          "simplePod",
+					Endpoint:     "eth0",
+				}
+
+				wepName, err := wepIDs.CalculateWorkloadEndpointName(false)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				wep, err := wepClient.Get(context.Background(), model.ResourceKey{
+					Name:      wepName,
+					Namespace: "testNamespace",
+					Kind:      apiv3.KindWorkloadEndpoint,
+				}, "")
+
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(wep.Value).Should(Equal(&apiv3.WorkloadEndpoint{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       apiv3.KindWorkloadEndpoint,
+						APIVersion: apiv3.GroupVersionCurrent,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      wepName,
+						Namespace: "testNamespace",
+						Labels: map[string]string{
+							apiv3.LabelNamespace:        "testNamespace",
+							apiv3.LabelOrchestrator:     "k8s",
+							apiv3.LabelNetwork:          "k8s-pod-network",
+							apiv3.LabelNetworkInterface: "eth0",
+						},
+					},
+					Spec: apiv3.WorkloadEndpointSpec{
+						Orchestrator:  "k8s",
+						Node:          "test-node",
+						Pod:           "simplePod",
+						Endpoint:      "eth0",
+						Profiles:      []string{"kns.testNamespace"},
+						IPNetworks:    []string{},
+						InterfaceName: "caliedff4356bd6",
+					},
+				}))
+			})
+		})
+
+		Context("CNCF annotations on Pod", func() {
+			When("the pods default calico interface is not eth0", func() {
+				It("gets the default WorkloadEndpoint using the non eth0 name", func() {
+					k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "simplePod",
+							Namespace: "testNamespace",
+							Annotations: map[string]string{
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "calico-default-network",
+										Interface: "ens4",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+								}),
+							},
+						},
+						Spec: k8sapi.PodSpec{
+							NodeName: "test-node",
+						},
+						Status: k8sapi.PodStatus{
+							PodIP: "192.168.91.113",
+						},
+					})
+
+					wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)
+					wepIDs := names.WorkloadEndpointIdentifiers{
+						Orchestrator: "k8s",
+						Node:         "test-node",
+						Pod:          "simplePod",
+						Endpoint:     "ens4",
+					}
+
+					wepName, err := wepIDs.CalculateWorkloadEndpointName(false)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					wep, err := wepClient.Get(context.Background(), model.ResourceKey{
+						Name:      wepName,
+						Namespace: "testNamespace",
+						Kind:      apiv3.KindWorkloadEndpoint,
+					}, "")
+
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(wep.Value).Should(Equal(&apiv3.WorkloadEndpoint{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       apiv3.KindWorkloadEndpoint,
+							APIVersion: apiv3.GroupVersionCurrent,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      wepName,
+							Namespace: "testNamespace",
+							Labels: map[string]string{
+								apiv3.LabelNamespace:        "testNamespace",
+								apiv3.LabelOrchestrator:     "k8s",
+								apiv3.LabelNetwork:          "calico-default-network",
+								apiv3.LabelNetworkInterface: "ens4",
+							},
+						},
+						Spec: apiv3.WorkloadEndpointSpec{
+							Orchestrator:  "k8s",
+							Node:          "test-node",
+							Pod:           "simplePod",
+							Endpoint:      "ens4",
+							Profiles:      []string{"kns.testNamespace"},
+							IPNetworks:    []string{"192.168.91.113/32"},
+							InterfaceName: "caliedff4356bd6",
+						},
+					}))
+				})
+			})
+			When("when the pod has multiple interfaces and an additional one is selected", func() {
+				It("returns the correct Workload endpoint", func() {
+					k8sClient := fake.NewSimpleClientset(&k8sapi.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "simplePod",
+							Namespace: "testNamespace",
+							Annotations: map[string]string{
+								nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "calico-default-network",
+										Interface: "ens4",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+									{
+										Name:      "calico1",
+										Interface: "net1",
+										IPs:       []string{"192.168.91.114"},
+										Mac:       "62:45:f5:10:97:c1",
+									},
+									{
+										Name:      "calico2",
+										Interface: "net2",
+										IPs:       []string{"192.168.91.115"},
+										Mac:       "62:76:f5:90:27:c1",
+									},
+								}),
+							},
+						},
+						Spec: k8sapi.PodSpec{
+							NodeName: "test-node",
+						},
+						Status: k8sapi.PodStatus{
+							PodIP: "192.168.91.113",
+						},
+					})
+
+					wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)
+					wepIDs := names.WorkloadEndpointIdentifiers{
+						Orchestrator: "k8s",
+						Node:         "test-node",
+						Pod:          "simplePod",
+						Endpoint:     "net1",
+					}
+
+					wepName, err := wepIDs.CalculateWorkloadEndpointName(false)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					wep, err := wepClient.Get(context.Background(), model.ResourceKey{
+						Name:      wepName,
+						Namespace: "testNamespace",
+						Kind:      apiv3.KindWorkloadEndpoint,
+					}, "")
+
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(wep.Value).Should(Equal(&apiv3.WorkloadEndpoint{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       apiv3.KindWorkloadEndpoint,
+							APIVersion: apiv3.GroupVersionCurrent,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      wepName,
+							Namespace: "testNamespace",
+							Labels: map[string]string{
+								apiv3.LabelNamespace:        "testNamespace",
+								apiv3.LabelOrchestrator:     "k8s",
+								apiv3.LabelNetwork:          "calico1",
+								apiv3.LabelNetworkInterface: "net1",
+							},
+						},
+						Spec: apiv3.WorkloadEndpointSpec{
+							Orchestrator:  "k8s",
+							Node:          "test-node",
+							Pod:           "simplePod",
+							Endpoint:      "net1",
+							Profiles:      []string{"kns.testNamespace"},
+							IPNetworks:    []string{"192.168.91.114/32"},
+							InterfaceName: "calim15X7UGVV5N",
+						},
+					}))
+				})
+			})
+		})
+	})
+
+	Describe("List", func() {
+		Context("name is specified", func() {
+			Context("the name contains an interface suffix", func() {
+				When("there is no WorkloadEndpoint matching the given name", func() {
+					It("returns an empty list", func() {
+						testListWorkloadEndpoints(
+							[]runtime.Object{&k8sapi.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "simplePod",
+									Namespace: "testNamespace",
+								},
+								Spec: k8sapi.PodSpec{
+									NodeName: "test-node",
+								},
+								Status: k8sapi.PodStatus{
+									PodIP: "192.168.91.113",
+								},
+							}},
+							model.ResourceListOptions{
+								Name:      "test--node-k8s-simplePod-ens4",
+								Namespace: "testNamespace",
+								Kind:      apiv3.KindWorkloadEndpoint,
+							},
+							[]*apiv3.WorkloadEndpoint(nil),
+						)
+					})
+				})
+			})
+			Context("the name contains a Pod name midfix, but no interface suffix", func() {
+				When("there are multiple calico interfaces for the matching pod", func() {
+					It("returns a WorkloadEndpoint for each calico interface on the Pod", func() {
+						testListWorkloadEndpoints(
+							[]runtime.Object{&k8sapi.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "simplePod",
+									Namespace: "testNamespace",
+									Annotations: map[string]string{
+										nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											},
+											{
+												Name:      "calico1",
+												Interface: "net1",
+												IPs:       []string{"192.168.91.114"},
+												Mac:       "62:45:f5:10:97:c1",
+											},
+											{
+												Name:      "calico2",
+												Interface: "net2",
+												IPs:       []string{"192.168.91.115"},
+												Mac:       "62:76:f5:90:27:c1",
+											},
+										}),
+									},
+								},
+								Spec: k8sapi.PodSpec{
+									NodeName: "test-node",
+								},
+								Status: k8sapi.PodStatus{
+									PodIP: "192.168.91.113",
+								},
+							},
+								&k8sapi.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "simplePod2",
+										Namespace: "testNamespace",
+										Annotations: map[string]string{
+											nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+											nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+												{
+													Name:      "calico-default-network",
+													Interface: "ens4",
+													IPs:       []string{"192.168.91.120"},
+													Mac:       "1e:a7:7e:8d:8f:e0",
+												},
+											}),
+										},
+									},
+									Spec: k8sapi.PodSpec{
+										NodeName: "test-node",
+									},
+									Status: k8sapi.PodStatus{
+										PodIP: "192.168.91.120",
+									},
+								}},
+							model.ResourceListOptions{
+								Name:      "test--node-k8s-simplePod-",
+								Namespace: "testNamespace",
+								Kind:      apiv3.KindWorkloadEndpoint,
+							},
+							[]*apiv3.WorkloadEndpoint{
+								{
+									TypeMeta: metav1.TypeMeta{
+										Kind:       apiv3.KindWorkloadEndpoint,
+										APIVersion: apiv3.GroupVersionCurrent,
+									},
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "test--node-k8s-simplePod-ens4",
+										Namespace: "testNamespace",
+										Labels: map[string]string{
+											apiv3.LabelNamespace:        "testNamespace",
+											apiv3.LabelOrchestrator:     "k8s",
+											apiv3.LabelNetwork:          "calico-default-network",
+											apiv3.LabelNetworkInterface: "ens4",
+										},
+									},
+									Spec: apiv3.WorkloadEndpointSpec{
+										Orchestrator:  "k8s",
+										Node:          "test-node",
+										Pod:           "simplePod",
+										Endpoint:      "ens4",
+										Profiles:      []string{"kns.testNamespace"},
+										IPNetworks:    []string{"192.168.91.113/32"},
+										InterfaceName: "caliedff4356bd6",
+									},
+								},
+								{
+									TypeMeta: metav1.TypeMeta{
+										Kind:       apiv3.KindWorkloadEndpoint,
+										APIVersion: apiv3.GroupVersionCurrent,
+									},
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "test--node-k8s-simplePod-net1",
+										Namespace: "testNamespace",
+										Labels: map[string]string{
+											apiv3.LabelNamespace:        "testNamespace",
+											apiv3.LabelOrchestrator:     "k8s",
+											apiv3.LabelNetwork:          "calico1",
+											apiv3.LabelNetworkInterface: "net1",
+										},
+									},
+									Spec: apiv3.WorkloadEndpointSpec{
+										Orchestrator:  "k8s",
+										Node:          "test-node",
+										Pod:           "simplePod",
+										Endpoint:      "net1",
+										Profiles:      []string{"kns.testNamespace"},
+										IPNetworks:    []string{"192.168.91.114/32"},
+										InterfaceName: "calim15X7UGVV5N",
+									},
+								},
+								{
+									TypeMeta: metav1.TypeMeta{
+										Kind:       apiv3.KindWorkloadEndpoint,
+										APIVersion: apiv3.GroupVersionCurrent,
+									},
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "test--node-k8s-simplePod-net2",
+										Namespace: "testNamespace",
+										Labels: map[string]string{
+											apiv3.LabelNamespace:        "testNamespace",
+											apiv3.LabelOrchestrator:     "k8s",
+											apiv3.LabelNetwork:          "calico2",
+											apiv3.LabelNetworkInterface: "net2",
+										},
+									},
+									Spec: apiv3.WorkloadEndpointSpec{
+										Orchestrator:  "k8s",
+										Node:          "test-node",
+										Pod:           "simplePod",
+										Endpoint:      "net2",
+										Profiles:      []string{"kns.testNamespace"},
+										IPNetworks:    []string{"192.168.91.115/32"},
+										InterfaceName: "calim25X7UGVV5N",
+									},
+								},
+							},
+						)
+					})
+				})
+				When("the Pod only contains only a default non eth0 calico interface", func() {
+					It("returns a list of WorkloadEndpoints containing a WorkloadEndpoint for the default interface", func() {
+						testListWorkloadEndpoints(
+							[]runtime.Object{
+								&k8sapi.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "simplePod",
+										Namespace: "testNamespace",
+										Annotations: map[string]string{
+											nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+											nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											}}),
+										},
+									},
+									Spec: k8sapi.PodSpec{
+										NodeName: "test-node",
+									},
+									Status: k8sapi.PodStatus{
+										PodIP: "192.168.91.113",
+									},
+								},
+								&k8sapi.Pod{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "simplePod2",
+										Namespace: "testNamespace",
+										Annotations: map[string]string{
+											nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+											nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+												{
+													Name:      "calico-default-network",
+													Interface: "ens4",
+													IPs:       []string{"192.168.91.120"},
+													Mac:       "1e:a7:7e:8d:8f:e0",
+												},
+											}),
+										},
+									},
+									Spec: k8sapi.PodSpec{
+										NodeName: "test-node",
+									},
+									Status: k8sapi.PodStatus{
+										PodIP: "192.168.91.120",
+									},
+								},
+							},
+							model.ResourceListOptions{
+								Name:      "test--node-k8s-simplePod-",
+								Namespace: "testNamespace",
+								Kind:      apiv3.KindWorkloadEndpoint,
+							},
+							[]*apiv3.WorkloadEndpoint{{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod-ens4",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "calico-default-network",
+										apiv3.LabelNetworkInterface: "ens4",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod",
+									Endpoint:      "ens4",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.113/32"},
+									InterfaceName: "caliedff4356bd6",
+								},
+							}},
+						)
+					})
+				})
+			})
+		})
+		Context("name is not specified", func() {
+			When("the specified namespace has multiple Pods with only default non eth0 interfaces", func() {
+				It("returns WorkloadEndpoints for each interface on each pod in the namespace", func() {
+					testListWorkloadEndpoints(
+						[]runtime.Object{
+							&k8sapi.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "simplePod",
+									Namespace: "testNamespace",
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											},
+										}),
+									},
+								},
+								Spec: k8sapi.PodSpec{
+									NodeName: "test-node",
+								},
+								Status: k8sapi.PodStatus{
+									PodIP: "192.168.91.113",
+								},
+							},
+							&k8sapi.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "simplePod2",
+									Namespace: "testNamespace",
+									Annotations: map[string]string{
+										nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.120"},
+												Mac:       "1e:a7:7e:8d:8f:e0",
+											},
+										}),
+									},
+								},
+								Spec: k8sapi.PodSpec{
+									NodeName: "test-node",
+								},
+								Status: k8sapi.PodStatus{
+									PodIP: "192.168.91.120",
+								},
+							},
+						},
+						model.ResourceListOptions{
+							Namespace: "testNamespace",
+							Kind:      apiv3.KindWorkloadEndpoint,
+						},
+						[]*apiv3.WorkloadEndpoint{
+							{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod-ens4",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "calico-default-network",
+										apiv3.LabelNetworkInterface: "ens4",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod",
+									Endpoint:      "ens4",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.113/32"},
+									InterfaceName: "caliedff4356bd6",
+								},
+							},
+							{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod2-ens4",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "calico-default-network",
+										apiv3.LabelNetworkInterface: "ens4",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod2",
+									Endpoint:      "ens4",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.120/32"},
+									InterfaceName: "cali4274eb44391",
+								},
+							},
+						},
+					)
+				})
+			})
+			When("the specified namespace has multiple Pods each with multiple interfaces", func() {
+				It("returns WorkloadEndpoints for the default interfaces on each Pod in the namespace", func() {
+					testListWorkloadEndpoints(
+						[]runtime.Object{
+							&k8sapi.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "simplePod",
+									Namespace: "testNamespace",
+									Annotations: map[string]string{
+										nettypes.NetworkAttachmentAnnot: "cali1",
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											},
+											{
+												Name:      "cali1",
+												Interface: "net1",
+												IPs:       []string{"192.168.91.114"},
+												Mac:       "7f:e7:3e:9d:8f:a0",
+											},
+										}),
+									},
+								},
+								Spec: k8sapi.PodSpec{
+									NodeName: "test-node",
+								},
+								Status: k8sapi.PodStatus{
+									PodIP: "192.168.91.113",
+								},
+							},
+							&k8sapi.Pod{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "simplePod2",
+									Namespace: "testNamespace",
+									Annotations: map[string]string{
+										nettypes.NetworkAttachmentAnnot: "s2cali1",
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.120"},
+												Mac:       "1e:a7:7e:8d:8f:e0",
+											},
+											{
+												Name:      "s2cali1",
+												Interface: "s2net",
+												IPs:       []string{"192.168.91.121"},
+												Mac:       "5a:a7:7e:8d:8f:e1",
+											},
+										}),
+									},
+								},
+								Spec: k8sapi.PodSpec{
+									NodeName: "test-node",
+								},
+								Status: k8sapi.PodStatus{
+									PodIP: "192.168.91.120",
+								},
+							}},
+						model.ResourceListOptions{
+							Namespace: "testNamespace",
+							Kind:      apiv3.KindWorkloadEndpoint,
+						},
+						[]*apiv3.WorkloadEndpoint{
+							{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod-ens4",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "calico-default-network",
+										apiv3.LabelNetworkInterface: "ens4",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod",
+									Endpoint:      "ens4",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.113/32"},
+									InterfaceName: "caliedff4356bd6",
+								},
+							},
+							{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod-net1",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "cali1",
+										apiv3.LabelNetworkInterface: "net1",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod",
+									Endpoint:      "net1",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.114/32"},
+									InterfaceName: "calim15X7UGVV5N",
+								},
+							},
+							{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod2-ens4",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "calico-default-network",
+										apiv3.LabelNetworkInterface: "ens4",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod2",
+									Endpoint:      "ens4",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.120/32"},
+									InterfaceName: "cali4274eb44391",
+								},
+							},
+							{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       apiv3.KindWorkloadEndpoint,
+									APIVersion: apiv3.GroupVersionCurrent,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test--node-k8s-simplePod2-s2net",
+									Namespace: "testNamespace",
+									Labels: map[string]string{
+										apiv3.LabelNamespace:        "testNamespace",
+										apiv3.LabelOrchestrator:     "k8s",
+										apiv3.LabelNetwork:          "s2cali1",
+										apiv3.LabelNetworkInterface: "s2net",
+									},
+								},
+								Spec: apiv3.WorkloadEndpointSpec{
+									Orchestrator:  "k8s",
+									Node:          "test-node",
+									Pod:           "simplePod2",
+									Endpoint:      "s2net",
+									Profiles:      []string{"kns.testNamespace"},
+									IPNetworks:    []string{"192.168.91.121/32"},
+									InterfaceName: "calim1IJ2OWRBZC",
+								},
+							},
+						},
+					)
+				})
+			})
+		})
+	})
+	Describe("Watch", func() {
+		Context("Pod added", func() {
+			When("the Pod has multiple calico interfaces", func() {
+				It("returns an event for each WorkloadEndpoint for the Pod", func() {
+					testWatchWorkloadEndpoints(&k8sapi.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "simplePod",
+							Namespace: "testNamespace",
+							Annotations: map[string]string{
+								nettypes.NetworkAttachmentAnnot: "cali1,cal2",
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "calico-default-network",
+										Interface: "ens4",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+									{
+										Name:      "cali1",
+										Interface: "net1",
+										IPs:       []string{"192.168.91.114"},
+										Mac:       "7f:e7:3e:9d:8f:a0",
+									},
+									{
+										Name:      "cali2",
+										Interface: "net2",
+										IPs:       []string{"192.168.91.115"},
+										Mac:       "2a:e7:7e:9d:8f:a3",
+									},
+								}),
+							},
+						},
+						Spec: k8sapi.PodSpec{
+							NodeName: "test-node",
+						},
+						Status: k8sapi.PodStatus{
+							PodIP: "192.168.91.113",
+						},
+					}, []*apiv3.WorkloadEndpoint{
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       apiv3.KindWorkloadEndpoint,
+								APIVersion: apiv3.GroupVersionCurrent,
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test--node-k8s-simplePod-ens4",
+								Namespace: "testNamespace",
+								Labels: map[string]string{
+									apiv3.LabelNamespace:        "testNamespace",
+									apiv3.LabelOrchestrator:     "k8s",
+									apiv3.LabelNetwork:          "calico-default-network",
+									apiv3.LabelNetworkInterface: "ens4",
+								},
+							},
+							Spec: apiv3.WorkloadEndpointSpec{
+								Orchestrator:  "k8s",
+								Node:          "test-node",
+								Pod:           "simplePod",
+								Endpoint:      "ens4",
+								Profiles:      []string{"kns.testNamespace"},
+								IPNetworks:    []string{"192.168.91.113/32"},
+								InterfaceName: "caliedff4356bd6",
+							},
+						},
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       apiv3.KindWorkloadEndpoint,
+								APIVersion: apiv3.GroupVersionCurrent,
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test--node-k8s-simplePod-net1",
+								Namespace: "testNamespace",
+								Labels: map[string]string{
+									apiv3.LabelNamespace:        "testNamespace",
+									apiv3.LabelOrchestrator:     "k8s",
+									apiv3.LabelNetwork:          "cali1",
+									apiv3.LabelNetworkInterface: "net1",
+								},
+							},
+							Spec: apiv3.WorkloadEndpointSpec{
+								Orchestrator:  "k8s",
+								Node:          "test-node",
+								Pod:           "simplePod",
+								Endpoint:      "net1",
+								Profiles:      []string{"kns.testNamespace"},
+								IPNetworks:    []string{"192.168.91.114/32"},
+								InterfaceName: "calim15X7UGVV5N",
+							},
+						},
+						{
+							TypeMeta: metav1.TypeMeta{
+								Kind:       apiv3.KindWorkloadEndpoint,
+								APIVersion: apiv3.GroupVersionCurrent,
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test--node-k8s-simplePod-net2",
+								Namespace: "testNamespace",
+								Labels: map[string]string{
+									apiv3.LabelNamespace:        "testNamespace",
+									apiv3.LabelOrchestrator:     "k8s",
+									apiv3.LabelNetwork:          "cali2",
+									apiv3.LabelNetworkInterface: "net2",
+								},
+							},
+							Spec: apiv3.WorkloadEndpointSpec{
+								Orchestrator:  "k8s",
+								Node:          "test-node",
+								Pod:           "simplePod",
+								Endpoint:      "net2",
+								Profiles:      []string{"kns.testNamespace"},
+								IPNetworks:    []string{"192.168.91.115/32"},
+								InterfaceName: "calim25X7UGVV5N",
+							},
+						},
+					})
+				})
+			})
+		})
+	})
+})
+
+func mustMarshal(v interface{}) string {
+	jsonStr, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return string(jsonStr)
+}
 
 func testListWorkloadEndpoints(pods []runtime.Object, listOptions model.ResourceListOptions, expectedWEPs []*apiv3.WorkloadEndpoint) {
 	k8sClient := fake.NewSimpleClientset(pods...)

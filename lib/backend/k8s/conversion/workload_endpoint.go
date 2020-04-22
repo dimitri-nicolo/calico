@@ -17,16 +17,45 @@
 package conversion
 
 import (
+	"net"
+	"os"
+
 	kapiv1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
+// PodInterface contains the network configuration for a particular interface on a Pod.
+type PodInterface struct {
+	IsDefault          bool
+	NetworkName        string
+	HostSideIfaceName  string
+	InsidePodIfaceName string
+	InsidePodGW        net.IP
+	IPNets             []*cnet.IPNet
+}
+
 type WorkloadEndpointConverter interface {
+	// Deprecated: Use InterfacesForPod. This exists for compatibility with OS
 	VethNameForWorkload(namespace, podName string) string
+	// InterfacesForPod must return the PodInterface for the default interface as it's first entry
+	InterfacesForPod(pod *kapiv1.Pod) ([]*PodInterface, error)
 	PodToWorkloadEndpoints(pod *kapiv1.Pod) ([]*model.KVPair, error)
 }
 
+// NewWorkloadEndpointConverter creates a WorkloadEndpointConverter. Which converter is created depends on the value returned
+// by the MultiInterfaceMode function. This defaults to the defaultWorkloadEndpointConverter.
 func NewWorkloadEndpointConverter() WorkloadEndpointConverter {
-	return &defaultWorkloadEndpointConverter{}
+	switch MultiInterfaceMode() {
+	case "multus":
+		return newMultusWorkloadEndpointConverter()
+	default:
+		return &defaultWorkloadEndpointConverter{}
+	}
+}
+
+// MultiInterfaceMode retrieves the multi interface mode set by the user (by reading the MULTI_INTERFACE_MODE env variable).
+func MultiInterfaceMode() string {
+	return os.Getenv("MULTI_INTERFACE_MODE")
 }

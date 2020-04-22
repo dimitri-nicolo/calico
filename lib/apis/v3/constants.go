@@ -40,6 +40,12 @@ const (
 	// orchestrator.
 	LabelOrchestrator = "projectcalico.org/orchestrator"
 
+	// Label used to denote the Network a WorkloadEndpoint belongs too.
+	LabelNetwork = "projectcalico.org/network"
+
+	// Label used to denote the inside pod interface for a WorkloadEndpoint.
+	LabelNetworkInterface = "projectcalico.org/network-interface"
+
 	// Known orchestrators.  Orchestrators are not limited to this list.
 	OrchestratorKubernetes = "k8s"
 	OrchestratorCNI        = "cni"

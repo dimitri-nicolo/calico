@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,9 @@ const (
 	maxApplyRetries  = 10
 )
 
+// upsertResourceFunc defines a function that can create or update a resource stored as a KVPair
+type upsertResourceFunc func(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
+
 // All Calico resources implement the resource interface.
 type resource interface {
 	runtime.Object
@@ -67,8 +70,8 @@ type resources struct {
 	backend bapi.Client
 }
 
-// Create creates a resource in the backend datastore.
-func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
+// create creates a resource in the backend datastore using the given create function.
+func createResource(ctx context.Context, opts options.SetOptions, kind string, in resource, createFunc upsertResourceFunc) (resource, error) {
 	// Resource must have a Name.  Currently we do not support GenerateName.
 	if len(in.GetObjectMeta().GetName()) == 0 {
 		var generateNameMessage string
@@ -95,7 +98,7 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind st
 			}},
 		}
 	}
-	if err := c.checkNamespace(in.GetObjectMeta().GetNamespace(), kind); err != nil {
+	if err := checkNamespace(in.GetObjectMeta().GetNamespace(), kind); err != nil {
 		return nil, err
 	}
 
@@ -110,9 +113,9 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind st
 
 	// Convert the resource to a KVPair and pass that to the backend datastore, converting
 	// the response (if we get one) back to a resource.
-	kvp, err := c.backend.Create(ctx, c.resourceToKVPair(opts, kind, in))
+	kvp, err := createFunc(ctx, resourceToKVPair(opts, kind, in))
 	if kvp != nil {
-		return c.kvPairToResource(kvp), err
+		return kvPairToResource(kvp), err
 	}
 	switch err.(type) {
 	case cerrors.ErrorResourceDoesNotExist:
@@ -134,8 +137,13 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind st
 	return nil, err
 }
 
-// Update updates a resource in the backend datastore.
-func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
+// Create creates a resource in the backend datastore using the Create function defined in the backend client.
+func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
+	return createResource(ctx, opts, kind, in, c.backend.Create)
+}
+
+// update updates a resource in the backend datastore using the given update function.
+func updateResource(ctx context.Context, opts options.SetOptions, kind string, in resource, updateFunc upsertResourceFunc) (resource, error) {
 	// A ResourceVersion should always be specified on an Update.
 	if len(in.GetObjectMeta().GetResourceVersion()) == 0 {
 		logWithResource(in).Info("Rejecting Update request with empty resource version")
@@ -147,7 +155,7 @@ func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind st
 			}},
 		}
 	}
-	if err := c.checkNamespace(in.GetObjectMeta().GetNamespace(), kind); err != nil {
+	if err := checkNamespace(in.GetObjectMeta().GetNamespace(), kind); err != nil {
 		return nil, err
 	}
 	creationTimestamp := in.GetObjectMeta().GetCreationTimestamp()
@@ -172,16 +180,21 @@ func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind st
 
 	// Convert the resource to a KVPair and pass that to the backend datastore, converting
 	// the response (if we get one) back to a resource.
-	kvp, err := c.backend.Update(ctx, c.resourceToKVPair(opts, kind, in))
+	kvp, err := updateFunc(ctx, resourceToKVPair(opts, kind, in))
 	if kvp != nil {
-		return c.kvPairToResource(kvp), err
+		return kvPairToResource(kvp), err
 	}
 	return nil, err
 }
 
+// Update updates a resource in the backend datastore using the Update function defined in the backend client.
+func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
+	return updateResource(ctx, opts, kind, in, c.backend.Update)
+}
+
 // Delete deletes a resource from the backend datastore.
 func (c *resources) Delete(ctx context.Context, opts options.DeleteOptions, kind, ns, name string) (resource, error) {
-	if err := c.checkNamespace(ns, kind); err != nil {
+	if err := checkNamespace(ns, kind); err != nil {
 		return nil, err
 	}
 	// Create a ResourceKey and pass that to the backend datastore.
@@ -192,14 +205,14 @@ func (c *resources) Delete(ctx context.Context, opts options.DeleteOptions, kind
 	}
 	kvp, err := c.backend.Delete(ctx, key, opts.ResourceVersion)
 	if kvp != nil {
-		return c.kvPairToResource(kvp), err
+		return kvPairToResource(kvp), err
 	}
 	return nil, err
 }
 
 // Get gets a resource from the backend datastore.
 func (c *resources) Get(ctx context.Context, opts options.GetOptions, kind, ns, name string) (resource, error) {
-	if err := c.checkNamespace(ns, kind); err != nil {
+	if err := checkNamespace(ns, kind); err != nil {
 		return nil, err
 	}
 	key := model.ResourceKey{
@@ -211,7 +224,7 @@ func (c *resources) Get(ctx context.Context, opts options.GetOptions, kind, ns, 
 	if err != nil {
 		return nil, err
 	}
-	out := c.kvPairToResource(kvp)
+	out := kvPairToResource(kvp)
 	return out, nil
 }
 
@@ -233,7 +246,7 @@ func (c *resources) List(ctx context.Context, opts options.ListOptions, kind, li
 	// Convert the slice of KVPairs to a slice of Objects.
 	resources := []runtime.Object{}
 	for _, kvp := range kvps.KVPairs {
-		resources = append(resources, c.kvPairToResource(kvp))
+		resources = append(resources, kvPairToResource(kvp))
 	}
 	err = meta.SetList(listObj, resources)
 	if err != nil {
@@ -279,7 +292,7 @@ func (c *resources) Watch(ctx context.Context, opts options.ListOptions, kind st
 
 // resourceToKVPair converts the resource to a KVPair that can be consumed by the
 // backend datastore client.
-func (c *resources) resourceToKVPair(opts options.SetOptions, kind string, in resource) *model.KVPair {
+func resourceToKVPair(opts options.SetOptions, kind string, in resource) *model.KVPair {
 	// Prepare the resource to remove non-persisted fields.
 	rv := in.GetObjectMeta().GetResourceVersion()
 	in.GetObjectMeta().SetResourceVersion("")
@@ -308,7 +321,7 @@ func (c *resources) resourceToKVPair(opts options.SetOptions, kind string, in re
 
 // kvPairToResource converts a KVPair returned by the backend datastore client to a
 // resource.
-func (c *resources) kvPairToResource(kvp *model.KVPair) resource {
+func kvPairToResource(kvp *model.KVPair) resource {
 	// Extract the resource from the returned value - the backend will already have
 	// decoded it.
 	out := kvp.Value.(resource)
@@ -322,7 +335,7 @@ func (c *resources) kvPairToResource(kvp *model.KVPair) resource {
 }
 
 // checkNamespace checks that the namespace is supplied on a namespaced resource type.
-func (c *resources) checkNamespace(ns, kind string) error {
+func checkNamespace(ns, kind string) error {
 
 	if namespace.IsNamespaced(kind) && len(ns) == 0 {
 		return cerrors.ErrorValidation{
@@ -408,14 +421,14 @@ func (w *watcher) convertEvent(backendEvent bapi.WatchEvent) watch.Event {
 	}
 
 	if backendEvent.Old != nil {
-		res := w.client.kvPairToResource(backendEvent.Old)
+		res := kvPairToResource(backendEvent.Old)
 		if w.converter != nil {
 			res = w.converter.Convert(res)
 		}
 		apiEvent.Previous = res
 	}
 	if backendEvent.New != nil {
-		res := w.client.kvPairToResource(backendEvent.New)
+		res := kvPairToResource(backendEvent.New)
 		if w.converter != nil {
 			apiEvent.Object = w.converter.Convert(res)
 		}

@@ -51,6 +51,9 @@ type WorkloadEndpointClient struct {
 	converter conversion.Converter
 }
 
+// Create is used to "create" default WorkloadEndpoints for Pods. In KDD mode, we need to store the IPs in annotations for
+// the default WorkloadEndpoint, and this function stores those IPs in a Pod annotation. Use CreateNonDefault if the WorkloadEndpoint
+// is not the default WorkloadEndpoint for the pod
 func (c *WorkloadEndpointClient) Create(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	log.Debug("Received Create request on WorkloadEndpoint type")
 	// As a special case for the CNI plugin, try to patch the Pod with the IP that we've calculated.
@@ -63,12 +66,31 @@ func (c *WorkloadEndpointClient) Create(ctx context.Context, kvp *model.KVPair) 
 	return c.patchPodIP(ctx, kvp)
 }
 
+// CreateNonDefault is used to "create" WorkloadEndpoints for a Pod that are not the default WorkloadEndpoint. This is a
+// NOOP, as nothing needs to be done for non default WorkloadEndpoints
+func (c *WorkloadEndpointClient) CreateNonDefault(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
+	log.Debug("Received Create request on WorkloadEndpoint type")
+
+	return kvp, nil
+}
+
+// Update is used to "update" default WorkloadEndpoints for Pods. In KDD mode, we need to store the IPs in annotations for
+// the default WorkloadEndpoint, and this function stores those IPs in a Pod annotation. Use UpdateNonDefault if the WorkloadEndpoint
+// is not the default WorkloadEndpoint for the pod
 func (c *WorkloadEndpointClient) Update(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	log.Debug("Received Update request on WorkloadEndpoint type")
 	// As a special case for the CNI plugin, try to patch the Pod with the IP that we've calculated.
 	// This works around a bug in kubelet that causes it to delay writing the Pod IP for a long time:
 	// https://github.com/kubernetes/kubernetes/issues/39113.
 	return c.patchPodIP(ctx, kvp)
+}
+
+// UpdateNonDefault is used to "update" WorkloadEndpoints for a Pod that are not the default WorkloadEndpoint. This is a
+// NOOP, as nothing needs to be done for non default WorkloadEndpoints
+func (c *WorkloadEndpointClient) UpdateNonDefault(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
+	log.Debug("Received Update request on WorkloadEndpoint type")
+
+	return kvp, nil
 }
 
 func (c *WorkloadEndpointClient) DeleteKVP(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
@@ -124,6 +146,8 @@ func (c *WorkloadEndpointClient) patchPodIP(ctx context.Context, kvp *model.KVPa
 		return nil, err
 	}
 
+	// patchPodIP should only ever be called with the default WorkloadEndpoint, which is always the first one in the kvp
+	// list
 	return kvps[0], nil
 }
 
