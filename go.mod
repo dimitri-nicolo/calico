@@ -14,6 +14,7 @@ require (
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
 	github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627
+
 	github.com/projectcalico/felix v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/satori/go.uuid v1.2.0
@@ -31,10 +32,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200411042000-559908ec9499
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200415003436-babb43054a98
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200415140238-a18ed5d03446
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200415163518-c61b63543f4e
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v0.0.0-20200417191056-3f9654137d4f
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200417185029-d8e1d5dd7785
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.0.0-20200417141004-1a2474251e84
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4

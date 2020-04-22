@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -368,7 +368,7 @@ func assertIPsWithHandle(c ipam.Interface, handle string, num int) error {
 		}
 	}
 	if len(ips) != num {
-		return fmt.Errorf("Expected %d IPs with handle %s, found %d", len(ips), handle, ips)
+		return fmt.Errorf("Expected %d IPs with handle %s, found %d (%v)", num, handle, len(ips), ips)
 	}
 	return nil
 }
