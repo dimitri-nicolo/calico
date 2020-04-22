@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package testutils
 
@@ -171,7 +171,7 @@ func RunCNIPluginWithId(
 	var r types.Result
 	pluginPath := fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
 	log.Debugf("pluginPath: %v", pluginPath)
-	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
+	r, err = invoke.ExecPluginWithResult(context.Background(), pluginPath, []byte(netconf), args, nil)
 	if err != nil {
 		log.Errorf("error from invoke.ExecPluginWithResult %v", err)
 		_ = DeleteContainerUsingDocker(containerId)
@@ -253,7 +253,7 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	args := &cniArgs{env}
 	pluginPath := fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
 	log.Debugf("pluginPath: %v", pluginPath)
-	err = invoke.ExecPluginWithoutResult(pluginPath, []byte(netconf), args, nil)
+	err = invoke.ExecPluginWithoutResult(context.Background(), pluginPath, []byte(netconf), args, nil)
 	if err != nil {
 		log.Errorf("error from invoke.ExecPluginWithoutResult %v", err)
 		return
