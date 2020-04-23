@@ -382,10 +382,29 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 	st.updates = nil
 	st.onUpdates = nil
 
+	remoteClusterStatus := map[string]model.RemoteClusterStatus{}
+
 	sanitized := make([]api.Update, 0, len(expected))
 	for i := range updates {
 		update := sanitizer(&updates[i])
 		if update != nil {
+			// The timing of the felixremotecluster_e2e_test tests is such that we can
+			// be retrying a connection to the remote cluster at the same time as we're
+			// checking these updates; and an extra retry will generate an extra
+			// duplicate RemoteClusterStatus.  Square those away by ignoring duplicate
+			// connection failed updates.
+			if key, ok := update.KVPair.Key.(model.RemoteClusterStatusKey); ok {
+				if update.KVPair.Value != nil {
+					status := update.KVPair.Value.(*model.RemoteClusterStatus)
+					if status.Status == model.RemoteClusterConnectionFailed && *status == remoteClusterStatus[key.Name] {
+						// Duplicate update: suppress.
+						log.Infof("Suppress status: %v", *status)
+						continue
+					} else {
+						remoteClusterStatus[key.Name] = *status
+					}
+				}
+			}
 			sanitized = append(sanitized, *update)
 		}
 	}

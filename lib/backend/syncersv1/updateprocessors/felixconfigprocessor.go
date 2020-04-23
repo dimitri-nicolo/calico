@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ func NewFelixConfigUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 			"FailsafeInboundHostPorts":  protoPortSliceToString,
 			"FailsafeOutboundHostPorts": protoPortSliceToString,
 			"DNSTrustedServers":         emptyStringSliceToNone,
+			"RouteTableRange":           routeTableRangeToString,
 		},
 	)
 }
@@ -60,4 +61,9 @@ var emptyStringSliceToNone = func(value interface{}) interface{} {
 		return "none"
 	}
 	return strings.Join(slice, ",")
+}
+
+var routeTableRangeToString = func(value interface{}) interface{} {
+	r := value.(apiv3.RouteTableRange)
+	return fmt.Sprintf("%d-%d", r.Min, r.Max)
 }

@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -40,7 +41,9 @@ func commonSanitizer(callersUpdate *api.Update) *api.Update {
 	// We expect two kinds of `model.Resource` over the Felix syncer:
 	// Nodes and Profiles.  We don't care about anything more than the
 	// spec.
-	if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+	switch key := u.KVPair.Key.(type) {
+	case model.ResourceKey:
+		log.Infof("model.ResourceKey = %v", key)
 		switch val := u.KVPair.Value.(type) {
 		case *apiv3.Node:
 			u.KVPair.Value = &apiv3.Node{Spec: val.Spec}
@@ -54,11 +57,23 @@ func commonSanitizer(callersUpdate *api.Update) *api.Update {
 				return nil
 			}
 		case *apiv3.Profile:
+			if key.Name == "projectcalico-default-allow" {
+				// Suppress, because the test code hasn't been updated to expect these.
+				return nil
+			}
 			u.KVPair.Value = &apiv3.Profile{Spec: val.Spec}
 		default:
 			// Unhandled v3 resource type.
 			Expect(false).To(BeTrue())
 		}
+	case model.ProfileRulesKey:
+		log.Infof("model.ProfileRulesKey = %v", key)
+		if strings.Contains(key.Name, "projectcalico-default-allow") {
+			// Suppress, because the test code hasn't been updated to expect these.
+			return nil
+		}
+	default:
+		log.Infof("default = %v", key)
 	}
 
 	return &u
@@ -170,11 +185,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			// RemoteClusterStatus error. Compare with the expected events.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
 				u := commonSanitizer(callersUpdate)
-				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
-					if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
-						// The error has the expected prefix. Substitute the actual error for the prefix so that the
-						// exact comparison can be made.
-						r.Error = errPrefix
+				if u != nil {
+					if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
+						if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
+							// The error has the expected prefix. Substitute the actual error for the prefix so that the
+							// exact comparison can be made.
+							r.Error = errPrefix
+						}
 					}
 				}
 				return u
@@ -256,8 +273,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			syncTester.ExpectStatusUpdate(api.InSync, connTimeout)
 
 			By("Checking we received the event messages for the remote cluster")
-			// We should receive Connecting and 3 ConnectionFaileds
-			// There will be 1 ConnectionFailed for each watchercache that is created for this test
+			// We should receive Connecting and ConnectionFailed
 			expectedEvents := []api.Update{
 				{
 					KVPair: model.KVPair{
@@ -267,26 +283,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						},
 					},
 					UpdateType: api.UpdateTypeKVNew,
-				},
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: name},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterConnectionFailed,
-							Error:  errPrefix,
-						},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
-				},
-				{
-					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: name},
-						Value: &model.RemoteClusterStatus{
-							Status: model.RemoteClusterConnectionFailed,
-							Error:  errPrefix,
-						},
-					},
-					UpdateType: api.UpdateTypeKVUpdated,
 				},
 				{
 					KVPair: model.KVPair{
@@ -332,17 +328,19 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			// RemoteClusterStatus error. Compare with the expected events.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(callersUpdate *api.Update) *api.Update {
 				u := commonSanitizer(callersUpdate)
-				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
-					// Need to clip off the exact client error
-					// ex: "Get http://foobarbaz:1000/api/v1/namespaces: ..."
-					splitErr := strings.SplitN(r.Error, ": ", 2)
-					if len(splitErr) == 2 {
-						r.Error = splitErr[1]
-					}
-					if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
-						// The error has the expected prefix. Substitute the actual error for the prefix so that the
-						// exact comparison can be made.
-						r.Error = errPrefix
+				if u != nil {
+					if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
+						// Need to clip off the exact client error
+						// ex: "Get http://foobarbaz:1000/api/v1/namespaces: ..."
+						splitErr := strings.SplitN(r.Error, ": ", 2)
+						if len(splitErr) == 2 {
+							r.Error = splitErr[1]
+						}
+						if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
+							// The error has the expected prefix. Substitute the actual error for the prefix so that the
+							// exact comparison can be made.
+							r.Error = errPrefix
+						}
 					}
 				}
 				return u

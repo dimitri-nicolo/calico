@@ -204,6 +204,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate":                     schema_libcalico_go_lib_apis_v3_ReportTemplate(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec":                     schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                         schema_libcalico_go_lib_apis_v3_ResourceID(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RouteTableRange":                    schema_libcalico_go_lib_apis_v3_RouteTableRange(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                               schema_libcalico_go_lib_apis_v3_Rule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RuleMetadata":                       schema_libcalico_go_lib_apis_v3_RuleMetadata(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig":     schema_libcalico_go_lib_apis_v3_ServiceAccountControllerConfig(ref),
@@ -4644,6 +4645,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"bpfDisableUnprivileged": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFDisableUnprivileged, if enabled, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable unprivileged use of BPF.  This ensures that unprivileged users cannot access Calico's BPF maps and cannot insert their own BPF programs to interfere with Calico's. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"bpfLogLevel": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFLogLevel controls the log level of the BPF programs when in BPF dataplane mode.  One of \"Off\", \"Info\", or \"Debug\".  The logs are emitted to the BPF trace pipe, accessible with the command `tc exec bpf debug`. [Default: Off].",
@@ -5054,11 +5062,24 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"routeSource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RouteSource configures where Felix gets its routing information. - WorkloadIPs: use workload endpoints to construct routes. - CalicoIPAM: the default - use IPAM data to contruct routes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"routeTableRange": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Calico programs additional Linux route tables for various purposes.  RouteTableRange specifies the indices of the route tables that Calico should use.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RouteTableRange"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/apis/v3.RouteTableRange", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9099,6 +9120,31 @@ func schema_libcalico_go_lib_apis_v3_ResourceID(ref common.ReferenceCallback) co
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_RouteTableRange(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"min": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"max": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+				Required: []string{"min", "max"},
 			},
 		},
 	}

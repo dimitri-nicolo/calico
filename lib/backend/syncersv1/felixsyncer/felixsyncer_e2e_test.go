@@ -34,6 +34,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
@@ -187,6 +188,23 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
 			syncTester.ExpectStatusUpdate(api.InSync)
+
+			// Add 2 for the default-allow profile that is always there.
+			// However, no profile labels are in the list because the
+			// default-allow profile doesn't specify labels.
+			expectedProfile := resources.DefaultAllowProfile()
+			syncTester.ExpectData(*expectedProfile)
+			expectedCacheSize += 1
+
+			syncTester.ExpectData(model.KVPair{
+				Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "projectcalico-default-allow"}},
+				Value: &model.ProfileRules{
+					InboundRules:  []model.Rule{{Action: "allow"}},
+					OutboundRules: []model.Rule{{Action: "allow"}},
+				},
+			})
+			expectedCacheSize += 1
+
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment.
 				expectedCacheSize += len(defaultKubernetesResource())
