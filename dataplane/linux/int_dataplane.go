@@ -1077,6 +1077,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	for _, t := range d.iptablesMangleTables {
 		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
 		if t.IPVersion == 4 && d.config.EgressIPEnabled {
+			log.Warn("song mangle table jump to cali-egress")
 			t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgress},
 			}})

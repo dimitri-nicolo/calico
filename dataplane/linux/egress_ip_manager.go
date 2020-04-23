@@ -224,6 +224,7 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		log.WithField("msg", msg).Debug("workload endpoint remove")
 		m.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.HostMetadataUpdate:
+		log.WithField("msg", msg).Debugf("song Local host update %s", m.dpConfig.FelixHostname)
 		if msg.Hostname == m.dpConfig.FelixHostname {
 			log.WithField("msg", msg).Debug("Local host update")
 			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
@@ -466,12 +467,17 @@ func ipStringToMac(s string) net.HardwareAddr {
 
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
-
+	retry := 0
 	for {
 		err := m.configureVXLANDevice(mtu)
 		if err != nil {
 			log.WithError(err).Warn("Failed configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
+			retry += 1
+
+			if retry > 3 {
+				m.NodeIP = m.dpConfig.NodeIP
+			}
 			continue
 		}
 		log.Info("egress ip VXLAN tunnel device configured")
