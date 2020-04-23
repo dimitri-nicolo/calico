@@ -865,24 +865,11 @@ func (m *endpointManager) resolveHostEndpoints() {
 			hostEp := m.rawHostEndpoints[id]
 
 			// Update the filter chain, for normal traffic.
-			var ingressPolicyNames, egressPolicyNames []string
-			var ingressForwardPolicyNames, egressForwardPolicyNames []string
-			if len(hostEp.Tiers) > 0 {
-				ingressPolicyNames = hostEp.Tiers[0].IngressPolicies
-				egressPolicyNames = hostEp.Tiers[0].EgressPolicies
-			}
-			if len(hostEp.ForwardTiers) > 0 {
-				ingressForwardPolicyNames = hostEp.ForwardTiers[0].IngressPolicies
-				egressForwardPolicyNames = hostEp.ForwardTiers[0].EgressPolicies
-			}
-
 			filtChains := m.ruleRenderer.HostEndpointToFilterChains(
 				ifaceName,
+				hostEp.Tiers,
+				hostEp.ForwardTiers,
 				m.epMarkMapper,
-				ingressPolicyNames,
-				egressPolicyNames,
-				ingressForwardPolicyNames,
-				egressForwardPolicyNames,
 				hostEp.ProfileIds,
 			)
 

@@ -1057,7 +1057,7 @@ func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openS
 
 	rules = append(rules, r.DropRules(
 		Match().MarkMatchesWithMask(mark, mask).RPFCheckFailed(acceptLocal),
-	))
+	)...)
 
 	return rules
 }

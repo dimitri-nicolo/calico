@@ -987,7 +987,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 				d.config.RulesConfig.OpenStackSpecialCasesEnabled, true),
 		}}
 		t.UpdateChains(rawChains)
-		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
+		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
 	}
