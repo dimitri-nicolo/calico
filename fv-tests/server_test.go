@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -268,7 +268,7 @@ var _ = Describe("With an in-process Server", func() {
 		Expect(server.Port()).ToNot(BeZero())
 	})
 
-	sendNUpdatesThenInSync := func(n int) map[string]api.Update {
+	sendNUpdates := func(n int) map[string]api.Update {
 		expectedEndState := map[string]api.Update{}
 		decoupler.OnStatusUpdated(api.ResyncInProgress)
 		for i := 0; i < n; i++ {
@@ -287,6 +287,11 @@ var _ = Describe("With an in-process Server", func() {
 			expectedEndState[path] = update
 			decoupler.OnUpdates([]api.Update{update})
 		}
+		return expectedEndState
+	}
+
+	sendNUpdatesThenInSync := func(n int) map[string]api.Update {
+		expectedEndState := sendNUpdates(n)
 		decoupler.OnStatusUpdated(api.InSync)
 		return expectedEndState
 	}
