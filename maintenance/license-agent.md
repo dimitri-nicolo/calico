@@ -76,8 +76,8 @@ kubectl create namespace tigera-license-agent
 
 ```
    kubectl create secret generic tigera-pull-secret \
-     --from-file=.dockerconfigjson=<path/to/pull/secret> \
-     --type=kubernetes.io/dockerconfigjson -n tigera-license-agent
+     --type=kubernetes.io/dockerconfigjson -n tigera-license-agent \
+     --from-file=.dockerconfigjson=<path/to/pull/secret>
 ```
 
 3. Apply manifest

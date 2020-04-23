@@ -99,8 +99,8 @@ The first step is to set up a management cluster. This will contain your central
 
    ```shell
    kubectl create secret generic tigera-pull-secret \
-       --from-file=.dockerconfigjson=<path/to/pull/secret> \
-       --type=kubernetes.io/dockerconfigjson -n tigera-operator
+       --type=kubernetes.io/dockerconfigjson -n tigera-operator \
+       --from-file=.dockerconfigjson=<path/to/pull/secret>
    ```
 
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).

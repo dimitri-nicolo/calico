@@ -58,8 +58,8 @@ Ensure that your GKE cluster that meets the following requirements:
 
    ```
    kubectl create secret generic tigera-pull-secret \
-       --from-file=.dockerconfigjson=<path/to/pull/secret> \
-       --type=kubernetes.io/dockerconfigjson -n tigera-operator
+       --type=kubernetes.io/dockerconfigjson -n tigera-operator \
+       --from-file=.dockerconfigjson=<path/to/pull/secret>
    ```
 
 1. Install any extra [Calico resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
