@@ -476,6 +476,7 @@ func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 			retry += 1
 
 			if retry > 3 {
+				log.Warnf("song set host ip manually")
 				m.NodeIP = m.dpConfig.NodeIP
 			}
 			continue
