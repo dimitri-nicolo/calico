@@ -7,14 +7,9 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
-	k8s "k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	celastic "github.com/tigera/lma/pkg/elastic"
@@ -23,7 +18,6 @@ import (
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	lmaauth "github.com/tigera/lma/pkg/auth"
 )
 
 var (
@@ -64,8 +58,8 @@ func Start(cfg *Config) error {
 	}
 	proxy := handler.NewProxy(pc)
 
-	k8sClient, k8sConfig := getKubernetestClientAndConfig()
-	k8sAuth := lmaauth.NewK8sAuth(k8sClient, k8sConfig)
+	mcmAuth := middleware.NewMCMAuth(cfg.VoltronCAPath)
+	k8sAuth := mcmAuth.DefaultK8sAuth()
 
 	// Install pip mutator
 	k8sClientSet := datastore.MustGetClientSet()
@@ -97,7 +91,7 @@ func Start(cfg *Config) error {
 	switch cfg.AccessMode {
 	case InsecureMode:
 		sm.Handle("/recommend",
-			middleware.PolicyRecommendationHandler(k8sAuth, k8sClientSet, esClient))
+			middleware.PolicyRecommendationHandler(mcmAuth, k8sClientSet, esClient))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPattern(
 				k8sAuth.KubernetesAuthnAuthz(proxy)))
@@ -107,18 +101,18 @@ func Start(cfg *Config) error {
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamespaceHandler(k8sAuth, esClient))))
+					middleware.FlowLogNamespaceHandler(mcmAuth, esClient))))
 		sm.Handle("/flowLogNames",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamesHandler(k8sAuth, esClient))))
+					middleware.FlowLogNamesHandler(mcmAuth, esClient))))
 		sm.Handle("/flowLogs",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(k8sAuth, esClient, p))))
+					middleware.FlowLogsHandler(mcmAuth, esClient, p))))
 	case ServiceUserMode:
 		sm.Handle("/recommend",
-			middleware.PolicyRecommendationHandler(k8sAuth, k8sClientSet, esClient))
+			middleware.PolicyRecommendationHandler(mcmAuth, k8sClientSet, esClient))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPattern(
 				k8sAuth.KubernetesAuthnAuthz(
@@ -130,15 +124,15 @@ func Start(cfg *Config) error {
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamespaceHandler(k8sAuth, esClient))))
+					middleware.FlowLogNamespaceHandler(mcmAuth, esClient))))
 		sm.Handle("/flowLogNames",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamesHandler(k8sAuth, esClient))))
+					middleware.FlowLogNamesHandler(mcmAuth, esClient))))
 		sm.Handle("/flowLogs",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(k8sAuth, esClient, p))))
+					middleware.FlowLogsHandler(mcmAuth, esClient, p))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
@@ -189,30 +183,4 @@ func addCertToCertPool(caPath string) *x509.CertPool {
 		log.WithError(err).Fatal("Could not add CA to pool")
 	}
 	return systemCertPool
-}
-
-// getKubernetestClientAndConfig figures out a k8s client, either using a
-// incluster config or a provided KUBECONFIG environment variable.
-// This function doesn't return an error but instead panics on error.
-func getKubernetestClientAndConfig() (k8s.Interface, *restclient.Config) {
-	var (
-		k8sConfig *restclient.Config
-		err       error
-	)
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig != "" {
-		log.WithField("kubeconfig", kubeconfig).Info("Using kubeconfig")
-		// Create client with provided kubeconfig
-		k8sConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			log.WithError(err).Fatal("Could not process kubeconfig file")
-		}
-	} else {
-		k8sConfig, err = restclient.InClusterConfig()
-		if err != nil {
-			log.WithError(err).Fatal("Could not get in cluster config")
-		}
-	}
-	k8sClient := k8s.NewForConfigOrDie(k8sConfig)
-	return k8sClient, k8sConfig
 }

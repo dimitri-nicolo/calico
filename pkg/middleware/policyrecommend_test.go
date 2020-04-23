@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/tigera/lma/pkg/auth"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -461,4 +462,12 @@ func (fa *fakeAuthorizer) setNextResult(nr int) {
 
 func (fa *fakeAuthorizer) setNextError(err error) {
 	fa.nextError = err
+}
+
+func (fa *fakeAuthorizer) DefaultK8sAuth() auth.K8sAuthInterface {
+	return fa
+}
+
+func (fa *fakeAuthorizer) K8sAuth(clusterID string) auth.K8sAuthInterface {
+	return fa
 }

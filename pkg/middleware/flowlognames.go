@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
-	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
 )
@@ -70,7 +69,7 @@ type EndpointInfo struct {
 	Type      string
 }
 
-func FlowLogNamesHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client) http.Handler {
+func FlowLogNamesHandler(mcmAuth MCMAuth, esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamesRequest(req)
@@ -86,8 +85,9 @@ func FlowLogNamesHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Clie
 			}
 			return
 		}
-
-		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req})
+		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
+		req = req.WithContext(context.WithValue(req.Context(), clusterKey, params.ClusterName))
+		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req})
 		response, err := getNamesFromElastic(params, esClient, rbacHelper)
 		if err != nil {
 			log.WithError(err).Info("Error getting names from elastic")

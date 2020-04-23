@@ -42,6 +42,7 @@ require (
 	github.com/onsi/ginkgo v1.10.2
 	github.com/onsi/gomega v1.7.1
 	github.com/projectcalico/libcalico-go v1.7.3
+	github.com/prometheus/common v0.4.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/apiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
 	github.com/tigera/compliance v0.0.0-20200321083204-39304111550f

@@ -18,7 +18,6 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
 
@@ -123,7 +122,7 @@ const esflowIndexPrefix = "tigera_secure_ee_flows"
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
+func FlowLogsHandler(mcmAuth MCMAuth, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -145,13 +144,15 @@ func FlowLogsHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client, 
 			}
 			return
 		}
-		flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req}))
+		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
+		req = req.WithContext(context.WithValue(req.Context(), clusterKey, params.ClusterName))
+		flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req}))
 		var response interface{}
 		var stat int
 		if params.PolicyPreview == nil {
 			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
 		} else {
-			factory := NewStandardPolicyImpactRbacHelperFactory(auth)
+			factory := NewStandardPolicyImpactRbacHelperFactory(mcmAuth.DefaultK8sAuth())
 			rbacHelper := factory.NewPolicyImpactRbacHelper(req)
 			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
 		}

@@ -35,6 +35,8 @@ const (
 	elasticConnRetriesEnv        = "ELASTIC_CONN_RETRIES"
 	elasticConnRetryIntervalEnv  = "ELASTIC_CONN_RETRY_INTERVAL"
 	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
+
+	voltronCAPathEnv = "VOLTRON_CA_PATH"
 )
 
 const (
@@ -76,6 +78,8 @@ const (
 
 	// We will use HTTPS if the env variable ELASTIC_SCHEME is not set.
 	defaultElasticScheme = "https"
+
+	defaultVoltronCAPath = "/manager-tls/cert"
 )
 
 // Config stores various configuration information for the es-proxy
@@ -121,6 +125,11 @@ type Config struct {
 	ProxyConnectTimeout  time.Duration
 	ProxyKeepAlivePeriod time.Duration
 	ProxyIdleConnTimeout time.Duration
+
+	// If multi-cluster management is used inside the cluster, this CA
+	// is necessary for establishing a connection with Voltron, when
+	// accessing other clusters.
+	VoltronCAPath string
 }
 
 func NewConfigFromEnv() (*Config, error) {
@@ -178,6 +187,7 @@ func NewConfigFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	voltronCAPath := getEnvOrDefaultString(voltronCAPathEnv, defaultVoltronCAPath)
 	config := &Config{
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
@@ -198,6 +208,7 @@ func NewConfigFromEnv() (*Config, error) {
 		ProxyConnectTimeout:       connectTimeout,
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
 		ProxyIdleConnTimeout:      idleConnTimeout,
+		VoltronCAPath:             voltronCAPath,
 	}
 	err = validateConfig(config)
 	return config, err

@@ -10,7 +10,6 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 
 	lmaerror "github.com/tigera/lma/pkg/api"
-	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/policyrec"
 	"github.com/tigera/lma/pkg/rbac"
 )
@@ -25,7 +24,7 @@ type PolicyRecommendationResponse struct {
 }
 
 // PolicyRecommendationHandler returns a handler that writes a json response containing recommended policies.
-func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.Interface, c policyrec.CompositeAggregator) http.Handler {
+func PolicyRecommendationHandler(mcmAuth MCMAuth, k8sClient k8s.Interface, c policyrec.CompositeAggregator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Check that the request has the appropriate method. Should it be GET or POST?
 
@@ -37,13 +36,13 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 		}
 
 		// Check that the user is allowed to access flow logs.
-		if stat, err := policyrec.ValidatePermissions(req, authz); err != nil {
+		if stat, err := policyrec.ValidatePermissions(req, mcmAuth.DefaultK8sAuth()); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
 
 		// Check that user has sufficient permissions to list flows for the requested endpoint.
-		if stat, err := ValidateRecommendationPermissions(req, authz, params); err != nil {
+		if stat, err := ValidateRecommendationPermissions(req, mcmAuth, params); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
@@ -101,8 +100,8 @@ func PolicyRecommendationHandler(authz lmaauth.K8sAuthInterface, k8sClient k8s.I
 }
 
 // ValidateRecommendationPermissions checks that the user is able to list flows for the specified endpoint.
-func ValidateRecommendationPermissions(req *http.Request, k8sAuth lmaauth.K8sAuthInterface, params *policyrec.PolicyRecommendationParams) (int, error) {
-	fh := rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: k8sAuth, userReq: req})
+func ValidateRecommendationPermissions(req *http.Request, mcmAuth MCMAuth, params *policyrec.PolicyRecommendationParams) (int, error) {
+	fh := rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req})
 	if params.Namespace != "" {
 		if ok, err := fh.CanListPods(params.Namespace); err != nil {
 			return http.StatusInternalServerError, err

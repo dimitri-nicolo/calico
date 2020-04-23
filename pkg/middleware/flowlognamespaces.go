@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
-	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
 )
@@ -52,7 +51,7 @@ type Namespace struct {
 	Name string `json:"name"`
 }
 
-func FlowLogNamespaceHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.Client) http.Handler {
+func FlowLogNamespaceHandler(mcmAuth MCMAuth, esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamespacesRequest(req)
@@ -68,8 +67,9 @@ func FlowLogNamespaceHandler(auth lmaauth.K8sAuthInterface, esClient lmaelastic.
 			}
 			return
 		}
-
-		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{k8sAuth: auth, userReq: req})
+		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
+		req = req.WithContext(context.WithValue(req.Context(), clusterKey, params.ClusterName))
+		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req})
 		response, err := getNamespacesFromElastic(params, esClient, rbacHelper)
 		if err != nil {
 			log.WithError(err).Info("Error getting namespaces from elastic")
