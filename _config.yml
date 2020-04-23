@@ -58,6 +58,7 @@ imageNames:
   ingress-collector: tigera/ingress-collector
   kibana: tigera/kibana
   license-agent: tigera/license-agent
+  firewall-integration: tigera/firewall-integration
   prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
   configMapReload: quay.io/coreos/configmap-reload
   alertManager: quay.io/prometheus/alertmanager
@@ -140,6 +141,7 @@ defaults:
         ingress-collector: tigera/ingress-collector
         kibana: tigera/kibana
         license-agent: tigera/license-agent
+        firewall-integration: tigera/firewall-integration
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
         configMapReload: quay.io/coreos/configmap-reload
         alertManager: quay.io/prometheus/alertmanager
