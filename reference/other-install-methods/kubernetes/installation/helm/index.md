@@ -28,7 +28,7 @@ Install {{ site.prodname }} in Kubernetes using Helm.
    ```
    helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
      --name {{ site.prodnamedash }} \
-     --set-file imagePullSecrets.tigera-pull-secret=./config.json
+     --set-file imagePullSecrets.tigera-pull-secret=<path/to/pull/secret>
    ```
 
 1. Wait for the apiserver to become available:
@@ -40,8 +40,14 @@ Install {{ site.prodname }} in Kubernetes using Helm.
 1. Install your {{ site.prodname }} license:
 
    ```
-   kubectl apply -f ./license.yaml
+   kubectl apply -f </path/to/license.yaml>
    ```
+
+1. Monitor progress and wait for all components to show a status of `Available`
+
+  ```
+  watch kubectl get tigerastatus
+  ```
 
 1. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
 
