@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,12 +98,20 @@ func (m MatchCriteria) OutInterface(ifaceMatch string) MatchCriteria {
 	return append(m, fmt.Sprintf("--out-interface %s", ifaceMatch))
 }
 
-func (m MatchCriteria) RPFCheckPassed() MatchCriteria {
-	return append(m, "-m rpfilter")
+func (m MatchCriteria) RPFCheckPassed(acceptLocal bool) MatchCriteria {
+	ret := append(m, "-m rpfilter")
+	if acceptLocal {
+		ret = append(ret, "--accept-local")
+	}
+	return ret
 }
 
-func (m MatchCriteria) RPFCheckFailed() MatchCriteria {
-	return append(m, "-m rpfilter --invert")
+func (m MatchCriteria) RPFCheckFailed(acceptLocal bool) MatchCriteria {
+	ret := append(m, "-m rpfilter --invert")
+	if acceptLocal {
+		ret = append(ret, "--accept-local")
+	}
+	return ret
 }
 
 func (m MatchCriteria) IPVSConnection() MatchCriteria {

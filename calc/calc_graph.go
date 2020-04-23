@@ -83,7 +83,7 @@ type passthruCallbacks interface {
 
 type routeCallbacks interface {
 	OnRouteUpdate(update *proto.RouteUpdate)
-	OnRouteRemove(routeType proto.RouteType, dst string)
+	OnRouteRemove(dst string)
 }
 
 type vxlanCallbacks interface {
@@ -347,7 +347,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 
-	if conf.BPFEnabled {
+	if conf.BPFEnabled || conf.VXLANEnabled {
 		// Calculate simple node-ownership routes.
 		//        ...
 		//     Dispatcher (all updates)
@@ -360,8 +360,8 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		//         |
 		//      <dataplane>
 		//
-		l3RR := NewL3RouteResolver(hostname, callbacks, conf.UseNodeResourceUpdates())
-		l3RR.RegisterWith(allUpdDispatcher)
+		l3RR := NewL3RouteResolver(hostname, callbacks, conf.UseNodeResourceUpdates(), conf.RouteSource)
+		l3RR.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
 	}
 
 	// Calculate VXLAN routes.

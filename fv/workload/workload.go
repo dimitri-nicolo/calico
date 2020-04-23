@@ -37,6 +37,7 @@ import (
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/tcpdump"
 	"github.com/projectcalico/felix/fv/utils"
 )
 
@@ -89,7 +90,7 @@ func Run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 	return w
 }
 
-func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w *Workload, err error) {
+func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string) *Workload {
 	workloadIdx++
 	n := fmt.Sprintf("%s-idx%v", name, workloadIdx)
 	interfaceName := conversion.NewConverter().VethNameForWorkload(profile, n)
@@ -98,14 +99,39 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 	}
 	// Build unique workload name and struct.
 	workloadIdx++
-	w = &Workload{
-		C:             c.Container,
-		Name:          n,
-		InterfaceName: interfaceName,
-		IP:            ip,
-		Ports:         ports,
-		Protocol:      protocol,
+
+	wep := api.NewWorkloadEndpoint()
+	wep.Labels = map[string]string{"name": n}
+	wep.Spec.Node = c.Hostname
+	wep.Spec.Orchestrator = "felixfv"
+	wep.Spec.Workload = n
+	wep.Spec.Endpoint = n
+	prefixLen := "32"
+	if strings.Contains(ip, ":") {
+		prefixLen = "128"
 	}
+	wep.Spec.IPNetworks = []string{ip + "/" + prefixLen}
+	wep.Spec.InterfaceName = interfaceName
+	wep.Spec.Profiles = []string{profile}
+
+	return &Workload{
+		C:                c.Container,
+		Name:             n,
+		InterfaceName:    interfaceName,
+		IP:               ip,
+		Ports:            ports,
+		Protocol:         protocol,
+		WorkloadEndpoint: wep,
+	}
+}
+
+func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w *Workload, err error) {
+	w = New(c, name, profile, ip, ports, protocol)
+	return w, w.Start()
+}
+
+func (w *Workload) Start() error {
+	var err error
 
 	// Ensure that the host has the 'test-workload' binary.
 	w.C.EnsureBinary("test-workload")
@@ -113,9 +139,9 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 	// Start the workload.
 	log.WithField("workload", w).Info("About to run workload")
 	var protoArg string
-	if protocol == "udp" {
+	if w.Protocol == "udp" {
 		protoArg = "--udp"
-	} else if protocol == "sctp" {
+	} else if w.Protocol == "sctp" {
 		protoArg = "--sctp"
 	}
 	w.runCmd = utils.Command("docker", "exec", w.C.Name,
@@ -128,15 +154,15 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 			w.Ports))
 	w.outPipe, err = w.runCmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("Getting StdoutPipe failed: %v", err)
+		return fmt.Errorf("Getting StdoutPipe failed: %v", err)
 	}
 	w.errPipe, err = w.runCmd.StderrPipe()
 	if err != nil {
-		return nil, fmt.Errorf("Getting StderrPipe failed: %v", err)
+		return fmt.Errorf("Getting StderrPipe failed: %v", err)
 	}
 	err = w.runCmd.Start()
 	if err != nil {
-		return nil, fmt.Errorf("runCmd Start failed: %v", err)
+		return fmt.Errorf("runCmd Start failed: %v", err)
 	}
 
 	// Read the workload's namespace path, which it writes to its standard output.
@@ -153,7 +179,7 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 				log.WithError(err).Info("End of workload stderr")
 				return
 			}
-			log.Infof("Workload %s stderr: %s", n, strings.TrimSpace(string(line)))
+			log.Infof("Workload %s stderr: %s", w.Name, strings.TrimSpace(string(line)))
 		}
 	}()
 
@@ -162,7 +188,7 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 		// (Only) if we fail here, wait for the stderr to be output before returning.
 		defer errDone.Wait()
 		if err != nil {
-			return nil, fmt.Errorf("Reading from stdout failed: %v", err)
+			return fmt.Errorf("Reading from stdout failed: %v", err)
 		}
 	}
 
@@ -175,28 +201,13 @@ func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string) (w 
 				log.WithError(err).Info("End of workload stdout")
 				return
 			}
-			log.Infof("Workload %s stdout: %s", name, strings.TrimSpace(string(line)))
+			log.Infof("Workload %s stdout: %s", w.Name, strings.TrimSpace(string(line)))
 		}
 	}()
 
 	log.WithField("workload", w).Info("Workload now running")
 
-	wep := api.NewWorkloadEndpoint()
-	wep.Labels = map[string]string{"name": w.Name}
-	wep.Spec.Node = w.C.Hostname
-	wep.Spec.Orchestrator = "felixfv"
-	wep.Spec.Workload = w.Name
-	wep.Spec.Endpoint = w.Name
-	prefixLen := "32"
-	if strings.Contains(w.IP, ":") {
-		prefixLen = "128"
-	}
-	wep.Spec.IPNetworks = []string{w.IP + "/" + prefixLen}
-	wep.Spec.InterfaceName = w.InterfaceName
-	wep.Spec.Profiles = []string{profile}
-	w.WorkloadEndpoint = wep
-
-	return w, nil
+	return nil
 }
 
 func (w *Workload) IPNet() string {
@@ -236,11 +247,11 @@ func (w *Workload) SourceIPs() []string {
 	return []string{w.IP}
 }
 
-func (w *Workload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
+func (w *Workload) CanConnectTo(ip, port, protocol string, opts ...connectivity.CheckOption) *connectivity.Result {
 	anyPort := Port{
 		Workload: w,
 	}
-	return anyPort.CanConnectTo(ip, port, protocol, duration)
+	return anyPort.CanConnectTo(ip, port, protocol, opts...)
 }
 
 func (w *Workload) Port(port uint16) *Port {
@@ -497,13 +508,75 @@ func (w *Workload) ToMatcher(explicitPort ...uint16) *connectivity.Matcher {
 	}
 }
 
+const nsprefix = "/var/run/netns/"
+
+func (w *Workload) netns() string {
+	if strings.HasPrefix(w.namespacePath, nsprefix) {
+		return strings.TrimPrefix(w.namespacePath, nsprefix)
+	}
+
+	return ""
+}
+
+func (w *Workload) RunCmd(cmd string, args ...string) (string, error) {
+	netns := w.netns()
+	dockerArgs := []string{"exec", w.C.Name}
+	if netns != "" {
+		dockerArgs = append(dockerArgs, "ip", "netns", "exec", netns)
+	}
+	dockerArgs = append(dockerArgs, cmd)
+	dockerArgs = append(dockerArgs, args...)
+	dockerCmd := utils.Command("docker", dockerArgs...)
+	out, err := dockerCmd.CombinedOutput()
+
+	log.WithField("output", string(out)).Debug("Workload.RunCmd")
+	return string(out), err
+}
+
+func (w *Workload) PathMTU(ip string) (int, error) {
+	out, err := w.RunCmd("ip", "route", "show", "cached")
+	if err != nil {
+		return 0, err
+	}
+
+	outRd := bufio.NewReader(strings.NewReader(out))
+	ipRegex := regexp.MustCompile("^" + ip + ".*")
+	mtuRegex := regexp.MustCompile(".*mtu ([0-9]+)")
+	for {
+		line, err := outRd.ReadString('\n')
+		if err != nil {
+			return 0, nil
+		}
+		if ipRegex.MatchString(line) {
+			line, err := outRd.ReadString('\n')
+			if err != nil {
+				return 0, nil
+			}
+			m := mtuRegex.FindStringSubmatch(line)
+			if len(m) == 0 {
+				return 0, nil
+			}
+			return strconv.Atoi(m[1])
+		}
+	}
+}
+
+// AttachTCPDump returns tcpdump attached to the workload
+func (w *Workload) AttachTCPDump() *tcpdump.TCPDump {
+	netns := w.netns()
+	tcpd := tcpdump.Attach(w.C.Name, netns, "eth0")
+	tcpd.SetLogString(w.Name)
+	return tcpd
+}
+
 type SpoofedWorkload struct {
 	*Workload
 	SpoofedSourceIP string
 }
 
-func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
-	return canConnectTo(s.Workload, ip, port, s.SpoofedSourceIP, "", protocol, duration)
+func (s *SpoofedWorkload) CanConnectTo(ip, port, protocol string, opts ...connectivity.CheckOption) *connectivity.Result {
+	opts = append(opts, connectivity.WithSourceIP(s.SpoofedSourceIP))
+	return canConnectTo(s.Workload, ip, port, protocol, "(spoofed)", opts...)
 }
 
 type Port struct {
@@ -524,14 +597,12 @@ func (p *Port) SourceIPs() []string {
 
 // Return if a connection is good and packet loss string "PacketLoss[xx]".
 // If it is not a packet loss test, packet loss string is "".
-func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
-	srcPort := strconv.Itoa(int(p.Port))
-	return canConnectTo(p.Workload, ip, port, "", srcPort, protocol, duration)
+func (p *Port) CanConnectTo(ip, port, protocol string, opts ...connectivity.CheckOption) *connectivity.Result {
+	opts = append(opts, connectivity.WithSourcePort(strconv.Itoa(int(p.Port))))
+	return canConnectTo(p.Workload, ip, port, protocol, "(with source port)", opts...)
 }
 
-func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, duration time.Duration) *connectivity.Result {
-	// Ensure that the host has the 'test-connection' binary.
-	w.C.EnsureBinary("test-connection")
+func canConnectTo(w *Workload, ip, port, protocol, logSuffix string, opts ...connectivity.CheckOption) *connectivity.Result {
 
 	if protocol == "udp" || protocol == "sctp" {
 		// If this is a retry then we may have stale conntrack entries and we don't want those
@@ -547,22 +618,13 @@ func canConnectTo(w *Workload, ip, port, srcIp, srcPort, protocol string, durati
 
 	logMsg := "Connection test"
 
-	// Run 'test-connection' to the target.
-	args := []string{
-		"exec", w.C.Name, "/test-connection", w.namespacePath, ip, port, "--protocol=" + protocol, fmt.Sprintf("--duration=%d", int(duration.Seconds())),
-	}
-	if srcIp != "" {
-		args = append(args, fmt.Sprintf("--source-ip=%s", srcIp))
-		logMsg += " (spoofed)"
-	}
-	if srcPort != "" {
-		// If we are using a particular source port, fill it in.
-		args = append(args, fmt.Sprintf("--source-port=%s", srcPort))
-		logMsg += " (with source port)"
-	}
-	connectionCmd := utils.Command("docker", args...)
+	// enforce the name space as we want to execute it in the workload
+	opts = append(opts, connectivity.WithNamespacePath(w.namespacePath))
+	logMsg += " " + logSuffix
 
-	return utils.RunConnectionCmd(connectionCmd, logMsg)
+	w.C.EnsureBinary(connectivity.BinaryName)
+
+	return connectivity.Check(w.C.Name, logMsg, ip, port, protocol, opts...)
 }
 
 // ToMatcher implements the connectionTarget interface, allowing this port to be used as

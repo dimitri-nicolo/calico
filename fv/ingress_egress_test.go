@@ -29,13 +29,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/collector"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
 var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", func() {

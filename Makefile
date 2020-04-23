@@ -87,7 +87,7 @@ endif
 FV_ETCDIMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 FV_K8SIMAGE ?= gcr.io/google_containers/hyperkube-$(BUILDARCH):$(K8S_VERSION)
 FV_TYPHAIMAGE ?= tigera/typha:latest-$(BUILDARCH)
-FV_FELIXIMAGE ?= tigera/felix:latest-$(BUILDARCH)
+FV_FELIXIMAGE?=$(BUILD_IMAGE)-test:latest-$(BUILDARCH)
 
 # If building on amd64 omit the arch in the container name.  Fixme!
 ifeq ($(BUILDARCH),amd64)
@@ -96,11 +96,17 @@ ifeq ($(BUILDARCH),amd64)
 	FV_TYPHAIMAGE=gcr.io/unique-caldron-775/cnx/tigera/typha:master
 endif
 
-# Total number of ginkgo batches to run.  The CI system sets this according to the number
-# of jobs that it divides the FVs into.
-FV_NUM_BATCHES?=3
+# Total number of batches to split the tests into.  In CI we set this to say 5 batches,
+# and run a single batch on each test VM.
+FV_NUM_BATCHES?=1
 # Space-delimited list of FV batches to run in parallel.  Defaults to running all batches
 # in parallel on this host.  The CI system runs a subset of batches in each parallel job.
+#
+# To run multiple batches in parallel in order to speed up local runs (on a powerful
+# developer machine), set FV_NUM_BATCHES to say 3, then this value will be automatically
+# calculated.  Note: the tests tend to flake more when run in parallel even though they
+# were designed to be isolated; if you hit a failure, try running the tests sequentially
+# (with FV_NUM_BATCHES=1) to check that it's not a flake.
 FV_BATCHES_TO_RUN?=$(shell seq $(FV_NUM_BATCHES))
 FV_SLOW_SPEC_THRESH=90
 
@@ -293,11 +299,19 @@ $(BUILD_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
 	mkdir -p docker-image/bpf/bin
 	# Copy only the files we're explicitly expecting (in case we have left overs after switching branch).
 	cp $(ALL_BPF_PROGS) docker-image/bpf/bin
-	if [ "$(SEMAPHORE)" != "true" -o "$$(docker images -q $(BUILD_IMAGE):latest-$(ARCH) 2> /dev/null)" = "" ] ; then \
+	if [ "$(SEMAPHORE)" != "true" -o "$$(docker images -q $(BUILD_IMAGE_NAME):latest-$(ARCH) 2> /dev/null)" = "" ] ; then \
 	  docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image; \
 	fi
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+endif
+
+image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection
+	if [ "$(SEMAPHORE)" != "true" -o "$$(docker images -q $(BUILD_IMAGE_NAME):latest-$(ARCH) 2> /dev/null)" = "" ] ; then \
+ 	  docker build -t $(BUILD_IMAGE)-test:latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./fv/Dockerfile.test.$(ARCH) bin; \
+	fi
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE)-test:latest-$(ARCH) $(BUILD_IMAGE)-test:latest
 endif
 
 ###############################################################################
@@ -450,7 +464,7 @@ fv/infrastructure/crds.yaml: mod-download
 # or It{} description string. For example, to only run dns_test.go, type:
 # 	GINKGO_FOCUS="DNS Policy" make fv
 #
-fv fv/latency.log: $(REMOTE_DEPS) $(BUILD_IMAGE) bin/iptables-locker bin/test-workload bin/test-connection bin/calico-bpf fv/fv.test
+fv fv/latency.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-workload bin/test-connection bin/calico-bpf fv/fv.test
 	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
@@ -499,7 +513,7 @@ K8SFV_GO_FILES:=$(shell find ./$(K8SFV_DIR) -name prometheus -prune -o -type f -
 # e.g.
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-k8sfv-test: $(BUILD_IMAGE) k8sfv-test-existing-felix
+k8sfv-test: image-test k8sfv-test-existing-felix
 # Run k8sfv test with whatever is the existing 'tigera/felix:latest'
 # container image.  To use some existing Felix version other than
 # 'latest', do 'FELIX_VERSION=<...> make k8sfv-test-existing-felix'.
@@ -552,6 +566,12 @@ bin/calico-bpf: $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	@echo Building calico-bpf...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
+
+bin/pktgen: $(SRC_FILES) $(LOCAL_BUILD_DEP)
+	@echo Building pktgen...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
 
 bin/iptables-locker: $(LOCAL_BUILD_DEP) go.mod $(shell find iptables -type f -name '*.go' -print)
 	@echo Building iptables-locker...

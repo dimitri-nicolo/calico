@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/felix/fv/tcpdump"
 	"github.com/projectcalico/felix/fv/utils"
 )
 
@@ -385,4 +386,15 @@ func (f *Felix) Restart() {
 	oldPID := f.GetFelixPID()
 	f.Signal(syscall.SIGHUP)
 	Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(oldPID))
+}
+
+func (f *Felix) Restart() {
+	oldPID := f.GetFelixPID()
+	f.Signal(syscall.SIGHUP)
+	Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(oldPID))
+}
+
+// AttachTCPDump returns tcpdump attached to the container
+func (f *Felix) AttachTCPDump(iface string) *tcpdump.TCPDump {
+	return tcpdump.Attach(f.Container.Name, "", iface)
 }

@@ -17,16 +17,11 @@ package utils
 import (
 	"bufio"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
-	"strconv"
 	"strings"
-	"sync"
+	"syscall"
 
 	"github.com/kelseyhightower/envconfig"
 	. "github.com/onsi/ginkgo"
@@ -39,7 +34,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/selector"
 
 	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/rules"
 )
@@ -212,177 +206,32 @@ func IPSetNameForSelector(ipVersion int, rawSelector string) string {
 	return ipVerConf.NameForMainIPSet(setID)
 }
 
-// Run a connection test command.
-// Report if connection test is successful and packet loss string for packet loss test.
-func RunConnectionCmd(connectionCmd *exec.Cmd, logMsg string) *connectivity.Result {
-	outPipe, err := connectionCmd.StdoutPipe()
-	Expect(err).NotTo(HaveOccurred())
-	errPipe, err := connectionCmd.StderrPipe()
-	Expect(err).NotTo(HaveOccurred())
-	err = connectionCmd.Start()
-	Expect(err).NotTo(HaveOccurred())
+// HasSyscallConn represents objects that can return a syscall.RawConn
+type HasSyscallConn interface {
+	SyscallConn() (syscall.RawConn, error)
+}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
-	var wOut, wErr []byte
-	var outErr, errErr error
+// ConnMTU returns the MTU of the connection for _connected_ connections. That
+// excludes unconnected udp which requires different approach for each peer.
+func ConnMTU(hsc HasSyscallConn) (int, error) {
+	c, err := hsc.SyscallConn()
+	if err != nil {
+		return 0, err
+	}
 
-	go func() {
-		defer wg.Done()
-		wOut, outErr = ioutil.ReadAll(outPipe)
-	}()
-
-	go func() {
-		defer wg.Done()
-		wErr, errErr = ioutil.ReadAll(errPipe)
-	}()
-
-	wg.Wait()
-	Expect(outErr).NotTo(HaveOccurred())
-	Expect(errErr).NotTo(HaveOccurred())
-
-	err = connectionCmd.Wait()
-
-	log.WithFields(log.Fields{
-		"stdout": string(wOut),
-		"stderr": string(wErr)}).WithError(err).Info(logMsg)
+	mtu := 0
+	var sysErr error
+	err = c.Control(func(fd uintptr) {
+		mtu, sysErr = syscall.GetsockoptInt(int(fd), syscall.IPPROTO_IP, syscall.IP_MTU)
+	})
 
 	if err != nil {
-		return nil
+		return 0, err
 	}
 
-	r := regexp.MustCompile(`RESULT=(.*)\n`)
-	m := r.FindSubmatch(wOut)
-	if len(m) > 0 {
-		var resp connectivity.Result
-		err := json.Unmarshal(m[1], &resp)
-		if err != nil {
-			log.WithError(err).WithField("output", string(wOut)).Panic("Failed to parse connection check response")
-		}
-		return &resp
-	}
-	return nil
-}
-
-const ConnectionTypeStream = "stream"
-const ConnectionTypePing = "ping"
-
-type ConnConfig struct {
-	ConnType string
-	ConnID   string
-}
-
-func (cc ConnConfig) getTestMessagePrefix() string {
-	return cc.ConnType + ":" + cc.ConnID + "~"
-}
-
-// Assembly a test message.
-func (cc ConnConfig) GetTestMessage(sequence int) connectivity.Request {
-	req := connectivity.NewRequest(cc.getTestMessagePrefix() + fmt.Sprintf("%d", sequence))
-	return req
-}
-
-// Extract sequence number from test message.
-func (cc ConnConfig) GetTestMessageSequence(msg string) (int, error) {
-	msg = strings.TrimSpace(msg)
-	seqString := strings.TrimPrefix(msg, cc.getTestMessagePrefix())
-	if seqString == msg {
-		// TrimPrefix failed.
-		return 0, errors.New("invalid message prefix format:" + msg)
+	if sysErr != nil {
+		return 0, sysErr
 	}
 
-	seq, err := strconv.Atoi(seqString)
-	if err != nil || seq < 0 {
-		return 0, errors.New("invalid message sequence format:" + msg)
-	}
-	return seq, nil
-}
-
-func IsMessagePartOfStream(msg string) bool {
-	return strings.HasPrefix(strings.TrimSpace(msg), ConnectionTypeStream)
-}
-
-const (
-	PacketLossPrefix        = "PacketLoss"
-	PacketLossPercentPrefix = PacketLossPrefix + "Percent"
-	PacketLossNumberPrefix  = PacketLossPrefix + "Number"
-	PacketTotalReqPrefix    = "TotalReq"
-	PacketTotalReplyPrefix  = "TotalReply"
-)
-
-// extract packet stat string from an output.
-func extractPacketStatString(s string) string {
-	re := regexp.MustCompile(PacketTotalReqPrefix + `<\d+>` + "," + PacketTotalReplyPrefix + `<\d+>`)
-	stat := re.FindString(s)
-
-	return stat
-}
-
-func FormPacketStatString(totalReq, totalReply int) string {
-	return fmt.Sprintf("%s<%d>,%s<%d>", PacketTotalReqPrefix, totalReq, PacketTotalReplyPrefix, totalReply)
-}
-
-// extract one packet loss measurement from string. Return -1 if measurement not found.
-func extractPacketLoss(prefix string, s string) int {
-	var number int
-	re := regexp.MustCompile(prefix + `<\d+>`)
-	lossString := re.FindString(s)
-
-	re = regexp.MustCompile(`\d+`)
-	substring := re.FindString(lossString)
-	if substring != "" {
-		var err error
-		number, err = strconv.Atoi(substring)
-		Expect(err).NotTo(HaveOccurred())
-	} else {
-		number = -1
-	}
-
-	return number
-}
-
-// Form a packet loss string from a maxPercent and maxNumber.
-func FormPacketLossString(maxPercent, maxNumber int) string {
-	var ps, ns string
-	if maxPercent >= 0 {
-		ps = fmt.Sprintf("%s<%d>", PacketLossPercentPrefix, maxPercent)
-	}
-	if maxNumber >= 0 {
-		ns = fmt.Sprintf("%s<%d>", PacketLossNumberPrefix, maxNumber)
-	}
-
-	return fmt.Sprintf("%s%s", ps, ns)
-}
-
-func GetPacketLossDirect(s string) (int, int) {
-	return extractPacketLoss(PacketLossPercentPrefix, s), extractPacketLoss(PacketLossNumberPrefix, s)
-}
-
-func extractPacketNumbers(s string) (int, int) {
-	re := regexp.MustCompile(`\d+`)
-	numbers := re.FindAllString(extractPacketStatString(s), -1)
-	Expect(len(numbers)).To(Equal(2))
-
-	totalReq, err := strconv.Atoi(numbers[0])
-	Expect(err).NotTo(HaveOccurred())
-
-	totalReply, err := strconv.Atoi(numbers[1])
-	Expect(err).NotTo(HaveOccurred())
-
-	return totalReq, totalReply
-}
-
-func GetPacketLossFromStat(s string) (int, int) {
-	totalReq, totalReply := extractPacketNumbers(s)
-	diff := totalReq - totalReply
-	Expect(diff).To(BeNumerically(">=", 0))
-
-	// Calculate packet loss and print out result.
-	loss := float64(diff) / float64(totalReq) * 100
-	if loss > 0 && uint(loss) == 0 {
-		// Set minimal loss to 1 percent.
-		return 1, diff
-	} else {
-		return int(loss), diff
-	}
+	return mtu, nil
 }

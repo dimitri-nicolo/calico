@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ func ConfigureEarlyLogging() {
 
 	// Replace logrus' formatter with a custom one using our time format,
 	// shared with the Python code.
-	log.SetFormatter(&logutils.Formatter{})
+	log.SetFormatter(&logutils.Formatter{Component: "felix"})
 
 	// Install a hook that adds file/line no information.
 	log.AddHook(&logutils.ContextHook{})
