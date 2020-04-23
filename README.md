@@ -2,6 +2,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/projectcalico/typha/badge.svg?branch=master&cachebreaker=1)](https://coveralls.io/github/projectcalico/typha?branch=master)
 [![Slack Status](https://slack.projectcalico.org/badge.svg)](https://slack.projectcalico.org)
 [![IRC Channel](https://img.shields.io/badge/irc-%23calico-blue.svg)](https://kiwiirc.com/client/irc.freenode.net/#calico)
+[![Go Report Card](https://goreportcard.com/badge/github.com/projectcalico/typha)](https://goreportcard.com/report/github.com/projectcalico/typha)
 # Project Calico
 
 <!--
@@ -27,9 +28,11 @@ This has many advantages:
 
 ## When should I use Typha?
 
-We recommend using Typha only if you're using the Kubernetes API Datastore and you have more than 50
-Kubernetes nodes.  While Typha can be used with etcd, etcd v3 is optimised to handle many clients
-already so we do not recommend adding Typha if you're using etcd.
+We recommend always using Typha when you are using the Kubernetes API datastore.
+However, Typha is strictly necessary when you are using the Kubernetes API datastore
+with a cluster greater than 50 nodes.
+
+Typha is generally not required for Calico deployments using an etcdv3 datastore directly.
 
 ## How can I start using Typha?
 
@@ -62,7 +65,7 @@ your contribution.
 ## How do I build Typha?
 
 Typha mostly uses Docker for builds.  We develop on Ubuntu 16.04 but other
-Linux distributions should work (there are known Makefile that prevent building on OS X).  
+Linux distributions should work (there are known Makefile that prevent building on OS X).
 To build Typha, you will need:
 
 - A suitable linux box.
@@ -75,7 +78,7 @@ Then, as a one-off, run
 make update-tools
 ```
 which will install a couple more go tools that we haven't yet containerised.
- 
+
 Then, to build the calico-typha binary:
 ```
 make bin/calico-typha
@@ -101,7 +104,7 @@ To get coverage stats:
 ```
 make cover-report
 ```
-or 
+or
 ```
 make cover-browser
 ```
@@ -130,7 +133,6 @@ Ginkgo will re-run tests as files are modified and saved.
 
 ### Docker
 
-After building the docker image (see above), you can run Typha and log to screen 
+After building the docker image (see above), you can run Typha and log to screen
 with, for example:
 `docker run --privileged --net=host -e TYPHA_LOGSEVERITYSCREEN=INFO tigera/typha`
-
