@@ -67,8 +67,6 @@ if [ "$CALICO_MANAGE_CNI" = "true" ]; then
 fi
 
 if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
-	rm -rf /etc/service/enabled/bird/log
-	rm -rf /etc/service/enabled/bird6/log
 	rm -rf /etc/service/enabled/confd/log
 	rm -rf /etc/service/enabled/felix/log
 	rm -rf /etc/service/enabled/calico-bgp-daemon/log
