@@ -1,0 +1,138 @@
+---                                                                                                                           
+layout: null                                                                     
+--- 
+
+---
+
+# Required RBAC:
+# - watch/list nodes and pods
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-firewall-controller
+  namespace: tigera-firewall-controller
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-firewall-controller
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - list
+      - get
+      - watch
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - list
+      - get
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-firewall-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-firewall-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-firewall-controller
+  namespace: tigera-firewall-controller
+
+---
+
+# The actual firewall-controller deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-firewall-controller
+  namespace: tigera-firewall-controller
+  labels:
+    k8s-app: tigera-firewall-controller
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: tigera-firewall-controller
+  template:
+    metadata:
+      name: tigera-firewall-controller
+      namespace: tigera-firewall-controller
+      labels:
+        k8s-app: tigera-firewall-controller
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: tigera-firewall-controller
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      imagePullSecrets:
+        - name: tigera-pull-secret
+      containers:
+        - name: tigera-firewall-controlller
+          image: {{page.registry}}{% include component_image component="firewall-integration" %}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ENABLED_CONTROLLERS
+              value: "fortigate"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: FW_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-firewall-controller
+                  key: tigera.firewall.host
+            - name: FW_APIKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-firewall-controller
+                  key: apikey
+            - name: FW_INSECURE_SKIP_VERIFY
+              value: "true"
+            - name: FW_POLICY_NAMESPACE_SELECTOR
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-firewall-controller
+                  key: tigera.firewall.policy.namespaceSelector
+            - name: FW_POLICY_SELECTOR_EXPRESSION
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-firewall-controller
+                  key: tigera.firewall.policy.selector
+
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.tigera-firewall-controller-access
+  namespace: tigera-firewall-controller
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-firewall-controller'
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Allow
+    protocol: TCP
+    source: {}
+    destination:
+      ports:
+       -  6443
+       -  443
