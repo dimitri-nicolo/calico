@@ -111,12 +111,35 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 			// first networkStatus is always for the default interface
 			isDefault := i == 0
 			if isDefault {
+				// If Multus was installed before upgrading to EE 3.0.0, then the network-status annotations will already
+				// exist on the pods but the interface field will be empty. This is because the Calico CNI plugin returns
+				// the Sandbox parameter in 3.0.0, which tells Multus to fill in the interface name on the network-status
+				// annotation, but prior to 3.0.0 the Calico CNI plugin would not do that.
+				if networkStatus.Interface == "" {
+					networkStatus.Interface = "eth0"
+				}
+
 				// default entry doesn't use the network status annotation to populate it's IPs
 				ipNets, err = getPodIPs(pod)
 				if err != nil {
 					return nil, err
 				}
 			} else {
+				// If this is an additional interface and the Interface name doesn't exist then log a error and skip
+				// over this invalid status. An error isn't returned because this issue won't occur on Pod creation, where
+				// we could stop the pod from being created and return this error, as the network-status annotation doesn't exist,
+				// and once the Pod is created typha and / or felix will be listing WorkloadEndpoints but the list calls
+				// will fail validation (Endpoint will be null) and tie up both services.
+				//
+				// Also note that this is very unlikely to happen with additional interfaces. If a customer used Multus
+				// to create additional interfaces prior to EE 3.0.0, Pod creation would fail for other reasons, therefore,
+				// to even have a network-status annotation that describes multiple interfaces EE 3.0.0 would have to be
+				// installed and the Pod would have to be created after that.
+				if networkStatus.Interface == "" {
+					log.WithField("network-status", networkStatus).Error("Interface name for net status is empty, skipping PodInterface generation")
+					continue
+				}
+
 				ipNets, err = stringsToIPNets(networkStatus.IPs)
 				if err != nil {
 					return nil, err
