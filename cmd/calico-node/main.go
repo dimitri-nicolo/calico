@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/node/pkg/allocateip"
 	"github.com/projectcalico/node/pkg/cni"
 	"github.com/projectcalico/node/pkg/health"
+	"github.com/projectcalico/node/pkg/metrics"
 	"github.com/projectcalico/node/pkg/startup"
 
 	"github.com/projectcalico/libcalico-go/lib/logutils"
@@ -43,6 +44,9 @@ var runStartup = flagSet.Bool("startup", false, "Initialize a new node")
 var allocateTunnelAddrs = flagSet.Bool("allocate-tunnel-addrs", false, "Configure tunnel addresses for this node")
 var monitorToken = flagSet.Bool("monitor-token", false, "Watch for Kubernetes token changes, update CNI config")
 
+// Build set of supported flags for metrics.
+var runBGPMetrics = flagSet.Bool("bgp-metrics", false, "Run server for BGP Prometheus metrics endpoint")
+
 // Options for liveness checks.
 var felixLive = flagSet.Bool("felix-live", false, "Run felix liveness checks")
 var birdLive = flagSet.Bool("bird-live", false, "Run bird liveness checks")
@@ -52,6 +56,7 @@ var bird6Live = flagSet.Bool("bird6-live", false, "Run bird6 liveness checks")
 var birdReady = flagSet.Bool("bird-ready", false, "Run BIRD readiness checks")
 var bird6Ready = flagSet.Bool("bird6-ready", false, "Run BIRD6 readiness checks")
 var felixReady = flagSet.Bool("felix-ready", false, "Run felix readiness checks")
+var bgpMetricsReady = flagSet.Bool("bgp-metrics-ready", false, "Run BGP metrics server readiness checks")
 
 // thresholdTime is introduced for bird readiness check. Default value is 30 sec.
 var thresholdTime = flagSet.Duration("threshold-time", 30*time.Second, "Threshold time for bird readiness")
@@ -60,8 +65,8 @@ var thresholdTime = flagSet.Duration("threshold-time", 30*time.Second, "Threshol
 var runConfd = flagSet.Bool("confd", false, "Run confd")
 var confdRunOnce = flagSet.Bool("confd-run-once", false, "Run confd in oneshot mode")
 var confdKeep = flagSet.Bool("confd-keep-stage-file", false, "Keep stage file when running confd")
-var confdConfDir = flagSet.String("confd-confdir","/etc/calico/confd", "Confd configuration directory.")
-var confdCalicoConfig = flagSet.String("confd-calicoconfig","", "Calico configuration file.")
+var confdConfDir = flagSet.String("confd-confdir", "/etc/calico/confd", "Confd configuration directory.")
+var confdCalicoConfig = flagSet.String("confd-calicoconfig", "", "Calico configuration file.")
 
 func main() {
 	// Log to stdout.  this prevents our logs from being interpreted as errors by, for example,
@@ -80,7 +85,7 @@ func main() {
 
 	// Perform some validation on the parsed flags. Only one of the following may be
 	// specified at a time.
-	onlyOne := []*bool{version, runFelix, runStartup, runConfd}
+	onlyOne := []*bool{version, runFelix, runStartup, runConfd, runBGPMetrics}
 	oneSelected := false
 	for _, o := range onlyOne {
 		if oneSelected && *o {
@@ -94,8 +99,8 @@ func main() {
 	}
 
 	// Check for liveness / readiness flags. Will only run checks specified by flags.
-	if *felixLive || *birdReady || *bird6Ready || *felixReady || *birdLive || *bird6Live {
-		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *thresholdTime)
+	if *felixLive || *birdReady || *bird6Ready || *felixReady || *birdLive || *bird6Live || *bgpMetricsReady {
+		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, *thresholdTime)
 		os.Exit(0)
 	}
 
@@ -126,6 +131,11 @@ func main() {
 	} else if *monitorToken {
 		logrus.SetFormatter(&logutils.Formatter{Component: "cni-config-monitor"})
 		cni.Run()
+	} else if *runBGPMetrics {
+		logrus.SetFormatter(&logutils.Formatter{Component: "bgp-metrics"})
+		// To halt the metrics process, close the signal
+		signal := make(chan struct{})
+		metrics.Run(signal)
 	} else {
 		fmt.Println("No valid options provided. Usage:")
 		flagSet.PrintDefaults()

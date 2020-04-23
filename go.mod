@@ -12,6 +12,7 @@ require (
 	github.com/projectcalico/felix v3.8.5+incompatible
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
+	github.com/prometheus/client_golang v1.0.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e

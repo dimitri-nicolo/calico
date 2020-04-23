@@ -1,0 +1,4 @@
+#!/bin/sh
+LOGDIR=/var/log/calico/bgp-metrics
+mkdir -p $LOGDIR
+exec svlogd $LOGDIR

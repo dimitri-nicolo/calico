@@ -267,6 +267,26 @@ endif
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 	touch $@
 
+##########################################################################################
+# TESTING
+##########################################################################################
+
+GINKGO_ARGS += -cover -timeout 20m --trace --v
+GINKGO = ginkgo
+
+#############################################
+# Run unit level tests
+#############################################
+UT_PACKAGES_TO_SKIP?=pkg/startup,pkg/allocateip
+.PHONY: ut
+ut: CMD = go mod download && $(GINKGO) -r
+ut:
+ifdef LOCAL
+	(CMD)
+else
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(CMD) -skipPackage=$(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)'
+endif
+
 ###############################################################################
 # FV Tests
 ###############################################################################
@@ -327,9 +347,6 @@ run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 # Stop Kubernetes apiserver
 stop-k8s-apiserver:
 	@-docker rm -f st-apiserver
-
-ut:
-	@echo "No UTs available"
 
 ###############################################################################
 # System tests

@@ -24,16 +24,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/node/pkg/bgp"
+	"github.com/projectcalico/node/pkg/metrics"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/projectcalico/node/pkg/health/bird"
 )
 
 var felixReadinessEp string
 var felixLivenessEp string
+var bgpMetricsReadinessEp string
 
 func init() {
+	initFelix()
+	initBGPMetrics()
+}
+
+func initFelix() {
 	felixPort := os.Getenv("FELIX_HEALTHPORT")
 	if felixPort == "" {
 		felixReadinessEp = "http://localhost:9099/readiness"
@@ -49,9 +55,24 @@ func init() {
 	felixLivenessEp = "http://localhost:" + felixPort + "/liveness"
 }
 
-func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live bool, thresholdTime time.Duration) {
+func initBGPMetrics() {
+	prometheusPort := os.Getenv("BGP_PROMETHEUSREPORTERPORT")
+	if prometheusPort == "" {
+		bgpMetricsReadinessEp = fmt.Sprintf("http://localhost:%d/metrics", metrics.DefaultPrometheusPort)
+		return
+	}
+
+	if _, err := strconv.Atoi(prometheusPort); err != nil {
+		log.Panicf("Failed to parse value for port %q", prometheusPort)
+	}
+
+	bgpMetricsReadinessEp = fmt.Sprintf("http://localhost:%s/metrics", prometheusPort)
+}
+
+// Run various health checks for Calico node, based on the given flag values
+func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsReady bool, thresholdTime time.Duration) {
 	livenessChecks := felixLive || birdLive || bird6Live
-	readinessChecks := bird || felixReady || bird6
+	readinessChecks := bird || felixReady || bird6 || bgpMetricsReady
 
 	if !livenessChecks && !readinessChecks {
 		fmt.Printf("calico/node check error: must specify at least one of -bird-live, -bird6-live, -felix-live, -bird, -bird6, or -felix")
@@ -63,7 +84,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live bool, threshold
 
 	if felixLive {
 		g.Go(func() error {
-			if err := checkFelixHealth(ctx, felixLivenessEp, "liveness"); err != nil {
+			if err := checkHealthEndpoint(ctx, felixLivenessEp, "liveness"); err != nil {
 				return fmt.Errorf("calico/node is not ready: Felix is not live: %+v", err)
 			}
 			return nil
@@ -90,7 +111,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live bool, threshold
 
 	if felixReady {
 		g.Go(func() error {
-			if err := checkFelixHealth(ctx, felixReadinessEp, "readiness"); err != nil {
+			if err := checkHealthEndpoint(ctx, felixReadinessEp, "readiness"); err != nil {
 				return fmt.Errorf("calico/node is not ready: felix is not ready: %+v", err)
 			}
 			return nil
@@ -99,7 +120,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live bool, threshold
 
 	if bird {
 		g.Go(func() error {
-			if err := checkBIRDReady("4", thresholdTime); err != nil {
+			if err := checkBIRDReady(bgp.IPv4, thresholdTime); err != nil {
 				return fmt.Errorf("calico/node is not ready: BIRD is not ready: %+v", err)
 			}
 			return nil
@@ -108,12 +129,22 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live bool, threshold
 
 	if bird6 {
 		g.Go(func() error {
-			if err := checkBIRDReady("6", thresholdTime); err != nil {
+			if err := checkBIRDReady(bgp.IPv6, thresholdTime); err != nil {
 				return fmt.Errorf("calico/node is not ready: BIRD6 is not ready: %+v", err)
 			}
 			return nil
 		})
 	}
+
+	if bgpMetricsReady {
+		g.Go(func() error {
+			if err := checkHealthEndpoint(ctx, bgpMetricsReadinessEp, "readiness"); err != nil {
+				return fmt.Errorf("calico/node is not ready: BGP metrics server is not ready: %+v", err)
+			}
+			return nil
+		})
+	}
+
 	if err := g.Wait(); err != nil {
 		fmt.Printf("%s", err)
 		os.Exit(1)
@@ -148,7 +179,7 @@ func checkService(serviceName string) error {
 // checkBIRDReady checks if BIRD is ready by connecting to the BIRD
 // socket to gather all BGP peer connection status, and overall graceful
 // restart status.
-func checkBIRDReady(ipv string, thresholdTime time.Duration) error {
+func checkBIRDReady(ipVer bgp.Version, thresholdTime time.Duration) error {
 	// Stat nodename file to get the modified time of the file.
 	nodenameFileStat, err := os.Stat("/var/lib/calico/nodename")
 	if err != nil {
@@ -156,11 +187,15 @@ func checkBIRDReady(ipv string, thresholdTime time.Duration) error {
 	}
 
 	// Check for unestablished peers
-	peers, err := bird.GetPeers(ipv)
-	log.Debugf("peers: %v", peers)
+	stats, err := bgp.GetPeers(ipVer)
 	if err != nil {
 		return err
 	}
+	peers, ok := stats.Data.([]bgp.Peer)
+	if !ok {
+		return fmt.Errorf("Failed to extract peers: %+v", stats.Data)
+	}
+	log.Debugf("peers: %v", peers)
 
 	s := []string{}
 
@@ -169,7 +204,7 @@ func checkBIRDReady(ipv string, thresholdTime time.Duration) error {
 
 	for _, peer := range peers {
 		if peer.BGPState == "Established" {
-			numEstablishedPeer += 1
+			numEstablishedPeer++
 		} else {
 			s = append(s, peer.PeerIP)
 		}
@@ -186,7 +221,7 @@ func checkBIRDReady(ipv string, thresholdTime time.Duration) error {
 			return fmt.Errorf("BGP not established with %+v", strings.Join(s, ","))
 		}
 		// Check for GR
-		gr, err := bird.GRInProgress(ipv)
+		gr, err := bgp.IsInGracefulRestart(ipVer)
 		if err != nil {
 			return err
 		} else if gr {
@@ -203,9 +238,9 @@ func checkBIRDReady(ipv string, thresholdTime time.Duration) error {
 	return nil
 }
 
-// checkFelixHealth checks if felix is ready or live by making an http request to
-// Felix's readiness or liveness endpoint.
-func checkFelixHealth(ctx context.Context, endpoint, probeType string) error {
+// checkHealthEndpoint determines if a component is ready or live by making an
+// HTTP request to the given endpoint.
+func checkHealthEndpoint(ctx context.Context, endpoint, probeType string) error {
 	c := &http.Client{}
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	req = req.WithContext(ctx)
