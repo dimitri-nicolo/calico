@@ -753,7 +753,11 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 		// Multipath routes
 		hops := []*netlink.NexthopInfo{}
 		for _, h := range target.MultiPath {
-			hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP()})
+			if target.Type == TargetTypeVXLAN {
+				hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP()})
+			} else {
+				hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP(), Flags: int(netlink.FLAG_ONLINK)})
+			}
 		}
 		route.MultiPath = hops
 	}
