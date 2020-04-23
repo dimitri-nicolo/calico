@@ -93,6 +93,8 @@ section:
       path: /security/logs/elastic/ee-audit
     - title: DNS logs
       path: /security/logs/elastic/dns
+    - title: BGP logs
+      path: /security/logs/elastic/bgp
     - title: Configure data retention
       path: /security/logs/retention
     - title: Archive logs to storage
