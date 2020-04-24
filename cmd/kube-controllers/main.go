@@ -146,6 +146,7 @@ func main() {
 	// Set the log level based on the loaded configuration.
 	logLevel, err := log.ParseLevel(cfg.LogLevel)
 	if err != nil {
+		log.WithError(err).Warnf("error parsing logLevel: %v", cfg.LogLevel)
 		logLevel = log.InfoLevel
 	}
 	log.SetLevel(logLevel)
@@ -229,7 +230,11 @@ func main() {
 		go runHealthChecks(ctx, s, k8sClientset, calicoClient)
 	}
 
-	// Run the controllers. This runs until a config or license change triggers a restart
+	// Set the log level from the merged config.
+	log.SetLevel(runCfg.LogLevelScreen)
+
+	// Run the controllers. This runs until a config change triggers a restart
+	// or a license change triggers a restart.
 	controllerCtrl.RunControllers()
 
 	// Shut down compaction, healthChecks, and configController
