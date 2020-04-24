@@ -26,8 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/idalloc"
@@ -716,10 +714,6 @@ func (config *Config) Validate() (err error) {
 		if problems != nil {
 			err = errors.New("IPsec is misconfigured: " + strings.Join(problems, "; "))
 		}
-	}
-
-	if (config.EgressIPFirstRoutingTableIndex + config.EgressIPRoutingTablesCount) > unix.RT_TABLE_COMPAT {
-		err = errors.New("routing table index for egress ip out of range")
 	}
 
 	if config.CloudWatchLogsReporterEnabled {

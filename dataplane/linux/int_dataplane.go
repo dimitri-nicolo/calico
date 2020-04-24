@@ -186,10 +186,8 @@ type Config struct {
 	IPSecLogLevel              string
 	IPSecRekeyTime             time.Duration
 
-	EgressIPEnabled                bool
-	EgressIPRoutingRulePriority    int
-	EgressIPFirstRoutingTableIndex int
-	EgressIPRoutingTablesCount     int
+	EgressIPEnabled             bool
+	EgressIPRoutingRulePriority int
 
 	// Optional stats collector
 	Collector collector.Collector

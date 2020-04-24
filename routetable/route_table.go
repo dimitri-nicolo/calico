@@ -878,7 +878,7 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 
 		// Check if GW or Multipath info has changed.
 		if t, ok := expectedTargets[dest]; ok {
-			if !t.EqualGWOrMultiPath(linkAttrs.Index, route) {
+			if linkAttrs != nil && !t.EqualGWOrMultiPath(linkAttrs.Index, route) {
 				routeProblems = append(routeProblems, "GW or multipath incorrect")
 			}
 		}

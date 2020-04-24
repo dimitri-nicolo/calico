@@ -78,8 +78,6 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"loadClientConfigFromEnvironment",
 		"useNodeResourceUpdates",
 
-		"EgressIPFirstRoutingTableIndex",
-		"EgressIPRoutingTablesCount",
 		"EgressIPEnabled",
 		"EgressIPRoutingRulePriority",
 		"EgressIPVXLANPort",

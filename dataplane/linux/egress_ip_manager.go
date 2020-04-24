@@ -87,11 +87,12 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	f.count += 1
 	return routetable.New(interfacePrefixes,
 		ipVersion,
-		tableIndex,
 		true,
 		netlinkTimeout,
 		deviceRouteSourceAddress,
-		deviceRouteProtocol, true)
+		deviceRouteProtocol,
+		true,
+		tableIndex)
 }
 
 type egressIPManager struct {
@@ -141,16 +142,16 @@ func newEgressIPManager(
 		log.WithError(err).Panic("Failed to get netlink handle.")
 	}
 
-	firstTableIndex := dpConfig.EgressIPFirstRoutingTableIndex
-	tableCount := dpConfig.EgressIPRoutingTablesCount
 	// Prepare table index stack for allocation.
 	tableIndexStack := stack.New()
 	// Prepare table index set to be passed to routerules.
 	tableIndexSet := set.New()
-	for i := 0; i < int(tableCount); i++ {
-		tableIndexStack.Push(firstTableIndex + i)
-		tableIndexSet.Add(firstTableIndex + i)
-	}
+	rtableIndices := dpConfig.RouteTableManager.GrabAllRemainingIndices()
+	rtableIndices.Iter(func(item interface{}) error {
+		tableIndexStack.Push(item.(int))
+		tableIndexSet.Add(item.(int))
+		return nil
+	})
 
 	// Create routerules to manage routing rules.
 	rr, err := routerule.New(4, dpConfig.EgressIPRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, routerule.RulesMatchSrcFWMark, dpConfig.NetlinkTimeout)
