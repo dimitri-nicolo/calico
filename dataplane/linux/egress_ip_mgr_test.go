@@ -122,7 +122,7 @@ var _ = Describe("EgressIPManager", func() {
 					Tiers:         []*proto.TierInfo{},
 					Ipv4Nets:      []string{"10.0.240.0/32"},
 					Ipv6Nets:      []string{"2001:db8:2::2/128"},
-					EgressIPSetId: "set0",
+					EgressIpSetId: "set0",
 				},
 			})
 
@@ -140,7 +140,7 @@ var _ = Describe("EgressIPManager", func() {
 					Tiers:         []*proto.TierInfo{},
 					Ipv4Nets:      []string{"10.0.241.0/32"},
 					Ipv6Nets:      []string{"2001:db8:2::3/128"},
-					EgressIPSetId: "set1",
+					EgressIpSetId: "set1",
 				},
 			})
 
@@ -282,7 +282,7 @@ var _ = Describe("EgressIPManager", func() {
 					Tiers:         []*proto.TierInfo{},
 					Ipv4Nets:      []string{"10.0.242.0/32"},
 					Ipv6Nets:      []string{"2001:db8:2::4/128"},
-					EgressIPSetId: "set0",
+					EgressIpSetId: "set0",
 				},
 			})
 			err := manager.CompleteDeferredWork()
@@ -359,7 +359,7 @@ var _ = Describe("EgressIPManager", func() {
 					Tiers:         []*proto.TierInfo{},
 					Ipv4Nets:      []string{"10.0.240.0/32"},
 					Ipv6Nets:      []string{"2001:db8:2::2/128"},
-					EgressIPSetId: "set1",
+					EgressIpSetId: "set1",
 				},
 			})
 			err := manager.CompleteDeferredWork()
@@ -385,7 +385,7 @@ var _ = Describe("EgressIPManager", func() {
 				Tiers:         []*proto.TierInfo{},
 				Ipv4Nets:      []string{"10.0.240.0/32"},
 				Ipv6Nets:      []string{"2001:db8:2::2/128"},
-				EgressIPSetId: "setx",
+				EgressIpSetId: "setx",
 			}
 			// Update pod-0 to use ipset setx.
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{

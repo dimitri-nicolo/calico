@@ -397,12 +397,12 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	for id, workload := range m.pendingWlEpUpdates {
 		logCxt := log.WithField("id", id)
 		oldWorkload := m.activeWlEndpoints[id]
-		if workload != nil && workload.EgressIPSetId != "" {
+		if workload != nil && workload.EgressIpSetId != "" {
 			logCxt.WithFields(log.Fields{
 				"workload":    workload,
 				"oldworkload": oldWorkload,
 			}).Info("Updating endpoint routing rule.")
-			if oldWorkload != nil && oldWorkload.EgressIPSetId != workload.EgressIPSetId {
+			if oldWorkload != nil && oldWorkload.EgressIpSetId != workload.EgressIpSetId {
 				logCxt.Debug("EgressIPSet changed, cleaning up old state")
 				for _, r := range m.workloadToRulesMatchSrcFWMark(oldWorkload) {
 					m.routerules.RemoveRule(r)
@@ -412,7 +412,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			// We are not checking if workload state is active or not,
 			// There is no big downside if we populate routing rule for
 			// an inactive workload.
-			IPSetId := workload.EgressIPSetId
+			IPSetId := workload.EgressIpSetId
 			index := m.egressIPSetToTableIndex[IPSetId]
 			if index == 0 {
 				// Have not received latest EgressIPSet update or WEP update is out of date.
