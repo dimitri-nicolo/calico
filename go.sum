@@ -861,6 +861,7 @@ github.com/tigera/typha-private v0.0.0-20200413211414-dc9f5ce2eda6/go.mod h1:9Ct
 github.com/tigera/typha-private v0.0.0-20200415163518-c61b63543f4e/go.mod h1:4xNF7Z4vXorhHx9FxUg4iEsFPYJtf5ZpS4J6tMcwxtI=
 github.com/tigera/typha-private v0.0.0-20200417141004-1a2474251e84/go.mod h1:3fIjzzUg5Wrvz8MxZd9ULf6fxJvZVml9tHIWoXVX7SY=
 github.com/tigera/typha-private v0.0.0-20200422163450-664fa65e1609/go.mod h1:tBF5oWv4YLOb9H49rwYTUC0CzWo5p6jlrw9Vih4vlyI=
+github.com/tigera/typha-private v0.0.0-20200423100815-abc739365bad/go.mod h1:ZNQr1EI3DUjlsCU9ZIPGbigXQrkdwLphabvkmA7S87E=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200310211350-635f510eff35 h1:ZSmd0ruPly9wFuWeGGDgJns0NRDWkt/bg+1M4U5rPkM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200310211350-635f510eff35/go.mod h1:/QYKyuPnD0YE9/qgyGtyGlNXehxRbs9OnMmD7Y1HWHI=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200319184751-e12d75794b87 h1:F7AmoeZoVg1JTRfVonk8x1ualXfvhX+PpWL+EmNFXdQ=
