@@ -16,7 +16,7 @@
 			"ip_version": {
 				"type": "keyword"
 			},
-			"hostname": {
+			"host": {
 				"type": "keyword"
 			}
 		}
