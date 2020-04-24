@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"github.com/tigera/compliance/pkg/config"
 	"net/http"
 	"os"
 	"sync"
@@ -19,7 +20,6 @@ import (
 const (
 	// Default cluster name for standalone and management cluster.
 	DefaultCluster    = "cluster"
-	voltronServiceURL = "https://tigera-manager.tigera-manager.svc:9443"
 	XClusterIDHeader  = "x-cluster-id"
 )
 
@@ -34,6 +34,8 @@ type RESTClientFactory interface {
 type RESTClientHolder struct {
 	clientMap map[string]clusterClients
 	sync.Mutex
+	multiClusterForwardingCA       string
+	multiClusterForwardingEndpoint string
 }
 
 // Groups clients per cluster
@@ -45,8 +47,10 @@ type clusterClients struct {
 
 // Creates an instance of RESTClientFactory, which holds various clients.
 // Loads current cluster eagerly, loads external clusters lazily.
-func MustGetRESTClient() RESTClientFactory {
+func MustGetRESTClient(config *config.Config) RESTClientFactory {
 	client := RESTClientHolder{}
+	client.multiClusterForwardingCA = config.MultiClusterForwardingCA
+	client.multiClusterForwardingEndpoint = config.MultiClusterForwardingEndpoint
 	client.clientMap = map[string]clusterClients{
 		DefaultCluster: {
 			MustGetCalicoClient(),
@@ -65,7 +69,7 @@ func (c *RESTClientHolder) CalicoClient(clusterID string) v3.ProjectcalicoV3Inte
 		return c.clientMap[DefaultCluster].calico
 	}
 	if _, ok := c.clientMap[clusterID]; !ok {
-		c.mustAddCluster(clusterID)
+		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
 	}
 	return c.clientMap[clusterID].calico
 }
@@ -78,7 +82,7 @@ func (c *RESTClientHolder) ESClient(clusterID string) elastic.Client {
 		return c.clientMap[DefaultCluster].es
 	}
 	if _, ok := c.clientMap[clusterID]; !ok {
-		c.mustAddCluster(clusterID)
+		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
 	}
 	return c.clientMap[clusterID].es
 }
@@ -91,15 +95,15 @@ func (c *RESTClientHolder) K8sAuth(clusterID string) auth.K8sAuthInterface {
 		return c.clientMap[DefaultCluster].k8s
 	}
 	if _, ok := c.clientMap[clusterID]; !ok {
-		c.mustAddCluster(clusterID)
+		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
 	}
 	return c.clientMap[clusterID].k8s
 }
 
 // Lazily add clients for a new cluster.
-func (c *RESTClientHolder) mustAddCluster(clusterID string) {
+func (c *RESTClientHolder) mustAddCluster(clusterID, caPath, host string) {
 	log.Infof("Creating new cluster clientMap for clusterID '%s'", clusterID)
-	cfg := mustCreateClusterConfig(clusterID)
+	cfg := mustCreateClusterConfig(clusterID, caPath, host)
 	// Build k8s client
 	k8sClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -132,15 +136,13 @@ func mustCreateESClientForCluster(clusterID string) elastic.Client {
 }
 
 // Create a config that routes requests through Voltron to a target cluster.
-func mustCreateClusterConfig(clusterID string) *rest.Config {
+func mustCreateClusterConfig(clusterID, caPath, host string) *rest.Config {
 	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		log.WithError(err).Panic("failed to build kubernetes client config")
 	}
-	config.Host = voltronServiceURL
-	config.TLSClientConfig = rest.TLSClientConfig{
-		Insecure: true,
-	}
+	config.Host = host
+	config.CAFile = caPath
 	config.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 		return &addHeaderRoundTripper{
 			headers: map[string][]string{XClusterIDHeader: {clusterID}},

@@ -62,7 +62,9 @@ type Config struct {
 	NodeName string `envconfig:"NODENAME"`
 
 	// This setting is required for es proxy that performs the authentication and authorization for an user.
-	EnableMultiClusterClient bool `envconfig:"ENABLE_MULTI_CLUSTER_CLIENT" default:"false"`
+	EnableMultiClusterClient       bool   `envconfig:"ENABLE_MULTI_CLUSTER_CLIENT" default:"false"`
+	MultiClusterForwardingCA       string `envconfig:"MULTI_CLUSTER_FORWARDING_CA" default:"/manager-tls/cert"`
+	MultiClusterForwardingEndpoint string `envconfig:"MULTI_CLUSTER_FORWARDING_ENDPOINT" default:"https://tigera-manager.tigera-manager.svc:9443"`
 
 	// Settings for controlling archiving behaviour for Compliance reports (through Fluentd tailed log file)
 	// Note: By default the logging to file for archiving is turned on. User is expected to interact with config

@@ -47,7 +47,7 @@ func main() {
 	cfg.InitializeLogging()
 
 	// Create the elastic and Calico clients.
-	restClient := datastore.MustGetRESTClient()
+	restClient := datastore.MustGetRESTClient(cfg)
 	// Set up tls certs
 	altIPs := []net.IP{net.ParseIP("127.0.0.1")}
 	if err := tls.GenerateSelfSignedCertsIfNeeded("localhost", nil, altIPs, *certPath, *keyPath); err != nil {
