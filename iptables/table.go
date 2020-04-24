@@ -436,6 +436,7 @@ func NewTable(
 }
 
 // Insert or Append rules based on insert mode configuration.
+// It is expected to be called only once for a chain.
 func (t *Table) InsertOrAppendRules(chainName string, rules []Rule) {
 	t.logCxt.WithField("chainName", chainName).Debug("Updating rule insertions")
 	oldRules := t.chainToInsertedRules[chainName]
@@ -452,6 +453,7 @@ func (t *Table) InsertOrAppendRules(chainName string, rules []Rule) {
 }
 
 // Append rules.
+// It is expected to be called only once for a chain.
 func (t *Table) AppendRules(chainName string, rules []Rule) {
 	t.logCxt.WithField("chainName", chainName).Debug("Updating rule appends")
 	oldRules := t.chainToAppendedRules[chainName]

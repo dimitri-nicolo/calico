@@ -1214,7 +1214,7 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:       []string{"tap"},
 				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				EgressIpEnabled:             true,
+				EgressIPEnabled:             true,
 				IptablesMarkAccept:          0x10,
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,
@@ -1235,7 +1235,7 @@ var _ = Describe("Static", func() {
 					},
 				},
 				{
-					Name: "cali-egress-set-mark",
+					Name: "cali-egress",
 					Rules: []Rule{
 						{
 							Action: SetMaskedMarkAction{Mark: 0x400, Mask: 0x400},
@@ -1267,8 +1267,8 @@ var _ = Describe("Static", func() {
 		})
 
 		It("IPv4: Should return expected mangle PREROUTING chain", func() {
-			Expect(findChain(rr.StaticMangleTableChains(4), "cali-egress-restore-mark")).To(Equal(&Chain{
-				Name: "cali-egress-restore-mark",
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-egress")).To(Equal(&Chain{
+				Name: "cali-egress",
 				Rules: []Rule{
 					{
 						Match: Match().SourceIPSet("cali40all-ipam-pools"),

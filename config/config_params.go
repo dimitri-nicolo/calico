@@ -348,6 +348,11 @@ type Config struct {
 
 	RouteTableRange idalloc.IndexRange `config:"route-table-range;1-250;die-on-fail"`
 
+	EgressIPEnabled             bool `config:"bool;false"`
+	EgressIPVXLANPort           int  `config:"int;4790"`
+	EgressIPVXLANVNI            int  `config:"int;4097"`
+	EgressIPRoutingRulePriority int  `config:"int;100"`
+
 	// State tracking.
 
 	// nameToSource tracks where we loaded each config param from.
@@ -438,9 +443,9 @@ func (config *Config) OpenstackActive() bool {
 	return false
 }
 
-func (c *Config) EgressIpCheckEnabled() bool {
-	// Disabled for the moment. Will be properly enabled by other PR.
-	return false
+func (c *Config) EgressIPCheckEnabled() bool {
+	// This will be replaced by EgressIP enable parameter from control plane.
+	return c.EgressIPEnabled
 }
 
 func (c *Config) IPSecEnabled() bool {

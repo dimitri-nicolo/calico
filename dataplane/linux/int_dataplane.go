@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/projectcalico/felix/bpf/state"
 	"github.com/projectcalico/felix/bpf/tc"
 
@@ -184,7 +186,8 @@ type Config struct {
 	IPSecLogLevel              string
 	IPSecRekeyTime             time.Duration
 
-	EgressIpEnabled bool
+	EgressIPEnabled             bool
+	EgressIPRoutingRulePriority int
 
 	// Optional stats collector
 	Collector collector.Collector
@@ -254,6 +257,7 @@ type InternalDataplane struct {
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
+	managersWithRouteRules  []ManagerWithRouteRules
 	ruleRenderer            rules.RuleRenderer
 
 	lookupCache *calc.LookupsCache
@@ -421,7 +425,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.RulesConfig.VXLANEnabled {
 		routeTableVXLAN := routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, 0)
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC)
 
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
@@ -438,6 +442,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Warnf("Failed to query VXLAN device")
 		} else if err = netlink.LinkDel(link); err != nil {
 			log.WithError(err).Error("Failed to delete unwanted VXLAN device")
+		}
+	}
+
+	if config.EgressIPEnabled {
+		egressIpMgr := newEgressIPManager("egress.calico", config)
+		go egressIpMgr.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
+		dp.RegisterManager(egressIpMgr)
+	} else {
+		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
+		log.Info("Checking if we need to clean up the egress VXLAN device")
+		if link, err := netlink.LinkByName("egress.calico"); err != nil && err != syscall.ENODEV {
+			log.WithError(err).Warnf("Failed to query egress VXLAN device")
+		} else if err = netlink.LinkDel(link); err != nil {
+			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
 		}
 	}
 
@@ -623,7 +641,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		interfaceRegexes[i] = "^" + r + ".*"
 	}
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
-		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, 0)
+		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -697,7 +715,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		routeTableV6 := routetable.New(
 			interfaceRegexes, 6, false, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, 0)
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
@@ -809,6 +827,11 @@ type ManagerWithRouteTables interface {
 	GetRouteTables() []routeTable
 }
 
+type ManagerWithRouteRules interface {
+	Manager
+	GetRouteRules() []routeRules
+}
+
 func (d *InternalDataplane) routeTables() []routeTable {
 	var rts []routeTable
 	for _, mrts := range d.managersWithRouteTables {
@@ -818,11 +841,26 @@ func (d *InternalDataplane) routeTables() []routeTable {
 	return rts
 }
 
+func (d *InternalDataplane) routeRules() []routeRules {
+	var rrs []routeRules
+	for _, mrrs := range d.managersWithRouteRules {
+		rrs = append(rrs, mrrs.GetRouteRules()...)
+	}
+
+	return rrs
+}
+
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
-	switch mgr := mgr.(type) {
-	case ManagerWithRouteTables:
+	tableMgr, ok := mgr.(ManagerWithRouteTables)
+	if ok {
 		log.WithField("manager", mgr).Debug("registering ManagerWithRouteTables")
-		d.managersWithRouteTables = append(d.managersWithRouteTables, mgr)
+		d.managersWithRouteTables = append(d.managersWithRouteTables, tableMgr)
+	}
+
+	rulesMgr, ok := mgr.(ManagerWithRouteRules)
+	if ok {
+		log.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
+		d.managersWithRouteRules = append(d.managersWithRouteRules, rulesMgr)
 	}
 	d.allManagers = append(d.allManagers, mgr)
 }
@@ -1022,9 +1060,9 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPrerouting},
 		}})
-		if d.config.EgressIpEnabled {
+		if t.IPVersion == 4 && d.config.EgressIPEnabled {
 			t.AppendRules("PREROUTING", []iptables.Rule{{
-				Action: iptables.JumpAction{Target: rules.ChainNATPreroutingEgressSetMark},
+				Action: iptables.JumpAction{Target: rules.ChainNATPreroutingEgress},
 			}})
 		}
 		t.InsertOrAppendRules("POSTROUTING", []iptables.Rule{{
@@ -1036,9 +1074,17 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	}
 	for _, t := range d.iptablesMangleTables {
 		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
-		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+		rs := []iptables.Rule{}
+		if t.IPVersion == 4 && d.config.EgressIPEnabled {
+			// Make sure egress rule at top.
+			rs = append(rs, iptables.Rule{
+				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgress},
+			})
+		}
+		rs = append(rs, iptables.Rule{
 			Action: iptables.JumpAction{Target: rules.ChainManglePrerouting},
-		}})
+		})
+		t.InsertOrAppendRules("PREROUTING", rs)
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {
@@ -1455,6 +1501,10 @@ func (d *InternalDataplane) apply() {
 			// Queue a resync on the next Apply().
 			r.QueueResync()
 		}
+		for _, r := range d.routeRules() {
+			// Queue a resync on the next Apply().
+			r.QueueResync()
+		}
 		d.forceRouteRefresh = false
 	}
 
@@ -1495,6 +1545,22 @@ func (d *InternalDataplane) apply() {
 		}(r)
 	}
 
+	// Update the routing rules in parallel with the other updates.  We'll wait for it to finish
+	// before we return.
+	var rulesWG sync.WaitGroup
+	for _, r := range d.routeRules() {
+		rulesWG.Add(1)
+		go func(r routeRules) {
+			err := r.Apply()
+			if err != nil {
+				log.Warn("Failed to synchronize routing rules, will retry...")
+				d.dataplaneNeedsSync = true
+			}
+			d.reportHealth()
+			rulesWG.Done()
+		}(r)
+	}
+
 	// Wait for the IP sets update to finish.  We can't update iptables until it has.
 	ipSetsWG.Wait()
 
@@ -1531,6 +1597,9 @@ func (d *InternalDataplane) apply() {
 
 	// Wait for the route updates to finish.
 	routesWG.Wait()
+
+	// Wait for the rule updates to finish.
+	rulesWG.Wait()
 
 	// And publish and status updates.
 	d.endpointStatusCombiner.Apply()

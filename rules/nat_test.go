@@ -44,6 +44,7 @@ var _ = Describe("NAT", func() {
 			IptablesMarkDrop:            0x80,
 			IptablesMarkEndpoint:        0xff00,
 			IptablesMarkNonCaliEndpoint: 0x100,
+			EgressIPInterface:           "egress.calico",
 		}
 	})
 
@@ -316,7 +317,7 @@ var _ = Describe("NAT", func() {
 	})
 
 	Describe("with Egress IP enabled", func() {
-		BeforeEach(func() { rrConfigNormal.EgressIpEnabled = true })
+		BeforeEach(func() { rrConfigNormal.EgressIPEnabled = true })
 
 		It("should render v4 rules correctly rules when active", func() {
 			Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
@@ -327,7 +328,7 @@ var _ = Describe("NAT", func() {
 						Match: Match().
 							SourceIPSet("cali40masq-ipam-pools").
 							NotDestIPSet("cali40all-ipam-pools").
-							NotMarkMatchesWithMask(rrConfigNormal.IptablesMarkEgress, rrConfigNormal.IptablesMarkEgress),
+							NotOutInterface("egress.calico"),
 					},
 				},
 			}))

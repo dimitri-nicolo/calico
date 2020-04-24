@@ -75,7 +75,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
 			}
 		}
-		if configParams.EgressIpCheckEnabled() {
+		if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
 			if markEgressIP == 0 {
@@ -163,7 +163,10 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
 
-				EgressIpEnabled: configParams.EgressIpCheckEnabled(),
+				EgressIPEnabled:   configParams.EgressIPCheckEnabled(),
+				EgressIPVXLANPort: configParams.EgressIPVXLANPort,
+				EgressIPVXLANVNI:  configParams.EgressIPVXLANVNI,
+				EgressIPInterface: "egress.calico",
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
@@ -216,7 +219,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPSecRekeyTime:             configParams.IPSecRekeyTime,
 			IPSecPolicyRefreshInterval: configParams.IPSecPolicyRefreshInterval,
 
-			EgressIpEnabled: configParams.EgressIpCheckEnabled(),
+			EgressIPEnabled:             configParams.EgressIPCheckEnabled(),
+			EgressIPRoutingRulePriority: configParams.EgressIPRoutingRulePriority,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 			ChildExitedRestartCallback:   childExitedRestartCallback,

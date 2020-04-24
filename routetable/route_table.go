@@ -77,9 +77,10 @@ const (
 	TargetTypeNoEncap TargetType = "noencap"
 
 	// The following target types should be used with InterfaceNone.
-	TargetTypeBlackhole TargetType = "blackhole"
-	TargetTypeProhibit  TargetType = "prohibit"
-	TargetTypeThrow     TargetType = "throw"
+	TargetTypeBlackhole   TargetType = "blackhole"
+	TargetTypeProhibit    TargetType = "prohibit"
+	TargetTypeThrow       TargetType = "throw"
+	TargetTypeUnreachable TargetType = "unreachable"
 )
 
 const (
@@ -98,10 +99,11 @@ type L2Target struct {
 }
 
 type Target struct {
-	Type    TargetType
-	CIDR    ip.CIDR
-	GW      ip.Addr
-	DestMAC net.HardwareAddr
+	Type      TargetType
+	CIDR      ip.CIDR
+	GW        ip.Addr
+	DestMAC   net.HardwareAddr
+	MultiPath []ip.Addr
 }
 
 func (t Target) Equal(t2 Target) bool {
@@ -140,6 +142,32 @@ const (
 	updateTypeFullResync updateType = iota
 	updateTypeDelta
 )
+
+func (t Target) EqualGWOrMultiPath(linkIndex int, r netlink.Route) bool {
+	if t.GW != nil {
+		if !r.Gw.Equal(t.GW.AsNetIP()) {
+			return false
+		}
+	} else {
+		if len(r.Gw) > 0 {
+			return false
+		}
+	}
+
+	if len(t.MultiPath) != len(r.MultiPath) {
+		return false
+	}
+	for i, tm := range t.MultiPath {
+		rm := r.MultiPath[i]
+		if rm.LinkIndex != linkIndex {
+			return false
+		}
+		if !rm.Gw.Equal(tm.AsNetIP()) {
+			return false
+		}
+	}
+	return true
+}
 
 type RouteTable struct {
 	logCxt *log.Entry
@@ -273,6 +301,10 @@ func NewWithShims(
 		removeExternalRoutes:           removeExternalRoutes,
 		tableIndex:                     tableIndex,
 	}
+}
+
+func (r *RouteTable) Index() int {
+	return r.tableIndex
 }
 
 func (r *RouteTable) OnIfaceStateChanged(ifaceName string, state ifacemonitor.State) {
@@ -717,6 +749,17 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 
 	if target.GW != nil {
 		route.Gw = target.GW.AsNetIP()
+	} else if len(target.MultiPath) > 0 {
+		// Multipath routes
+		hops := []*netlink.NexthopInfo{}
+		for _, h := range target.MultiPath {
+			if target.Type != TargetTypeVXLAN {
+				hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP()})
+			} else {
+				hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP(), Flags: int(netlink.FLAG_ONLINK)})
+			}
+		}
+		route.MultiPath = hops
 	}
 
 	if target.Type == TargetTypeVXLAN || target.Type == TargetTypeNoEncap {
@@ -830,6 +873,13 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 				(route.Gw != nil && expectedTarget.GW == nil) ||
 				(route.Gw != nil && expectedTarget.GW != nil && !route.Gw.Equal(expectedTarget.GW.AsNetIP())) {
 				routeProblems = append(routeProblems, "incorrect gateway")
+			}
+		}
+
+		// Check if GW or Multipath info has changed.
+		if t, ok := expectedTargets[dest]; ok {
+			if linkAttrs != nil && !t.EqualGWOrMultiPath(linkAttrs.Index, route) {
+				routeProblems = append(routeProblems, "GW or multipath incorrect")
 			}
 		}
 		if len(routeProblems) == 0 {

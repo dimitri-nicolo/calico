@@ -77,6 +77,11 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 
 		"loadClientConfigFromEnvironment",
 		"useNodeResourceUpdates",
+
+		"EgressIPEnabled",
+		"EgressIPRoutingRulePriority",
+		"EgressIPVXLANPort",
+		"EgressIPVXLANVNI",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",

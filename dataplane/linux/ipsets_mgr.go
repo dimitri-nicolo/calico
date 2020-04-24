@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,6 +82,9 @@ type ipSetsManager struct {
 	// Map from each active domain name to the IDs of the domain sets that include that domain
 	// name.
 	domainSetIds map[string]set.Set
+
+	// IP set IDs that we don't process.
+	ignoredSetIds set.Set
 }
 
 type store interface {
@@ -103,6 +106,7 @@ func newIPSetsManager(ipsets_ ipsetsDataplane, maxIPSetSize int, domainInfoStore
 
 		domainSetProgramming: make(map[string]map[string]set.Set),
 		domainSetIds:         make(map[string]set.Set),
+		ignoredSetIds:        set.New(),
 	}
 }
 
@@ -123,7 +127,7 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 			// Work needed to resolve domain name deltas against the current ipset
 			// programming.
 			m.handleDomainIPSetDeltaUpdate(msg.Id, msg.RemovedMembers, msg.AddedMembers)
-		} else {
+		} else if !m.ignoredSetIds.Contains(msg.Id) {
 			// Pass deltas directly to the ipsets dataplane layer.
 			m.ipsetsDataplane.AddMembers(msg.Id, msg.AddedMembers)
 			m.callbacks.InvokeAddMembersIPSet(msg.Id, membersToSet(msg.AddedMembers))
@@ -142,6 +146,10 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 			setType = ipsets.IPSetTypeHashIPPort
 		case proto.IPSetUpdate_DOMAIN:
 			setType = ipsets.IPSetTypeHashIP
+		case proto.IPSetUpdate_EGRESS_IP:
+			// Ignore this IP set.
+			m.ignoredSetIds.Add(msg.Id)
+			return
 		default:
 			log.WithField("type", msg.Type).Panic("Unknown IP set type")
 		}
@@ -163,6 +171,10 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 		if m.domainSetProgramming[msg.Id] != nil {
 			// Remove tracking data for this domain set.
 			m.removeDomainIPSetTracking(msg.Id)
+		}
+		if m.ignoredSetIds.Contains(msg.Id) {
+			m.ignoredSetIds.Discard(msg.Id)
+			return
 		}
 		m.ipsetsDataplane.RemoveIPSet(msg.Id)
 		if m.domainSetProgramming[msg.Id] == nil {

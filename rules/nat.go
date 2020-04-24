@@ -64,10 +64,10 @@ func (r *DefaultRuleRenderer) makeNATOutgoingRuleIPTables(ipVersion uint8, proto
 		match = match.NotDestIPSet(allHostsIPSetName)
 	}
 
-	if r.Config.EgressIpEnabled && ipVersion == 4 {
-		// When EgressIp is enabled, any packet leaving cluster will be directed to vxlan tunnel
+	if r.Config.EgressIPEnabled && ipVersion == 4 {
+		// When EgressIP is enabled, any packet leaving cluster from a pod with egress annotation will be directed to vxlan tunnel
 		// device to be encapsulated. To preserve the source pod ip, no SNAT should be taken.
-		match = match.NotMarkMatchesWithMask(r.IptablesMarkEgress, r.IptablesMarkEgress)
+		match = match.NotOutInterface(r.Config.EgressIPInterface)
 	}
 
 	if protocol != "" {

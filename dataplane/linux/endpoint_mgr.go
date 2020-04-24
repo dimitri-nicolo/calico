@@ -35,6 +35,7 @@ import (
 )
 
 type routeTable interface {
+	Index() int
 	SetRoutes(ifaceName string, targets []routetable.Target)
 	SetL2Routes(ifaceName string, targets []routetable.L2Target)
 	OnIfaceStateChanged(string, ifacemonitor.State)
