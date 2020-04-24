@@ -1076,15 +1076,17 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 	}
 	for _, t := range d.iptablesMangleTables {
 		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
+		rs := []iptables.Rule{}
 		if t.IPVersion == 4 && d.config.EgressIPEnabled {
-			log.Warn("song mangle table jump to cali-egress")
-			t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+			// Make sure egress rule at top.
+			rs = append(rs, iptables.Rule{
 				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgress},
-			}})
+			})
 		}
-		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+		rs = append(rs, iptables.Rule{
 			Action: iptables.JumpAction{Target: rules.ChainManglePrerouting},
-		}})
+		})
+		t.InsertOrAppendRules("PREROUTING", rs)
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {
