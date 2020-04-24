@@ -292,7 +292,7 @@ GINKGO_FOCUS?=.*
 ## Run the tests in a container. Useful for CI, Mac dev
 ut: proto bin/ingress-collector-$(ARCH)
 	mkdir -p report
-	$(DOCKER_RUN_RO) \
+	$(DOCKER_RUN) \
 	    $(LOCAL_BUILD_MOUNTS) \
 	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
 	    ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
