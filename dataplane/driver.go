@@ -166,7 +166,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				EgressIPEnabled:   configParams.EgressIPCheckEnabled(),
 				EgressIPVXLANPort: configParams.EgressIPVXLANPort,
 				EgressIPVXLANVNI:  configParams.EgressIPVXLANVNI,
-				EgressIPInterface: "calico.egress",
+				EgressIPInterface: "egress.calico",
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
