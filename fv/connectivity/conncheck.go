@@ -195,12 +195,6 @@ func (c *Checker) ExpectedConnectivityPretty() []string {
 				result[i] += fmt.Sprintf(" (maxLoss: %.1f%%)", exp.ExpectedPacketLoss.MaxPercent)
 			}
 		}
-		if exp.ExpectedPacketLoss.MaxNumber >= 0 {
-			result[i] += fmt.Sprintf(" (maxLoss: %d packets)", exp.ExpectedPacketLoss.MaxNumber)
-		}
-		if exp.ExpectedPacketLoss.MaxPercent >= 0 {
-			result[i] += fmt.Sprintf(" (maxLoss: %.1f%%)", exp.ExpectedPacketLoss.MaxPercent)
-		}
 	}
 	return result
 }
@@ -339,7 +333,7 @@ type ConnectionSource interface {
 }
 
 func (m *Matcher) Match(actual interface{}) (success bool, err error) {
-	success = actual.(ConnectionSource).CanConnectTo(m.IP, m.Port, m.Protocol, time.Duration(0)) != nil
+	success = actual.(ConnectionSource).CanConnectTo(m.IP, m.Port, m.Protocol) != nil
 	return
 }
 
