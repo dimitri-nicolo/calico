@@ -210,7 +210,7 @@ var localWlEp2NoProfiles = WorkloadEndpoint{
 		mustParseNet("fc00:fe11::3/128")},
 }
 
-var remoteWlEp1 = WorkloadEndpoint{
+var remoteWlEp1New = WorkloadEndpoint{
 	State:      "active",
 	Name:       "remote-wep-1",
 	Mac:        mustParseMac("01:02:03:04:05:06"),

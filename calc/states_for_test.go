@@ -101,7 +101,11 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	"fc00:fe11::2/128",
 	"10.0.0.1/32",
 	"10.0.0.2/32",
-}).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
+}).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
 
 // Same as withDNSPolicy, but with no duplication in the network set domain names.
 var withDNSPolicyNoDupe = withDNSPolicy.withKVUpdates(
@@ -129,7 +133,11 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	"fc00:fe11::2/128",
 	"10.0.0.1/32",
 	"10.0.0.2/32",
-}).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomains, allowedEgressDomains2...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
+}).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomains, allowedEgressDomains2...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
 
 // withDNSPolicy3 verifies that a GlobalNetworkSet with allowedEgressDomains and a Policy that matches the domains directly but
 // without a selector will contain an IPSet with the correct domains.
@@ -151,7 +159,11 @@ var withDNSPolicy3 = initialisedStore.withKVUpdates(
 	"fc00:fe11::2/128",
 	"10.0.0.1/32",
 	"10.0.0.2/32",
-}).withIPSet(selectorIdDNSExternal3, allowedEgressDomains).withName("with DNS Policy 3")
+}).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+).withIPSet(selectorIdDNSExternal3, allowedEgressDomains).withName("with DNS Policy 3")
 
 // withServiceAccountPolicy adds two policies containing service account selector.
 var withServiceAccountPolicy = initialisedStore.withKVUpdates(
@@ -186,6 +198,62 @@ var routelocalWlTenDotThree = proto.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.3/32",
 	DstNodeName:   localHostname,
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotOneWithNodeIP = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.1/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.1",
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotTwoWithNodeIP = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.2/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.1",
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotThreeWithNodeIP = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.3/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.1",
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotFourWithNodeIP = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.4/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.1",
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotOneWithNodeIPTwo = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.1/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.2",
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotTwoWithNodeIPTwo = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.2/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.2",
+	LocalWorkload: true,
+}
+
+var routelocalWlTenDotThreeWithNodeIPTwo = proto.RouteUpdate{
+	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Dst:           "10.0.0.3/32",
+	DstNodeName:   localHostname,
+	DstNodeIp:     "192.168.0.2",
 	LocalWorkload: true,
 }
 
@@ -1127,7 +1195,7 @@ var vxlanWithWEPIPs = empty.withKVUpdates(
 
 // Adds in an workload on remoteHost2 and expected route.
 var vxlanWithWEPIPsAndWEP = vxlanWithWEPIPs.withKVUpdates(
-	KVPair{Key: remoteWlEpKey2, Value: &remoteWlEp1},
+	KVPair{Key: remoteWlEpKey2, Value: &remoteWlEp1New},
 ).withName("VXLAN using WorkloadIPs and a WEP").withRoutes(
 	routeUpdateIPPoolVXLAN,
 	routeUpdateRemoteHost2,
@@ -1139,6 +1207,13 @@ var vxlanWithWEPIPsAndWEP = vxlanWithWEPIPs.withKVUpdates(
 		DstNodeIp:   remoteHost2IP.String(),
 		NatOutgoing: true,
 	},
+).withIPSecBinding(
+	"192.168.0.3", "10.0.0.5",
+).withRemoteEndpoint(
+	&calc.EndpointData{
+		Key:      remoteWlEpKey2,
+		Endpoint: &remoteWlEp1New,
+	},
 )
 
 // Add in another workload with the same IP, but on a different node - remoteHost1.
@@ -1147,7 +1222,7 @@ var vxlanWithWEPIPsAndWEP = vxlanWithWEPIPs.withKVUpdates(
 var vxlanWithWEPIPsAndWEPDuplicate = vxlanWithWEPIPsAndWEP.withKVUpdates(
 	KVPair{Key: remoteHostIPKey, Value: &remoteHostIP},
 	KVPair{Key: remoteHostVXLANTunnelConfigKey, Value: remoteHostVXLANTunnelIP},
-	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1},
+	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1New},
 ).withName("VXLAN using WorkloadIPs and overlapping WEPs").withVTEPs(
 	proto.VXLANTunnelEndpointUpdate{
 		Node:           remoteHostname2,
@@ -1172,6 +1247,15 @@ var vxlanWithWEPIPsAndWEPDuplicate = vxlanWithWEPIPsAndWEP.withKVUpdates(
 		DstNodeName: remoteHostname,
 		DstNodeIp:   remoteHostIP.String(),
 		NatOutgoing: true,
+	},
+).withoutIPSecBinding(
+	"192.168.0.3", "10.0.0.5",
+).withIPSecBlacklist(
+	"10.0.0.5",
+).withRemoteEndpoint(
+	&calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: &remoteWlEp1New,
 	},
 )
 
@@ -1480,6 +1564,10 @@ var vxlanLocalBlockWithBorrowsLocalWEP = vxlanLocalBlockWithBorrows.withKVUpdate
 	proto.ProfileID{Name: "prof-1"},
 	proto.ProfileID{Name: "prof-2"},
 	proto.ProfileID{Name: "prof-missing"},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
 ).withEndpoint("orch/wl1/ep1", []mock.TierInfo{})
 
 // As vxlanLocalBlockWithBorrows but using Node resources instead of host IPs.

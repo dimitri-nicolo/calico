@@ -810,7 +810,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		// We don't need to check for ordering here since the cached remote endpoints could
 		// be returned in any order. Hence the use of "ConsistOf" instead of "Equal".
 		Expect(getCachedRemoteEndpoints()).To(ConsistOf(state.ExpectedCachedRemoteEndpoints),
-			"Remote endpoints are cached: %v\n%+v",
+			"Remote endpoints are cached: %v",
 			state.Name)
 	}))
 }
