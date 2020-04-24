@@ -393,6 +393,10 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{imageRegistry}#{versions["license-agent"].image}
       tag: #{versions["license-agent"].version}
 
+    firewallIntegration:
+      image: #{imageRegistry}#{versions["firewall-integration"].image}
+      tag: #{versions["firewall-integration"].version}
+
     # Optionally specify docker configuration to be used for imagePullSecrets. 
     # Default to an empty list. 
     #
