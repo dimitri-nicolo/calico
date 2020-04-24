@@ -7,7 +7,7 @@ replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200423003215-56e38b498404
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200421235523-112604167a7b
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200423084306-f81d433fe3cd
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200422190457-7a5142853c1f
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200423190432-4bed8a5ae163
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
