@@ -171,7 +171,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	//     positive selector-derived matches on dest address
 	//     negated matches on source address
 	//     negated matches on dest address
-	//     rule containing rest of match critera
+	//     rule containing rest of match criteria
 	//
 	// We use one match bit to record whether all the blocks accept the packet and one as a
 	// scratch bit for each block to use.  As an invariant, at the end of each block, the

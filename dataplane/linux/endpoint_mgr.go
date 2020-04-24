@@ -864,22 +864,20 @@ func (m *endpointManager) resolveHostEndpoints() {
 			log.WithField("id", id).Info("Updating host endpoint chains.")
 			hostEp := m.rawHostEndpoints[id]
 
-			if !m.bpfEnabled {
-				// Update the filter chain, for normal traffic.
-				filtChains := m.ruleRenderer.HostEndpointToFilterChains(
-					ifaceName,
-					hostEp.Tiers,
-					hostEp.ForwardTiers,
-					m.epMarkMapper,
-					hostEp.ProfileIds,
-				)
+			// Update the filter chain, for normal traffic.
+			filtChains := m.ruleRenderer.HostEndpointToFilterChains(
+				ifaceName,
+				hostEp.Tiers,
+				hostEp.ForwardTiers,
+				m.epMarkMapper,
+				hostEp.ProfileIds,
+			)
 
-				if !reflect.DeepEqual(filtChains, m.activeHostIfaceToFiltChains[ifaceName]) {
-					m.filterTable.UpdateChains(filtChains)
-				}
-				newHostIfaceFiltChains[ifaceName] = filtChains
-				delete(m.activeHostIfaceToFiltChains, ifaceName)
+			if !reflect.DeepEqual(filtChains, m.activeHostIfaceToFiltChains[ifaceName]) {
+				m.filterTable.UpdateChains(filtChains)
 			}
+			newHostIfaceFiltChains[ifaceName] = filtChains
+			delete(m.activeHostIfaceToFiltChains, ifaceName)
 		}
 
 		newHostIfaceMangleChains := map[string][]*iptables.Chain{}

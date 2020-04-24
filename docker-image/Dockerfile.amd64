@@ -42,8 +42,6 @@ RUN apt-get update && apt-get install -y \
     # Also needed (provides utilities for browsing procfs like ps)
     procps \
     ca-certificates \
-    # Felix FV tests require wget
-    wget \
     strongswan \
     strongswan-swanctl
 

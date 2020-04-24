@@ -91,8 +91,6 @@ allow:
 
 #endif /* CALI_DEBUG_ALLOW_ALL */
 
-#define FIB_ENABLED (!CALI_F_L3 && CALI_FIB_LOOKUP_ENABLED && CALI_F_TO_HOST)
-
 __attribute__((section("1/0")))
 int calico_tc_norm_pol_tail(struct __sk_buff *skb)
 {
@@ -148,12 +146,14 @@ static CALI_BPF_INLINE int skb_nat_l4_csum_ipv4(struct __sk_buff *skb, size_t of
 	int ret = 0;
 
 	if (ip_from != ip_to) {
-		CALI_DEBUG("L4 checksum update (csum is at %d) IP from %x to %x\n", off, ip_from, ip_to);
+		CALI_DEBUG("L4 checksum update (csum is at %d) IP from %x to %x\n", off,
+				be32_to_host(ip_from), be32_to_host(ip_to));
 		ret = bpf_l4_csum_replace(skb, off, ip_from, ip_to, flags | BPF_F_PSEUDO_HDR | 4);
 		CALI_DEBUG("bpf_l4_csum_replace(IP): %d\n", ret);
 	}
 	if (port_from != port_to) {
-		CALI_DEBUG("L4 checksum update (csum is at %d) port from %x to %x\n", off, port_from, port_to);
+		CALI_DEBUG("L4 checksum update (csum is at %d) port from %d to %d\n",
+				off, be16_to_host(port_from), be16_to_host(port_to));
 		int rc = bpf_l4_csum_replace(skb, off, port_from, port_to, flags | 2);
 		CALI_DEBUG("bpf_l4_csum_replace(port): %d\n", rc);
 		ret |= rc;
@@ -215,6 +215,7 @@ static CALI_BPF_INLINE int forward_or_drop(struct __sk_buff *skb,
 			CALI_DEBUG("Too short\n");
 			goto deny;
 		}
+
 		struct iphdr *ip_header = skb_iphdr(skb);
 		struct bpf_fib_lookup fib_params = {
 			.family = 2, /* AF_INET */
@@ -228,14 +229,8 @@ static CALI_BPF_INLINE int forward_or_drop(struct __sk_buff *skb,
 		/* set the ipv4 here, otherwise the ipv4/6 unions do not get
 		 * zeroed properly
 		 */
-		if (fwd->fib_flags & BPF_FIB_LOOKUP_OUTPUT) {
-			// Flip src/dest.
-			fib_params.ipv4_src = state->ip_dst;
-			fib_params.ipv4_dst = state->ip_src;
-		} else {
-			fib_params.ipv4_src = state->ip_src;
-			fib_params.ipv4_dst = state->ip_dst;
-		}
+		fib_params.ipv4_src = state->ip_src;
+		fib_params.ipv4_dst = state->ip_dst;
 
 		CALI_DEBUG("FIB family=%d\n", fib_params.family);
 		CALI_DEBUG("FIB tot_len=%d\n", fib_params.tot_len);
@@ -302,7 +297,7 @@ skip_fib:
 		 * can do a 16-bit store instead of a 32-bit load/modify/store,
 		 * which trips up the validator.
 		 */
-		skb->mark = fwd->mark;
+		skb->mark = fwd->mark | CALI_SKB_MARK_SEEN; /* make sure that each pkt has SEEN mark */
 	}
 
 	if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_INFO) {
@@ -332,6 +327,9 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	};
 	struct calico_nat_dest *nat_dest = NULL;
 
+	/* we assume we do FIB and from this point on, we only set it to false
+	 * if we decide not to do it.
+	 */
 	fwd_fib_set(&fwd, true);
 
 	if (CALI_LOG_LEVEL >= CALI_LOG_LEVEL_INFO) {
@@ -353,7 +351,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	}
 
 	struct iphdr *ip_header;
-	if (CALI_F_TO_HEP) {
+	if (CALI_F_TO_HEP || CALI_F_TO_WEP) {
 		switch (skb->mark) {
 		case CALI_SKB_MARK_BYPASS_FWD:
 			CALI_DEBUG("Packet approved for forward.\n");
@@ -373,16 +371,16 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 			ip_header = skb_iphdr(skb);
 			__be32 ip_src = ip_header->saddr;
 
-			if (ip_src == cali_host_ip()) {
+			if (ip_src == HOST_IP) {
 				CALI_DEBUG("src ip fixup not needed %x\n", be32_to_host(ip_src));
 				goto allow;
 			}
 
 			/* XXX do a proper CT lookup to find this */
-			ip_header->saddr = cali_host_ip();
+			ip_header->saddr = HOST_IP;
 			int l3_csum_off = skb_iphdr_offset(skb) + offsetof(struct iphdr, check);
 
-			int res = bpf_l3_csum_replace(skb, l3_csum_off, ip_src, cali_host_ip(), 4);
+			int res = bpf_l3_csum_replace(skb, l3_csum_off, ip_src, HOST_IP, 4);
 			if (res) {
 				fwd.reason = CALI_REASON_CSUM_FAIL;
 				goto deny;
@@ -430,10 +428,15 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	ip_header = skb_iphdr(skb);
 
-	if (is_vxlan_tunnel(ip_header)) {
+	if (dnat_should_decap() && is_vxlan_tunnel(ip_header)) {
+		struct udphdr *udp_header = (void*)(ip_header+1);
 		/* decap on host ep only if directly for the node */
-		CALI_DEBUG("VXLAN tunnel packet to %x (host IP=%x)\n", ip_header->daddr, cali_host_ip());
-		if (dnat_should_decap() && ip_header->daddr == cali_host_ip()) {
+		CALI_DEBUG("VXLAN tunnel packet to %x (host IP=%x)\n", ip_header->daddr, HOST_IP);
+		if (ip_header->daddr == HOST_IP &&
+				vxlan_udp_csum_ok(udp_header) &&
+				vxlan_size_ok(skb, udp_header) &&
+				vxlan_vni_is_valid(skb, udp_header) &&
+				vxlan_vni(skb, udp_header) == CALI_VXLAN_VNI) {
 			state.nat_tun_src = ip_header->saddr;
 			CALI_DEBUG("vxlan decap\n");
 			if (vxlan_v4_decap(skb)) {
@@ -457,7 +460,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	struct udphdr *udp_header = (void*)(ip_header+1);
 	struct icmphdr *icmp_header = (void*)(ip_header+1);
 
-	state.ip_proto = ip_header->protocol;
+	tc_state_fill_from_iphdr(&state, ip_header);
 
 	switch (state.ip_proto) {
 	case IPPROTO_TCP:
@@ -477,7 +480,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		break;
 	case IPPROTO_ICMP:
 		icmp_header = (void*)(ip_header+1);
-		CALI_DEBUG("ICMP; ports: type=%d code=%d\n",
+		CALI_DEBUG("ICMP; type=%d code=%d\n",
 				icmp_header->type, icmp_header->code);
 		break;
 	case 4:
@@ -492,8 +495,6 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		CALI_DEBUG("Unknown protocol (%d), unable to extract ports\n", (int)state.ip_proto);
 	}
 
-	state.ip_src = ip_header->saddr;
-	state.ip_dst = ip_header->daddr;
 	state.pol_rc = CALI_POL_NO_MATCH;
 
 	switch (state.ip_proto) {
@@ -511,6 +512,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 	}
 
 	struct ct_ctx ct_lookup_ctx = {
+		.skb = skb,
 		.proto	= state.ip_proto,
 		.src	= state.ip_src,
 		.sport	= state.sport,
@@ -535,9 +537,26 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 		state.flags |= CALI_ST_NAT_OUTGOING;
 	}
 
+	/* We are possibly past (D)NAT, but that is ok, we need to let the IP
+	 * stack do the RPF check on the source, dest is not importatnt.
+	 */
+	if (CALI_F_TO_HOST && ct_result_rpf_failed(state.ct_result.rc)) {
+		fwd_fib_set(&fwd, false);
+	}
+
+
 	/* skip policy if we get conntrack hit */
-	if (state.ct_result.rc != CALI_CT_NEW) {
+	if (ct_result_rc(state.ct_result.rc) != CALI_CT_NEW) {
 		goto skip_policy;
+	}
+
+	/* Unlike from WEP where we can do RPF by comparing to calico routing
+	 * info, we must rely in Linux to do it for us when receiving packets
+	 * from outside of the host. We enforce RPF failed on every new flow.
+	 * This will make it to skip fib in calico_tc_skb_accepted()
+	 */
+	if (CALI_F_FROM_HEP) {
+		ct_result_set_flag(state.ct_result.rc, CALI_CT_RPF_FAILED);
 	}
 
 	/* No conntrack entry, check if we should do NAT */
@@ -682,43 +701,44 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 							 struct calico_nat_dest *nat_dest)
 {
 	CALI_DEBUG("Entering calico_tc_skb_accepted\n");
+
+	enum calico_reason reason = CALI_REASON_UNKNOWN;
+	int rc = TC_ACT_UNSPEC;
+	bool fib = false;
+	struct ct_ctx ct_nat_ctx = {};
+	int ct_rc = ct_result_rc(state->ct_result.rc);
+	bool ct_related = ct_result_is_related(state->ct_result.rc);
+	uint32_t seen_mark;
+	size_t l4_csum_off = 0, l3_csum_off;
+	uint32_t fib_flags = 0;
+
 	CALI_DEBUG("src=%x dst=%x\n", be32_to_host(state->ip_src), be32_to_host(state->ip_dst));
 	CALI_DEBUG("post_nat=%x:%d\n", be32_to_host(state->post_nat_ip_dst), state->post_nat_dport);
 	CALI_DEBUG("nat_tun=%x\n", state->nat_tun_src);
 	CALI_DEBUG("pol_rc=%d\n", state->pol_rc);
 	CALI_DEBUG("sport=%d\n", state->sport);
 	CALI_DEBUG("flags=%x\n", state->flags);
-	enum calico_reason reason = CALI_REASON_UNKNOWN;
-	int rc = TC_ACT_UNSPEC;
-	bool fib;
-	struct ct_ctx ct_nat_ctx = {};
+	CALI_DEBUG("ct_rc=%d\n", ct_rc);
+	CALI_DEBUG("ct_related=%d\n", ct_related);
 
-	uint32_t seen_mark;
 	if (CALI_F_FROM_WEP && (state->flags & CALI_ST_NAT_OUTGOING)) {
-		fib = false;
 		seen_mark = CALI_SKB_MARK_NAT_OUT;
 	} else {
-		fib = true;
+		/* XXX we do it here again because doing it in one place only
+		 * XXX in calico_tc() irritates the verifier :'(
+		 */
+		if (!CALI_F_TO_HOST || !ct_result_rpf_failed(state->ct_result.rc)) {
+			fib = true;
+		}
 		seen_mark = CALI_SKB_MARK_SEEN;
 	}
 
-
-	struct tcphdr *tcp_header = (void*)(ip_header+1);
-	struct udphdr *udp_header = (void*)(ip_header+1);
-
-	__u8 ihl = ip_header->ihl * 4;
-
-	size_t l4_csum_off = 0, l3_csum_off;
-	int res = 0;
-	bool encap_needed = false;
-	uint32_t fib_flags = 0;
-
-	/* XXX we cannot pass the related ICMP after NATing back yet, so we need
-	 * to act here, we know we are forwarding.
+	/* We check the ttl here to avoid needing complicated handling of
+	 * related trafic back from the host if we let the host to handle it.
 	 */
 	CALI_DEBUG("ip->ttl %d\n", ip_header->ttl);
 	if (ip_ttl_exceeded(ip_header)) {
-		switch (state->ct_result.rc){
+		switch (ct_rc){
 		case CALI_CT_NEW:
 			if (nat_dest) {
 				goto icmp_ttl_exceeded;
@@ -731,16 +751,92 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 	}
 
 	l3_csum_off = skb_iphdr_offset(skb) +  offsetof(struct iphdr, check);
-	switch (state->ip_proto) {
-	case IPPROTO_TCP:
-		l4_csum_off = skb_l4hdr_offset(skb, ihl) + offsetof(struct tcphdr, check);
-		break;
-	case IPPROTO_UDP:
-		l4_csum_off = skb_l4hdr_offset(skb, ihl) + offsetof(struct udphdr, check);
-		break;
+
+	if (ct_related) {
+		if (ip_header->protocol == IPPROTO_ICMP) {
+			struct icmphdr *icmp;
+			bool outer_ip_snat;
+
+			/* if we do SNAT ... */
+			outer_ip_snat = ct_rc == CALI_CT_ESTABLISHED_SNAT;
+			/* ... there is a return path to the tunnel ... */
+			outer_ip_snat = outer_ip_snat && state->ct_result.tun_ret_ip;
+			/* ... and should do encap and it is not DSR or it is leaving host
+			 * and either DSR from WEP or originated at host ... */
+			outer_ip_snat = outer_ip_snat &&
+				((dnat_return_should_encap() && !CALI_F_DSR) ||
+				 (CALI_F_TO_HEP &&
+				  ((CALI_F_DSR && skb_seen(skb)) || !skb_seen(skb))));
+
+			/* ... then fix the outer header IP first */
+			if (outer_ip_snat) {
+				ip_header->saddr = state->ct_result.nat_ip;
+				int res = bpf_l3_csum_replace(skb, l3_csum_off,
+						state->ip_src, state->ct_result.nat_ip, 4);
+				if (res) {
+					reason = CALI_REASON_CSUM_FAIL;
+					goto deny;
+				}
+				CALI_DEBUG("ICMP related: outer IP SNAT to %x\n",
+						be32_to_host(state->ct_result.nat_ip));
+			}
+
+			if (!icmp_skb_get_hdr(skb, &icmp)) {
+				CALI_DEBUG("Ooops, we already passed one such a check!!!\n");
+				goto deny;
+			}
+
+			l3_csum_off += sizeof(*ip_header) + sizeof(*icmp);
+			ip_header = (struct iphdr *)(icmp + 1); /* skip to inner ip */
+
+			/* flip the direction, we need to reverse the original packet */
+			switch (ct_rc) {
+			case CALI_CT_ESTABLISHED_SNAT:
+				/* handle the DSR case, see CALI_CT_ESTABLISHED_SNAT where nat is done */
+				if (dnat_return_should_encap() && state->ct_result.tun_ret_ip) {
+					if (CALI_F_DSR) {
+						/* SNAT will be done after routing, when leaving HEP */
+						CALI_DEBUG("DSR enabled, skipping SNAT + encap\n");
+						goto allow;
+					}
+				}
+				ct_rc = CALI_CT_ESTABLISHED_DNAT;
+				break;
+			case CALI_CT_ESTABLISHED_DNAT:
+				if (CALI_F_FROM_HEP && state->nat_tun_src && !state->ct_result.tun_ret_ip) {
+					/* Packet is returning from a NAT tunnel, just forward it. */
+					seen_mark = CALI_SKB_MARK_BYPASS_FWD;
+					CALI_DEBUG("ICMP related returned from NAT tunnel\n");
+					goto allow;
+				}
+				ct_rc = CALI_CT_ESTABLISHED_SNAT;
+				break;
+			}
+		}
 	}
 
-	switch (state->ct_result.rc){
+	struct tcphdr *tcp_header = (void*)(ip_header+1);
+	struct udphdr *udp_header = (void*)(ip_header+1);
+
+	__u8 ihl = ip_header->ihl * 4;
+
+	int res = 0;
+	bool encap_needed = false;
+
+	if (state->ip_proto == IPPROTO_ICMP && ct_related) {
+		/* do not fix up embedded L4 checksum for related ICMP */
+	} else {
+		switch (ip_header->protocol) {
+		case IPPROTO_TCP:
+			l4_csum_off = skb_l4hdr_offset(skb, ihl) + offsetof(struct tcphdr, check);
+			break;
+		case IPPROTO_UDP:
+			l4_csum_off = skb_l4hdr_offset(skb, ihl) + offsetof(struct udphdr, check);
+			break;
+		}
+	}
+
+	switch (ct_rc){
 	case CALI_CT_NEW:
 		switch (state->pol_rc) {
 		case CALI_POL_NO_MATCH:
@@ -795,7 +891,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 
 	case CALI_CT_ESTABLISHED_DNAT:
 		/* align with CALI_CT_NEW */
-		if (state->ct_result.rc == CALI_CT_ESTABLISHED_DNAT) {
+		if (ct_rc == CALI_CT_ESTABLISHED_DNAT) {
 			if (CALI_F_FROM_HEP && state->nat_tun_src && !state->ct_result.tun_ret_ip) {
 				/* Packet is returning from a NAT tunnel,
 				 * already SNATed, just forward it.
@@ -823,13 +919,16 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 			CALI_DEBUG("rt found for 0x%x\n", be32_to_host(state->post_nat_ip_dst));
 
 			encap_needed = !cali_rt_is_local(rt);
+
+			/* We cannot enforce RPF check on encapped traffic, do FIB if you can */
+			fib = true;
 		}
 
 		/* We have not created the conntrack yet since we did not know
 		 * if we need encap or not. Must do before MTU check and before
 		 * we jump to do the encap.
 		 */
-		if (state->ct_result.rc == CALI_CT_NEW) {
+		if (ct_rc == CALI_CT_NEW) {
 			if (CALI_F_DSR && CALI_F_FROM_HEP &&
 					encap_needed && state->nat_tun_src == 0) {
 				ct_nat_ctx.flags |= CALI_CT_FLAG_DSR_FWD;
@@ -838,11 +937,12 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 		}
 
 		if (encap_needed) {
-			if (ip_is_dnf(ip_header) && vxlan_v4_encap_too_big(skb)) {
-				CALI_DEBUG("Request packet with DNF set is too big");
+			if (!(state->ip_proto == IPPROTO_TCP && skb_is_gso(skb)) &&
+					ip_is_dnf(ip_header) && vxlan_v4_encap_too_big(skb)) {
+				CALI_DEBUG("Request packet with DNF set is too big\n");
 				goto icmp_too_big;
 			}
-			state->ip_src = cali_host_ip();
+			state->ip_src = HOST_IP;
 			state->ip_dst = cali_rt_is_workload(rt) ? rt->next_hop : state->post_nat_ip_dst;
 			seen_mark = CALI_SKB_MARK_BYPASS_FWD;
 			goto nat_encap;
@@ -850,7 +950,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 
 		ip_header->daddr = state->post_nat_ip_dst;
 
-		switch (state->ip_proto) {
+		switch (ip_header->protocol) {
 		case IPPROTO_TCP:
 			tcp_header->dest = host_to_be16(state->post_nat_dport);
 			break;
@@ -865,7 +965,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 			res = skb_nat_l4_csum_ipv4(skb, l4_csum_off, state->ip_dst,
 					state->post_nat_ip_dst,	host_to_be16(state->dport),
 					host_to_be16(state->post_nat_dport),
-					state->ip_proto == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
+					ip_header->protocol == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
 		}
 
 		res |= bpf_l3_csum_replace(skb, l3_csum_off, state->ip_dst, state->post_nat_ip_dst, 4);
@@ -873,6 +973,38 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 		if (res) {
 			reason = CALI_REASON_CSUM_FAIL;
 			goto deny;
+		}
+
+		/* Handle returning ICMP related to tunnel
+		 *
+		 * N.B. we assume that we can fit in the MTU. Since it is ICMP
+		 * and even though Linux sends up to min ipv4 MTU, it is
+		 * unlikely that we are anywhere to close the MTU limit. If we
+		 * are, we need to fail anyway.
+		 */
+		if (ct_related && state->ip_proto == IPPROTO_ICMP
+				&& state->ct_result.tun_ret_ip
+				&& !CALI_F_DSR) {
+			if (dnat_return_should_encap()) {
+				CALI_DEBUG("Returning related ICMP from workload to tunnel\n");
+				state->ip_dst = state->ct_result.tun_ret_ip;
+				seen_mark = CALI_SKB_MARK_BYPASS_FWD_SRC_FIXUP;
+				goto nat_encap;
+			} else if (CALI_F_TO_HEP) {
+				/* Special case for ICMP error being returned by the host with the
+				 * backing workload into the tunnel back to the original host. It is
+				 * ICMP related and there is a return tunnel path. We need to change
+				 * both the source and destination at once.
+				 *
+				 * XXX the packet was routed to the original client as if it was XXX
+				 * DSR and we might not be on the right iface!!! Should we XXX try
+				 * to reinject it to fix the routing?
+				 */
+				CALI_DEBUG("Returning related ICMP from host to tunnel\n");
+				state->ip_src = HOST_IP;
+				state->ip_dst = state->ct_result.tun_ret_ip;
+				goto nat_encap;
+			}
 		}
 
 		state->dport = state->post_nat_dport;
@@ -901,7 +1033,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 		// Actually do the NAT.
 		ip_header->saddr = state->ct_result.nat_ip;
 
-		switch (state->ip_proto) {
+		switch (ip_header->protocol) {
 		case IPPROTO_TCP:
 			tcp_header->source = host_to_be16(state->ct_result.nat_port);
 			break;
@@ -916,7 +1048,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 			res = skb_nat_l4_csum_ipv4(skb, l4_csum_off, state->ip_src,
 					state->ct_result.nat_ip, host_to_be16(state->sport),
 					host_to_be16(state->ct_result.nat_port),
-					state->ip_proto == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
+					ip_header->protocol == IPPROTO_UDP ? BPF_F_MARK_MANGLED_0 : 0);
 		}
 
 		CALI_VERB("L3 checksum update (csum is at %d) port from %x to %x\n",
@@ -992,31 +1124,39 @@ icmp_ttl_exceeded:
 	/* we need to allow the reponse for the IP stack to route it back.
 	 * XXX we might want to send it back the same iface
 	 */
-	goto allow;
+	goto icmp_allow;
 
 icmp_too_big:
-	if (skb_shorter(skb, ETH_IPV4_UDP_SIZE)) {
-		reason = CALI_REASON_SHORT;
-		goto deny;
-	}
 	if (icmp_v4_too_big(skb)) {
 		reason = CALI_REASON_ICMP_DF;
 		goto deny;
 	}
 
-	seen_mark = CALI_SKB_MARK_BYPASS_FWD;
-
 	/* XXX we might use skb->ifindex to redirect it straight back
 	 * to where it came from if it is guaranteed to be the path
 	 */
-	state->sport = state->dport = 0;
-	state->ip_proto = IPPROTO_ICMP;
-
 	fib_flags |= BPF_FIB_LOOKUP_OUTPUT;
 	if (CALI_F_FROM_WEP) {
 		/* we know it came from workload, just send it back the same way */
 		rc = CALI_RES_REDIR_IFINDEX;
 	}
+
+	goto icmp_allow;
+
+icmp_allow:
+	/* recheck the size of the packet after it was turned into icmp and set
+	 * state so that it can processed further.
+	 */
+	if (skb_shorter(skb, ETH_IPV4_UDP_SIZE)) {
+		reason = CALI_REASON_SHORT;
+		goto deny;
+	}
+	ip_header = skb_iphdr(skb);
+	tc_state_fill_from_iphdr(state, ip_header);
+	state->sport = state->dport = 0;
+
+	/* packet was created because of approved traffic, treat it as related */
+	seen_mark = CALI_SKB_MARK_BYPASS_FWD;
 
 	goto allow;
 
@@ -1026,7 +1166,7 @@ nat_encap:
 		goto  deny;
 	}
 
-	state->sport = state->dport = host_to_be16(CALI_VXLAN_PORT);
+	state->sport = state->dport = CALI_VXLAN_PORT;
 	state->ip_proto = IPPROTO_UDP;
 
 	if (CALI_F_INGRESS) {

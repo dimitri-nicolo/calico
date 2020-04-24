@@ -60,9 +60,8 @@ func init() {
 
 // Constants that are shared with the UT binaries that we build.
 const (
-	natTunnelMTU       = uint16(700)
-	ethernetHeaderSize = 14
-	testVxlanPort      = uint16(5665)
+	natTunnelMTU  = uint16(700)
+	testVxlanPort = uint16(5665)
 )
 
 var (
@@ -143,8 +142,7 @@ func runBpfTest(t *testing.T, section string, rules [][][]*proto.Rule, testFn fu
 	}
 
 	log.WithField("hostIP", hostIP).Info("Host IP")
-	ipStr := fmt.Sprintf("0x%02x%02x%02x%02x", hostIP[3], hostIP[2], hostIP[1], hostIP[0])
-	obj += fmt.Sprintf("fib_debug_skb0x%x_host%s", skbMark, ipStr)
+	obj += fmt.Sprintf("fib_debug_skb0x%x", skbMark)
 
 	if strings.Contains(section, "_dsr") {
 		obj += "_dsr"
@@ -154,7 +152,16 @@ func runBpfTest(t *testing.T, section string, rules [][][]*proto.Rule, testFn fu
 
 	obj += ".o"
 
-	err = bpftoolProgLoadAll(obj, bpfFsDir)
+	bin, err := bpf.BinaryFromFile(obj)
+	Expect(err).NotTo(HaveOccurred())
+	err = bin.PatchIPv4(hostIP)
+	Expect(err).NotTo(HaveOccurred())
+	bin.PatchTunnelMTU(natTunnelMTU)
+	tempObj := tempDir + "bpf.o"
+	err = bin.WriteToFile(tempObj)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir)
 	Expect(err).NotTo(HaveOccurred())
 
 	if err != nil {
@@ -353,7 +360,16 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn)) {
 
 	objFname := "../../bpf-gpl/ut/" + strings.TrimSuffix(source, path.Ext(source)) + ".o"
 
-	err = bpftoolProgLoadAll(objFname, bpfFsDir)
+	bin, err := bpf.BinaryFromFile(objFname)
+	Expect(err).NotTo(HaveOccurred())
+	err = bin.PatchIPv4(hostIP)
+	Expect(err).NotTo(HaveOccurred())
+	bin.PatchTunnelMTU(natTunnelMTU)
+	tempObj := tempDir + "bpf.o"
+	err = bin.WriteToFile(tempObj)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir)
 	Expect(err).NotTo(HaveOccurred())
 
 	t.Run(source, func(_ *testing.T) {
@@ -576,4 +592,9 @@ func testPacket(ethAlt *layers.Ethernet, ipv4Alt *layers.IPv4, l4Alt gopacket.La
 
 func testPacketUDPDefault() (*layers.Ethernet, *layers.IPv4, gopacket.Layer, []byte, []byte, error) {
 	return testPacket(nil, nil, nil, nil)
+}
+
+func resetBPFMaps() {
+	resetCTMap(ctMap)
+	resetRTMap(rtMap)
 }

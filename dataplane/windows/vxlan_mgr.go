@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package windataplane
 
@@ -60,17 +60,17 @@ func newVXLANManager(hcn hcnInterface, hostname string, networkName *regexp.Rege
 func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.RouteUpdate:
-		if msg.Type == proto.RouteType_VXLAN {
+		if msg.Type == proto.RouteType_REMOTE_WORKLOAD && msg.IpPoolType == proto.IPPoolType_VXLAN {
 			logrus.WithField("msg", msg).Debug("VXLAN data plane received route update")
 			m.routesByDest[msg.Dst] = msg
 			m.dirty = true
 		}
 	case *proto.RouteRemove:
-		if msg.Type == proto.RouteType_VXLAN {
+		if _, ok := m.routesByDest[msg.Dst]; ok {
 			logrus.WithField("msg", msg).Debug("VXLAN data plane received route remove")
-			delete(m.routesByDest, msg.Dst)
 			m.dirty = true
 		}
+		delete(m.routesByDest, msg.Dst)
 	case *proto.VXLANTunnelEndpointUpdate:
 		logrus.WithField("msg", msg).Debug("VXLAN data plane received VTEP update")
 		if msg.Node != m.hostname { // Skip creating a route to ourselves.
@@ -125,9 +125,9 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 			"route": route,
 		}).Debug("Currently-active route")
 
-		vtep := m.vtepsByNode[route.Node]
+		vtep := m.vtepsByNode[route.DstNodeName]
 		if vtep == nil {
-			logrus.WithField("node", route.Node).Error("Received route without corresponding VTEP")
+			logrus.WithField("node", route.DstNodeName).Info("Received route without corresponding VTEP")
 			continue
 		}
 		logrus.WithFields(logrus.Fields{"vtep": vtep, "route": route}).Debug("Found VTEP for route")

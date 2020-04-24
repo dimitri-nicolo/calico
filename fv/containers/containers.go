@@ -30,10 +30,10 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/connectivity"
+	"github.com/projectcalico/felix/fv/tcpdump"
+	"github.com/projectcalico/felix/fv/utils"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/felix/fv/utils"
 )
 
 type Container struct {
@@ -594,15 +594,12 @@ func (c *Container) SourceIPs() []string {
 	return ips
 }
 
-func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Duration) *connectivity.Result {
-	// Ensure that the container has the 'test-connection' binary.
-	logCxt := log.WithField("container", c.Name)
-	logCxt.Debugf("Entering Container.CanConnectTo(%v,%v,%v)", ip, port, protocol)
-	c.EnsureBinary("test-connection")
+func (c *Container) CanConnectTo(ip, port, protocol string, opts ...connectivity.CheckOption) *connectivity.Result {
+	c.EnsureBinary(connectivity.BinaryName)
+	return connectivity.Check(c.Name, "Connection test", ip, port, protocol, opts...)
+}
 
-	// Run 'test-connection' to the target.
-	connectionCmd := utils.Command("docker", "exec", c.Name,
-		"/test-connection", "--protocol="+protocol, "-", ip, port, fmt.Sprintf("--duration=%d", int(duration.Seconds())))
-
-	return utils.RunConnectionCmd(connectionCmd, "Connection test")
+// AttachTCPDump returns tcpdump attached to the container
+func (c *Container) AttachTCPDump(iface string) *tcpdump.TCPDump {
+	return tcpdump.AttachUnavailable(c.Name, c.GetID(), iface)
 }

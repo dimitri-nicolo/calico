@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package windataplane
 
@@ -84,14 +84,26 @@ var _ = Describe("VXLAN manager tests", func() {
 			Describe("after receiving a route", func() {
 				BeforeEach(func() {
 					mgr.OnUpdate(&proto.RouteUpdate{
-						Type: proto.RouteType_VXLAN,
-						Dst:  "10.0.0.0/26",
-						Node: "other-node",
-						Gw:   "10.0.0.1",
+						Type:        proto.RouteType_REMOTE_WORKLOAD,
+						IpPoolType:  proto.IPPoolType_VXLAN,
+						Dst:         "10.0.0.0/26",
+						DstNodeName: "other-node",
+						DstNodeIp:   "10.0.0.1",
 					})
 				})
 				It("should be dirty", func() {
 					Expect(mgr.dirty).To(BeTrue())
+				})
+
+				Describe("after receiving a route deletion", func() {
+					BeforeEach(func() {
+						mgr.OnUpdate(&proto.RouteRemove{
+							Dst: "10.0.0.0/26",
+						})
+					})
+					It("should be dirty", func() {
+						Expect(mgr.dirty).To(BeTrue())
+					})
 				})
 
 				Describe("after receiving a matching VTEP", func() {
@@ -174,8 +186,7 @@ var _ = Describe("VXLAN manager tests", func() {
 						Describe("after removing the route and calling CompleteDeferredWork", func() {
 							BeforeEach(func() {
 								mgr.OnUpdate(&proto.RouteRemove{
-									Type: proto.RouteType_VXLAN,
-									Dst:  "10.0.0.0/26",
+									Dst: "10.0.0.0/26",
 								})
 								Expect(mgr.CompleteDeferredWork()).NotTo(HaveOccurred())
 							})
@@ -232,18 +243,6 @@ var _ = Describe("VXLAN manager tests", func() {
 							})
 						})
 					})
-				})
-			})
-
-			Describe("after receiving a route deletion", func() {
-				BeforeEach(func() {
-					mgr.OnUpdate(&proto.RouteRemove{
-						Type: proto.RouteType_VXLAN,
-						Dst:  "10.0.0.0/26",
-					})
-				})
-				It("should be dirty", func() {
-					Expect(mgr.dirty).To(BeTrue())
 				})
 			})
 

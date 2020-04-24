@@ -18,6 +18,7 @@ package fv_test
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,10 +26,9 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/fv/connectivity"
-
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 
+	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/workload"
 )
@@ -116,6 +116,23 @@ func describeConnCheckTests(protocol string) bool {
 					It("and a 20% threshold, should tolerate packet loss", func() {
 						cc.ExpectLoss(felixes[0], hostW[1], 2*time.Second, 20, -1)
 						cc.CheckConnectivityPacketLoss()
+					})
+
+					It("with tcpdump", func() {
+						tcpdF := felixes[0].AttachTCPDump("eth0")
+						tcpdF.SetLogEnabled(true)
+						tcpdF.AddMatcher("UDP", regexp.MustCompile(`.*UDP.*`))
+						tcpdF.Start()
+
+						tcpdW := hostW[1].AttachTCPDump()
+						tcpdW.SetLogEnabled(true)
+						tcpdW.AddMatcher("UDP", regexp.MustCompile(`.*UDP.*`))
+						tcpdW.Start()
+
+						cc.ExpectLoss(felixes[0], hostW[1], 2*time.Second, 20, -1)
+						cc.CheckConnectivityPacketLoss()
+						Eventually(func() int { return tcpdF.MatchCount("UDP") }).Should(BeNumerically(">", 0))
+						Eventually(func() int { return tcpdW.MatchCount("UDP") }).Should(BeNumerically(">", 0))
 					})
 				})
 			}

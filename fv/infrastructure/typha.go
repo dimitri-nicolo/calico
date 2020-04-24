@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,9 +23,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/typha/pkg/tlsutils"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/utils"
-	"github.com/projectcalico/typha/pkg/tlsutils"
 )
 
 type Typha struct {

@@ -148,10 +148,12 @@ type Config struct {
 
 	PostInSyncCallback func()
 	HealthAggregator   *health.HealthAggregator
+	RouteTableManager  *idalloc.IndexAllocator
 
 	ExternalNodesCidrs []string
 
 	BPFEnabled                         bool
+	BPFDisableUnprivileged             bool
 	BPFKubeProxyIptablesCleanupEnabled bool
 	BPFLogLevel                        string
 	BPFDataIfacePattern                *regexp.Regexp
@@ -418,8 +420,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.ipSets = append(dp.ipSets, ipSetsV4)
 
 	if config.RulesConfig.VXLANEnabled {
-		routeTableVXLAN := routetable.New([]string{"vxlan.calico"}, 4, true, config.NetlinkTimeout, config.DeviceRouteSourceAddress,
-			config.DeviceRouteProtocol, true)
+		routeTableVXLAN := routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, 0)
 
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
@@ -616,8 +618,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4, false, config.NetlinkTimeout,
-		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes)
+	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
+	for i, r := range config.RulesConfig.WorkloadIfacePrefixes {
+		interfaceRegexes[i] = "^" + r + ".*"
+	}
+	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
+		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, 0)
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -689,7 +695,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
 		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
 
-		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6, false, config.NetlinkTimeout, config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes)
+		routeTableV6 := routetable.New(
+			interfaceRegexes, 6, false, config.NetlinkTimeout,
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, 0)
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
@@ -964,10 +972,23 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 		t.InsertOrAppendRules("INPUT", inputRules)
 		t.InsertOrAppendRules("FORWARD", fwdRules)
 	}
+
 	for _, t := range d.iptablesNATTables {
 		t.UpdateChains(d.ruleRenderer.StaticNATPostroutingChains(t.IPVersion))
 		t.InsertOrAppendRules("POSTROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainNATPostrouting},
+		}})
+	}
+
+	for _, t := range d.iptablesRawTables {
+		rawChains := []*iptables.Chain{{
+			Name: rules.ChainRawPrerouting,
+			Rules: d.ruleRenderer.RPFilter(t.IPVersion, 0xca100000, 0xfff00000,
+				d.config.RulesConfig.OpenStackSpecialCasesEnabled, true),
+		}}
+		t.UpdateChains(rawChains)
+		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
+			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
 	}
 }
@@ -1361,6 +1382,14 @@ func (d *InternalDataplane) configureKernel() {
 	err = writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
 	if err != nil {
 		log.Warnf("failed to set enable conntrack packet and byte accounting: %v\n", err)
+	}
+
+	if d.config.BPFEnabled && d.config.BPFDisableUnprivileged {
+		log.Info("BPF enabled, disabling unprivileged BPF usage.")
+		err := writeProcSys("/proc/sys/kernel/unprivileged_bpf_disabled", "1")
+		if err != nil {
+			log.WithError(err).Error("Failed to set unprivileged_bpf_disabled sysctl")
+		}
 	}
 }
 

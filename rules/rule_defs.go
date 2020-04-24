@@ -277,6 +277,8 @@ type RuleRenderer interface {
 
 	DNATsToIptablesChains(dnats map[string]string) []*iptables.Chain
 	SNATsToIptablesChains(snats map[string]string) []*iptables.Chain
+
+	RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled, acceptLocal bool) []iptables.Rule
 }
 
 type DefaultRuleRenderer struct {
@@ -355,7 +357,7 @@ type Config struct {
 
 	EnableNflogSize bool
 	IPSecEnabled    bool
-	EgressIpEnabled  bool
+	EgressIpEnabled bool
 
 	DNSTrustedServers []config.ServerPort
 }

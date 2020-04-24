@@ -439,7 +439,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.RouteUpdate:
 		d.activeRoutes.Iter(func(item interface{}) error {
 			r := item.(proto.RouteUpdate)
-			if event.Dst == r.Dst && event.Type == r.Type {
+			if event.Dst == r.Dst {
 				return set.RemoveItem
 			}
 			return nil
@@ -448,7 +448,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.RouteRemove:
 		d.activeRoutes.Iter(func(item interface{}) error {
 			r := item.(proto.RouteUpdate)
-			if event.Dst == r.Dst && event.Type == r.Type {
+			if event.Dst == r.Dst {
 				return set.RemoveItem
 			}
 			return nil

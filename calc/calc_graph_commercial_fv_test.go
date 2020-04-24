@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -58,6 +58,10 @@ var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
 ).withName("ep1 local, policy")
 
 var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
@@ -158,6 +162,10 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 		[]mock.TierInfo{
 			{"tier-1", expectedOrder[:], expectedOrder[:]},
 		},
+	).withRoutes(
+		// Routes for the local WEPs.
+		routelocalWlTenDotOne,
+		routelocalWlTenDotTwo,
 	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
 	return state
 }
@@ -222,6 +230,10 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 			{expectedOrder[1], []string{expectedOrder[1] + "-pol"}, []string{expectedOrder[1] + "-pol"}},
 			{expectedOrder[2], []string{expectedOrder[2] + "-pol"}, []string{expectedOrder[2] + "-pol"}},
 		},
+	).withRoutes(
+		// Routes for the local WEPs.
+		routelocalWlTenDotOne,
+		routelocalWlTenDotTwo,
 	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
 	return state
 }
@@ -281,6 +293,10 @@ func tierDisabledOrderState(tierOrders [3]float64, expectedOrder [3]string, tier
 		activeTiers,
 	).withTotalActivePolicies(
 		activeTiers,
+	).withRoutes(
+		// Routes for the local WEPs.
+		routelocalWlTenDotOne,
+		routelocalWlTenDotTwo,
 	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
 	return state
 }
@@ -306,6 +322,10 @@ var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotTwo,
+	routelocalWlTenDotThree,
 ).withName("ep2 local, policy")
 
 // localEpsWithPolicyAndTier contains both of the above endpoints, which have some
@@ -344,6 +364,11 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+	routelocalWlTenDotThree,
 ).withName("2 local, overlapping IPs & a policy")
 
 // One local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
@@ -353,6 +378,17 @@ var localEp1WithNode = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.1",
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIP,
+	routelocalWlTenDotTwoWithNodeIP,
 ).withName("Local endpoint 1 with a host IP")
 
 var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
@@ -361,6 +397,17 @@ var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.2", "10.0.0.1",
 ).withIPSecBinding(
 	"192.168.0.2", "10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.2/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.2",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIPTwo,
+	routelocalWlTenDotTwoWithNodeIPTwo,
 ).withName("Local endpoint 1 with a (different) host IP")
 
 // Two nodes sharing an IP but only one of them has endpoints so the other will get ignored.
@@ -371,6 +418,17 @@ var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.1",
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIP,
+	routelocalWlTenDotTwoWithNodeIP,
 ).withName("Local endpoint 1 with pair of hosts sharing IP")
 
 var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
@@ -381,6 +439,17 @@ var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.1",
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIP,
+	routelocalWlTenDotTwoWithNodeIP,
 ).withName("Local endpoint 1 with triple of hosts sharing IP")
 
 var commRemoteWlEp1 = WorkloadEndpoint{
@@ -473,6 +542,17 @@ var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.2",
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.3",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlTenDotThreeWithNodeIP,
 ).withName("Local endpoint 2 with a host IP")
 
 // Endpoint 2 using endpoint 1's key (so we can simulate changing an endpoint's IPs.
@@ -511,6 +591,18 @@ var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.3",
 ).withIPSecBlacklist(
 	"10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIP,
+	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlTenDotThreeWithNodeIP,
 ).withName("Local endpoints 1 and 2 sharing an IP with a host IP defined")
 
 // Endpoint 1, 2 and 3 sharing an IP with a node too.
@@ -538,6 +630,19 @@ var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
 	[]mock.TierInfo{},
 ).withIPSecBlacklist(
 	"10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIP,
+	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlTenDotThreeWithNodeIP,
+	routelocalWlTenDotFourWithNodeIP,
 ).withName("3 endpoints sharing an IP with a host IP defined")
 
 var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates(
@@ -565,6 +670,19 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	[]mock.TierInfo{},
 ).withIPSecBlacklist(
 	"10.0.0.2",
+).withRoutes(
+	proto.RouteUpdate{
+		Type:        proto.RouteType_LOCAL_HOST,
+		IpPoolType:  proto.IPPoolType_NONE,
+		Dst:         "192.168.0.1/32",
+		DstNodeName: "localhostname",
+		DstNodeIp:   "192.168.0.1",
+	},
+	// Routes for the local WEPs.
+	routelocalWlTenDotOneWithNodeIP,
+	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlTenDotThreeWithNodeIP,
+	routelocalWlTenDotFourWithNodeIP,
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
 var remoteWlEpKey3 = WorkloadEndpointKey{remoteHostname, "orch", "wl3", "ep3"}
@@ -675,6 +793,10 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 		Key:      remoteWlEpKey3,
 		Endpoint: &remoteWlEp3,
 	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
 ).withName("1 local and 1 remote")
 
 var remoteEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(

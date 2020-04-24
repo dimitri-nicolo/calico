@@ -20,6 +20,8 @@ package calc_test
 import (
 	"fmt"
 	"os"
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -29,12 +31,14 @@ import (
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/set"
+
 	. "github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
 // Each entry in baseTests contains a series of states to move through (defined in
@@ -268,6 +272,10 @@ var baseTests = []StateList{
 
 		// Add it back again.
 		vxlanWithBlock,
+
+		// Adding/removing IPv6 pool should cause no problems.
+		vxlanWithIPv6Resources,
+		vxlanWithBlock,
 	},
 	{
 		// This sequence switches the IP pool between VXLAN and IPIP.
@@ -323,6 +331,62 @@ var baseTests = []StateList{
 		// Add it back again.
 		vxlanWithMAC,
 	},
+	{
+		// Test L3 route resolver in node resource mode.
+		// Note: the test logic below auto-enables the Node resources flag if it detects any states with
+		// Node resources (and the route resolver ignores whichever datatype it expects to be disabled).
+		// Hence, we have to use all Node resource-based states or all host IP-base ones.
+		vxlanWithBlockNodeRes,
+		vxlanLocalBlockWithBorrowsNodeRes,
+		vxlanLocalBlockWithBorrowsCrossSubnetNodeRes,
+		vxlanLocalBlockWithBorrowsDifferentSubnetNodeRes,
+		vxlanWithBlockNodeRes,
+	},
+	{
+		// Test L3 route resolver in node resource mode using WorkloadIPs as the route source.
+		// This test starts with a single remote workload, then moves to two remote workloads with the same
+		// IP address on different nodes, and then back to a single workload.
+		vxlanWithWEPIPs,
+		vxlanWithWEPIPsAndWEP,
+		vxlanWithWEPIPsAndWEPDuplicate,
+		vxlanWithWEPIPsAndWEP,
+	},
+	{
+		// Test corner case where the IP pool and block share a /32.
+		// Should be able to add or remove the block or pool in either order and get the same result.
+		vxlanSlash32,
+		vxlanSlash32NoBlock,
+		vxlanSlash32NoPool,
+		vxlanSlash32,
+		vxlanSlash32NoPool,
+		vxlanSlash32NoBlock,
+		vxlanSlash32,
+	},
+	{
+		// Corner case where there's a remote workload and a local WEP with overlapping IPs.
+		vxlanLocalBlockWithBorrows,
+		vxlanLocalBlockWithBorrowsLocalWEP,
+		vxlanLocalBlockWithBorrows,
+		vxlanLocalBlockWithBorrowsLocalWEP,
+	},
+	{
+		// Corner case: host is inside an IP pool (used to influence NAT outgoing behaviour).
+		vxlanWithBlock,
+		hostInIPPool,
+		vxlanWithBlock,
+	},
+	{
+		// Corner case: hosts with duplicate IPs.
+		vxlanWithBlock,
+		vxlanWithBlockDupNodeIP,
+		vxlanWithBlock,
+	},
+	{
+		// Corner case: hosts with duplicate IPs; scenario where we add a host with a dup IP and then remove the
+		// original host.
+		vxlanWithBlockDupNodeIP,
+		vxlanWithDupNodeIPRemoved,
+	},
 
 	// Egress IP states.
 	{
@@ -332,6 +396,8 @@ var baseTests = []StateList{
 		endpointWithoutProfileEgressGateway,
 	},
 }
+
+var logOnce sync.Once
 
 // license is a mocked-up interface which provides a simple version of the licensing repo's
 // "monitor" interface. There are two concrete instances of the interface: licenseTiersEnabled
@@ -370,7 +436,9 @@ func testExpanders() (testExpanders []func(baseTest StateList) (desc string, map
 	}
 
 	if os.Getenv("DISABLE_TEST_EXPANSION") == "true" {
-		log.Info("Test expansion disabled")
+		logOnce.Do(func() {
+			log.Info("Test expansion disabled")
+		})
 		return
 	}
 	testExpanders = append(testExpanders,
@@ -463,6 +531,8 @@ func describeAsyncTests(baseTests []StateList, l license) {
 					conf.IPSecPSKFile = "/proc/1/cmdline"
 					conf.IPSecIKEAlgorithm = "somealgo"
 					conf.IPSecESPAlgorithm = "somealgo"
+					conf.SetUseNodeResourceUpdates(test.UsesNodeResources())
+					conf.RouteSource = test.RouteSource()
 					outputChan := make(chan interface{})
 					lookupsCache := NewLookupsCache()
 					asyncGraph := NewAsyncCalcGraph(conf, l, []chan<- interface{}{outputChan}, nil, lookupsCache)
@@ -565,7 +635,8 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(mockDataplane.ActiveVTEPs()).To(Equal(state.ExpectedVTEPs),
 		"Active VTEPs were incorrect after moving to state: %v",
 		state.Name)
-	Expect(mockDataplane.ActiveRoutes()).To(Equal(state.ExpectedRoutes),
+	// Comparing stringified versions of the routes here so that, on failure, we get much more readable output.
+	Expect(stringifyRoutes(mockDataplane.ActiveRoutes())).To(Equal(stringifyRoutes(state.ExpectedRoutes)),
 		"Active routes were incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.EndpointToPolicyOrder()).To(Equal(state.ExpectedEndpointPolicyOrder),
@@ -594,6 +665,16 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 			"IPsec blacklist incorrect after moving to state: %v",
 			state.Name)
 	}
+}
+
+func stringifyRoutes(routes set.Set) []string {
+	out := make([]string, 0, routes.Len())
+	routes.Iter(func(item interface{}) error {
+		out = append(out, fmt.Sprintf("%+v", item))
+		return nil
+	})
+	sort.Strings(out)
+	return out
 }
 
 type flushStrategy int
@@ -627,6 +708,8 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		conf.FelixHostname = localHostname
 		conf.VXLANEnabled = true
 		conf.BPFEnabled = true
+		conf.SetUseNodeResourceUpdates(expandedTest.UsesNodeResources())
+		conf.RouteSource = expandedTest.RouteSource()
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
@@ -727,7 +810,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		// We don't need to check for ordering here since the cached remote endpoints could
 		// be returned in any order. Hence the use of "ConsistOf" instead of "Equal".
 		Expect(getCachedRemoteEndpoints()).To(ConsistOf(state.ExpectedCachedRemoteEndpoints),
-			"Remote endpoints are cached: %v\n%+v",
+			"Remote endpoints are cached: %v",
 			state.Name)
 	}))
 }
