@@ -59,6 +59,8 @@ var (
 		Name: "felix_route_table_per_iface_sync_seconds",
 		Help: "Time taken to sync each interface",
 	})
+
+	defaultCidr, _ = ip.ParseCIDROrIP("0.0.0.0/0")
 )
 
 func init() {
@@ -98,12 +100,17 @@ type L2Target struct {
 	GW ip.Addr
 }
 
+type NextHop struct {
+	Gw        ip.Addr
+	LinkIndex int
+}
+
 type Target struct {
 	Type      TargetType
 	CIDR      ip.CIDR
 	GW        ip.Addr
 	DestMAC   net.HardwareAddr
-	MultiPath []ip.Addr
+	MultiPath []NextHop
 }
 
 func (t Target) Equal(t2 Target) bool {
@@ -118,6 +125,8 @@ func (t Target) RouteType() int {
 		return syscall.RTN_BLACKHOLE
 	case TargetTypeProhibit:
 		return syscall.RTN_PROHIBIT
+	case TargetTypeUnreachable:
+		return syscall.RTN_UNREACHABLE
 	default:
 		return syscall.RTN_UNICAST
 	}
@@ -143,7 +152,7 @@ const (
 	updateTypeDelta
 )
 
-func (t Target) EqualGWOrMultiPath(linkIndex int, r netlink.Route) bool {
+func (t Target) EqualGWOrMultiPath(r netlink.Route) bool {
 	if t.GW != nil {
 		if !r.Gw.Equal(t.GW.AsNetIP()) {
 			return false
@@ -159,10 +168,10 @@ func (t Target) EqualGWOrMultiPath(linkIndex int, r netlink.Route) bool {
 	}
 	for i, tm := range t.MultiPath {
 		rm := r.MultiPath[i]
-		if rm.LinkIndex != linkIndex {
+		if rm.LinkIndex != tm.LinkIndex {
 			return false
 		}
-		if !rm.Gw.Equal(tm.AsNetIP()) {
+		if !rm.Gw.Equal(tm.Gw.AsNetIP()) {
 			return false
 		}
 	}
@@ -518,7 +527,7 @@ ifaceLoop:
 		fullResync := ia == updateTypeFullResync
 		for retry := 0; retry < maxApplyRetries; retry++ {
 			var err error
-			if r.vxlan {
+			if r.vxlan && ifaceName != InterfaceNone {
 				// Sync L2 routes first.
 				err = r.syncL2RoutesForLink(ifaceName)
 			}
@@ -617,6 +626,11 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool) error {
 	defer func() {
 		cidrsToTarget := r.ifaceNameToTargets[ifaceName]
 		for _, route := range routesToDelete {
+			if route.Dst == nil {
+				// Default route has route.Dst set to nil.
+				logCxt.Warnf("route dst is nil continue")
+				continue
+			}
 			if cidr := ip.CIDRFromIPNet(route.Dst); cidr == nil {
 				// No parseable CIDR destination in route.
 			} else if _, ok := cidrsToTarget[cidr]; !ok {
@@ -649,8 +663,10 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool) error {
 	// Delete the combined set of routes.
 	for _, route := range routesToDelete {
 		if err := nl.RouteDel(&route); err != nil {
-			logCxt.WithError(err).Warn("Failed to delete route")
+			logCxt.WithError(err).Warnf("Failed to delete route %v", route)
 			updatesFailed = true
+		} else {
+			logCxt.WithField("route", route).Debug("Deleted route")
 		}
 	}
 
@@ -662,8 +678,10 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool) error {
 		// to be cleaned up.  (No-op if there are no pending deletes.)
 		r.waitForPendingConntrackDeletion(target.CIDR.Addr())
 		if err := nl.RouteAdd(&route); err != nil {
-			logCxt.WithError(err).Warn("Failed to add route")
+			logCxt.WithError(err).Warnf("Failed to add route %v", route)
 			updatesFailed = true
+		} else {
+			logCxt.WithField("route", route).Debug("Added route")
 		}
 		if r.ipVersion == 4 && target.DestMAC != nil {
 			// TODO(smc) clean up/sync old ARP entries
@@ -731,6 +749,9 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 	var linkIndex int
 	if linkAttrs != nil {
 		linkIndex = linkAttrs.Index
+	} else {
+		// For InterfaceNone
+		linkIndex = 0
 	}
 	cidr := target.CIDR
 	ipNet := cidr.ToIPNet()
@@ -754,9 +775,9 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 		hops := []*netlink.NexthopInfo{}
 		for _, h := range target.MultiPath {
 			if target.Type != TargetTypeVXLAN {
-				hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP()})
+				hops = append(hops, &netlink.NexthopInfo{LinkIndex: h.LinkIndex, Gw: h.Gw.AsNetIP()})
 			} else {
-				hops = append(hops, &netlink.NexthopInfo{LinkIndex: linkAttrs.Index, Gw: h.AsNetIP(), Flags: int(netlink.FLAG_ONLINK)})
+				hops = append(hops, &netlink.NexthopInfo{LinkIndex: h.LinkIndex, Gw: h.Gw.AsNetIP(), Flags: int(netlink.FLAG_ONLINK)})
 			}
 		}
 		route.MultiPath = hops
@@ -822,6 +843,8 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 		return nil, filteredErr
 	}
 
+	logCxt.WithField("programmedRoutes", programmedRoutes).Debug("get filtered routes")
+
 	// Track any CIDRs in the route table that should not have been programmed.
 	oldCIDRs := set.New()
 	defer oldCIDRs.Iter(func(item interface{}) error {
@@ -841,10 +864,13 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 	alreadyCorrectCIDRs := set.New()
 	leaveDirty := false
 	for _, route := range programmedRoutes {
-		logCxt.Debugf("Processing route: %v %v %v", route.Table, route.LinkIndex, route.Dst)
+		logCxt.WithField("route", route).Debug("Processing route")
 		var dest ip.CIDR
 		if route.Dst != nil {
 			dest = ip.CIDRFromIPNet(route.Dst)
+		} else {
+			// This is a default route
+			dest = defaultCidr
 		}
 		logCxt := logCxt.WithField("dest", dest)
 		// Check if we should remove routes not added by us
@@ -869,19 +895,13 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 			if expectedTargetFound && expectedTarget.RouteType() != route.Type {
 				routeProblems = append(routeProblems, "incorrect type")
 			}
-			if (route.Gw == nil && expectedTarget.GW != nil) ||
-				(route.Gw != nil && expectedTarget.GW == nil) ||
-				(route.Gw != nil && expectedTarget.GW != nil && !route.Gw.Equal(expectedTarget.GW.AsNetIP())) {
-				routeProblems = append(routeProblems, "incorrect gateway")
+			if expectedTargetFound {
+				if linkAttrs != nil && !expectedTarget.EqualGWOrMultiPath(route) {
+					routeProblems = append(routeProblems, "GW or multipath incorrect")
+				}
 			}
 		}
 
-		// Check if GW or Multipath info has changed.
-		if t, ok := expectedTargets[dest]; ok {
-			if linkAttrs != nil && !t.EqualGWOrMultiPath(linkAttrs.Index, route) {
-				routeProblems = append(routeProblems, "GW or multipath incorrect")
-			}
-		}
 		if len(routeProblems) == 0 {
 			logCxt.Debug("Route is correct")
 			alreadyCorrectCIDRs.Add(dest)
@@ -893,7 +913,8 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 			leaveDirty = true
 			continue
 		}
-		logCxt.WithField("routeProblems", routeProblems).Info("Remove old route")
+		logCxt.WithField("routeProblems", routeProblems).Infof("Remove old route %#v with expected target %#v",
+			route, expectedTarget)
 		routesToDelete = append(routesToDelete, route)
 	}
 
@@ -930,9 +951,9 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 
 func (r *RouteTable) syncL2RoutesForLink(ifaceName string) error {
 	logCxt := r.logCxt.WithField("ifaceName", ifaceName)
-	logCxt.Debug("Syncing interface L2 routes")
+	logCxt.Info("Syncing interface L2 routes")
 	if updatedTargets, ok := r.pendingIfaceNameToL2Targets[ifaceName]; ok {
-		logCxt.Debug("Have updated targets.")
+		logCxt.WithField("updatedTarget", updatedTargets).Info("Have updated target")
 		if updatedTargets == nil {
 			delete(r.ifaceNameToL2Targets, ifaceName)
 		} else {
@@ -968,24 +989,29 @@ func (r *RouteTable) syncL2RoutesForLink(ifaceName string) error {
 	// For each existing neighbor, if it is not present in the expected set, then remove it.
 	var updatesFailed bool
 	for _, existing := range existingNeigh {
-		if existing.Family == syscall.AF_BRIDGE {
-			// FDB entries have family set to bridge.
-			if _, ok := expectedFDBEntries[existing.IP.String()]; !ok {
-				logCxt.WithField("neighbor", existing).Info("Removing old neighbor entry (FDB)")
-				if err := netlink.NeighDel(&existing); err != nil {
-					updatesFailed = true
-					continue
-				}
+		if _, ok := expectedFDBEntries[existing.IP.String()]; !ok {
+			logCxt.WithField("neighbor", existing).Info("Removing old neighbor entry (FDB)")
+			// FDB entry for this neighbor.
+			n := &netlink.Neigh{
+				LinkIndex:    existing.LinkIndex,
+				State:        netlink.NUD_PERMANENT,
+				Family:       syscall.AF_BRIDGE,
+				Flags:        netlink.NTF_SELF,
+				IP:           existing.IP,
+				HardwareAddr: existing.HardwareAddr,
 			}
-		} else {
-			if _, ok := expectedARPEntries[existing.IP.String()]; !ok {
-				logCxt.WithField("neighbor", existing).Info("Removing old neighbor entry (ARP)")
-				if err := netlink.NeighDel(&existing); err != nil {
-					updatesFailed = true
-					continue
-				}
+			if err := netlink.NeighDel(n); err != nil {
+				logCxt.WithError(err).Infof("Failed to delete FDB entry %v", n)
+				updatesFailed = true
+				continue
 			}
-
+		}
+		if _, ok := expectedARPEntries[existing.IP.String()]; !ok {
+			logCxt.WithField("neighbor", existing).Info("Removing old neighbor entry (ARP)")
+			if err := netlink.NeighDel(&existing); err != nil {
+				updatesFailed = true
+				continue
+			}
 		}
 	}
 
