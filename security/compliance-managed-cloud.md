@@ -80,7 +80,7 @@ Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.
    where:
    - `additionalSources`: Section where EKS Cloudwatch logs are specified.
    - `eksCloudwatchLog`: Configuration section containing EKS Cloudwatch logs.
-   - `fetchInterval`: Interval in seconds for {{site.prodname}} to get logs from Cloudwatch. Default: 600 seconds. This value works for most use cases.
+   - `fetchInterval`: Interval in seconds for {{site.prodname}} to get logs from Cloudwatch. Default: 60 seconds, this fetches 1MB every 60 seconds, adjust it based number on CRUD operations performed on cluster resource.
    - `groupName`: Name of the `Log Group` (value from "Enable audit logs in EKS")
    - `region`: AWS region where EKS cluster is hosted (value from "Enable audit logs in EKS")
    - `streamPrefix`: Prefix of `Log Stream` (value from "Enable audit logs in EKS")
@@ -95,7 +95,7 @@ Amazon EKS writes Kubernetes audit logs to [Amazon Cloudwatch logs](https://aws.
    spec:
      additionalSources:
        eksCloudwatchLog:
-         fetchInterval: "600"
+         fetchInterval: 60
          groupName: /aws/eks/mitch-eks-kube-audit-log-forwarder/cluster
          region: us-west-2
          streamPrefix: kube-apiserver-audit-

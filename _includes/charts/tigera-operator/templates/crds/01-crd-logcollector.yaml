@@ -100,8 +100,9 @@ spec:
                       description: Cloudwatch audit log stream prefix, default 'kube-apiserver-audit-'.
                       type: string
                     fetchInterval:
-                      description: Log fetch interval expressed in seconds, default 600.
-                      type: string
+                      description: Log fetch interval expressed in seconds, default 60.
+                      format: int32
+                      type: integer
                   required:
                   - region
                   - groupName
