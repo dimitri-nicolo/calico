@@ -3,11 +3,11 @@ module github.com/tigera/es-proxy
 go 1.13
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200422041113-2b9f3dbe5ff3
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200423003215-56e38b498404
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200425051643-77c91b7700ee
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200424213350-c94519782392
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200421235523-112604167a7b
-	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200423084306-f81d433fe3cd
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200423190432-4bed8a5ae163
+	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200425082411-f550e294e52e
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200424190439-3147614502e2
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
