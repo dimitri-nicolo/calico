@@ -154,6 +154,17 @@ load_image kind-worker
 load_image kind-worker2
 load_image kind-worker3
 
+for image in calico/cni:master calico/pod2daemon-flexvol:master; do
+    docker pull ${image}
+    rm -f image.tar
+    docker save --output image.tar ${image}
+    for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
+	docker cp image.tar ${node}:/image.tar
+	docker exec -t ${node} ctr -n=k8s.io images import /image.tar
+	docker exec -t ${node} rm /image.tar
+    done
+done
+
 # Install pull secret so we can pull the right calicoctl.
 ${kubectl} -n kube-system create secret generic cnx-pull-secret \
    --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
