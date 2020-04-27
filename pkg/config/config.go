@@ -82,7 +82,8 @@ type Config struct {
 	// Option used for testing and debugging to set the license polling interval to a shorter period.
 	DebugUseShortPollIntervals bool `default:"false" split_words:"true"`
 
-	VoltronServiceURL string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
+	MultiClusterForwardingCA       string `default:"/manager-tls/cert" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct

@@ -28,8 +28,6 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 
-	"k8s.io/client-go/rest"
-
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/pkg/srv"
@@ -522,15 +520,13 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.controllerStates["ManagedCluster"] = &controllerState{
 			controller: managedcluster.New(
 				func(clustername string) (kubernetes.Interface, error) {
-					kubeconfig.Host = cfg.Controllers.ManagedCluster.VoltronServiceURL
+					kubeconfig.Host = cfg.Controllers.ManagedCluster.MultiClusterForwardingEndpoint
+					kubeconfig.CAFile = cfg.Controllers.ManagedCluster.MultiClusterForwardingCA
 					kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 						return &addHeaderRoundTripper{
 							headers: map[string][]string{"x-cluster-id": {clustername}},
 							rt:      rt,
 						}
-					}
-					kubeconfig.TLSClientConfig = rest.TLSClientConfig{
-						Insecure: true,
 					}
 					return kubernetes.NewForConfig(kubeconfig)
 				},

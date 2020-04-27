@@ -113,9 +113,10 @@ type ElasticsearchCfgControllerCfg struct {
 
 type ManagedClusterControllerConfig struct {
 	GenericControllerConfig
-	RESTConfig        *restclient.Config
-	VoltronServiceURL string
-	ElasticConfig     ElasticsearchCfgControllerCfg
+	RESTConfig                     *restclient.Config
+	MultiClusterForwardingEndpoint string
+	MultiClusterForwardingCA       string
+	ElasticConfig                  ElasticsearchCfgControllerCfg
 }
 
 type RunConfigController struct {
@@ -373,7 +374,8 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ManagedCluster.ElasticConfig.NumberOfWorkers = envCfg.ManagedClusterElasticsearchConfigurationWorkers
-		rc.ManagedCluster.VoltronServiceURL = envCfg.VoltronServiceURL
+		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
+		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
 		if err != nil {
 			log.WithError(err).Fatal("failed to build kubernetes client config")
