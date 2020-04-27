@@ -117,6 +117,10 @@ spec:
     port: 9081
     targetPort: 9081
     protocol: TCP
+  - name: calico-bgp-metrics-port
+    port: 9900
+    targetPort: 9900
+    protocol: TCP
 ---
 
 # This manifest creates a network policy to allow traffic to Alertmanager
@@ -242,6 +246,10 @@ spec:
     - kube-system
   endpoints:
   - port: calico-metrics-port
+    interval: 5s
+    scrapeTimeout: 5s
+    honorLabels: true
+  - port: calico-bgp-metrics-port
     interval: 5s
     scrapeTimeout: 5s
     honorLabels: true
