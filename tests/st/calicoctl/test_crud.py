@@ -2697,6 +2697,30 @@ class InvalidData(TestBase):
         '  resourceVersion: ' % (API_VERSION, testdata['kind'])
     )
 
+    def check_only_default_profile_returned(self, testdata):
+        out = calicoctl("get %s --output=yaml" % testdata['kind'])
+        out.assert_output_contains(
+        'apiVersion: %s\n'
+        'items:\n'
+        '- apiVersion: %s\n'
+        '  kind: %s\n'
+        '  metadata:\n'
+        '    creationTimestamp: null\n'
+        '    name: projectcalico-default-allow\n'
+        '    resourceVersion: "0"\n'
+        '  spec:\n'
+        '    egress:\n'
+        '    - action: Allow\n'
+        '      destination: {}\n'
+        '      source: {}\n'
+        '    ingress:\n'
+        '    - action: Allow\n'
+        '      destination: {}\n'
+        '      source: {}\n'
+        'kind: %sList\n'
+        'metadata:\n'
+        '  resourceVersion: ' % (API_VERSION, API_VERSION, testdata['kind'], testdata['kind'])
+    )
 
     @parameterized.expand(testdata)
     def test_invalid_profiles_rejected(self, name, testdata, error):
@@ -2704,7 +2728,12 @@ class InvalidData(TestBase):
         log_and_run("cat << EOF > %s\n%s" % ("/tmp/testfile.yaml", testdata))
         ctl = calicoctl("create", testdata)
 
-        self.check_no_data_in_store(testdata)
+        # Profiles are a special case. Getting profiles
+        # always returns the default-allow profile.
+        if testdata['kind'] == 'Profile':
+            self.check_only_default_profile_returned(testdata)
+        else:
+            self.check_no_data_in_store(testdata)
 
         # Assert that we saw the correct error being reported
         ctl.assert_error(error)
@@ -2717,7 +2746,11 @@ class InvalidData(TestBase):
 
         for data in testdata:
             if data['metadata']['name'] in errors:
-                self.check_no_data_in_store(data)
+                if data['kind'] == 'Profile':
+                    self.check_only_default_profile_returned(data)
+                else:
+                    self.check_no_data_in_store(data)
+
 
         # Assert that we saw the correct error being reported
         for value in errors.values():
