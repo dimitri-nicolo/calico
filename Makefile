@@ -265,7 +265,7 @@ endif
 		( echo "Error: $(BINDIR)/apiserver was not statically linked"; false ) )'
 
 # Build cnx-apiserver docker image.
-# Recursive make call here, forces make to rebuild dependencies
+# Recursive make tigera/cnx-apiserver forces make to rebuild dependencies again
 image:
 	make tigera/cnx-apiserver
 
