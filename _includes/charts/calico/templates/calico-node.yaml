@@ -395,6 +395,7 @@ spec:
               - /bin/calico-node
               - -bird-ready
               - -felix-ready
+              - -bgp-metrics-ready
 {{- else }}
             exec:
               command:
