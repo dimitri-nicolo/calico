@@ -127,7 +127,7 @@ WINDOWS_ARCHIVE_FILES := \
 # Variables used by the tests
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 ST_TO_RUN?=tests/st/
-K8ST_TO_RUN?=tests/
+
 # Can exclude the slower tests with "-a '!slow'"
 ST_OPTIONS?=
 
@@ -455,11 +455,12 @@ dual-tor-cleanup:
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
 ##
-## K8ST_RIG can be "dual-stack" or "vanilla".  "dual-stack" means set
+## K8ST_RIG can be "dual_stack" or "vanilla".  "dual_stack" means set
 ## up for dual stack testing; it requires KIND changes that have not
 ## yet been merged to master, and runs kube-proxy in IPVS mode.
 ## "vanilla" means use vanilla upstream master KIND.
-K8ST_RIG?=dual-stack
+K8ST_RIG?=dual_stack
+K8ST_TO_RUN?=-A $(K8ST_RIG)
 .PHONY: k8s-test
 k8s-test:
 	$(MAKE) kind-k8st-setup

@@ -13,13 +13,13 @@ TEST_DIR=./tests/k8st
 : ${KIND:=$TEST_DIR/kind}
 
 # type of rig to set up
-: ${K8ST_RIG:=dual-stack}
+: ${K8ST_RIG:=dual_stack}
 
 # Set config variables needed for ${kubectl}.
 export KUBECONFIG=~/.kube/kind-config-kind
 
 function dual_stack {
-    test "${K8ST_RIG}" = dual-stack
+    test "${K8ST_RIG}" = dual_stack
 }
 
 function checkModule(){
