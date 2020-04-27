@@ -75,7 +75,10 @@ func (aggr *routeCountAggregator) computeMetrics(stats *bgp.Stats) error {
 		log.Errorf("Failed to extract peers: %+v", stats.Data)
 		return fmt.Errorf("Failed to extract peers: %+v", stats.Data)
 	}
-	log.Debugf("Compute route count metrics for this node using the given peers: %+v", peers)
+	fields := log.Fields{
+		"peers": peers,
+	}
+	log.WithFields(fields).Debugf("Compute route count metrics using peers")
 
 	// Tally up route counts for this node
 	routesImported := float64(0)

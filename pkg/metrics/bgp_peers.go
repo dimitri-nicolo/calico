@@ -51,7 +51,10 @@ func (aggr *peerCountAggregator) computeMetrics(stats *bgp.Stats) error {
 		log.Errorf("Failed to extract peers: %+v", stats.Data)
 		return fmt.Errorf("Failed to extract peers: %+v", stats.Data)
 	}
-	log.Debugf("Compute peer count metrics for the given peers: %+v", peers)
+	fields := log.Fields{
+		"peers": peers,
+	}
+	log.WithFields(fields).Debugln("Compute peer count metrics using peers")
 
 	// Create a table of BGP peer counts by status value
 	statusPeerCounts := map[string]float64{}

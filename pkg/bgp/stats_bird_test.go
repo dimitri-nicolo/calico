@@ -169,6 +169,82 @@ func Test_parsePeers(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "Successfully parse multiple peers",
+			args: args{
+				ipVer:    IPv4,
+				filename: "test_parsePeers.3.data",
+			},
+			want: []Peer{
+				Peer{
+					PeerIP:   "10.128.0.83",
+					PeerType: "node-to-node mesh",
+					State:    "up",
+					Since:    "06:31:30",
+					BGPState: "Established",
+					Info:     "",
+					Details: PeerDetails{
+						RouteCounts: PeerRouteCounts{
+							NumImported:  1,
+							NumExported:  1,
+							NumPreferred: 1,
+						},
+						ImportUpdateCounts: PeerImportUpdateCounts{
+							NumReceived: 2,
+							NumRejected: 0,
+							NumFiltered: 0,
+							NumIgnored:  1,
+							NumAccepted: 1,
+						},
+					},
+				},
+				Peer{
+					PeerIP:   "10.128.0.19",
+					PeerType: "global",
+					State:    "start",
+					Since:    "22:19:52",
+					BGPState: "Active",
+					Info:     "Socket: Connection refused",
+					Details: PeerDetails{
+						RouteCounts: PeerRouteCounts{
+							NumImported:  1,
+							NumExported:  0,
+							NumPreferred: 1,
+						},
+						ImportUpdateCounts: PeerImportUpdateCounts{
+							NumReceived: 1,
+							NumRejected: 0,
+							NumFiltered: 0,
+							NumIgnored:  0,
+							NumAccepted: 1,
+						},
+					},
+				},
+				Peer{
+					PeerIP:   "10.128.0.44",
+					PeerType: "node specific",
+					State:    "start",
+					Since:    "22:19:56",
+					BGPState: "Active",
+					Info:     "Socket: Connection closed",
+					Details: PeerDetails{
+						RouteCounts: PeerRouteCounts{
+							NumImported:  1,
+							NumExported:  0,
+							NumPreferred: 1,
+						},
+						ImportUpdateCounts: PeerImportUpdateCounts{
+							NumReceived: 4,
+							NumRejected: 0,
+							NumFiltered: 0,
+							NumIgnored:  3,
+							NumAccepted: 1,
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

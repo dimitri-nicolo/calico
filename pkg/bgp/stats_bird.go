@@ -62,9 +62,12 @@ func init() {
 
 	// We use ignoreRow regex as a catch all case, to match valid rows of output
 	// that we do not care about capturing or validating against.
-	// For example, the below row is an example of something we would ignore.
+	// For example, the below rows are all examples of lines we should ignore
+	// (but still match):
 	//    Route change stats:     received   rejected   filtered    ignored   accepted
-	regex.protocol.ignoreRow = regexp.MustCompile(`^(?:1006\-)?\s+[^:]+:\s+.+\s*$`)
+	//         Neighbor graceful restart active
+	//         Export updates:             52         16         32        ---          4
+	regex.protocol.ignoreRow = regexp.MustCompile(`^(?:1006\-)?\s+[^:]+[:]?\s+.+\s*$`)
 }
 
 // ParseError represents an error when parsing BIRD output. Using a custom error type
@@ -221,13 +224,8 @@ func parsePeers(ipVer Version, conn net.Conn) ([]Peer, error) {
 		line := scanner.Text()
 		log.Debugf("Read: %s\n", line)
 
-		// "0000" means end of data
-		if strings.HasPrefix(line, "0000") {
-			break
-		}
-
-		// We expect a single empty line in the output between peers
-		if isEmptyString(line) {
+		// We expect a single empty line in the output between peers (or end)
+		if isEmptyString(line) || strings.HasPrefix(line, "0000") {
 			// Given a non-empty output for a peer, we are ready to parse it
 			if !isEmptyString(peerOutput) {
 				if peer := parsePeerDetails(peerOutput, ipSeparator); peer != nil {
@@ -240,6 +238,11 @@ func parsePeers(ipVer Version, conn net.Conn) ([]Peer, error) {
 		} else {
 			// Otherwise, continue to collate lines of output for the current peer
 			peerOutput += (line + "\n")
+		}
+
+		// "0000" means end of data
+		if strings.HasPrefix(line, "0000") {
+			break
 		}
 
 		// Before reading the next line, adjust the time-out for
@@ -262,14 +265,11 @@ func parsePeerSummary(line, ipSeparator string, peer *Peer) bool {
 	// info (which will be columns > 6).
 	//
 	// Peer names will be of the format described by regex.protocol.summary.
-	log.Debugf("Parsing line: %s", line)
 	columns := strings.Fields(line)
 	if len(columns) < 6 {
-		log.Debugf("Not a valid line: fewer than 6 columns")
 		return false
 	}
 	if columns[1] != "BGP" {
-		log.Debugf("Not a valid line: protocol is not BGP")
 		return false
 	}
 
@@ -279,13 +279,11 @@ func parsePeerSummary(line, ipSeparator string, peer *Peer) bool {
 	// -  An IP address (with _ separating the octets)
 	sm := regex.protocol.summary.FindStringSubmatch(columns[0])
 	if len(sm) != 3 {
-		log.Debugf("Not a valid line: peer name '%s' is not correct format", columns[0])
 		return false
 	}
 	var ok bool
 	peer.PeerIP = strings.Replace(sm[2], "_", ipSeparator, -1)
 	if peer.PeerType, ok = bgpTypeMap[sm[1]]; !ok {
-		log.Debugf("Not a valid line: peer type '%s' is not recognized", sm[1])
 		return false
 	}
 
@@ -351,7 +349,6 @@ func ignoreRow(line string) bool {
 func parseRoutes(line string, prc *PeerRouteCounts) bool {
 	groups := regex.protocol.routes.FindStringSubmatch(line)
 	if groups == nil {
-		log.Debugf("Invalid output for routes section of BGP peer details")
 		return false
 	}
 
@@ -386,7 +383,6 @@ func parseRoutes(line string, prc *PeerRouteCounts) bool {
 func parseImportUpdates(line string, iuc *PeerImportUpdateCounts) bool {
 	groups := regex.protocol.importUpdates.FindStringSubmatch(line)
 	if groups == nil {
-		log.Debugf("Invalid output for import updates section of BGP peer details")
 		return false
 	}
 
@@ -405,12 +401,14 @@ func parseImportUpdates(line string, iuc *PeerImportUpdateCounts) bool {
 func applyParsers(line string, parsers []func(s string) bool) bool {
 	for _, parser := range parsers {
 		if parser(line) {
+			log.Debugf("Parsing line: '%s' ... passed", line)
 			return true
 		}
 	}
 	// If all parsers ran but none passed, then we consider the entire process
 	// to have failed (there was something unexpected about this particular
 	// line of text)
+	log.Debugf("Parsing line: '%s' ... failed", line)
 	return false
 }
 
