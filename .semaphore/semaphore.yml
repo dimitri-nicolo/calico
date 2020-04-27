@@ -39,9 +39,12 @@ blocks:
     - name: "make ci"
       commands:
       - make ci
-    - name: "make k8s-test"
+    - name: "make k8s-test (dual stack)"
       commands:
       - make k8s-test
+    - name: "make k8s-test (vanilla)"
+      commands:
+      - make k8s-test K8ST_RIG=vanilla
     - name: "make dual-tor-test"
       commands:
       - make dual-tor-test
