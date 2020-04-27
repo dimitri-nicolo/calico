@@ -8,7 +8,7 @@ LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 # Used only when doing local build
 LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
 
-build: tigera/cnx-apiserver
+build: image
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -264,8 +264,12 @@ endif
 	        grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 		( echo "Error: $(BINDIR)/apiserver was not statically linked"; false ) )'
 
+# Build cnx-apiserver docker image.
+# Recursive make tigera/cnx-apiserver forces make to rebuild dependencies again
+image:
+	make tigera/cnx-apiserver
+
 # Build the tigera/cnx-apiserver docker image.
-image: tigera/cnx-apiserver
 .PHONY: tigera/cnx-apiserver
 tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/apiserver
 	rm -rf docker-image/bin
