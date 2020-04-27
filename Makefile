@@ -447,13 +447,19 @@ dual-tor-cleanup:
 	STEPS=cleanup tests/k8st/dual-tor/dualtor.sh
 	rm ./kubectl
 
-## Run k8st in an existing k8s cluster
+## k8st: STs in a real Kubernetes cluster provisioned by KIND
 ##
 ## Note: if you're developing and want to see test output as it
 ## happens, instead of only later and if the test fails, add "-s
 ## --nocapture --nologcapture" to K8ST_TO_RUN.  For example:
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
+##
+## K8ST_RIG can be "dual-stack" or "vanilla".  "dual-stack" means set
+## up for dual stack testing; it requires KIND changes that have not
+## yet been merged to master, and runs kube-proxy in IPVS mode.
+## "vanilla" means use vanilla upstream master KIND.
+K8ST_RIG?=dual-stack
 .PHONY: k8s-test
 k8s-test:
 	$(MAKE) kind-k8st-setup
@@ -466,6 +472,7 @@ kind-k8st-setup: cnx-node.tar
 	chmod +x ./kubectl
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
 	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
+	K8ST_RIG=$(K8ST_RIG) \
 	tests/k8st/create_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
