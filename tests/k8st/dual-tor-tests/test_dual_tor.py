@@ -607,3 +607,15 @@ class TestRestartCalicoNodes(TestBase):
 
             # Wait another 2s before moving on.
             time.sleep(2)
+
+
+TestFailoverPodIP.vanilla = False
+TestFailoverPodIP.dual_stack = False
+TestFailoverServiceIP.vanilla = False
+TestFailoverServiceIP.dual_stack = False
+TestFailoverNodePort.vanilla = False
+TestFailoverNodePort.dual_stack = False
+TestFailoverHostAccess.vanilla = False
+TestFailoverHostAccess.dual_stack = False
+TestRestartCalicoNodes.vanilla = False
+TestRestartCalicoNodes.dual_stack = False
