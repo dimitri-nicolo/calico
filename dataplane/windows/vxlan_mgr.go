@@ -64,6 +64,14 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 			logrus.WithField("msg", msg).Debug("VXLAN data plane received route update")
 			m.routesByDest[msg.Dst] = msg
 			m.dirty = true
+		} else {
+			// Same processing as for RouteRemove, in case we had this destination for a
+			// VXLAN route but it has now changed to non-VXLAN.
+			if _, ok := m.routesByDest[msg.Dst]; ok {
+				logrus.WithField("msg", msg).Debug("VXLAN data plane received non-VXLAN update for previous VXLAN route")
+				m.dirty = true
+			}
+			delete(m.routesByDest, msg.Dst)
 		}
 	case *proto.RouteRemove:
 		if _, ok := m.routesByDest[msg.Dst]; ok {
