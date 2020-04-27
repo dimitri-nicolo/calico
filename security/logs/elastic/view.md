@@ -41,3 +41,5 @@ under the following indices.
 - **Audit logs**: `tigera_secure_ee_audit*`
 
 - **DNS logs**: `tigera_secure_ee_dns*`
+
+- **BGP logs**: `tigera_secure_ee_bgp*`

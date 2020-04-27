@@ -12,6 +12,7 @@ In this section we will elaborate on the specifics of the collected data and how
 * [Flow logs](flow)
 * [Audit logs](ee-audit)
 * [DNS logs](dns)
+* [BGP logs](bgp)
 * [Flow log visualization](view#view-in-mgr)
 * [Kibana](view#accessing-logs-from-kibana)
 * [Elasticsearch API](view#accessing-logs-from-the-elasticsearch-api)
