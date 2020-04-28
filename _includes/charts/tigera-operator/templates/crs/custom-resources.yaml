@@ -11,6 +11,10 @@ apiVersion: operator.tigera.io/v1
 kind: Installation
 metadata:
   name: default
+{{ if .Values.techPreview.nodeApparmorPolicyName }}
+  annotations:
+    "tech-preview.operator.tigera.io/node-apparmor-profile": {{ .Values.techPreview.nodeApparmorPolicyName | quote}}
+{{ end }}
 spec:
 {{ $installSpec | toYaml | indent 2 }}
 

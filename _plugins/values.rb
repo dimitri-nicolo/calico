@@ -474,6 +474,11 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       tag: #{versions["configmap-reload"].version}
 
     includeCoreChart: false
+
+    techPreviewOptions:
+      # set to name of desired apparmor policy for the calico-node container and
+      # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
+      nodeApparmorPolicyName: ""
     EOF
   else 
     versionsYml = <<~EOF
