@@ -63,6 +63,8 @@ var _ = Describe("EgressIPManager", func() {
 				links: []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "egress.calico"}}},
 			},
 		)
+
+		manager.vxlanDeviceLinkIndex = 2
 	})
 
 	It("should set Node IP and configure vxlan device", func() {
@@ -73,10 +75,23 @@ var _ = Describe("EgressIPManager", func() {
 		Expect(manager.NodeIP).To(Equal(net.ParseIP("172.0.0.2")))
 		err := manager.configureVXLANDevice(50)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(manager.vxlanDeviceLinkIndex).To(Equal(6))
 	})
 
 	checkSetMember := func(id string, members []string) {
 		Expect(manager.activeEgressIPSet[id]).To(Equal(set.FromArray(members)))
+	}
+
+	multiPath := func(ips []string) []routetable.NextHop {
+		multipath := []routetable.NextHop{}
+
+		for _, e := range ips {
+			multipath = append(multipath, routetable.NextHop{
+				Gw:        ip.FromString(e),
+				LinkIndex: manager.vxlanDeviceLinkIndex,
+			})
+		}
+		return multipath
 	}
 
 	Describe("with multiple ipsets and endpoints update", func() {
@@ -148,11 +163,12 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(rr.hasRule(100, "10.0.240.0/32", 0x200, 1)).To(BeTrue())
-			factory.Table(1).checkRoutes("egress.calico", []routetable.Target{{
+			factory.Table(1).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
 				Type:      routetable.TargetTypeVXLAN,
 				CIDR:      defaultCidr,
-				MultiPath: []ip.Addr{ip.FromString("10.0.0.1"), ip.FromString("10.0.0.2")},
+				MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 			}})
+			factory.Table(1).checkRoutes("egress.calico", nil)
 			factory.Table(1).checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
@@ -167,10 +183,10 @@ var _ = Describe("EgressIPManager", func() {
 			})
 
 			Expect(rr.hasRule(100, "10.0.241.0/32", 0x200, 2)).To(BeTrue())
-			factory.Table(2).checkRoutes("egress.calico", []routetable.Target{{
+			factory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
 				Type:      routetable.TargetTypeVXLAN,
 				CIDR:      defaultCidr,
-				MultiPath: []ip.Addr{ip.FromString("10.0.1.1"), ip.FromString("10.0.1.2")},
+				MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
 			}})
 			factory.Table(2).checkL2Routes("egress.calico", []routetable.L2Target{
 				{
@@ -195,10 +211,10 @@ var _ = Describe("EgressIPManager", func() {
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			factory.Table(2).checkRoutes("egress.calico", []routetable.Target{{
+			factory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
 				Type:      routetable.TargetTypeVXLAN,
 				CIDR:      defaultCidr,
-				MultiPath: []ip.Addr{ip.FromString("10.0.1.2"), ip.FromString("10.0.3.0"), ip.FromString("10.0.3.1")},
+				MultiPath: multiPath([]string{"10.0.1.2", "10.0.3.0", "10.0.3.1"}),
 			}})
 			factory.Table(2).checkL2Routes("egress.calico", []routetable.L2Target{
 				{
@@ -229,6 +245,7 @@ var _ = Describe("EgressIPManager", func() {
 
 			Expect(manager.tableIndexStack.Peek()).To(Equal(2))
 			Expect(manager.tableIndexStack.Len()).To(Equal(2))
+			factory.Table(2).checkRoutes(routetable.InterfaceNone, nil)
 			factory.Table(2).checkRoutes("egress.calico", nil)
 			factory.Table(2).checkL2Routes("egress.calico", nil)
 
@@ -289,10 +306,10 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(rr.hasRule(100, "10.0.242.0/32", 0x200, 1))
-			factory.Table(1).checkRoutes("egress.calico", []routetable.Target{{
+			factory.Table(1).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
 				Type:      routetable.TargetTypeVXLAN,
 				CIDR:      defaultCidr,
-				MultiPath: []ip.Addr{ip.FromString("10.0.0.1"), ip.FromString("10.0.0.2")},
+				MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 			}})
 			factory.Table(1).checkL2Routes("egress.calico", []routetable.L2Target{
 				{
@@ -317,7 +334,7 @@ var _ = Describe("EgressIPManager", func() {
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
-			factory.Table(2).checkRoutes("NoInterface", []routetable.Target{{
+			factory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
 				Type: routetable.TargetTypeUnreachable,
 				CIDR: defaultCidr,
 			}})
@@ -411,10 +428,10 @@ var _ = Describe("EgressIPManager", func() {
 			// pod-0 use table 3 as the result.
 			Expect(rr.hasRule(100, "10.0.240.0/32", 0x200, 1)).To(BeFalse())
 			Expect(rr.hasRule(100, "10.0.240.0/32", 0x200, 3)).To(BeTrue())
-			factory.Table(3).checkRoutes("egress.calico", []routetable.Target{{
+			factory.Table(3).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
 				Type:      routetable.TargetTypeVXLAN,
 				CIDR:      defaultCidr,
-				MultiPath: []ip.Addr{ip.FromString("10.0.10.1"), ip.FromString("10.0.10.2")},
+				MultiPath: multiPath([]string{"10.0.10.1", "10.0.10.2"}),
 			}})
 			factory.Table(3).checkL2Routes("egress.calico", []routetable.L2Target{
 				{

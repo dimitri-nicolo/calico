@@ -38,7 +38,8 @@ type mockVXLANDataplane struct {
 func (m *mockVXLANDataplane) LinkByName(name string) (netlink.Link, error) {
 	return &netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: "vxlan",
+			Index: 6,
+			Name:  "vxlan",
 		},
 		VxlanId:      1,
 		Port:         20,

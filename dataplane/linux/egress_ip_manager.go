@@ -127,6 +127,8 @@ type egressIPManager struct {
 	vxlanID     int
 	vxlanPort   int
 
+	vxlanDeviceLinkIndex int
+
 	NodeIP net.IP
 
 	nlHandle netlinkHandle
@@ -147,11 +149,14 @@ func newEgressIPManager(
 	// Prepare table index set to be passed to routerules.
 	tableIndexSet := set.New()
 	rtableIndices := dpConfig.RouteTableManager.GrabAllRemainingIndices()
-	rtableIndices.Iter(func(item interface{}) error {
-		tableIndexStack.Push(item.(int))
-		tableIndexSet.Add(item.(int))
-		return nil
-	})
+
+	// Sort indices to make route table allocation deterministic.
+	sorted := sortIntSet(rtableIndices)
+
+	for _, element := range sorted {
+		tableIndexStack.Push(element)
+		tableIndexSet.Add(element)
+	}
 
 	// Create routerules to manage routing rules.
 	rr, err := routerule.New(4, dpConfig.EgressIPRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, routerule.RulesMatchSrcFWMark, dpConfig.NetlinkTimeout)
@@ -225,7 +230,7 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		log.WithField("msg", msg).Debug("workload endpoint remove")
 		m.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.HostMetadataUpdate:
-		log.WithField("msg", msg).Debugf("song Local host update %s", m.dpConfig.FelixHostname)
+		log.WithField("msg", msg).Debug("host meta update")
 		if msg.Hostname == m.dpConfig.FelixHostname {
 			log.WithField("msg", msg).Debug("Local host update")
 			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
@@ -289,11 +294,23 @@ func sortStringSet(s set.Set) []string {
 	return sorted
 }
 
+func sortIntSet(s set.Set) []int {
+	sorted := []int{}
+	s.Iter(func(item interface{}) error {
+		sorted = append(sorted, item.(int))
+		return nil
+	})
+	sort.Slice(sorted, func(p, q int) bool {
+		return sorted[p] < sorted[q]
+	})
+	return sorted
+}
+
 // Set L3 and L2 routes for an EgressIPSet.
 func (m *egressIPManager) setL3L2Routes(rTable routeTable, ips set.Set) {
 	logCxt := log.WithField("table", rTable.Index())
 	l2routes := []routetable.L2Target{}
-	multipath := []ip.Addr{}
+	multipath := []routetable.NextHop{}
 
 	// Sort ips to make ECMP route deterministic.
 	sorted := sortStringSet(ips)
@@ -306,32 +323,60 @@ func (m *egressIPManager) setL3L2Routes(rTable routeTable, ips set.Set) {
 			GW:      ip.FromString(ipString),
 			IP:      ip.FromString(ipString),
 		})
-		multipath = append(multipath, ip.FromString(ipString))
+		multipath = append(multipath, routetable.NextHop{
+			Gw:        ip.FromString(ipString),
+			LinkIndex: m.vxlanDeviceLinkIndex,
+		})
 	}
 
 	// Set L2 route. If there is no l2route target, old entries will be removed.
 	logCxt.WithField("l2routes", l2routes).Info("Egress ip manager sending L2 updates")
 	rTable.SetL2Routes(m.vxlanDevice, l2routes)
 
-	if len(multipath) > 0 {
-		// Set L3 route.
+	if len(multipath) > 1 {
+		// Set multipath L3 route.
+		// Note the interface is InterfaceNone for multipath.
 		route := routetable.Target{
 			Type:      routetable.TargetTypeVXLAN,
 			CIDR:      defaultCidr,
 			MultiPath: multipath,
 		}
 		logCxt.WithField("ecmproute", route).Info("Egress ip manager sending ECMP VXLAN L3 updates")
+		rTable.RouteRemove(m.vxlanDevice, defaultCidr)
+		rTable.SetRoutes(routetable.InterfaceNone, []routetable.Target{route})
+	} else if len(multipath) == 1 {
+		// If we send multipath routes with just one path, netlink will program it successfully.
+		// However, we will read back a route via netlink with GW set to nexthop GW
+		// and len(Multipath) set to 0. To keep route target consistent with netlink route,
+		// we should not send a multipath target with just one GW.
+		route := routetable.Target{
+			Type: routetable.TargetTypeVXLAN,
+			CIDR: defaultCidr,
+			GW:   multipath[0].Gw,
+		}
+		logCxt.WithField("route", route).Info("Egress ip manager sending single path VXLAN L3 updates," +
+			" may see couple of warnings if an ECMP route was previously programmed")
+
+		// Route table module may report warning of `file exists` on programming route for egress.vxlan device.
+		// This is because route table module processes route updates organized by interface names.
+		// In this case, default route for egress.calico interface could not be programmed unless
+		// the default route linked with InterfaceNone been removed. After couple of failures on processing
+		// egress.calico updates, route table module will continue on processing InterfaceNone updates
+		// and remove default route (see RouteRemove below).
+		// Route updates for egress.vxlan will be successful at next dataplane apply().
+		rTable.RouteRemove(routetable.InterfaceNone, defaultCidr)
 		rTable.SetRoutes(m.vxlanDevice, []routetable.Target{route})
+
 	} else {
-		// Set unreachable
+		// Set unreachable route.
 		route := routetable.Target{
 			Type: routetable.TargetTypeUnreachable,
 			CIDR: defaultCidr,
 		}
 
-		// TODO: Should based on latest OS routetable code.
-		logCxt.WithField("ecmproute", route).Info("Egress ip manager sending unreachable upates")
-		rTable.SetRoutes("NoInterface", []routetable.Target{route})
+		logCxt.WithField("route", route).Info("Egress ip manager sending unreachable route")
+		rTable.RouteRemove(m.vxlanDevice, defaultCidr)
+		rTable.SetRoutes(routetable.InterfaceNone, []routetable.Target{route})
 	}
 }
 
@@ -346,6 +391,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 
 	// Work out egress ip set updates.
 	for _, id := range sorted {
+		logCxt := log.WithField("id", id)
 		currentIndex, ipsetToIndexExists := m.egressIPSetToTableIndex[id]
 		if ips, found := m.activeEgressIPSet[id]; !found {
 			// EgressIPSet been removed.
@@ -356,8 +402,9 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			}
 
 			// Remove routes.
-			log.WithField("tableindex", currentIndex).Info("EgressIPManager remove routes and release route table.")
-			rTable.SetRoutes(m.vxlanDevice, nil)
+			logCxt.WithField("tableindex", currentIndex).Info("EgressIPManager remove routes and release route table.")
+			rTable.RouteRemove(routetable.InterfaceNone, defaultCidr)
+			rTable.RouteRemove(m.vxlanDevice, defaultCidr)
 			rTable.SetL2Routes(m.vxlanDevice, nil)
 
 			// Once routes pending being removed, we can safely push table index back to stack.
@@ -374,9 +421,10 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 				index := m.tableIndexStack.Pop().(int)
 				if m.tableIndexToRouteTable[index] == nil {
 					// Allocate a routetable if it does not exists.
-					m.tableIndexToRouteTable[index] = m.rtGenerator.NewRouteTable([]string{m.vxlanDevice}, 4, index, true, m.dpConfig.NetlinkTimeout, nil,
+					m.tableIndexToRouteTable[index] = m.rtGenerator.NewRouteTable([]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
+						4, index, true, m.dpConfig.NetlinkTimeout, nil,
 						m.dpConfig.DeviceRouteProtocol, true)
-					log.WithField("tableindex", index).Info("EgressIPManager allocate new route table.")
+					logCxt.WithField("tableindex", index).Info("EgressIPManager allocate new route table.")
 				}
 				m.egressIPSetToTableIndex[id] = index
 				currentIndex = index
@@ -468,18 +516,11 @@ func ipStringToMac(s string) net.HardwareAddr {
 
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
-	retry := 0
 	for {
 		err := m.configureVXLANDevice(mtu)
 		if err != nil {
 			log.WithError(err).Warn("Failed configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
-			retry += 1
-
-			if retry > 3 {
-				log.Warnf("song set host ip manually")
-				m.NodeIP = m.dpConfig.NodeIP
-			}
 			continue
 		}
 		log.Info("egress ip VXLAN tunnel device configured")
@@ -501,7 +542,7 @@ func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
 		}
 		for _, addr := range addrs {
 			if addr.IPNet.IP.Equal(m.NodeIP) {
-				log.Debugf("Found parent interface: %s", link)
+				log.Debugf("Found parent interface: %#v", link)
 				return link, nil
 			}
 		}
@@ -584,6 +625,9 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	if err := m.nlHandle.LinkSetUp(link); err != nil {
 		return fmt.Errorf("failed to set interface up: %s", err)
 	}
+
+	// Save link index
+	m.vxlanDeviceLinkIndex = attrs.Index
 
 	return nil
 }

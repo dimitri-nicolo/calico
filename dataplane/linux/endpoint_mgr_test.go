@@ -607,6 +607,15 @@ func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target
 	t.currentRoutes[ifaceName] = targets
 }
 
+func (t *mockRouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
+	log.WithFields(log.Fields{
+		"index":     t.index,
+		"ifaceName": ifaceName,
+		"cidr":   cidr,
+	}).Debug("RouteRemove")
+	t.currentRoutes[ifaceName] = nil
+}
+
 func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Target) {
 	log.WithFields(log.Fields{
 		"index":     t.index,
