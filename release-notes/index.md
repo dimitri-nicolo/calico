@@ -22,6 +22,8 @@ To select a different version, click **Releases** in the top-right navigation ba
 
 ## Component Versions
 
+This release comprises the following components, and can be installed using `{{ release.tigera-operator.registry }}/{{ release.tigera-operator.image }}:{{ release.tigera-operator.version }}`
+
 | Component              | Version |
 |------------------------|---------|
 {% for component in release.components %}
