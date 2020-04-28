@@ -1,4 +1,4 @@
-FROM alpine:3.9.3
+FROM alpine:3
 
 ADD bin/es-proxy-amd64 /es-proxy
 
