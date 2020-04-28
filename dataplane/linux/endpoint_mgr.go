@@ -37,7 +37,7 @@ import (
 type routeTable interface {
 	Index() int
 	SetRoutes(ifaceName string, targets []routetable.Target)
-    RouteRemove(ifaceName string, cidr ip.CIDR)
+	RouteRemove(ifaceName string, cidr ip.CIDR)
 	SetL2Routes(ifaceName string, targets []routetable.L2Target)
 	OnIfaceStateChanged(string, ifacemonitor.State)
 	QueueResync()

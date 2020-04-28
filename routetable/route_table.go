@@ -628,7 +628,9 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool) error {
 		for _, route := range routesToDelete {
 			if route.Dst == nil {
 				// Default route has route.Dst set to nil.
-				logCxt.Warnf("route dst is nil continue")
+				// This function is intended to remove conntrack entries for deleted pods.
+				// So default route should be skipped.
+				logCxt.Debug("route dst is nil continue")
 				continue
 			}
 			if cidr := ip.CIDRFromIPNet(route.Dst); cidr == nil {

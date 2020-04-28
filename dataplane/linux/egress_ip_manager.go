@@ -230,6 +230,7 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		log.WithField("msg", msg).Debug("workload endpoint remove")
 		m.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.HostMetadataUpdate:
+		log.WithField("msg", msg).Debug("host meta update")
 		if msg.Hostname == m.dpConfig.FelixHostname {
 			log.WithField("msg", msg).Debug("Local host update")
 			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
@@ -345,22 +346,24 @@ func (m *egressIPManager) setL3L2Routes(rTable routeTable, ips set.Set) {
 		rTable.SetRoutes(routetable.InterfaceNone, []routetable.Target{route})
 	} else if len(multipath) == 1 {
 		// If we send multipath routes with just one path, netlink will program it successfully.
-		// However, we will read back a route via netlink with GW set to nexthop GW and len(Multipath) set to 0.
-		// To keep route target consistent with netlink route, we should not send a multipath target with just one GW.
+		// However, we will read back a route via netlink with GW set to nexthop GW
+		// and len(Multipath) set to 0. To keep route target consistent with netlink route,
+		// we should not send a multipath target with just one GW.
 		route := routetable.Target{
 			Type: routetable.TargetTypeVXLAN,
 			CIDR: defaultCidr,
 			GW:   multipath[0].Gw,
 		}
 		logCxt.WithField("route", route).Info("Egress ip manager sending single path VXLAN L3 updates," +
-			" may see couple of warnings if ECMP routes been programmed previously")
+			" may see couple of warnings if an ECMP route was previously programmed")
 
 		// Route table module may report warning of `file exists` on programming route for egress.vxlan device.
 		// This is because route table module processes route updates organized by interface names.
-		// In this case, default route for egress.calico interface could not be programmed unless the default route
-		// linked with InterfaceNone been removed. After couple of failures on processing egress.vxlan updates,
-		// route table module continue on InterfaceNone and remove default route. Route updates for egress.vxlan will
-		// be successful at next dataplane apply().
+		// In this case, default route for egress.calico interface could not be programmed unless
+		// the default route linked with InterfaceNone been removed. After couple of failures on processing
+		// egress.calico updates, route table module will continue on processing InterfaceNone updates
+		// and remove default route (see RouteRemove below).
+		// Route updates for egress.vxlan will be successful at next dataplane apply().
 		rTable.RouteRemove(routetable.InterfaceNone, defaultCidr)
 		rTable.SetRoutes(m.vxlanDevice, []routetable.Target{route})
 
@@ -371,7 +374,7 @@ func (m *egressIPManager) setL3L2Routes(rTable routeTable, ips set.Set) {
 			CIDR: defaultCidr,
 		}
 
-		logCxt.WithField("route", route).Info("Egress ip manager sending unreachable upates")
+		logCxt.WithField("route", route).Info("Egress ip manager sending unreachable route")
 		rTable.RouteRemove(m.vxlanDevice, defaultCidr)
 		rTable.SetRoutes(routetable.InterfaceNone, []routetable.Target{route})
 	}
