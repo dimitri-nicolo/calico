@@ -331,6 +331,12 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
 	activeEgressCalc.OnEgressIPSetIDUpdate = polResolver.OnEgressIPSetIDUpdate
 
+	// Create and hook up the egress selector pool.
+	egressSelectorPool := NewEgressSelectorPool()
+	egressSelectorPool.RegisterWith(allUpdDispatcher)
+	egressSelectorPool.OnEgressSelectorAdded = polResolver.OnEgressSelectorAdded
+	egressSelectorPool.OnEgressSelectorRemoved = polResolver.OnEgressSelectorRemoved
+
 	// Register for host IP updates.
 	//
 	//        ...

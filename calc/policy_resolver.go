@@ -128,6 +128,12 @@ func (pr *PolicyResolver) OnDatamodelStatus(status api.SyncStatus) {
 	}
 }
 
+func (pr *PolicyResolver) OnEgressSelectorAdded(selector string) {
+}
+
+func (pr *PolicyResolver) OnEgressSelectorRemoved(selector string) {
+}
+
 func (pr *PolicyResolver) refreshSortOrder() {
 	pr.sortedTierData = pr.policySorter.Sorted()
 	pr.sortRequired = false
