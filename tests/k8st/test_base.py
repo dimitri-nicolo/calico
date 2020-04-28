@@ -244,7 +244,7 @@ class TestBase(TestCase):
 # Default is for all K8ST tests to be runnable in all setups (K8ST_RIG
 # values).  The test classes that cannot be run in particular setups
 # should set the corresponding variables to False.
-TestBase.vanilla = True
+TestBase.vanilla = False
 TestBase.dual_stack = True
 TestBase.dual_tor = True
 
