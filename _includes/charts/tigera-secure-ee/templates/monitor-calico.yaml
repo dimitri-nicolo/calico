@@ -508,6 +508,10 @@ spec:
                   key: tigera.elasticsearch.port
             - name: FLUENTD_ES_SECURE
               value: "true"
+            - name: NODENAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             - name: ELASTIC_SSL_VERIFY
               value: "true"
 {{- if eq $elasticMode "external" }}
