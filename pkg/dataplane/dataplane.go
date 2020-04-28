@@ -38,6 +38,7 @@ type Dataplane interface {
 		routes []*net.IPNet,
 		endpoint *api.WorkloadEndpoint,
 		annotations map[string]string,
+		ipv4GW net.IP,
 	) (hostVethName, contVethMAC string, err error)
 
 	CleanUpNamespace(args *skel.CmdArgs) error

@@ -39,10 +39,35 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+func podToInterface(pod *corev1.Pod, ifaceName string) (*k8sconversion.PodInterface, error) {
+	wepConverter := k8sconversion.NewWorkloadEndpointConverter()
+	podInterfaces, err := wepConverter.InterfacesForPod(pod)
+	if err != nil {
+		return nil, err
+	}
+
+	var podInterface *k8sconversion.PodInterface
+	for _, pIface := range podInterfaces {
+		if pIface.InsidePodIfaceName == ifaceName {
+			podInterface = pIface
+			break
+		}
+	}
+
+	// podInterface will be nil if there's no PodInterface with and InsidePodIfaceName equal to ifaceName, so just use
+	// the default PodInterface (first entry is always the default one)
+	if podInterface == nil {
+		podInterface = podInterfaces[0]
+	}
+
+	return podInterface, nil
+}
 
 // CmdAddK8s performs the "ADD" operation on a kubernetes pod
 // Having kubernetes code in its own file avoids polluting the mainline code. It's expected that the kubernetes case will
@@ -113,6 +138,29 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		return nil, err
 	}
 	logger.WithField("client", client).Debug("Created Kubernetes client")
+
+	var podInterface *k8sconversion.PodInterface
+	var pod *corev1.Pod
+
+	// Only attempt to fetch the calculate the podInterface from the pod if the policy type is k8s. This allows users to
+	// run the plugin under Kubernetes without needing it to access the Kubernetes API.
+	if conf.Policy.PolicyType == "k8s" {
+		pod, err = client.CoreV1().Pods(epIDs.Namespace).Get(epIDs.Pod, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+
+		podInterface, err = podToInterface(pod, args.IfName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		podInterface = &k8sconversion.PodInterface{
+			IsDefault:          true,
+			InsidePodIfaceName: args.IfName,
+			HostSideIfaceName:  k8sconversion.NewConverter().VethNameForWorkload(epIDs.Namespace, epIDs.Pod),
+		}
+	}
 
 	var routes []*net.IPNet
 	if conf.IPAM.Type == "host-local" {
@@ -191,7 +239,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 
 	// Determine which routes to program within the container. If no routes were provided in the CNI config,
 	// then use the Calico default routes. If routes were provided then program those instead.
-	if len(routes) == 0 {
+	if len(routes) == 0 && podInterface.IsDefault {
 		logger.Debug("No routes specified in CNI configuration, using defaults.")
 		routes = utils.DefaultRoutes
 	} else {
@@ -221,7 +269,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 		logger.WithField("NS Annotations", annotNS).Debug("Fetched K8s namespace annotations")
 
-		labels, annot, ports, profiles, generateName, err = getK8sPodInfo(client, epIDs.Pod, epIDs.Namespace)
+		labels, annot, ports, profiles, generateName, err = getK8sPodInfo(pod, args.IfName)
 		if err != nil {
 			return nil, err
 		}
@@ -230,8 +278,8 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		logger.WithField("ports", ports).Debug("Fetched K8s ports")
 		logger.WithField("profiles", profiles).Debug("Generated profiles")
 
-		// Check for calico IPAM specific annotations and set them if needed.
-		if conf.IPAM.Type == "calico-ipam" {
+		// If this is for the default pod interface check for calico IPAM specific annotations and set them if needed.
+		if podInterface.IsDefault && conf.IPAM.Type == "calico-ipam" {
 
 			var v4pools, v6pools string
 
@@ -294,81 +342,90 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 	}
 
-	ipAddrsNoIpam := annot["cni.projectcalico.org/ipAddrsNoIpam"]
-	ipAddrs := annot["cni.projectcalico.org/ipAddrs"]
+	// Only respect the ipAddrsNoIpam and ipAddrs annotations if this is the default pod interface
+	if podInterface.IsDefault {
+		ipAddrsNoIpam := annot["cni.projectcalico.org/ipAddrsNoIpam"]
+		ipAddrs := annot["cni.projectcalico.org/ipAddrs"]
 
-	// Switch based on which annotations are passed or not passed.
-	switch {
-	case ipAddrs == "" && ipAddrsNoIpam == "":
-		// Call the IPAM plugin.
+		// Switch based on which annotations are passed or not passed.
+		switch {
+		case ipAddrs == "" && ipAddrsNoIpam == "":
+			// Call the IPAM plugin.
+			result, err = utils.AddIPAM(conf, args, logger)
+			if err != nil {
+				return nil, err
+			}
+
+		case ipAddrs != "" && ipAddrsNoIpam != "":
+			// Can't have both ipAddrs and ipAddrsNoIpam annotations at the same time.
+			e := fmt.Errorf("can't have both annotations: 'ipAddrs' and 'ipAddrsNoIpam' in use at the same time")
+			logger.Error(e)
+			return nil, e
+
+		case ipAddrsNoIpam != "":
+			// Validate that we're allowed to use this feature.
+			if conf.IPAM.Type != "calico-ipam" {
+				e := fmt.Errorf("ipAddrsNoIpam is not compatible with configured IPAM: %s", conf.IPAM.Type)
+				logger.Error(e)
+				return nil, e
+			}
+			if !conf.FeatureControl.IPAddrsNoIpam {
+				e := fmt.Errorf("requested feature is not enabled: ip_addrs_no_ipam")
+				logger.Error(e)
+				return nil, e
+			}
+
+			// ipAddrsNoIpam annotation is set so bypass IPAM, and set the IPs manually.
+			overriddenResult, err := overrideIPAMResult(ipAddrsNoIpam, logger)
+			if err != nil {
+				return nil, err
+			}
+			logger.Debugf("Bypassing IPAM to set the result to: %+v", overriddenResult)
+
+			// Convert overridden IPAM result into current Result.
+			// This method fill in all the empty fields necessory for CNI output according to spec.
+			result, err = current.NewResultFromResult(overriddenResult)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(result.IPs) == 0 {
+				return nil, errors.New("failed to build result")
+			}
+
+		case ipAddrs != "":
+			// Validate that we're allowed to use this feature.
+			if conf.IPAM.Type != "calico-ipam" {
+				e := fmt.Errorf("ipAddrs is not compatible with configured IPAM: %s", conf.IPAM.Type)
+				logger.Error(e)
+				return nil, e
+			}
+
+			// If the endpoint already exists, we need to attempt to release the previous IP addresses here
+			// since the ADD call will fail when it tries to reallocate the same IPs. releaseIPAddrs assumes
+			// that Calico IPAM is in use, which is OK here since only Calico IPAM supports the ipAddrs
+			// annotation.
+			if endpoint != nil {
+				logger.Info("Endpoint already exists and ipAddrs is set. Release any old IPs")
+				if err := releaseIPAddrs(endpoint.Spec.IPNetworks, calicoClient, logger); err != nil {
+					return nil, fmt.Errorf("failed to release ipAddrs: %s", err)
+				}
+			}
+
+			// When ipAddrs annotation is set, we call out to the configured IPAM plugin
+			// requesting the specific IP addresses included in the annotation.
+			result, err = ipAddrsResult(ipAddrs, conf, args, logger)
+			if err != nil {
+				return nil, err
+			}
+			logger.Debugf("IPAM result set to: %+v", result)
+		}
+	} else {
+		// Non-default interface: call the IPAM plugin
 		result, err = utils.AddIPAM(conf, args, logger)
 		if err != nil {
 			return nil, err
 		}
-
-	case ipAddrs != "" && ipAddrsNoIpam != "":
-		// Can't have both ipAddrs and ipAddrsNoIpam annotations at the same time.
-		e := fmt.Errorf("can't have both annotations: 'ipAddrs' and 'ipAddrsNoIpam' in use at the same time")
-		logger.Error(e)
-		return nil, e
-
-	case ipAddrsNoIpam != "":
-		// Validate that we're allowed to use this feature.
-		if conf.IPAM.Type != "calico-ipam" {
-			e := fmt.Errorf("ipAddrsNoIpam is not compatible with configured IPAM: %s", conf.IPAM.Type)
-			logger.Error(e)
-			return nil, e
-		}
-		if !conf.FeatureControl.IPAddrsNoIpam {
-			e := fmt.Errorf("requested feature is not enabled: ip_addrs_no_ipam")
-			logger.Error(e)
-			return nil, e
-		}
-
-		// ipAddrsNoIpam annotation is set so bypass IPAM, and set the IPs manually.
-		overriddenResult, err := overrideIPAMResult(ipAddrsNoIpam, logger)
-		if err != nil {
-			return nil, err
-		}
-		logger.Debugf("Bypassing IPAM to set the result to: %+v", overriddenResult)
-
-		// Convert overridden IPAM result into current Result.
-		// This method fill in all the empty fields necessory for CNI output according to spec.
-		result, err = current.NewResultFromResult(overriddenResult)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(result.IPs) == 0 {
-			return nil, errors.New("failed to build result")
-		}
-
-	case ipAddrs != "":
-		// Validate that we're allowed to use this feature.
-		if conf.IPAM.Type != "calico-ipam" {
-			e := fmt.Errorf("ipAddrs is not compatible with configured IPAM: %s", conf.IPAM.Type)
-			logger.Error(e)
-			return nil, e
-		}
-
-		// If the endpoint already exists, we need to attempt to release the previous IP addresses here
-		// since the ADD call will fail when it tries to reallocate the same IPs. releaseIPAddrs assumes
-		// that Calico IPAM is in use, which is OK here since only Calico IPAM supports the ipAddrs
-		// annotation.
-		if endpoint != nil {
-			logger.Info("Endpoint already exists and ipAddrs is set. Release any old IPs")
-			if err := releaseIPAddrs(endpoint.Spec.IPNetworks, calicoClient, logger); err != nil {
-				return nil, fmt.Errorf("failed to release ipAddrs: %s", err)
-			}
-		}
-
-		// When ipAddrs annotation is set, we call out to the configured IPAM plugin
-		// requesting the specific IP addresses included in the annotation.
-		result, err = ipAddrsResult(ipAddrs, conf, args, logger)
-		if err != nil {
-			return nil, err
-		}
-		logger.Debugf("IPAM result set to: %+v", result)
 	}
 
 	// Configure the endpoint (creating if required).
@@ -412,9 +469,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	}
 
 	// Whether the endpoint existed or not, the veth needs (re)creating.
-	desiredVethName := k8sconversion.NewConverter().VethNameForWorkload(epIDs.Namespace, epIDs.Pod)
-	hostVethName, contVethMac, err := d.DoNetworking(ctx, calicoClient, args, result, desiredVethName, routes, endpoint, annot)
-
+	_, contVethMac, err := d.DoNetworking(ctx, calicoClient, args, result, podInterface.HostSideIfaceName, routes, endpoint, annot, podInterface.InsidePodGW)
 	if err != nil {
 		logger.WithError(err).Error("Error setting up networking")
 		releaseIPAM()
@@ -428,7 +483,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		return nil, err
 	}
 	endpoint.Spec.MAC = mac.String()
-	endpoint.Spec.InterfaceName = hostVethName
+	endpoint.Spec.InterfaceName = podInterface.HostSideIfaceName
 	endpoint.Spec.ContainerID = epIDs.ContainerID
 	logger.WithField("endpoint", endpoint).Info("Added Mac, interface name, and active container ID to endpoint")
 
@@ -449,32 +504,35 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 	}
 
-	// List of DNAT ipaddrs to map to this workload endpoint
-	floatingIPs := annot["cni.projectcalico.org/floatingIPs"]
+	// floatingIPs are allowed for the default interface only
+	if podInterface.IsDefault {
+		// List of DNAT ipaddrs to map to this workload endpoint
+		floatingIPs := annot["cni.projectcalico.org/floatingIPs"]
 
-	if floatingIPs != "" {
-		// If floating IPs are defined, but the feature is not enabled, return an error.
-		if !conf.FeatureControl.FloatingIPs {
-			releaseIPAM()
-			return nil, fmt.Errorf("requested feature is not enabled: floating_ips")
-		}
-		ips, err := parseIPAddrs(floatingIPs, logger)
-		if err != nil {
-			releaseIPAM()
-			return nil, err
-		}
+		if floatingIPs != "" {
+			// If floating IPs are defined, but the feature is not enabled, return an error.
+			if !conf.FeatureControl.FloatingIPs {
+				releaseIPAM()
+				return nil, fmt.Errorf("requested feature is not enabled: floating_ips")
+			}
+			ips, err := parseIPAddrs(floatingIPs, logger)
+			if err != nil {
+				releaseIPAM()
+				return nil, err
+			}
 
-		for _, ip := range ips {
-			endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, api.IPNAT{
-				InternalIP: result.IPs[0].Address.IP.String(),
-				ExternalIP: ip,
-			})
+			for _, ip := range ips {
+				endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, api.IPNAT{
+					InternalIP: result.IPs[0].Address.IP.String(),
+					ExternalIP: ip,
+				})
+			}
+			logger.WithField("endpoint", endpoint).Info("Added floatingIPs to endpoint")
 		}
-		logger.WithField("endpoint", endpoint).Info("Added floatingIPs to endpoint")
 	}
 
 	// Write the endpoint object (either the newly created one, or the updated one)
-	if _, err := utils.CreateOrUpdate(ctx, calicoClient, endpoint); err != nil {
+	if _, err := utils.CreateOrUpdate(ctx, calicoClient, endpoint, podInterface.IsDefault); err != nil {
 		logger.WithError(err).Error("Error creating/updating endpoint in datastore.")
 		releaseIPAM()
 		return nil, err
@@ -482,8 +540,15 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	logger.Info("Wrote updated endpoint to datastore")
 
 	// Add the interface created above to the CNI result.
-	result.Interfaces = append(result.Interfaces, &current.Interface{
-		Name: endpoint.Spec.InterfaceName},
+	result.Interfaces = append(result.Interfaces,
+		&current.Interface{
+			Name: endpoint.Spec.InterfaceName,
+		},
+		&current.Interface{
+			Name:    args.IfName,
+			Sandbox: args.Netns,
+			Mac:     contVethMac,
+		},
 	)
 
 	return result, nil
@@ -848,24 +913,32 @@ func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotation
 	return ns.Annotations, nil
 }
 
-func getK8sPodInfo(client *kubernetes.Clientset, podName, podNamespace string) (labels map[string]string, annotations map[string]string, ports []api.EndpointPort, profiles []string, generateName string, err error) {
-	pod, err := client.CoreV1().Pods(string(podNamespace)).Get(podName, metav1.GetOptions{})
-	logrus.Infof("pod info %+v", pod)
-	if err != nil {
-		return nil, nil, nil, nil, "", err
-	}
-
+func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []api.EndpointPort, profiles []string, generateName string, err error) {
 	c := k8sconversion.NewConverter()
 	kvps, err := c.PodToWorkloadEndpoints(pod)
 	if err != nil {
 		return nil, nil, nil, nil, "", err
 	}
 
-	kvp := kvps[0]
-	ports = kvp.Value.(*api.WorkloadEndpoint).Spec.Ports
-	labels = kvp.Value.(*api.WorkloadEndpoint).Labels
-	profiles = kvp.Value.(*api.WorkloadEndpoint).Spec.Profiles
-	generateName = kvp.Value.(*api.WorkloadEndpoint).GenerateName
+	var wep *api.WorkloadEndpoint
+	for _, kvp := range kvps {
+		if kvp.Value.(*api.WorkloadEndpoint).Spec.Endpoint == iface {
+			wep = kvp.Value.(*api.WorkloadEndpoint)
+		}
+	}
+
+	// If we don't find a WEP for the given iface, just return the default WEP (always the first entry). If the WEP
+	// for the given interface isn't found then it's likely this is the default interface but it's not named eth0,
+	// and PodToWorkloadEndpoints can't figure out what the real default interface name is until after the CNI plugin
+	// has created the WorkloadEndpoints.
+	if wep == nil {
+		wep = kvps[0].Value.(*api.WorkloadEndpoint)
+	}
+
+	ports = wep.Spec.Ports
+	labels = wep.Labels
+	profiles = wep.Spec.Profiles
+	generateName = wep.GenerateName
 
 	return labels, pod.Annotations, ports, profiles, generateName, nil
 }

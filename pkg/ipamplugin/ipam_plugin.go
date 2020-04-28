@@ -123,7 +123,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("error constructing WorkloadEndpoint name: %s", err)
 	}
 
-	handleID := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
+	handleID := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName, epIDs.Endpoint)
 
 	logger := logrus.WithFields(logrus.Fields{
 		"Workload":    epIDs.WEPName,
@@ -288,8 +288,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return fmt.Errorf("error constructing WorkloadEndpoint name: %s", err)
 	}
 
-	handleID := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
-
+	handleID := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName, epIDs.Endpoint)
 	logger := logrus.WithFields(logrus.Fields{
 		"Workload":    epIDs.WEPName,
 		"ContainerID": epIDs.ContainerID,
@@ -306,7 +305,13 @@ func cmdDel(args *skel.CmdArgs) error {
 			logger.WithError(err).Error("Failed to release address")
 			return err
 		}
-		logger.Warn("Asked to release address but it doesn't exist. Ignoring")
+
+		// if there was no assigned IPAM address with the given handle ID, then attempt to release an address associated
+		// with the legacy format of the handle ID
+		legacyHandleID := utils.GetLegacyHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
+		if err := calicoClient.IPAM().ReleaseByHandle(ctx, legacyHandleID); err != nil {
+			logger.Warn("Asked to release address but it doesn't exist. Ignoring")
+		}
 	} else {
 		logger.Info("Released address using handleID")
 	}

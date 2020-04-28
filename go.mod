@@ -21,15 +21,15 @@ require (
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
-	github.com/philhofer/fwd v1.0.0 // indirect
-	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
 	github.com/projectcalico/libcalico-go v1.7.2
+	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343
+	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	k8s.io/api v0.17.3

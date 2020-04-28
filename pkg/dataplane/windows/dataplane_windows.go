@@ -94,6 +94,7 @@ func (d *windowsDataplane) DoNetworking(
 	routes []*net.IPNet,
 	endpoint *api.WorkloadEndpoint,
 	annotations map[string]string,
+	ipv4GW net.IP,
 ) (hostVethName, contVethMAC string, err error) {
 	// Not used on Windows.
 	_ = desiredVethName

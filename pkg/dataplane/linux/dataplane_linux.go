@@ -34,6 +34,10 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+func defaultIPv4Gateway() net.IP {
+	return net.IPv4(169, 254, 1, 1)
+}
+
 type linuxDataplane struct {
 	allowIPForwarding bool
 	mtu               int
@@ -57,6 +61,7 @@ func (d *linuxDataplane) DoNetworking(
 	routes []*net.IPNet,
 	endpoint *api.WorkloadEndpoint,
 	annotations map[string]string,
+	ipv4GW net.IP,
 ) (hostVethName, contVethMAC string, err error) {
 	// Not used on Linux
 	_ = ctx
@@ -139,8 +144,11 @@ func (d *linuxDataplane) DoNetworking(
 		// Do the per-IP version set-up.  Add gateway routes etc.
 		if hasIPv4 {
 			// Add a connected route to a dummy next hop so that a default route can be set
-			gw := net.IPv4(169, 254, 1, 1)
-			gwNet := &net.IPNet{IP: gw, Mask: net.CIDRMask(32, 32)}
+			if ipv4GW == nil {
+				ipv4GW = defaultIPv4Gateway()
+			}
+
+			gwNet := &net.IPNet{IP: ipv4GW, Mask: net.CIDRMask(32, 32)}
 			err := netlink.RouteAdd(
 				&netlink.Route{
 					LinkIndex: contVeth.Attrs().Index,
@@ -159,8 +167,40 @@ func (d *linuxDataplane) DoNetworking(
 					continue
 				}
 				d.logger.WithField("route", r).Debug("Adding IPv4 route")
-				if err = ip.AddRoute(r, gw, contVeth); err != nil {
-					return fmt.Errorf("failed to add IPv4 route for %v via %v: %v", r, gw, err)
+				if err = ip.AddRoute(r, ipv4GW, contVeth); err != nil {
+					return fmt.Errorf("failed to add IPv4 route for %v via %v: %v", r, ipv4GW, err)
+				}
+			}
+
+			// If this is not using the default gateway then source based routing needs to be configured
+			if ipv4GW.String() != defaultIPv4Gateway().String() {
+				// Use the last byte if the gateway IP as the table ID
+				tableID := int(ipv4GW[len(ipv4GW)-1])
+
+				// Add the default route to a new table for this gateway
+				err := netlink.RouteAdd(&netlink.Route{
+					LinkIndex: contVeth.Attrs().Index,
+					Table:     tableID,
+					Scope:     netlink.SCOPE_UNIVERSE,
+					Gw:        ipv4GW,
+				})
+
+				if err != nil {
+					return err
+				}
+
+				// Add a source based rule for each ipv4 address to use the newly created table if a route has a source
+				// in this list
+				for _, addr := range result.IPs {
+					if addr.Version == "4" {
+						rule := netlink.NewRule()
+						rule.Table = tableID
+						rule.Src = &addr.Address
+
+						if err := netlink.RuleAdd(rule); err != nil {
+							return err
+						}
+					}
 				}
 			}
 		}

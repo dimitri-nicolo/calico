@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	. "github.com/onsi/ginkgo/extensions/table"
 
 	"regexp"
 
@@ -28,6 +31,7 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -2195,7 +2199,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		checkIPAMReservation := func() {
 			// IPAM reservation should still be in place.
-			handleID := utils.GetHandleID("calico-uts", containerID, workloadName)
+			handleID := utils.GetHandleID("calico-uts", containerID, workloadName, "eth0")
 			ipamIPs, err := calicoClient.IPAM().IPsByHandle(context.Background(), handleID)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred(), "error getting IPs")
 			ExpectWithOffset(1, ipamIPs).To(HaveLen(1),
@@ -2230,6 +2234,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			clientset, err = kubernetes.NewForConfig(config)
 			Expect(err).NotTo(HaveOccurred())
+			// Make sure the namespace exists.
+			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 			name = fmt.Sprintf("run%d", rand.Uint32())
 			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS,
 				&v1.Pod{
@@ -2298,6 +2304,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			// Otherwise, they should be the same.
 			resultSecondAdd.IPs = nil
 			result.IPs = nil
+			for _, iface := range result.Interfaces {
+				iface.Mac = ""
+			}
+			for _, iface := range resultSecondAdd.Interfaces {
+				iface.Mac = ""
+			}
+
 			Expect(resultSecondAdd).Should(Equal(result))
 
 			// IPAM reservation should still be in place.
@@ -2370,6 +2383,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			clientset, err := kubernetes.NewForConfig(config)
 			Expect(err).NotTo(HaveOccurred())
 
+			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 			// Now create a K8s pod.
 			name := "mypod-1"
 
@@ -2837,6 +2851,400 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 	})
 
+	Context("releasing IP's when the container is deleted", func() {
+		pool := "172.24.0.0/24"
+
+		BeforeEach(func() {
+			testutils.MustCreateNewIPPool(calicoClient, pool, false, false, true)
+		})
+
+		AfterEach(func() {
+			testutils.MustDeleteIPPool(calicoClient, pool)
+		})
+
+		It("releases the assigned IP address for the container on DEL", func() {
+			ctx := context.Background()
+
+			config, err := clientcmd.DefaultClientConfig.ClientConfig()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			clientSet, err := kubernetes.NewForConfig(config)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ensureNamespace(clientSet, testutils.K8S_TEST_NS)
+
+			cniVersion := os.Getenv("CNI_SPEC_VERSION")
+			nc := types.NetConf{
+				CNIVersion:           cniVersion,
+				Name:                 "calico-uts",
+				Type:                 "calico",
+				EtcdEndpoints:        fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
+				DatastoreType:        os.Getenv("DATASTORE_TYPE"),
+				Kubernetes:           types.Kubernetes{K8sAPIRoot: "http://127.0.0.1:8080"},
+				Policy:               types.Policy{PolicyType: "k8s"},
+				NodenameFileOptional: true,
+				LogLevel:             "info",
+			}
+			nc.IPAM.Type = "calico-ipam"
+			ncb, err := json.Marshal(nc)
+			Expect(err).NotTo(HaveOccurred())
+			netconf := string(ncb)
+
+			hostname, _ := names.Hostname()
+			name := fmt.Sprintf("run%d", rand.Uint32())
+			pod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: testutils.K8S_TEST_NS,
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+					}},
+					NodeName: hostname,
+				},
+			}
+
+			ensurePodCreated(clientSet, testutils.K8S_TEST_NS, pod)
+			defer ensurePodDeleted(clientSet, testutils.K8S_TEST_NS, name)
+
+			containerID, _, _, _, _, netNS, err := testutils.CreateContainerWithIface(netconf, name, testutils.K8S_TEST_NS, "", "eth0")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ids := names.WorkloadEndpointIdentifiers{
+				Node:         hostname,
+				Orchestrator: api.OrchestratorKubernetes,
+				Endpoint:     "eth0",
+				Pod:          name,
+				ContainerID:  containerID,
+			}
+			workloadName, err := ids.CalculateWorkloadEndpointName(false)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			handle := utils.GetHandleID("calico-uts", containerID, workloadName, "eth0")
+
+			// Double check the IPs were assigned under the legacy Handle
+			_, err = calicoClient.IPAM().IPsByHandle(ctx, handle)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = testutils.DeleteContainer(netconf, netNS.Path(), name, testutils.K8S_TEST_NS)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			_, err = calicoClient.IPAM().IPsByHandle(ctx, handle)
+			Expect(err).Should(BeAssignableToTypeOf(cerrors.ErrorResourceDoesNotExist{}))
+		})
+
+		When("the container has an assigned IP with a legacy handle", func() {
+			It("releases the assigned IP address with the legacy handle on DEL", func() {
+				ctx := context.Background()
+
+				config, err := clientcmd.DefaultClientConfig.ClientConfig()
+				Expect(err).ShouldNot(HaveOccurred())
+
+				clientSet, err := kubernetes.NewForConfig(config)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				ensureNamespace(clientSet, testutils.K8S_TEST_NS)
+
+				cniVersion := os.Getenv("CNI_SPEC_VERSION")
+				nc := types.NetConf{
+					CNIVersion:           cniVersion,
+					Name:                 "calico-uts",
+					Type:                 "calico",
+					EtcdEndpoints:        fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
+					DatastoreType:        os.Getenv("DATASTORE_TYPE"),
+					Kubernetes:           types.Kubernetes{K8sAPIRoot: "http://127.0.0.1:8080"},
+					Policy:               types.Policy{PolicyType: "k8s"},
+					NodenameFileOptional: true,
+					LogLevel:             "info",
+				}
+				nc.IPAM.Type = "calico-ipam"
+				ncb, err := json.Marshal(nc)
+				Expect(err).NotTo(HaveOccurred())
+				netconf := string(ncb)
+
+				hostname, _ := names.Hostname()
+				name := fmt.Sprintf("run%d", rand.Uint32())
+				pod := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: testutils.K8S_TEST_NS,
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{{
+							Name:  name,
+							Image: "ignore",
+						}},
+						NodeName: hostname,
+					},
+				}
+
+				ensurePodCreated(clientSet, testutils.K8S_TEST_NS, pod)
+				defer ensurePodDeleted(clientSet, testutils.K8S_TEST_NS, name)
+
+				containerID, _, _, contAddresses, _, netNS, err := testutils.CreateContainerWithIface(netconf, name, testutils.K8S_TEST_NS, "", "eth0")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var ips []cnet.IP
+				for _, address := range contAddresses {
+					ips = append(ips, cnet.IP{IP: address.IP})
+				}
+
+				_, err = calicoClient.IPAM().ReleaseIPs(ctx, ips)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				ids := names.WorkloadEndpointIdentifiers{
+					Node:         hostname,
+					Orchestrator: api.OrchestratorKubernetes,
+					Endpoint:     "eth0",
+					Pod:          name,
+					ContainerID:  containerID,
+				}
+				workloadName, err := ids.CalculateWorkloadEndpointName(false)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				legacyHandle := utils.GetLegacyHandleID("calico-uts", containerID, workloadName)
+				for _, ip := range ips {
+					err = calicoClient.IPAM().AssignIP(ctx, ipam.AssignIPArgs{
+						IP:       ip,
+						HandleID: &legacyHandle,
+						Hostname: hostname,
+					})
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+
+				// Double check the IPs were assigned under the legacy Handle
+				retrievedIPs, err := calicoClient.IPAM().IPsByHandle(ctx, legacyHandle)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(len(retrievedIPs)).Should(Equal(len(ips)))
+
+				_, err = testutils.DeleteContainer(netconf, netNS.Path(), name, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				_, err = calicoClient.IPAM().IPsByHandle(ctx, legacyHandle)
+				Expect(err).Should(BeAssignableToTypeOf(cerrors.ErrorResourceDoesNotExist{}))
+			})
+		})
+	})
+
+	Context("multi interface mode set to multus", func() {
+		pool := "172.24.0.0/24"
+
+		BeforeEach(func() {
+			Expect(os.MkdirAll("/etc/cni/net.d/", os.ModePerm))
+			Expect(ioutil.WriteFile("/etc/cni/net.d/calico_multi_interface_mode", []byte("multus"), 0777)).ShouldNot(HaveOccurred())
+
+			testutils.MustCreateNewIPPool(calicoClient, pool, false, false, true)
+
+			Expect(os.Setenv("MULTI_INTERFACE_MODE", "multus")).ShouldNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(os.Remove("/etc/cni/net.d/calico_multi_interface_mode")).ShouldNot(HaveOccurred())
+			testutils.MustDeleteIPPool(calicoClient, pool)
+
+			Expect(os.Setenv("MULTI_INTERFACE_MODE", "")).ShouldNot(HaveOccurred())
+		})
+
+		It("sets up the correct networking for the additional interface", func() {
+			config, err := clientcmd.DefaultClientConfig.ClientConfig()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			clientSet, err := kubernetes.NewForConfig(config)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			ensureNamespace(clientSet, testutils.K8S_TEST_NS)
+
+			cniVersion := os.Getenv("CNI_SPEC_VERSION")
+			nc := types.NetConf{
+				CNIVersion:           cniVersion,
+				Name:                 "calico-uts",
+				Type:                 "calico",
+				EtcdEndpoints:        fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
+				DatastoreType:        os.Getenv("DATASTORE_TYPE"),
+				Kubernetes:           types.Kubernetes{K8sAPIRoot: "http://127.0.0.1:8080"},
+				Policy:               types.Policy{PolicyType: "k8s"},
+				NodenameFileOptional: true,
+				LogLevel:             "info",
+			}
+			nc.IPAM.Type = "calico-ipam"
+			ncb, err := json.Marshal(nc)
+			Expect(err).NotTo(HaveOccurred())
+			netconf := string(ncb)
+
+			hostname, _ := names.Hostname()
+			name := fmt.Sprintf("run%d", rand.Uint32())
+			pod := &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: testutils.K8S_TEST_NS,
+					Annotations: map[string]string{
+						"k8s.v1.cni.cncf.io/networks": "calico1",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+					}},
+					NodeName: hostname,
+				},
+			}
+
+			ensurePodCreated(clientSet, testutils.K8S_TEST_NS, pod)
+			defer ensurePodDeleted(clientSet, testutils.K8S_TEST_NS, name)
+
+			containterID, _, _, contAddresses, _, contNs, err := testutils.CreateContainerWithIface(netconf, name, testutils.K8S_TEST_NS, "", "net1")
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Test the routes and rules were setup correctly inside the pod
+			err = contNs.Do(func(_ ns.NetNS) error {
+				defer GinkgoRecover()
+				link, err := netlink.LinkByName("net1")
+				Expect(err).ShouldNot(HaveOccurred())
+				routeFilter := &netlink.Route{
+					Table: 2,
+				}
+				routes, err := netlink.RouteListFiltered(syscall.AF_INET, routeFilter, netlink.RT_FILTER_TABLE)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(len(routes)).Should(Equal(1))
+
+				route := routes[0]
+				Expect(route).Should(Equal(netlink.Route{
+					LinkIndex: link.Attrs().Index,
+					Table:     2,
+					Type:      route.Type,
+					Protocol:  route.Protocol,
+					Scope:     netlink.SCOPE_UNIVERSE,
+					Gw:        net.IPv4(169, 254, 1, 2).To4(),
+				}))
+
+				rules, err := netlink.RuleList(syscall.AF_INET)
+				Expect(err).ShouldNot(HaveOccurred())
+
+			OUTER:
+				for _, addr := range contAddresses {
+					if addr.IP.To4() == nil {
+						continue
+					}
+
+					for _, rule := range rules {
+						if rule.Src != nil && rule.Src.IP.To4().String() == addr.IP.To4().String() {
+							Expect(rule.Table).Should(Equal(2))
+							continue OUTER
+						}
+					}
+
+					Fail(fmt.Sprintf("couldn't find matching rule for source %s", addr.IP.To4()))
+				}
+
+				return nil
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Test host side routing is setup correctly
+			converter := k8sconversion.NewWorkloadEndpointConverter()
+
+			podInterfaces, err := converter.InterfacesForPod(pod)
+			Expect(err).ShouldNot(HaveOccurred())
+			var podInterface *k8sconversion.PodInterface
+			for _, pI := range podInterfaces {
+				if pI.InsidePodIfaceName == "net1" {
+					podInterface = pI
+					break
+				}
+			}
+			Expect(podInterface).ShouldNot(BeNil())
+
+			hostLink, err := netlink.LinkByName(podInterface.HostSideIfaceName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			hostRoutes, err := netlink.RouteList(hostLink, syscall.AF_INET)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(len(hostRoutes)).Should(Equal(1))
+
+			_, err = testutils.DeleteContainerWithIdAndIfaceName(netconf, contNs.Path(), name, testutils.K8S_TEST_NS, containterID, "net1")
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+		When("an ipv4pools annotation exists on the pod", func() {
+			extraPool := "50.60.0.0/24"
+
+			BeforeEach(func() {
+				testutils.MustCreateNewIPPool(calicoClient, extraPool, false, false, true)
+			})
+
+			AfterEach(func() {
+				testutils.MustDeleteIPPool(calicoClient, extraPool)
+			})
+
+			DescribeTable("", func(iface string, matchingPool cnet.IPNet) {
+				config, err := clientcmd.DefaultClientConfig.ClientConfig()
+				Expect(err).ShouldNot(HaveOccurred())
+
+				clientSet, err := kubernetes.NewForConfig(config)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				ensureNamespace(clientSet, testutils.K8S_TEST_NS)
+
+				cniVersion := os.Getenv("CNI_SPEC_VERSION")
+				nc := types.NetConf{
+					CNIVersion:           cniVersion,
+					Name:                 "calico-uts",
+					Type:                 "calico",
+					EtcdEndpoints:        fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
+					DatastoreType:        os.Getenv("DATASTORE_TYPE"),
+					Kubernetes:           types.Kubernetes{K8sAPIRoot: "http://127.0.0.1:8080"},
+					Policy:               types.Policy{PolicyType: "k8s"},
+					NodenameFileOptional: true,
+					LogLevel:             "info",
+				}
+				nc.IPAM.Type = "calico-ipam"
+				ncb, err := json.Marshal(nc)
+				Expect(err).NotTo(HaveOccurred())
+				netconf := string(ncb)
+
+				hostname, _ := names.Hostname()
+				name := fmt.Sprintf("run%d", rand.Uint32())
+				pod := &v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: testutils.K8S_TEST_NS,
+						Annotations: map[string]string{
+							"cni.projectcalico.org/ipv4pools": "[\"50.60.0.0/24\"]",
+							"k8s.v1.cni.cncf.io/networks":     "calico1",
+						},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{{
+							Name:  name,
+							Image: "ignore",
+						}},
+						NodeName: hostname,
+					},
+				}
+
+				ensurePodCreated(clientSet, testutils.K8S_TEST_NS, pod)
+				defer ensurePodDeleted(clientSet, testutils.K8S_TEST_NS, name)
+
+				_, _, _, contAddresses, _, contNs, err := testutils.CreateContainerWithIface(netconf, name, testutils.K8S_TEST_NS, "", iface)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				Expect(len(contAddresses)).Should(Equal(1))
+				matchingPool.Contains(contAddresses[0].IP)
+
+				_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+			}, TableEntry{
+				Description: "uses that annotation for the default interface",
+				Parameters:  []interface{}{"eth0", cnet.MustParseCIDR(extraPool)},
+			}, TableEntry{
+				Description: "ignores the annotation for additional interfaces",
+				Parameters:  []interface{}{"net1", cnet.MustParseCIDR(pool)},
+			})
+		})
+	})
+
 	Describe("testConnection tests", func() {
 
 		It("successfully connects to the datastore", func(done Done) {
@@ -2913,7 +3321,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		}, 10)
 
 	})
-
 })
 
 func checkPodIPAnnotations(clientset *kubernetes.Clientset, ns, name, expectedIP, expectedIPs string) {
