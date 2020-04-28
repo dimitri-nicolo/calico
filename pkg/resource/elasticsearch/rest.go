@@ -23,17 +23,18 @@ type restClient struct {
 
 // NewRESTClient creates a new instance of the RESTClient from the given rest.Config
 func NewRESTClient(config *rest.Config) (RESTClient, error) {
+	cp := rest.CopyConfig(config)
 	if err := esv1.SchemeBuilder.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 
-	config.APIPath = "/apis"
-	config.GroupVersion = &schema.GroupVersion{Group: "elasticsearch.k8s.elastic.co", Version: "v1"}
+	cp.APIPath = "/apis"
+	cp.GroupVersion = &schema.GroupVersion{Group: "elasticsearch.k8s.elastic.co", Version: "v1"}
 
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
-	config.UserAgent = rest.DefaultKubernetesUserAgent()
+	cp.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	cp.UserAgent = rest.DefaultKubernetesUserAgent()
 
-	restCli, err := rest.RESTClientFor(config)
+	restCli, err := rest.RESTClientFor(cp)
 	if err != nil {
 		return nil, err
 	}
