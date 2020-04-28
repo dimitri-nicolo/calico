@@ -33,6 +33,12 @@ rules:
       - list
       - get
       - watch
+  - apiGroups: ["projectcalico.org"]
+    resources: ["tier.globalnetworkpolicies"]
+    verbs: ["get","watch","list"]
+  - apiGroups: ["projectcalico.org"]
+    resources: ["tiers"]
+    verbs: ["get","watch","list"]
 
 ---
 
@@ -102,11 +108,6 @@ spec:
                   key: apikey
             - name: FW_INSECURE_SKIP_VERIFY
               value: "true"
-            - name: FW_POLICY_NAMESPACE_SELECTOR
-              valueFrom:
-                configMapKeyRef:
-                  name: tigera-firewall-controller
-                  key: tigera.firewall.policy.namespaceSelector
             - name: FW_POLICY_SELECTOR_EXPRESSION
               valueFrom:
                 configMapKeyRef:
