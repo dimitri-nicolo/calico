@@ -147,6 +147,7 @@ type endpointManager struct {
 	activeUpIfaces             set.Set
 	activeWlIDToChains         map[proto.WorkloadEndpointID][]*iptables.Chain
 	activeWlDispatchChains     map[string]*iptables.Chain
+	activeWlRPFDispatchChains  map[string]*iptables.Chain
 	activeEPMarkDispatchChains map[string]*iptables.Chain
 
 	// Workload endpoints that would be locally active but are 'shadowed' by other endpoints
@@ -285,6 +286,7 @@ func newEndpointManagerWithShims(
 		// Caches of the current dispatch chains indexed by chain name.  We use these to
 		// calculate deltas when we need to update the chains.
 		activeWlDispatchChains:         map[string]*iptables.Chain{},
+		activeWlRPFDispatchChains:      map[string]*iptables.Chain{},
 		activeHostFilterDispatchChains: map[string]*iptables.Chain{},
 		activeHostMangleDispatchChains: map[string]*iptables.Chain{},
 		activeHostRawDispatchChains:    map[string]*iptables.Chain{},
@@ -568,6 +570,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 						adminUp,
 						workload.Tiers,
 						workload.ProfileIds,
+						workload.IsEgressGateway,
 					)
 					m.filterTable.UpdateChains(chains)
 					m.activeWlIDToChains[id] = chains
@@ -662,6 +665,19 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeWlEndpoints)
 		m.updateDispatchChains(m.activeWlDispatchChains, newDispatchChains, m.filterTable)
 		m.needToCheckDispatchChains = false
+
+		if m.ipVersion == 4 {
+			// Collect the workload interface names that are allowed to bypass RPF
+			// because they are egress gateways.
+			gatewayInterfaceNames := make([]string, 0, len(m.activeWlEndpoints))
+			for _, endpoint := range m.activeWlEndpoints {
+				if endpoint.IsEgressGateway {
+					gatewayInterfaceNames = append(gatewayInterfaceNames, endpoint.Name)
+				}
+			}
+			newRPFDispatchChains := m.ruleRenderer.WorkloadRPFDispatchChains(m.ipVersion, gatewayInterfaceNames)
+			m.updateDispatchChains(m.activeWlRPFDispatchChains, newRPFDispatchChains, m.rawTable)
+		}
 
 		// Set flag to update endpoint mark chains.
 		m.needToCheckEndpointMarkChains = true

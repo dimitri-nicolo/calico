@@ -992,12 +992,23 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 		})
 	}
 
-	// Apply strict RPF check to packets from workload interfaces.  This prevents
-	// workloads from spoofing their IPs.  Note: non-privileged containers can't
-	// usually spoof but privileged containers and VMs can.
-	//
-	rules = append(rules,
-		r.RPFilter(ipVersion, markFromWorkload, markFromWorkload, r.OpenStackSpecialCasesEnabled, false)...)
+	if ipVersion == 4 {
+		// Apply strict RPF check to packets from workload interfaces (except for egress
+		// gateways).  This prevents workloads from spoofing their IPs.  Note:
+		// non-privileged containers can't usually spoof but privileged containers and VMs
+		// can.
+		rules = append(rules, Rule{
+			Match:  Match().MarkSingleBitSet(markFromWorkload),
+			Action: JumpAction{Target: ChainFromWorkloadDispatch},
+		})
+	} else {
+		// Apply strict RPF check to packets from workload interfaces.  This prevents
+		// workloads from spoofing their IPs.  Note: non-privileged containers can't usually
+		// spoof but privileged containers and VMs can.
+		//
+		rules = append(rules,
+			r.RPFilter(ipVersion, markFromWorkload, markFromWorkload, r.OpenStackSpecialCasesEnabled, false)...)
+	}
 
 	rules = append(rules,
 		// Send non-workload traffic to the untracked policy chains.
@@ -1052,9 +1063,15 @@ func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openS
 		)
 	}
 
-	rules = append(rules, r.DropRules(
-		Match().MarkMatchesWithMask(mark, mask).RPFCheckFailed(acceptLocal),
-	)...)
+	baseMatch := Match()
+	if mark == 0 {
+		// No mark to match; we're in a context where we already know we're coming from a
+		// workload interface.
+	} else {
+		// Match on mark to check we're coming from a workload interface.
+		baseMatch = baseMatch.MarkMatchesWithMask(mark, mask)
+	}
+	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed(acceptLocal))...)
 
 	return rules
 }

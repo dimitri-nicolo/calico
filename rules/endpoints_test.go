@@ -102,7 +102,8 @@ var _ = Describe("Endpoints", func() {
 					"cali1234", epMarkMapper,
 					true,
 					nil,
-					nil)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					nil,
+					NotAnEgressGateway)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
 						Rules: []Rule{
@@ -150,6 +151,7 @@ var _ = Describe("Endpoints", func() {
 					false,
 					nil,
 					nil,
+					NotAnEgressGateway,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -185,6 +187,7 @@ var _ = Describe("Endpoints", func() {
 						EgressPolicies:  []string{"ae", "be"},
 					}},
 					[]string{"prof1", "prof2"},
+					NotAnEgressGateway,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -294,6 +297,7 @@ var _ = Describe("Endpoints", func() {
 						EgressPolicies:  []string{"ae", "staged:be"},
 					}},
 					[]string{"prof1", "prof2"},
+					NotAnEgressGateway,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -397,6 +401,7 @@ var _ = Describe("Endpoints", func() {
 						EgressPolicies:  []string{"staged:ae", "staged:be"},
 					}},
 					[]string{"prof1", "prof2"},
+					NotAnEgressGateway,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -761,6 +766,7 @@ var _ = Describe("Endpoints", func() {
 					true,
 					nil,
 					nil,
+					NotAnEgressGateway,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",

@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	ingressPolicy = "ingress"
-	egressPolicy  = "egress"
-	dropEncap     = true
-	dontDropEncap = false
+	ingressPolicy      = "ingress"
+	egressPolicy       = "egress"
+	dropEncap          = true
+	dontDropEncap      = false
+	NotAnEgressGateway = false
 )
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
@@ -37,6 +38,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	adminUp bool,
 	tiers []*proto.TierInfo,
 	profileIDs []string,
+	isEgressGateway bool,
 ) []*Chain {
 	result := []*Chain{}
 	result = append(result,
@@ -56,6 +58,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			ingressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
 			dontDropEncap,
+			isEgressGateway,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -73,6 +76,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			egressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
 			dropEncap,
+			isEgressGateway,
 		),
 	)
 
@@ -116,6 +120,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			egressPolicy,
 			r.filterAllowAction,
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 		// Chain for input traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -133,6 +138,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ingressPolicy,
 			r.filterAllowAction,
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 		// Chain for forward traffic _to_ the endpoint.
 		r.endpointIptablesChain(
@@ -150,6 +156,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			egressPolicy,
 			r.filterAllowAction,
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 		// Chain for forward traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -167,6 +174,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ingressPolicy,
 			r.filterAllowAction,
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 	)
 
@@ -206,6 +214,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			egressPolicy,
 			AcceptAction{},
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -223,6 +232,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			ingressPolicy,
 			AcceptAction{},
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 	}
 }
@@ -250,6 +260,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
 			ingressPolicy,
 			r.mangleAllowAction,
 			dontDropEncap,
+			NotAnEgressGateway,
 		),
 	}
 }
@@ -300,6 +311,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	policyType string,
 	allowAction Action,
 	dropEncap bool,
+	isEgressGateway bool,
 ) *Chain {
 	rules := []Rule{}
 	chainName := EndpointChainName(endpointPrefix, name)
@@ -316,7 +328,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	if chainType != chainTypeUntracked {
 		// Tracked chain: install conntrack rules, which implement our stateful connections.
 		// This allows return traffic associated with a previously-permitted request.
-		rules = r.appendConntrackRules(rules, allowAction)
+		rules = r.appendConntrackRules(rules, allowAction, isEgressGateway)
 	}
 
 	// First set up failsafes.
@@ -502,7 +514,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	}
 }
 
-func (r *DefaultRuleRenderer) appendConntrackRules(rules []Rule, allowAction Action) []Rule {
+func (r *DefaultRuleRenderer) appendConntrackRules(rules []Rule, allowAction Action, allowInvalid bool) []Rule {
 	// Allow return packets for established connections.
 	if allowAction != (AcceptAction{}) {
 		// If we've been asked to return instead of accept the packet immediately,
@@ -520,7 +532,7 @@ func (r *DefaultRuleRenderer) appendConntrackRules(rules []Rule, allowAction Act
 			Action: allowAction,
 		},
 	)
-	if !r.Config.DisableConntrackInvalid {
+	if !(r.Config.DisableConntrackInvalid || allowInvalid) {
 		// Drop packets that aren't either a valid handshake or part of an established
 		// connection.
 		rules = append(rules, Rule{

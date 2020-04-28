@@ -236,12 +236,14 @@ type RuleRenderer interface {
 	StaticMangleTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
+	WorkloadRPFDispatchChains(ipVersion uint8, gatewayInterfaceNames []string) []*iptables.Chain
 	WorkloadEndpointToIptablesChains(
 		ifaceName string,
 		epMarkMapper EndpointMarkMapper,
 		adminUp bool,
 		tiers []*proto.TierInfo,
 		profileIDs []string,
+		isEgressGateway bool,
 	) []*iptables.Chain
 
 	EndpointMarkDispatchChains(

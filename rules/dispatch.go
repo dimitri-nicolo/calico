@@ -24,6 +24,12 @@ import (
 	"github.com/projectcalico/felix/stringutils"
 )
 
+func gotoEndpointChain(pfx, name string) Action {
+	return GotoAction{
+		Target: EndpointChainName(pfx, name),
+	}
+}
+
 func (r *DefaultRuleRenderer) WorkloadDispatchChains(
 	endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint,
 ) []*Chain {
@@ -48,10 +54,36 @@ func (r *DefaultRuleRenderer) WorkloadDispatchChains(
 			ChainToWorkloadDispatch,
 			endRules,
 			endRules,
+			gotoEndpointChain,
 		)...,
 	)
 
 	return result
+}
+
+func (r *DefaultRuleRenderer) WorkloadRPFDispatchChains(
+	ipVersion uint8,
+	gatewayInterfaceNames []string,
+) []*Chain {
+	log.WithField("numGateways", len(gatewayInterfaceNames)).Debug("Rendering workload RPF dispatch chains")
+
+	// We can reuse WorkloadFromEndpointPfx and ChainFromWorkloadDispatch here because these
+	// chains are going into the raw table, where that prefix and chain name aren't otherwise
+	// used.
+	return r.interfaceNameDispatchChains(
+		gatewayInterfaceNames,
+		WorkloadFromEndpointPfx,
+		"",
+		ChainFromWorkloadDispatch,
+		"",
+		// By default, use RPF to prevent a workload from spoofing its source IP.
+		r.RPFilter(ipVersion, 0, 0, r.OpenStackSpecialCasesEnabled, false),
+		nil,
+		// For gateway interfaces, simply return (from ChainFromWorkloadDispatch).
+		func(pfx, name string) Action {
+			return ReturnAction{}
+		},
+	)
 }
 
 // In some scenario, e.g. packet goes to an kubernetes ipvs service ip. Traffic goes through input/output filter chain
@@ -168,6 +200,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			"",
 			fromEndRules,
 			toEndRules,
+			gotoEndpointChain,
 		)
 	}
 
@@ -180,6 +213,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpoint,
 			fromEndRules,
 			toEndRules,
+			gotoEndpointChain,
 		)
 	}
 
@@ -192,6 +226,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpoint,
 			fromEndRules,
 			toEndRules,
+			gotoEndpointChain,
 		),
 		r.interfaceNameDispatchChains(
 			names,
@@ -201,6 +236,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpointForward,
 			fromEndForwardRules,
 			toEndForwardRules,
+			gotoEndpointChain,
 		)...,
 	)
 }
@@ -213,6 +249,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 	dispatchToEndpointChainName string,
 	fromEndRules []Rule,
 	toEndRules []Rule,
+	perEndpointFn func(pfx, name string) Action,
 ) []*Chain {
 
 	log.WithField("ifaceNames", names).Debug("Rendering endpoint dispatch chains")
@@ -230,11 +267,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 		prefixToNames,
 		fromEndpointPfx,
 		func(name string) MatchCriteria { return Match().InInterface(name) },
-		func(pfx, name string) Action {
-			return GotoAction{
-				Target: EndpointChainName(pfx, name),
-			}
-		},
+		perEndpointFn,
 		fromEndRules,
 	)
 
@@ -249,11 +282,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 			prefixToNames,
 			toEndpointPfx,
 			func(name string) MatchCriteria { return Match().OutInterface(name) },
-			func(pfx, name string) Action {
-				return GotoAction{
-					Target: EndpointChainName(pfx, name),
-				}
-			},
+			perEndpointFn,
 			toEndRules,
 		)
 		chains = append(chains, toChildChains...)
