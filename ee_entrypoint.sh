@@ -90,10 +90,11 @@ cp /fluentd/etc/outputs/out-es-flows.conf /fluentd/etc/output_flows/out-es.conf
 cp /fluentd/etc/outputs/out-es-dns.conf /fluentd/etc/output_dns/out-es.conf
 cp /fluentd/etc/outputs/out-es-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-es.conf
 cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
+cp /fluentd/etc/outputs/out-es-bgp.conf /fluentd/etc/output_bgp/out-es.conf
 
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-  for x in flows dns tsee_audit kube_audit; do
+  for x in flows dns tsee_audit kube_audit bgp; do
     setup_secure_es_conf $x
   done
 fi
