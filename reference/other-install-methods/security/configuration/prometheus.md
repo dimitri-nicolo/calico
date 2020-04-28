@@ -33,7 +33,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: calico-prometheus-dp-rate
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
     role: tigera-prometheus-rules
     prometheus: calico-node-prometheus
@@ -60,9 +60,9 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: calico-prometheus-dp-rate
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
-    role: calico-prometheus-rules
+    role: tigera-prometheus-rules
     prometheus: calico-node-prometheus
 spec:
   groups:
@@ -88,12 +88,12 @@ information.
 
 To add the new alerting rule to our Prometheus instance, define a PrometheusRule manifest
 in the `calico-monitoring` namespace with the labels
-`role: calico-prometheus-rules` and `prometheus: calico-node-prometheus`. The
+`role: tigera-prometheus-rules` and `prometheus: calico-node-prometheus`. The
 labels should match the labels defined by the `ruleSelector` field of the
 Prometheus manifest.
 
 As an example, to fire a alert when a {{site.noderunning}} instance has been down for
-more than 5 minutes, save the following to a file, say `calico-node-down-alert.yaml`
+more than 5 minutes, save the following to a file, say `calico-node-down-alert.yaml`.
 
 ```yaml
 {% raw %}
@@ -101,9 +101,9 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: calico-prometheus-calico-node-down
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
-    role: calico-prometheus-rules
+    role: tigera-prometheus-rules
     prometheus: calico-node-prometheus
 spec:
   groups:
@@ -124,6 +124,51 @@ Then create/apply this manifest in kubernetes.
 
 ```
 kubectl apply -f calico-node-down-alert.yaml
+```
+
+Your changes should be applied in a few seconds by the prometheus-config-reloader
+container inside the prometheus pod launched by the prometheus-operator
+(usually named `prometheus-<your-prometheus-instance-name>`).
+
+Let’s look at an example of a new alerting rule to our Prometheus instance with respect to monitoring BGP
+peering health. Define a PrometheusRule manifest in the tigera-prometheus namespace with the labels
+`role: tigera-prometheus-rules` and `prometheus: calico-node-prometheus`. The labels should match the labels
+defined by the `ruleSelector` field of the Prometheus manifest.
+
+As an example, to fire an alert when the number of peering connections with a status other than “Established”
+is increasing at a non-zero rate in the cluster (over the last 5 minutes), save the following to a file, say 
+`tigera-peer-status-not-established.yaml`.
+
+```yaml
+{% raw %}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: calico-node-prometheus
+    role: tigera-prometheus-rules
+  name: tigera-prometheus-peer-status-not-established
+  namespace: tigera-prometheus
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+    - alert: CalicoNodePeerStatusNotEstablished
+      annotations:
+        description: '{{$labels.instance}} has at least one peer connection that is
+          no longer up.'
+        summary: Instance {{$labels.instance}} has peer connection that is no longer
+          up
+      expr: rate(bgp_peers{status!~"Established"}[5m]) > 0
+      labels:
+        severity: critical
+{% endraw %}
+```
+
+Then create/apply this manifest in kubernetes.
+
+```
+kubectl apply -f tigera-peer-status-not-established.yaml
 ```
 
 Your changes should be applied in a few seconds by the prometheus-config-reloader
@@ -257,7 +302,7 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: Prometheus
 metadata:
   name: calico-node-prometheus
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
 spec:
   serviceAccountName: prometheus
   serviceMonitorSelector:
@@ -270,11 +315,11 @@ spec:
       memory: 800Mi
   ruleSelector:
     matchLabels:
-      role: calico-prometheus-rules
+      role: tigera-prometheus-rules
       prometheus: calico-node-prometheus
   alerting:
     alertmanagers:
-      - namespace: calico-monitoring
+      - namespace: tigera-prometheus
         name: calico-node-alertmanager
         port: web
         scheme: http
@@ -327,7 +372,7 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: ServiceMonitor
 metadata:
   name: calico-node-monitor
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
     team: network-operators
 spec:
@@ -350,7 +395,7 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: ServiceMonitor
 metadata:
   name: calico-node-monitor
-  namespace: calico-monitoring
+  namespace: tigera-prometheus
   labels:
     team: network-operators
 spec:
