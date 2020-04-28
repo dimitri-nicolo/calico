@@ -23,6 +23,8 @@ section:
     path: /security/generate-policy-recommendation
   - title: Calico Enterprise policy tutorial
     path: /security/simple-policy-cnx
+  - title: Extend FortiGate Firewalls to Kubernetes with Calico Enterprise
+    path: /security/firewall-integration
   - title: Policy for AWS security groups
     path: /security/aws-security-group-integration/
     section:
