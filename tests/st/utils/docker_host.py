@@ -641,6 +641,16 @@ class DockerHost(object):
         """
         # Grab all objects of a resource type
         objects = yaml.safe_load(self.calicoctl("get %s -o yaml" % resource))
+
+        # Filter out the projectcalico-default-allow profile, which cannot be deleted.
+        if resource == "profile":
+            if len(objects) > 0 and 'items' in objects:
+                filtered_profiles = []
+                for prof in objects['items']:
+                    if prof['metadata']['name'] != 'projectcalico-default-allow':
+                        filtered_profiles.append(prof)
+                objects['items'] = filtered_profiles
+
         # and delete them (if there are any)
         if len(objects) > 0:
             if 'items' in objects and len(objects['items']) == 0:

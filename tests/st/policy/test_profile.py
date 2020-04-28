@@ -386,14 +386,20 @@ class MultiHostMainline(TestBase):
         }
         _log.info("resource_version_map = %r", resource_version_map)
 
+        # Filter out the projectcalico-default-allow profile, which cannot be updated.
+        filtered_profiles = []
+        for prof in new_profiles:
+            if prof['metadata']['name'] != 'projectcalico-default-allow':
+                filtered_profiles.append(prof)
+
         # Set current resource versions in the profiles we are about to apply.
-        for p in new_profiles:
+        for p in filtered_profiles:
             p['metadata']['resourceVersion'] = resource_version_map[p['metadata']['name']]
             if 'creationTimestamp' in p['metadata']:
                 del p['metadata']['creationTimestamp']
 
         # Apply new profiles
-        host.writejson("new_profiles", new_profiles)
+        host.writejson("new_profiles", filtered_profiles)
         host.calicoctl("apply -f new_profiles")
 
     def _setup_workloads(self, host1, host2):
