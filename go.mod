@@ -7,12 +7,12 @@ require (
 	github.com/kelseyhightower/confd v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/cni-plugin v3.8.2+incompatible
 	github.com/projectcalico/felix v3.8.5+incompatible
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
-	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/client_golang v1.1.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
@@ -25,13 +25,11 @@ require (
 replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/containernetworking/cni => github.com/containernetworking/cni v0.0.0-20180705210735-e67bb289cccf
-	github.com/containernetworking/plugins => github.com/containernetworking/plugins v0.0.0-20180925020009-646dbbace1b1
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200401041722-25c17f32ff2a
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200417191056-3f9654137d4f
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200417162525-e725ff206290
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200416215002-419c85191aba
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200427041238-cd8c9d88848d
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200428210837-b3668d92ea39
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200428184425-3cfd0857c1ae
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200424213350-c94519782392
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200425163450-8aa41da9098a
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
