@@ -434,6 +434,11 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     compliance:
       enabled: true
 
+    prometheus:
+      enabled: true
+      image: #{versions["prometheus"].registry}/#{versions["prometheus"].image}
+      tag: #{versions["prometheus"].version}
+
     # Optional configuration for setting custom BGP templates where
     # key is the filename of the template and value is the contents of the template.
     bgp: {}
@@ -468,6 +473,10 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     prometheusConfigReloader:
       image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
+
+    alertmanager:
+      image: #{versions["alertmanager"].registry}/#{versions["alertmanager"].image}
+      tag: #{versions["alertmanager"].version}
 
     configmapReload:
       image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}

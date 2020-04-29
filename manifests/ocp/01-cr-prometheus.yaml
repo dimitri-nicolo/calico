@@ -1,29 +1,3 @@
-# This section configures the Calico Enterprise Prometheus deployment.
-apiVersion: monitoring.coreos.com/v1
-kind: Prometheus
-metadata:
-  name: calico-node-prometheus
-  namespace: tigera-prometheus
-spec:
-  baseImage: quay.io/prometheus/prometheus
-  nodeSelector:
-    beta.kubernetes.io/os: linux
-  serviceAccountName: prometheus
-  serviceMonitorSelector:
-    matchLabels:
-      team: network-operators
-  version: v2.7.1
-  retention: 24h
-  resources:
-    requests:
-      memory: 400Mi
-  ruleSelector:
-    matchLabels:
-      role: tigera-prometheus-rules
-      prometheus: calico-node-prometheus
-  alerting:
-    alertmanagers:
-      - namespace: tigera-prometheus
-        name: calico-node-alertmanager
-        port: web
-        scheme: http
+{% helm tigera-operator --execute templates/crs/prometheus/prometheus.yaml %}
+# todo: fix bug where empty values doesn't render
+{% endhelm %}

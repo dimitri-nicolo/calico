@@ -1,3 +1,4 @@
+{{ if .Values.prometheus.enabled }}
 # Service for access to the AlertManager.
 apiVersion: v1
 kind: Service
@@ -13,3 +14,4 @@ spec:
     targetPort: web
   selector:
     alertmanager: calico-node-alertmanager
+{{ end }}
