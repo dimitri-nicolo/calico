@@ -241,7 +241,19 @@ class TestBase(TestCase):
                        (deployment, ns, replicas)).strip()
 
 
+# Default is for all K8ST tests to be runnable in all setups (K8ST_RIG
+# values).  The test classes that cannot be run in particular setups
+# should set the corresponding variables to False.
+TestBase.vanilla = False
+TestBase.dual_stack = True
+TestBase.dual_tor = True
+
+
 class TestBaseV6(TestBase):
 
     def get_routes(self):
         return run("docker exec kube-node-extra ip -6 r")
+
+
+TestBaseV6.vanilla = False
+TestBaseV6.dual_tor = False
