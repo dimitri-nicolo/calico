@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -44,7 +45,7 @@ type MockDataplane struct {
 	endpointToPolicyOrder          map[string][]TierInfo
 	endpointToUntrackedPolicyOrder map[string][]TierInfo
 	endpointToPreDNATPolicyOrder   map[string][]TierInfo
-	endpointEgressIPSetID          map[string]string
+	endpointEgressData             map[string]calc.EndpointEgressData
 	endpointToAllPolicyIDs         map[string][]proto.PolicyID
 	endpointToProfiles             map[string][]string
 	serviceAccounts                map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
@@ -170,13 +171,14 @@ func (d *MockDataplane) EndpointToPreDNATPolicyOrder() map[string][]TierInfo {
 
 	return copyPolOrder(d.endpointToPreDNATPolicyOrder)
 }
-func (d *MockDataplane) EndpointEgressIPSetID() map[string]string {
+func (d *MockDataplane) EndpointEgressData() map[string]calc.EndpointEgressData {
 	d.Lock()
 	defer d.Unlock()
 
-	localCopy := map[string]string{}
-	for k, v := range d.endpointEgressIPSetID {
-		if v != "" {
+	localCopy := map[string]calc.EndpointEgressData{}
+	for k, v := range d.endpointEgressData {
+		zeroData := calc.EndpointEgressData{}
+		if v != zeroData {
 			localCopy[k] = v
 		}
 	}
@@ -254,7 +256,7 @@ func NewMockDataplane() *MockDataplane {
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
-		endpointEgressIPSetID:          make(map[string]string),
+		endpointEgressData:             make(map[string]calc.EndpointEgressData),
 		endpointToProfiles:             make(map[string][]string),
 		endpointToAllPolicyIDs:         make(map[string][]proto.PolicyID),
 		serviceAccounts:                make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
@@ -371,7 +373,10 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		d.endpointToPolicyOrder[id.String()] = tierInfos
 		d.endpointToUntrackedPolicyOrder[id.String()] = []TierInfo{}
 		d.endpointToPreDNATPolicyOrder[id.String()] = []TierInfo{}
-		d.endpointEgressIPSetID[id.String()] = event.Endpoint.EgressIpSetId
+		d.endpointEgressData[id.String()] = calc.EndpointEgressData{
+			EgressIPSetID:   event.Endpoint.EgressIpSetId,
+			IsEgressGateway: event.Endpoint.IsEgressGateway,
+		}
 		d.endpointToAllPolicyIDs[id.String()] = allPolsIDs
 
 		// Check that all the profiles referenced by the endpoint are already present, which
@@ -388,7 +393,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		delete(d.endpointToPolicyOrder, id.String())
 		delete(d.endpointToUntrackedPolicyOrder, id.String())
 		delete(d.endpointToPreDNATPolicyOrder, id.String())
-		delete(d.endpointEgressIPSetID, id.String())
+		delete(d.endpointEgressData, id.String())
 		delete(d.endpointToProfiles, id.String())
 		delete(d.endpointToAllPolicyIDs, id.String())
 	case *proto.HostEndpointUpdate:
