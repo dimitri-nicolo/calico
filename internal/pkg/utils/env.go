@@ -34,7 +34,7 @@ func SetEnv() error {
 		}
 
 		// this may be an openshift install, and if so this file will be somewhere else
-		if _, err := os.Stat(ifaceModePath); err != nil {
+		if _, err := os.Stat(ocIfaceModePath); err != nil {
 			if os.IsNotExist(err) {
 				return nil
 			}
