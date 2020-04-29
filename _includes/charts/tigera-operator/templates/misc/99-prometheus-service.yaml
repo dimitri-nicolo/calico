@@ -1,4 +1,4 @@
-{{ if .Values.prometheus.enabled }}
+{{ if .Values.prometheusOperator.enabled }}
 # Service for access to Prometheus.
 apiVersion: v1
 kind: Service
