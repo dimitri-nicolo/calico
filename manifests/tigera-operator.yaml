@@ -18,4 +18,6 @@ manager:
   enabled: false
 compliance:
   enabled: false
+prometheus:
+  enabled: false
 {% endhelm %}

@@ -467,6 +467,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       binPath: /bin
 
     prometheusOperator:
+      enabled: true
       image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
       tag: #{versions["prometheus-operator"].version}
 
