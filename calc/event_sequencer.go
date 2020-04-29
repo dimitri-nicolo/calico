@@ -38,6 +38,18 @@ type configInterface interface {
 	RawValues() map[string]string
 }
 
+// Struct for additional data that feeds into proto.WorkloadEndpoint but is computed rather than
+// taken directly from model.WorkloadEndpoint.  Currently this is all related to egress IP function.
+// (It could be generalised in future, and so perhaps renamed EndpointComputedData.)
+type EndpointEgressData struct {
+	// The egress IP set for this endpoint.  This is non-empty when an active local endpoint is
+	// configured to use egress gateways.
+	EgressIPSetID string
+
+	// Whether this endpoint _is_ an egress gateway.
+	IsEgressGateway bool
+}
+
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
 // when Flush() is called.  It flushed updates in a dependency-safe order.
 type EventSequencer struct {
@@ -54,7 +66,7 @@ type EventSequencer struct {
 	pendingProfileUpdates        map[model.ProfileRulesKey]*ParsedRules
 	pendingProfileDeletes        set.Set
 	pendingEndpointUpdates       map[model.Key]interface{}
-	pendingEndpointEgressUpdates map[model.Key]string
+	pendingEndpointEgressUpdates map[model.Key]EndpointEgressData
 	pendingEndpointTierUpdates   map[model.Key][]tierInfo
 	pendingEndpointDeletes       set.Set
 	pendingHostIPUpdates         map[string]*net.IP
@@ -117,7 +129,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingProfileUpdates:        map[model.ProfileRulesKey]*ParsedRules{},
 		pendingProfileDeletes:        set.New(),
 		pendingEndpointUpdates:       map[model.Key]interface{}{},
-		pendingEndpointEgressUpdates: map[model.Key]string{},
+		pendingEndpointEgressUpdates: map[model.Key]EndpointEgressData{},
 		pendingEndpointTierUpdates:   map[model.Key][]tierInfo{},
 		pendingEndpointDeletes:       set.New(),
 		pendingHostIPUpdates:         map[string]*net.IP{},
@@ -390,7 +402,7 @@ func ModelHostEndpointToProto(ep *model.HostEndpoint, tiers, untrackedTiers, pre
 
 func (buf *EventSequencer) OnEndpointTierUpdate(key model.Key,
 	endpoint interface{},
-	egressIPSetID string,
+	egressData EndpointEgressData,
 	filteredTiers []tierInfo,
 ) {
 	if endpoint == nil {
@@ -406,7 +418,7 @@ func (buf *EventSequencer) OnEndpointTierUpdate(key model.Key,
 		// Update.
 		buf.pendingEndpointDeletes.Discard(key)
 		buf.pendingEndpointUpdates[key] = endpoint
-		buf.pendingEndpointEgressUpdates[key] = egressIPSetID
+		buf.pendingEndpointEgressUpdates[key] = egressData
 		buf.pendingEndpointTierUpdates[key] = filteredTiers
 	}
 }
@@ -418,7 +430,8 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 		case model.WorkloadEndpointKey:
 			wlep := endpoint.(*model.WorkloadEndpoint)
 			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
-			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key]
+			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key].EgressIPSetID
+			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: key.OrchestratorID,

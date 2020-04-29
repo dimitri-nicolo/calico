@@ -55,6 +55,7 @@ type PolicyResolver struct {
 	sortedTierData        []*tierInfo
 	endpoints             map[model.Key]interface{}
 	egressIPSetIDs        map[model.WorkloadEndpointKey]string
+	endpointGatewayUsage  map[model.WorkloadEndpointKey]int
 	dirtyEndpoints        set.Set
 	sortRequired          bool
 	policySorter          *PolicySorter
@@ -63,7 +64,7 @@ type PolicyResolver struct {
 }
 
 type PolicyResolverCallbacks interface {
-	OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, egressIPSetID string, filteredTiers []tierInfo)
+	OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, egressData EndpointEgressData, filteredTiers []tierInfo)
 }
 
 func NewPolicyResolver() *PolicyResolver {
@@ -72,6 +73,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpointIDToPolicyIDs: multidict.NewIfaceToIface(),
 		endpoints:             make(map[model.Key]interface{}),
 		egressIPSetIDs:        make(map[model.WorkloadEndpointKey]string),
+		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
 		dirtyEndpoints:        set.New(),
 		policySorter:          NewPolicySorter(),
 		Callbacks:             []PolicyResolverCallbacks{},
@@ -128,12 +130,6 @@ func (pr *PolicyResolver) OnDatamodelStatus(status api.SyncStatus) {
 	}
 }
 
-func (pr *PolicyResolver) OnEgressSelectorAdded(selector string) {
-}
-
-func (pr *PolicyResolver) OnEgressSelectorRemoved(selector string) {
-}
-
 func (pr *PolicyResolver) refreshSortOrder() {
 	pr.sortedTierData = pr.policySorter.Sorted()
 	pr.sortRequired = false
@@ -170,6 +166,27 @@ func (pr *PolicyResolver) OnPolicyMatchStopped(policyKey model.PolicyKey, endpoi
 	pr.maybeFlush()
 }
 
+func (pr *PolicyResolver) OnEgressSelectorMatch(es string, endpointKey interface{}) {
+	if key, ok := endpointKey.(model.WorkloadEndpointKey); ok {
+		log.Debugf("Egress selector match %v -> %v", es, key)
+		pr.endpointGatewayUsage[key]++
+		pr.dirtyEndpoints.Add(endpointKey)
+		pr.maybeFlush()
+	}
+}
+
+func (pr *PolicyResolver) OnEgressSelectorMatchStopped(es string, endpointKey interface{}) {
+	if key, ok := endpointKey.(model.WorkloadEndpointKey); ok {
+		log.Debugf("Delete egress selector match %v -> %v", es, key)
+		pr.endpointGatewayUsage[key]--
+		if pr.endpointGatewayUsage[key] == 0 {
+			delete(pr.endpointGatewayUsage, key)
+		}
+		pr.dirtyEndpoints.Add(endpointKey)
+		pr.maybeFlush()
+	}
+}
+
 func (pr *PolicyResolver) maybeFlush() {
 	if !pr.InSync {
 		log.Debugf("Not in sync, skipping flush")
@@ -189,7 +206,7 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		log.Debugf("Endpoint is unknown, sending nil update")
 		for _, cb := range pr.Callbacks {
 			cb.OnEndpointTierUpdate(endpointID.(model.Key),
-				nil, "", []tierInfo{})
+				nil, EndpointEgressData{}, []tierInfo{})
 		}
 		return nil
 	}
@@ -220,15 +237,16 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		}
 	}
 
-	egressIPSetID := ""
+	egressData := EndpointEgressData{}
 	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
-		egressIPSetID = pr.egressIPSetIDs[key]
+		egressData.EgressIPSetID = pr.egressIPSetIDs[key]
+		egressData.IsEgressGateway = (pr.endpointGatewayUsage[key] > 0)
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
 	for _, cb := range pr.Callbacks {
 		cb.OnEndpointTierUpdate(endpointID.(model.Key),
-			endpoint, egressIPSetID, applicableTiers)
+			endpoint, egressData, applicableTiers)
 	}
 	return nil
 }

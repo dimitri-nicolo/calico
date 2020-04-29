@@ -368,7 +368,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 		uut.OnEndpointTierUpdate(
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
-			"e:abcdef",
+			calc.EndpointEgressData{EgressIPSetID: "e:abcdef"},
 			nil,
 		)
 		uut.Flush()
@@ -391,7 +391,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 		uut.OnEndpointTierUpdate(
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
-			"",
+			calc.EndpointEgressData{},
 			nil,
 		)
 		uut.Flush()

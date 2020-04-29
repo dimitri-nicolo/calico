@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018,2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ type FelixSender interface {
 type PolicyMatchListener interface {
 	OnPolicyMatch(policyKey model.PolicyKey, endpointKey interface{})
 	OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey interface{})
+	OnEgressSelectorMatch(es string, endpointKey interface{})
+	OnEgressSelectorMatchStopped(es string, endpointKey interface{})
 }
 
 // ActiveRulesCalculator calculates the set of policies and profiles (i.e. the rules) that
@@ -240,6 +242,18 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 	return
 }
 
+func (arc *ActiveRulesCalculator) OnEgressSelectorAdded(es string) {
+	sel, err := selector.Parse(es)
+	if err != nil {
+		log.WithError(err).Panicf("Failed to parse egress selector %#v", es)
+	}
+	arc.labelIndex.UpdateSelector(es, sel)
+}
+
+func (arc *ActiveRulesCalculator) OnEgressSelectorRemoved(es string) {
+	arc.labelIndex.DeleteSelector(es)
+}
+
 func (arc *ActiveRulesCalculator) updateStats() {
 	if arc.OnPolicyCountsChanged == nil {
 		return
@@ -303,6 +317,10 @@ func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profil
 }
 
 func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
+	if es, ok := selID.(string); ok {
+		arc.PolicyMatchListener.OnEgressSelectorMatch(es, labelId)
+		return
+	}
 	polKey := selID.(model.PolicyKey)
 	policyWasActive := arc.policyIDToEndpointKeys.ContainsKey(polKey)
 	arc.policyIDToEndpointKeys.Put(selID, labelId)
@@ -317,6 +335,10 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 }
 
 func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
+	if es, ok := selID.(string); ok {
+		arc.PolicyMatchListener.OnEgressSelectorMatchStopped(es, labelId)
+		return
+	}
 	polKey := selID.(model.PolicyKey)
 	arc.policyIDToEndpointKeys.Discard(selID, labelId)
 	if !arc.policyIDToEndpointKeys.ContainsKey(selID) {
