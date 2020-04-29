@@ -1023,6 +1023,15 @@ func (m *endpointManager) updateDispatchChains(
 	}
 }
 
+func (m *endpointManager) ifaceIsForEgressGateway(name string) bool {
+	id, ok := m.activeWlIfaceNameToID[name]
+	if !ok {
+		return false
+	}
+	ep := m.activeWlEndpoints[id]
+	return ep != nil && ep.IsEgressGateway
+}
+
 func (m *endpointManager) configureInterface(name string) error {
 	if !m.activeUpIfaces.Contains(name) {
 		log.WithField("ifaceName", name).Info(
@@ -1032,6 +1041,14 @@ func (m *endpointManager) configureInterface(name string) error {
 	log.WithField("ifaceName", name).Info(
 		"Applying /proc/sys configuration to interface.")
 	if m.ipVersion == 4 {
+		if m.ifaceIsForEgressGateway(name) {
+			// Enable loose reverse-path filtering for this interface.  This allows an egress
+			// gateway workload to forward traffic with any source IP address.
+			err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "2")
+			if err != nil {
+				return err
+			}
+		}
 		// Enable routing to localhost.  This is required to allow for NAT to the local
 		// host.
 		err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/route_localnet", name), "1")
