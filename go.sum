@@ -746,6 +746,8 @@ github.com/tigera/compliance v0.0.0-20200425082411-f550e294e52e h1:phD4//oFTJwP9
 github.com/tigera/compliance v0.0.0-20200425082411-f550e294e52e/go.mod h1:2v2CXn3hgN1Nc5DEmXRZ2etnA2qw1UmJNMyIwqG0+E0=
 github.com/tigera/compliance v0.0.0-20200428084815-d7abd7dda9e0 h1:LHScp3zNUgol8Lz2Jcy/vDms13oVGf/cG2jVLi2sSo4=
 github.com/tigera/compliance v0.0.0-20200428084815-d7abd7dda9e0/go.mod h1:YTgJV3H1x6w5d2VtmDlVnF72pdIgaMe4Vm91oO3i4XI=
+github.com/tigera/compliance v0.0.0-20200429084626-64b1c6ecc9c5 h1:7YuK9t6srX/NhuibtiwMT3IwU6Ozg8rxvvBd18cfSpo=
+github.com/tigera/compliance v0.0.0-20200429084626-64b1c6ecc9c5/go.mod h1:ga0/NAZD3SKf9+U5Z4por/WBg/s1Uflawj1Tprf8hSM=
 github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682 h1:nuf7AXSZUwOFtzT4lFPcSuWQlca2Ub1GSBxEGzWA39k=
 github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682/go.mod h1:NZhbY5rsP3g58UCROZXLuhf425OkOdEEO/O0hWb0My0=
 github.com/tigera/felix-private v0.0.0-20200422041113-2b9f3dbe5ff3 h1:LcYCFFZFdtDKozoOgxUesu7VYmrOgiyT9+a2UAAOz58=
@@ -754,6 +756,8 @@ github.com/tigera/felix-private v0.0.0-20200425051643-77c91b7700ee h1:3xyQJM3L+8
 github.com/tigera/felix-private v0.0.0-20200425051643-77c91b7700ee/go.mod h1:OQc5Ilsiu4ajIv3GZfsPxQwxx1OjLEYxUZIKLoX6yHc=
 github.com/tigera/felix-private v0.0.0-20200427161904-9be7bc21cc73 h1:5q9VTaNAwV7MzeBp/tpDMu8jPAenPdW+6iwIWO4PJs0=
 github.com/tigera/felix-private v0.0.0-20200427161904-9be7bc21cc73/go.mod h1:AbU/fQx8HgNH/6Xj9zRmOv82gGldSSqSDapzVhzLZEM=
+github.com/tigera/felix-private v0.0.0-20200428184425-3cfd0857c1ae h1:c8VHtS88LQw5O2tTuHTqGZ0pPVlLy9+OApXeW9veS34=
+github.com/tigera/felix-private v0.0.0-20200428184425-3cfd0857c1ae/go.mod h1:AbU/fQx8HgNH/6Xj9zRmOv82gGldSSqSDapzVhzLZEM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a h1:oym5mIYF8q/Qirzim4TbN1WdeXRxEvDbeD3mdmy7r30=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200421230545-4b8ce69b960d h1:BINH5oWsXi/Bu5ZxYkQ/ESrIIdoaFROp8okRE5r70lE=
