@@ -665,8 +665,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs)
 	}
 
-	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled {
-		// Add a manger to keep the all-hosts IP set up to date.
+	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled || config.EgressIPEnabled {
+		// Add a manager to keep the all-hosts IP set up to date.
 		dp.allHostsIpsetManager = newAllHostsIpsetManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs)
 		dp.RegisterManager(dp.allHostsIpsetManager) // IPv4-only
 	}
