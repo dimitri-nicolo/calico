@@ -119,7 +119,7 @@ Description of ConfigMap section as follows
 
 1. Create a tier for organizing global network policies.
 
-We recommend creating a separate [Calico tiered policy]({{site.baseurl}}/security/tiered-policies) for organizing all Fortigate firewall global network policies in a single location. (Use the Tier name as a selector in the ConfigMap for choosing global network policies for Fortigate firewalls.)
+We recommend creating a separate [Calico tiered policy]({{site.baseurl}}/security/tiered-policy) for organizing all Fortigate firewall global network policies in a single location. (Use the Tier name as a selector in the ConfigMap for choosing global network policies for Fortigate firewalls.)
 
 2. Create a GlobalNetworkPolicy for address group mappings.
 
