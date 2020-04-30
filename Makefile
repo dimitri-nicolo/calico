@@ -269,7 +269,7 @@ endif
 	touch $@
 
 $(GATEWAY_IMAGE):
-	cd images/egress docker build --pull -t $(GATEWAY_IMAGE):latest-$(ARCH) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
+	cd images/egress && docker build --pull -t $(GATEWAY_IMAGE):latest-$(ARCH) . --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 
 ##########################################################################################
 # TESTING
