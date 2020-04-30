@@ -83,6 +83,7 @@ rules:
       - ipamblocks
       - blockaffinities
       - ipamhandles
+      - ipamconfigs
     verbs:
       - create
       - get
