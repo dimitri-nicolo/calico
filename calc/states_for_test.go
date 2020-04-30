@@ -1842,7 +1842,7 @@ var hostInIPPool = vxlanWithBlock.withKVUpdates(
 	},
 )
 
-// Egress IP.
+// Egress IP.  (All private-only).
 var (
 	egressSelector        = "egress-provider == 'true'"
 	egressSelectorSim     = "egress-provider in {'true', 'not-sure'}"

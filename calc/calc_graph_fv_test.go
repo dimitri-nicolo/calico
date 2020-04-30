@@ -179,7 +179,7 @@ var baseTests = []StateList{
 		endpointWithOwnEgressGateway,
 		localEpsWithPolicy,
 		localEpsWithPolicyUpdatedIPs,
-		twoRemoteEpsSameEgressSelectorLocalGateway,
+		twoRemoteEpsSameEgressSelectorLocalGateway, // private-only
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
 		withProfileTagInherit,
@@ -210,13 +210,13 @@ var baseTests = []StateList{
 		localEpsWithUpdatedProfileNegatedTags,
 		localEpsWithPolicy,
 		localEp1WithNamedPortPolicyNoSelector,
-		endpointWithProfileEgressGateway,
-		endpointWithOwnLocalEgressGateway,
+		endpointWithProfileEgressGateway,  // private-only
+		endpointWithOwnLocalEgressGateway, // private-only
 		localEpsWithPolicyUpdatedIPs,
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
-		endpointWithProfileLocalEgressGateway,
-		twoRemoteEpsSimilarEgressSelectorLocalGateway,
+		endpointWithProfileLocalEgressGateway,         // private-only
+		twoRemoteEpsSimilarEgressSelectorLocalGateway, // private-only
 		withProfileTagInherit,
 		localEp1WithNamedPortPolicyUDP,
 		localEp1WithNamedPortPolicyUDP,
@@ -224,9 +224,9 @@ var baseTests = []StateList{
 
 	// And another.
 	{localEpsWithProfile,
-		endpointWithProfileEgressGateway,
+		endpointWithProfileEgressGateway, // private-only
 		localEp1WithOneTierPolicy123,
-		endpointWithOwnLocalEgressGateway,
+		endpointWithOwnLocalEgressGateway, // private-only
 		localEpsWithNonMatchingProfile,
 		localEpsWithTagInheritProfile,
 		localEpsWithPolicy,
@@ -237,8 +237,8 @@ var baseTests = []StateList{
 		withProfileTagInherit,
 		hostEp1WithPolicyAndTwoNetworkSets,
 		localEp1WithIngressPolicy,
-		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways,
-		endpointWithProfileLocalEgressGateway,
+		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways, // private-only
+		endpointWithProfileLocalEgressGateway,             // private-only
 		localEpsWithNonMatchingProfile,
 		localEpsWithUpdatedProfileNegatedTags,
 		hostEp1WithUntrackedPolicy,
@@ -395,7 +395,7 @@ var baseTests = []StateList{
 		vxlanWithDupNodeIPRemoved,
 	},
 
-	// Egress IP states.
+	// Egress IP states.  (All private-only.)
 	{
 		endpointWithOwnEgressGateway,
 		endpointWithProfileEgressGateway,
