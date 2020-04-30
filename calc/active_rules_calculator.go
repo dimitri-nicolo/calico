@@ -90,6 +90,8 @@ type ActiveRulesCalculator struct {
 	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles, numALPPolicies, numALPEndpoints int)
 }
 
+type egressSelector string
+
 func NewActiveRulesCalculator() *ActiveRulesCalculator {
 	arc := &ActiveRulesCalculator{
 		// Caches of all known policies/profiles and tiers.
@@ -247,11 +249,11 @@ func (arc *ActiveRulesCalculator) OnEgressSelectorAdded(es string) {
 	if err != nil {
 		log.WithError(err).Panicf("Failed to parse egress selector %#v", es)
 	}
-	arc.labelIndex.UpdateSelector(es, sel)
+	arc.labelIndex.UpdateSelector(egressSelector(es), sel)
 }
 
 func (arc *ActiveRulesCalculator) OnEgressSelectorRemoved(es string) {
-	arc.labelIndex.DeleteSelector(es)
+	arc.labelIndex.DeleteSelector(egressSelector(es))
 }
 
 func (arc *ActiveRulesCalculator) updateStats() {
@@ -317,8 +319,8 @@ func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profil
 }
 
 func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
-	if es, ok := selID.(string); ok {
-		arc.PolicyMatchListener.OnEgressSelectorMatch(es, labelId)
+	if es, ok := selID.(egressSelector); ok {
+		arc.PolicyMatchListener.OnEgressSelectorMatch(string(es), labelId)
 		return
 	}
 	polKey := selID.(model.PolicyKey)
@@ -335,8 +337,8 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 }
 
 func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
-	if es, ok := selID.(string); ok {
-		arc.PolicyMatchListener.OnEgressSelectorMatchStopped(es, labelId)
+	if es, ok := selID.(egressSelector); ok {
+		arc.PolicyMatchListener.OnEgressSelectorMatchStopped(string(es), labelId)
 		return
 	}
 	polKey := selID.(model.PolicyKey)
