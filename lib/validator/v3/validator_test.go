@@ -69,6 +69,9 @@ func init() {
 
 	as61234, _ := numorstring.ASNumberFromString("61234")
 
+	validRulePriority := 12345
+	invalidRulePriority := 99999
+
 	// longLabelsValue is 63 and 64 chars long
 	maxAnnotationsLength := 256 * (1 << 10)
 	longValue := make([]byte, maxAnnotationsLength)
@@ -746,6 +749,20 @@ func init() {
 		Entry("should reject route table range max < min", api.FelixConfigurationSpec{RouteTableRange: &api.RouteTableRange{Min: 50, Max: 45}}, false),
 		Entry("should reject route table range max too large", api.FelixConfigurationSpec{RouteTableRange: &api.RouteTableRange{Min: 1, Max: 253}}, false),
 		Entry("should accept route table range with min == max", api.FelixConfigurationSpec{RouteTableRange: &api.RouteTableRange{Min: 8, Max: 8}}, true),
+
+		Entry("should reject an invalid EgressIPSupport value 'Foo'",
+			api.FelixConfigurationSpec{EgressIPSupport: "Foo"}, false),
+		Entry("should accept a valid EgressIPSupport value 'Disabled'",
+			api.FelixConfigurationSpec{EgressIPSupport: "Disabled"}, true),
+		Entry("should accept a valid EgressIPSupport value 'EnabledPerNamespace'",
+			api.FelixConfigurationSpec{EgressIPSupport: "EnabledPerNamespace"}, true),
+		Entry("should accept a valid EgressIPSupport value 'EnabledPerNamespaceOrPerPod'",
+			api.FelixConfigurationSpec{EgressIPSupport: "EnabledPerNamespaceOrPerPod"}, true),
+
+		Entry("should accept a valid egress ip routing rule priority",
+			api.FelixConfigurationSpec{EgressIPRoutingRulePriority: &validRulePriority}, true),
+		Entry("should reject an invalid egress ip routing rule priority",
+			api.FelixConfigurationSpec{EgressIPRoutingRulePriority: &invalidRulePriority}, false),
 
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),

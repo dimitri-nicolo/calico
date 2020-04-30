@@ -1581,6 +1581,21 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(RouteTableRange)
 		**out = **in
 	}
+	if in.EgressIPVXLANPort != nil {
+		in, out := &in.EgressIPVXLANPort, &out.EgressIPVXLANPort
+		*out = new(int)
+		**out = **in
+	}
+	if in.EgressIPVXLANVNI != nil {
+		in, out := &in.EgressIPVXLANVNI, &out.EgressIPVXLANVNI
+		*out = new(int)
+		**out = **in
+	}
+	if in.EgressIPRoutingRulePriority != nil {
+		in, out := &in.EgressIPRoutingRulePriority, &out.EgressIPRoutingRulePriority
+		*out = new(int)
+		**out = **in
+	}
 	return
 }
 
