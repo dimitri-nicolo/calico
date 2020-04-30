@@ -149,7 +149,7 @@ configuring {{site.prodname}}. The flow of traffic should look like the followin
 In order to properly configure TLS in the {{site.prodname}} Manager, you will need
 certificates and keys signed by an appropriate Certificate Authority (CA).
 For more high level information on certificates, keys, and CAs, see
-[this blogpost](https://blog.talpor.com/2015/07/ssltls-certificates-beginners-tutorial){:target="_blank"}.
+[this blogpost](http://www.steves-internet-guide.com/ssl-certificates-explained/){:target="_blank"}.
 
 > **Note** It is important when generating your certificates to make sure
 > that the Common Name or Subject Alternative Name specified in your certificates
