@@ -377,8 +377,8 @@ message WorkloadEndpoint {
   repeated TierInfo tiers = 7;
   repeated NatInfo ipv4_nat = 8;
   repeated NatInfo ipv6_nat = 9;
-  string egress_ip_set_id = 10;
-  bool is_egress_gateway = 11;
+  string egress_ip_set_id = 100;
+  bool is_egress_gateway = 101;
 }
 
 message WorkloadEndpointRemove {
