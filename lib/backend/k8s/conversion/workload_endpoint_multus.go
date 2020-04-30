@@ -59,16 +59,37 @@ func (m multusWorkloadEndpointConverter) VethNameForWorkload(namespace, podName 
 	return m.defaultConverter.VethNameForWorkload(namespace, podName)
 }
 
-// podCNCFNetStatusAnnotation gets the annotation name used for the network status information, if it's available.
-func podCNCFNetStatusAnnotation(pod *kapiv1.Pod) string {
-	annotations := pod.GetAnnotations()
-	if _, exists := annotations[nettypes.OldNetworkStatusAnnot]; exists {
-		return nettypes.OldNetworkStatusAnnot
-	} else if _, exists := annotations[nettypes.NetworkStatusAnnot]; exists {
-		return nettypes.NetworkStatusAnnot
+// networksFromPod parses out the networks from the multus annotations, if available
+func networksFromPod(pod *kapiv1.Pod) ([]*nettypes.NetworkSelectionElement, error) {
+	if _, exists := pod.Annotations[nettypes.NetworkAttachmentAnnot]; exists {
+		return netutils.ParsePodNetworkAnnotation(pod)
 	}
 
-	return ""
+	return nil, nil
+}
+
+// networkStatusesFromPod parses out the network statuses from the multus annotations, if available.
+func networkStatusesFromPod(pod *kapiv1.Pod) ([]*nettypes.NetworkStatus, error) {
+	var networkStatusStr string
+	var exists bool
+
+	annotations := pod.GetAnnotations()
+	if networkStatusStr, exists = annotations[nettypes.OldNetworkStatusAnnot]; exists {
+	} else if networkStatusStr, exists = annotations[nettypes.NetworkStatusAnnot]; exists {
+	} else {
+		return nil, nil
+	}
+
+	if networkStatusStr == "" {
+		return nil, nil
+	}
+
+	var networkStatuses []*nettypes.NetworkStatus
+	if err := json.Unmarshal([]byte(networkStatusStr), &networkStatuses); err != nil {
+		return nil, err
+	}
+
+	return networkStatuses, nil
 }
 
 // InterfacesForPod calculates the PodInterfaces for the interfaces on the given pod.
@@ -92,14 +113,20 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 	var podIfaces []*PodInterface
 	var err error
 
-	annotations := pod.GetAnnotations()
-	// Use the network-status annotation if available because it includes the IP addresses.
-	if cncfNetStatusAnnot := podCNCFNetStatusAnnotation(pod); cncfNetStatusAnnot != "" {
-		var networkStatuses []*nettypes.NetworkStatus
-		if err := json.Unmarshal([]byte(annotations[cncfNetStatusAnnot]), &networkStatuses); err != nil {
-			return nil, err
-		}
+	networks, err := networksFromPod(pod)
+	if err != nil {
+		// Don't return an error in this case, we can just continue and at the very least return the default PodInterface
+		log.WithError(err).Errorf("Failed to parse the networks from the pod %s/%s", pod.Namespace, pod.Name)
+	}
 
+	networkStatuses, err := networkStatusesFromPod(pod)
+	if err != nil {
+		// Don't return an error in this case, we can just continue and at the very least return the default PodInterface
+		log.WithError(err).Errorf("Failed to parse the network statuses from the pod %s/%s", pod.Namespace, pod.Name)
+	}
+
+	// Use the networkStatuses if available because they include the IP addresses.
+	if networkStatuses != nil {
 		// default interface is included in this list, so 9 + 1 interfaces
 		if len(networkStatuses) > 10 {
 			return nil, new(AdditionalPodInterfaceLimitExceededError)
@@ -166,27 +193,22 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 
 		podIfaces = append(podIfaces, defaultPodInterface)
 		// If network-status isn't available yet use the networks instead, but the IP addresses aren't known yet.
-		if annotations[nettypes.NetworkAttachmentAnnot] != "" {
-			netSelectionElements, err := netutils.ParsePodNetworkAnnotation(pod)
-			if err != nil {
-				return nil, err
-			}
-
-			if len(netSelectionElements) > 9 {
+		if networks != nil {
+			if len(networks) > 9 {
 				return nil, new(AdditionalPodInterfaceLimitExceededError)
 			}
 
-			for i, netSelectionElement := range netSelectionElements {
-				if netSelectionElement.InterfaceRequest == "" {
+			for i, network := range networks {
+				if network.InterfaceRequest == "" {
 					// this is what multus defaults the interface name to, if libcalico-go starts supporting more CNI
 					// delegating plugins this will need to be revisited, as other plugins may not use the same default
 					// interface naming scheme
-					netSelectionElement.InterfaceRequest = fmt.Sprintf("net%d", i+1)
+					network.InterfaceRequest = fmt.Sprintf("net%d", i+1)
 				}
 
 				podIfaces = append(podIfaces, &PodInterface{
-					NetworkName:        netSelectionElement.Name,
-					InsidePodIfaceName: netSelectionElement.InterfaceRequest,
+					NetworkName:        network.Name,
+					InsidePodIfaceName: network.InterfaceRequest,
 					HostSideIfaceName:  calculateHostSideVethName(pod.Namespace, pod.Name, i+1),
 					InsidePodGW:        net.IPv4(169, 254, 1, 2+byte(i)),
 				})
