@@ -32,26 +32,3 @@ and examples.
 > for your datastore, then it is possible to `exec` into the container and have an
 > already configured environment.
 {: .alert .alert-info}
-
-{% if include.cli == "calicoq" %}
-#### {{site.prodname}} AWS Security Group Integration
-
-If you are using
-[{{site.prodname}} AWS Security Group Integration]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/aws-sg-integration)
-some additional environment variables need to be provided to `{{include.cli}}`
-to ensure endpoints have the proper labels when they are evaluated.
-
-If you are running `{{include.cli}}` as a binary or container on a single host
-you will need to ensure the following environment variables are set with the
-appropriate values from the `tigera-aws-config` ConfigMap.
-
-| Environment variable              | ConfigMap Key |
-| --------------------------------- | ------------- |
-| `TIGERA_DEFAULT_SECURITY_GROUPS`  | `default_sgs` |
-| `TIGERA_POD_SECURITY_GROUP`       | `pod_sg`      |
-
-> **Note**: Retrieving the values from the ConfigMap must be done after installing
-> the AWS Security Group Integration as the ConfigMap will not exist before installation.
-{: .alert .alert-info}
-{% endif %}
-
