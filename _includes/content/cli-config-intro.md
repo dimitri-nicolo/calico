@@ -34,21 +34,6 @@ and examples.
 {: .alert .alert-info}
 
 {% if include.cli == "calicoq" %}
-#### {{site.prodname}} Federation
-
-If you are using [{{site.prodname}} Federation]({{site.baseurl}}/networking/federation/index) and you wish to view the
-remote cluster endpoints using `{{ include.cli }}` then it is also necessary to include any files (kubeconfigs,
-certificates and keys) that are referenced in the Remote Cluster Configuration resources in the same location as
-specified in these resources. For example, suppose you have a Remote Cluster Configuration resource that references a
-kubeconfig file at `/etc/tigera-federation-remotecluster/kubeconfig` then that kubeconfig would need to be at
-that same location on the local filesystem where you are running `{{ include.cli }}`. If the file is missing then that
-remote cluster configuration will not be included in the `{{ include.cli }}` output, and will instead indicate
-an error for that cluster.
-
-> **Note**: When running `{{ include.cli }}` inside a container or as a kubernetes pod these files need to be mounted
-> into the container at the correct location within the container.
-{: .alert .alert-info}
-
 #### {{site.prodname}} AWS Security Group Integration
 
 If you are using

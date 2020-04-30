@@ -87,9 +87,6 @@ EOF
 {{site.prodname}} supports the AWS VPC CNI plugin, which creates ENI interfaces for the pods that fall within the VPC of
 the cluster. Routing to these pods is automatically handled by AWS.
 
-We recommend using the AWS VPC CNI plugin with [federation](../../networking/federation/index) as it provides seamless IP connectivity
-between your AWS cluster and a remote cluster. Ensure that you use version 1.1 or later.
-
 Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
 
 1. Download the AWS VPC CNI manifest.
@@ -102,9 +99,6 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
 
 1. By default, the AWS CNI plugin performs SNAT for any packet routed outside the VPC. You must disable SNAT
    on external packets to allow clusters in other VPCs or connected via VPN to communicate with pods.
-
-   > **Important**: Required for [federation](../../networking/federation/index).
-   {: .alert .alert-danger}
 
    To disable SNAT on external packets, open the AWS VPC CNI manifest in your favorite editor
    and add an `AWS_VPC_K8S_CNI_EXTERNALSNAT` environment variable set to `true` in the `aws-node` container.
