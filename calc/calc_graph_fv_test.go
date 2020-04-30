@@ -179,6 +179,7 @@ var baseTests = []StateList{
 		endpointWithOwnEgressGateway,
 		localEpsWithPolicy,
 		localEpsWithPolicyUpdatedIPs,
+		twoRemoteEpsSameEgressSelectorLocalGateway, // private-only
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
 		withProfileTagInherit,
@@ -209,10 +210,13 @@ var baseTests = []StateList{
 		localEpsWithUpdatedProfileNegatedTags,
 		localEpsWithPolicy,
 		localEp1WithNamedPortPolicyNoSelector,
-		endpointWithProfileEgressGateway,
+		endpointWithProfileEgressGateway,  // private-only
+		endpointWithOwnLocalEgressGateway, // private-only
 		localEpsWithPolicyUpdatedIPs,
 		hostEp1WithPolicy,
 		localEpsWithUpdatedProfile,
+		endpointWithProfileLocalEgressGateway,         // private-only
+		twoRemoteEpsSimilarEgressSelectorLocalGateway, // private-only
 		withProfileTagInherit,
 		localEp1WithNamedPortPolicyUDP,
 		localEp1WithNamedPortPolicyUDP,
@@ -220,8 +224,9 @@ var baseTests = []StateList{
 
 	// And another.
 	{localEpsWithProfile,
-		endpointWithProfileEgressGateway,
+		endpointWithProfileEgressGateway, // private-only
 		localEp1WithOneTierPolicy123,
+		endpointWithOwnLocalEgressGateway, // private-only
 		localEpsWithNonMatchingProfile,
 		localEpsWithTagInheritProfile,
 		localEpsWithPolicy,
@@ -232,6 +237,8 @@ var baseTests = []StateList{
 		withProfileTagInherit,
 		hostEp1WithPolicyAndTwoNetworkSets,
 		localEp1WithIngressPolicy,
+		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways, // private-only
+		endpointWithProfileLocalEgressGateway,             // private-only
 		localEpsWithNonMatchingProfile,
 		localEpsWithUpdatedProfileNegatedTags,
 		hostEp1WithUntrackedPolicy,
@@ -388,12 +395,17 @@ var baseTests = []StateList{
 		vxlanWithDupNodeIPRemoved,
 	},
 
-	// Egress IP states.
+	// Egress IP states.  (All private-only.)
 	{
 		endpointWithOwnEgressGateway,
 		endpointWithProfileEgressGateway,
 		endpointWithoutOwnEgressGateway,
+		endpointWithOwnLocalEgressGateway,
 		endpointWithoutProfileEgressGateway,
+		endpointWithProfileLocalEgressGateway,
+		twoRemoteEpsSameEgressSelectorLocalGateway,
+		twoRemoteEpsSimilarEgressSelectorLocalGateway,
+		twoRemoteEpsSimilarEgressSelectorTwoLocalGateways,
 	},
 }
 
@@ -648,8 +660,8 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(mockDataplane.EndpointToPreDNATPolicyOrder()).To(Equal(state.ExpectedPreDNATEndpointPolicyOrder),
 		"Pre-DNAT endpoint policy order incorrect after moving to state: %v",
 		state.Name)
-	Expect(mockDataplane.EndpointEgressIPSetID()).To(Equal(state.ExpectedEndpointEgressIPSetID),
-		"Endpoint egress IP set IDs incorrect after moving to state: %v",
+	Expect(mockDataplane.EndpointEgressData()).To(Equal(state.ExpectedEndpointEgressData),
+		"Endpoint egress data incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.ActiveUntrackedPolicies()).To(Equal(state.ExpectedUntrackedPolicyIDs),
 		"Untracked policies incorrect after moving to state: %v",

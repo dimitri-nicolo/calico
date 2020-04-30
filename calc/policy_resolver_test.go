@@ -71,9 +71,9 @@ type prCallbacks struct {
 	egressIPSetIDs []string
 }
 
-func (tc *prCallbacks) OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, egressIPSetID string, filteredTiers []tierInfo) {
+func (tc *prCallbacks) OnEndpointTierUpdate(endpointKey model.Key, endpoint interface{}, egressData EndpointEgressData, filteredTiers []tierInfo) {
 	tc.keys = append(tc.keys, endpointKey)
-	tc.egressIPSetIDs = append(tc.egressIPSetIDs, egressIPSetID)
+	tc.egressIPSetIDs = append(tc.egressIPSetIDs, egressData.EgressIPSetID)
 }
 
 func (tc *prCallbacks) ExpectEndpointTierUpdate(key model.WorkloadEndpointKey, egressIPSetID string) {

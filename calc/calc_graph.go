@@ -61,7 +61,7 @@ type rulesUpdateCallbacks interface {
 type endpointCallbacks interface {
 	OnEndpointTierUpdate(endpointKey model.Key,
 		endpoint interface{},
-		egressIPSetID string,
+		egressData EndpointEgressData,
 		filteredTiers []tierInfo)
 }
 
@@ -330,6 +330,12 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
 	activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
 	activeEgressCalc.OnEgressIPSetIDUpdate = polResolver.OnEgressIPSetIDUpdate
+
+	// Create and hook up the egress selector pool.
+	egressSelectorPool := NewEgressSelectorPool()
+	egressSelectorPool.RegisterWith(allUpdDispatcher)
+	egressSelectorPool.OnEgressSelectorAdded = activeRulesCalc.OnEgressSelectorAdded
+	egressSelectorPool.OnEgressSelectorRemoved = activeRulesCalc.OnEgressSelectorRemoved
 
 	// Register for host IP updates.
 	//

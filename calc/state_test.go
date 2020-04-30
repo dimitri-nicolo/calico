@@ -49,7 +49,7 @@ type State struct {
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
-	ExpectedEndpointEgressIPSetID        map[string]string
+	ExpectedEndpointEgressData           map[string]calc.EndpointEgressData
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
@@ -78,7 +78,7 @@ func NewState() State {
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
-		ExpectedEndpointEgressIPSetID:        make(map[string]string),
+		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
 	}
@@ -100,8 +100,8 @@ func (s State) Copy() State {
 	for k, v := range s.ExpectedPreDNATEndpointPolicyOrder {
 		cpy.ExpectedPreDNATEndpointPolicyOrder[k] = v
 	}
-	for k, v := range s.ExpectedEndpointEgressIPSetID {
-		cpy.ExpectedEndpointEgressIPSetID[k] = v
+	for k, v := range s.ExpectedEndpointEgressData {
+		cpy.ExpectedEndpointEgressData[k] = v
 	}
 
 	cpy.ExpectedPolicyIDs = s.ExpectedPolicyIDs.Copy()
@@ -198,12 +198,13 @@ func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTi
 	return newState
 }
 
-func (s State) withEndpointEgressIPSetID(id, egressIPSetID string) State {
+func (s State) withEndpointEgressData(id string, egressData calc.EndpointEgressData) State {
 	newState := s.Copy()
-	if egressIPSetID != "" {
-		newState.ExpectedEndpointEgressIPSetID[id] = egressIPSetID
+	zeroData := calc.EndpointEgressData{}
+	if egressData != zeroData {
+		newState.ExpectedEndpointEgressData[id] = egressData
 	} else {
-		delete(newState.ExpectedEndpointEgressIPSetID, id)
+		delete(newState.ExpectedEndpointEgressData, id)
 	}
 	return newState
 }
