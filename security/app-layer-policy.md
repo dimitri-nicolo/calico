@@ -76,7 +76,7 @@ kubectl patch configmap -n istio-system istio-sidecar-injector --patch "$(cat is
 ```
 [View sample manifest]({{ "/manifests/alp/istio-inject-configmap-1.3.5.yaml" | absolute_url }}){:target="_blank"}
 
-If you installed a different version of Istio, substitute 1.4.2 in the above URL for your Istio version. We have predefined `ConfigMaps` for Istio versions 1.1.0 through 1.1.17, 1.2.0 through 1.2.9, 1.3.0 through 1.3.5, and 1.4.0 through 1.4.2. To customize the standard sidecar injector `ConfigMap` or understand the changes we have made, see [Customizing the manifests]({{ site.baseurl }}/reference/other-install-methods/kubernetes/installation/config-options).
+If you installed a different version of Istio, substitute 1.4.2 in the above URL for your Istio version. We have predefined `ConfigMaps` for Istio versions 1.1.0 through 1.1.17, 1.2.0 through 1.2.9, 1.3.0 through 1.3.5, and 1.4.0 through 1.4.2.
 
 #### Add Calico authorization services to the mesh
 

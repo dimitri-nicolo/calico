@@ -166,5 +166,4 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
    kubectl apply -f aws-k8s-cni.yaml
    ```
 
-1. Follow the standard {{site.prodname}} instructions to install [{{site.prodname}} for policy only]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/other),
-   making sure to download the correct manifest.
+1. Follow the instructions to install [{{site.prodname}} on AWS]({{site.baseurl}}/getting-started/kubernetes/self-managed-public-cloud/aws).
