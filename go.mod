@@ -5,7 +5,7 @@ go 1.13
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200428184425-3cfd0857c1ae
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200424213350-c94519782392
-	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200427235127-771e07c78810
+	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200429182527-b33b71378a15
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200429084626-64b1c6ecc9c5
 	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200425190426-35f3c6e5242e
 
