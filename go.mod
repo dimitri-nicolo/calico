@@ -31,7 +31,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200428210837-b3668d92ea39
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200429213932-0782742ce617
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200428184425-3cfd0857c1ae
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200424213350-c94519782392
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200425163450-8aa41da9098a
