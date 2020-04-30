@@ -52,7 +52,8 @@ CALICO_VERSION=v3.13.1
 ###############################################################################
 CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 BUILD_IMAGE?=tigera/cnx-node
-PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
+GATEWAY_IMAGE?=tigera/egress-gateway
+PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node $(CNX_REPOSITORY)/tigera/egress-gateway
 RELEASE_IMAGES?=
 
 # Versions and location of dependencies used in the build.
@@ -245,7 +246,7 @@ $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
 # Building the image
 ###############################################################################
 ## Create the image for the current ARCH
-image: remote-deps $(BUILD_IMAGE)
+image: remote-deps $(BUILD_IMAGE) $(GATEWAY_IMAGE)
 ## Create the images for all supported ARCHes
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
@@ -266,6 +267,9 @@ endif
 	"
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 	touch $@
+
+$(GATEWAY_IMAGE):
+	cd images/egress && docker build --pull -t $(GATEWAY_IMAGE):latest-$(ARCH) . --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 
 ##########################################################################################
 # TESTING
