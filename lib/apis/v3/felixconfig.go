@@ -515,6 +515,17 @@ type FelixConfigurationSpec struct {
 	EgressIPVXLANVNI *int `json:"egressVxlanVNI,omitempty"`
 	// EgressIPRoutingRulePriority controls the priority value to use for the egress IP routing rule. [Default: 100]
 	EgressIPRoutingRulePriority *int `json:"egressIPRoutingRulePriority,omitempty" validate:"omitempty,gt=0,lt=32766"`
+
+	// WireguardEnabled controls whether Wireguard is enabled. [Default: false]
+	WireguardEnabled *bool `json:"wireguardEnabled,omitempty"`
+	// WireguardListeningPort controls the listening port used by Wireguard. [Default: 51820]
+	WireguardListeningPort *int `json:"wireguardListeningPort,omitempty" validate:"omitempty,gt=0,lte=65535"`
+	// WireguardRoutingRulePriority controls the priority value to use for the Wireguard routing rule. [Default: 99]
+	WireguardRoutingRulePriority *int `json:"wireguardRoutingRulePriority,omitempty" validate:"omitempty,gt=0,lt=32766"`
+	// WireguardInterfaceName specifies the name to use for the Wireguard interface. [Default: wg.calico]
+	WireguardInterfaceName string `json:"wireguardInterfaceName,omitempty" validate:"omitempty,interface"`
+	// WireguardMTU controls the MTU on the Wireguard interface. See Configuring MTU [Default: 1420]
+	WireguardMTU *int `json:"wireguardMTU,omitempty"`
 }
 
 type RouteTableRange struct {

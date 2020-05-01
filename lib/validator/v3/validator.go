@@ -16,6 +16,7 @@ package v3
 
 import (
 	"fmt"
+	"math/bits"
 	"net"
 	"reflect"
 	"regexp"
@@ -27,12 +28,11 @@ import (
 
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
+	wireguard "golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	validator "gopkg.in/go-playground/validator.v9"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
-
-	"math/bits"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
@@ -206,6 +206,7 @@ func init() {
 	registerFieldValidator("birdGatewayMode", RegexValidator("BIRDGatewayMode", BIRDGatewayModeRegex))
 	registerFieldValidator("regexp", validateRegexp)
 	registerFieldValidator("routeSource", validateRouteSource)
+	registerFieldValidator("wireguardPublicKey", validateWireguardPublicKey)
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -339,6 +340,13 @@ func validateRouteSource(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate routeSource: %s", s)
 	_, err := regexp.Compile(s)
+	return err == nil
+}
+
+func validateWireguardPublicKey(fl validator.FieldLevel) bool {
+	k := fl.Field().String()
+	log.Debugf("Validate Wireguard public-key %s", k)
+	_, err := wireguard.ParseKey(k)
 	return err == nil
 }
 

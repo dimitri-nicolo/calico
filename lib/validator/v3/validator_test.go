@@ -71,6 +71,8 @@ func init() {
 
 	validRulePriority := 12345
 	invalidRulePriority := 99999
+	validWireguardPortOrRulePriority := 12345
+	invalidWireguardPortOrRulePriority := 99999
 
 	// longLabelsValue is 63 and 64 chars long
 	maxAnnotationsLength := 256 * (1 << 10)
@@ -1602,6 +1604,20 @@ func init() {
 			RouteReflectorClusterID: "245.0.0.1",
 		}}, true),
 
+		// Wireguard config field tests
+		Entry("should allow valid Wireguard public-key", api.NodeStatus{
+			WireguardPublicKey: "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY=",
+		}, true),
+		Entry("should allow valid IP address on Wireguard config", api.NodeSpec{Wireguard: &api.NodeWireguardSpec{
+			InterfaceIPv4Address: ipv4_1,
+		}}, true),
+		Entry("should reject invalid IP address on Wireguard config", api.NodeSpec{Wireguard: &api.NodeWireguardSpec{
+			InterfaceIPv4Address: "foo.bar",
+		}}, false),
+		Entry("should reject invalid Wireguard public-key", api.NodeStatus{
+			WireguardPublicKey: "foobar",
+		}, false),
+
 		// GlobalNetworkPolicy validation.
 		Entry("disallow name with invalid character", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
 		Entry("disallow name with mixed case characters", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"}}, false),
@@ -2676,6 +2692,20 @@ func init() {
 		Entry("invalid DNS trusted server: invalid IPv6",
 			*felixCfgWithDNSTrustedServers("[fd00:xyz::2]:5353"), false,
 		),
+		Entry("should accept a valid listening port",
+			api.FelixConfigurationSpec{WireguardListeningPort: &validWireguardPortOrRulePriority}, true,
+		),
+		Entry("should reject a valid listening port",
+			api.FelixConfigurationSpec{WireguardListeningPort: &invalidWireguardPortOrRulePriority}, false,
+		),
+		Entry("should accept a valid routing rule priority",
+			api.FelixConfigurationSpec{WireguardRoutingRulePriority: &validWireguardPortOrRulePriority}, true,
+		),
+		Entry("should reject a valid routing rule priority",
+			api.FelixConfigurationSpec{WireguardRoutingRulePriority: &invalidWireguardPortOrRulePriority}, false,
+		),
+		Entry("should accept valid Wireguard interface", api.FelixConfigurationSpec{WireguardInterfaceName: "wg0"}, true),
+		Entry("should reject valid Wireguard interface", api.FelixConfigurationSpec{WireguardInterfaceName: "wg&0"}, false),
 
 		// KubeControllersConfiguration validation
 		Entry("should not accept invalid HealthChecks",

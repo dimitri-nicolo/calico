@@ -36,7 +36,8 @@ require (
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/genproto v0.0.0-20191203220235-3fa9dbf08042 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
@@ -47,7 +48,6 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	gopkg.in/tchap/go-patricia.v2 v2.2.6
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
-
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
