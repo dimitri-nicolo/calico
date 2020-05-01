@@ -77,14 +77,6 @@ spec:
             self.add_cleanup(gateway.delete)
             gateway.wait_ready()
 
-            # Temporary hack: add an address to the host-side veth for the egress gateway pod.
-            #
-            # First, find the interface name.
-            if_name = run("docker exec -it kind-worker2 bash -c" +
-                          " 'ip r | grep \"%s dev cali\" | cut -d\" \" -f3'" % gateway.ip).strip()
-            # Now add 169.254.1.1 address to that interface.
-            run("docker exec -it kind-worker2 ip a a 169.254.1.1/16 dev %s" % if_name)
-
             # Create client.
             client_ns = "default"
             client = NetcatClientTCP(client_ns, "test1", annotations={
