@@ -47,6 +47,8 @@ const (
 	nodeBgpCIDAnnotation                 = "projectcalico.org/RouteReflectorClusterID"
 	nodeK8sLabelAnnotation               = "projectcalico.org/kube-labels"
 	k8sOrchestratorName                  = "k8s"
+	nodeWireguardIpv4IfaceAddrAnnotation = "projectcalico.org/IPv4WireguardInterfaceAddr"
+	nodeWireguardPublicKeyAnnotation     = "projectcalico.org/WireguardPublicKey"
 	providerIDSep                        = "://"
 )
 
@@ -273,6 +275,18 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node, usePodCIDR bool) (*model.KVPair, erro
 		})
 	}
 
+	// Set the Wireguard interface address and public-key based on annotation.
+	wireguardSpec := &apiv3.NodeWireguardSpec{}
+	wireguardSpec.InterfaceIPv4Address = annotations[nodeWireguardIpv4IfaceAddrAnnotation]
+	wireguardStatus := apiv3.NodeStatus{}
+	wireguardStatus.WireguardPublicKey = annotations[nodeWireguardPublicKeyAnnotation]
+	if !reflect.DeepEqual(*wireguardSpec, apiv3.NodeWireguardSpec{}) {
+		calicoNode.Spec.Wireguard = wireguardSpec
+	}
+	if !reflect.DeepEqual(wireguardStatus, apiv3.NodeStatus{}) {
+		calicoNode.Status = wireguardStatus
+	}
+
 	// Create the resource key from the node name.
 	return &model.KVPair{
 		Key: model.ResourceKey{
@@ -320,38 +334,55 @@ func mergeCalicoNodeIntoK8sNode(calicoNode *apiv3.Node, k8sNode *kapiv1.Node) (*
 		delete(k8sNode.Annotations, nodeBgpIpv6AddrAnnotation)
 		delete(k8sNode.Annotations, nodeBgpAsnAnnotation)
 		delete(k8sNode.Annotations, nodeBgpCIDAnnotation)
-		return k8sNode, nil
+	} else {
+		// If the BGP spec is not nil, then handle each field within the BGP spec individually.
+		if calicoNode.Spec.BGP.IPv4Address != "" {
+			k8sNode.Annotations[nodeBgpIpv4AddrAnnotation] = calicoNode.Spec.BGP.IPv4Address
+		} else {
+			delete(k8sNode.Annotations, nodeBgpIpv4AddrAnnotation)
+		}
+
+		if calicoNode.Spec.BGP.IPv4IPIPTunnelAddr != "" {
+			k8sNode.Annotations[nodeBgpIpv4IPIPTunnelAddrAnnotation] = calicoNode.Spec.BGP.IPv4IPIPTunnelAddr
+		} else {
+			delete(k8sNode.Annotations, nodeBgpIpv4IPIPTunnelAddrAnnotation)
+		}
+
+		if calicoNode.Spec.BGP.IPv6Address != "" {
+			k8sNode.Annotations[nodeBgpIpv6AddrAnnotation] = calicoNode.Spec.BGP.IPv6Address
+		} else {
+			delete(k8sNode.Annotations, nodeBgpIpv6AddrAnnotation)
+		}
+
+		if calicoNode.Spec.BGP.ASNumber != nil {
+			k8sNode.Annotations[nodeBgpAsnAnnotation] = calicoNode.Spec.BGP.ASNumber.String()
+		} else {
+			delete(k8sNode.Annotations, nodeBgpAsnAnnotation)
+		}
+
+		if calicoNode.Spec.BGP.RouteReflectorClusterID != "" {
+			k8sNode.Annotations[nodeBgpCIDAnnotation] = calicoNode.Spec.BGP.RouteReflectorClusterID
+		} else {
+			delete(k8sNode.Annotations, nodeBgpCIDAnnotation)
+		}
 	}
 
-	// If the BGP spec is not nil, then handle each field within the BGP spec individually.
-	if calicoNode.Spec.BGP.IPv4Address != "" {
-		k8sNode.Annotations[nodeBgpIpv4AddrAnnotation] = calicoNode.Spec.BGP.IPv4Address
+	if calicoNode.Spec.Wireguard == nil {
+		delete(k8sNode.Annotations, nodeWireguardIpv4IfaceAddrAnnotation)
 	} else {
-		delete(k8sNode.Annotations, nodeBgpIpv4AddrAnnotation)
+		// Handle Wireguard interface address.
+		if calicoNode.Spec.Wireguard.InterfaceIPv4Address != "" {
+			k8sNode.Annotations[nodeWireguardIpv4IfaceAddrAnnotation] = calicoNode.Spec.Wireguard.InterfaceIPv4Address
+		} else {
+			delete(k8sNode.Annotations, nodeWireguardIpv4IfaceAddrAnnotation)
+		}
 	}
 
-	if calicoNode.Spec.BGP.IPv4IPIPTunnelAddr != "" {
-		k8sNode.Annotations[nodeBgpIpv4IPIPTunnelAddrAnnotation] = calicoNode.Spec.BGP.IPv4IPIPTunnelAddr
+	// Handle Wireguard public-key.
+	if calicoNode.Status.WireguardPublicKey != "" {
+		k8sNode.Annotations[nodeWireguardPublicKeyAnnotation] = calicoNode.Status.WireguardPublicKey
 	} else {
-		delete(k8sNode.Annotations, nodeBgpIpv4IPIPTunnelAddrAnnotation)
-	}
-
-	if calicoNode.Spec.BGP.IPv6Address != "" {
-		k8sNode.Annotations[nodeBgpIpv6AddrAnnotation] = calicoNode.Spec.BGP.IPv6Address
-	} else {
-		delete(k8sNode.Annotations, nodeBgpIpv6AddrAnnotation)
-	}
-
-	if calicoNode.Spec.BGP.ASNumber != nil {
-		k8sNode.Annotations[nodeBgpAsnAnnotation] = calicoNode.Spec.BGP.ASNumber.String()
-	} else {
-		delete(k8sNode.Annotations, nodeBgpAsnAnnotation)
-	}
-
-	if calicoNode.Spec.BGP.RouteReflectorClusterID != "" {
-		k8sNode.Annotations[nodeBgpCIDAnnotation] = calicoNode.Spec.BGP.RouteReflectorClusterID
-	} else {
-		delete(k8sNode.Annotations, nodeBgpCIDAnnotation)
+		delete(k8sNode.Annotations, nodeWireguardPublicKeyAnnotation)
 	}
 
 	return k8sNode, nil

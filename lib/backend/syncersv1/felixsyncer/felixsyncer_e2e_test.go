@@ -221,6 +221,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
 			var node *apiv3.Node
+			wip := net.MustParseIP("192.168.12.34")
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// For Kubernetes, update the existing node config to have some BGP configuration.
 				By("Configuring a node with an IP address and tunnel MAC address")
@@ -228,6 +229,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					oldValuesSaved        bool
 					oldBGPSpec            *apiv3.NodeBGPSpec
 					oldVXLANTunnelMACAddr string
+					oldWireguardSpec      *apiv3.NodeWireguardSpec
+					oldWireguardPublicKey string
 				)
 				for i := 0; i < 5; i++ {
 					// This can fail due to an update conflict, so we allow a few retries.
@@ -241,6 +244,13 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 							oldBGPSpec = &bgpSpecCopy
 						}
 						oldVXLANTunnelMACAddr = node.Spec.VXLANTunnelMACAddr
+						if node.Spec.Wireguard == nil {
+							oldWireguardSpec = nil
+						} else {
+							wireguardSpecCopy := *node.Spec.Wireguard
+							oldWireguardSpec = &wireguardSpecCopy
+						}
+						oldWireguardPublicKey = node.Status.WireguardPublicKey
 						oldValuesSaved = true
 					}
 					node.Spec.BGP = &apiv3.NodeBGPSpec{
@@ -249,6 +259,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						IPv4IPIPTunnelAddr: "10.10.10.1",
 					}
 					node.Spec.VXLANTunnelMACAddr = "66:cf:23:df:22:07"
+					node.Spec.Wireguard = &apiv3.NodeWireguardSpec{
+						InterfaceIPv4Address: "192.168.12.34",
+					}
+					node.Status = apiv3.NodeStatus{
+						WireguardPublicKey: "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY=",
+					}
 					node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
 					if err == nil {
 						break
@@ -262,6 +278,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						Expect(err).NotTo(HaveOccurred())
 						node.Spec.BGP = oldBGPSpec
 						node.Spec.VXLANTunnelMACAddr = oldVXLANTunnelMACAddr
+						node.Spec.Wireguard = oldWireguardSpec
+						node.Status.WireguardPublicKey = oldWireguardPublicKey
 						node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
 						if err == nil {
 							break
@@ -277,7 +295,11 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "VXLANTunnelMACAddr"},
 					Value: "66:cf:23:df:22:07",
 				})
-				expectedCacheSize += 2
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.WireguardKey{NodeName: "127.0.0.1"},
+					Value: &model.Wireguard{InterfaceIPv4Addr: &wip, PublicKey: "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="},
+				})
+				expectedCacheSize += 3
 			} else {
 				// For non-Kubernetes, add a new node with valid BGP configuration.
 				By("Creating a node with an IP address and tunnel MAC address")
@@ -292,6 +314,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 								IPv4IPIPTunnelAddr: "10.10.10.1",
 							},
 							VXLANTunnelMACAddr: "66:cf:23:df:22:07",
+							Wireguard: &apiv3.NodeWireguardSpec{
+								InterfaceIPv4Address: "192.168.12.34",
+							},
+						},
+						Status: apiv3.NodeStatus{
+							WireguardPublicKey: "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY=",
 						},
 					},
 					options.SetOptions{},
@@ -323,7 +351,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "VXLANTunnelMACAddr"},
 					Value: "66:cf:23:df:22:07",
 				})
-				expectedCacheSize += 5
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.WireguardKey{NodeName: "127.0.0.1"},
+					Value: &model.Wireguard{InterfaceIPv4Addr: &wip, PublicKey: "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="},
+				})
+				//add one for the node resource
+				expectedCacheSize += 6
 			}
 
 			// The HostIP will be added for the IPv4 address

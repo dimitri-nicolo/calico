@@ -1,4 +1,16 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package updateprocessors_test
 
@@ -37,6 +49,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			nodeMarker:         res,
 			"IpInIpTunnelAddr": nil,
 			"NodeIP":           nil,
+			wireguardMarker:    nil,
 		}
 		kvps, err := up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -68,6 +81,25 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			expected,
 		)
 
+		By("converting a zero-ed but non-nil WireguardSpec")
+		res = apiv3.NewNode()
+		res.Name = "mynode"
+		res.Spec.Wireguard = &apiv3.NodeWireguardSpec{}
+		expected[nodeMarker] = res
+		expected[wireguardMarker] = nil
+		kvps, err = up.Process(&model.KVPair{
+			Key:   v3NodeKey1,
+			Value: res,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		// same expected results as the fully zeroed struct.
+		checkExpectedConfigs(
+			kvps,
+			isNodeFelixConfig,
+			numFelixConfigs,
+			expected,
+		)
+
 		By("converting a Node with an IPv4 (specified without the network) only")
 		res = apiv3.NewNode()
 		res.Name = "mynode"
@@ -80,6 +112,83 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			nodeMarker:         res,
 			"IpInIpTunnelAddr": nil,
 			"NodeIP":           "1.2.3.4",
+		}
+		kvps, err = up.Process(&model.KVPair{
+			Key:   v3NodeKey1,
+			Value: res,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		checkExpectedConfigs(
+			kvps,
+			isNodeFelixConfig,
+			numFelixConfigs,
+			expected,
+		)
+
+		By("converting a Node with Wireguard interface IPv4 address")
+		res = apiv3.NewNode()
+		res.Name = "mynode"
+		res.Spec.Wireguard = &apiv3.NodeWireguardSpec{
+			InterfaceIPv4Address: "1.2.3.4",
+		}
+		expected = map[string]interface{}{
+			nodeMarker: res,
+			wireguardMarker: &model.Wireguard{
+				InterfaceIPv4Addr: &ip,
+			},
+		}
+		kvps, err = up.Process(&model.KVPair{
+			Key:   v3NodeKey1,
+			Value: res,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		checkExpectedConfigs(
+			kvps,
+			isNodeFelixConfig,
+			numFelixConfigs,
+			expected,
+		)
+
+		By("converting a Node with Wireguard public-key")
+		res = apiv3.NewNode()
+		res.Name = "mynode"
+		key := "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="
+		res.Status = apiv3.NodeStatus{
+			WireguardPublicKey: key,
+		}
+		expected = map[string]interface{}{
+			nodeMarker: res,
+			wireguardMarker: &model.Wireguard{
+				PublicKey: key,
+			},
+		}
+		kvps, err = up.Process(&model.KVPair{
+			Key:   v3NodeKey1,
+			Value: res,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		checkExpectedConfigs(
+			kvps,
+			isNodeFelixConfig,
+			numFelixConfigs,
+			expected,
+		)
+
+		By("converting a Node with Wireguard interface address and public-key")
+		res = apiv3.NewNode()
+		res.Name = "mynode"
+		res.Spec.Wireguard = &apiv3.NodeWireguardSpec{
+			InterfaceIPv4Address: "1.2.3.4",
+		}
+		res.Status = apiv3.NodeStatus{
+			WireguardPublicKey: key,
+		}
+		expected = map[string]interface{}{
+			nodeMarker: res,
+			wireguardMarker: &model.Wireguard{
+				InterfaceIPv4Addr: &ip,
+				PublicKey:         key,
+			},
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -185,6 +294,28 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			"IpInIpTunnelAddr":    "192.100.100.100",
 			"IPv4VXLANTunnelAddr": nil,
 			"NodeIP":              nil,
+		}
+		checkExpectedConfigs(
+			kvps,
+			isNodeFelixConfig,
+			numFelixConfigs,
+			expected,
+		)
+
+		By("trying to convert with an invalid Wireguard interface IPv4 address - expect delete for that key")
+		res = apiv3.NewNode()
+		res.Name = "mynode"
+		res.Spec.Wireguard = &apiv3.NodeWireguardSpec{
+			InterfaceIPv4Address: "1.2.3.4/240",
+		}
+		kvps, err = up.Process(&model.KVPair{
+			Key:   v3NodeKey1,
+			Value: res,
+		})
+		Expect(err).To(HaveOccurred())
+		expected = map[string]interface{}{
+			nodeMarker:      res,
+			wireguardMarker: nil,
 		}
 		checkExpectedConfigs(
 			kvps,
