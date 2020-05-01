@@ -30,7 +30,8 @@ We'll use a new namespace for this guide.  Run the following commands to create 
 
 ```shell
 kubectl create ns advanced-policy-demo
-kubectl run --namespace=advanced-policy-demo nginx --replicas=2 --image=nginx
+kubectl create deployment --namespace=advanced-policy-demo nginx --image=nginx
+kubectl scale deployment --namespace=advanced-policy-demo --replicas=2 nginx
 kubectl expose --namespace=advanced-policy-demo deployment nginx --port=80
 ```
 

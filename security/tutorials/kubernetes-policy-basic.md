@@ -24,7 +24,8 @@ We'll use Kubernetes `Deployment` objects to easily create pods in the namespace
 1. Create some nginx pods in the `policy-demo` namespace.
 
    ```bash
-   kubectl run --namespace=policy-demo nginx --replicas=2 --image=nginx
+   kubectl create deployment --namespace=policy-demo nginx --image=nginx
+   kubectl scale deployment --namespace=policy-demo --replicas=2 nginx
    ```
 
 1. Expose them through a service.
