@@ -21,6 +21,9 @@ import (
 // egress selectors, and hence should be privileged in the ways that are needed for endpoints acting
 // as egress gateways.
 type EgressSelectorPool struct {
+	// "EnabledPerNamespaceOrPerPod" or "EnabledPerNamespace".
+	supportLevel string
+
 	// Known egress selectors and their ref counts.
 	endpointSelectors map[model.WorkloadEndpointKey]string
 	profileSelectors  map[model.ResourceKey]string
@@ -31,8 +34,9 @@ type EgressSelectorPool struct {
 	OnEgressSelectorRemoved func(selector string)
 }
 
-func NewEgressSelectorPool() *EgressSelectorPool {
+func NewEgressSelectorPool(supportLevel string) *EgressSelectorPool {
 	esp := &EgressSelectorPool{
+		supportLevel:      supportLevel,
 		endpointSelectors: map[model.WorkloadEndpointKey]string{},
 		profileSelectors:  map[model.ResourceKey]string{},
 		selectorRefCount:  map[string]int{},
@@ -41,8 +45,10 @@ func NewEgressSelectorPool() *EgressSelectorPool {
 }
 
 func (esp *EgressSelectorPool) RegisterWith(allUpdDispatcher *dispatcher.Dispatcher) {
-	// It needs all workload endpoints and v3 profiles.
-	allUpdDispatcher.Register(model.WorkloadEndpointKey{}, esp.OnUpdate)
+	// Subject to support level, it needs all workload endpoints and v3 profiles.
+	if esp.supportLevel == "EnabledPerNamespaceOrPerPod" {
+		allUpdDispatcher.Register(model.WorkloadEndpointKey{}, esp.OnUpdate)
+	}
 	allUpdDispatcher.Register(model.ResourceKey{}, esp.OnUpdate)
 }
 

@@ -722,6 +722,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		conf.BPFEnabled = true
 		conf.SetUseNodeResourceUpdates(expandedTest.UsesNodeResources())
 		conf.RouteSource = expandedTest.RouteSource()
+		conf.EgressIPSupport = "EnabledPerNamespaceOrPerPod"
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)

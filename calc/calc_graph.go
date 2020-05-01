@@ -324,18 +324,20 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	// And hook its output to the callbacks.
 	polResolver.RegisterCallback(callbacks)
 
-	// Create and hook up the active egress calculator.
-	activeEgressCalc := NewActiveEgressCalculator()
-	activeEgressCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
-	activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
-	activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
-	activeEgressCalc.OnEgressIPSetIDUpdate = polResolver.OnEgressIPSetIDUpdate
+	if conf.EgressIPCheckEnabled() {
+		// Create and hook up the active egress calculator.
+		activeEgressCalc := NewActiveEgressCalculator(conf.EgressIPSupport)
+		activeEgressCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
+		activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
+		activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
+		activeEgressCalc.OnEgressIPSetIDUpdate = polResolver.OnEgressIPSetIDUpdate
 
-	// Create and hook up the egress selector pool.
-	egressSelectorPool := NewEgressSelectorPool()
-	egressSelectorPool.RegisterWith(allUpdDispatcher)
-	egressSelectorPool.OnEgressSelectorAdded = activeRulesCalc.OnEgressSelectorAdded
-	egressSelectorPool.OnEgressSelectorRemoved = activeRulesCalc.OnEgressSelectorRemoved
+		// Create and hook up the egress selector pool.
+		egressSelectorPool := NewEgressSelectorPool(conf.EgressIPSupport)
+		egressSelectorPool.RegisterWith(allUpdDispatcher)
+		egressSelectorPool.OnEgressSelectorAdded = activeRulesCalc.OnEgressSelectorAdded
+		egressSelectorPool.OnEgressSelectorRemoved = activeRulesCalc.OnEgressSelectorRemoved
+	}
 
 	// Register for host IP updates.
 	//

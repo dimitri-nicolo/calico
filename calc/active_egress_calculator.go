@@ -23,6 +23,9 @@ import (
 // for each selector; and the PolicyResolver to tell it to include the egress IP set ID on the
 // WorkloadEndpoint data that is passed to the dataplane implementation.
 type ActiveEgressCalculator struct {
+	// "EnabledPerNamespaceOrPerPod" or "EnabledPerNamespace".
+	supportLevel string
+
 	// Active egress selectors.
 	selectors map[string]*esData
 
@@ -60,11 +63,12 @@ type esData struct {
 	refCount int
 }
 
-func NewActiveEgressCalculator() *ActiveEgressCalculator {
+func NewActiveEgressCalculator(supportLevel string) *ActiveEgressCalculator {
 	aec := &ActiveEgressCalculator{
-		selectors: map[string]*esData{},
-		endpoints: map[model.WorkloadEndpointKey]*epData{},
-		profiles:  map[string]string{},
+		supportLevel: supportLevel,
+		selectors:    map[string]*esData{},
+		endpoints:    map[model.WorkloadEndpointKey]*epData{},
+		profiles:     map[string]string{},
 	}
 	return aec
 }
@@ -82,7 +86,14 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 		if update.Value != nil {
 			log.Debugf("Updating AEC with endpoint %v", key)
 			endpoint := update.Value.(*model.WorkloadEndpoint)
-			aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector)
+			if aec.supportLevel == "EnabledPerNamespaceOrPerPod" {
+				// Endpoint-level selectors are supported.
+				aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector)
+			} else {
+				// Endpoint-level selectors are not supported.
+				aec.updateEndpoint(key, endpoint.ProfileIDs, "")
+			}
+
 		} else {
 			log.Debugf("Deleting endpoint %v from AEC", key)
 			aec.deleteEndpoint(key)
