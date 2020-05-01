@@ -1,7 +1,7 @@
 ---
-title: Configuring Prometheus
+title: Monitor metrics for denied packets and storage
 description: Configure rules for alerts and denied packets, for persistent storage.
-canonical_url: /reference/other-install-methods/security/configuration/prometheus
+canonical_url: /maintenance/monitor/prometheus
 ---
 
 #### Updating Denied Packets Rules

@@ -1,5 +1,5 @@
 ---
-title: Deploy and monitor Calico Enterprise license metrics
+title: Monitor Calico Enterprise license metrics
 description: Use the Prometheus monitoring and alerting tool to get Calico Enterprise license metrics such as nodes used, nodes available, and days until license expires.
 ---
 
@@ -9,13 +9,13 @@ Use the Prometheus monitoring and alerting tool to get {{site.prodname}} license
 
 ### Value
 
-Platform engineering teams need to report licensing usage on the third-party software (like {{site.prodname}}) for their CaaS/Kubernetes platforms. This is often driven by compliance, but also to mitigate risks from license expiration or usage that may impact operations. For teams to easily access these vital metrics, {{site.prodname}} provides license metrics using the Prometheus monitoring and alerting tool.
+Platform engineering teams need to report licensing usage on third-party software (like {{site.prodname}}) for their CaaS/Kubernetes platforms. This is often driven by compliance, but also to mitigate risks from license expiration or usage that may impact operations. For teams to easily access these vital metrics, {{site.prodname}} provides license metrics using the Prometheus monitoring and alerting tool.
 
 ### Features
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- **LicenseKey API**
+- **LicenseKey resource**
 
 ### Concepts
 
@@ -34,9 +34,9 @@ The **License Agent** is a containerized application that monitors the following
 
 #### FAQ
 
-**Is license metrics are available through {{site.prodname}} Manager?**
+**Are license metrics are available through {{site.prodname}} Manager?**
 
- No. Currently, the only interface is prometheus. 
+ No. Currently, the only interface is Prometheus. 
 
 **How long does it take to get a new {{site.prodname}} license?**
 
@@ -55,40 +55,33 @@ The **License Agent** is a containerized application that monitors the following
 - New nodes that you add past your limit, are still added
 - All {{site.prodname}} features still work
 
-
 ### How to
 
-- [Deploy license agent in your Kubernetes cluster](#deploy-license-agent-in-your-kubernetes-cluster)
-- [Create alerts using prometheus metrics](#create-alerts-using-prometheus-metrics)
+- [Add license agent in your Kubernetes cluster](#add-license-agent-in-your-Kubernetes-cluster)
+- [Create alerts using Prometheus metrics](#create-alerts-using-prometheus-metrics)
 
+#### Add license agent in your Kubernetes cluster
 
-#### Deploy license agent in your Kubernetes cluster
+To add the license-agent component in a Kubernetes cluster for license metrics, install the pull secret and apply the license-agent manifest. 
 
-To add the license-agent component in a Kubernetes cluster for license metrics, install pull secret and apply license-agent manifest. 
+1. Create a namespace for the license-agent.
+   ```
+    kubectl create namespace tigera-license-agent
+   ```
+1. Install your pull secret.
+   ```
+    kubectl create secret generic tigera-pull-secret \
+      --type=kubernetes.io/dockerconfigjson -n tigera-license-agent \
+      --from-file=.dockerconfigjson=<path/to/pull/secret>
+   ```
+1. Apply the manifest.
+   ```
+    kubectl apply -f {{ "/manifests/licenseagent.yaml" | absolute_url }}
+   ```
 
-1. Create namespace for license-agent
+#### Create alerts using Prometheus metrics
 
-```
-kubectl create namespace tigera-license-agent
-```
-
-2. Install your pull secret
-
-```
-   kubectl create secret generic tigera-pull-secret \
-     --type=kubernetes.io/dockerconfigjson -n tigera-license-agent \
-     --from-file=.dockerconfigjson=<path/to/pull/secret>
-```
-
-3. Apply manifest
-
-```
-kubectl apply -f {{ "/manifests/licenseagent.yaml" | absolute_url }}
-```
-
-#### Create alerts using prometheus metrics
-
-In the following example, Alert is configured to trigger when the license expires in less than 15 days
+In the following example, an alert is configured when the license expiry is fewer than 15 days.
 
 ```
 apiVersion: monitoring.coreos.com/v1
@@ -112,13 +105,10 @@ spec:
         description: "Calico Enterprise License expires in less than 15 days"
 ```
 
-### Note
-
-Monitoring {{site.prodname}} license metrics works only with Operator based Install.
-If Kubernetes api-server serves on any other port than 6443 or 443, Add that port in the Egress policy of license agent manifest.
+>**Note**: If the Kubernetes api-server serves on any port other than 6443 or 443, add that port in the Egress policy of the license agent manifest. 
+{: .alert .alert-info}
 
 ### Above and beyond
 
-- [LicenseKey API]({{site.baseurl}}/reference/resources/licensekey)
-- [Configuring Alertmanager]({{site.baseurl}}/reference/other-install-methods/security/configuration/alertmanager)
-
+- [LicenseKey resource]({{site.baseurl}}/reference/resources/licensekey)
+- [Configure Alertmanager]({{site.baseurl}}/maintenance/monitor/alertmanager)

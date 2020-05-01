@@ -80,7 +80,7 @@ The metrics generated are:
 
 {{site.prodname}} will run BGP metrics for Prometheus by default. Metrics are directly available on each compute node at `http://<node-IP>:9900/metrics`.
 
-Refer to [Configuring Prometheus]({{site.baseurl}}/reference/other-install-methods/security/configuration/prometheus) for information on how to create a new Alerting rule or updating the scraping interval for how often Prometheus collects the metrics.
+Refer to [Configuring Prometheus]({{site.baseurl}}/maintenance/monitor/prometheus) for information on how to create a new Alerting rule or updating the scraping interval for how often Prometheus collects the metrics.
 
 #### BGP peers metric
  
@@ -134,4 +134,4 @@ irate(bgp_route_updates_received{ip_version="IPv4"}[5m])
 ### Above and beyond
 
 - [Secure {{site.prodname}} Prometheus endpoints]({{site.baseurl}}/security/comms/secure-metrics)
-- [Configuring Prometheus]({{site.baseurl}}/reference/other-install-methods/security/configuration/prometheus)
+- [Configuring Prometheus]({{site.baseurl}}/maintenance/monitor/prometheus)

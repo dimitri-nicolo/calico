@@ -45,7 +45,7 @@ May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be
 ```
 {: .no-select-button}
 
-Note that [Denied Packet Metrics]({{site.baseurl}}/reference/other-install-methods/security/metrics/metrics) are independent of the `DropActionOverride`
+Note that [Denied Packet Metrics]({{site.baseurl}}/maintenance/monitor/metrics) are independent of the `DropActionOverride`
 setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of `Accept` or `LogAndAccept`, those packets
 still contribute to the denied packet metrics as normal.

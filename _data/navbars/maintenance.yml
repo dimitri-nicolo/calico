@@ -10,21 +10,27 @@ section:
   - title: Kubernetes
     path: /maintenance/kubernetes-upgrade-tsee/
     section:
-    - title: Operator Upgrade
+    - title: Operator upgrade
       path: /maintenance/kubernetes-upgrade-tsee/operator
   - title: OpenShift
     path: /maintenance/openshift-upgrade
   - title: Helm
     path: /maintenance/helm-upgrade-tsee
-- title: Deploy and monitor Calico Enterprise licensing metrics
-  path: /maintenance/license-agent
 - title: Monitor
   path: /maintenance/monitor/
   section: 
-  - title: Monitor component metrics
-    path: /maintenance/monitor-component-metrics  
+  - title: Monitor Calico Enterprise component metrics
+    path: /maintenance/monitor/monitor-component-metrics 
+  - title: Configure Alertmanager
+    path: /maintenance/monitor/alertmanager    
   - title: Monitor BGP metrics
-    path: /maintenance/monitor/bgp-metrics 
+    path: /maintenance/monitor/bgp-metrics     
+  - title: Monitor Calico Enterprise license metrics
+    path: /maintenance/monitor/license-agent
+  - title: Monitor policy metrics 
+    path: /maintenance/monitor/metrics  
+  - title: Monitor denied packets and storage
+    path: /maintenance/monitor/prometheus  
 - title: Remove nodes from a cluster
   path: /maintenance/decommissioning-a-node
 - title: Troubleshoot

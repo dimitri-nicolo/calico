@@ -1,7 +1,7 @@
 ---
-title: Policy metrics in Prometheus
+title: Monitor policy metrics
 description: Monitor the effects of policy in your cluster and received alerts by defining rules and thresholds.
-canonical_url: /reference/other-install-methods/security/metrics/metrics
+canonical_url: /maintenance/monitor/metrics
 ---
 
 {{site.prodname}} adds the ability to monitor effects of policies configured in your cluster.
@@ -61,7 +61,7 @@ Once Prometheus scrapes a node and collects policy metrics, it will be
 available at Prometheus until the metric is considered _stale_, i.e.,
 Prometheus has not seen any updates to this metric for some time. This time is
 configurable. Refer to
-[Configuring Prometheus configuration]({{site.baseurl}}/reference/other-install-methods/security/configuration/prometheus)
+[Configuring Prometheus configuration]({{site.baseurl}}/maintenance/monitor/prometheus)
 for more information.
 
 Because of metrics being expired, as just described, it is entirely possible

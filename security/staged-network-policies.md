@@ -245,4 +245,4 @@ spec:
 - For details on how to configure RBAC for staged policy resources, see [Configuring RBAC for tiered policy]({{site.baseurl}}/security/rbac-tiered-policies)
 - For details on staged policy metrics, see
   - [Flow logs]({{site.baseurl}}/security/logs/elastic/flow)
-  - [Prometheus statistics]({{site.baseurl}}/reference/other-install-methods/security/metrics/metrics#content-main)
+  - [Prometheus statistics]({{site.baseurl}}/maintenance/monitor/metrics#content-main)
