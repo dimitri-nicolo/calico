@@ -1,0 +1,51 @@
+---
+layout: null
+---
+
+{% helm tigera-operator \
+--execute templates/crds/01-crd-alertmanager.yaml \
+--execute templates/crds/01-crd-apiserver.yaml \
+--execute templates/crds/01-crd-compliance.yaml \
+--execute templates/crds/01-crd-manager.yaml \
+--execute templates/crds/01-crd-eck-apmserver.yaml \
+--execute templates/crds/01-crd-eck-elasticsearch.yaml \
+--execute templates/crds/01-crd-eck-kibana.yaml \
+--execute templates/crds/01-crd-eck-trustrelationship.yaml \
+--execute templates/crds/01-crd-installation.yaml \
+--execute templates/crds/01-crd-intrusiondetection.yaml \
+--execute templates/crds/01-crd-logstorage.yaml \
+--execute templates/crds/01-crd-logcollector.yaml \
+--execute templates/crds/01-crd-prometheusrule.yaml \
+--execute templates/crds/01-crd-prometheus.yaml \
+--execute templates/crds/01-crd-servicemonitor.yaml \
+--execute templates/crds/01-crd-tigerastatus.yaml \
+--execute templates/crds/01-crd-managementclusterconnection.yaml \
+--execute templates/crds/calico/kdd/02-crd-bgpconfiguration.yaml \
+--execute templates/crds/calico/kdd/02-crd-felixconfiguration.yaml \
+--execute templates/crds/calico/kdd/02-crd-ipamblock.yaml \
+--execute templates/crds/calico/kdd/02-crd-kubecontrollersconfiguration.yaml \
+--execute templates/crds/calico/kdd/02-crd-bgppeer.yaml \
+--execute templates/crds/calico/kdd/02-crd-globalnetworkpolicy.yaml \
+--execute templates/crds/calico/kdd/02-crd-ipamconfig.yaml \
+--execute templates/crds/calico/kdd/02-crd-networkpolicy.yaml \
+--execute templates/crds/calico/kdd/02-crd-blockaffinity.yaml \
+--execute templates/crds/calico/kdd/02-crd-globalnetworkset.yaml \
+--execute templates/crds/calico/kdd/02-crd-ipamhandle.yaml \
+--execute templates/crds/calico/kdd/02-crd-networkset.yaml \
+--execute templates/crds/calico/kdd/02-crd-clusterinformation.yaml \
+--execute templates/crds/calico/kdd/02-crd-hostendpoint.yaml \
+--execute templates/crds/calico/kdd/02-crd-ippool.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-globalalerttemplate.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-globalthreatfeed.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-stagedglobalnetworkpolicy.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-globalalert.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-licensekey.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-stagedkubernetesnetworkpolicy.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-globalreporttype.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-managedcluster.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-stagednetworkpolicy.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-globalreport.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-remoteclusterconfiguration.yaml \
+--execute templates/crds/calico/ee-kdd/02-crd-tier.yaml %}
+# todo: fix bug where empty tag doesn't render
+{% endhelm %}
