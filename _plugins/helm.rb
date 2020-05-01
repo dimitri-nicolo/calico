@@ -34,8 +34,21 @@ module Jekyll
         extra_args.slice! " secure-es"
       end
 
+      # helm doesn't natively have an --execute-dir flag but it sure would be useful if it did.
+      # here we replace instances of "--execute-dir $dir" with individual calls to "--execute $file" by
+      # iterating over files in that directory.
+      extra_args.gsub!(/--execute-dir (\S*)/) do |_|
+        e = []
+        Dir.foreach "_includes/charts/#{@chart}/#{$1}" do |file|
+            next if File.directory?("_includes/charts/#{@chart}/#{$1}/#{file}")
+            e << "--execute #{$1}/#{file}"
+        end
+        e.join(" ")
+      end
+
       @extra_args = extra_args
     end
+
     def render(context)
       text = super
 
