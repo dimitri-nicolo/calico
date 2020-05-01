@@ -29,7 +29,7 @@ blocks:
       jobs:
         - name: Build helm charts for master branch
           commands:
-            - make charts RELEASE_STREAM=master
+            - make charts
   - name: "Push helm charts"
     dependencies: ["Build helm charts"]
     run:
@@ -38,7 +38,7 @@ blocks:
       jobs:
         - name: Push helm charts for master branch
           commands:
-            - make charts RELEASE_STREAM=master
+            - make charts
             - |
               for chart in ./bin/*.tgz; do
                   sudo helm gcs push $chart gs://tigera-helm-charts
