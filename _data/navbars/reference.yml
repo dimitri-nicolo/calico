@@ -102,21 +102,6 @@ section:
       path: /reference/resources/tier
     - title: Workload endpoint
       path: /reference/resources/workloadendpoint
-- title: Configuring etcd RBAC
-  path: /reference/etcd-rbac/
-  section:
-  - title: Overview
-    path: /reference/etcd-rbac/overview
-  - title: Generating certificates
-    path: /reference/etcd-rbac/certificate-generation
-  - title: Creating users and roles
-    path: /reference/etcd-rbac/users-and-roles
-  - title: Segmenting etcd on Kubernetes (basic)
-    path: /reference/etcd-rbac/kubernetes
-  - title: Segmenting etcd on Kubernetes (advanced)
-    path: /reference/etcd-rbac/kubernetes-advanced
-  - title: Calico key and path prefixes
-    path: /reference/etcd-rbac/calico-etcdv3-paths
 - title: cnx-node
   path: /reference/node/configuration
 - title: calicoq
