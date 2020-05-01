@@ -24,7 +24,7 @@ class TestEgressIP(TestBase):
         with DiagsCollector():
 
             # Enable egress IP.
-            newEnv = {"FELIX_EGRESSIPENABLED": "true"}
+            newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod"}
             self.update_ds_env("calico-node", "kube-system", newEnv)
 
             # Create external server.
