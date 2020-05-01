@@ -50,9 +50,7 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
 
             # Create egress gateway, with an IP from that pool.
-            gateway_ns = "gateway-ns"
             gateway_ns = "default"
-            # self.create_namespace(gateway_ns)
             gateway = Pod(gateway_ns, "gateway", image=None, yaml="""
 apiVersion: v1
 kind: Pod
@@ -90,9 +88,7 @@ spec:
             run("docker exec -it kind-worker2 ip a a 169.254.1.1/16 dev %s" % if_name)
 
             # Create client.
-            client_ns = "client-ns"
             client_ns = "default"
-            #self.create_namespace(client_ns)
             client = NetcatClientTCP(client_ns, "test1", annotations={
                 "egress.projectcalico.org/selector": "color == 'red'",
                 "egress.projectcalico.org/namespaceSelector": "all()",
@@ -116,6 +112,7 @@ spec:
 
 
 TestEgressIP.vanilla = True
+TestEgressIP.dual_stack = False
 
 
 class NetcatServerTCP(Container):
