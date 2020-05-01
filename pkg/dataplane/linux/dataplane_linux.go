@@ -66,6 +66,7 @@ func (d *linuxDataplane) DoNetworking(
 	// Not used on Linux
 	_ = ctx
 
+	isDefaultNetwork := ipv4GW == nil || ipv4GW.String() == defaultIPv4Gateway().String()
 	hostVethName = desiredVethName
 	contVethName := args.IfName
 	var hasIPv4, hasIPv6 bool
@@ -173,34 +174,11 @@ func (d *linuxDataplane) DoNetworking(
 			}
 
 			// If this is not using the default gateway then source based routing needs to be configured
-			if ipv4GW.String() != defaultIPv4Gateway().String() {
+			if !isDefaultNetwork {
 				// Use the last byte if the gateway IP as the table ID
 				tableID := int(ipv4GW[len(ipv4GW)-1])
-
-				// Add the default route to a new table for this gateway
-				err := netlink.RouteAdd(&netlink.Route{
-					LinkIndex: contVeth.Attrs().Index,
-					Table:     tableID,
-					Scope:     netlink.SCOPE_UNIVERSE,
-					Gw:        ipv4GW,
-				})
-
-				if err != nil {
+				if err := setupSourceRouting(tableID, ipv4GW, contVeth, result.IPs, "4"); err != nil {
 					return err
-				}
-
-				// Add a source based rule for each ipv4 address to use the newly created table if a route has a source
-				// in this list
-				for _, addr := range result.IPs {
-					if addr.Version == "4" {
-						rule := netlink.NewRule()
-						rule.Table = tableID
-						rule.Src = &addr.Address
-
-						if err := netlink.RuleAdd(rule); err != nil {
-							return err
-						}
-					}
 				}
 			}
 		}
@@ -264,6 +242,15 @@ func (d *linuxDataplane) DoNetworking(
 					return fmt.Errorf("failed to add IPv6 route for %v via %v: %v", r, hostIPv6Addr, err)
 				}
 			}
+
+			// If this is not using the default gateway then source based routing needs to be configured
+			if !isDefaultNetwork {
+				// Use the last byte if the gateway IP as the table ID
+				tableID := int(ipv4GW[len(ipv4GW)-1])
+				if err := setupSourceRouting(tableID, hostIPv6Addr, contVeth, result.IPs, "6"); err != nil {
+					return err
+				}
+			}
 		}
 
 		// Now add the IPs to the container side of the veth.
@@ -314,6 +301,38 @@ func (d *linuxDataplane) DoNetworking(
 	}
 
 	return hostVethName, contVethMAC, err
+}
+
+// setupSourceRouting creates an ip rule and route to send traffic originating from the IP's in addrs out the gateway
+// determined by gw over the interface determined by contVeth.
+func setupSourceRouting(tableID int, gw net.IP, contVeth netlink.Link, addrs []*current.IPConfig, version string) error {
+	// Add the default route to a new table for this gateway
+	err := netlink.RouteAdd(&netlink.Route{
+		LinkIndex: contVeth.Attrs().Index,
+		Table:     tableID,
+		Scope:     netlink.SCOPE_UNIVERSE,
+		Gw:        gw,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Add a source based rule for each address of "version" (ipv4 or ipv6) to use the newly created table if a route has
+	// a source in this list
+	for _, addr := range addrs {
+		if addr.Version == version {
+			rule := netlink.NewRule()
+			rule.Table = tableID
+			rule.Src = &addr.Address
+
+			if err := netlink.RuleAdd(rule); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // SetupRoutes sets up the routes for the host side of the veth pair.
