@@ -26,3 +26,4 @@ Makefile.common*
 bin
 kubectl
 /tests/k8st/kind
+/tests/k8st/infra/calico.yaml

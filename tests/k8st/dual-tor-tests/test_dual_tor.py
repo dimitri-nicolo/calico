@@ -611,11 +611,16 @@ class TestRestartCalicoNodes(TestBase):
 
 TestFailoverPodIP.vanilla = False
 TestFailoverPodIP.dual_stack = False
+TestFailoverPodIP.dual_tor = True
 TestFailoverServiceIP.vanilla = False
 TestFailoverServiceIP.dual_stack = False
+TestFailoverServiceIP.dual_tor = True
 TestFailoverNodePort.vanilla = False
 TestFailoverNodePort.dual_stack = False
+TestFailoverNodePort.dual_tor = True
 TestFailoverHostAccess.vanilla = False
 TestFailoverHostAccess.dual_stack = False
+TestFailoverHostAccess.dual_tor = True
 TestRestartCalicoNodes.vanilla = False
 TestRestartCalicoNodes.dual_stack = False
+TestRestartCalicoNodes.dual_tor = True

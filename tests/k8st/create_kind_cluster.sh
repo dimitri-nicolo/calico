@@ -59,6 +59,9 @@ EOF
 EOF
 	# update FELIX_IPV6SUPPORT=true
 	sed -i '/FELIX_IPV6SUPPORT/!b;n;c\              value: "true"' "${yaml}"
+    else
+	# For vanilla setup, we don't want any IP-IP or VXLAN overlay.
+	sed -i 's/Always/Never/' "${yaml}"
     fi
 
     # update calico/node image
