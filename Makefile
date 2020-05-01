@@ -524,7 +524,7 @@ bin/helm:
 ###############################################################################
 # Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml: _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-secure-ee/values.yaml _includes/charts/tigera-operator/values.yaml
+values.yaml: _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-operator/values.yaml
 _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
 	docker run --rm \
 	  -v $$PWD:/calico \
@@ -549,7 +549,7 @@ appVersion:=$(CALICO_VER)-$(GIT_HASH)
 endif
 endif
 
-charts: chart/tigera-secure-ee-core chart/tigera-secure-ee chart/tigera-operator
+charts: chart/tigera-secure-ee-core chart/tigera-operator
 chart/%: _includes/charts/%/values.yaml
 	mkdir -p bin
 	helm package ./_includes/charts/$* \
