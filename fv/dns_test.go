@@ -72,7 +72,7 @@ var _ = Describe("DNS Policy", func() {
 		// initial TCP connection packet at T=0s and the first retry packet at T=1s.  Then
 		// it seems microsoft.com can take a little time to send a response, so allow 2s
 		// more.
-		out, err := w[0].ExecCombinedOutput("wget", "--dns-timeout=1", "--no-dns-cache", "-U", "firefox", "-T", "4", "microsoft.com")
+		out, err := w[0].ExecCombinedOutput("wget", "--dns-timeout=1", "-U", "firefox", "-T", "4", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
 	}
@@ -205,7 +205,7 @@ var _ = Describe("DNS Policy", func() {
 			"iptables", "-w", "-t", "nat",
 			"-A", "POSTROUTING",
 			"-o", "eth0",
-			"-j", "MASQUERADE",
+			"-j", "MASQUERADE", "--random-fully",
 		)
 	})
 
