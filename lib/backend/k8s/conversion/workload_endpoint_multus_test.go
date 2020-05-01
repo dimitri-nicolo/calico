@@ -346,6 +346,100 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 			})
 		})
 		Context("with the k8s.v1.cni.cncf.io/network-status annotation", func() {
+			It("falls back to the networks annotation if the content of the networks-status annotation is empty", func() {
+				pod := &kapiv1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "podA",
+						Namespace: "default",
+						Annotations: map[string]string{
+							nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+							nettypes.NetworkStatusAnnot:     "",
+						},
+					},
+					Status: kapiv1.PodStatus{
+						PodIP: "192.168.91.113",
+					},
+				}
+
+				podInterfaces, err := multusWorkloadEndpointConverter{}.InterfacesForPod(pod)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(podInterfaces).Should(Equal([]*PodInterface{
+					{
+						IsDefault:          true,
+						NetworkName:        "k8s-pod-network",
+						InsidePodIfaceName: "eth0",
+						HostSideIfaceName:  "cali7f94ce7c295",
+						InsidePodGW:        net.IPv4(169, 254, 1, 1),
+						IPNets: []*cnet.IPNet{{
+							IPNet: net.IPNet{
+								IP:   []byte{192, 168, 91, 113},
+								Mask: net.IPMask("\xff\xff\xff\xff"),
+							},
+						}},
+					},
+					{
+						IsDefault:          false,
+						NetworkName:        "calico1",
+						InsidePodIfaceName: "net1",
+						HostSideIfaceName:  "calim1P6KM47BJK",
+						InsidePodGW:        net.IPv4(169, 254, 1, 2),
+					},
+					{
+						IsDefault:          false,
+						NetworkName:        "calico2",
+						InsidePodIfaceName: "net2",
+						HostSideIfaceName:  "calim2P6KM47BJK",
+						InsidePodGW:        net.IPv4(169, 254, 1, 3),
+					},
+				}))
+			})
+			It("falls back to the networks annotation if the content of the networks-status annotation is invalid json", func() {
+				pod := &kapiv1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "podA",
+						Namespace: "default",
+						Annotations: map[string]string{
+							nettypes.NetworkAttachmentAnnot: "calico1,calico2",
+							nettypes.NetworkStatusAnnot:     "}[{dsfewc",
+						},
+					},
+					Status: kapiv1.PodStatus{
+						PodIP: "192.168.91.113",
+					},
+				}
+
+				podInterfaces, err := multusWorkloadEndpointConverter{}.InterfacesForPod(pod)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(podInterfaces).Should(Equal([]*PodInterface{
+					{
+						IsDefault:          true,
+						NetworkName:        "k8s-pod-network",
+						InsidePodIfaceName: "eth0",
+						HostSideIfaceName:  "cali7f94ce7c295",
+						InsidePodGW:        net.IPv4(169, 254, 1, 1),
+						IPNets: []*cnet.IPNet{{
+							IPNet: net.IPNet{
+								IP:   []byte{192, 168, 91, 113},
+								Mask: net.IPMask("\xff\xff\xff\xff"),
+							},
+						}},
+					},
+					{
+						IsDefault:          false,
+						NetworkName:        "calico1",
+						InsidePodIfaceName: "net1",
+						HostSideIfaceName:  "calim1P6KM47BJK",
+						InsidePodGW:        net.IPv4(169, 254, 1, 2),
+					},
+					{
+						IsDefault:          false,
+						NetworkName:        "calico2",
+						InsidePodIfaceName: "net2",
+						HostSideIfaceName:  "calim2P6KM47BJK",
+						InsidePodGW:        net.IPv4(169, 254, 1, 3),
+					},
+				}))
+			})
 			It("populates the PodInterface using k8s.v1.cni.cncf.io/networks-status annotation", func() {
 				// The exception to this population is with the default interface, as it gets its IPs from the pod Status
 				// IP annotations
