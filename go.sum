@@ -305,7 +305,9 @@ github.com/tigera/libcalico-go-private v0.0.0-20200424134240-3b1dc290be81 h1:qp8
 github.com/tigera/libcalico-go-private v0.0.0-20200424134240-3b1dc290be81/go.mod h1:4xXwtBqgZgwn3qMj3v4Z5ZlBxW6fV8dnV72yEtAfSfo=
 github.com/tigera/libcalico-go-private v0.0.0-20200424213350-c94519782392 h1:Jt3JSy9a26RnKZpXKTslWTDqOYJold7CQXhZiTo1QOs=
 github.com/tigera/libcalico-go-private v0.0.0-20200424213350-c94519782392/go.mod h1:4xXwtBqgZgwn3qMj3v4Z5ZlBxW6fV8dnV72yEtAfSfo=
+github.com/tigera/libcalico-go-private v0.0.0-20200501024505-bbeb9855431b h1:W0TvK6atfY5KK4op5nhKyhKLPPKCjuhk3lwC/2oAYdM=
 github.com/tigera/libcalico-go-private v0.0.0-20200501024505-bbeb9855431b/go.mod h1:4xXwtBqgZgwn3qMj3v4Z5ZlBxW6fV8dnV72yEtAfSfo=
+github.com/tigera/libcalico-go-private v0.0.0-20200501133425-3e6300d6d59b/go.mod h1:4xXwtBqgZgwn3qMj3v4Z5ZlBxW6fV8dnV72yEtAfSfo=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 h1:xM0NXtWnlqB83al1HoHAODwZc2Y/0SzclonznKHw9wQ=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
 github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1 h1:xglpgGtP0Sww8sSSWti6B+a2TGZ3Td95wOw4u9BD73M=
@@ -335,6 +337,7 @@ github.com/tigera/typha-private v0.0.0-20200424174941-c0cd443cbb3f h1:p/kSrb7bOa
 github.com/tigera/typha-private v0.0.0-20200424174941-c0cd443cbb3f/go.mod h1:e63bmhcEuoora/PKue1wRC/5JruSwRm5Il59VhmVw1g=
 github.com/tigera/typha-private v0.0.0-20200425163450-8aa41da9098a h1:Ud2FYLOUoU1U6IEYev+nwAI8wa2YSBAoEfcUGec733E=
 github.com/tigera/typha-private v0.0.0-20200425163450-8aa41da9098a/go.mod h1:BLP8xgbZm5r/IJZgCdfDr1y+UZ9QuDEcJzardf3OC0A=
+github.com/tigera/typha-private v0.0.0-20200501163439-12049d9ae3f2/go.mod h1:WrE6+tHRFPz4P18IUpzCm3nlBqaWbrtFMeKqMjg8PMI=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
