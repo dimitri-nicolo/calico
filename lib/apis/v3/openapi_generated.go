@@ -5077,7 +5077,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"egressIPSupport": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EgressIPSupport defines three different support modes for egress IP function. [Default: Disabled] - Disabled:                    EgressIP function is disabled. - EnabledPerNamespace:         Egress IP function is enabled and can be configured on a per-namespace basis;\n                               per-pod egress annotations are ignored.\n- EnabledPerNamespaceOrPerPod: Egress IP function is enabled and can be configured per-namespace or per-pod,\n                               with per-pod egress annotations overriding namespace annotations.",
+							Description: "EgressIPSupport defines three different support modes for egress IP function. [Default: Disabled] - Disabled:                    Egress IP function is disabled. - EnabledPerNamespace:         Egress IP function is enabled and can be configured on a per-namespace basis;\n                               per-pod egress annotations are ignored.\n- EnabledPerNamespaceOrPerPod: Egress IP function is enabled and can be configured per-namespace or per-pod,\n                               with per-pod egress annotations overriding namespace annotations.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
