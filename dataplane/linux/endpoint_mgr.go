@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
@@ -196,6 +197,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
+	nlHandle               netlinkHandle
 }
 
 type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string)
@@ -216,6 +218,8 @@ func newEndpointManager(
 	bpfEnabled bool,
 	callbacks *callbacks,
 ) *endpointManager {
+	nlHandle, _ := netlink.NewHandle()
+
 	return newEndpointManagerWithShims(
 		rawTable,
 		mangleTable,
@@ -230,6 +234,7 @@ func newEndpointManager(
 		writeProcSys,
 		bpfEnabled,
 		callbacks,
+		nlHandle,
 	)
 }
 
@@ -247,6 +252,7 @@ func newEndpointManagerWithShims(
 	procSysWriter procSysWriter,
 	bpfEnabled bool,
 	callbacks *callbacks,
+	nlHandle netlinkHandle,
 ) *endpointManager {
 	wlIfacesPattern := "^(" + strings.Join(wlInterfacePrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
@@ -303,6 +309,7 @@ func newEndpointManagerWithShims(
 
 		OnEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
 		callbacks:              newEndpointManagerCallbacks(callbacks, ipVersion),
+		nlHandle:               nlHandle,
 	}
 }
 
@@ -1039,6 +1046,47 @@ func (m *endpointManager) ifaceIsForEgressGateway(name string) bool {
 	return ep != nil && ep.IsEgressGateway
 }
 
+func (m *endpointManager) configureEgressGatewayInterface(name string) error {
+	// Enable loose reverse-path filtering for this interface.  This allows an egress
+	// gateway workload to forward traffic with any source IP address.
+	err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "2")
+	if err != nil {
+		return err
+	}
+
+	// rp_filter=2 only works if the interface also has at least one IP address defined on it.
+	// So assign the IPv4 link-local address 169.254.1.1 on the interface (which is the host
+	// side of the veth pair for the egress gateway pod).
+	link, err := m.nlHandle.LinkByName(name)
+	if err != nil {
+		// Presumably the link is not up yet.  We will be called again when it is.
+		return err
+	}
+	addrs, err := m.nlHandle.AddrList(link, netlink.FAMILY_V4)
+	if err != nil {
+		// Not sure why this would happen, but pass it up.
+		return err
+	}
+	if len(addrs) > 0 {
+		// Any IP is good enough to make rp_filter=2 work, so we don't need to add another
+		// one.
+		log.Infof("Egress gateway interface already has IPv4(s): %v", addrs)
+		return nil
+	}
+
+	// No existing IPv4 addresses, so add 169.254.1.1/16.
+	_, net, err := net.ParseCIDR("169.254.1.1/16")
+	if err != nil {
+		return err
+	}
+	addr := netlink.Addr{IPNet: net}
+	log.WithFields(log.Fields{"address": addr}).Info("Assign address to egress gateway device")
+	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *endpointManager) configureInterface(name string) error {
 	if !m.activeUpIfaces.Contains(name) {
 		log.WithField("ifaceName", name).Info(
@@ -1049,10 +1097,7 @@ func (m *endpointManager) configureInterface(name string) error {
 		"Applying /proc/sys configuration to interface.")
 	if m.ipVersion == 4 {
 		if m.ifaceIsForEgressGateway(name) {
-			// Enable loose reverse-path filtering for this interface.  This allows an egress
-			// gateway workload to forward traffic with any source IP address.
-			err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "2")
-			if err != nil {
+			if err := m.configureEgressGatewayInterface(name); err != nil {
 				return err
 			}
 		}
