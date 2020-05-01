@@ -1075,10 +1075,11 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 	}
 
 	// No existing IPv4 addresses, so add 169.254.1.1/16.
-	_, net, err := net.ParseCIDR("169.254.1.1/16")
+	ip, net, err := net.ParseCIDR("169.254.1.1/16")
 	if err != nil {
 		return err
 	}
+	net.IP = ip
 	addr := netlink.Addr{IPNet: net}
 	log.WithFields(log.Fields{"address": addr}).Info("Assign address to egress gateway device")
 	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
