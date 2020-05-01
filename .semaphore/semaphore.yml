@@ -33,7 +33,8 @@ blocks:
   - name: "Push helm charts"
     dependencies: ["Build helm charts"]
     run:
-      when: "branch = 'master'"
+      # master and all branches vX.Y after v2.8
+      when: "branch = 'master' OR (branch =~ release-v*.* AND branch != release-v2.0 AND branch != release-v2.1 AND branch != release-v2.7)"
     task:
       jobs:
         - name: Push helm charts for master branch
