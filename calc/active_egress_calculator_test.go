@@ -32,7 +32,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 	we2Key := model.WorkloadEndpointKey{WorkloadID: "we2"}
 
 	BeforeEach(func() {
-		aec = NewActiveEgressCalculator()
+		aec = NewActiveEgressCalculator("EnabledPerNamespaceOrPerPod")
 		cbs = &testCallbacks{}
 		aec.OnIPSetActive = cbs.OnIPSetActive
 		aec.OnIPSetInactive = cbs.OnIPSetInactive
