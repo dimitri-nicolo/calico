@@ -19,4 +19,8 @@ spec:
     interval: 5s
     scrapeTimeout: 5s
     honorLabels: true
+  - port: calico-bgp-metrics-port
+    interval: 5s
+    scrapeTimeout: 5s
+    honorLabels: true
 {{ end }}
