@@ -5376,6 +5376,34 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RouteTableRange"),
 						},
 					},
+					"egressIPSupport": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressIPSupport defines three different support modes for egress IP function. [Default: Disabled] - Disabled:                    Egress IP function is disabled. - EnabledPerNamespace:         Egress IP function is enabled and can be configured on a per-namespace basis;\n                               per-pod egress annotations are ignored.\n- EnabledPerNamespaceOrPerPod: Egress IP function is enabled and can be configured per-namespace or per-pod,\n                               with per-pod egress annotations overriding namespace annotations.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"egressVxlanPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressIPVXLANPort is the port number of vxlan tunnel device for egress traffic. [Default: 4790]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"egressVxlanVNI": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressIPVXLANVNI is the VNI ID of vxlan tunnel device for egress traffic. [Default: 4097]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"egressIPRoutingRulePriority": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressIPRoutingRulePriority controls the priority value to use for the egress IP routing rule. [Default: 100]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
