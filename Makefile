@@ -1,7 +1,7 @@
 PACKAGE_NAME=github.com/projectcalico/kube-controllers
 GIT_USE_SSH = true
 
-GO_BUILD_VER=v0.38
+GO_BUILD_VER=v0.39
 
 ###############################################################################
 # Download and include Makefile.common
