@@ -28,8 +28,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343
-	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	k8s.io/api v0.17.3
@@ -39,6 +38,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200501133425-3e6300d6d59b
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200501232840-876b078b772a
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
