@@ -366,11 +366,6 @@ type Config struct {
 
 	// State tracking.
 
-	// nameToSource tracks where we loaded each config param from.
-	sourceToRawConfig map[Source]map[string]string
-	rawValues         map[string]string
-	Err               error
-
 	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
 
 	// Config for DNS policy.

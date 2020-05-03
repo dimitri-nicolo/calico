@@ -36,13 +36,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 
-	"github.com/projectcalico/felix/bpf"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
-
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
@@ -1095,6 +1088,7 @@ func getAndMergeConfig(
 
 type DataplaneConnector struct {
 	config                     *config.Config
+	configUpdChan              chan<- map[string]string
 	ToDataplane                chan interface{}
 	StatusUpdatesFromDataplane chan interface{}
 	InSync                     chan bool
@@ -1116,6 +1110,7 @@ type Startable interface {
 }
 
 func newConnector(configParams *config.Config,
+	configUpdChan chan<- map[string]string,
 	datastore bapi.Client,
 	datastorev3 client.Interface,
 	dataplane dp.DataplaneDriver,

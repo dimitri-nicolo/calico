@@ -42,17 +42,12 @@ type routeTableSyncer interface {
 	Apply() error
 }
 
-type routeTable interface {
-	Index() int
-	SetRoutes(ifaceName string, targets []routetable.Target)
-	RouteRemove(ifaceName string, cidr ip.CIDR)
-	SetL2Routes(ifaceName string, targets []routetable.L2Target)
-}
-
 // routeTable is the interface provided by the standard routetable module used to progam the RIB.
 type routeTable interface {
 	routeTableSyncer
+	Index() int
 	SetRoutes(ifaceName string, targets []routetable.Target)
+	RouteRemove(ifaceName string, cidr ip.CIDR)
 	SetL2Routes(ifaceName string, targets []routetable.L2Target)
 }
 

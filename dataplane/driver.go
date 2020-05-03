@@ -23,10 +23,6 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/projectcalico/felix/wireguard"
-
-	"github.com/projectcalico/felix/bpf/conntrack"
-
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -43,6 +39,7 @@ import (
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/felix/wireguard"
 )
 
 func StartDataplaneDriver(configParams *config.Config,

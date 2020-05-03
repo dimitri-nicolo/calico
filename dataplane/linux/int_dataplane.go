@@ -859,6 +859,11 @@ type ManagerWithRouteTables interface {
 	GetRouteTableSyncers() []routeTableSyncer
 }
 
+type ManagerWithRouteRules interface {
+	Manager
+	GetRouteRules() []routeRules
+}
+
 func (d *InternalDataplane) routeTableSyncers() []routeTableSyncer {
 	var rts []routeTableSyncer
 	for _, mrts := range d.managersWithRouteTables {
