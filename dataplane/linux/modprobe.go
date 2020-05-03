@@ -22,6 +22,9 @@ const (
 
 	// Kernel module needed for SCTP protocol support on some kernels
 	moduleConntrackSCTP = "nf_conntrack_proto_sctp"
+
+	// Kernel module to enable wireguard encryption.
+	moduleWireguard = "wireguard"
 )
 
 type modProbe struct {

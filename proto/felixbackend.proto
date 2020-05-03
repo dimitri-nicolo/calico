@@ -140,6 +140,11 @@ message ToDataplane {
     IPSecBlacklistAdd ipsec_binding_add = 124;
     // Send when one or more IPs is un-blacklisted.
     IPSecBlacklistRemove ipsec_binding_remove = 125;
+
+    // WireguardEndpointUpdate is sent to setup wireguard on the host.
+    WireguardEndpointUpdate wireguard_endpoint_update = 27;
+    // WireguardEndpointRemove is sent to undo wireguard on the host.
+    WireguardEndpointRemove wireguard_endpoint_remove = 28;
   }
 }
 
@@ -162,6 +167,10 @@ message FromDataplane {
     // WorkloadEndpointStatusRemove is sent when an endpoint is removed to
     // clean up its oper status entry.
     WorkloadEndpointStatusRemove workload_endpoint_status_remove = 7;
+
+    // WireguardStatusUpdate is sent when the wireguard is available with the
+    // crypto primitives set up.
+    WireguardStatusUpdate wireguard_status_update = 9;
   }
 }
 
@@ -449,6 +458,11 @@ message WorkloadEndpointStatusRemove {
   WorkloadEndpointID id = 1;
 }
 
+message WireguardStatusUpdate {
+  // Wireguard public-key set on the interface.
+  string public_key = 1;
+}
+
 message HostMetadataUpdate {
   string hostname = 1;
   string ipv4_addr = 2;
@@ -676,4 +690,20 @@ message RuleTrace {
 message HTTPData {
   string x_forwarded_for = 1;
   string x_real_ip = 2;
+}
+
+message WireguardEndpointUpdate {
+  // The name of the wireguard host.
+  string hostname = 1;
+
+  // The public key for this endpoint.
+  string public_key = 2;
+
+  // The IP address of the wireguard interface.
+  string interface_ipv4_addr = 3;
+}
+
+message WireguardEndpointRemove {
+  // The name of the wireguard host.
+  string hostname = 1;
 }

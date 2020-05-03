@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -150,6 +150,14 @@ func (p *passthruCallbackRecorder) OnIPPoolUpdate(model.IPPoolKey, *model.IPPool
 
 func (p *passthruCallbackRecorder) OnIPPoolRemove(model.IPPoolKey) {
 	Fail("IPPoolRemove received")
+}
+
+func (p *passthruCallbackRecorder) OnWireguardUpdate(string, *model.Wireguard) {
+	Fail("OnWireguardUpdate received")
+}
+
+func (p *passthruCallbackRecorder) OnWireguardRemove(string) {
+	Fail("OnWireguardRemove received")
 }
 
 func (p *passthruCallbackRecorder) OnServiceAccountUpdate(update *proto.ServiceAccountUpdate) {

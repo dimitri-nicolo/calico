@@ -27,6 +27,7 @@ require (
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/libp2p/go-reuseport v0.0.1
+	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.10.1
@@ -48,6 +49,7 @@ require (
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/grpc v1.26.0
 	gopkg.in/ini.v1 v1.46.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
