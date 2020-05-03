@@ -809,6 +809,8 @@ github.com/tigera/lma v0.0.0-20200425190426-35f3c6e5242e h1:YRuyhZvM3elQhdLBQMe4
 github.com/tigera/lma v0.0.0-20200425190426-35f3c6e5242e/go.mod h1:f0Ic9RxuE1xoQHhhOCRWKja/M76Ws3kSLj8PPYkktRU=
 github.com/tigera/lma v0.0.0-20200501190431-d68c8a679c6a h1:tpZX5eI+WEBNhkLHec//4+B6y1yhWDT06oBiZId6Sr8=
 github.com/tigera/lma v0.0.0-20200501190431-d68c8a679c6a/go.mod h1:b8Hbg2bN3ba3a/0HfL5qN7BYrsaf2NgjOfAsgjVg/T4=
+github.com/tigera/lma v0.0.0-20200502190437-37c3f3c7adec h1:FmpAmW/rHQIo9T1butO4Dy1LPbkTZCGW5UDvPuTPsZI=
+github.com/tigera/lma v0.0.0-20200502190437-37c3f3c7adec/go.mod h1:JbqgBEWusscD6mbRAdPx8Y0AjUren9SWA21S6/qw/Zw=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
