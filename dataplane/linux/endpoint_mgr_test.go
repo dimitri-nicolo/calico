@@ -786,6 +786,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				mockProcSys.write,
 				false,
 				newCallbacks(),
+				&mockVXLANDataplane{},
 			)
 		})
 

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
@@ -188,6 +189,8 @@ type endpointManager struct {
 	activeHostEpIDToIfaceNames map[proto.HostEndpointID][]string
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
+	// Interfaces to which we've added a host-side address, for egress IP function to work.
+	egressGatewayAddressAdded map[string]netlink.Addr
 
 	needToCheckDispatchChains     bool
 	needToCheckEndpointMarkChains bool
@@ -196,6 +199,7 @@ type endpointManager struct {
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 	callbacks              endpointManagerCallbacks
 	bpfEnabled             bool
+	nlHandle               netlinkHandle
 }
 
 type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string)
@@ -216,6 +220,8 @@ func newEndpointManager(
 	bpfEnabled bool,
 	callbacks *callbacks,
 ) *endpointManager {
+	nlHandle, _ := netlink.NewHandle()
+
 	return newEndpointManagerWithShims(
 		rawTable,
 		mangleTable,
@@ -230,6 +236,7 @@ func newEndpointManager(
 		writeProcSys,
 		bpfEnabled,
 		callbacks,
+		nlHandle,
 	)
 }
 
@@ -247,6 +254,7 @@ func newEndpointManagerWithShims(
 	procSysWriter procSysWriter,
 	bpfEnabled bool,
 	callbacks *callbacks,
+	nlHandle netlinkHandle,
 ) *endpointManager {
 	wlIfacesPattern := "^(" + strings.Join(wlInterfacePrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
@@ -289,6 +297,7 @@ func newEndpointManagerWithShims(
 		activeHostIfaceToRawChains:    map[string][]*iptables.Chain{},
 		activeHostIfaceToFiltChains:   map[string][]*iptables.Chain{},
 		activeHostIfaceToMangleChains: map[string][]*iptables.Chain{},
+		egressGatewayAddressAdded:     map[string]netlink.Addr{},
 
 		// Caches of the current dispatch chains indexed by chain name.  We use these to
 		// calculate deltas when we need to update the chains.
@@ -303,6 +312,7 @@ func newEndpointManagerWithShims(
 
 		OnEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
 		callbacks:              newEndpointManagerCallbacks(callbacks, ipVersion),
+		nlHandle:               nlHandle,
 	}
 }
 
@@ -1039,6 +1049,78 @@ func (m *endpointManager) ifaceIsForEgressGateway(name string) bool {
 	return ep != nil && ep.IsEgressGateway
 }
 
+func (m *endpointManager) configureEgressGatewayInterface(name string) error {
+	// Enable loose reverse-path filtering for this interface.  This allows an egress
+	// gateway workload to forward traffic with any source IP address.
+	err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "2")
+	if err != nil {
+		return err
+	}
+
+	// rp_filter=2 only works if the interface also has at least one IP address defined on it.
+	// So assign the IPv4 link-local address 169.254.1.1 on the interface (which is the host
+	// side of the veth pair for the egress gateway pod).
+	link, err := m.nlHandle.LinkByName(name)
+	if err != nil {
+		// Presumably the link is not up yet.  We will be called again when it is.
+		return err
+	}
+	addrs, err := m.nlHandle.AddrList(link, netlink.FAMILY_V4)
+	if err != nil {
+		// Not sure why this would happen, but pass it up.
+		return err
+	}
+	if len(addrs) > 0 {
+		// Any IP is good enough to make rp_filter=2 work, so we don't need to add another
+		// one.
+		log.Infof("Egress gateway interface already has IPv4(s): %v", addrs)
+		return nil
+	}
+
+	// No existing IPv4 addresses, so add 169.254.1.1/32.
+	ip, net, err := net.ParseCIDR("169.254.1.1/32")
+	if err != nil {
+		return err
+	}
+	net.IP = ip
+	addr := netlink.Addr{IPNet: net, Scope: int(netlink.SCOPE_LINK)}
+	log.WithFields(log.Fields{"address": addr}).Info("Assign address to egress gateway device")
+	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
+		return err
+	}
+	m.egressGatewayAddressAdded[name] = addr
+	return nil
+}
+
+func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
+	addr, added := m.egressGatewayAddressAdded[name]
+	if !added {
+		// We haven't added an address to this interface, so nothing to remove.
+		return
+	}
+
+	// In all cases, we only want to try deleting the added address once, as the possible cases
+	// are:
+	// 1. Link not found - the address will already be gone.
+	// 2. Address deletion failed - no point trying the same thing again.
+	// 3. Address deletion succeeded.
+	// So remove the entry from our tracking map upfront here.
+	delete(m.egressGatewayAddressAdded, name)
+
+	// Look up the interface.
+	link, err := m.nlHandle.LinkByName(name)
+	if err != nil {
+		// Presumably the link has been removed.  Address already gone.
+		return
+	}
+	if err = m.nlHandle.AddrDel(link, &addr); err != nil {
+		log.WithField("address", addr).WithError(err).Warning("Failed to remove address from egress gateway device")
+		return
+	}
+	log.WithField("address", addr).Info("Removed address from egress gateway device")
+	return
+}
+
 func (m *endpointManager) configureInterface(name string) error {
 	if !m.activeUpIfaces.Contains(name) {
 		log.WithField("ifaceName", name).Info(
@@ -1049,12 +1131,11 @@ func (m *endpointManager) configureInterface(name string) error {
 		"Applying /proc/sys configuration to interface.")
 	if m.ipVersion == 4 {
 		if m.ifaceIsForEgressGateway(name) {
-			// Enable loose reverse-path filtering for this interface.  This allows an egress
-			// gateway workload to forward traffic with any source IP address.
-			err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "2")
-			if err != nil {
+			if err := m.configureEgressGatewayInterface(name); err != nil {
 				return err
 			}
+		} else {
+			m.removeEgressGatewayInterfaceAddress(name)
 		}
 		// Enable routing to localhost.  This is required to allow for NAT to the local
 		// host.
