@@ -1080,7 +1080,7 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 		return err
 	}
 	net.IP = ip
-	addr := netlink.Addr{IPNet: net}
+	addr := netlink.Addr{IPNet: net, Scope: int(netlink.SCOPE_LINK)}
 	log.WithFields(log.Fields{"address": addr}).Info("Assign address to egress gateway device")
 	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
 		return err
