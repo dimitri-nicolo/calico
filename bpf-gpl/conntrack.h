@@ -110,6 +110,10 @@ struct calico_ct_value {
 	};
 };
 
+#define CT_CREATE_NORMAL	0
+#define CT_CREATE_NAT		1
+#define CT_CREATE_NAT_FWD	2
+
 struct ct_ctx {
 	struct __sk_buff *skb;
 	__u8 proto;
@@ -124,16 +128,10 @@ struct ct_ctx {
 	__u8 flags;
 };
 
-struct bpf_map_def_extended __attribute__((section("maps"))) cali_v4_ct = {
-	.type = BPF_MAP_TYPE_HASH,
-	.key_size = sizeof(struct calico_ct_key),
-	.value_size = sizeof(struct calico_ct_value),
-	.map_flags = BPF_F_NO_PREALLOC,
-	.max_entries = 512000, // arbitrary
-#ifndef __BPFTOOL_LOADER__
-	.pinning_strategy = 2, /* global namespace */
-#endif
-};
+CALI_MAP(cali_v4_ct, 2,
+		BPF_MAP_TYPE_HASH,
+		struct calico_ct_key, struct calico_ct_value,
+		512000, BPF_F_NO_PREALLOC, MAP_PIN_GLOBAL)
 
 static CALI_BPF_INLINE void dump_ct_key(struct calico_ct_key *k)
 {
@@ -143,7 +141,8 @@ static CALI_BPF_INLINE void dump_ct_key(struct calico_ct_key *k)
 
 static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct ct_ctx *ctx,
 							struct calico_ct_key *k,
-							enum cali_ct_type type)
+							enum cali_ct_type type,
+							int nat)
 {
 	__be32 ip_src = ctx->src;
 	__be32 ip_dst = ctx->dst;
@@ -171,7 +170,7 @@ static CALI_BPF_INLINE int calico_ct_v4_create_tracking(struct ct_ctx *ctx,
 				"from another endpoint, doing lookup\n");
 		bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
 		*k = ct_make_key(srcLTDest, ctx->proto, ip_src, ip_dst, sport, dport);
-		struct calico_ct_value *ct_value = bpf_map_lookup_elem(&cali_v4_ct, k);
+		struct calico_ct_value *ct_value = cali_v4_ct_lookup_elem(k);
 		if (!ct_value) {
 			CALI_VERB("CT Packet marked as from workload but got a conntrack miss!\n");
 			goto create;
@@ -252,21 +251,30 @@ create:
 	CALI_DEBUG("NEW src_to_dst->ifindex %d\n", src_to_dst->ifindex);
 	dst_to_src->ifindex = CT_INVALID_IFINDEX;
 
-	int src_wl;
-
-	/* whitelist src if from workload */
-	src_wl = CALI_F_TO_HOST;
-	/* whitelist src if DNAT + tunnel on host ingress -> will be forwarded */
-	src_wl |= CALI_F_FROM_HEP && ctx->nat_tun_src;
-
-	if (src_wl) {
+	if (CALI_F_FROM_WEP) {
+		/* src is the from the WEP, policy whitelisted this side */
 		src_to_dst->whitelisted = 1;
-		CALI_DEBUG("CT-ALL Whitelisted source side\n");
-	} else {
+		CALI_DEBUG("CT-ALL Whitelisted source side - from WEP\n");
+	} else if (CALI_F_FROM_HEP) {
+		/* src is the from the HEP, policy whitelisted this side */
+		src_to_dst->whitelisted = 1;
+
+		if (nat == CT_CREATE_NAT_FWD) {
+			/* When we do NAT and forward through the tunnel, we go through
+			 * a single policy, what we forward we also accept back,
+			 * whitelist both sides.
+			 */
+			dst_to_src->whitelisted = 1;
+		}
+		CALI_DEBUG("CT-ALL Whitelisted source side - from HEP tun fwd=%d\n",
+				nat == CT_CREATE_NAT_FWD);
+	} else if (CALI_F_FROM_HOST) {
+		/* dst is to the EP, policy whitelisted this side */
 		dst_to_src->whitelisted = 1;
-		CALI_DEBUG("CT-ALL Whitelisted dest side\n");
+		CALI_DEBUG("CT-ALL Whitelisted dest side - to EP\n");
 	}
-	int err = bpf_map_update_elem(&cali_v4_ct, k, &ct_value, 0);
+
+	int err = cali_v4_ct_update_elem(k, &ct_value, 0);
 	CALI_VERB("CT-ALL Create result: %d.\n", err);
 	return err;
 }
@@ -307,7 +315,7 @@ static CALI_BPF_INLINE int calico_ct_v4_create_nat_fwd(struct ct_ctx *ctx,
 
 	dump_ct_key(&k);
 	ct_value.nat_rev_key = *rk;
-	int err = bpf_map_update_elem(&cali_v4_ct, &k, &ct_value, 0);
+	int err = cali_v4_ct_update_elem(&k, &ct_value, 0);
 	CALI_VERB("CT-%d Create result: %d.\n", ip_proto, err);
 	return err;
 }
@@ -316,14 +324,14 @@ static CALI_BPF_INLINE int calico_ct_v4_create(struct ct_ctx *ctx)
 {
 	struct calico_ct_key k;
 
-	return calico_ct_v4_create_tracking(ctx, &k, CALI_CT_TYPE_NORMAL);
+	return calico_ct_v4_create_tracking(ctx, &k, CALI_CT_TYPE_NORMAL, CT_CREATE_NORMAL);
 }
 
-static CALI_BPF_INLINE int calico_ct_v4_create_nat(struct ct_ctx *ctx)
+static CALI_BPF_INLINE int calico_ct_v4_create_nat(struct ct_ctx *ctx, int nat)
 {
 	struct calico_ct_key k;
 
-	calico_ct_v4_create_tracking(ctx, &k, CALI_CT_TYPE_NAT_REV);
+	calico_ct_v4_create_tracking(ctx, &k, CALI_CT_TYPE_NAT_REV, nat);
 	calico_ct_v4_create_nat_fwd(ctx, &k);
 
 	return 0;
@@ -412,7 +420,7 @@ static CALI_BPF_INLINE void calico_ct_v4_tcp_delete(
 	bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
 	struct calico_ct_key k = ct_make_key(srcLTDest, IPPROTO_TCP, ip_src, ip_dst, sport, dport);
 
-	int rc = bpf_map_delete_elem(&cali_v4_ct, &k);
+	int rc = cali_v4_ct_delete_elem(&k);
 	CALI_DEBUG("CT-TCP delete result: %d\n", rc);
 }
 
@@ -499,7 +507,9 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 		CALI_CT_VERB("packet rst = %d\n", tcp_header->rst);
 	}
 
-	struct calico_ct_result result = {};
+	struct calico_ct_result result = {
+		.rc = CALI_CT_NEW, /* it is zero, but make it explicit in the code */
+	};
 
 	if (tcp_header && tcp_header->syn && !tcp_header->ack) {
 		// SYN should always go through policy.
@@ -510,7 +520,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 	bool srcLTDest = src_lt_dest(ip_src, ip_dst, sport, dport);
 	struct calico_ct_key k = ct_make_key(srcLTDest, ctx->proto, ip_src, ip_dst, sport, dport);
 
-	struct calico_ct_value *v = bpf_map_lookup_elem(&cali_v4_ct, &k);
+	struct calico_ct_value *v = cali_v4_ct_lookup_elem(&k);
 	if (!v) {
 		if (ctx->proto != IPPROTO_ICMP) {
 			CALI_CT_DEBUG("Miss.\n");
@@ -526,7 +536,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 
 		srcLTDest = src_lt_dest(ctx->src, ctx->dst, ctx->sport, ctx->dport);
 		k = ct_make_key(srcLTDest, ctx->proto, ctx->src, ctx->dst, ctx->sport, ctx->dport);
-		v = bpf_map_lookup_elem(&cali_v4_ct, &k);
+		v = cali_v4_ct_lookup_elem(&k);
 		if (!v) {
 			CALI_CT_DEBUG("Miss on ICMP related\n");
 			goto out_lookup_fail;
@@ -554,7 +564,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 		// This is a forward NAT entry; since we do the bookkeeping on the
 		// reverse entry, we need to do a second lookup.
 		CALI_CT_DEBUG("Hit! NAT FWD entry, doing secondary lookup.\n");
-		tracking_v = bpf_map_lookup_elem(&cali_v4_ct, &v->nat_rev_key);
+		tracking_v = cali_v4_ct_lookup_elem(&v->nat_rev_key);
 		if (!tracking_v) {
 			CALI_CT_DEBUG("Miss when looking for secondary entry.\n");
 			goto out_lookup_fail;
@@ -623,7 +633,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 		 * entering a workload or leaving via a host endpoint, actually
 		 * reverse the NAT.
 		 */
-		snat = !CALI_F_TO_HOST;
+		snat = CALI_F_FROM_HOST;
 		/* if returning packet into a tunnel */
 		snat |= (dnat_return_should_encap() && v->tun_ip);
 		snat = snat && dst_to_src->opener;
@@ -699,7 +709,9 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 		}
 	}
 
-	if (CALI_F_TO_HOST && !ctx->nat_tun_src) {
+	if (ret_from_tun) {
+		CALI_DEBUG("Packet returned from tunnel %x\n", be32_to_host(ctx->nat_tun_src));
+	} else if (CALI_F_TO_HOST) {
 		/* Source of the packet is the endpoint, so check the src whitelist. */
 		if (src_to_dst->whitelisted) {
 			CALI_CT_VERB("Packet whitelisted by this workload's policy.\n");
@@ -712,9 +724,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct ct_ctx
 			CALI_CT_DEBUG("Packet not allowed by ingress/egress whitelist flags (TH).\n");
 			result.rc = tcp_header ? CALI_CT_INVALID : CALI_CT_NEW;
 		}
-	} else if (ret_from_tun) {
-		CALI_DEBUG("Packet returned from tunnel %x\n", be32_to_host(ctx->nat_tun_src));
-	} else {
+	} if (CALI_F_FROM_HOST) {
 		/* Dest of the packet is the workload, so check the dest whitelist. */
 		if (dst_to_src->whitelisted) {
 			// Packet was whitelisted by the policy attached to this endpoint.
@@ -783,13 +793,20 @@ out_lookup_fail:
 }
 
 /* creates connection tracking for tracked protocols */
-static CALI_BPF_INLINE int conntrack_create(struct ct_ctx * ctx, bool nat)
+static CALI_BPF_INLINE int conntrack_create(struct ct_ctx * ctx, int nat)
 {
 	switch (ctx->proto) {
 	case IPPROTO_TCP:
 	case IPPROTO_UDP:
 	case IPPROTO_ICMP:
-		return nat ? calico_ct_v4_create_nat(ctx) : calico_ct_v4_create(ctx);
+		switch (nat) {
+		case CT_CREATE_NORMAL:
+			return calico_ct_v4_create(ctx);
+		case CT_CREATE_NAT:
+		case CT_CREATE_NAT_FWD:
+			return calico_ct_v4_create_nat(ctx, nat);
+		}
+		return 0;
 	default:
 		return 0;
 	}

@@ -79,6 +79,8 @@ type passthruCallbacks interface {
 	OnServiceAccountRemove(proto.ServiceAccountID)
 	OnNamespaceUpdate(*proto.NamespaceUpdate)
 	OnNamespaceRemove(proto.NamespaceID)
+	OnWireguardUpdate(string, *model.Wireguard)
+	OnWireguardRemove(string)
 }
 
 type routeCallbacks interface {
@@ -355,7 +357,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 
-	if conf.BPFEnabled || conf.VXLANEnabled {
+	if conf.BPFEnabled || conf.VXLANEnabled || conf.WireguardEnabled {
 		// Calculate simple node-ownership routes.
 		//        ...
 		//     Dispatcher (all updates)

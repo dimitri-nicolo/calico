@@ -39,6 +39,7 @@ import (
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/felix/wireguard"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -85,6 +86,19 @@ func StartDataplaneDriver(configParams *config.Config,
 				}).Panic("Failed to allocate a mark bit for Egress IP, not enough mark bits available.")
 			}
 		}
+
+		var markWireguard uint32
+		if configParams.WireguardEnabled {
+			log.Info("Wireguard enabled, allocating a mark bit")
+			markWireguard, _ = markBitsManager.NextSingleBitMark()
+			if markWireguard == 0 {
+				log.WithFields(log.Fields{
+					"Name":     "felix-iptables",
+					"MarkMask": configParams.IptablesMarkMask,
+				}).Panic("Failed to allocate a mark bit for wireguard, not enough mark bits available.")
+			}
+		}
+
 		// Short-lived mark bits for local calculations within a chain.
 		markScratch0, _ := markBitsManager.NextSingleBitMark()
 		markScratch1, _ := markBitsManager.NextSingleBitMark()
@@ -114,6 +128,22 @@ func StartDataplaneDriver(configParams *config.Config,
 			"endpointMark":        markEndpointMark,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
 		}).Info("Calculated iptables mark bits")
+
+		// Create a routing table manager. There are certain components that should take specific indices in the range
+		// to simplify table tidy-up.
+		routeTableIndexAllocator := idalloc.NewIndexAllocator(configParams.RouteTableRange)
+
+		var wireguardEnabled bool
+		var wireguardTableIndex int
+		if configParams.WireguardEnabled {
+			if idx, err := routeTableIndexAllocator.GrabIndex(); err == nil {
+				log.Debugf("Assigned wireguard table index: %d", idx)
+				wireguardEnabled = true
+				wireguardTableIndex = idx
+			} else {
+				log.WithError(err).Warning("Unable to assign table index for wireguard - disabling wireguard on this node")
+			}
+		}
 
 		dpConfig := intdataplane.Config{
 			Hostname: configParams.FelixHostname,
@@ -189,6 +219,16 @@ func StartDataplaneDriver(configParams *config.Config,
 				BPFEnabled:                         configParams.BPFEnabled,
 			},
 
+			Wireguard: wireguard.Config{
+				Enabled:             wireguardEnabled,
+				ListeningPort:       configParams.WireguardListeningPort,
+				FirewallMark:        int(markWireguard),
+				RoutingRulePriority: configParams.WireguardRoutingRulePriority,
+				RoutingTableIndex:   wireguardTableIndex,
+				InterfaceName:       configParams.WireguardInterfaceName,
+				MTU:                 configParams.WireguardMTU,
+			},
+
 			IPIPMTU:                        configParams.IpInIpMtu,
 			VXLANMTU:                       configParams.VXLANMTU,
 			IptablesBackend:                configParams.IptablesBackend,
@@ -254,7 +294,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			XDPEnabled:                         configParams.XDPEnabled,
 			XDPAllowGeneric:                    configParams.GenericXDPEnabled,
 			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
-			RouteTableManager:                  idalloc.NewIndexAllocator(configParams.RouteTableRange),
+			RouteTableManager:                  routeTableIndexAllocator,
 
 			KubeClientSet: k8sClientSet,
 

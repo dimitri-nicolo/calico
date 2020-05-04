@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/projectcalico/felix/bpf/state"
 	"github.com/projectcalico/felix/bpf/tc"
@@ -58,6 +59,7 @@ import (
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/throttle"
+	"github.com/projectcalico/felix/wireguard"
 )
 
 const (
@@ -100,6 +102,7 @@ var (
 	})
 
 	processStartTime time.Time
+	zeroKey          = wgtypes.Key{}
 )
 
 func init() {
@@ -136,6 +139,8 @@ type Config struct {
 	IptablesLockTimeout            time.Duration
 	IptablesLockProbeInterval      time.Duration
 	XDPRefreshInterval             time.Duration
+
+	Wireguard wireguard.Config
 
 	NetlinkTimeout time.Duration
 
@@ -245,6 +250,8 @@ type InternalDataplane struct {
 
 	ipSecPolTable  *ipsec.PolicyTable
 	ipSecDataplane ipSecDataplane
+
+	wireguardManager *wireguardManager
 
 	ifaceMonitor     *ifacemonitor.InterfaceMonitor
 	ifaceUpdates     chan *ifaceUpdate
@@ -436,13 +443,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
 		dp.RegisterManager(vxlanManager)
 	} else {
-		// If VXLAN is not enabled, check to see if there is a VXLAN device and delete it if there is.
-		log.Info("Checking if we need to clean up the VXLAN device")
-		if link, err := netlink.LinkByName("vxlan.calico"); err != nil && err != syscall.ENODEV {
-			log.WithError(err).Warnf("Failed to query VXLAN device")
-		} else if err = netlink.LinkDel(link); err != nil {
-			log.WithError(err).Error("Failed to delete unwanted VXLAN device")
-		}
+		cleanUpVXLANDevice()
 	}
 
 	if config.EgressIPEnabled {
@@ -671,6 +672,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.allHostsIpsetManager) // IPv4-only
 	}
 
+	// Add a manager for wireguard configuration. This is added irrespective of whether wireguard is actually enabled
+	// because it may need to tidy up some of the routing rules when disabled.
+	cryptoRouteTableWireguard := wireguard.New(config.Hostname, &config.Wireguard, config.NetlinkTimeout,
+		config.DeviceRouteProtocol, func(publicKey wgtypes.Key) error {
+			if publicKey == zeroKey {
+				dp.fromDataplane <- &proto.WireguardStatusUpdate{PublicKey: ""}
+			} else {
+				dp.fromDataplane <- &proto.WireguardStatusUpdate{PublicKey: publicKey.String()}
+			}
+			return nil
+		})
+	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard)
+	dp.RegisterManager(dp.wireguardManager) // IPv4-only
+
 	if config.IPv6Enabled {
 		mangleTableV6 := iptables.NewTable(
 			"mangle",
@@ -811,6 +826,23 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	return dp
 }
 
+func cleanUpVXLANDevice() {
+	// If VXLAN is not enabled, check to see if there is a VXLAN device and delete it if there is.
+	log.Debug("Checking if we need to clean up the VXLAN device")
+	link, err := netlink.LinkByName("vxlan.calico")
+	if err != nil {
+		if _, ok := err.(netlink.LinkNotFoundError); ok {
+			log.Debug("VXLAN disabled and no VXLAN device found")
+			return
+		}
+		log.WithError(err).Warnf("VXLAN disabled and failed to query VXLAN device.  Ignoring.")
+		return
+	}
+	if err = netlink.LinkDel(link); err != nil {
+		log.WithError(err).Error("VXLAN disabled and failed to delete unwanted VXLAN device. Ignoring.")
+	}
+}
+
 type Manager interface {
 	// OnUpdate is called for each protobuf message from the datastore.  May either directly
 	// send updates to the IPSets and iptables.Table objects (which will queue the updates
@@ -824,7 +856,7 @@ type Manager interface {
 
 type ManagerWithRouteTables interface {
 	Manager
-	GetRouteTables() []routeTable
+	GetRouteTableSyncers() []routeTableSyncer
 }
 
 type ManagerWithRouteRules interface {
@@ -832,10 +864,10 @@ type ManagerWithRouteRules interface {
 	GetRouteRules() []routeRules
 }
 
-func (d *InternalDataplane) routeTables() []routeTable {
-	var rts []routeTable
+func (d *InternalDataplane) routeTableSyncers() []routeTableSyncer {
+	var rts []routeTableSyncer
 	for _, mrts := range d.managersWithRouteTables {
-		rts = append(rts, mrts.GetRouteTables()...)
+		rts = append(rts, mrts.GetRouteTableSyncers()...)
 	}
 
 	return rts
@@ -1237,7 +1269,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		}
 
 		for _, mgr := range d.managersWithRouteTables {
-			for _, routeTable := range mgr.GetRouteTables() {
+			for _, routeTable := range mgr.GetRouteTableSyncers() {
 				routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
 			}
 		}
@@ -1437,6 +1469,12 @@ func (d *InternalDataplane) configureKernel() {
 			log.WithError(err).Error("Failed to set unprivileged_bpf_disabled sysctl")
 		}
 	}
+	if d.config.Wireguard.Enabled {
+		// wireguard module is available in linux kernel >= 5.6
+		mpwg := newModProbe(moduleWireguard, newRealCmd)
+		out, err = mpwg.Exec()
+		log.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleWireguard)
+	}
 }
 
 func (d *InternalDataplane) recordMsgStat(msg interface{}) {
@@ -1497,7 +1535,7 @@ func (d *InternalDataplane) apply() {
 
 	if d.forceRouteRefresh {
 		// Refresh timer popped.
-		for _, r := range d.routeTables() {
+		for _, r := range d.routeTableSyncers() {
 			// Queue a resync on the next Apply().
 			r.QueueResync()
 		}
@@ -1532,9 +1570,9 @@ func (d *InternalDataplane) apply() {
 	// Update the routing table in parallel with the other updates.  We'll wait for it to finish
 	// before we return.
 	var routesWG sync.WaitGroup
-	for _, r := range d.routeTables() {
+	for _, r := range d.routeTableSyncers() {
 		routesWG.Add(1)
-		go func(r routeTable) {
+		go func(r routeTableSyncer) {
 			err := r.Apply()
 			if err != nil {
 				log.Warn("Failed to synchronize routing table, will retry...")

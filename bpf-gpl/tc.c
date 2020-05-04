@@ -97,7 +97,7 @@ int calico_tc_norm_pol_tail(struct __sk_buff *skb)
 	CALI_DEBUG("Entering normal policy tail call\n");
 
 	__u32 key = 0;
-	struct cali_tc_state *state = bpf_map_lookup_elem(&cali_v4_state, &key);
+	struct cali_tc_state *state = cali_v4_state_lookup_elem(&key);
 	if (!state) {
 	        CALI_DEBUG("State map lookup failed: DROP\n");
 	        goto deny;
@@ -614,7 +614,7 @@ static CALI_BPF_INLINE int calico_tc(struct __sk_buff *skb)
 
 	// Set up an entry in the state map and then jump to the normal policy program.
 	int key = 0;
-	struct cali_tc_state *map_state = bpf_map_lookup_elem(&cali_v4_state, &key);
+	struct cali_tc_state *map_state = cali_v4_state_lookup_elem(&key);
 	if (!map_state) {
 		// Shouldn't be possible; the map is pre-allocated.
 		CALI_INFO("State map lookup failed: DROP\n");
@@ -881,7 +881,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 		// If we get here, we've passed policy.
 
 		if (nat_dest == NULL) {
-			conntrack_create(&ct_nat_ctx, false);
+			conntrack_create(&ct_nat_ctx, CT_CREATE_NORMAL);
 			goto allow;
 		}
 
@@ -916,12 +916,10 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 				reason = CALI_REASON_RT_UNKNOWN;
 				goto deny;
 			}
-			CALI_DEBUG("rt found for 0x%x\n", be32_to_host(state->post_nat_ip_dst));
+			CALI_DEBUG("rt found for 0x%x local %d\n",
+					be32_to_host(state->post_nat_ip_dst), !!cali_rt_is_local(rt));
 
 			encap_needed = !cali_rt_is_local(rt);
-
-			/* We cannot enforce RPF check on encapped traffic, do FIB if you can */
-			fib = true;
 		}
 
 		/* We have not created the conntrack yet since we did not know
@@ -933,7 +931,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 					encap_needed && state->nat_tun_src == 0) {
 				ct_nat_ctx.flags |= CALI_CT_FLAG_DSR_FWD;
 			}
-			conntrack_create(&ct_nat_ctx, true);
+			conntrack_create(&ct_nat_ctx, encap_needed ? CT_CREATE_NAT_FWD : CT_CREATE_NAT);
 		}
 
 		if (encap_needed) {
@@ -945,6 +943,10 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct __sk_buff *skb,
 			state->ip_src = HOST_IP;
 			state->ip_dst = cali_rt_is_workload(rt) ? rt->next_hop : state->post_nat_ip_dst;
 			seen_mark = CALI_SKB_MARK_BYPASS_FWD;
+
+			/* We cannot enforce RPF check on encapped traffic, do FIB if you can */
+			fib = true;
+
 			goto nat_encap;
 		}
 

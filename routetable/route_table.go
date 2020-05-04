@@ -285,7 +285,8 @@ func NewWithShims(
 
 	return &RouteTable{
 		logCxt: log.WithFields(log.Fields{
-			"ipVersion": ipVersion,
+			"ipVersion":  ipVersion,
+			"ifaceRegex": ifaceNamePattern,
 		}),
 		ipVersion:                      ipVersion,
 		netlinkFamily:                  family,
@@ -352,6 +353,11 @@ func (r *RouteTable) markIfaceForUpdate(ifaceName string, resync bool) {
 // SetRoutes sets the full set of targets for the specified interface. This recalculates the deltas from the current
 // set of programmed routes.
 func (r *RouteTable) SetRoutes(ifaceName string, targets []Target) {
+	if ifaceName == InterfaceNone && !r.includeNoInterface {
+		r.logCxt.Error("Setting route with no interface")
+		return
+	}
+
 	currentCIDRsToTarget := r.ifaceNameToTargets[ifaceName]
 	deltas := map[ip.CIDR]*Target{}
 
@@ -382,6 +388,11 @@ func (r *RouteTable) SetRoutes(ifaceName string, targets []Target) {
 // RouteUpdate updates the route keyed off the target CIDR. These deltas will be applied to any routes set using
 // SetRoute.
 func (r *RouteTable) RouteUpdate(ifaceName string, target Target) {
+	if ifaceName == InterfaceNone && !r.includeNoInterface {
+		r.logCxt.Error("Updating route with no interface")
+		return
+	}
+
 	if r.pendingIfaceNameToDeltaTargets[ifaceName] == nil {
 		r.pendingIfaceNameToDeltaTargets[ifaceName] = map[ip.CIDR]*Target{}
 	}
@@ -399,6 +410,11 @@ func (r *RouteTable) RouteUpdate(ifaceName string, target Target) {
 // RouteRemove removes the route with the specified CIDR. These deltas will be applied to any routes set using
 // SetRoute.
 func (r *RouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
+	if ifaceName == InterfaceNone && !r.includeNoInterface {
+		r.logCxt.Error("Removing route with no interface")
+		return
+	}
+
 	if r.pendingIfaceNameToDeltaTargets[ifaceName] == nil {
 		r.pendingIfaceNameToDeltaTargets[ifaceName] = map[ip.CIDR]*Target{}
 	}
@@ -719,7 +735,7 @@ func (r *RouteTable) applyRouteDeltas(ifaceName string) (targetsToCreate, target
 	deltaTargets := r.pendingIfaceNameToDeltaTargets[ifaceName]
 	for cidr, target := range deltaTargets {
 		if current, ok := cidrsToTarget[cidr]; ok {
-			// Previous entry exists, so need to delete it. Note that the SetRoute, RouteAdd and RouteRemove will not
+			// Previous entry exists, so need to delete it. Note that the SetRoutes, RouteUpdate and RouteRemove will not
 			// add deltas for unchanged targets, so we don't need to check for target equivalency here.
 			log.Debugf("Deleted or updated CIDR: %v", cidr)
 			targetsToDelete = append(targetsToDelete, current)
