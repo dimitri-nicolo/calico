@@ -105,7 +105,7 @@ spec:
 | routeTableRange                    | Calico programs additional Linux route tables for various purposes.  `RouteTableRange` specifies the indices of the route tables that Calico should use. |  | [RouteTableRange](#routetablerange) | `{Min: 1, Max: 250}` |
 | sidecarAccelerationEnabled         | Enable experimental acceleration between application and proxy sidecar when using [application layer policy]({{ site.baseurl }}/security/app-layer-policy). [Default: `false`] | boolean | boolean | `false` |
 | vxlanEnabled                       | Automatically set when needed, you shouldn't need to change this setting: whether Felix should create the VXLAN tunnel device for VXLAN networking. | boolean | boolean | `false` |
-| vxlanMTU                           | MTU to use for the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. | int | int | `1410` |
+| vxlanMTU                           | MTU to use for the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. Also Controls MTU for egress VXLAN traffic when egress IP enabled. | int | int | `1410` |
 | vxlanPort                          | Port to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4789` |
 | vxlanVNI                           | Virtual network ID to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4096` |
 | xdpRefreshInterval                 | Period at which Felix re-checks the XDP state in the dataplane to ensure that no other process has accidentally broken {{site.prodname}}'s rules. Set to 0 to disable XDP refresh. | `5s`, `10s`, `1m` etc. | duration | `90s` |
@@ -130,7 +130,10 @@ spec:
 | bpfKubeProxyIptablesCleanupEnabled | In eBPF dataplane mode, controls whether Felix will clean up the iptables rules created by the Kubernetes `kube-proxy`; should only be enabled if `kube-proxy` is not running. This is a tech preview feature and subject to change in future releases. | true,false| boolean | true |
 | bpfKubeProxyMinSyncPeriod          | In eBPF dataplane mode, controls the minimum time between dataplane updates for Felix's embedded `kube-proxy` implementation. | `5s`, `10s`, `1m` etc. | duration | `1s` |
 | routeSource                        | Where Felix gets is routing information from for VXLAN and the BPF dataplane. The CalicoIPAM setting is more efficient because it supports route aggregation, but it only works when Calico's IPAM or host-local IPAM is in use. Use the WorkloadIPs setting if you are using Calico's VXLAN or BPF dataplane and not using Calico IPAM or host-local IPAM. | CalicoIPAM,WorkloadIPs | string | `CalicoIPAM` |
-
+| egressIPSupport                    | Defines three different support modes for egress IP function. `Disabled` means egress IP is not supported. `EnabledPerNamespace` means egress IP function is enabled and can be configured on a per-namespace basis (but per-pod egress annotations are ignored). `EnabledPerNamespaceOrPerPod` means egress IP function is enabled and can be configured per-namespace or per-pod (with per-pod egress annotations overriding namespace annotations). | Disabled,<br/>EnabledPerNamespace,<br/>EnabledPerNamespaceOrPerPod | string | `Disabled` |
+| egressIPVXLANPort                  | Port to use for egress IP VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4790` |
+| egressIPVXLANVNI                   | Virtual network ID to use for egress IP VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4097` |
+| egressIPRoutingRulePriority        | Controls the priority value to use for the egress IP routing rule. | int | int | `100` |
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
    ```
