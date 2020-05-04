@@ -44,18 +44,3 @@ section:
      path: /networking/migrate-pools
    - title: Restrict a pod to use an IP address in a specific range
      path: /networking/legacy-firewalls
-- title: Federation for Kubernetes
-  path: /networking/federation/
-  section:
-  - title: Overview
-    path: /networking/federation/overview
-  - title: Create kubeconfig files
-    path: /networking/federation/kubeconfig
-  - title: Configure access to remote clusters
-    path: /networking/federation/configure-rcc
-  - title: Configure federated services
-    path: /networking/federation/services-controller
-  - title: Example AWS configuration
-    path: /networking/federation/aws
-  - title: Query remote clusters with calicoq
-    path: /networking/federation/calicoq

@@ -25,23 +25,6 @@ section:
     path: /security/simple-policy-cnx
   - title: Extend FortiGate Firewalls to Kubernetes with Calico Enterprise
     path: /security/firewall-integration
-  - title: Policy for AWS security groups
-    path: /security/aws-security-group-integration/
-    section:
-    - title: Overview
-      path: /security/aws-security-group-integration/overview
-    - title: Interconnect your VPC and cluster
-      path: /security/aws-security-group-integration/interconnection
-    - title: Enable pods to access VPC members
-      path: /security/aws-security-group-integration/pod-access
-    - title: Enable VPC members to access pods
-      path: /security/aws-security-group-integration/vpc-member-access
-    - title: Enable access to AWS metadata
-      path: /security/aws-security-group-integration/metadata-access
-    - title: Manage tiers associated with security group integration
-      path: /security/aws-security-group-integration/tier-management
-    - title: Host endpoints
-      path: /security/aws-security-group-integration/host-endpoints
 - title: Threat detection and prevention
   path: /security/threat-detection-and-prevention/
   section:

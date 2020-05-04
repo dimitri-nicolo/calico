@@ -1,9 +1,0 @@
----
-layout: null
----
-{% helm --execute templates/cloud-controllers.yaml %}
-datastore: kubernetes
-network: calico
-cloudControllers:
-  enabled: true
-{% endhelm %}
