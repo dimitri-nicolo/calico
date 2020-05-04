@@ -138,16 +138,6 @@ func WithTunnelTargetWhitelist(tgts []regexp.Regexp) Option {
 	}
 }
 
-// WithAutoRegister accept tunnels with genuine cert even if there is no cluster
-// registerd for it. This is a poor man's crash recovery and mainly for
-// debugging, should not be used in production.
-func WithAutoRegister() Option {
-	return func(s *Server) error {
-		s.toggles.autoRegister = true
-		return nil
-	}
-}
-
 // WithWatchAdded lets server to watch k8s for added clusters and register them
 // this way. This is useful for testing.
 func WithWatchAdded() Option {

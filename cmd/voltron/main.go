@@ -141,8 +141,7 @@ func main() {
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
-			server.WithAutoRegister())
+		)
 	}
 
 	targets, err := bootstrap.ProxyTargets([]bootstrap.Target{

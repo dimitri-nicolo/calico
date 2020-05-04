@@ -166,6 +166,8 @@ func NewK8sSimpleFakeClient(k8sObj []runtime.Object, calicoObj []runtime.Object)
 			return k8stesting.DefaultWatchReactor(watcher, nil)(action)
 		})
 	calico.Fake.PrependReactor("list", "managedclusters", fake.clusters.listReactor)
+	calico.Fake.PrependReactor("get", "managedclusters", fake.clusters.getReactor)
+	calico.Fake.PrependReactor("update", "managedclusters", fake.clusters.updateReactor)
 
 	fake.k8sFake.PrependReactor("create", "tokenreviews", fake.reviews.Reactor)
 
@@ -215,7 +217,8 @@ func (c *K8sFakeClient) AddBobIdentity() {
 }
 
 type cluster struct {
-	id string
+	id          string
+	annotations map[string]string
 }
 
 type managedClusters struct {
@@ -260,10 +263,11 @@ func (mc *managedClusters) Get(id string) *cluster {
 	return mc.cs[id]
 }
 
-func (mc *managedClusters) Add(id, name string) {
+func (mc *managedClusters) Add(id, name string, annotations map[string]string) {
 	// We now use the resource name as the ID
 	mc.cs[name] = &cluster{
-		id: name,
+		id:          name,
+		annotations: annotations,
 	}
 
 	mc.version++
@@ -277,6 +281,7 @@ func (mc *managedClusters) Add(id, name string) {
 			Name:            name,
 			UID:             k8stypes.UID(id),
 			ResourceVersion: mc.versionStr(),
+			Annotations:     annotations,
 		},
 	}
 
@@ -285,15 +290,16 @@ func (mc *managedClusters) Add(id, name string) {
 	}
 }
 
-func (mc *managedClusters) Update(id string) {
+func (mc *managedClusters) Update(id string, annotations map[string]string) {
 	cl := &apiv3.ManagedCluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       calicov3.KindManagedCluster,
 			APIVersion: calicov3.GroupVersionCurrent,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mc.cs[id].id,
-			UID:  k8stypes.UID(id),
+			Name:        mc.cs[id].id,
+			UID:         k8stypes.UID(id),
+			Annotations: annotations,
 		},
 	}
 
@@ -359,6 +365,48 @@ func (mc *managedClusters) listReactor(action k8stesting.Action) (
 	return true, list, nil
 }
 
+func (mc *managedClusters) getReactor(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	mc.Lock()
+	defer mc.Unlock()
+
+	givenName := action.(k8stesting.GetActionImpl).Name
+	cluster, ok := mc.cs[givenName]
+
+	if !ok {
+		return true, nil, errors.Errorf("Missing mocked cluster")
+	}
+
+	managedCluster := &apiv3.ManagedCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       calicov3.KindManagedCluster,
+			APIVersion: calicov3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        givenName,
+			UID:         k8stypes.UID(cluster.id),
+			Annotations: cluster.annotations,
+		},
+	}
+
+	return true, managedCluster, nil
+}
+
+func (mc *managedClusters) updateReactor(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	mc.Lock()
+	defer mc.Unlock()
+
+	managedCluster := action.(k8stesting.UpdateActionImpl).GetObject().(*apiv3.ManagedCluster)
+	_, ok := mc.cs[managedCluster.Name]
+
+	if !ok {
+		return true, nil, errors.Errorf("Missing mocked cluster")
+	}
+
+	mc.cs[managedCluster.Name] = &cluster{id: managedCluster.Name, annotations: managedCluster.Annotations}
+
+	return true, managedCluster, nil
+}
+
 // WaitForManagedClustersWatched returns when the ManagedClusters start being
 // watched to sync with tests
 func (c *K8sFakeClient) WaitForManagedClustersWatched() {
@@ -369,7 +417,7 @@ func (c *K8sFakeClient) WaitForManagedClustersWatched() {
 }
 
 // AddCluster adds a cluster resource
-func (c *K8sFakeClient) AddCluster(id, name string) error {
+func (c *K8sFakeClient) AddCluster(id, name string, annotations map[string]string) error {
 	c.clusters.Lock()
 	defer c.clusters.Unlock()
 
@@ -377,7 +425,7 @@ func (c *K8sFakeClient) AddCluster(id, name string) error {
 		return errors.Errorf("cluster id %s already present", id)
 	}
 
-	c.clusters.Add(id, name)
+	c.clusters.Add(id, name, annotations)
 	return nil
 }
 
@@ -385,7 +433,7 @@ func (c *K8sFakeClient) AddCluster(id, name string) error {
 //
 // its action is currently void, but will be used when it comes to cert rotation
 // etc.
-func (c *K8sFakeClient) UpdateCluster(id string) error {
+func (c *K8sFakeClient) UpdateCluster(id string, annotations map[string]string) error {
 	c.clusters.Lock()
 	defer c.clusters.Unlock()
 
@@ -393,7 +441,8 @@ func (c *K8sFakeClient) UpdateCluster(id string) error {
 		return errors.Errorf("cluster id %s not present", id)
 	}
 
-	c.clusters.Update(id)
+	c.clusters.cs[id].annotations = annotations
+	c.clusters.Update(id, annotations)
 	return nil
 }
 

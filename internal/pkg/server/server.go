@@ -17,13 +17,14 @@ import (
 	"regexp"
 	"time"
 
+	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/tigera/voltron/pkg/tunnelmgr"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
 
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/auth"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
@@ -80,13 +81,6 @@ type Server struct {
 	publicAddress string
 
 	auth *auth.Identity
-
-	toggles toggles
-}
-
-// toggles are the toggles that enable or disable a feature
-type toggles struct {
-	autoRegister bool
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -221,34 +215,9 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		}
 
 		var clusterID string
+		var fingerprint string
 
-		var idChecker func(c *cluster) error
-
-		switch id := t.Identity().(type) {
-		case *x509.Certificate:
-			// N.B. By now, we know that we signed this certificate, that means,
-			// it contains what we placed into that cert, therefore there is no
-			// need to do any additional checks on that cert.
-			clusterID = id.Subject.CommonName
-			// However, the cert may be outdate (e.g. revoked, custer id
-			// reused, etc.) so we need to double check the cert
-			idChecker = func(c *cluster) error {
-				if c.cert == nil {
-					if s.toggles.autoRegister {
-						// TODO remove this case when SAAS-222 lands, check the
-						// cert or fingerprint
-						return nil
-					}
-					return errors.Errorf("no cert assigned to cluster")
-				}
-				if !c.cert.Equal(id) {
-					return errors.Errorf("cert assigned to cluster does not match presented cert")
-				}
-				return nil
-			}
-		default:
-			log.Errorf("unknown tunnel identity type %T", id)
-		}
+		clusterID, fingerprint = s.extractIdentity(t, clusterID, fingerprint)
 
 		c := s.clusters.get(clusterID)
 
@@ -265,9 +234,15 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		func() {
 			defer c.RUnlock()
 
-			if err := idChecker(c); err != nil {
-				log.Errorf("id check error: %s", err)
-				t.Close()
+			if len(c.ActiveFingerprint) == 0 {
+				log.Error("No fingerprint has been stored against the current connection")
+				closeTunnel(t)
+				return
+
+			}
+			if fingerprint != c.ActiveFingerprint {
+				log.Error("Stored fingerprint does not match provided fingerprint")
+				closeTunnel(t)
 				return
 			}
 
@@ -286,6 +261,29 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			log.Debugf("Accepted a new tunnel from %s", clusterID)
 		}()
 	}
+}
+
+func closeTunnel(t *tunnel.Tunnel) {
+	var err = t.Close()
+	if err != nil {
+		log.WithError(err).Error("Could not close tunnel")
+	}
+}
+
+func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint string) (string, string) {
+	switch id := t.Identity().(type) {
+	case *x509.Certificate:
+		// N.B. By now, we know that we signed this certificate as these checks
+		// are performed during TLS handshake. We need to extract the common name
+		// and fingerprint of the certificate to check against our internal records
+		// We expect to have a cluster registered with this ID and matching fingerprint
+		// for the cert.
+		clusterID = id.Subject.CommonName
+		fingerprint = utils.GenerateFingerprint(id)
+	default:
+		log.Errorf("unknown tunnel identity type %T", id)
+	}
+	return clusterID, fingerprint
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
@@ -401,7 +399,7 @@ func (s *Server) generateCreds(clusterInfo *jclust.ManagedCluster) (*x509.Certif
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(1000000 * time.Hour), // XXX TBD
 		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth,},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 
 	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, s.tunnelCert, &key.PublicKey, s.tunnelKey)

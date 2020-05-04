@@ -77,7 +77,8 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 		stream: stream,
 		errCh:  make(chan struct{}),
 		// Defaults
-		keepAliveEnable:   true,
+		keepAliveEnable: true,
+
 		keepAliveInterval: 100 * time.Millisecond,
 	}
 

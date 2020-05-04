@@ -203,7 +203,7 @@ func (s *Server) setCredsPEM(certPem, keyPem []byte) error {
 	s.certs = append(s.certs, cert)
 	s.certPool.AddCert(xCert)
 
-	log.Debugf("tunnel.Server: TLS creds set")
+	log.Debug("tunnel.Server: TLS creds set")
 
 	return nil
 }

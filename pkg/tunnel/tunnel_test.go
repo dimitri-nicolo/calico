@@ -47,6 +47,7 @@ var _ = Describe("Stream Server", func() {
 
 		wg.Add(1)
 		go func() {
+			defer GinkgoRecover()
 			defer wg.Done()
 
 			for i := 1; i < N; i++ {
@@ -64,7 +65,7 @@ var _ = Describe("Stream Server", func() {
 
 		wg.Wait()
 		close(done)
-	})
+	}, 100)
 
 	It("srv.Stop() should fail all connections", func() {
 		srv.Stop()
@@ -168,7 +169,7 @@ var _ = Describe("Tunnel server", func() {
 
 			wg.Wait()
 			close(done)
-		})
+		}, 100)
 
 		It("should be possible to close stream", func() {
 			err := srvS2.Close()
@@ -197,6 +198,7 @@ var _ = Describe("Tunnel server", func() {
 
 			wg.Add(1)
 			go func() {
+				defer GinkgoRecover()
 				defer wg.Done()
 
 				err := srvT.Close()
@@ -206,7 +208,7 @@ var _ = Describe("Tunnel server", func() {
 			_, err := clnT.Accept()
 			Expect(err).Should(HaveOccurred())
 			close(done)
-		})
+		}, 100)
 
 		It("should fail tunneled streams", func() {
 			data := make([]byte, 1)
@@ -335,6 +337,8 @@ var _ = Describe("TLS Stream", func() {
 
 		wg.Add(1)
 		go func() {
+			defer GinkgoRecover()
+
 			defer wg.Done()
 			var err error
 			srvS, err = srv.Accept()
@@ -353,7 +357,7 @@ var _ = Describe("TLS Stream", func() {
 		})
 		Expect(err).ShouldNot(HaveOccurred())
 		wg.Wait()
-	})
+	}, 100)
 
 	Context("when tls stream is open", func() {
 		It("should be able to send data s -> c", func(done Done) {
@@ -407,6 +411,8 @@ var _ = Describe("tunnel tests", func() {
 				var wg sync.WaitGroup
 				wg.Add(1)
 				go func() {
+					defer GinkgoRecover()
+
 					defer wg.Done()
 					conn, err := state.InterfaceToConnOrError(<-connResults)
 					Expect(err).ToNot(HaveOccurred())
@@ -419,7 +425,7 @@ var _ = Describe("tunnel tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				wg.Wait()
-			})
+			}, 100)
 			It("channel is closed when the tunnel is closed", func() {
 				cliConn, srvConn := net.Pipe()
 				tun, err := tunnel.NewClientTunnel(cliConn)
@@ -432,6 +438,8 @@ var _ = Describe("tunnel tests", func() {
 				var wg sync.WaitGroup
 				wg.Add(1)
 				go func() {
+					defer GinkgoRecover()
+
 					defer wg.Done()
 					_, ok := <-connResults
 					Expect(ok).ShouldNot(BeTrue())
@@ -439,7 +447,7 @@ var _ = Describe("tunnel tests", func() {
 
 				Expect(srvConn.Close()).ToNot(HaveOccurred())
 				wg.Wait()
-			})
+			}, 100)
 		})
 	})
 })

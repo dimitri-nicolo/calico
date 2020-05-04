@@ -222,9 +222,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			_ = voltron.ServeTunnelsTLS(lisTun)
 		}()
 
-		wgSrvCnlt.Add(1)
 		go func() {
-			defer wgSrvCnlt.Done()
 			_ = voltron.WatchK8sWithSync(watchSync)
 		}()
 
@@ -233,12 +231,38 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should register 2 clusters", func() {
+		var err error
+		var cert []byte
+		var block *pem.Block
+		var certCluster, otherCertCluster *x509.Certificate
+
 		k8sAPI.WaitForManagedClustersWatched()
-		Expect(k8sAPI.AddCluster(clusterID, clusterID)).ShouldNot(HaveOccurred())
+		Expect(k8sAPI.AddCluster(clusterID, clusterID, nil)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		Expect(k8sAPI.AddCluster(clusterID2, clusterID2)).ShouldNot(HaveOccurred())
+		cert, _, err = voltron.ClusterCreds(clusterID)
+		Expect(err).NotTo(HaveOccurred())
+		block, _ = pem.Decode(cert)
+		Expect(block).NotTo(BeNil())
+		certCluster, err = x509.ParseCertificate(block.Bytes)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sAPI.UpdateCluster(clusterID, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certCluster)})).ShouldNot(HaveOccurred())
+
+		Expect(k8sAPI.AddCluster(clusterID2, clusterID2, nil)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
+
+		cert, _, err = voltron.ClusterCreds(clusterID2)
+		Expect(err).NotTo(HaveOccurred())
+		block, _ = pem.Decode(cert)
+		Expect(block).NotTo(BeNil())
+		otherCertCluster, err = x509.ParseCertificate(block.Bytes)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sAPI.UpdateCluster(clusterID2, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(otherCertCluster)})).ShouldNot(HaveOccurred())
+
 	})
 
 	It("should start guardian", func() {
@@ -325,39 +349,39 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	// To be fixed in SAAS-768
-/*	It("should start guardian again", func() {
-		cert, key, err := voltron.ClusterCreds(clusterID)
-		Expect(err).NotTo(HaveOccurred())
+	/*	It("should start guardian again", func() {
+			cert, key, err := voltron.ClusterCreds(clusterID)
+			Expect(err).NotTo(HaveOccurred())
 
-		guardian, err = client.New(
-			lisTun.Addr().String(),
-			client.WithTunnelCreds(cert, key, rootCAs),
-			client.WithProxyTargets(
-				[]proxy.Target{
-					{
-						Path: "/some/path",
-						Dest: listenerURL(lisTs),
+			guardian, err = client.New(
+				lisTun.Addr().String(),
+				client.WithTunnelCreds(cert, key, rootCAs),
+				client.WithProxyTargets(
+					[]proxy.Target{
+						{
+							Path: "/some/path",
+							Dest: listenerURL(lisTs),
+						},
 					},
-				},
-			),
-		)
-		Expect(err).NotTo(HaveOccurred())
-		wgSrvCnlt.Add(1)
-		go func() {
-			defer wgSrvCnlt.Done()
-			_ = guardian.ServeTunnelHTTP()
-		}()
-	})
+				),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			wgSrvCnlt.Add(1)
+			go func() {
+				defer wgSrvCnlt.Done()
+				_ = guardian.ServeTunnelHTTP()
+			}()
+		})
 
-	It("should be possible to reach the test server again", func() {
-		var msg string
-		Eventually(func() error {
-			var err error
-			msg, err = ui.doRequest(clusterID)
-			return err
-		}, "10s", "1s").ShouldNot(HaveOccurred())
-		Expect(msg).To(Equal(ts.msg))
-	})*/
+		It("should be possible to reach the test server again", func() {
+			var msg string
+			Eventually(func() error {
+				var err error
+				msg, err = ui.doRequest(clusterID)
+				return err
+			}, "10s", "1s").ShouldNot(HaveOccurred())
+			Expect(msg).To(Equal(ts.msg))
+		})*/
 
 	It("should clean up", func(done Done) {
 		_ = voltron.Close()

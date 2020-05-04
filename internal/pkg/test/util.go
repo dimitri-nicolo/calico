@@ -177,6 +177,9 @@ func PemEncodeCert(cert *x509.Certificate) []byte {
 
 // DataFlow sends a message from the io Reader to the io Writer. Returns the sent message.
 func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
+	if r == nil || w == nil {
+		return nil, errors.Errorf("Invalid parameters")
+	}
 	var wg sync.WaitGroup
 
 	errChan := make(chan error, 2)

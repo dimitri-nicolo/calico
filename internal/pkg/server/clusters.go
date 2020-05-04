@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/voltron/internal/pkg/utils"
+
 	vtls "github.com/tigera/voltron/pkg/tls"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -38,6 +40,10 @@ import (
 
 // AppYaml is the content-type that will be returned when returning a yaml file
 const AppYaml = "application/vnd.yaml"
+
+// AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
+// managed cluster certificate that is allowed to initiate connections.
+const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
 
 var sniServiceMap = map[string]string{
 	"tigera-secure-kb-http.tigera-kibana.svc": "tigera-secure-kb-http.tigera-kibana.svc:5601",
@@ -160,6 +166,7 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 		return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
 	}
 
+	mc.ActiveFingerprint = utils.GenerateFingerprint(cert)
 	c, err := cs.add(mc)
 	if err != nil {
 		return nil, err
@@ -172,7 +179,11 @@ func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
 
 	err = cs.renderManifest(resp, cert, key)
 	if err != nil {
-		return nil, errors.WithMessage(err, "could not renderer manifest")
+		return nil, errors.WithMessage(err, "fail not renderer manifest")
+	}
+	err = storeFingerprint(cs.k8sCLI, mc.ID, mc.ActiveFingerprint)
+	if err != nil {
+		return nil, errors.WithMessage(err, "fail to renderer manifest")
 	}
 
 	return resp, nil
@@ -279,6 +290,23 @@ func (cs *clusters) deleteClusterREST(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "Deleted")
+}
+
+// storeFingerprint uses the given K8sInterface to store the active certificate fingerprint for the
+// ManagedCluster specified by "name"
+func storeFingerprint(k8s K8sInterface, name, activeFingerprint string) error {
+	var newManagedCluster *apiv3.ManagedCluster
+	var err error
+	newManagedCluster, err = k8s.ManagedClusters().Get(name, metav1.GetOptions{})
+	if err != nil {
+		return errors.WithMessage(err, "failed to retrieve ManagedCluster")
+	}
+	if newManagedCluster.ObjectMeta.Annotations == nil {
+		newManagedCluster.ObjectMeta.Annotations = make(map[string]string)
+	}
+	newManagedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint] = activeFingerprint
+	_, err = k8s.ManagedClusters().Update(newManagedCluster)
+	return err
 }
 
 // Determine which handler to execute based on HTTP method.
@@ -429,7 +457,8 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			}
 
 			mc := &jclust.ManagedCluster{
-				ID: mcResource.ObjectMeta.Name,
+				ID:                mcResource.ObjectMeta.Name,
+				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 			}
 
 			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -479,7 +508,8 @@ func (cs *clusters) resyncWithK8s(ctx context.Context) (string, error) {
 		id := mc.ObjectMeta.Name
 
 		mc := &jclust.ManagedCluster{
-			ID: id,
+			ID:                id,
+			ActiveFingerprint: mc.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 		}
 
 		known[id] = struct{}{}

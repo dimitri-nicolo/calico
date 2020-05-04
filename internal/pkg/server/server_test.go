@@ -5,6 +5,17 @@ package server_test
 import (
 	"crypto"
 	"crypto/rsa"
+	"net/http/httptest"
+	"net/url"
+
+	"golang.org/x/crypto/ssh"
+
+	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/regex"
+
+	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/tigera/voltron/pkg/tunnel"
+
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -12,13 +23,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/crypto/ssh"
 
 	"k8s.io/client-go/rest"
 
@@ -29,12 +36,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/clusters"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
-	"github.com/tigera/voltron/internal/pkg/utils"
-	"github.com/tigera/voltron/pkg/tunnel"
 )
 
 var (
@@ -118,7 +121,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to register a new cluster", func() {
-			Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
+			Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -136,7 +139,7 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to register another cluster", func() {
-			Expect(k8sAPI.AddCluster(clusterB, clusterB)).ShouldNot(HaveOccurred())
+			Expect(k8sAPI.AddCluster(clusterB, clusterB, nil)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 		})
 
@@ -269,9 +272,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			_ = srv.ServeTunnelsTLS(lisTun)
 		}()
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			_ = srv.WatchK8sWithSync(watchSync)
 		}()
 	}
@@ -301,7 +302,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("should not be able to proxy to a cluster without a tunnel", func() {
-			Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
+			Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 			clientHelloReq(lis.Addr().String(), clusterA, 400)
 		})
@@ -333,9 +334,14 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		It("should be possible to open a tunnel", func() {
 			var err error
+			var certA *x509.Certificate
 
 			certPemA, keyPemA, err = srv.ClusterCreds(clusterA)
 			Expect(err).NotTo(HaveOccurred())
+			block, _ := pem.Decode(certPemA)
+			certA, err = x509.ParseCertificate(block.Bytes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certA)})).ShouldNot(HaveOccurred())
 
 			cert, err := tls.X509KeyPair(certPemA, keyPemA)
 			Expect(err).NotTo(HaveOccurred())
@@ -360,11 +366,14 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					http2Srv(clnT)
 				}()
 
+				rootCAs = x509.NewCertPool()
+				rootCAs.AppendCertsFromPEM(cert)
+
 				clnt := &http.Client{
 					Transport: &http2.Transport{
 						TLSClientConfig: &tls.Config{
-							InsecureSkipVerify: true,
-							NextProtos:         []string{"h2"},
+							NextProtos: []string{"h2"},
+							RootCAs:    rootCAs,
 						},
 					},
 				}
@@ -411,8 +420,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 
 			It("should be able to register another cluster", func() {
-				Expect(k8sAPI.AddCluster(clusterB, clusterB)).ShouldNot(HaveOccurred())
+				Expect(k8sAPI.AddCluster(clusterB, clusterB, nil)).ShouldNot(HaveOccurred())
 				Expect(<-watchSync).NotTo(HaveOccurred())
+				clientHelloReq(lis.Addr().String(), clusterB, 400)
+
+				block, _ := pem.Decode(certPemA)
+				Expect(block).NotTo(BeNil())
+				certB, err := x509.ParseCertificate(block.Bytes)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(k8sAPI.UpdateCluster(clusterB, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certB)})).ShouldNot(HaveOccurred())
 			})
 
 			When("another cluster is registered", func() {
@@ -447,7 +465,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					testSrv.Listener = tunB
 					testSrv.Start()
 
-					clientHelloReq(lis.Addr().String(), clusterB, 502 /* non-TLS srv -> err */)
+					// non-TLS srv -> err
+					clientHelloReq(lis.Addr().String(), clusterB, 502)
 				})
 
 				It("should be possible to open a second tunnel from clusterB", func() {
@@ -480,12 +499,16 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				It("eventually accepting connections fails as the tunnel is rejected", func() {
-					_, err := tunB.Accept()
-					Expect(err).Should(HaveOccurred())
+					go func() {
+						defer GinkgoRecover()
+
+						_, err := tunB.Accept()
+						Expect(err).Should(HaveOccurred())
+					}()
 				})
 
 				It("should be able to register clusterB again", func() {
-					Expect(k8sAPI.AddCluster(clusterB, clusterB)).ShouldNot(HaveOccurred())
+					Expect(k8sAPI.AddCluster(clusterB, clusterB, nil)).ShouldNot(HaveOccurred())
 					Expect(<-watchSync).NotTo(HaveOccurred())
 				})
 
@@ -580,74 +603,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			wg.Wait()
 			close(done)
 		})
-
-		It("should re-start a server with auto registration", func() {
-			startServer(server.WithAutoRegister())
-		})
-
-		Context("When auto-registration is enabled", func() {
-			It("should be possible to open a tunnel with certs for clusterA", func() {
-				cert, err := tls.X509KeyPair(certPemA, keyPemA)
-				Expect(err).NotTo(HaveOccurred())
-
-				cfg := &tls.Config{
-					Certificates: []tls.Certificate{cert},
-					RootCAs:      rootCAs,
-				}
-
-				clnT, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			Context("when client tunnel exists", func() {
-				testClnT()
-			})
-		})
-
-		It("should delete clusterA", func() {
-			Expect(k8sAPI.DeleteCluster(clusterA)).ShouldNot(HaveOccurred())
-			Expect(<-watchSync).NotTo(HaveOccurred())
-		})
-
-		It("should stop the servers again", func(done Done) {
-			err := srv.Close()
-			Expect(err).NotTo(HaveOccurred())
-			wg.Wait()
-			close(done)
-		})
-
-		It("should re-start a server again", func() {
-			startServer(server.WithAutoRegister())
-		})
-
-		Context("When clusterA was previously deleted", func() {
-			It("should be possible to open a tunnel with certs for clusterA", func() {
-				cert, err := tls.X509KeyPair(certPemA, keyPemA)
-				Expect(err).NotTo(HaveOccurred())
-
-				cfg := &tls.Config{
-					Certificates: []tls.Certificate{cert},
-					RootCAs:      rootCAs,
-				}
-
-				clnT, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("eventually accepting connections fails as the tunnel is rejected", func() {
-				_, err := clnT.Accept()
-				Expect(err).Should(HaveOccurred())
-			})
-
-		})
-
-	})
-
-	It("should stop the servers", func(done Done) {
-		err := srv.Close()
-		Expect(err).NotTo(HaveOccurred())
-		wg.Wait()
-		close(done)
 	})
 })
 
@@ -721,9 +676,7 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 			_ = srv.ServeTunnelsTLS(lisTun)
 		}()
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			_ = srv.WatchK8sWithSync(watchSync)
 		}()
 
@@ -745,29 +698,41 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 		var err error
 
 		By("adding ClusterA")
-
-		Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
+		Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		By("adding a managed cluster named voltron to spoof the management cluster")
-		Expect(k8sAPI.AddCluster("voltron", "voltron")).ShouldNot(HaveOccurred())
-		Expect(<-watchSync).NotTo(HaveOccurred())
-
-		By("Trying to connect clusterA to the fake voltron")
+		By("Getting the certificates for clusterA")
 		certPemA, keyPemA, err := srv.ClusterCreds(clusterA)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("Setting the fingerprint annotation for clusterA certificate")
+		block, _ := pem.Decode(certPemA)
+		Expect(block).NotTo(BeNil())
+		certA, err := x509.ParseCertificate(block.Bytes)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certA)})).ShouldNot(HaveOccurred())
+
+		By("adding a managed cluster named voltron to generate credentials faking management cluster")
+		Expect(k8sAPI.AddCluster("voltron", "voltron", nil)).ShouldNot(HaveOccurred())
+		Expect(<-watchSync).NotTo(HaveOccurred())
+
+		By("Getting the certificates for fake voltron")
 		certPem, keyPem, err := srv.ClusterCreds("voltron")
 		Expect(err).NotTo(HaveOccurred())
 
+		By("Setting the fingerprint annotation for voltron certificate")
+		block, _ = pem.Decode(certPem)
+		k, _ := ssh.ParseRawPrivateKey(keyPem)
+		Expect(block).NotTo(BeNil())
+		c, err := x509.ParseCertificate(block.Bytes)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sAPI.UpdateCluster("voltron", map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(c)})).ShouldNot(HaveOccurred())
+
+		By("Trying to connect clusterA to the fake voltron")
 		//close the server
 		err = srv.Close()
 		Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
-
-		k, _ := ssh.ParseRawPrivateKey(keyPem)
-		block, _ := pem.Decode(certPem)
-		c, _ := x509.ParseCertificate(block.Bytes)
 
 		// Restart the server with the guardian certificates as the new tunnel credentials
 		startServer(true, server.WithTunnelCreds(c, k.(crypto.Signer)))
@@ -784,13 +749,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 
 		_, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
 		Expect(err).Should(MatchError("tcp.tls.Dial failed: x509: certificate specifies an incompatible key usage"))
-	})
-
-	It("should stop the servers", func(done Done) {
-		err := srv.Close()
-		Expect(err).NotTo(HaveOccurred())
-		wg.Wait()
-		close(done)
 	})
 })
 
@@ -867,9 +825,7 @@ var _ = Describe("Server authenticates requests", func() {
 			_ = srv.ServeTunnelsTLS(lisTun)
 		}()
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			_ = srv.WatchK8sWithSync(watchSync)
 		}()
 
@@ -877,8 +833,18 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("Should add cluster A", func() {
-		Expect(k8sAPI.AddCluster(clusterA, clusterA)).ShouldNot(HaveOccurred())
+		Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
+
+		certPem, _, err := srv.ClusterCreds(clusterA)
+		Expect(err).NotTo(HaveOccurred())
+		block, _ := pem.Decode(certPem)
+		Expect(block).NotTo(BeNil())
+		cert, err := x509.ParseCertificate(block.Bytes)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(cert)})).ShouldNot(HaveOccurred())
+
 	})
 
 	var bin *test.HTTPSBin
