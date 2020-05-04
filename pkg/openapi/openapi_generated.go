@@ -177,6 +177,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig":                  schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                              schema_libcalico_go_lib_apis_v3_NodeList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec":                              schema_libcalico_go_lib_apis_v3_NodeSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeStatus":                            schema_libcalico_go_lib_apis_v3_NodeStatus(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec":                     schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                               schema_libcalico_go_lib_apis_v3_OrchRef(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig":                schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile":                               schema_libcalico_go_lib_apis_v3_Profile(ref),
@@ -5404,6 +5406,41 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"wireguardEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardEnabled controls whether Wireguard is enabled. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"wireguardListeningPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardListeningPort controls the listening port used by Wireguard. [Default: 51820]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"wireguardRoutingRulePriority": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardRoutingRulePriority controls the priority value to use for the Wireguard routing rule. [Default: 99]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"wireguardInterfaceName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardInterfaceName specifies the name to use for the Wireguard interface. [Default: wg.calico]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"wireguardMTU": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardMTU controls the MTU on the Wireguard interface. See Configuring MTU [Default: 1420]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
@@ -8360,11 +8397,17 @@ func schema_libcalico_go_lib_apis_v3_Node(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status of the Node.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -8537,11 +8580,56 @@ func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) comm
 							},
 						},
 					},
+					"wireguard": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Wireguard configuration for this node.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_NodeStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"wireguardPublicKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardPublicKey is the Wireguard public-key for this node. wireguardPublicKey validates if the string is a valid base64 encoded key.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeWireguardSpec contains the specification for the Node wireguard configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"interfaceIpv4Address": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InterfaceIPv4Address is the IPv4 address for the Wireguard interface.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
