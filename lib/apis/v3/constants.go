@@ -43,6 +43,9 @@ const (
 	// Label used to denote the Network a WorkloadEndpoint belongs too.
 	LabelNetwork = "projectcalico.org/network"
 
+	// Label used to denote the Namespace the NetworkAttachmentDefinition for a WorkloadEndpoint belongs to.
+	LabelNetworkNamespace = "projectcalico.org/network-namespace"
+
 	// Label used to denote the inside pod interface for a WorkloadEndpoint.
 	LabelNetworkInterface = "projectcalico.org/network-interface"
 
