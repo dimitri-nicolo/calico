@@ -493,10 +493,10 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	return nil
 }
 
-func (m *egressIPManager) GetRouteTables() []routeTable {
-	rts := []routeTable{}
+func (m *egressIPManager) GetRouteTableSyncers() []routeTableSyncer {
+	rts := []routeTableSyncer{}
 	for _, t := range m.tableIndexToRouteTable {
-		rts = append(rts, t)
+		rts = append(rts, t.(routeTableSyncer))
 	}
 
 	return rts
