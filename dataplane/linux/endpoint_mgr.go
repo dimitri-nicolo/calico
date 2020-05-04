@@ -1074,8 +1074,8 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 		return nil
 	}
 
-	// No existing IPv4 addresses, so add 169.254.1.1/16.
-	ip, net, err := net.ParseCIDR("169.254.1.1/16")
+	// No existing IPv4 addresses, so add 169.254.1.1/32.
+	ip, net, err := net.ParseCIDR("169.254.1.1/32")
 	if err != nil {
 		return err
 	}
