@@ -19,3 +19,7 @@ package bpf
 func SyscallSupport() bool {
 	return false
 }
+
+func SupportsBPFDataplane() error {
+	return nil
+}
