@@ -189,6 +189,8 @@ type endpointManager struct {
 	activeHostEpIDToIfaceNames map[proto.HostEndpointID][]string
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
+	// Interfaces to which we've added a host-side address, for egress IP function to work.
+	egressGatewayAddressAdded map[string]netlink.Addr
 
 	needToCheckDispatchChains     bool
 	needToCheckEndpointMarkChains bool
@@ -295,6 +297,7 @@ func newEndpointManagerWithShims(
 		activeHostIfaceToRawChains:    map[string][]*iptables.Chain{},
 		activeHostIfaceToFiltChains:   map[string][]*iptables.Chain{},
 		activeHostIfaceToMangleChains: map[string][]*iptables.Chain{},
+		egressGatewayAddressAdded:     map[string]netlink.Addr{},
 
 		// Caches of the current dispatch chains indexed by chain name.  We use these to
 		// calculate deltas when we need to update the chains.
@@ -1085,7 +1088,37 @@ func (m *endpointManager) configureEgressGatewayInterface(name string) error {
 	if err = m.nlHandle.AddrAdd(link, &addr); err != nil {
 		return err
 	}
+	m.egressGatewayAddressAdded[name] = addr
 	return nil
+}
+
+func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
+	addr, added := m.egressGatewayAddressAdded[name]
+	if !added {
+		// We haven't added an address to this interface, so nothing to remove.
+		return
+	}
+
+	// In all cases, we only want to try deleting the added address once, as the possible cases
+	// are:
+	// 1. Link not found - the address will already be gone.
+	// 2. Address deletion failed - no point trying the same thing again.
+	// 3. Address deletion succeeded.
+	// So remove the entry from our tracking map upfront here.
+	delete(m.egressGatewayAddressAdded, name)
+
+	// Look up the interface.
+	link, err := m.nlHandle.LinkByName(name)
+	if err != nil {
+		// Presumably the link has been removed.  Address already gone.
+		return
+	}
+	if err = m.nlHandle.AddrDel(link, &addr); err != nil {
+		log.WithField("address", addr).WithError(err).Warning("Failed to remove address from egress gateway device")
+		return
+	}
+	log.WithField("address", addr).Info("Removed address from egress gateway device")
+	return
 }
 
 func (m *endpointManager) configureInterface(name string) error {
@@ -1101,6 +1134,8 @@ func (m *endpointManager) configureInterface(name string) error {
 			if err := m.configureEgressGatewayInterface(name); err != nil {
 				return err
 			}
+		} else {
+			m.removeEgressGatewayInterfaceAddress(name)
 		}
 		// Enable routing to localhost.  This is required to allow for NAT to the local
 		// host.
