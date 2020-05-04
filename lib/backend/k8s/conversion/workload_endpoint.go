@@ -30,6 +30,7 @@ import (
 type PodInterface struct {
 	IsDefault          bool
 	NetworkName        string
+	NetworkNamespace   string // The k8s Namespace the network definition is in
 	HostSideIfaceName  string
 	InsidePodIfaceName string
 	InsidePodGW        net.IP

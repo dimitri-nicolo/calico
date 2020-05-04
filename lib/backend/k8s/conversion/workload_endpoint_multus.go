@@ -59,10 +59,24 @@ func (m multusWorkloadEndpointConverter) VethNameForWorkload(namespace, podName 
 	return m.defaultConverter.VethNameForWorkload(namespace, podName)
 }
 
-// networksFromPod parses out the networks from the multus annotations, if available
+// networksFromPod parses out the networks from the multus annotations, if available. If the networks were successfully
+// parsed any empty InterfaceRequest value is set to the default multus interface name.
 func networksFromPod(pod *kapiv1.Pod) ([]*nettypes.NetworkSelectionElement, error) {
 	if _, exists := pod.Annotations[nettypes.NetworkAttachmentAnnot]; exists {
-		return netutils.ParsePodNetworkAnnotation(pod)
+		networks, err := netutils.ParsePodNetworkAnnotation(pod)
+		if err != nil {
+			return nil, err
+		}
+
+		for i, network := range networks {
+			if network.InterfaceRequest == "" {
+				// this is what multus defaults the interface name to, if libcalico-go starts supporting more CNI
+				// delegating plugins this will need to be revisited, as other plugins may not use the same default
+				// interface naming scheme
+				network.InterfaceRequest = fmt.Sprintf("net%d", i+1)
+			}
+		}
+		return networks, nil
 	}
 
 	return nil, nil
@@ -132,11 +146,21 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 			return nil, new(AdditionalPodInterfaceLimitExceededError)
 		}
 
+		// Create a mapping from interface name to network namespace so the PodInterface can be populated with the
+		// network Namespace below
+		ifaceToNetNSMap := map[string]string{}
+		if networks != nil {
+			for _, network := range networks {
+				ifaceToNetNSMap[network.InterfaceRequest] = network.Namespace
+			}
+		}
+
 		for i, networkStatus := range networkStatuses {
 			var ipNets []*cnet.IPNet
 
 			// first networkStatus is always for the default interface
 			isDefault := i == 0
+			netNamespace := ifaceToNetNSMap[networkStatus.Interface]
 			if isDefault {
 				// If Multus was installed before upgrading to EE 3.0.0, then the network-status annotations will already
 				// exist on the pods but the interface field will be empty. This is because the Calico CNI plugin returns
@@ -151,6 +175,10 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 				if err != nil {
 					return nil, err
 				}
+
+				// Just assume each default network has it's definition in it's own namespace, as they are not configured
+				// through the NetworkAttachmentDefinitions.
+				netNamespace = pod.Namespace
 			} else {
 				// If this is an additional interface and the Interface name doesn't exist then log a error and skip
 				// over this invalid status. An error isn't returned because this issue won't occur on Pod creation, where
@@ -176,6 +204,7 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 			podIfaces = append(podIfaces, &PodInterface{
 				IsDefault:          isDefault, //first one is always the default interface
 				NetworkName:        networkStatus.Name,
+				NetworkNamespace:   netNamespace,
 				InsidePodIfaceName: networkStatus.Interface,
 				HostSideIfaceName:  calculateHostSideVethName(pod.Namespace, pod.Name, i),
 				InsidePodGW:        net.IPv4(169, 254, 1, 1+byte(i)),
@@ -199,15 +228,11 @@ func (m multusWorkloadEndpointConverter) InterfacesForPod(pod *kapiv1.Pod) ([]*P
 			}
 
 			for i, network := range networks {
-				if network.InterfaceRequest == "" {
-					// this is what multus defaults the interface name to, if libcalico-go starts supporting more CNI
-					// delegating plugins this will need to be revisited, as other plugins may not use the same default
-					// interface naming scheme
-					network.InterfaceRequest = fmt.Sprintf("net%d", i+1)
-				}
-
 				podIfaces = append(podIfaces, &PodInterface{
-					NetworkName:        network.Name,
+					NetworkName:      network.Name,
+					NetworkNamespace: network.Namespace,
+					// note that networksFromPod sets this value using the default multus naming scheme if this wasn't set
+					// originally
 					InsidePodIfaceName: network.InterfaceRequest,
 					HostSideIfaceName:  calculateHostSideVethName(pod.Namespace, pod.Name, i+1),
 					InsidePodGW:        net.IPv4(169, 254, 1, 2+byte(i)),
@@ -230,6 +255,7 @@ func (m multusWorkloadEndpointConverter) defaultInterfaceForPod(pod *kapiv1.Pod)
 	return &PodInterface{
 		IsDefault:          true,
 		NetworkName:        "k8s-pod-network",
+		NetworkNamespace:   pod.Namespace,
 		InsidePodIfaceName: "eth0",
 		HostSideIfaceName:  calculateHostSideVethName(pod.Namespace, pod.Name, 0),
 		InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -295,6 +321,7 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 	}
 
 	wep.Labels[apiv3.LabelNetwork] = podInterface.NetworkName
+	wep.Labels[apiv3.LabelNetworkNamespace] = podInterface.NetworkNamespace
 	wep.Labels[apiv3.LabelNetworkInterface] = podInterface.InsidePodIfaceName
 
 	wep.Spec.Endpoint = podInterface.InsidePodIfaceName

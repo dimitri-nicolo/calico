@@ -53,6 +53,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -78,6 +79,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -101,6 +103,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -108,6 +111,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico1",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "net1",
 								HostSideIfaceName:  "calim1P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -115,6 +119,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico2",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "net2",
 								HostSideIfaceName:  "calim2P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 3),
@@ -122,6 +127,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico3",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "net3",
 								HostSideIfaceName:  "calim3P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 4),
@@ -160,6 +166,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -167,6 +174,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico1",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "cali1",
 								HostSideIfaceName:  "calim1P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -174,6 +182,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico2",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "cali2",
 								HostSideIfaceName:  "calim2P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 3),
@@ -181,6 +190,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico3",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "cali3",
 								HostSideIfaceName:  "calim3P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 4),
@@ -219,6 +229,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -226,6 +237,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico1",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "net1",
 								HostSideIfaceName:  "calim1P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -233,6 +245,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico2",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "cali2",
 								HostSideIfaceName:  "calim2P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 3),
@@ -240,6 +253,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico3",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "net3",
 								HostSideIfaceName:  "calim3P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 4),
@@ -288,6 +302,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -295,6 +310,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico1",
+								NetworkNamespace:   "namespace",
 								InsidePodIfaceName: "net1",
 								HostSideIfaceName:  "calim1P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -323,6 +339,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          true,
 								NetworkName:        "k8s-pod-network",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "eth0",
 								HostSideIfaceName:  "cali7f94ce7c295",
 								InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -336,6 +353,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							{
 								IsDefault:          false,
 								NetworkName:        "calico",
+								NetworkNamespace:   "default",
 								InsidePodIfaceName: "net1",
 								HostSideIfaceName:  "calim1P6KM47BJK",
 								InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -367,6 +385,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          true,
 						NetworkName:        "k8s-pod-network",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "eth0",
 						HostSideIfaceName:  "cali7f94ce7c295",
 						InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -380,6 +399,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          false,
 						NetworkName:        "calico1",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "net1",
 						HostSideIfaceName:  "calim1P6KM47BJK",
 						InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -387,6 +407,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          false,
 						NetworkName:        "calico2",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "net2",
 						HostSideIfaceName:  "calim2P6KM47BJK",
 						InsidePodGW:        net.IPv4(169, 254, 1, 3),
@@ -414,6 +435,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          true,
 						NetworkName:        "k8s-pod-network",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "eth0",
 						HostSideIfaceName:  "cali7f94ce7c295",
 						InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -427,6 +449,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          false,
 						NetworkName:        "calico1",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "net1",
 						HostSideIfaceName:  "calim1P6KM47BJK",
 						InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -434,6 +457,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          false,
 						NetworkName:        "calico2",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "net2",
 						HostSideIfaceName:  "calim2P6KM47BJK",
 						InsidePodGW:        net.IPv4(169, 254, 1, 3),
@@ -481,6 +505,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          true,
 						NetworkName:        "calico-default-network",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "ens4",
 						HostSideIfaceName:  "cali7f94ce7c295",
 						InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -494,6 +519,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          false,
 						NetworkName:        "calico1",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "net1",
 						HostSideIfaceName:  "calim1P6KM47BJK",
 						InsidePodGW:        net.IPv4(169, 254, 1, 2),
@@ -507,6 +533,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 					{
 						IsDefault:          false,
 						NetworkName:        "calico2",
+						NetworkNamespace:   "default",
 						InsidePodIfaceName: "net2",
 						HostSideIfaceName:  "calim2P6KM47BJK",
 						InsidePodGW:        net.IPv4(169, 254, 1, 3),
@@ -547,6 +574,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 						{
 							IsDefault:          true,
 							NetworkName:        "calico-default-network",
+							NetworkNamespace:   "default",
 							InsidePodIfaceName: "ens4",
 							HostSideIfaceName:  "cali7f94ce7c295",
 							InsidePodGW:        net.IPv4(169, 254, 1, 1),
@@ -593,6 +621,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 							apiv3.LabelNamespace:        "testNamespace",
 							apiv3.LabelOrchestrator:     "k8s",
 							apiv3.LabelNetwork:          "k8s-pod-network",
+							apiv3.LabelNetworkNamespace: "testNamespace",
 							apiv3.LabelNetworkInterface: "eth0",
 						},
 					},
@@ -653,6 +682,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 								apiv3.LabelNamespace:        "testNamespace",
 								apiv3.LabelOrchestrator:     "k8s",
 								apiv3.LabelNetwork:          "calico-default-network",
+								apiv3.LabelNetworkNamespace: "testNamespace",
 								apiv3.LabelNetworkInterface: "ens4",
 							},
 						},
@@ -726,6 +756,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNamespace:        "testNamespace",
 									apiv3.LabelOrchestrator:     "k8s",
 									apiv3.LabelNetwork:          "calico-default-network",
+									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "ens4",
 								},
 							},
@@ -751,6 +782,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNamespace:        "testNamespace",
 									apiv3.LabelOrchestrator:     "k8s",
 									apiv3.LabelNetwork:          "calico1",
+									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net1",
 								},
 							},
@@ -776,6 +808,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNamespace:        "testNamespace",
 									apiv3.LabelOrchestrator:     "k8s",
 									apiv3.LabelNetwork:          "calico2",
+									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net2",
 								},
 							},
