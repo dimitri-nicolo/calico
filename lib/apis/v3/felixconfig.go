@@ -510,9 +510,9 @@ type FelixConfigurationSpec struct {
 	//                                with per-pod egress annotations overriding namespace annotations.
 	EgressIPSupport string `json:"egressIPSupport,omitempty" validate:"omitempty,oneof=Disabled EnabledPerNamespace EnabledPerNamespaceOrPerPod"`
 	// EgressIPVXLANPort is the port number of vxlan tunnel device for egress traffic. [Default: 4790]
-	EgressIPVXLANPort *int `json:"egressVxlanPort,omitempty"`
+	EgressIPVXLANPort *int `json:"egressIPVXLANPort,omitempty"`
 	// EgressIPVXLANVNI is the VNI ID of vxlan tunnel device for egress traffic. [Default: 4097]
-	EgressIPVXLANVNI *int `json:"egressVxlanVNI,omitempty"`
+	EgressIPVXLANVNI *int `json:"egressIPVXLANVNI,omitempty"`
 	// EgressIPRoutingRulePriority controls the priority value to use for the egress IP routing rule. [Default: 100]
 	EgressIPRoutingRulePriority *int `json:"egressIPRoutingRulePriority,omitempty" validate:"omitempty,gt=0,lt=32766"`
 
