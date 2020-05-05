@@ -2,9 +2,6 @@
 layout: null
 ---
 
-{% helm tigera-operator \
---execute-dir templates/crds \
---execute-dir templates/crds/calico/kdd \
---execute-dir templates/crds/calico/ee-kdd %}
+{% helm tigera-operator --execute-dir templates/crds %}
 # todo: fix bug where empty tag doesn't render
 {% endhelm %}
