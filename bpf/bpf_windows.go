@@ -16,10 +16,12 @@
 
 package bpf
 
+import "fmt"
+
 func SyscallSupport() bool {
 	return false
 }
 
 func SupportsBPFDataplane() error {
-	return nil
+	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }
