@@ -102,9 +102,10 @@ spec:
 | flowLogsFileIncludeLabels | When set to `true`, include source and destination endpoint labels in the aggregated flow log. Note that only Kubernetes endpoints or network sets are included; arbitrary networks do not contain labels. | `true`, `false` | boolean | `false` |
 | flowLogsFileIncludePolicies | When set to `true`, include all policies in the aggregated flow logs that acted upon and matches the flow log traffic. | `true`, `false` | boolean | `false` |
 | flowLogsEnableNetworkSets | When set to `true`, include an arbitrary network set in the aggregated flow log that matches the IP address of the flow log endpoint. | `true`, `false` | boolean | `false` |
+| routeTableRange                    | Calico programs additional Linux route tables for various purposes.  `RouteTableRange` specifies the indices of the route tables that Calico should use. |  | [RouteTableRange](#routetablerange) | `{Min: 1, Max: 250}` |
 | sidecarAccelerationEnabled         | Enable experimental acceleration between application and proxy sidecar when using [application layer policy]({{ site.baseurl }}/security/app-layer-policy). [Default: `false`] | boolean | boolean | `false` |
 | vxlanEnabled                       | Automatically set when needed, you shouldn't need to change this setting: whether Felix should create the VXLAN tunnel device for VXLAN networking. | boolean | boolean | `false` |
-| vxlanMTU                           | MTU to use for the VXLAN tunnel device. | int | int | `1410` |
+| vxlanMTU                           | MTU to use for the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. | int | int | `1410` |
 | vxlanPort                          | Port to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4789` |
 | vxlanVNI                           | Virtual network ID to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4096` |
 | xdpRefreshInterval                 | Period at which Felix re-checks the XDP state in the dataplane to ensure that no other process has accidentally broken {{site.prodname}}'s rules. Set to 0 to disable XDP refresh. | `5s`, `10s`, `1m` etc. | duration | `90s` |
@@ -128,6 +129,7 @@ spec:
 | bpfExternalServiceMode             | In eBPF dataplane mode, controls how traffic from outside the cluster to NodePorts and ClusterIPs is handled.  In Tunnel mode, packet is tunneled from the ingress host to the host with the backing pod and back again.  In DSR mode, traffic is tunneled to the host with the backing pod and then returned directly; this requires a network that allows direct return. | Tunnel,DSR | string | Tunnel |
 | bpfKubeProxyIptablesCleanupEnabled | In eBPF dataplane mode, controls whether Felix will clean up the iptables rules created by the Kubernetes `kube-proxy`; should only be enabled if `kube-proxy` is not running. This is a tech preview feature and subject to change in future releases. | true,false| boolean | true |
 | bpfKubeProxyMinSyncPeriod          | In eBPF dataplane mode, controls the minimum time between dataplane updates for Felix's embedded `kube-proxy` implementation. | `5s`, `10s`, `1m` etc. | duration | `1s` |
+| routeSource                        | Where Felix gets is routing information from for VXLAN and the BPF dataplane. The CalicoIPAM setting is more efficient because it supports route aggregation, but it only works when Calico's IPAM or host-local IPAM is in use. Use the WorkloadIPs setting if you are using Calico's VXLAN or BPF dataplane and not using Calico IPAM or host-local IPAM. | CalicoIPAM,WorkloadIPs | string | `CalicoIPAM` |
 
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
@@ -152,6 +154,13 @@ spec:
 | 0     | No aggregation |
 | 1     | Aggregate all flows that share a source port on each node |
 | 2     | Aggregate all flows that share source ports or are from the same ReplicaSet on each node |
+
+#### RouteTableRange
+
+| Field    | Description          | Accepted Values   | Schema |
+|----------|----------------------|-------------------|--------|
+| min      | Minimum index to use | 1-250             | int    |
+| max      | Maximum index to use | 1-250             | int    |
 
 ### Supported operations
 

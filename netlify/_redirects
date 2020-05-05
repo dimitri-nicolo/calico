@@ -1,1 +1,3 @@
+# redirect old docs to latest at root.
+# note that you can still access these old docs at https://docs.projectcalico.org/archive/*
 /latest/* /:splat 301

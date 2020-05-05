@@ -60,12 +60,13 @@ The full list of parameters which can be set is as follows.
 | `RemoveExternalRoutes`            | `FELIX_REMOVEEXTERNALROUTES`            | Whether or not to remove device routes that have not been programmed by Felix. Disabling this will allow external applications to also add device routes. [Default: `true`] | bool |
 | `ReportingIntervalSecs`           | `FELIX_REPORTINGINTERVALSECS`           | Interval at which Felix reports its status into the datastore or `0` to disable. Must be non-zero in OpenStack deployments. [Default: `30`] | int |
 | `ReportingTTLSecs`                | `FELIX_REPORTINGTTLSECS`                | Time-to-live setting for process-wide status reports. [Default: `90`] | int |
+| `RouteTableRange`                 | `FELIX_ROUTETABLERANGE`                 | Calico programs additional Linux route tables for various purposes.  `RouteTableRange` specifies the indices of the route tables that Calico should use. [Default: `1-250`] | `<min>-<max>` |
 | `SidecarAccelerationEnabled`      | `FELIX_SIDECARACCELERATIONENABLED`      | Enable experimental acceleration between application and proxy sidecar when using [application layer policy]({{site.baseurl}}/security/app-layer-policy). [Default: `false`] | boolean |
 | `UsageReportingEnabled`           | `FELIX_USAGEREPORTINGENABLED`           | Reports anonymous {{site.prodname}} version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of {{site.prodname}} being used. [Default: `true`] | boolean |
 | `UsageReportingInitialDelaySecs`  | `FELIX_USAGEREPORTINGINITIALDELAYSECS`  | Minimum delay before first usage report, in seconds. [Default: `300`] | int |
 | `UsageReportingIntervalSecs`      | `FELIX_USAGEREPORTINGINTERVALSECS`      | Interval at which to make usage reports, in seconds. [Default: `86400`] | int |
 | `VXLANEnabled`                    | `FELIX_VXLANENABLED`                    | Automatically set when needed, you shouldn't need to change this setting: whether Felix should create the VXLAN tunnel device for VXLAN networking. [Default: `false`] | boolean |
-| `VXLANMTU`                        | `FELIX_VXLANMTU`                        | The MTU to set on the VXLAN tunnel device. See [Configuring MTU]({{site.baseurl}}/networking/mtu) [Default: `1410`] | int |
+| `VXLANMTU`                        | `FELIX_VXLANMTU`                        | The MTU to set on the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. See [Configuring MTU]({{ site.baseurl }}/networking/mtu) [Default: `1410`] | int |
 | `VXLANPort`                       | `FELIX_VXLANPORT`                       | The UDP port to use for VXLAN. [Default: `4789`] | int |
 | `VXLANTunnelMACAddr`              |                                         | MAC address of the VXLAN tunnel. This is system configured and should not be updated manually. | string |
 | `VXLANVNI`                        | `FELIX_VXLANVNI`                        | The virtual network ID to use for VXLAN. [Default: `4096`] | int |
@@ -74,6 +75,7 @@ The full list of parameters which can be set is as follows.
 | `TyphaAddr`                       | `FELIX_TYPHAADDR`                       | IPv4 address at which Felix should connect to Typha. [Default: none] | string |
 | `TyphaK8sServiceName`             | `FELIX_TYPHAK8SSERVICENAME`             | Name of the Typha Kubernetes service | string |
 | `Ipv6Support`                     | `FELIX_IPV6SUPPORT`                     | Enable {{site.prodname}} networking and security for IPv6 traffic as well as for IPv4. | boolean |
+| `RouteSource`                     | `FELIX_ROUTESOURCE`                     | Where Felix gets is routing information from for VXLAN and the BPF dataplane. The CalicoIPAM setting is more efficient because it supports route aggregation, but it only works when Calico's IPAM or host-local IPAM is in use. Use the WorkloadIPs setting if you are using Calico's VXLAN or BPF dataplane and not using Calico IPAM or host-local IPAM. [Default: "CalicoIPAM"] | 'CalicoIPAM', or 'WorkloadIPs' |
 
 #### etcd datastore configuration
 
@@ -151,7 +153,7 @@ See the [getting started guide]({{ site.baseurl }}/getting-started/kubernetes/tr
 
 | Configuration parameter | Environment variable    | Description | Schema |
 | ----------------------- | ----------------------- | ----------- | ------ |
-| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value. [Default: `cali`] | string |
+| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value, and our OpenStack integration sets the `tap` value. [Default: `cali`] | string |
 
 #### {{site.prodname}} specific configuration
 
@@ -242,6 +244,16 @@ only a validated client can read Prometheus metrics, and the data is
 encrypted in transit.  A valid client must then connect over HTTPS and
 present a certificate that is signed by one of the trusted CAs in the
 relevant `Prometheus...CAFile` setting.
+
+#### Felix-Typha Configuration
+
+| Configuration parameter | Environment variable        | Description | Schema |
+| ----------------------- | --------------------------- | ----------- | ------ |
+| `TyphaAddr`             | `FELIX_TYPHAADDR`           | Address of the Typha Server when running outside a K8S Cluster, in the format IP:PORT | string |
+| `TyphaK8sServiceName`   | `FELIX_TYPHAK8SSERVICENAME` | Service Name of Typha Deployment when running inside a K8S Cluster | string |
+| `TyphaK8sNamespace`     | `FELIX_TYPHAK8SNAMESPACE`   | Namespace of Typha Deployment when running inside a K8S Cluster. [Default: `kube-system`] | string |
+| `TyphaReadTimeout`      | `FELIX_TYPHAREADTIMEOUT`    | Timeout of Felix when reading information from Typha, in seconds. [Default: 30] | int |
+| `TyphaWriteTimeout`     | `FELIX_TYPHAWRITETIMEOUT`   | Timeout of Felix when writing information to Typha, in seconds. [Default: 30] | int |
 
 #### Felix-Typha TLS configuration
 
