@@ -113,8 +113,9 @@ class TestBase(TestCase):
                 kubectl("describe po %s -n %s" % (pod.metadata.name, pod.metadata.namespace))
             assert pod.status.phase == 'Running'
 
-    def create_namespace(self, ns_name):
-        self.cluster.create_namespace(client.V1Namespace(metadata=client.V1ObjectMeta(name=ns_name)))
+    def create_namespace(self, ns_name, labels=None, annotations=None):
+        self.cluster.create_namespace(client.V1Namespace(metadata=client.V1ObjectMeta(name=ns_name, labels=labels, annotations=annotations)))
+        self.add_cleanup(lambda: self.delete_and_confirm(ns_name, "ns"))
 
     def deploy(self, image, name, ns, port, replicas=1, svc_type="NodePort", traffic_policy="Local", cluster_ip=None, ipv6=False):
         """
@@ -185,13 +186,13 @@ class TestBase(TestCase):
 
     def delete_and_confirm(self, name, resource_type, ns="default"):
         try:
-            kubectl("delete %s %s -n%s" % (resource_type, name, ns))
+            kubectl("delete %s %s -n %s" % (resource_type, name, ns))
         except subprocess.CalledProcessError:
             pass
 
         def is_it_gone_yet(res_name, res_type):
             try:
-                kubectl("get %s %s -n%s" % (res_type, res_name, ns),
+                kubectl("get %s %s -n %s" % (res_type, res_name, ns),
                         logerr=False)
                 raise self.StillThere
             except subprocess.CalledProcessError:
@@ -222,6 +223,17 @@ class TestBase(TestCase):
                     node_ips.append(a.address)
         return node_ips
 
+    def get_ds_env(self, ds, ns, key):
+        config.load_kube_config(os.environ.get('KUBECONFIG'))
+        api = client.AppsV1Api(client.ApiClient())
+        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=True)
+        for container in node_ds.spec.template.spec.containers:
+            if container.name == ds:
+                for env in container.env:
+                    if env.name == key:
+                        return env.value
+        return None
+
     def update_ds_env(self, ds, ns, env_vars):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
@@ -233,7 +245,11 @@ class TestBase(TestCase):
                     env_present = False
                     for env in container.env:
                         if env.name == k:
-                            env_present = True
+                            if env.value == v:
+                                env_present = True
+                            else:
+                                container.env.remove(env)
+
                     if not env_present:
                         v1_ev = client.V1EnvVar(name=k, value=v, value_from=None)
                         container.env.append(v1_ev)
@@ -252,11 +268,6 @@ class TestBase(TestCase):
     def scale_deployment(self, deployment, ns, replicas):
         return kubectl("scale deployment %s -n %s --replicas %s" %
                        (deployment, ns, replicas)).strip()
-
-    def create_namespace(self, ns):
-        kubectl("create ns " + ns)
-        self.add_cleanup(lambda: self.delete_and_confirm(ns, "ns"))
-
 
 # Default is for K8ST tests to run only in the dual_stack rig by
 # default.  Individual test classes can override this.
@@ -303,7 +314,7 @@ class Container(object):
 
 class Pod(object):
 
-    def __init__(self, ns, name, image=None, annotations=None, yaml=None):
+    def __init__(self, ns, name, node=None, image=None, labels=None, annotations=None, yaml=None):
         if yaml:
             # Caller has provided the complete pod YAML.
             kubectl("""apply -f - <<'EOF'
@@ -319,6 +330,7 @@ EOF
                     "annotations": annotations,
                     "name": name,
                     "namespace": ns,
+                    "labels": labels,
                 },
                 "spec": {
                     "containers": [
@@ -330,6 +342,8 @@ EOF
                     "terminationGracePeriodSeconds": 0,
                 },
             }
+            if node:
+                pod["spec"]["nodeName"] = node
             kubectl("""apply -f - <<'EOF'
 %s
 EOF
@@ -340,6 +354,8 @@ EOF
         self.name = name
         self.ns = ns
         self._ip = None
+        self._hostip = None
+        self._nodename = None
 
     def delete(self):
         kubectl("delete pod/%s -n %s" % (self.name, self.ns))
@@ -353,6 +369,20 @@ EOF
             self._ip = run("kubectl get po %s -n %s -o json | jq '.status.podIP'" %
                            (self.name, self.ns)).strip().strip('"')
         return self._ip
+
+    @property
+    def hostip(self):
+        if not self._hostip:
+            self._hostip = run("kubectl get po %s -n %s -o json | jq '.status.hostIP'" %
+                           (self.name, self.ns)).strip().strip('"')
+        return self._hostip
+
+    @property
+    def nodename(self):
+        if not self._nodename:
+            self._nodename = run("kubectl get po %s -n %s -o json | jq '.spec.nodeName'" %
+                               (self.name, self.ns)).strip().strip('"')
+        return self._nodename
 
     def execute(self, cmd):
         return kubectl("exec %s -n %s -- %s" % (self.name, self.ns, cmd))

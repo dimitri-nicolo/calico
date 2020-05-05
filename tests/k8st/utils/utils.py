@@ -259,3 +259,8 @@ def node_info():
         node_ip = kubectl("get node --selector='!node-role.kubernetes.io/master' -o jsonpath='{.items[%d].status.addresses[0].address}'" % i)
         ips.append(node_ip)
     return nodes, ips, ip6s
+
+def stop_for_debug():
+    _log.info("stop on file /code/stop")
+    while os.path.isfile('/code/stop'):
+        os.system("sleep 3")
