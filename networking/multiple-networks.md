@@ -54,9 +54,10 @@ Although the following Calico IPAM features are supported for your default {{sit
 
 **Required**
 
-- [Install Multus on your Kubernetes cluster](https://github.com/intel/multus-cni/)
-  **Note**: Multus is already installed on OpenShift 4.3+ clusters.
-- [calicoctl is installed and configured]({{site.baseurl}}/getting-started/clis/calicoctl/)
+- [Install Multus on your Kubernetes cluster](https://github.com/intel/multus-cni/) 
+  >**Note**: Multus is installed on OpenShift 4.3+ clusters.
+  {: .alert .alert-info} 
+- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/)
 
 ### How to
 
@@ -65,7 +66,7 @@ Although the following Calico IPAM features are supported for your default {{sit
 1. [Create a pod interface for the new network](#create-a-pod-interface-for-the-new-network)
 1. [Configure the IP pool for the network](#configure-the-ip-pool-for-the-network)
 1. [Enforce policy on the new network and pod interface](#enforce-policy-on-the-new-network-and-pod-interface)
-   [List workload endpoints](#list-workload-endpoints)
+1. [List workload endpoints](#list-workload-endpoints)
 
 #### Configure cluster for multiple networks
 
@@ -148,10 +149,10 @@ When MultiInterfaceMode is set to Multus, WorkloadEndpoints are created with the
 
 You can use these labels to enforce policies on specific interfaces and networks using policy label selectors. 
 
->**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix, was always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting workload endpoints using these new labels, you should verify label values using the [List WorkloadEndpoints](#list-workloadendpoints) commands in the section that follows.
+>**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix were always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting WorkloadEndpoints using the new labels, you should verify label values using the [List workload endpoints](#list-workload-endpoints) commands in the section that follows.
 {: .alert .alert-info}
 
-In this policy example, we use the selector field to target all WorkloadEndpoint with a network interface of, `cali1`.
+In this policy example, we use the selector field to target all WorkloadEndpoints with the network interface of, `cali1`.
 
 ```
 apiVersion: projectcalico.org/v3
@@ -199,7 +200,6 @@ To list specific WorkloadEndpoints, use the following command.
 
 `MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoint test--bz--72vg--kadm--infra--0-k8s-multus--test--pod--1-net1 -o yaml`
 
-
 ```
 apiVersion: projectcalico.org/v3
 kind: WorkloadEndpoint
@@ -227,8 +227,4 @@ spec:
   profiles:
   - kns.default
   - ksa.default.default
-
 ```   
-
-### Above and beyond
-
