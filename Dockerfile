@@ -1,4 +1,4 @@
-FROM alpine:3.7 as builder
+FROM alpine:3 as builder
 COPY kibana /kibana
 RUN apk add --no-cache zip
 RUN zip -r /tigera_customization.zip kibana
@@ -7,7 +7,8 @@ FROM docker.elastic.co/kibana/kibana:7.3.2
 
 USER root
 RUN yum -y update && yum -y upgrade
-USER kibana
+# The base "kibana" user has a uid of 1000
+USER 1000
 
 # custom throbber
 RUN sed -i 's/Loading Kibana/Loading Tigera/g' /usr/share/kibana/src/legacy/ui/ui_render/views/ui_app.pug
