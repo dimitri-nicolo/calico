@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Tigera, Inc. All rights reserved.
+# Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 import logging
 
@@ -72,13 +72,46 @@ EOF
 """ % (pod_selector, domain_string))
 
     def test_internet_service(self):
-        kubectl("run " + self.test1 + " --generator=run-pod/v1 " +
-                "--image=laurenceman/alpine --labels=\"egress=restricted\"")
+        kubectl("""apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-1
+  namespace: %s
+  labels:
+    egress: restricted
+spec:
+  containers:
+  - name: lm
+    image: laurenceman/alpine
+  terminationGracePeriodSeconds: 0
+EOF
+""" % self.ns)
         kubectl("wait --for=condition=ready pod/%s" % self.test1)
+        kubectl("exec " + self.test1 + " -- apk add --no-cache wget")
 
         def should_connect():
             kubectl("exec " + self.test1 + " -- " +
-                    "curl --connect-timeout 3 -i -L microsoft.com")
+                    #
+                    # Test connection to microsoft.com, with:
+                    #
+                    # --max-redirect=0 .. Don't follow redirects; if
+                    # we get a redirect, that's already enough to know
+                    # that we've contacted the target domain name.
+                    #
+                    # -U firefox .. Pretend to be Firefox.
+                    #
+                    # -T 4 .. 4 second timeout for all network
+                    # operations, including DNS lookups.
+                    #
+                    # -t 1 .. Only try connecting once.
+                    #
+                    # allow_codes=[8] .. 8 is the expected return code
+                    # when connection succeeds but the server sends an
+                    # HTTP failure response.
+                    #
+                    "wget --max-redirect=0 -U firefox -T 4 -t 1 microsoft.com",
+                    allow_codes=[8])
 
         def should_not_connect():
             try:
@@ -92,12 +125,12 @@ EOF
 
         # Deny all egress.
         self.deny_all_egress_except_dns("egress == 'restricted'")
-        retry_until_success(should_not_connect, retries=2)
+        retry_until_success(should_not_connect, retries=5)
 
         # DNS policy.
         self.allow_egress_to_domains("egress == 'restricted'",
                                      ["microsoft.com", "www.microsoft.com"])
-        retry_until_success(should_connect, retries=2)
+        retry_until_success(should_connect, retries=5)
 
 
 TestDNSPolicy.needs_tsee = True

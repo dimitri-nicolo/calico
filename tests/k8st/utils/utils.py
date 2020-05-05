@@ -178,7 +178,7 @@ def function_name(f):
         return "<unknown function>"
 
 
-def run(command, logerr=True, allow_fail=False):
+def run(command, logerr=True, allow_fail=False, allow_codes=[]):
     out = ""
     _log.info("[%s] %s", datetime.datetime.now(), command)
     try:
@@ -189,7 +189,7 @@ def run(command, logerr=True, allow_fail=False):
     except subprocess.CalledProcessError as e:
         if logerr:
             _log.exception("Failure output:\n%s", e.output)
-        if not allow_fail:
+        if not (allow_fail or e.returncode in allow_codes):
             raise
     return out
 
@@ -204,8 +204,11 @@ def curl(hostname, container="kube-node-extra"):
     return run(cmd)
 
 
-def kubectl(args, logerr=True, allow_fail=False):
-    return run("kubectl " + args, logerr=logerr, allow_fail=allow_fail)
+def kubectl(args, logerr=True, allow_fail=False, allow_codes=[]):
+    return run("kubectl " + args,
+               logerr=logerr,
+               allow_fail=allow_fail,
+               allow_codes=allow_codes)
 
 
 def calicoctl(args, allow_fail=False):
