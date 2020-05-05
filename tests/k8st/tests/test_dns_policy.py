@@ -72,8 +72,21 @@ EOF
 """ % (pod_selector, domain_string))
 
     def test_internet_service(self):
-        kubectl("run " + self.test1 + " --generator=run-pod/v1 " +
-                "--image=laurenceman/alpine --labels=\"egress=restricted\"")
+        kubectl("""apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-1
+  namespace: %s
+  labels:
+    egress: restricted
+spec:
+  containers:
+  - name: lm
+    image: laurenceman/alpine
+  terminationGracePeriodSeconds: 0
+EOF
+""" % self.ns)
         kubectl("wait --for=condition=ready pod/%s" % self.test1)
         kubectl("exec " + self.test1 + " -- apk add --no-cache wget")
 
