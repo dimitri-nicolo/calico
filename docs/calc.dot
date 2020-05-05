@@ -70,6 +70,8 @@ OnUpdates(updates []KVPair)<BR ALIGN="LEFT"/>
         </table>>, shape=none, margin=0]
         Dispatcher -> PolicyResolver [label="policy, tier\nKVs", penwidth=2]
         Dispatcher -> ActiveRulesCalc [label="policy, profile\nKVs", penwidth=2]
+        Dispatcher -> ActiveEgressCalc [label="v3 Profile\nKVs", penwidth=2]
+        Dispatcher -> EgressSelPool [label="workload endpoint\n& v3 Profile\nKVs", penwidth=2]
 
         Dispatcher -> LocalDispatcher [label="all\nendpoint KVs", penwidth=4];
         Dispatcher -> MemberCalc [label="all\nendpoint KVs", penwidth=4];
@@ -82,6 +84,7 @@ OnUpdates(updates []KVPair)<BR ALIGN="LEFT"/>
         </table>>, shape=none, margin=0]
         LocalDispatcher -> ActiveRulesCalc [label="local\nendpoint KVs", penwidth=2];
         LocalDispatcher -> PolicyResolver [label="local\nendpoint KVs", penwidth=2]
+        LocalDispatcher -> ActiveEgressCalc [label="local workload\nendpoint KVs", penwidth=2];
 
         ConfigBatcher [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
           <tr><td><font point-size="14">Config batcher</font></td></tr>
@@ -90,12 +93,25 @@ OnUpdates(updates []KVPair)<BR ALIGN="LEFT"/>
         </table>>, shape=none, margin=0]
         ConfigBatcher -> PipelineCallbacks [label="OnConfigUpdate()"]
 
+        EgressSelPool [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">Egress selector pool</font></td></tr>
+          <tr><td><font point-size="10">Collates egress selectors used<br/>anywhere in cluster.</font></td></tr>
+        </table>>, shape=none, margin=0];
+        EgressSelPool -> ActiveRulesCalc [label="egress selector\nadded/removed"];
+
         ActiveRulesCalc [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
           <tr><td><font point-size="14">Active rules calculator</font></td></tr>
-          <tr><td><font point-size="10">Calculates which policies/profiles are<br/>active on this host.</font></td></tr>
+          <tr><td><font point-size="10">Calculates which policies/profiles are<br/>active on this host, and whether<br/>egress selectors match local endpoints.</font></td></tr>
         </table>>, shape=none, margin=0];
         ActiveRulesCalc -> RuleScanner [label="active rule\nupdates"];
-        ActiveRulesCalc -> PolicyResolver [label="policy match\nupdates"];
+        ActiveRulesCalc -> PolicyResolver [label="policy/egress\nmatch updates"];
+
+	ActiveEgressCalc [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">Active egress calculator</font></td></tr>
+          <tr><td><font point-size="10">Calculates egress selectors used<br/>by active local endpoints.</font></td></tr>
+        </table>>, shape=none, margin=0];
+        ActiveEgressCalc -> RuleScannerShim [label="egress IP set\n(in)active"];
+        ActiveEgressCalc -> PolicyResolver [label="egress IP set\nID updates"];
 
         "<<shim function>>" [shape=none]
 
