@@ -11,6 +11,8 @@ section:
     path: /networking/bgp
   - title: Deploy a dual ToR cluster
     path: /networking/dual-tor
+  - title: Configure multiple Calico Enterprise networks on a pod using Multus
+    path: /networking/multiple-networks
   - title: Configure overlay networking
     path: /networking/vxlan-ipip
   - title: Advertise Kubernetes service IP addresses
