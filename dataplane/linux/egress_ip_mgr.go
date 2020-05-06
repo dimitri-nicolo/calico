@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	log "github.com/sirupsen/logrus"
@@ -96,7 +98,12 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 }
 
 type egressIPManager struct {
-	routerules  routeRules
+	routerules routeRules
+
+	// route table for programming L2 routes.
+	mainTable routeTable
+
+	// rtGenerator dynamically creates route tables to program L3 routes.
 	rtGenerator routeTableGenerator
 
 	// Routing table index stack.
@@ -166,8 +173,14 @@ func newEgressIPManager(
 		log.Panicf("error creating routerule instance")
 	}
 
+	// Create main route table to manage L2 routing rules.
+	mainTable := routetable.New([]string{"^" + deviceName + "$"},
+		4, true, dpConfig.NetlinkTimeout, nil,
+		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC)
+
 	return newEgressIPManagerWithShims(
 		rr,
+		mainTable,
 		&routeTableFactory{count: 0},
 		tableIndexStack,
 		deviceName,
@@ -178,6 +191,7 @@ func newEgressIPManager(
 
 func newEgressIPManagerWithShims(
 	routerules routeRules,
+	mainTable routeTable,
 	rtGenerator routeTableGenerator,
 	tableIndexStack *stack.Stack,
 	deviceName string,
@@ -187,6 +201,7 @@ func newEgressIPManagerWithShims(
 
 	return &egressIPManager{
 		routerules:              routerules,
+		mainTable:               mainTable,
 		rtGenerator:             rtGenerator,
 		tableIndexStack:         tableIndexStack,
 		tableIndexToRouteTable:  make(map[int]routeTable),
@@ -306,10 +321,30 @@ func sortIntSet(s set.Set) []int {
 	return sorted
 }
 
-// Set L3 and L2 routes for an EgressIPSet.
-func (m *egressIPManager) setL3L2Routes(rTable routeTable, ips set.Set) {
-	logCxt := log.WithField("table", rTable.Index())
+// Set L2 routes for all active EgressIPSet.
+func (m *egressIPManager) setL2Routes() {
 	l2routes := []routetable.L2Target{}
+	for _, ips := range m.activeEgressIPSet {
+		ips.Iter(func(item interface{}) error {
+			ipString := strings.Split(item.(string), "/")[0]
+			l2routes = append(l2routes, routetable.L2Target{
+				// remote VTEP mac is generated based on gateway pod ip.
+				VTEPMAC: ipStringToMac(ipString),
+				GW:      ip.FromString(ipString),
+				IP:      ip.FromString(ipString),
+			})
+			return nil
+		})
+	}
+
+	// Set L2 route. If there is no l2route target, old entries will be removed.
+	log.WithField("l2routes", l2routes).Info("Egress ip manager sending L2 updates")
+	m.mainTable.SetL2Routes(m.vxlanDevice, l2routes)
+}
+
+// Set L3 routes for an EgressIPSet.
+func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set) {
+	logCxt := log.WithField("table", rTable.Index())
 	multipath := []routetable.NextHop{}
 
 	// Sort ips to make ECMP route deterministic.
@@ -317,21 +352,11 @@ func (m *egressIPManager) setL3L2Routes(rTable routeTable, ips set.Set) {
 
 	for _, element := range sorted {
 		ipString := strings.Split(element, "/")[0]
-		l2routes = append(l2routes, routetable.L2Target{
-			// remote VTEP mac is generated based on gateway pod ip.
-			VTEPMAC: ipStringToMac(ipString),
-			GW:      ip.FromString(ipString),
-			IP:      ip.FromString(ipString),
-		})
 		multipath = append(multipath, routetable.NextHop{
 			Gw:        ip.FromString(ipString),
 			LinkIndex: m.vxlanDeviceLinkIndex,
 		})
 	}
-
-	// Set L2 route. If there is no l2route target, old entries will be removed.
-	logCxt.WithField("l2routes", l2routes).Info("Egress ip manager sending L2 updates")
-	rTable.SetL2Routes(m.vxlanDevice, l2routes)
 
 	if len(multipath) > 1 {
 		// Set multipath L3 route.
@@ -386,8 +411,14 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		return nil
 	}
 
-	// Sort set to make table allocate/release deterministic.
-	sorted := sortStringSet(m.dirtyEgressIPSet)
+	sorted := []string{}
+	if m.dirtyEgressIPSet.Len() > 0 {
+		// Work out all L2 routes update.
+		m.setL2Routes()
+
+		// Sort set to make table allocate/release deterministic.
+		sorted = sortStringSet(m.dirtyEgressIPSet)
+	}
 
 	// Work out egress ip set updates.
 	for _, id := range sorted {
@@ -405,7 +436,6 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			logCxt.WithField("tableindex", currentIndex).Info("EgressIPManager remove routes and release route table.")
 			rTable.RouteRemove(routetable.InterfaceNone, defaultCidr)
 			rTable.RouteRemove(m.vxlanDevice, defaultCidr)
-			rTable.SetL2Routes(m.vxlanDevice, nil)
 
 			// Once routes pending being removed, we can safely push table index back to stack.
 			m.tableIndexStack.Push(currentIndex)
@@ -432,8 +462,8 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 
 			rTable := m.tableIndexToRouteTable[currentIndex]
 
-			// Add L3 and L2 routes for EgressIPSet.
-			m.setL3L2Routes(rTable, ips)
+			// Add L3 routes for EgressIPSet.
+			m.setL3Routes(rTable, ips)
 		}
 
 		// Remove id from dirtyEgressIPSet.
@@ -494,7 +524,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 }
 
 func (m *egressIPManager) GetRouteTableSyncers() []routeTableSyncer {
-	rts := []routeTableSyncer{}
+	rts := []routeTableSyncer{m.mainTable.(routeTableSyncer)}
 	for _, t := range m.tableIndexToRouteTable {
 		rts = append(rts, t.(routeTableSyncer))
 	}
