@@ -3,7 +3,7 @@
   command = './netlify/build.sh'
 
 [build.environment]
-  RUBY_VERSION = "2.5.4"
+  RUBY_VERSION = "2.6.2"
   CANDIDATE_RELEASE = "v3.0"
   CURRENT_RELEASE = "v2.8"
   CUSTOM_ARCHIVE_PATH = ""

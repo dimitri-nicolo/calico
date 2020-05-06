@@ -14,7 +14,8 @@ if [ -z "$CURRENT_RELEASE" ]; then
 fi
 
 if [ -z "$(which jekyll)" ]; then
-    gem install github-pages
+    echo "error: jekyll not installed"
+    exit 1
 fi
 
 if [ -z "$(which helm)" ]; then

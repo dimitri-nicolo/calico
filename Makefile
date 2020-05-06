@@ -2,7 +2,7 @@ CALICO_DIR=$(shell git rev-parse --show-toplevel)
 GIT_HASH=$(shell git rev-parse --short=7 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 IMAGES_FILE=
-JEKYLL_VERSION=pages
+JEKYLL_VERSION=4.0.0
 HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
@@ -78,7 +78,7 @@ serve: bin/helm
 	  -e JEKYLL_DOCKER_TAG="" \
 	  -e JEKYLL_UID=`id -u` \
 	  -p 4000:4000 \
-	  jekyll/jekyll:$(JEKYLL_VERSION) jekyll serve --incremental $(CONFIG)
+	  jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll serve --incremental $(CONFIG)'
 
 .PHONY: build
 _site build: bin/helm
@@ -89,7 +89,7 @@ _site build: bin/helm
 	-v $$PWD:/srv/jekyll \
 	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
 	-v $(IMAGES_FILE):/config_images.yml \
-	jekyll/jekyll:$(JEKYLL_VERSION) jekyll build --incremental $(CONFIG)
+	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
 
 ## Clean enough that a new release build will be clean
 clean:

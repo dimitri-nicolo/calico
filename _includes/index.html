@@ -5,4 +5,4 @@
 {% endfor %}
 {% assign navbars = unsorted_navbars | sort:"order" %}
 
-{% include section_index.html section_index=navbars %}
+{% include_cached section_index.html section_index=navbars %}
