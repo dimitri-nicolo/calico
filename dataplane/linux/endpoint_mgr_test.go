@@ -28,6 +28,7 @@ import (
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
+	mocknetlink "github.com/projectcalico/felix/netlink/mock"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -269,6 +270,10 @@ func chainsForIfaces(ipVersion uint8,
 				ifaceKind = nameParts[2]
 			}
 		}
+		isEgressGateway := strings.HasSuffix(ifaceName, ":egress-gateway")
+		if isEgressGateway {
+			ifaceName = strings.TrimSuffix(ifaceName, ":egress-gateway")
+		}
 		epMark, err := epMarkMapper.GetEndpointMark(ifaceName)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -292,10 +297,12 @@ func chainsForIfaces(ipVersion uint8,
 					Action: iptables.AcceptAction{},
 				},
 			)
-			outRules = append(outRules, iptables.Rule{
-				Match:  iptables.Match().ConntrackState("INVALID"),
-				Action: iptables.DropAction{},
-			})
+			if !isEgressGateway {
+				outRules = append(outRules, iptables.Rule{
+					Match:  iptables.Match().ConntrackState("INVALID"),
+					Action: iptables.DropAction{},
+				})
+			}
 		}
 
 		if host && tableKind != "applyOnForward" {
@@ -729,6 +736,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 			routeTable      *mockRouteTable
 			mockProcSys     *testProcSys
 			statusReportRec *statusReportRecorder
+			nlDataplane     *mocknetlink.MockNetlinkDataplane
 		)
 
 		BeforeEach(func() {
@@ -772,6 +780,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 			}
 			mockProcSys = &testProcSys{state: map[string]string{}}
 			statusReportRec = &statusReportRecorder{currentState: map[interface{}]string{}}
+			nlDataplane = mocknetlink.NewMockNetlinkDataplane()
+			nlHandle, err := nlDataplane.NewMockNetlink()
+			Expect(err).NotTo(HaveOccurred())
 			epMgr = newEndpointManagerWithShims(
 				rawTable,
 				mangleTable,
@@ -786,7 +797,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				mockProcSys.write,
 				false,
 				newCallbacks(),
-				&mockVXLANDataplane{},
+				nlHandle,
 			)
 		})
 
@@ -1516,6 +1527,95 @@ func endpointManagerTests(ipVersion uint8) func() {
 					})
 					err := epMgr.CompleteDeferredWork()
 					Expect(err).ToNot(HaveOccurred())
+				})
+
+				Context("with egress gateway role and iface up", func() {
+					JustBeforeEach(func() {
+						nlDataplane.AddIface(28, "cali12345-ab", true, true)
+						epMgr.OnUpdate(&ifaceUpdate{
+							Name:  "cali12345-ab",
+							State: "up",
+						})
+						epMgr.OnUpdate(&ifaceAddrsUpdate{
+							Name:  "cali12345-ab",
+							Addrs: set.New(),
+						})
+						err := epMgr.CompleteDeferredWork()
+						Expect(err).ToNot(HaveOccurred())
+						epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
+							Id: &wlEPID1,
+							Endpoint: &proto.WorkloadEndpoint{
+								State:           "active",
+								Mac:             "01:02:03:04:05:06",
+								Name:            "cali12345-ab",
+								ProfileIds:      []string{},
+								Tiers:           tiers,
+								Ipv4Nets:        []string{"10.0.240.2/24"},
+								Ipv6Nets:        []string{"2001:db8:2::2/128"},
+								IsEgressGateway: true,
+							},
+						})
+						err = epMgr.CompleteDeferredWork()
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab:egress-gateway"))
+
+					It("should set routes", func() {
+						if ipVersion == 6 {
+							routeTable.checkRoutes("cali12345-ab", []routetable.Target{{
+								CIDR:    ip.MustParseCIDROrIP("2001:db8:2::2/128"),
+								DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
+							}})
+						} else {
+							routeTable.checkRoutes("cali12345-ab", []routetable.Target{{
+								CIDR:    ip.MustParseCIDROrIP("10.0.240.0/24"),
+								DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
+							}})
+						}
+					})
+
+					It("should have configured the interface for gateway role", func() {
+						if ipVersion == 4 {
+							Expect(nlDataplane.AddedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+							mockProcSys.checkState(map[string]string{
+								"/proc/sys/net/ipv4/conf/cali12345-ab/forwarding":     "1",
+								"/proc/sys/net/ipv4/conf/cali12345-ab/route_localnet": "1",
+								"/proc/sys/net/ipv4/conf/cali12345-ab/proxy_arp":      "1",
+								"/proc/sys/net/ipv4/neigh/cali12345-ab/proxy_delay":   "0",
+								"/proc/sys/net/ipv4/conf/cali12345-ab/rp_filter":      "2",
+							})
+							Expect(nlDataplane.DeletedAddrs.Len()).To(BeZero())
+						}
+					})
+
+					Context("with egress gateway role removed", func() {
+						JustBeforeEach(func() {
+							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
+								Id: &wlEPID1,
+								Endpoint: &proto.WorkloadEndpoint{
+									State:           "active",
+									Mac:             "01:02:03:04:05:06",
+									Name:            "cali12345-ab",
+									ProfileIds:      []string{},
+									Tiers:           tiers,
+									Ipv4Nets:        []string{"10.0.240.2/24"},
+									Ipv6Nets:        []string{"2001:db8:2::2/128"},
+									IsEgressGateway: false,
+								},
+							})
+							err := epMgr.CompleteDeferredWork()
+							Expect(err).ToNot(HaveOccurred())
+						})
+
+						It("should have expected chains", expectWlChainsFor(ipVersion, "cali12345-ab"))
+
+						It("should have removed the 169.254.1.1 address", func() {
+							if ipVersion == 4 {
+								Expect(nlDataplane.DeletedAddrs.Contains("169.254.1.1/32")).To(BeTrue())
+							}
+						})
+					})
 				})
 
 				Context("with policy", func() {
