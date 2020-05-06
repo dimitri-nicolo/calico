@@ -339,8 +339,22 @@ test-install-cni: image k8s-install/scripts/install_cni.test
 .PHONY: ci
 ci: clean mod-download build static-checks test-cni-versions image-all test-install-cni
 
+## Avoid unplanned go.sum updates
+.PHONY: undo-go-sum check-dirty
+undo-go-sum:
+	@echo "Undoing go.sum update..."
+	git checkout -- go.sum
+
+## Check if generated image is dirty
+check-dirty: undo-go-sum
+	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated image is dirty:"; \
+	  git status --porcelain; \
+	  false; \
+	fi
+
 ## Deploys images to registry
-cd:
+cd: check-dirty
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
