@@ -66,7 +66,7 @@ Although the following Calico IPAM features are supported for your default {{sit
 1. [Create a pod interface for the new network](#create-a-pod-interface-for-the-new-network)
 1. [Configure the IP pool for the network](#configure-the-ip-pool-for-the-network)
 1. [Enforce policy on the new network and pod interface](#enforce-policy-on-the-new-network-and-pod-interface)
-1. [List workload endpoints](#list-workload-endpoints)
+1. [View workload endpoints](#view-workload-endpoints)
 
 #### Configure cluster for multiple networks
 
@@ -149,7 +149,7 @@ When MultiInterfaceMode is set to Multus, WorkloadEndpoints are created with the
 
 You can use these labels to enforce policies on specific interfaces and networks using policy label selectors. 
 
->**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix were always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting WorkloadEndpoints using the new labels, you should verify label values using the [List workload endpoints](#list-workload-endpoints) commands in the section that follows.
+>**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix were always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting WorkloadEndpoints using the new labels, you should verify label values using the [View workload endpoints](#view-workload-endpoints) commands in the section that follows.
 {: .alert .alert-info}
 
 In this policy example, we use the selector field to target all WorkloadEndpoints with the network interface of, `cali1`.
@@ -182,12 +182,17 @@ spec:
   - action: Allow
 ```
 
-#### List workload endpoints
+#### View workload endpoints
 
-To list the default and new WorkloadEndpoints for pods, use `calicoctl` or TBD - Calico Enterprise Manager UI?
+**In the {{site.prodname}} Manager UI**, go to the **WorkloadEndpoint** page to see all of the WorkloadEndpoints, including the network labels are for targeting WorkloadEndpoints with policy.
 
-`MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoints -o wide`
+**In `calicoctl`**...
 
+To view all WorkloadEndpoints for pods (default and new), use the following command.
+
+```
+MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoints -o wide`
+```
 ```
 NAME                                                                 WORKLOAD            NODE                         NETWORKS            INTERFACE         PROFILES                          NATS   
 test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-eth0        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.129/32   calif887e436e8b   kns.default,ksa.default.default          
@@ -196,9 +201,11 @@ test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-testiface   multus-test-
 test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-net3        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.52.143/32   calim37CD6INXIX   kns.default,ksa.default.default 
 ```   
 
-To list specific WorkloadEndpoints, use the following command.
+To view specific WorkloadEndpoints, use the following command.
 
-`MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoint test--bz--72vg--kadm--infra--0-k8s-multus--test--pod--1-net1 -o yaml`
+```
+MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoint test--bz--72vg--kadm--infra--0-k8s-multus--test--pod--1-net1 -o yaml
+```
 
 ```
 apiVersion: projectcalico.org/v3
