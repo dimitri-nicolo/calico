@@ -35,13 +35,18 @@ func PolicyRecommendationHandler(mcmAuth MCMAuth, k8sClient k8s.Interface, c pol
 			return
 		}
 
-		// Check that the user is allowed to access flow logs.
+		// Retrieve the cluster name from the "x-cluster-id" header. Add it to the req context, such that the auth checks
+		// can be performed.
+		req = createRequestWithClusterKey(req, req.Header.Get("x-cluster-id"))
+
+		// Check that the user is allowed to access flow logs. This happens in the current cluster.
 		if stat, err := policyrec.ValidatePermissions(req, mcmAuth.DefaultK8sAuth()); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return
 		}
 
-		// Check that user has sufficient permissions to list flows for the requested endpoint.
+		// Check that user has sufficient permissions to list flows for the requested endpoint. This happens in the
+		// selected cluster from the UI drop-down menu.
 		if stat, err := ValidateRecommendationPermissions(req, mcmAuth, params); err != nil {
 			createAndReturnError(err, "Not permitting user actions", stat, lmaerror.PolicyRec, w)
 			return

@@ -86,7 +86,7 @@ func FlowLogNamesHandler(mcmAuth MCMAuth, esClient lmaelastic.Client) http.Handl
 			return
 		}
 		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
-		req = req.WithContext(context.WithValue(req.Context(), clusterKey, params.ClusterName))
+		req = createRequestWithClusterKey(req, params.ClusterName)
 		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req})
 		response, err := getNamesFromElastic(params, esClient, rbacHelper)
 		if err != nil {

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -41,4 +42,10 @@ func (u *userAuthorizer) Authorize(res *authzv1.ResourceAttributes) (bool, error
 		return false, err
 	}
 	return true, nil
+}
+
+// Makes a copy of the request but adds the clusterId to the context. This helps the Authorize() method determine which
+// credentials to use.
+func createRequestWithClusterKey(r *http.Request, key string) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), clusterKey, key))
 }

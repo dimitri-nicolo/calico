@@ -145,7 +145,7 @@ func FlowLogsHandler(mcmAuth MCMAuth, esClient lmaelastic.Client, pip pippkg.PIP
 			return
 		}
 		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
-		req = req.WithContext(context.WithValue(req.Context(), clusterKey, params.ClusterName))
+		req = createRequestWithClusterKey(req, params.ClusterName)
 		flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req}))
 		var response interface{}
 		var stat int
