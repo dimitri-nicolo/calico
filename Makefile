@@ -93,7 +93,7 @@ serve: bin/helm
 	  jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll serve --incremental $(CONFIG)'
 
 .PHONY: build
-_site build: bin/helm
+_site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	docker run --rm -t -i \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
@@ -107,6 +107,7 @@ _site build: bin/helm
 clean:
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
+	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 
 ########################################################################################################################
 # Builds locally checked out code using local versions of libcalico, felix, and confd.
@@ -248,7 +249,7 @@ test: docs_test.created
 		--xunit-file='/code/tests/report/nosetests.xml' \
 		--with-timer $(EXTRA_NOSE_ARGS)"
 
-ci: clean htmlproofer kubeval helm-tests
+ci: clean htmlproofer kubeval
 
 htmlproofer: _site
 	# Run htmlproofer, failing if we hit any errors.
@@ -486,7 +487,9 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 # Utilities
 ###############################################################################
 HELM_RELEASE=helm-v2.16.3-linux-amd64.tar.gz
-bin/helm:
+# note: the tigera-secure-ee-core.tgz chart isn't a dependency of bin/helm, but
+# netlify calls 'make bin/helm' so we package it as part of that dependency here.
+bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
 	wget -q https://storage.googleapis.com/kubernetes-helm/$(HELM_RELEASE) -O $(TMP)/$(HELM_RELEASE)
@@ -498,7 +501,7 @@ bin/helm:
 ###############################################################################
 # Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml: _includes/charts/tigera-prometheus-operator/values.yaml _includes/charts/tigera-secure-ee-core/values.yaml _includes/charts/tigera-operator/values.yaml
+values.yaml: _includes/charts/tigera-prometheus-operator/values.yaml _includes/charts/tigera-operator/values.yaml
 _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
 	docker run --rm \
 	  -v $$PWD:/calico \
@@ -523,14 +526,22 @@ appVersion:=$(CALICO_VER)-$(GIT_HASH)
 endif
 endif
 
-charts: chart/tigera-prometheus-operator chart/tigera-secure-ee-core chart/tigera-operator 
+charts: chart/tigera-prometheus-operator chart/tigera-operator
+chart/tigera-operator: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 chart/%: _includes/charts/%/values.yaml
 	mkdir -p bin
-	helm package ./_includes/charts/$* \
+	helm package ./_includes/charts/$(@F) \
 	--save=false \
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
+
+# the non-operator to operator helm chart packages the v2.8 non-operator chart as a dependency.
+# here we grab the public chart at build time.
+NON_OPERATOR_CHART_VERSION=v2.8.3-1
+_includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz:
+	mkdir -p $(@D)
+	wget -O $@ https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-$(NON_OPERATOR_CHART_VERSION).tgz
 
  ## Create the vendor directory
 vendor: glide.yaml
