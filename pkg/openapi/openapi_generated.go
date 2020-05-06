@@ -5385,14 +5385,14 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
-					"egressVxlanPort": {
+					"egressIPVXLANPort": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EgressIPVXLANPort is the port number of vxlan tunnel device for egress traffic. [Default: 4790]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
-					"egressVxlanVNI": {
+					"egressIPVXLANVNI": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EgressIPVXLANVNI is the VNI ID of vxlan tunnel device for egress traffic. [Default: 4097]",
 							Type:        []string{"integer"},
