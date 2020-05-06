@@ -154,7 +154,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		if err := cli.ServeTunnelHTTP(); err != nil {
-			log.WithError(err).Fatal("Serving the tunnel exited with an error")
+			log.WithError(err).Fatal("Serving the tunnel exited")
 		}
 	}()
 
