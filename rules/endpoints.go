@@ -30,6 +30,7 @@ const (
 	dropEncap          = true
 	dontDropEncap      = false
 	NotAnEgressGateway = false
+	IsAnEgressGateway  = true
 )
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
@@ -328,7 +329,11 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	if chainType != chainTypeUntracked {
 		// Tracked chain: install conntrack rules, which implement our stateful connections.
 		// This allows return traffic associated with a previously-permitted request.
-		rules = r.appendConntrackRules(rules, allowAction, isEgressGateway)
+		rules = r.appendConntrackRules(
+			rules,
+			allowAction,
+			isEgressGateway && (dir == RuleDirEgress),
+		)
 	}
 
 	// First set up failsafes.
