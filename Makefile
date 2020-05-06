@@ -172,6 +172,7 @@ clean:
 	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
+	docker rmi $(GATEWAY_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
 
 ###############################################################################
@@ -739,12 +740,24 @@ endif
 tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
 
 sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+	@if echo $* | grep -q "$(call escapefs,$(GATEWAY_IMAGE))"; then \
+		echo "docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
+		docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
+	else \
+		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
+		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
+	fi
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+	@if echo $* | grep -q "$(call escapefs,$(GATEWAY_IMAGE))"; then \
+		echo "docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
+		docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
+	else \
+		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
+		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
+	fi
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -758,6 +771,7 @@ sub-tag-images-%:
 tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
 sub-base-tag-images-%:
 	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
+	docker tag $(GATEWAY_IMAGE):latest-$* $(call unescapefs,$(GATEWAY_IMAGE):$(VERSION)-$*)
 
 ###############################################################################
 # Windows packaging
