@@ -104,6 +104,26 @@ volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
 ```
 
+##### GCP Persistent Disks
+
+In the following example for a GKE cloud provider integration, the **StorageClass** tells {{site.prodname}} to use the GCE Persistent Disks for log storage. 
+
+
+  > **Note**: There are currently two types available `pd-standard` and `pd-ssd`. For production deployments, we recommend using the `pd-ssd` storage type. 
+
+```
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: tigera-elasticsearch
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+  replication-type: none
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+```
+
 ### Above and beyond
 
 - [Adjust size of Elasticsearch cluster]({{site.baseurl}}/maintenance/adjust-log-storage-size)
