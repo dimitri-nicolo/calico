@@ -15,7 +15,7 @@ More detailed information about Alertmanager is available in the [upstream docum
     Our manifests will end up creating a secret called: `alertmanager-calico-node-alertmanager`.
 
     ```
-    kubectl -n calico-monitoring get secrets alertmanager-calico-node-alertmanager -o yaml > alertmanager-secret.yaml
+    kubectl -n tigera-prometheus get secrets alertmanager-calico-node-alertmanager -o yaml > alertmanager-secret.yaml
     ```
 
   - The current alertmanager.yaml file is encoded and stored inside the
@@ -39,7 +39,7 @@ More detailed information about Alertmanager is available in the [upstream docum
     updated manifest.
 
     ```
-    kubectl -n calico-monitoring apply -f alertmanager-config.yaml
+    kubectl -n tigera-prometheus apply -f alertmanager-config.yaml
     ```
 
   Your changes should be applied in a few seconds by the config-reloader
