@@ -127,7 +127,7 @@ spec:
 
 #### Configure the IP pool for the network
 
-Although not required, you may want to assign IPs from specific pools to specific network interfaces. If you are using the [Calico Enterprise IPAM plugin[(.../reference/cni-plugin/configuration#specifying-ip-pools-on-a-per-namespace-or-per-pod-basis), specify the IP pools in the **NetworkAttachmentDefinition** custom resource. For example:
+Although not required, you may want to assign IPs from specific pools to specific network interfaces. If you are using the [Calico Enterprise IPAM plugin[({{site.baseurl}}/reference/cni-plugin/configuration#specifying-ip-pools-on-a-per-namespace-or-per-pod-basis), specify the IP pools in the **NetworkAttachmentDefinition** custom resource. For example:
 
 ```
  "ipam": {                                                       
