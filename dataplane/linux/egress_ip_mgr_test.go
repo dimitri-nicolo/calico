@@ -177,6 +177,8 @@ var _ = Describe("EgressIPManager", func() {
 				MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 			}})
 			factory.Table(1).checkRoutes("egress.calico", nil)
+			factory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
+			factory.Table(1).checkL2Routes("egress.calico", nil)
 
 			Expect(rr.hasRule(100, "10.0.241.0/32", 0x200, 2)).To(BeTrue())
 			factory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
@@ -184,7 +186,11 @@ var _ = Describe("EgressIPManager", func() {
 				CIDR:      defaultCidr,
 				MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
 			}})
+			factory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
+			factory.Table(2).checkL2Routes("egress.calico", nil)
 
+			mainTable.checkRoutes(routetable.InterfaceNone, nil)
+			mainTable.checkRoutes("egress.calico", nil)
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),

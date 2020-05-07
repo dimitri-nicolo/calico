@@ -689,17 +689,7 @@ func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Tar
 }
 
 func (t *mockRouteTable) checkL2Routes(ifaceName string, expected []routetable.L2Target) {
-	// We cannot use straight Equal because order of the two slices may differ.
-	// We could use set.Equal function. However, L2Target is not hashable,
-	// so use a function to get the set of string presentations for L2Target.
-	getSet := func(targets []routetable.L2Target) set.Set {
-		s := []string{}
-		for _, t := range targets {
-			s = append(s, fmt.Sprintf("%v", t))
-		}
-		return set.FromArray(s)
-	}
-	Expect(getSet(t.currentL2Routes[ifaceName]).Equals(getSet(expected))).To(BeTrue())
+	Expect(t.currentL2Routes[ifaceName]).To(Equal(expected))
 }
 
 type statusReportRecorder struct {
