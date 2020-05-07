@@ -147,7 +147,7 @@ When MultiInterfaceMode is set to Multus, WorkloadEndpoints are created with the
 
 You can use these labels to enforce policies on specific interfaces and networks using policy label selectors. 
 
->**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix were always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting WorkloadEndpoints using the new labels, you should verify label values using the [View workload endpoints](#view-workload-endpoints) commands in the section that follows.
+>**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix were always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting WorkloadEndpoints using the new labels, you should verify label values using the commands in [View workload endpoints](#view-workload-endpoints).
 {: .alert .alert-info}
 
 In this policy example, we use the selector field to target all WorkloadEndpoints with the network interface of, `cali1`.
