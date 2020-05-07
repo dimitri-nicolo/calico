@@ -662,7 +662,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 
 					// Deleting the workload from the datastore should send a delete on the sync
 					// socket and then close the connection.
-					w[0].RemoveFromDatastore(calicoClient)
+					w[0].EtcdRemoveFromDatastore(calicoClient)
 					Eventually(client.EndpointToPolicyOrder).Should(Equal(map[string][]mock.TierInfo{}))
 
 					Eventually(client.Done).Should(BeClosed())

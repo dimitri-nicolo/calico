@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,6 +59,9 @@ type DatastoreInfra interface {
 	// *api.WorkloadEndpoint will be returned, otherwise an error will be
 	// returned.
 	AddWorkload(wep *api.WorkloadEndpoint) (*api.WorkloadEndpoint, error)
+	// RemoveWorkload will take the appropriate steps to remove a workload from
+	// the datastore with the passed in wep values.
+	RemoveWorkload(wep *api.WorkloadEndpoint) error
 	// AddDefaultAllow will ensure that the datastore is configured so that
 	// the default profile/namespace will allow traffic. Returns the name of the
 	// default profile.
