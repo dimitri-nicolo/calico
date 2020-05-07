@@ -39,7 +39,7 @@ You can then create {{site.prodname}} policies using these label selectors to ta
 
 **Maximum additional networks per pod**
 
-You can define a maximum of nine additional {{site.prodname}} networks on a pod.  If a pod exceeds the limit, the CNI plugin fails to set up the networking for the pod and returns an error.
+You can define a maximum of nine additional {{site.prodname}} networks on a pod. If you add a network that exceeds the limit for the pod, networking is not configured and the pod fails to start with an associated error. 
 
 **{{site.prodname}} features**
 
