@@ -15,6 +15,8 @@
 package intdataplane
 
 import (
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/ipsets"
@@ -75,11 +77,11 @@ type ipSetsManager struct {
 	domainInfoStore store
 
 	// Map from each active domain set ID to the IPs that are currently programmed for it and
-	// why.  The interior map is from each IP to the set of domain names that have resolved to
+	// why.  The interior map is from each IP to the set of lower case domain names that have resolved to
 	// that IP.
 	domainSetProgramming map[string]map[string]set.Set
 
-	// Map from each active domain name to the IDs of the domain sets that include that domain
+	// Map from each active lower case domain name to the IDs of the domain sets that include that domain
 	// name.
 	domainSetIds map[string]set.Set
 
@@ -125,7 +127,7 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 		log.WithField("ipSetId", msg.Id).Debug("IP set delta update")
 		if m.domainSetProgramming[msg.Id] != nil {
 			// Work needed to resolve domain name deltas against the current ipset
-			// programming.
+			// programming.  These domain names may be mixed case.
 			m.handleDomainIPSetDeltaUpdate(msg.Id, msg.RemovedMembers, msg.AddedMembers)
 		} else if !m.ignoredSetIds.Contains(msg.Id) {
 			// Pass deltas directly to the ipsets dataplane layer.
@@ -159,7 +161,7 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 			MaxSize: m.maxSize,
 		}
 		if msg.Type == proto.IPSetUpdate_DOMAIN {
-			// Work needed to resolve domain names to expiring IPs.
+			// Work needed to resolve domain names to expiring IPs.  These domain names may be mixed case.
 			m.handleDomainIPSetUpdate(msg, &metadata)
 		} else {
 			// Pass directly onto the ipsets dataplane layer.
@@ -212,8 +214,11 @@ func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 
 	if m.domainSetProgramming[msg.Id] != nil {
 		log.Info("IPSetUpdate for existing IP set")
+		domainsToAdd := set.New()
 		domainsToRemove := set.New()
-		domainsToAdd := set.FromArray(msg.Members)
+		for _, mixedCaseMsgDomain := range msg.Members {
+			domainsToAdd.Add(mixedCaseMsgDomain)
+		}
 		for domain, domainSetIds := range m.domainSetIds {
 			if domainSetIds.Contains(msg.Id) {
 				// Domain set previously included this domain name.
@@ -234,7 +239,8 @@ func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	ipToDomains := make(map[string]set.Set)
 
 	// For each domain name in this set...
-	for _, domain := range msg.Members {
+	for _, mixedCaseDomain := range msg.Members {
+		domain := strings.ToLower(mixedCaseDomain)
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
 		m.domainIncludedInSet(domain, msg.Id)
@@ -286,10 +292,10 @@ func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 	ipsToAdd := set.New()
 
 	// For each removed domain name...
-	for _, domain := range domainsRemoved {
+	for _, mixedCaseDomain := range domainsRemoved {
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
-		m.domainRemovedFromSet(domain, ipSetId)
+		m.domainRemovedFromSet(strings.ToLower(mixedCaseDomain), ipSetId)
 	}
 
 	// For each programmed IP...
@@ -306,7 +312,8 @@ func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 	}
 
 	// For each new domain name...
-	for _, domain := range domainsAdded {
+	for _, mixedCaseDomain := range domainsAdded {
+		domain := strings.ToLower(mixedCaseDomain)
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
 		m.domainIncludedInSet(domain, ipSetId)
@@ -346,10 +353,11 @@ func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {
 	delete(m.domainSetProgramming, ipSetId)
 }
 
+// This function may be called with a lowercase domain name when the original watch was uppercase.
 func (m *ipSetsManager) OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool) {
 	log.WithFields(log.Fields{"domain": msg.domain, "reason": msg.reason}).Info("Domain info changed")
 
-	// Find the affected domain sets.
+	// Find the affected domain sets (note that the domain is always lowercased).
 	domainSetIds := m.domainSetIds[msg.domain]
 	if domainSetIds != nil {
 		// This is a domain name of active interest, so report that a dataplane sync will be

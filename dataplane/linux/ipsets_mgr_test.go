@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017 - 2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package intdataplane
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -44,7 +46,7 @@ var ipsetsMgrTestCases = []IPSetsMgrTestCase{
 	{
 		ipsetID:      "id2",
 		ipsetType:    proto.IPSetUpdate_DOMAIN,
-		ipsetMembers: [numMembers]string{"abc.com", "def.com", "ghi.com", "jkl.com"},
+		ipsetMembers: [numMembers]string{"abc.com", "DEF.com", "gHi.CoM", "jkl.com"},
 		dnsRecs: map[string][]string{
 			"abc.com": []string{"10.0.0.10"},
 			"def.com": []string{"10.0.0.20"},
@@ -59,12 +61,14 @@ type mockDomainStore struct {
 }
 
 func (s *mockDomainStore) GetDomainIPs(domain string) []string {
-	return s.mappings[domain]
+	// The domainStore is case insensitive.
+	return s.mappings[strings.ToLower(domain)]
 }
 
 func allIPsForDomains(mappings map[string][]string, domains ...string) (ips []string) {
 	for _, domain := range domains {
-		ips = append(ips, mappings[domain]...)
+		// The domainStore is case insensitive.
+		ips = append(ips, mappings[strings.ToLower(domain)]...)
 	}
 	return
 }
@@ -185,6 +189,34 @@ var _ = Describe("IP Sets manager", func() {
 					AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
 				}
 			})
+
+			if ipsetType == proto.IPSetUpdate_DOMAIN {
+				Describe("after timing out the mIxEdCaSe DNS entries in lowercase", func() {
+					BeforeEach(func() {
+						ipSets.AddOrReplaceCalled = false
+						ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
+							Id:      ipsetID,
+							Members: []string{members[1], members[2]},
+							Type:    ipsetType,
+						})
+						err := ipsetsMgr.CompleteDeferredWork()
+						Expect(err).ToNot(HaveOccurred())
+						domainStore.mappings = map[string][]string{
+							members[2]: domainStore.GetDomainIPs(members[2]),
+						}
+						syncNeeded := ipsetsMgr.OnDomainInfoChange(&domainInfoChanged{
+							// The domain_info_store always returns lowercase domain names
+							domain: strings.ToLower(members[1]),
+							reason: "mapping expired",
+						})
+						Expect(syncNeeded).To(BeTrue())
+						err = ipsetsMgr.CompleteDeferredWork()
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[2]))
+				})
+			}
 		})
 	}
 
