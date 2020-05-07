@@ -332,6 +332,10 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		rules = r.appendConntrackRules(
 			rules,
 			allowAction,
+			// Allow CtState INVALID only for traffic _from_ an egress gateway, because
+			// the return path from an egress gateway is different from the
+			// VXLAN-tunnelled forwards path.  In all other circumstances we disallow
+			// traffic with an invalid conntrack state.
 			isEgressGateway && (dir == RuleDirEgress),
 		)
 	}
