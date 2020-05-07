@@ -22,22 +22,22 @@ var VERSION string
 var version bool
 
 func PrintVersion() error {
-        fmt.Println(VERSION)
-        return nil
+	fmt.Println(VERSION)
+	return nil
 }
 
 func init() {
-        // Add a flag to check the version.
-        flag.BoolVar(&version, "version", false, "Display version")
+	// Add a flag to check the version.
+	flag.BoolVar(&version, "version", false, "Display version")
 }
 
 func main() {
 
-        flag.Parse()
-        if version {
-                PrintVersion()
-                os.Exit(0)
-        }
+	flag.Parse()
+	if version {
+		PrintVersion()
+		os.Exit(0)
+	}
 
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
@@ -49,6 +49,8 @@ func main() {
 		log.Warnf("Could not parse log level %v, setting log level to %v", logLevelStr, logLevel)
 	}
 	log.SetLevel(logLevel)
+	// Install a hook that adds file/line number information.
+	log.AddHook(&logutils.ContextHook{})
 
 	config, err := server.NewConfigFromEnv()
 	if err != nil {
