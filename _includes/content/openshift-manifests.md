@@ -14,6 +14,7 @@ curl {{ "/manifests/ocp/crds/01-crd-intrusiondetection.yaml" | absolute_url }} -
 curl {{ "/manifests/ocp/crds/01-crd-logstorage.yaml" | absolute_url }} -o manifests/01-crd-logstorage.yaml
 curl {{ "/manifests/ocp/crds/01-crd-logcollector.yaml" | absolute_url }} -o manifests/01-crd-logcollector.yaml
 curl {{ "/manifests/ocp/crds/01-crd-prometheusrule.yaml" | absolute_url }} -o manifests/01-crd-prometheusrule.yaml
+curl {{ "/manifests/ocp/crds/01-crd-thanosrulers.yaml" | absolute_url }} -o manifests/01-crd-thanosrulers.yaml
 curl {{ "/manifests/ocp/crds/01-crd-prometheus.yaml" | absolute_url }} -o manifests/01-crd-prometheus.yaml
 curl {{ "/manifests/ocp/crds/01-crd-servicemonitor.yaml" | absolute_url }} -o manifests/01-crd-servicemonitor.yaml
 curl {{ "/manifests/ocp/crds/01-crd-tigerastatus.yaml" | absolute_url }} -o manifests/01-crd-tigerastatus.yaml

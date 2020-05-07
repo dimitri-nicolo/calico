@@ -99,19 +99,19 @@
     # to the docs & manifest tooling not to default to the tigera registry.
     prometheus-operator:
       image: coreos/prometheus-operator
-      version: v0.34.0
+      version: v0.38.1
       registry: quay.io
     prometheus:
       image: prometheus/prometheus
-      version: v2.7.1
+      version: v2.17.2
       registry: quay.io
     alertmanager:
       image: prometheus/alertmanager
-      version: v0.16.1
+      version: v0.20.0
       registry: quay.io
     prometheus-config-reloader:
       image: coreos/prometheus-config-reloader
-      version: v0.34.0
+      version: v0.38.1
       registry: quay.io
     configmap-reload:
       image: coreos/configmap-reload
