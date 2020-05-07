@@ -238,13 +238,6 @@ setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of `Accept` or `LogAndAccept`, those packets
 still contribute to the denied packet metrics as just described.
 
-When the `PrometheusReporter...File` and `PrometheusMetrics...File`
-parameters are set, Felix's Prometheus ports are TLS-secured such that
-only a validated client can read Prometheus metrics, and the data is
-encrypted in transit.  A valid client must then connect over HTTPS and
-present a certificate that is signed by one of the trusted CAs in the
-relevant `Prometheus...CAFile` setting.
-
 #### Felix-Typha Configuration
 
 | Configuration parameter | Environment variable        | Description | Schema |
