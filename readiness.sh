@@ -3,10 +3,12 @@ set -e -o pipefail
 
 # Location of readiness file which contains elasticsearch metrics
 readiness_destfile="/tmp/readiness_metrics"
+output=$(curl -s "http://localhost:24220/api/plugins.json")
 
 # Get the current metrics of elasticsearch
-retry_count_current=$(curl -s http://localhost:24220/api/plugins.json | jq --raw-output '.plugins[] | select(.config.index_name) | select(.config.index_name | test("tigera_secure_ee_flows")) | .retry_count' | awk '{SUM += $0 } END { print SUM }');
-buffer_length_current=$(curl -s http://localhost:24220/api/plugins.json | jq --raw-output '.plugins[] | select(.config.index_name) | select(.config.index_name | test("tigera_secure_ee_flows")) | .buffer_total_queued_size' | awk '{SUM += $0 } END { print SUM }');
+retry_count_current=$(echo $output | jq --raw-output '.plugins[] | select(.config.index_name) | select(.config.index_name | test("tigera_secure_ee_flows")) | .retry_count' | awk '{SUM += $0 } END { print SUM }');
+buffer_length_current=$(echo $output | jq --raw-output '.plugins[] | select(.config.index_name) | select(.config.index_name | test("tigera_secure_ee_flows")) | .buffer_total_queued_size' | awk '{SUM += $0 } END { print SUM }');
+
 
 # Check if earlier metrics present
 if [ ! -f "$readiness_destfile" ]
