@@ -80,6 +80,34 @@ var _ = Describe("Dispatch chains", func() {
 			Expect(func() { renderer.WorkloadDispatchChains(input) }).To(Panic())
 		})
 
+		It("generates expected WorkloadRPFDispatchChains", func() {
+			Expect(renderer.WorkloadRPFDispatchChains(4, []string{
+				"cali12345",
+				"cali6789a",
+				"calibcdef",
+			})).To(Equal([]*iptables.Chain{{
+				Name: "cali-from-wl-dispatch",
+				Rules: []iptables.Rule{
+					{
+						Match:  iptables.Match().InInterface("cali12345"),
+						Action: iptables.ReturnAction{},
+					},
+					{
+						Match:  iptables.Match().InInterface("cali6789a"),
+						Action: iptables.ReturnAction{},
+					},
+					{
+						Match:  iptables.Match().InInterface("calibcdef"),
+						Action: iptables.ReturnAction{},
+					},
+					{
+						Match:  iptables.Match().RPFCheckFailed(false),
+						Action: iptables.DropAction{},
+					},
+				},
+			}}))
+		})
+
 		DescribeTable("workload rendering tests",
 			func(names []string, expectedChains map[bool][]*iptables.Chain) {
 				var input map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint

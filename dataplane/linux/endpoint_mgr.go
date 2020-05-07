@@ -1050,6 +1050,8 @@ func (m *endpointManager) ifaceIsForEgressGateway(name string) bool {
 }
 
 func (m *endpointManager) configureEgressGatewayInterface(name string) error {
+	log.WithField("iface", name).Debug("Configure interface for egress gateway role")
+
 	// Enable loose reverse-path filtering for this interface.  This allows an egress
 	// gateway workload to forward traffic with any source IP address.
 	err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "2")
@@ -1098,6 +1100,8 @@ func (m *endpointManager) removeEgressGatewayInterfaceAddress(name string) {
 		// We haven't added an address to this interface, so nothing to remove.
 		return
 	}
+
+	log.WithField("iface", name).Debug("Remove configuration for egress gateway role")
 
 	// In all cases, we only want to try deleting the added address once, as the possible cases
 	// are:

@@ -750,6 +750,114 @@ var _ = Describe("Endpoints", func() {
 					},
 				}))
 			})
+
+			It("should render an egress gateway workload endpoint", func() {
+				Expect(renderer.WorkloadEndpointToIptablesChains(
+					"cali1234",
+					epMarkMapper,
+					true,
+					[]*proto.TierInfo{{
+						Name:            "default",
+						IngressPolicies: []string{"ai", "bi"},
+						EgressPolicies:  []string{"ae", "be"},
+					}},
+					[]string{"prof1", "prof2"},
+					IsAnEgressGateway,
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					{
+						Name: "cali-tw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+							{Match: Match().ConntrackState("INVALID"),
+								Action: DropAction{}},
+
+							{Action: ClearMarkAction{Mark: 0x88}},
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-pi-default/ai"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-pi-default/bi"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
+							{Match: Match().MarkClear(0x10),
+								Action:  DropAction{},
+								Comment: []string{"Drop if no policies passed packet"}},
+
+							{Action: JumpAction{Target: "cali-pri-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pri-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
+							{Action: DropAction{},
+								Comment: []string{"Drop if no profiles matched"}},
+						},
+					},
+					{
+						Name: "cali-fw-cali1234",
+						Rules: []Rule{
+							// conntrack rules.
+							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{}},
+
+							{Action: ClearMarkAction{Mark: 0x88}},
+							dropVXLANRule,
+							dropIPIPRule,
+
+							{Comment: []string{"Start of tier default"},
+								Action: ClearMarkAction{Mark: 0x10}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-po-default/ae"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-po-default/be"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"}},
+							{Match: Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
+							{Match: Match().MarkClear(0x10),
+								Action:  DropAction{},
+								Comment: []string{"Drop if no policies passed packet"}},
+
+							{Action: JumpAction{Target: "cali-pro-prof1"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+							{Action: JumpAction{Target: "cali-pro-prof2"}},
+							{Match: Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"}},
+
+							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
+							{Action: DropAction{},
+								Comment: []string{"Drop if no profiles matched"}},
+						},
+					},
+					{
+						Name: "cali-sm-cali1234",
+						Rules: []Rule{
+							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+						},
+					},
+				})))
+			})
 		})
 
 		Describe("with ctstate=INVALID disabled", func() {

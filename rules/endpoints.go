@@ -30,6 +30,7 @@ const (
 	dropEncap          = true
 	dontDropEncap      = false
 	NotAnEgressGateway = false
+	IsAnEgressGateway  = true
 )
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
@@ -328,7 +329,15 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	if chainType != chainTypeUntracked {
 		// Tracked chain: install conntrack rules, which implement our stateful connections.
 		// This allows return traffic associated with a previously-permitted request.
-		rules = r.appendConntrackRules(rules, allowAction, isEgressGateway)
+		rules = r.appendConntrackRules(
+			rules,
+			allowAction,
+			// Allow CtState INVALID only for traffic _from_ an egress gateway, because
+			// the return path from an egress gateway is different from the
+			// VXLAN-tunnelled forwards path.  In all other circumstances we disallow
+			// traffic with an invalid conntrack state.
+			isEgressGateway && (dir == RuleDirEgress),
+		)
 	}
 
 	// First set up failsafes.
