@@ -57,7 +57,7 @@ Although the following {{site.prodname}} features are supported for your default
 - [Install Multus on your Kubernetes cluster](https://github.com/intel/multus-cni/) 
   >**Note**: Multus is installed on OpenShift 4.0+ clusters.
   {: .alert .alert-info} 
-- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/) or access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)
+- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/) or configure access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)
 
 ### How to
 
@@ -127,7 +127,7 @@ spec:
 
 #### Configure the IP pool for the network
 
-Although not required, you may want to assign IPs from specific pools to specific network interfaces. If you are using the [Calico Enterprise IPAM plugin[({{site.baseurl}}/reference/cni-plugin/configuration#specifying-ip-pools-on-a-per-namespace-or-per-pod-basis), specify the IP pools in the **NetworkAttachmentDefinition** custom resource. For example:
+Although not required, you may want to assign IPs from specific pools to specific network interfaces. If you are using the [Calico Enterprise IPAM plugin]({{site.baseurl}}/reference/cni-plugin/configuration#specifying-ip-pools-on-a-per-namespace-or-per-pod-basis), specify the IP pools in the **NetworkAttachmentDefinition** custom resource. For example:
 
 ```
  "ipam": {                                                       
