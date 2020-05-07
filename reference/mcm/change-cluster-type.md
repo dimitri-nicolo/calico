@@ -1,5 +1,5 @@
 ---
-title: Post-installation
+title: Change cluster type
 description: Change your cluster management type to or from Standalone, Management or Managed.
 canonical_url: '/reference/mcm/change-cluster-type'
 ---
@@ -41,6 +41,11 @@ kubectl get installation -o yaml
     ```
 
 ## Change a Management cluster into a Standalone cluster
+> **Note**: While the operator will automatically clean up the credentials that were created for managed clusters, the
+            data will still be retained in the Elasticsearch cluster of your management cluster for as long as you have 
+            specified in the retention section of your [LogStorage]({{site.baseurl}}/reference/installation/api).
+{: .alert .alert-info}
+
 1.  Change your installation type to Standalone.
     ```bash
     kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Standalone"}}'
@@ -55,13 +60,16 @@ kubectl get installation -o yaml
     kubectl delete managedcluster --all
     ```
 
-> **Note**: While the operator will automatically clean up the credentials that were created for managed clusters, the
-            data will still be retained in the Elasticsearch cluster of your management cluster for as long as you have 
-            specified in the retention section of your [LogStorage]({{site.baseurl}}/reference/installation/api).       
-{: .alert .alert-info}
-
 ## Change a Standalone cluster into a Managed cluster
 For these instructions we assume you already have a management cluster up and running.
+
+> **Note**: Unlike a standalone cluster, a managed cluster does not require log storage (since all log data is sent to the 
+management cluster). While the operator will automatically remove the running components related to log storage from your 
+standalone cluster, you have full control over what happens to the associated log data stored within the persistent volume 
+provisioned for the cluster. Log data will be retained only if the reclaim policy within your storage class 
+is set to Retain. For more details see [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+{: .alert .alert-info}
+
 1.  Inside your **Management** cluster, log into the manager UI. Under the `Managed Clusters` page, add a managed cluster and 
     download the manifest. Complete the manifest by filling in the `ManagementClusterConnection` field. The 
     [quickstart guide]({{site.baseurl}}/reference/mcm/quickstart#add-a-managed-cluster-to-the-management-plane) 
@@ -94,6 +102,11 @@ For these instructions we assume you already have a management cluster up and ru
     page, verify that your cluster has `Connection status: Connected`.
 
 ## Change a Managed cluster into a Standalone cluster
+> **Note**: Since a managed cluster does not require its own log storage, while a standalone cluster does, 
+in order to perform the conversion you must ensure a persistent volume has been provisioned to store log data. 
+For more information on how to do this, please review [Configure storage for logs and reports]({{site.baseurl}}/getting-started/create-storage).
+{: .alert .alert-info}
+
 1.  Remove the ManagementClusterConnection from your cluster.
      ```bash
      kubectl delete managementclusterconnection tigera-secure
@@ -116,3 +129,7 @@ For these instructions we assume you already have a management cluster up and ru
     ```bash
     kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
     ```
+
+## Above and beyond
+
+- [Configure storage for logs and reports]({{site.baseurl}}/getting-started/create-storage)

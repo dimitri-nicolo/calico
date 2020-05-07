@@ -1,5 +1,5 @@
 ---
-title: Multi-cluster management Overview
+title: Multi-cluster management overview
 description: Simplify the management of multiple Calico Enterprise installations using a single management plane.
 canonical_url: '/reference/mcm/overview'
 ---
