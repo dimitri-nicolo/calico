@@ -23,6 +23,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -430,6 +432,10 @@ func (r *RouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
 }
 
 func (r *RouteTable) SetL2Routes(ifaceName string, targets []L2Target) {
+	if r.tableIndex != unix.RT_TABLE_UNSPEC {
+		log.WithField("tableindex", r.tableIndex).Panic(
+			"Non main routing table should not set L2 routes.")
+	}
 	r.pendingIfaceNameToL2Targets[ifaceName] = targets
 	r.markIfaceForUpdate(ifaceName, false)
 }
@@ -543,7 +549,7 @@ ifaceLoop:
 		fullResync := ia == updateTypeFullResync
 		for retry := 0; retry < maxApplyRetries; retry++ {
 			var err error
-			if r.vxlan && ifaceName != InterfaceNone {
+			if r.tableIndex == unix.RT_TABLE_UNSPEC && r.vxlan && ifaceName != InterfaceNone {
 				// Sync L2 routes first.
 				err = r.syncL2RoutesForLink(ifaceName)
 			}

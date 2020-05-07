@@ -27,6 +27,7 @@ var _ = Describe("EgressIPManager", func() {
 	var manager *egressIPManager
 	var dpConfig Config
 	var rr *mockRouteRules
+	var mainTable *mockRouteTable
 	var factory *mockRouteTableFactory
 
 	BeforeEach(func() {
@@ -34,6 +35,11 @@ var _ = Describe("EgressIPManager", func() {
 			matchForUpdate: routerule.RulesMatchSrcFWMarkTable,
 			matchForRemove: routerule.RulesMatchSrcFWMark,
 			activeRules:    set.New(),
+		}
+		mainTable = &mockRouteTable{
+			index:           0,
+			currentRoutes:   map[string][]routetable.Target{},
+			currentL2Routes: map[string][]routetable.L2Target{},
 		}
 		factory = &mockRouteTableFactory{count: 0, tables: make(map[int]*mockRouteTable)}
 
@@ -55,6 +61,7 @@ var _ = Describe("EgressIPManager", func() {
 
 		manager = newEgressIPManagerWithShims(
 			rr,
+			mainTable,
 			factory,
 			tableIndexStack,
 			"egress.calico",
@@ -170,7 +177,21 @@ var _ = Describe("EgressIPManager", func() {
 				MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 			}})
 			factory.Table(1).checkRoutes("egress.calico", nil)
-			factory.Table(1).checkL2Routes("egress.calico", []routetable.L2Target{
+			factory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
+			factory.Table(1).checkL2Routes("egress.calico", nil)
+
+			Expect(rr.hasRule(100, "10.0.241.0/32", 0x200, 2)).To(BeTrue())
+			factory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
+				Type:      routetable.TargetTypeVXLAN,
+				CIDR:      defaultCidr,
+				MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
+			}})
+			factory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
+			factory.Table(2).checkL2Routes("egress.calico", nil)
+
+			mainTable.checkRoutes(routetable.InterfaceNone, nil)
+			mainTable.checkRoutes("egress.calico", nil)
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
 					GW:      ip.FromString("10.0.0.1"),
@@ -181,15 +202,6 @@ var _ = Describe("EgressIPManager", func() {
 					GW:      ip.FromString("10.0.0.2"),
 					IP:      ip.FromString("10.0.0.2"),
 				},
-			})
-
-			Expect(rr.hasRule(100, "10.0.241.0/32", 0x200, 2)).To(BeTrue())
-			factory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
-				Type:      routetable.TargetTypeVXLAN,
-				CIDR:      defaultCidr,
-				MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
-			}})
-			factory.Table(2).checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01}),
 					GW:      ip.FromString("10.0.1.1"),
@@ -217,7 +229,17 @@ var _ = Describe("EgressIPManager", func() {
 				CIDR:      defaultCidr,
 				MultiPath: multiPath([]string{"10.0.1.2", "10.0.3.0", "10.0.3.1"}),
 			}})
-			factory.Table(2).checkL2Routes("egress.calico", []routetable.L2Target{
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02}),
 					GW:      ip.FromString("10.0.1.2"),
@@ -248,7 +270,18 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(manager.tableIndexStack.Len()).To(Equal(2))
 			factory.Table(2).checkRoutes(routetable.InterfaceNone, nil)
 			factory.Table(2).checkRoutes("egress.calico", nil)
-			factory.Table(2).checkL2Routes("egress.calico", nil)
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+			})
 
 			// Send same ipset remove
 			manager.OnUpdate(&proto.IPSetRemove{
@@ -312,7 +345,7 @@ var _ = Describe("EgressIPManager", func() {
 				CIDR:      defaultCidr,
 				MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
 			}})
-			factory.Table(1).checkL2Routes("egress.calico", []routetable.L2Target{
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
 					GW:      ip.FromString("10.0.0.1"),
@@ -322,6 +355,16 @@ var _ = Describe("EgressIPManager", func() {
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
 					GW:      ip.FromString("10.0.0.2"),
 					IP:      ip.FromString("10.0.0.2"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01}),
+					GW:      ip.FromString("10.0.1.1"),
+					IP:      ip.FromString("10.0.1.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02}),
+					GW:      ip.FromString("10.0.1.2"),
+					IP:      ip.FromString("10.0.1.2"),
 				},
 			})
 		})
@@ -339,7 +382,18 @@ var _ = Describe("EgressIPManager", func() {
 				Type: routetable.TargetTypeUnreachable,
 				CIDR: defaultCidr,
 			}})
-			factory.Table(2).checkL2Routes("egress.calico", []routetable.L2Target{})
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+			})
 		})
 
 		It("should remove routes for old workload", func() {
@@ -434,7 +488,27 @@ var _ = Describe("EgressIPManager", func() {
 				CIDR:      defaultCidr,
 				MultiPath: multiPath([]string{"10.0.10.1", "10.0.10.2"}),
 			}})
-			factory.Table(3).checkL2Routes("egress.calico", []routetable.L2Target{
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01}),
+					GW:      ip.FromString("10.0.1.1"),
+					IP:      ip.FromString("10.0.1.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02}),
+					GW:      ip.FromString("10.0.1.2"),
+					IP:      ip.FromString("10.0.1.2"),
+				},
 				{
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x01}),
 					GW:      ip.FromString("10.0.10.1"),
