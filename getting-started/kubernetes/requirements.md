@@ -1,6 +1,6 @@
 ---
 title: System requirements
-description: Review requirements before installing Calico Enterprise on nodes to ensure success. 
+description: Review requirements before installing Calico Enterprise to ensure success.
 canonical_url: '/getting-started/kubernetes/requirements'
 ---
 
@@ -12,10 +12,9 @@ canonical_url: '/getting-started/kubernetes/requirements'
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
 
-- v1.15
-- v1.16
-- v1.17
-- v1.18
+- 1.16
+- 1.17
+- 1.18
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.

@@ -18,7 +18,7 @@ The `{{site.imageNames["kubeControllers"]}}` container includes the following co
 1. namespace controller: watches namespaces and programs {{site.prodname}} profiles.
 1. serviceaccount controller: watches service accounts and programs {{site.prodname}} profiles.
 1. workloadendpoint controller: watches for changes to pod labels and updates {{site.prodname}} workload endpoints.
-1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}.
+1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}, and optionally watches for node updates to create and sync host endpoints for each node.
 1. federation controller: watches Kubernetes services and endpoints locally and across all remote clusters, and programs
    Kubernetes endpoints for any locally configured service that specifies a service federation selector annotation.
 
@@ -74,6 +74,7 @@ The following environment variables can be used to configure the {{site.prodname
 | `LOG_LEVEL`           | Minimum log level to be displayed. | debug, info, warning, error | info
 | `KUBECONFIG`          | Path to a kubeconfig file for Kubernetes API access | path |
 | `SYNC_NODE_LABELS`    | When enabled, Kubernetes node labels will be copied to Calico node objects. | boolean | true
+| `AUTO_HOST_ENDPOINTS` | When enabled, automatically create a host endpoint for each node. | boolean | false
 | `COMPACTION_PERIOD` | Compact the etcd database on this interval. Set to "0" to disable. | [duration](https://golang.org/pkg/time/#ParseDuration) | 10m
 
 ## About each controller

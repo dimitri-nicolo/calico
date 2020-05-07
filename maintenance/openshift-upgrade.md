@@ -26,10 +26,12 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated 
 during upgrade).
 
+{% include content/hostendpoints-upgrade.md orch="OpenShift" %}
 
 ### Download the new manifests
 
 Make a manifests directory.
+
 ```bash
 mkdir manifests
 ```
@@ -102,3 +104,7 @@ mkdir manifests
    ```bash
    watch oc get tigerastatus
    ```
+
+1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
+

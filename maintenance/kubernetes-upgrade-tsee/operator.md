@@ -26,6 +26,8 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
 the upgrade.
 
+{% include content/hostendpoints-upgrade.md orch="Kubernetes" %}
+
 ## Upgrade to {{page.version}} {{site.prodname}}
 
 1. Export your current LogStorage CR to a file.
@@ -109,3 +111,8 @@ the upgrade.
 
    **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
    {: .alert .alert-info}
+
+1. If you were upgrading from a version of Calico prior to v3.14 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+   add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
+
+{% include content/auto-hostendpoints-migrate.md orch="Kubernetes" %}

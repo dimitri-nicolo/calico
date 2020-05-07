@@ -1,12 +1,12 @@
 ---
-title: Install an OpenShift v4 cluster with Calico Enterprise
+title: Install an OpenShift 4 cluster with Calico Enterprise
 description: Install Calico Enterprise on an OpenShift v4 cluster.
 canonical_url: '/getting-started/openshift/installation'
 ---
 
 ### Big picture
 
-Install an OpenShift v4 cluster with {{site.prodname}}.
+Install an OpenShift 4 cluster with {{site.prodname}}.
 
 ### Value
 
@@ -21,7 +21,7 @@ to install {{site.prodname}}.
 
 - Ensure that you have the [private registry credentials and license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
-- **If installing on AWS**, ensure that you have {% include open-new-window.html text='configured an AWS account' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html' %} appropriate for OpenShift v4,
+- **If installing on AWS**, ensure that you have {% include open-new-window.html text='configured an AWS account' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html' %} appropriate for OpenShift 4,
   and have {% include open-new-window.html text='set up your AWS credentials' url='https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html' %}.
   Note that the OpenShift installer supports a subset of {% include open-new-window.html text='AWS regions' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html#installation-aws-regions_installing-aws-account' %}.
 
