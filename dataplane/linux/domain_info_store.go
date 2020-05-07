@@ -48,7 +48,7 @@ type valueData struct {
 
 // The data that we hold for each name.
 type nameData struct {
-	// Known values for this name.  Map keys are the actual values (i.e. IPs or CNAME names),
+	// Known values for this name.  Map keys are the actual values (i.e. IPs or lowercase CNAME names),
 	// and valueData is as above.
 	values map[string]*valueData
 	// Other names that we should notify a "change of information" for, and whose cached IP list
@@ -264,7 +264,9 @@ func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 		ttlNow := time.Until(expiryTime)
 		if ttlNow.Seconds() > 1 {
 			log.Debugf("Recreate mapping %v", jsonMapping)
-			s.storeInfo(jsonMapping.LHS, jsonMapping.RHS, ttlNow, jsonMapping.Type == v1TypeName)
+			// The mapping may have been saved by a previous version including uppercase letters,
+			// so lowercase it now.
+			s.storeInfo(strings.ToLower(jsonMapping.LHS), strings.ToLower(jsonMapping.RHS), ttlNow, jsonMapping.Type == v1TypeName)
 		} else {
 			log.Debugf("Ignore expired mapping %v", jsonMapping)
 		}
@@ -371,31 +373,35 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 		return
 	}
 
+	// All names are stored and looked up as lowercase.
+	name := strings.ToLower(string(rec.Name))
+
 	switch rec.Type {
 	case layers.DNSTypeA:
 		log.Debugf("A: %v -> %v with TTL %v (%v)",
-			string(rec.Name),
+			name,
 			rec.IP,
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+		s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeAAAA:
 		log.Debugf("AAAA: %v -> %v with TTL %v (%v)",
-			string(rec.Name),
+			name,
 			rec.IP,
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+		s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeCNAME:
+		cname := strings.ToLower(string(rec.CNAME))
 		log.Debugf("CNAME: %v -> %v with TTL %v (%v)",
-			string(rec.Name),
-			string(rec.CNAME),
+			name,
+			cname,
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(string(rec.Name), string(rec.CNAME), time.Duration(rec.TTL)*time.Second, true)
+		s.storeInfo(name, cname, time.Duration(rec.TTL)*time.Second, true)
 	default:
 		log.Debugf("Ignore DNS response with type %v", rec.Type)
 	}
@@ -509,6 +515,8 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	// All names are stored and looked up as lowercase.
+	domain = strings.ToLower(domain)
 	ips := s.resultsCache[domain]
 	if ips == nil {
 		var collectIPsForName func(string, set.Set)

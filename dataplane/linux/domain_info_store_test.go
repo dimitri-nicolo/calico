@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,12 +22,14 @@ import (
 
 var _ = Describe("Domain Info Store", func() {
 	var (
-		domainStore     *domainInfoStore
-		mockDNSRecA1    = testutils.MakeA("a.com", "10.0.0.10")
-		mockDNSRecA2    = testutils.MakeA("b.com", "10.0.0.20")
-		mockDNSRecAAAA1 = testutils.MakeAAAA("aaaa.com", "fe80:fe11::1")
-		mockDNSRecAAAA2 = testutils.MakeAAAA("bbbb.com", "fe80:fe11::2")
-		invalidDNSRec   = layers.DNSResourceRecord{
+		domainStore         *domainInfoStore
+		mockDNSRecA1        = testutils.MakeA("a.com", "10.0.0.10")
+		mockDNSRecA2        = testutils.MakeA("b.com", "10.0.0.20")
+		mockDNSRecA2Caps    = testutils.MakeA("B.cOm", "10.0.0.20")
+		mockDNSRecAAAA1     = testutils.MakeAAAA("aaaa.com", "fe80:fe11::1")
+		mockDNSRecAAAA2     = testutils.MakeAAAA("bbbb.com", "fe80:fe11::2")
+		mockDNSRecAAAA3Caps = testutils.MakeAAAA("mIxEdCaSe.CoM", "fe80:fe11::3")
+		invalidDNSRec       = layers.DNSResourceRecord{
 			Name:       []byte("invalid#rec.com"),
 			Type:       layers.DNSTypeMX,
 			Class:      layers.DNSClassAny,
@@ -37,8 +40,13 @@ var _ = Describe("Domain Info Store", func() {
 		}
 		mockDNSRecCNAME = []layers.DNSResourceRecord{
 			testutils.MakeCNAME("cname1.com", "cname2.com"),
-			testutils.MakeCNAME("cname2.com", "cname3.com"),
+			testutils.MakeCNAME("cNAME2.com", "cname3.com"),
 			testutils.MakeCNAME("cname3.com", "a.com"),
+		}
+		mockDNSRecCNAMEUnderscore = []layers.DNSResourceRecord{
+			testutils.MakeCNAME("cname_1.com", "cname2.com"),
+			testutils.MakeCNAME("cNAME2.com", "cname_3.com"),
+			testutils.MakeCNAME("cname_3.com", "a.com"),
 		}
 	)
 
@@ -58,9 +66,14 @@ var _ = Describe("Domain Info Store", func() {
 
 	// Assert that the domain store accepted and signaled the given record (and reason).
 	AssertDomainChanged := func(domainStore *domainInfoStore, d string, r string) {
-		receivedInfo := <-domainStore.domainInfoChanges
-		log.Infof("domainInfoChanged:  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, d)
-		Expect(receivedInfo).To(Equal(&domainInfoChanged{domain: d, reason: r}))
+		select {
+		case receivedInfo := <-domainStore.domainInfoChanges:
+			log.Infof("domainInfoChanged:  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, strings.ToLower(d))
+			Expect(receivedInfo).To(Equal(&domainInfoChanged{domain: strings.ToLower(d), reason: r}))
+		case <-time.After(1 * time.Second):
+			// Domain info change never sent.
+			Expect(false).To(Equal(true))
+		}
 	}
 
 	// Assert that the domain store registered the given record and then process its expiration.
@@ -69,7 +82,7 @@ var _ = Describe("Domain Info Store", func() {
 			Expect(domainStore.GetDomainIPs(string(dnsRec.Name))).To(Equal([]string{dnsRec.IP.String()}))
 		})
 		It("should expire and signal a domain change", func() {
-			domainStore.processMappingExpiry(string(dnsRec.Name), dnsRec.IP.String())
+			domainStore.processMappingExpiry(strings.ToLower(string(dnsRec.Name)), dnsRec.IP.String())
 			AssertDomainChanged(domainStore, string(dnsRec.Name), "mapping expired")
 			Expect(domainStore.collectGarbage()).To(Equal(1))
 		})
@@ -173,9 +186,12 @@ var _ = Describe("Domain Info Store", func() {
 	}
 
 	domainStoreTestValidRec(mockDNSRecA1, mockDNSRecA2)
+	domainStoreTestValidRec(mockDNSRecA1, mockDNSRecA2Caps)
 	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA2)
+	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA3Caps)
 	domainStoreTestInvalidRec(invalidDNSRec)
 	domainStoreTestCNAME(mockDNSRecCNAME, mockDNSRecA1)
+	domainStoreTestCNAME(mockDNSRecCNAMEUnderscore, mockDNSRecA1)
 
 	expectChangesFor := func(domains ...string) {
 		domainsSignaled := set.New()
