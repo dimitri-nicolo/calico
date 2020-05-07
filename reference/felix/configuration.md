@@ -66,7 +66,7 @@ The full list of parameters which can be set is as follows.
 | `UsageReportingInitialDelaySecs`  | `FELIX_USAGEREPORTINGINITIALDELAYSECS`  | Minimum delay before first usage report, in seconds. [Default: `300`] | int |
 | `UsageReportingIntervalSecs`      | `FELIX_USAGEREPORTINGINTERVALSECS`      | Interval at which to make usage reports, in seconds. [Default: `86400`] | int |
 | `VXLANEnabled`                    | `FELIX_VXLANENABLED`                    | Automatically set when needed, you shouldn't need to change this setting: whether Felix should create the VXLAN tunnel device for VXLAN networking. [Default: `false`] | boolean |
-| `VXLANMTU`                        | `FELIX_VXLANMTU`                        | The MTU to set on the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. See [Configuring MTU]({{ site.baseurl }}/networking/mtu) [Default: `1410`] | int |
+| `VXLANMTU`                        | `FELIX_VXLANMTU`                        | The MTU to set on the VXLAN tunnel device. Also controls NodePort MTU when eBPF enabled. Also Controls MTU for egress VXLAN traffic when egress IP enabled. See [Configuring MTU]({{ site.baseurl }}/networking/mtu) [Default: `1410`] | int |
 | `VXLANPort`                       | `FELIX_VXLANPORT`                       | The UDP port to use for VXLAN. [Default: `4789`] | int |
 | `VXLANTunnelMACAddr`              |                                         | MAC address of the VXLAN tunnel. This is system configured and should not be updated manually. | string |
 | `VXLANVNI`                        | `FELIX_VXLANVNI`                        | The virtual network ID to use for VXLAN. [Default: `4096`] | int |
@@ -197,6 +197,10 @@ See the [getting started guide]({{ site.baseurl }}/getting-started/kubernetes/tr
 | `DNSLogsFileAggregationKind` | `FELIX_DNSLOGSFILEAGGREGATIONKIND` | `1` | How much to aggregate DNS logs.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate similar DNS logs from workloads in the same ReplicaSet. |
 | `DNSLogsFileIncludeLabels`   | `FELIX_DNSLOGSFILEINCLUDELABELS`   | `true` | Whether to include client and server workload labels in DNS logs. |
 | `DNSLogsFilePerNodeLimit`    | `FELIX_DNSLOGSFILEPERNODELIMIT`    | `0` (no limit) | Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs. |
+| `EgressIPSupport`            | `FELIX_EGRESSIPSUPPORT`           | `Disabled` | Defines three different support modes for egress IP function. `Disabled` means egress IP is not supported. `EnabledPerNamespace` means egress IP function is enabled and can be configured on a per-namespace basis (but per-pod egress annotations are ignored). `EnabledPerNamespaceOrPerPod` means egress IP function is enabled and can be configured per-namespace or per-pod (with per-pod egress annotations overriding namespace annotations). |
+| `EgressIPVXLANPort`          | `FELIX_EGRESSIPVXLANPORT`         | `4097` | Port to use for egress IP VXLAN traffic. A value of `0` means "use the kernel default". |
+| `EgressIPVXLANVNI`           | `FELIX_EGRESSIPVXLANVNI`          | `4790` | Virtual network ID to use for egress IP VXLAN traffic. A value of `0` means "use the kernel default". |
+| `EgressIPRoutingRulePriority` | `FELIX_EGRESSIPROUTINGRULEPRIORITY` | `100` | Priority value to use for the egress IP routing rule. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current {{site.prodname}} policy - i.e. by the ordered combination of all the
