@@ -9,7 +9,7 @@ Configure a Kubernetes cluster with multiple {{site.prodname}} networks on each 
 
 ### Value
 
-By default, you can configure only one CNI (network and pod interface) in a cluster. But many deployments require multiple networks for sending different types of data (for example, one that is faster or more secure). {{site.prodname}} supports configuring additional {{site.prodname}} networks and interfaces in your pods using the Multus-CNI plugin. You can then use {{site.prodname}} tiered policy and other features to enforce security on all of your workload traffic.
+By default, you can configure only one CNI (network and pod interface) in a cluster. But many deployments require multiple networks (for example, one that is faster or more secure) for sending different types of data. {{site.prodname}} supports configuring additional {{site.prodname}} networks and interfaces in your pods using the Multus-CNI plugin. You can then use {{site.prodname}} tiered policy and other features to enforce security on all of your workload traffic.
 
 ### Features
 
