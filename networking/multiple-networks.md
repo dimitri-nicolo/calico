@@ -21,13 +21,13 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### About the Multus-CNI plugin
 
-{{site.prodname}} uses the [Multus-CNI delegator plugin](https://github.com/intel/multus-cni/) to create multiple {{site.prodname}} networks and multiple pod interfaces to access these networks. This extends the default network and pod interface that comes with the Calico CNI. 
+{{site.prodname}} uses the [Multus-CNI plugin](https://github.com/intel/multus-cni/) to create multiple {{site.prodname}} networks and multiple pod interfaces to access these networks. This extends the default network and pod interface that comes with the Calico CNI. 
 
 You install Multus on a cluster, then simply enable Multus in the {{site.prodname}} Installation resource. Using the Multus **NetworkAttachmentDefinition**, you define the new networks and reference them as an annotation in the pod resource. 
 
 #### Labels, workload endpoints, and policy
 
-When you set the `MultiInterfaceMode` field to multus in the Installation resource, the following network and network interface labels are automatically added to new workload endpoints.
+When you set the `MultiInterfaceMode` field to `Multus` in the Installation resource, the following network and network interface labels are automatically added to new workload endpoints.
 
 - `projectcalico.org/network`
 - `projectcalico.org/network-namespace`
@@ -41,9 +41,9 @@ You can then create {{site.prodname}} policies using these label selectors to ta
 
 You can define a maximum of nine additional {{site.prodname}} networks on a pod.  If a pod exceeds the limit, the CNI plugin fails to set up the networking for the pod and returns an error.
 
-**Calico IPAM feature restrictions**
+**{{site.prodname}} features**
 
-Although the following Calico IPAM features are supported for your default {{site.prodname}} network, they are not supported at this time for additional networks/network interfaces using Multus:
+Although the following {{site.prodname}} features are supported for your default {{site.prodname}} network, they are not supported at this time for additional networks/network interfaces using Multus:
 
 - Floating IPs
 - Specific IPs
@@ -55,9 +55,9 @@ Although the following Calico IPAM features are supported for your default {{sit
 **Required**
 
 - [Install Multus on your Kubernetes cluster](https://github.com/intel/multus-cni/) 
-  >**Note**: Multus is installed on OpenShift 4.3+ clusters.
+  >**Note**: Multus is installed on OpenShift 4.0+ clusters.
   {: .alert .alert-info} 
-- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/)
+- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/) or access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)
 
 ### How to
 
@@ -138,7 +138,6 @@ Although not required, you may want to assign IPs from specific pools to specifi
 },
 
 ```
-
 #### Enforce policy on the new network and pod interface
 
 When MultiInterfaceMode is set to Multus, WorkloadEndpoints are created with these labels:
@@ -181,7 +180,6 @@ spec:
   egress:
   - action: Allow
 ```
-
 #### View workload endpoints
 
 **In the {{site.prodname}} Manager UI**, go to the **WorkloadEndpoint** page to see all of the WorkloadEndpoints, including the network labels are for targeting WorkloadEndpoints with policy.
