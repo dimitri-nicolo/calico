@@ -46,7 +46,7 @@ If you have a {{site.prodname}} clusters that are not connected, you can:
 
 ### Before you begin...
 
-- {{site.prodname}} standalone clusters (or multi-clustered management (MCM) clusters). For help, see the [Quickstart quide]({{site.baseurl}}/getting-started/kubernetes/quickstart#install-kubernetes) or [Multi-cluster management]({{site.baseurl}}/reference/mcm).
+- {{site.prodname}} standalone clusters (or multi-clustered management (MCM) clusters). For help, see the [Quickstart quide]({{site.baseurl}}/getting-started/kubernetes/quickstart#install-kubernetes) or [Multi-cluster management]({{site.baseurl}}/getting-started/mcm/).
 - kubectl is installed
 - You have configured access to the {{site.prodname}} Manager
 - Helm is installed

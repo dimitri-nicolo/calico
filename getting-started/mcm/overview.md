@@ -1,7 +1,7 @@
 ---
 title: Multi-cluster management overview
 description: Simplify the management of multiple Calico Enterprise installations using a single management plane.
-canonical_url: '/reference/mcm/overview'
+canonical_url: '/getting-started/mcm/overview'
 ---
 ## Big picture
 
@@ -49,4 +49,4 @@ In addition, connecting multiple {{site.prodname}} clusters together means you o
 
 ## Next steps
 
-- [Multi-cluster management quickstart]({{site.baseurl}}/reference/mcm/quickstart)
+- [Multi-cluster management quickstart]({{site.baseurl}}/getting-started/mcm/quickstart)

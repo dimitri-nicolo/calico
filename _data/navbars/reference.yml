@@ -4,17 +4,6 @@ order: 5
 section:
 - title: Installation
   path: /reference/installation/api
-- title: Multi-cluster management
-  path: /reference/mcm/
-  section:
-  - title: Overview
-    path: /reference/mcm/overview
-  - title: Quickstart
-    path: /reference/mcm/quickstart
-  - title: Post-installation
-    path: /reference/mcm/post-installation
-  - title: Changing the cluster type
-    path: /reference/mcm/change-cluster-type
 - title: calicoctl
   path: /reference/calicoctl/
   section:

@@ -1,7 +1,7 @@
 ---
 title: Change cluster type
 description: Change your cluster management type to or from Standalone, Management or Managed.
-canonical_url: '/reference/mcm/change-cluster-type'
+canonical_url: '/getting-started/mcm/change-cluster-type'
 ---
 
 ## Big Picture
@@ -18,7 +18,7 @@ kubectl get installation -o yaml
     kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Management"}}'
     ```
 1.  Create a service to expose the management cluster. For high availability, we recommend that you change the type
-    of the service for a more scalable option. For more information see our [post-installation instructions]({{site.baseurl}}/reference/mcm/post-installation).
+    of the service for a more scalable option. For more information see our [post-installation instructions]({{site.baseurl}}/getting-started/mcm/post-installation).
                                                        
     Apply the following service manifest:
     ```bash
@@ -72,7 +72,7 @@ is set to Retain. For more details see [Reclaiming](https://kubernetes.io/docs/c
 
 1.  Inside your **Management** cluster, log into the manager UI. Under the `Managed Clusters` page, add a managed cluster and 
     download the manifest. Complete the manifest by filling in the `ManagementClusterConnection` field. The 
-    [quickstart guide]({{site.baseurl}}/reference/mcm/quickstart#add-a-managed-cluster-to-the-management-plane) 
+    [quickstart guide]({{site.baseurl}}/getting-started/mcm/quickstart#add-a-managed-cluster-to-the-management-plane) 
     elaborates on this step with screenshots. 
     
     Apply the manifest to your cluster.

@@ -30,6 +30,17 @@ section:
       path: /getting-started/openshift/requirements
     - title: Installation
       path: /getting-started/openshift/installation/
+  - title: Single management plane for all clusters
+    path: /getting-started/mcm/
+    section:
+      - title: Overview
+        path: /getting-started/mcm/overview
+      - title: Quickstart
+        path: /getting-started/mcm/quickstart
+      - title: Post-installation
+        path: /getting-started/mcm/post-installation
+      - title: Changing the cluster type
+        path: /getting-started/mcm/change-cluster-type
   - title: Install from a private registry
     path: /getting-started/private-registry
   - title: Configure storage for logs and reports

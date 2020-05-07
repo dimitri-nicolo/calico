@@ -1,7 +1,7 @@
 ---
 title: Quickstart for multi-cluster management
 description: Getting started with multi-cluster management.
-canonical_url: '/reference/mcm/quickstart'
+canonical_url: '/getting-started/mcm/quickstart'
 ---
 
 ## Big picture
@@ -12,7 +12,7 @@ will have optional steps to get you started quickly, which include:
 - Setting up a node port service to expose the management cluster
 
 For both these steps there are more advanced alternatives for production deployments. See 
-[post-installation instructions]({{site.baseurl}}/reference/mcm/post-installation) for more details.
+[post-installation instructions]({{site.baseurl}}/getting-started/mcm/post-installation) for more details.
 
 ## Requirements
 - You will need 2 Kubernetes clusters to get started with multi-cluster management. For more details, see
@@ -96,7 +96,7 @@ In order for managed clusters to connect to the shared management plane, you mus
 `tigera-manager` pod. This can be accomplished by creating a Kubernetes service.
 
 For this quickstart we will use an example `NodePort` service. For high availability, we recommend that you change this 
-service for a more scalable option. For more information see our [post-installation instructions]({{site.baseurl}}/reference/mcm/post-installation).
+service for a more scalable option. For more information see our [post-installation instructions]({{site.baseurl}}/getting-started/mcm/post-installation).
 
 Apply the following service manifest:
 
@@ -291,4 +291,4 @@ kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-us
 
 ## Above and beyond
 
-- [Post-installation instructions]({{site.baseurl}}/reference/mcm/post-installation)
+- [Post-installation instructions]({{site.baseurl}}/getting-started/mcm/post-installation)

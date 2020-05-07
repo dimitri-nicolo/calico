@@ -1,10 +1,10 @@
 ---
 title: Post-installation
 description: Configuring permissions, accessing data and detailed information for multi-cluster management.
-canonical_url: '/reference/mcm/post-installation'
+canonical_url: '/getting-started/mcm/post-installation'
 ---
 
-In the [quickstart guide]({{site.baseurl}}/reference/mcm/quickstart), we showed how you can easily get started with
+In the [quickstart guide]({{site.baseurl}}/getting-started/mcm/quickstart), we showed how you can easily get started with
 multi-cluster management. In this section, we highlight some topics that are important to understand in-depth when 
 preparing a multi-cluster management setup for production use.
 
@@ -55,7 +55,7 @@ spec:
 {: .alert .alert-info}
 
 > **Note**: Don't forget to update the address in each of your managed clusters, either by editing the 
-            ManagementClusterConnection manifest that you [downloaded]({{site.baseurl}}/reference/mcm/quickstart#add-a-managed-cluster-to-the-management-plane) 
+            ManagementClusterConnection manifest that you [downloaded]({{site.baseurl}}/getting-started/mcm/quickstart#add-a-managed-cluster-to-the-management-plane) 
             and applying it or using kubectl `kubectl edit managementclusterconnection tigera-secure`.
 {: .alert .alert-info}
 
