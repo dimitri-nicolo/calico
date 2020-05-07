@@ -136,7 +136,6 @@ Although not required, you may want to assign IPs from specific pools to specifi
      "assign_ipv6" : "false"
      "ipv4_pools": ["10.0.0.0/24", "20.0.0.0/16", "default-ipv4-ippool"],
 },
-
 ```
 #### Enforce policy on the new network and pod interface
 
