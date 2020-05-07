@@ -183,7 +183,7 @@ spec:
 
 **In the {{site.prodname}} Manager UI**, go to the **WorkloadEndpoint** page to see all of the WorkloadEndpoints, including the network labels are for targeting WorkloadEndpoints with policy.
 
-**CLI**...
+**Using the CLI...**
 
 To view all WorkloadEndpoints for pods (default and new), use the following command.
 
