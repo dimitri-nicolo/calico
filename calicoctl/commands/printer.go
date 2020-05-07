@@ -225,7 +225,7 @@ func (r resourcePrinterTemplate) print(client client.Interface, resources []runt
 // localTime takes jwt.NumericDate which is an alias for time.Unix (int64)
 // and converts it to time.Time for the local timezone.
 func localTime(t interface{}) string {
-	exp, ok := t.(jwt.NumericDate)
+	exp, ok := t.(*jwt.NumericDate)
 	if !ok {
 		return "unknown - license corrupted"
 	}
