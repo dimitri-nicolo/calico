@@ -107,7 +107,7 @@ spec:
 
 Create a pod interface that specifies the new network using an annotation. 
 
-In the following example, we create a pod with an additional pod interface named, `cali1`. The pod interface is attached to the network named, `additional-calico-network` using the `k8s.v1.cni.cncf.io/networks` annotation.
+In the following example, we create a pod with an additional pod interface named, `cali1`. The pod interface is attached to the network named, `additional-calico-network`, using the `k8s.v1.cni.cncf.io/networks` annotation.
 Note that all networks in `k8s.v1.cni.cncf.io/networks` are assumed to be {{site.prodname}} networks.
 
 ```
@@ -183,7 +183,7 @@ spec:
 
 **In the {{site.prodname}} Manager UI**, go to the **WorkloadEndpoint** page to see all of the WorkloadEndpoints, including the network labels are for targeting WorkloadEndpoints with policy.
 
-**In `calicoctl`**...
+**CLI**...
 
 To view all WorkloadEndpoints for pods (default and new), use the following command.
 
