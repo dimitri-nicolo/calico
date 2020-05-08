@@ -156,7 +156,7 @@ The code is a little roundabout for a few reasons:
                       <div id="{{ navbar_id }}" class="panel-collapse collapse {% if this_pages_navbar == navbar and availableToc.size > 0 %}in{% endif %}">
                           {% if availableToc %}
                             <div class="panel-body">
-                                {% include sidebar.html sidebar=availableToc prefix=tocPrefix %}
+                                {% include_cached sidebar.html sidebar=availableToc prefix=tocPrefix %}
                             </div> 
                           {% endif %}
                       </div>

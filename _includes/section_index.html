@@ -21,6 +21,6 @@
     {% endif %}
 
     {% if item.section %}
-        {% include section_index.html section_index=item.section %}
+        {% include_cached section_index.html section_index=item.section %}
     {% endif %}
 {% endfor %}
