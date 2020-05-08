@@ -3,9 +3,8 @@ GO_BUILD_VER    ?= v0.38
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
+TYPHA_REPO       = github.com/tigera/typha-private
 LOCAL_CHECKS     = mod-download
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-FELIX_REPO       = github.com/tigera/felix-private
 
 build: es-proxy
 
@@ -387,7 +386,7 @@ replace-lma-pin:
 	$(call update_replace_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin replace-apiserver-pin replace-compliance-pin replace-lma-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin replace-compliance-pin replace-lma-pin
 
 ###############################################################################
 # Utilities

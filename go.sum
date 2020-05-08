@@ -50,6 +50,7 @@ github.com/Rican7/retry v0.1.0/go.mod h1:FgOROf8P5bebcC1DS0PdOQiqGUridaZvikzUmkF
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
+github.com/Workiva/go-datastructures v1.0.50/go.mod h1:Z+F2Rca0qCsVYDS8z7bAGm8f3UkzuWYS/oBZz5a7VVA=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=
 github.com/alecthomas/participle v0.3.0 h1:e8vhrYR1nDjzDxyDwpLO27TWOYWilaT+glkwbPadj50=
 github.com/alecthomas/participle v0.3.0/go.mod h1:SW6HZGeZgSIpcUWX3fXpfZhuaWHnmoD5KCVaqSaNTkk=
@@ -155,6 +156,7 @@ github.com/docker/go-units v0.3.3/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDD
 github.com/docker/go-units v0.4.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/docker/libnetwork v0.8.0-dev.2.0.20190624125649-f0e46a78ea34/go.mod h1:93m0aTqz6z+g32wla4l4WxTrdtvBRmVzYRkYvasA5Z8=
 github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZgvJUkLughtfhJv5dyTYa91l1fOUCrgjqmcifM=
+github.com/docopt/docopt-go v0.0.0-20160216232012-784ddc588536/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
@@ -196,6 +198,7 @@ github.com/go-acme/lego v2.5.0+incompatible/go.mod h1:yzMNe9CasVUhkquNvti5nAtPmG
 github.com/go-bindata/go-bindata v3.1.1+incompatible/go.mod h1:xK8Dsgwmeed+BBsSy2XTopBn/8uK2HWuGSnA11C3Joo=
 github.com/go-critic/go-critic v0.3.5-0.20190526074819-1df300866540 h1:djv/qAomOVj8voCHt0M0OYwR/4vfDq1zNKSPKjJCexs=
 github.com/go-critic/go-critic v0.3.5-0.20190526074819-1df300866540/go.mod h1:+sE8vrLDS2M0pZkBk0wy6+nLdKexVDrl/jBqQOTDThA=
+github.com/go-ini/ini v0.0.0-20190327024845-3be5ad479f69/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
 github.com/go-ini/ini v1.44.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
 github.com/go-ini/ini v1.48.0 h1:TvO60hO/2xgaaTWp2P0wUe4CFxwdMzfbkv3+343Xzqw=
 github.com/go-ini/ini v1.48.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
@@ -685,6 +688,7 @@ github.com/smartystreets/assertions v1.0.1 h1:voD4ITNjPL5jjBfgR/r8fPIIBrliWrWHei
 github.com/smartystreets/assertions v1.0.1/go.mod h1:kHHU4qYBaI3q23Pp3VPrmWhuIUrLW/7eUrw0BU5VaoM=
 github.com/smartystreets/go-aws-auth v0.0.0-20180515143844-0c1422d1fdb9/go.mod h1:SnhjPscd9TpLiy1LpzGSKh3bXCfxxXuqd9xmQJy3slM=
 github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
+github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 h1:WN9BUFbdyOsSH/XohnWpXOlq9NBD5sGAB2FciQMUEe8=
 github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
 github.com/soheilhy/cmux v0.1.4 h1:0HKaf1o97UwFjHH9o5XsHUOF+tqmdA7KEzXLpiyaw0E=
@@ -750,6 +754,8 @@ github.com/tigera/apiserver v0.0.0-20200429182527-b33b71378a15 h1:qwQVSeS3aNBIfN
 github.com/tigera/apiserver v0.0.0-20200429182527-b33b71378a15/go.mod h1:r9JtSi++6Hw32jW3LVNVRbLrN4IaaDcZql5vEyiA5MA=
 github.com/tigera/apiserver v0.0.0-20200502000304-941a03a33701 h1:G66IQy1sYBJ8twws5On+gwNfwM88cQipRk5fPgdVu7g=
 github.com/tigera/apiserver v0.0.0-20200502000304-941a03a33701/go.mod h1:/jdcx6GKgv52LQv/Mf0EA52if+yJx+24PxHn48Y/ZWs=
+github.com/tigera/apiserver v0.0.0-20200506190821-5745459ba2c7 h1:dpWWTt15CIw+8JyImJAbvQoJ8gGYFgXHxiDNsAnNx5c=
+github.com/tigera/apiserver v0.0.0-20200506190821-5745459ba2c7/go.mod h1:2MMWk3BwDDwT6k07Umz8UzNNVHEv2N0Y30MJR5xyXJM=
 github.com/tigera/compliance v0.0.0-20200420185749-75ca22d42060 h1:lyxy+cdtDj/nO1iQq+mHp5nZXcUA6D3rFQIzoCbwLVM=
 github.com/tigera/compliance v0.0.0-20200420185749-75ca22d42060/go.mod h1:Q0UeogNiNZvIXX4vyo8fnoJKoB0qWp2rZ49xuUkLHFs=
 github.com/tigera/compliance v0.0.0-20200422050438-bfb11c568ca0 h1:4OtdhjYNffA/CXgrKQDA3VNlo/iRXMp8teajmBpTx1Q=
@@ -766,6 +772,8 @@ github.com/tigera/compliance v0.0.0-20200501081226-cb13ad7e9b32 h1:hhxmiaMIJmGqu
 github.com/tigera/compliance v0.0.0-20200501081226-cb13ad7e9b32/go.mod h1:ft2plMHE7fgjSb5IDHx5ORn2uJlMdpKcIsYI1xpG+ZQ=
 github.com/tigera/compliance v0.0.0-20200502081045-a0195ccd3865 h1:LE2a+XlzkjUWE+DdoO8gDT8BEtyxI5hXPgyeVsrrtfk=
 github.com/tigera/compliance v0.0.0-20200502081045-a0195ccd3865/go.mod h1:ihgNuBKtixi89K5Sz35VBeHYWBFSfdytm0rCOQK2Tpk=
+github.com/tigera/compliance v0.0.0-20200508043858-08b4080af69f h1:Z0+Jo7FXBXcC18aZEWhmbp+n+SpX1m+L2m9R5L6MSyA=
+github.com/tigera/compliance v0.0.0-20200508043858-08b4080af69f/go.mod h1:HbaXPMDZq/7gawnTqKeP2blNlCR5SZKQrnlsOh3IzsI=
 github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682 h1:nuf7AXSZUwOFtzT4lFPcSuWQlca2Ub1GSBxEGzWA39k=
 github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682/go.mod h1:NZhbY5rsP3g58UCROZXLuhf425OkOdEEO/O0hWb0My0=
 github.com/tigera/felix-private v0.0.0-20200422041113-2b9f3dbe5ff3 h1:LcYCFFZFdtDKozoOgxUesu7VYmrOgiyT9+a2UAAOz58=
@@ -780,6 +788,8 @@ github.com/tigera/felix-private v0.0.0-20200501051626-c2fa41f55a97 h1:WVVB+X2egm
 github.com/tigera/felix-private v0.0.0-20200501051626-c2fa41f55a97/go.mod h1:CL1kvScytSox94IAow0Jr6IpL8ZauPu3seQVMCfR3bg=
 github.com/tigera/felix-private v0.0.0-20200501191809-b38029a7fa7b h1:NXWBboVht2IAvbApxZQkRarG0xbFKD/FuqptFfwgGGo=
 github.com/tigera/felix-private v0.0.0-20200501191809-b38029a7fa7b/go.mod h1:g82839dwKtmguw7FRryNis2tdP9ZXsJ3CpdqPvniH4E=
+github.com/tigera/felix-private v0.0.0-20200508031538-757eaa328cf2 h1:VH/IINNTglXORR9zb726eVoCZS8p8KOuseSsypAdoyE=
+github.com/tigera/felix-private v0.0.0-20200508031538-757eaa328cf2/go.mod h1:EyNfKY69FACTbXioPMZLMGvKiyNaEPrXaRdVDrYhOlk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a h1:oym5mIYF8q/Qirzim4TbN1WdeXRxEvDbeD3mdmy7r30=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200421230545-4b8ce69b960d h1:BINH5oWsXi/Bu5ZxYkQ/ESrIIdoaFROp8okRE5r70lE=
@@ -792,6 +802,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200501024505-bbeb9855431b h1:m
 github.com/tigera/libcalico-go-private v1.7.2-0.20200501024505-bbeb9855431b/go.mod h1:4xXwtBqgZgwn3qMj3v4Z5ZlBxW6fV8dnV72yEtAfSfo=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200501232840-876b078b772a h1:q4lxvMdg6xLFo60ZGdle6e+zdCMt7/ULS+wyBOuMzEc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200501232840-876b078b772a/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200506164255-6c40e2856338 h1:oo1IUuyfNTGoV5skJIm09DF4RCTGqzovzKDQF8Hx9/A=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200506164255-6c40e2856338/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 h1:xkS+YSPj//0GV+0XM3V0+9c0eV5umXU7/PPXxw95luE=
 github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
@@ -811,7 +823,10 @@ github.com/tigera/lma v0.0.0-20200501190431-d68c8a679c6a h1:tpZX5eI+WEBNhkLHec//
 github.com/tigera/lma v0.0.0-20200501190431-d68c8a679c6a/go.mod h1:b8Hbg2bN3ba3a/0HfL5qN7BYrsaf2NgjOfAsgjVg/T4=
 github.com/tigera/lma v0.0.0-20200502190437-37c3f3c7adec h1:FmpAmW/rHQIo9T1butO4Dy1LPbkTZCGW5UDvPuTPsZI=
 github.com/tigera/lma v0.0.0-20200502190437-37c3f3c7adec/go.mod h1:JbqgBEWusscD6mbRAdPx8Y0AjUren9SWA21S6/qw/Zw=
+github.com/tigera/lma v0.0.0-20200506190422-fbd36b7a5e3b h1:5zY56oTwjh3+gTwf6QqSCuAcXQOHMaNiNWrxqid1xck=
+github.com/tigera/lma v0.0.0-20200506190422-fbd36b7a5e3b/go.mod h1:PbKCcP0y/Op/EZpASFn4UD0/9R0ZRfTTt6fc3/b+tOg=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200507190401-426be0fdfd51/go.mod h1:EEpJMYi9GL7Kjcx8DQbZ8EjtGpLGFvbOMZzp4g7qrMc=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
@@ -1059,6 +1074,8 @@ google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873/go.mod h1:VzzqZJRn
 google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55/go.mod h1:DMBHOl98Agz4BDEuKkezgsaosCRResVns1a3J2ZsMNc=
 google.golang.org/genproto v0.0.0-20191203220235-3fa9dbf08042 h1:q/wgXlL1G7gx4JkovoCNbg/YcllD+MCeQINQJzCAWSw=
 google.golang.org/genproto v0.0.0-20191203220235-3fa9dbf08042/go.mod h1:n3cpQtvxv34hfy77yVDNjmbRyujviMdxYliBSkLhpCc=
+google.golang.org/genproto v0.0.0-20191206224255-0243a4be9c8f h1:naitw5DILWPQvG0oG04mR9jF8fmKpRdW3E3zzKA4D0Y=
+google.golang.org/genproto v0.0.0-20191206224255-0243a4be9c8f/go.mod h1:n3cpQtvxv34hfy77yVDNjmbRyujviMdxYliBSkLhpCc=
 google.golang.org/grpc v1.7.1/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.17.0/go.mod h1:6QZJwpn2B+Zp71q/5VxRsJ6NXXVCE5NRUHRo+f3cWCs=
 google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
@@ -1088,6 +1105,7 @@ gopkg.in/go-playground/validator.v9 v9.30.2/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWd
 gopkg.in/inf.v0 v0.9.0/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
 gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
+gopkg.in/ini.v1 v1.44.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/ini.v1 v1.46.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/ini.v1 v1.48.0 h1:URjZc+8ugRY5mL5uUeQH/a63JcHwdX9xZaWvmNWD7z8=
 gopkg.in/ini.v1 v1.48.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
