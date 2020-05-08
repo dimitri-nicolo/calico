@@ -7,6 +7,8 @@ section:
   section:
   - title: Quickstart
     path: /getting-started/kubernetes/quickstart
+  - title: Options for installing Calico Enterprise
+    path: /getting-started/options-install  
   - title: Managed public cloud
     path: /getting-started/kubernetes/managed-public-cloud/
     section:
