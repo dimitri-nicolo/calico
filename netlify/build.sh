@@ -31,6 +31,21 @@ if [ "$CONTEXT" == "deploy-preview" ]; then
     JEKYLL_CONFIG=$JEKYLL_CONFIG,$(pwd)/_config_url.yml
 fi
 
+# As a side effect of choosing the a different release branching scheme
+# only in private docs, we need to pick between the "release" prefix and
+# "release-calient" prefix for release branch schemes. This function is
+# for use when building non-legacy branches only.
+# v2.7, v2.8 will "return" release- and everything else release-calient.
+# Returns the prefix without a trailing "-".
+function get_release_prefix() {
+    local release_stream=$1
+    if [[ ${release_stream} == v2.* ]]; then
+        echo "release"
+    else
+        echo "release-calient"
+    fi
+}
+
 # build builds a branch $1 into the dir _site/$2. If $2 is not provided, the
 # branch is built into _site/
 function build() {
@@ -65,11 +80,12 @@ function build_archives() {
                 EXTRA_CONFIG=$EXTRA_CONFIG,$(pwd)/netlify/_manifests_only.yml build release-legacy /
             fi
         else
+            release_prefix=$(get_release_prefix ${branch})
             if [ -z "$CUSTOM_ARCHIVE_PATH" ]; then
-                build release-${branch} /${branch}
+                build ${release_prefix}-${branch} /${branch}
             else
-                build release-${branch} $CUSTOM_ARCHIVE_PATH/${branch}
-                EXTRA_CONFIG=$EXTRA_CONFIG,$(pwd)/netlify/_manifests_only.yml build release-${branch} /${branch}
+                build ${release_prefix}-${branch} $CUSTOM_ARCHIVE_PATH/${branch}
+                EXTRA_CONFIG=$EXTRA_CONFIG,$(pwd)/netlify/_manifests_only.yml build ${release_prefix}-${branch} /${branch}
             fi
         fi
     done
@@ -93,16 +109,19 @@ cat /tmp/archives.log
 
 mv _site/sitemap.xml _site/release-legacy-sitemap.xml
 
+RELEASE_PREFIX=$(get_release_prefix $CURRENT_RELEASE)
+
 echo "[INFO] building current release"
-EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build release-$CURRENT_RELEASE
+EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build $RELEASE_PREFIX-$CURRENT_RELEASE
 mv _site/sitemap.xml _site/latest-sitemap.xml
 
 echo "[INFO] building permalink for current release"
-EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build release-$CURRENT_RELEASE /$CURRENT_RELEASE
+EXTRA_CONFIG=$(pwd)/netlify/_config_latest.yml build $RELEASE_PREFIX-$CURRENT_RELEASE /$CURRENT_RELEASE
 
 if [ ! -z "$CANDIDATE_RELEASE" ]; then
+    RELEASE_PREFIX=$(get_release_prefix $CANDIDATE_RELEASE)
     echo "[INFO] building candidate release"
-    build release-$CANDIDATE_RELEASE /$CANDIDATE_RELEASE
+    build $RELEASE_PREFIX-$CANDIDATE_RELEASE /$CANDIDATE_RELEASE
 fi
 
 mv netlify/sitemap-index.xml _site/sitemap.xml
