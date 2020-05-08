@@ -6,6 +6,7 @@ from parameterized import parameterized
 
 PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = tests.RELEASE_STREAM
+EE_RELEASE_BRANCH_PREFIX = tests.EE_RELEASE_BRANCH_PREFIX
 
 GITHUB_API_URL = tests.GITHUB_API_URL
 GITHUB_API_TOKEN = tests.GITHUB_API_TOKEN
@@ -54,11 +55,15 @@ def test_all_tigera_images_are_mapped():
 def test_component_repo_has_release_branch(name, repo_name):
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
 
-    print '[INFO] checking {0} repo({1}) has release-{2} branch'.format(name, repo_name, RELEASE_STREAM)
+    release_prefix = EE_RELEASE_BRANCH_PREFIX
+    if RELEASE_STREAM < 'v3.0':
+        release_prefix = 'release'
+
+    print '[INFO] checking {0} repo({1}) has {2}-{3} branch'.format(name, repo_name, release_prefix, RELEASE_STREAM)
 
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
     req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
-        base_url=GITHUB_API_URL, repo=repo_name, branch='release-{}'.format(RELEASE_STREAM))
+        base_url=GITHUB_API_URL, repo=repo_name, branch='{0}-{1}'.format(release_prefix, RELEASE_STREAM))
     res = requests.head(req_url, headers=headers)
     assert res.status_code == 200
 
@@ -77,10 +82,14 @@ def test_component_repo_has_release_tag(name, repo_name):
 def test_docs_repo_has_release_branch():
     assert GITHUB_API_TOKEN != 'fake-token', '[ERROR] need a real GITHUB_API_TOKEN env value'
 
-    print '[INFO] checking calico-private repo has release-{} branch'.format(RELEASE_STREAM)
+    release_prefix = EE_RELEASE_BRANCH_PREFIX
+    if RELEASE_STREAM < 'v3.0':
+        release_prefix = 'release'
+
+    print '[INFO] checking calico-private repo has {0}-{1} branch'.format(release_prefix, RELEASE_STREAM)
 
     headers = {'Accept': 'application/vnd.github.v3.raw', 'Authorization': 'token {}'.format(GITHUB_API_TOKEN)}
     req_url = '{base_url}/repos/tigera/{repo}/branches/{branch}'.format(
-        base_url=GITHUB_API_URL, repo='calico-private', branch='release-{}'.format(RELEASE_STREAM))
+        base_url=GITHUB_API_URL, repo='calico-private', branch='{0}-{1}'.format(release_prefix, RELEASE_STREAM))
     res = requests.head(req_url, headers=headers)
     assert res.status_code == 200
