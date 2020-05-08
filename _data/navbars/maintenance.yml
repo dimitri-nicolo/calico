@@ -19,8 +19,6 @@ section:
 - title: Monitor
   path: /maintenance/monitor/
   section: 
-  - title: Monitor Calico Enterprise component metrics
-    path: /maintenance/monitor/monitor-component-metrics 
   - title: Configure Alertmanager
     path: /maintenance/monitor/alertmanager    
   - title: Monitor BGP metrics

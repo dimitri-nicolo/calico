@@ -12,7 +12,7 @@ The process of updating rules is the same as for user created rules (documented 
   - Save the current alert rule:
 
     ```
-    kubectl -n calico-monitoring get prometheusrule -o yaml > calico-prometheus-alert-rule-dp.yaml
+    kubectl -n tigera-prometheus get prometheusrule -o yaml > calico-prometheus-alert-rule-dp.yaml
     ```
 
   - Make necessary edits to the alerting rules then apply the updated manifest.
@@ -87,7 +87,7 @@ and [Queries](https://prometheus.io/docs/querying/examples/) for more
 information.
 
 To add the new alerting rule to our Prometheus instance, define a PrometheusRule manifest
-in the `calico-monitoring` namespace with the labels
+in the `tigera-prometheus` namespace with the labels
 `role: tigera-prometheus-rules` and `prometheus: calico-node-prometheus`. The
 labels should match the labels defined by the `ruleSelector` field of the
 Prometheus manifest.
@@ -350,7 +350,7 @@ Increasing the interval reduces load on Prometheus and the amount of storage req
   - Save the current ServiceMonitor manifest:
 
     ```
-    kubectl -n calico-monitoring get servicemonitor calico-node-monitor -o yaml > calico-node-monitor.yaml
+    kubectl -n tigera-prometheus get servicemonitor calico-node-monitor -o yaml > calico-node-monitor.yaml
     ```
 
   - Update the `interval` field under `endpoints` to desired settings and
@@ -417,13 +417,13 @@ Check config reloader logs to see if they detected any recent activity.
   - For prometheus run:
 
     ```
-    kubectl -n calico-monitoring logs prometheus-<your-prometheus-name> prometheus-config-reloader
+    kubectl -n tigera-prometheus logs prometheus-<your-prometheus-name> prometheus-config-reloader
     ```
 
   - For alertmanager run:
 
     ```
-    kubectl -n calico-monitoring logs alertmanager-<your-prometheus-name> config-reloader
+    kubectl -n tigera-prometheus logs alertmanager-<your-prometheus-name> config-reloader
     ```
 
 The config-reloaders watch each pods file-system for updated config from
