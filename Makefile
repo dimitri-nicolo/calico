@@ -4,6 +4,7 @@ GOMOD_VENDOR     = true
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
+TYPHA_REPO       = github.com/tigera/typha-private
 LOCAL_CHECKS     = vendor
 BINARY           = bin/calicoq
 
@@ -196,7 +197,7 @@ update-licensing-pin:
 replace-logrus-pin:
 	$(call update_replace_pin,$(LOGRUS_REPO_ORIG),$(LOGRUS_REPO),$(LOGRUS_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-felix-pin update-licensing-pin replace-logrus-pin
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-licensing-pin replace-logrus-pin
 
 ###############################################################################
 # TODO: re-enable these linters!

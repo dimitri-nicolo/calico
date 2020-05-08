@@ -437,6 +437,16 @@ func (cbs *describeCmd) OnPolicyMatchStopped(policyKey model.PolicyKey, endpoint
 	return
 }
 
+func (cbs *describeCmd) OnEgressSelectorMatch(es string, endpointKey interface{}) {
+	// We don't currently analyze egress selectors.
+	return
+}
+
+func (cbs *describeCmd) OnEgressSelectorMatchStopped(es string, endpointKey interface{}) {
+	// We don't currently analyze egress selectors.
+	return
+}
+
 type TierInfo struct {
 	Name     string
 	Valid    bool
