@@ -74,7 +74,7 @@ In the [Installation custom resource]({{site.baseurl}}/reference/installation/ap
 
 #### Create a new network
 
-Create a new network using the Multus **NetworkAttachmentDefinition**, and set the following required field to, `"type":"calico"`. 
+Create a new network using the Multus **NetworkAttachmentDefinition**, and set the following required field to `"type":"calico"`. 
  
 ```                                                                 
 apiVersion: "k8s.cni.cncf.io/v1"                            
@@ -117,7 +117,7 @@ metadata:
  name: multus-test-pod-1
  namespace: default
  annotations:
-   k8s.v1.cni.cncf.io/networks: cali1@additional-calico-network
+   k8s.v1.cni.cncf.io/networks: additional-calico-network@cali1
 spec:
  containers:
    - name: multus-test
@@ -188,7 +188,7 @@ spec:
 To view all WorkloadEndpoints for pods (default and new), use the following command.
 
 ```
-MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoints -o wide`
+MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoints -o wide
 ```
 ```
 NAME                                                                 WORKLOAD            NODE                         NETWORKS            INTERFACE         PROFILES                          NATS   

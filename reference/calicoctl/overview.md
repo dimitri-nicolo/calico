@@ -76,6 +76,13 @@ organized by top level command.
 -  [calicoctl node]({{ site.baseurl }}/reference/calicoctl/node)
 -  [calicoctl version]({{ site.baseurl }}/reference/calicoctl/version)
 
+## Multiple networks support
+
+If multiple networks is enabled, the environment variable `MULTI_INTERFACE_MODE=multus` must be set to view details of these additional networks, 
+such as their workload endpoints.
+
+For more information, see the [multiple-networks how-to guide]({{ site.baseurl }}/networking/multiple-networks).
+
 ## Modifying low-level component configurations
 
 In order to update low-level Felix or BGP settings (`FelixConfiguration` and `BGPConfiguration` resource types):

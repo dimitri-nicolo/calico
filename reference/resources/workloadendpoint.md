@@ -28,6 +28,16 @@ This resource is not supported in `kubectl`.
 > use `calicoctl` to view this resource type.
 {: .alert .alert-info}
 
+**Multiple networks**
+
+If multiple networks are enabled, workload endpoints will have additional labels which can be used in network policy selectors:
+
+- `projectcalico.org/network`: The name of the network specified in the NetworkAttachmentDefinition.
+- `projectcalico.org/network-namespace`: This namespace the network is in.
+- `projectcalico.org/network-interface`: The network interface for the workload endpoint.
+
+For more information, see the [multiple-networks how-to guide]({{ site.baseurl }}/networking/multiple-networks).
+
 ### Sample YAML
 
 ```yaml
