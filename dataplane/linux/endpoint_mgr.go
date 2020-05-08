@@ -1133,6 +1133,13 @@ func (m *endpointManager) configureInterface(name string) error {
 	}
 	log.WithField("ifaceName", name).Info(
 		"Applying /proc/sys configuration to interface.")
+
+	// Disable route advertisement from the containers, regardless of the ipVersion
+	err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/accept_ra", name), "0")
+	if err != nil {
+		return err
+	}
+
 	if m.ipVersion == 4 {
 		if m.ifaceIsForEgressGateway(name) {
 			if err := m.configureEgressGatewayInterface(name); err != nil {
