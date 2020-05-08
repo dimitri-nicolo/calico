@@ -139,4 +139,4 @@ The rule below allows access to any cluster for all log types.
 - [Accessing logs from Kibana]({{site.baseurl}}/security/logs/elastic/view#accessing-logs-from-kibana)
 - [Installation API reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation)
 - [ManagementClusterConnection resource reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementClusterConnection)
-- [Adjust log storage size]({{site.baseurl}}/maintenance/adjust-log-storage-size)
+- [Adjust log storage size]({{site.baseurl}}/maintenance/logstorage/adjust-log-storage-size)

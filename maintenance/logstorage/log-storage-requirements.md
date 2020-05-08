@@ -1,4 +1,10 @@
-## Log storage requirements
+---
+title: Log storage requirements
+description: Guidelines for setting up your log storage.
+canonical_url: /maintenance/logstorage/log-storage-requirements
+---
+
+### Log storage requirements
 
 {{site.prodname}} installs an Elasticsearch cluster for storing logs internally.
 
@@ -17,15 +23,17 @@ For information on how to configure storage, please consult the [Kubernetes](htt
 or [OpenShift](https://docs.openshift.com/container-platform/4.2/storage/understanding-persistent-storage.html) documentation.
 - If you're going to use local disks, you may find the [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)
   useful.  It can create and manage PersistentVolumes by watching for disks mounted in a certain directory.
-- If you're planning on using cloud storage, ensure you've set up the cloud provider integration.
+- If you're planning on using cloud storage, ensure you have set up the cloud provider integration.
 
 ### Sizing
 
 Many factors need to be considered when sizing this cluster:
-- Scale, and nature of the traffic patterns in the cluster
+
+- Scale and nature of the traffic patterns in the cluster
 - Retention periods for logs
 - Aggregation and export interval configuration
 - Desired replication factor for data
+
 For tailored recommendations on sizing the cluster, please contact Tigera support.
 
 #### Example test / development topology

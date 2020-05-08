@@ -24,7 +24,7 @@ We recommend the following minimum memory requirements for your Elasticsearch cl
 | 3-4 | 16 |
 | 5-7 | 32 |
 
-See [adjusting LogStorage]({{site.baseurl}}/maintenance/adjust-log-storage-size) to change the Elasticsearch cluster memory.
+See [adjusting LogStorage]({{site.baseurl}}/maintenance/logstorage/adjust-log-storage-size) to change the Elasticsearch cluster memory.
 
 ## Enabling anomaly detection jobs
 

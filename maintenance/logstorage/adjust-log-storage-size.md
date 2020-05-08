@@ -1,5 +1,7 @@
 ---
 title: Adjust log storage size
+description: Adjust the log storage size during or after installation.
+canonical_url: /maintenance/logstorage/adjust-log-storage-size
 ---
 
 ### Big picture
@@ -30,9 +32,9 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Before you begin...
 
-**Review Log storage requirements**
+**Review log storage requirements**
 
-Review [Log storage requirements]() for guidance on the number of nodes and resources to configure for your environment.
+Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements) for guidance on the number of nodes and resources to configure for your environment.
 
 ### How to
 

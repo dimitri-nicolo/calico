@@ -1,10 +1,10 @@
 ---
-title: Monitor metrics for denied packets and storage
+title: Configure Prometheus
 description: Configure rules for alerts and denied packets, for persistent storage.
 canonical_url: /maintenance/monitor/prometheus
 ---
 
-#### Updating Denied Packets Rules
+### Updating Denied Packets Rules
 
 This is an example of how to modify the sample rule created by the sample manifest.
 The process of updating rules is the same as for user created rules (documented below).
@@ -78,14 +78,14 @@ spec:
 {% endraw %}
 ```
 
-#### Creating a New Alerting Rule
+### Creating a New Alerting Rule
 
 Creating a new alerting rule is straightforward once you figure out what you
-want your rule to look for. Check [alerting
-rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
+want your rule to look for. Check [alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
 and [Queries](https://prometheus.io/docs/querying/examples/) for more
 information.
 
+#### New Alerting Rule for Monitoring Calico Node
 To add the new alerting rule to our Prometheus instance, define a PrometheusRule manifest
 in the `tigera-prometheus` namespace with the labels
 `role: tigera-prometheus-rules` and `prometheus: calico-node-prometheus`. The
@@ -129,6 +129,8 @@ kubectl apply -f calico-node-down-alert.yaml
 Your changes should be applied in a few seconds by the prometheus-config-reloader
 container inside the prometheus pod launched by the prometheus-operator
 (usually named `prometheus-<your-prometheus-instance-name>`).
+
+#### New Alerting Rule for Monitoring BGP Peers
 
 Let’s look at an example of a new alerting rule to our Prometheus instance with respect to monitoring BGP
 peering health. Define a PrometheusRule manifest in the tigera-prometheus namespace with the labels
@@ -175,7 +177,7 @@ Your changes should be applied in a few seconds by the prometheus-config-reloade
 container inside the prometheus pod launched by the prometheus-operator
 (usually named `prometheus-<your-prometheus-instance-name>`).
 
-#### Additional Alerting Rules
+### Additional Alerting Rules
 
 The Alerting Rules installed by the {{site.prodname}} install manifest is a simple
 one that fires an alert when the rate of denied packets denied by a policy on
@@ -260,7 +262,7 @@ To use these queries as Alerting Rules, follow the instructions defined in the
 [Creating a new Alerting Rule](#creating-a-new-alerting-rule) section and create
 a ConfigMap with the appropriate query.
 
-#### Storage
+### Storage
 
 Prometheus stores metrics at regular intervals. If Prometheus is restarted and
 if ephemeral storage is used, metrics will be lost. Configure the Storage spec
@@ -339,7 +341,7 @@ Combining storage resource with proper retention time for metrics will ensure
 that Prometheus will use the storage effectively. The `retention` field is used
 to configure the amount of time that metrics are stored on disk.
 
-#### Updating the scrape interval
+### Updating the scrape interval
 
 You may wish to modify the scrape interval (time between Prometheus polling each node for new denied packet information).
 Increasing the interval reduces load on Prometheus and the amount of storage required, but decreases the detail of the collected metrics.

@@ -1,5 +1,5 @@
 ---
-title: Troubleshoot and diagnostics
+title: Troubleshooting and diagnostics
 description: View logs and diagnostics, common issues, and where to report issues in github.
 canonical_url: '/maintenance/troubleshoot/troubleshooting'
 ---
