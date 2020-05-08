@@ -3,7 +3,7 @@ module github.com/tigera/intrusion-detection/controller
 go 1.13
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200421230545-4b8ce69b960d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200506164255-6c40e2856338
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.17.2
@@ -38,7 +38,6 @@ require (
 	github.com/avast/retry-go v2.2.0+incompatible
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0
-	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
@@ -48,7 +47,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/calico-k8sapiserver v0.0.0-20200110212651-95b7ffebd28b
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
-	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	k8s.io/api v0.17.3
