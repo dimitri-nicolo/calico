@@ -719,6 +719,8 @@ github.com/tigera/felix-private v0.0.0-20200506014149-260c343e9f19 h1:NJT6r9aI3h
 github.com/tigera/felix-private v0.0.0-20200506014149-260c343e9f19/go.mod h1:L/kvUF/CuTlOevmGsN1CFY3VyOP0HRhsVPlQEIgiKqc=
 github.com/tigera/felix-private v0.0.0-20200506101312-fb7bde3d2872 h1:rEE6JGNmUw+OeAIS/2dC/w0Ar36buhWBsp00E+N6QuY=
 github.com/tigera/felix-private v0.0.0-20200506101312-fb7bde3d2872/go.mod h1:L/kvUF/CuTlOevmGsN1CFY3VyOP0HRhsVPlQEIgiKqc=
+github.com/tigera/felix-private v0.0.0-20200508031538-757eaa328cf2 h1:VH/IINNTglXORR9zb726eVoCZS8p8KOuseSsypAdoyE=
+github.com/tigera/felix-private v0.0.0-20200508031538-757eaa328cf2/go.mod h1:EyNfKY69FACTbXioPMZLMGvKiyNaEPrXaRdVDrYhOlk=
 github.com/tigera/libcalico-go-private v0.0.0-20200423003215-56e38b498404 h1:SaDWpnzN+nK3k84KOINQRZwDQTnTJZ+0pVEC+EYH+EI=
 github.com/tigera/libcalico-go-private v0.0.0-20200423003215-56e38b498404/go.mod h1:4xXwtBqgZgwn3qMj3v4Z5ZlBxW6fV8dnV72yEtAfSfo=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200424213350-c94519782392 h1:sSswf9C0JXV8j3M9kbXrLN/yVtCIM7+jrKa/gGXmlr8=
@@ -749,6 +751,7 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200502163515-d265adcb6046/go.mo
 github.com/tigera/typha-private v0.6.0-beta1.0.20200504224941-def86642f383/go.mod h1:8QtfS1JnLnLZpIMM/Nue3gwdexn9fJeylmNUCl+V3qM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200505163528-192ceef33363/go.mod h1:RModDgrjlpFKEKhKCOU99kSZZTYFP8nDO1/0b4tIOnM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200507030630-8569405b5e4d/go.mod h1:EEpJMYi9GL7Kjcx8DQbZ8EjtGpLGFvbOMZzp4g7qrMc=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200507190401-426be0fdfd51/go.mod h1:EEpJMYi9GL7Kjcx8DQbZ8EjtGpLGFvbOMZzp4g7qrMc=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
