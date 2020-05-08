@@ -727,6 +727,9 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									},
 								}),
 							},
+							Labels: map[string]string{
+								"pod": "simplePod",
+							},
 						},
 						Spec: k8sapi.PodSpec{
 							NodeName: "test-node",
@@ -758,6 +761,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNetwork:          "calico-default-network",
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "ens4",
+									"pod":                       "simplePod",
 								},
 							},
 							Spec: apiv3.WorkloadEndpointSpec{
@@ -784,6 +788,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNetwork:          "calico1",
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net1",
+									"pod":                       "simplePod",
 								},
 							},
 							Spec: apiv3.WorkloadEndpointSpec{
@@ -810,6 +815,7 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									apiv3.LabelNetwork:          "calico2",
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net2",
+									"pod":                       "simplePod",
 								},
 							},
 							Spec: apiv3.WorkloadEndpointSpec{

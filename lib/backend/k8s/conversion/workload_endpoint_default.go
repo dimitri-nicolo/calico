@@ -146,10 +146,16 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 
 	// Build the labels map.  Start with the pod labels, and append two additional labels for
 	// namespace and orchestrator matches.
-	labels := pod.Labels
-	if labels == nil {
+	var labels map[string]string
+	if pod.Labels == nil {
 		labels = make(map[string]string, 2)
+	} else {
+		labels = make(map[string]string, len(pod.Labels)+2)
+		for k, v := range pod.Labels {
+			labels[k] = v
+		}
 	}
+
 	labels[apiv3.LabelNamespace] = pod.Namespace
 	labels[apiv3.LabelOrchestrator] = apiv3.OrchestratorKubernetes
 
