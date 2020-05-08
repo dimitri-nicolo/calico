@@ -25,11 +25,11 @@ require (
 replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200504041555-f27cde333de3
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200504155729-9eb106919427
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200504221648-301c2955f333
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200504210655-52ad88035264
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200504184550-eecfee943d92
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200508011103-fbb3dcccab75
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200508043154-b133a860d33d
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200508031538-757eaa328cf2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200506164255-6c40e2856338
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200507190401-426be0fdfd51
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
