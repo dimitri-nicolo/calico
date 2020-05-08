@@ -10,6 +10,5 @@ curl {{ "/manifests/ocp/01-cr-logstorage.yaml" | absolute_url }} -o manifests/01
 curl {{ "/manifests/ocp/01-cr-logcollector.yaml" | absolute_url }} -o manifests/01-cr-logcollector.yaml
 curl {{ "/manifests/ocp/01-cr-prometheus.yaml" | absolute_url }} -o manifests/01-cr-prometheus.yaml
 curl {{ "/manifests/ocp/01-cr-prometheusrule.yaml" | absolute_url }} -o manifests/01-cr-prometheusrule.yaml
-curl {{ "/manifests/ocp/01-cr-thanosrulers.yaml" | absolute_url }} -o manifests/01-cr-thanosrulers.yaml
 curl {{ "/manifests/ocp/01-cr-servicemonitor.yaml" | absolute_url }} -o manifests/01-cr-servicemonitor.yaml
 ```
