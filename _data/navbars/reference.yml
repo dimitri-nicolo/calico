@@ -202,9 +202,3 @@ section:
       path: /reference/architecture/design/l3-interconnect-fabric
 - title: Frequently asked questions
   path: /reference/faq
-- title: Other installation methods
-  path: /reference/other-install-methods/
-  section:
-  - title: Helm
-    path: /reference/other-install-methods/kubernetes/installation/helm/
-  # TODO: This is old content that needs refreshing in order to work with the operator.

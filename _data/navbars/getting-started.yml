@@ -23,6 +23,8 @@ section:
     section:
     - title: Standard
       path: /getting-started/kubernetes/self-managed-on-prem/generic-install
+    - title: Helm
+      path: /getting-started/kubernetes/self-managed-on-prem/helm
     - title: Docker Enterprise
       path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
     - title: Rancher Kubernetes Engine

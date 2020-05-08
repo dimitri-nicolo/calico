@@ -11,11 +11,6 @@ Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
 
 **Required**
 
-- Run the following command to verify that you are currently using Tigera installer:
-  ```
-  kubectl get tigerastatus
-  ```
-  If you are not using the Tigera installer, see [Upgrade]({{site.baseurl}}/maintenance/upgrading) or contact Tigera support.
 - Tiller **v2.14** is running, and your local helm CLI is configured to speak to it.
 - [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
