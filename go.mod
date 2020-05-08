@@ -13,7 +13,6 @@ require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/go-ini/ini v1.44.0
-	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.3.2
@@ -66,7 +65,7 @@ require (
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200506164255-6c40e2856338
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200507030630-8569405b5e4d
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200507190401-426be0fdfd51
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
