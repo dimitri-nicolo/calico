@@ -550,8 +550,12 @@ github.com/tigera/libcalico-go-private v0.0.0-20200505094137-67e5bb69f02d h1:Ask
 github.com/tigera/libcalico-go-private v0.0.0-20200505094137-67e5bb69f02d/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v0.0.0-20200506164255-6c40e2856338 h1:8JS/TVQkqsZYcM+7uTlsTSJ1/NL+F7ArCFgr15yuI9U=
 github.com/tigera/libcalico-go-private v0.0.0-20200506164255-6c40e2856338/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
+github.com/tigera/libcalico-go-private v0.0.0-20200508235409-a506e44fde18 h1:Xi6EVWMDpW6x9tBpmwTKanMdJS/yl8zZ+XQCBj8iMQ0=
+github.com/tigera/libcalico-go-private v0.0.0-20200508235409-a506e44fde18/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1 h1:xglpgGtP0Sww8sSSWti6B+a2TGZ3Td95wOw4u9BD73M=
 github.com/tigera/licensing v0.0.0-20200417212345-02da246de3e1/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
+github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a h1:UcfIHveY0DOA2L1NC7ML1OGMICOhzA55qDDHf3xsgHE=
+github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
 github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 h1:xkS+YSPj//0GV+0XM3V0+9c0eV5umXU7/PPXxw95luE=
 github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
