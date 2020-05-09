@@ -63,12 +63,6 @@ spec:
     Azure AKS
   </div>
   <div class="col-xs-6 col-md-3" style="text-align:center">
-    <a href="{{site.baseurl}}/getting-started/kubernetes/self-managed-on-prem/docker-enterprise" class="thumbnail">
-      <img src="{{site.baseurl}}/images/Docker-R-Logo-08-2018-Monochomatic-RGB_Vertical-x3.jpg" alt="Docker Enterprise" width="98%">
-    </a>
-    Docker Enterprise
-  </div>
-  <div class="col-xs-6 col-md-3" style="text-align:center">
     <a href="{{site.baseurl}}/getting-started/openshift/installation/" class="thumbnail">
       <img src="{{site.baseurl}}/images/OpenShift-LogoType.svg" alt="OpenShift" width="80%">
     </a>
