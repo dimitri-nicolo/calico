@@ -1,7 +1,7 @@
 ---
 title: Standard
 description: Install Calico Enterprise on a deployed Kubernetes cluster for on-premises deployments.
-canonical_url: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
+canonical_url: /getting-started/kubernetes/self-managed-on-prem/generic-install
 ---
 
 ### Big picture
