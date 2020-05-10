@@ -26,7 +26,7 @@ require (
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 // indirect
+	github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	google.golang.org/grpc v1.26.0
