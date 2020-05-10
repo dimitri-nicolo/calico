@@ -782,6 +782,8 @@ github.com/tigera/compliance v0.0.0-20200508081142-5c083af1e538 h1:SrjO9utQrPgP+
 github.com/tigera/compliance v0.0.0-20200508081142-5c083af1e538/go.mod h1:eOklZnzEL/KgNFxOkotodTHTkQDY99TeLkflxKsqNVI=
 github.com/tigera/compliance v0.0.0-20200509081055-d2af001a5e53 h1:XxqRYPXGkDdlYPYpW63kFRhUEThywT5VgRKUHTYLn2M=
 github.com/tigera/compliance v0.0.0-20200509081055-d2af001a5e53/go.mod h1:gAyQfyLjvrGJimaIuKP7zHRCCi7AojE1fRkm2EUTDMw=
+github.com/tigera/compliance v0.0.0-20200510081136-35bb2c9b3804 h1:wRcKQkz9gI0EUGP9OFQNWSwk3XsafObrNZae+INqt3Q=
+github.com/tigera/compliance v0.0.0-20200510081136-35bb2c9b3804/go.mod h1:nb47qpIxlwJBe61Vdr0V6yMRNStbMziPCXBLwhElsHc=
 github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682 h1:nuf7AXSZUwOFtzT4lFPcSuWQlca2Ub1GSBxEGzWA39k=
 github.com/tigera/felix-private v0.0.0-20200418051602-e34d26f03682/go.mod h1:NZhbY5rsP3g58UCROZXLuhf425OkOdEEO/O0hWb0My0=
 github.com/tigera/felix-private v0.0.0-20200422041113-2b9f3dbe5ff3 h1:LcYCFFZFdtDKozoOgxUesu7VYmrOgiyT9+a2UAAOz58=
@@ -802,6 +804,8 @@ github.com/tigera/felix-private v0.0.0-20200508070023-1677903b034d h1:DH0xyA1oW7
 github.com/tigera/felix-private v0.0.0-20200508070023-1677903b034d/go.mod h1:EyNfKY69FACTbXioPMZLMGvKiyNaEPrXaRdVDrYhOlk=
 github.com/tigera/felix-private v0.0.0-20200509042756-3ad23bfa944d h1:jdNnjOpcy7AhwqUBHT0CfjmxTcpwX+3vwcBirAHQlJU=
 github.com/tigera/felix-private v0.0.0-20200509042756-3ad23bfa944d/go.mod h1:EyNfKY69FACTbXioPMZLMGvKiyNaEPrXaRdVDrYhOlk=
+github.com/tigera/felix-private v0.0.0-20200510041811-e3ca836e443c h1:8+KlgSvrNu9qGn5iP6JDuTlANbN16SWKXECsYAqIWZY=
+github.com/tigera/felix-private v0.0.0-20200510041811-e3ca836e443c/go.mod h1:a0EeinvZLC+2lwR7wi4jYSTNX7txWggofIplxubwqkc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a h1:oym5mIYF8q/Qirzim4TbN1WdeXRxEvDbeD3mdmy7r30=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a/go.mod h1:khH8v5+CH98NdhWqcXj5K1TILWhvBSwr7U/+/sdY5uQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200421230545-4b8ce69b960d h1:BINH5oWsXi/Bu5ZxYkQ/ESrIIdoaFROp8okRE5r70lE=
@@ -823,6 +827,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200508235409-a506e44fde18/go.m
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1 h1:xkS+YSPj//0GV+0XM3V0+9c0eV5umXU7/PPXxw95luE=
 github.com/tigera/licensing v1.0.1-0.20200417212345-02da246de3e1/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
+github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a h1:maYOHHjIuWEyMZyvPbKaDjcpDaoHyaXPQB9pb6gMRaU=
+github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
 github.com/tigera/lma v0.0.0-20200416190624-f99f144876a3 h1:PPqd98DBUjW1CxBhXgNiQ7TUtpOFI2sdVpEYrpL4jGI=
 github.com/tigera/lma v0.0.0-20200416190624-f99f144876a3/go.mod h1:7xfTQmVGefOyyUz8t0CzOamwHvmHJvzPkl9KuEz9GEI=
 github.com/tigera/lma v0.0.0-20200422002544-17d0fbe77b34 h1:cOUsu8mDjAGGQvUp/DdBr7LiP2wFXE4y47qZYcMZNFk=
@@ -845,6 +851,8 @@ github.com/tigera/lma v0.0.0-20200508070159-368af3162c1f h1:WuvXiv8fa6F2SBxXL9JR
 github.com/tigera/lma v0.0.0-20200508070159-368af3162c1f/go.mod h1:PbKCcP0y/Op/EZpASFn4UD0/9R0ZRfTTt6fc3/b+tOg=
 github.com/tigera/lma v0.0.0-20200508190430-5b61c06c9d53 h1:4rJW3a7P9LpNIP2zSG6+5+avaXL5EBQEH+fQMCuooYM=
 github.com/tigera/lma v0.0.0-20200508190430-5b61c06c9d53/go.mod h1:YMt6WlgsDVuyZBPgGIZvVqd1oSoxj1V0+nxC8286MeA=
+github.com/tigera/lma v0.0.0-20200509190418-725d3b7d5d03 h1:Up+92pwzMMwN0jyLRXqRlPuHk328mR8gLFBEpWzDij4=
+github.com/tigera/lma v0.0.0-20200509190418-725d3b7d5d03/go.mod h1:icexePdhk6/7BSFeWJSrDaMDmRouyHVipgavJYHe4Hs=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200507190401-426be0fdfd51/go.mod h1:EEpJMYi9GL7Kjcx8DQbZ8EjtGpLGFvbOMZzp4g7qrMc=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200508070229-390d93a736bf/go.mod h1:EEpJMYi9GL7Kjcx8DQbZ8EjtGpLGFvbOMZzp4g7qrMc=
