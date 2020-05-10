@@ -2,8 +2,13 @@ title: "Operations"
 path: /maintenance/
 order: 4
 section:
-- title: Adjust log storage size
-  path: /maintenance/adjust-log-storage-size
+- title: Configure log storage
+  path: /maintenance/logstorage
+  section:
+  - title: Log storage requirements
+    path: /maintenance/logstorage/log-storage-requirements
+  - title: Adjust log storage size
+    path: /maintenance/logstorage/adjust-log-storage-size
 - title: Upgrade
   path: /maintenance/upgrading
   section:
@@ -19,22 +24,22 @@ section:
 - title: Monitor
   path: /maintenance/monitor/
   section: 
-  - title: Configure Alertmanager
-    path: /maintenance/monitor/alertmanager    
   - title: Monitor BGP metrics
-    path: /maintenance/monitor/bgp-metrics     
+    path: /maintenance/monitor/bgp-metrics
   - title: Monitor Calico Enterprise license metrics
     path: /maintenance/monitor/license-agent
   - title: Monitor policy metrics 
     path: /maintenance/monitor/metrics  
-  - title: Monitor denied packets and storage
-    path: /maintenance/monitor/prometheus  
+  - title: Configure Prometheus
+    path: /maintenance/monitor/prometheus
+  - title: Configure Alertmanager
+    path: /maintenance/monitor/alertmanager
 - title: Remove nodes from a cluster
   path: /maintenance/decommissioning-a-node
 - title: Troubleshoot
   path: /maintenance/troubleshoot/
   section:
-  - title: Troubleshoot
+  - title: Troubleshooting and diagnostics
     path: /maintenance/troubleshoot/troubleshooting
   - title: Component logs
     path: /maintenance/troubleshoot/component-logs

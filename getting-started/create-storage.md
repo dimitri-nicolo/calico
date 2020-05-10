@@ -31,6 +31,10 @@ The storage provided by the cluster. Storage classes can be used with dynamic pr
 
 ### Before you begin...
 
+**Review log storage requirements**
+
+Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements) for guidance on the number of nodes and resources to configure for your environment.
+
 **Determine storage support**
 
 Determine the storage types that are available on your cluster. If you are using dynamic provisioning, verify it is supported.
@@ -126,4 +130,4 @@ allowVolumeExpansion: true
 
 ### Above and beyond
 
-- [Adjust size of Elasticsearch cluster]({{site.baseurl}}/maintenance/adjust-log-storage-size)
+- [Adjust size of Elasticsearch cluster]({{site.baseurl}}/maintenance/logstorage/adjust-log-storage-size)
