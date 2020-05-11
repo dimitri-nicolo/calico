@@ -432,6 +432,10 @@ func configureSysctls(hostVethName string, hasIPv4, hasIPv6 bool) error {
 		}
 	}
 
+	if err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/accept_ra", hostVethName), "0"); err != nil {
+		return fmt.Errorf("failed to set net.ipv6.conf.%s.accept_ra=0: %s", hostVethName, err)
+	}
+
 	return nil
 }
 
