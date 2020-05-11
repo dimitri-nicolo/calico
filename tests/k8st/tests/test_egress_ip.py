@@ -49,6 +49,7 @@ EOF
 
             # Create egress gateway, with an IP from that pool.
             gateway_ns = "default"
+            run("kubectl get secret cnx-pull-secret -n kube-system --export -o yaml | kubectl apply --namespace=%s -f -" % gateway_ns)
             gateway = Pod(gateway_ns, "gateway", image=None, yaml="""
 apiVersion: v1
 kind: Pod
@@ -60,9 +61,11 @@ metadata:
   name: gateway
   namespace: %s
 spec:
+  imagePullSecrets:
+  - name: cnx-pull-secret
   containers:
   - name: gateway
-    image: songtjiang/gateway:ubi
+    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64
     env:
     - name: EGRESS_POD_IP
       valueFrom:
