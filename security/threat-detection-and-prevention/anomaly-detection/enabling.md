@@ -18,7 +18,7 @@ However, anomaly detection requires that additional flow data be stored. To do s
 We recommend the following minimum memory requirements for your Elasticsearch cluster, based on the number of anomaly detection jobs that you intend to run concurrently:
 
 | Number of jobs | Minimum memory (GB) |
-| :--- | :--- |
+| --- | --- |
 | 1 | 4 |
 | 2 | 8 |
 | 3-4 | 16 |
