@@ -7,15 +7,19 @@ agent:
 execution_time_limit:
   minutes: 120
 global_job_config:
-  prologue:
-    commands:
-    - checkout
-    # Semaphore is doing shallow clone on a commit without tags.
-    # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
-    - git fetch --unshallow || true
   secrets:
     - name: quay-robot-semaphore_v2
     - name: docker
+    - name: google-service-account-for-gcr
+  prologue:
+    commands:
+      # Login to docker in order to push images.
+      - gcloud auth activate-service-account --key-file=secrets/secret.google-service-account-key.json
+      - gcloud auth configure-docker -q
+      - checkout
+      # Semaphore is doing shallow clone on a commit without tags.
+      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+      - git fetch --unshallow || true
 
 blocks:
 
