@@ -43,6 +43,9 @@ Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-st
 - [Adjust the volume size](#adjust-the-volume-size)
 - [Adjust the CPU and memory](#adjust-the-cpu-and-memory)
 
+> **Important**: If you are not using a dynamic provisioner, make sure there is an available persistent volume before updating the resource requirements (cpu, memory, storage) in this section. To check that a persistent volume has the status of `Available`, run this command: `kubectl get pv | grep tigera-elasticsearch` 
+  {: .alert .alert-danger}
+
 In the following examples, you can set **LogStorage** resource values during {{site.prodname}} installation, or after by applying kubectl to the manifest.
 
 #### Adjust the number of nodes
