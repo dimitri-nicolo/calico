@@ -52,8 +52,7 @@ CALICO_VERSION=v3.13.1
 ###############################################################################
 CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 BUILD_IMAGE?=tigera/cnx-node
-GATEWAY_IMAGE?=tigera/egress-gateway
-PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node $(CNX_REPOSITORY)/tigera/egress-gateway
+PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
 RELEASE_IMAGES?=
 
 # Versions and location of dependencies used in the build.
@@ -172,7 +171,6 @@ clean:
 	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
-	docker rmi $(GATEWAY_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
 
 ###############################################################################
@@ -252,7 +250,7 @@ $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe:
 # Building the image
 ###############################################################################
 ## Create the image for the current ARCH
-image: remote-deps $(BUILD_IMAGE) $(GATEWAY_IMAGE)
+image: remote-deps $(BUILD_IMAGE)
 ## Create the images for all supported ARCHes
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
@@ -273,9 +271,6 @@ endif
 	"
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 	touch $@
-
-$(GATEWAY_IMAGE):
-	cd images/egress && docker build --pull -t $(GATEWAY_IMAGE):latest-$(ARCH) . --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
 
 ##########################################################################################
 # TESTING
@@ -307,7 +302,7 @@ $(FELIX_GPL_SOURCE): go.mod
 	mkdir -p filesystem/included-source/
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c ' \
 		tar cf $@ `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl;'
-	
+
 ###############################################################################
 # FV Tests
 ###############################################################################
@@ -740,24 +735,12 @@ endif
 tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
 
 sub-single-tag-images-arch-%:
-	@if echo $* | grep -q "$(call escapefs,$(GATEWAY_IMAGE))"; then \
-		echo "docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
-		docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
-	else \
-		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))"; \
-		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH)); \
-	fi
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	@if echo $* | grep -q "$(call escapefs,$(GATEWAY_IMAGE))"; then \
-		echo "docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
-		docker tag $(GATEWAY_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
-	else \
-		echo "docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))"; \
-		docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)); \
-	fi
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -771,7 +754,6 @@ sub-tag-images-%:
 tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
 sub-base-tag-images-%:
 	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
-	docker tag $(GATEWAY_IMAGE):latest-$* $(call unescapefs,$(GATEWAY_IMAGE):$(VERSION)-$*)
 
 ###############################################################################
 # Windows packaging
