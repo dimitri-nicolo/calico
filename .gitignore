@@ -1,0 +1,3 @@
+/Makefile.common
+/Makefile.common.v*
+/.egress_gateway.created-amd64
