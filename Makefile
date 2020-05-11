@@ -65,9 +65,7 @@ $(GATEWAY_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_
 ci: clean image-all
 
 ## Deploys images to registry
-# Check-dirty before `cd` because `foss-checks` can lead to go.sum update.
-# since `foss-checks` is defined in common Makefile, we do it just before `cd`.
-cd: check-dirty
+cd:
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
