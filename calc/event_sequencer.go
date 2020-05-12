@@ -438,6 +438,11 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
 			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key].EgressIPSetID
 			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
+			if protoEp.IsEgressGateway {
+				// To break gatewaying loops, we do not allow a workload to route
+				// via egress gateways if it is _itself_ an egress gateway.
+				protoEp.EgressIpSetId = ""
+			}
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: key.OrchestratorID,
