@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/workload"
@@ -134,7 +135,9 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 	})
 
 	expectedRoute := func(ips ...string) string {
-		if len(ips) == 1 {
+		if len(ips) == 0 {
+			return "unreachable default scope link"
+		} else if len(ips) == 1 {
 			return "default via " + ips[0] + " dev egress.calico onlink"
 		} else {
 			r := "default onlink \n"
@@ -203,6 +206,80 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.2")))
+
+			// Remove the second gateway.
+			gw2.RemoveFromDatastore(infra)
+
+			// Check ip rules and routes.
+			Consistently(getIPRules, "5s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(func() string {
+				return getIPRoute(table1)
+			}, "10s", "1s").Should(Equal(expectedRoute()))
+		})
+	})
+
+	Context("Disabled", func() {
+		BeforeEach(func() {
+			supportLevel = "Disabled"
+		})
+
+		It("does nothing when egress IP is disabled", func() {
+			// Create a gateway.
+			gw := makeGateway("10.10.10.1", "gw1")
+			defer gw.Stop()
+
+			// Create a client.
+			app := makeClient("10.65.0.2", "app")
+			defer app.Stop()
+
+			// Should be no ip rules.
+			Consistently(getIPRules, "5s", "1s").Should(BeEmpty())
+		})
+	})
+
+	Context("EnabledPerNamespace", func() {
+		BeforeEach(func() {
+			supportLevel = "EnabledPerNamespace"
+		})
+
+		It("honours namespace annotations but not per-pod", func() {
+			// Create a gateway.
+			gw := makeGateway("10.10.10.1", "gw1")
+			defer gw.Stop()
+
+			// Create a client.
+			app := makeClient("10.65.0.2", "app")
+			defer app.Stop()
+
+			// Should be no ip rules.
+			Consistently(getIPRules, "5s", "1s").Should(BeEmpty())
+
+			// Add egress annotations to the default namespace.
+			coreV1 := infra.(*infrastructure.K8sDatastoreInfra).K8sClient.CoreV1()
+			ns, err := coreV1.Namespaces().Get(app.WorkloadEndpoint.Namespace, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			if ns.Annotations == nil {
+				ns.Annotations = map[string]string{}
+			}
+			ns.Annotations["egress.projectcalico.org/selector"] = "egress-code == 'red'"
+			_, err = coreV1.Namespaces().Update(ns)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Check ip rules.  (In this example the gateway is also in the default
+			// namespace, but is prevented from looping around to itself (or to any
+			// other gateway) because it is an egress gateway itself.)
+			Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
+			rules := getIPRules()
+			Expect(rules).To(HaveKey("10.65.0.2"))
+			table1 := rules["10.65.0.2"]
+
+			// Check ip routes.
+			Eventually(func() string {
+				return getIPRoute(table1)
+			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1")))
+			Consistently(func() string {
+				return getIPRoute(table1)
+			}).Should(Equal(expectedRoute("10.10.10.1")))
 		})
 	})
 
