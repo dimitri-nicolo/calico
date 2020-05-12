@@ -380,6 +380,7 @@ EOF
     @property
     def nodename(self):
         if not self._nodename:
+            # spec.nodeName will be populated for a running pod regardless of being specified or not on pod creation.
             self._nodename = run("kubectl get po %s -n %s -o json | jq '.spec.nodeName'" %
                                (self.name, self.ns)).strip().strip('"')
         return self._nodename
