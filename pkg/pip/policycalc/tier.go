@@ -1,12 +1,7 @@
 package policycalc
 
 import (
-	"strings"
-
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-
 	"github.com/tigera/lma/pkg/api"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
@@ -33,7 +28,7 @@ func calculateCompiledTiersAndImpactedPolicies(
 		// Iterate through the policies in a tier.
 		for _, pol := range tier {
 			// Determine the impact of this policy.
-			impact, isImpacted := impacted.Impact(pol.Policy)
+			impact, isImpacted := impacted.Impact(pol.ResourceID)
 
 			// If this is set of data with changes applied, pass the impact associated with the policy when compiling
 			// it.
@@ -42,8 +37,11 @@ func calculateCompiledTiersAndImpactedPolicies(
 				actualImpact = impact
 			}
 
+			// If this is an impacted policy, and the changes are being applied, then we always "enforce" the policy.
+			previewingChange := changesApplied && isImpacted
+
 			// Compile the policy to get the ingress and egress versions of the policy as appropriate.
-			ingressPol, egressPol := compilePolicy(matcherFactory, pol, actualImpact)
+			ingressPol, egressPol := compilePolicy(matcherFactory, pol, actualImpact, previewingChange)
 
 			// Add the ingress and egress policies to their respective slices. If this is a impacted policy, also
 			// track it - we'll use this as a shortcut to determine if a flow is possibly affected by the configuration
@@ -52,8 +50,8 @@ func calculateCompiledTiersAndImpactedPolicies(
 				ingressTier = append(ingressTier, ingressPol)
 				if isImpacted {
 					// If resource is impacted include this policy. We do this for original and changed resources.
-					log.Debugf("This is an impacted ingress policy: deleted:%v; modified:%v; useStaged:%v",
-						actualImpact.Deleted, actualImpact.Modified, actualImpact.UseStaged)
+					log.Debugf("This is an impacted ingress policy: deleted:%v; modified:%v",
+						actualImpact.Deleted, actualImpact.Modified)
 					ingress.ImpactedPolicies = append(ingress.ImpactedPolicies, ingressPol)
 				}
 			}
@@ -61,8 +59,8 @@ func calculateCompiledTiersAndImpactedPolicies(
 				egressTier = append(egressTier, egressPol)
 				if isImpacted {
 					// If resource is impacted include this policy. We do this for original and changed resources.
-					log.Debugf("This is an impacted egress policy: deleted:%v; modified:%v; useStaged:%v",
-						actualImpact.Deleted, actualImpact.Modified, actualImpact.UseStaged)
+					log.Debugf("This is an impacted egress policy: deleted:%v; modified:%v",
+						actualImpact.Deleted, actualImpact.Modified)
 					egress.ImpactedPolicies = append(egress.ImpactedPolicies, egressPol)
 				}
 			}
@@ -94,7 +92,9 @@ type CompiledTiersAndImpactedPolicies struct {
 
 // FlowSelectedByModifiedEgressPolicies returns whether the flow is selected by any of the impacted policies.
 func (c *CompiledTiersAndImpactedPolicies) FlowSelectedByImpactedPolicies(flow *api.Flow, cache *flowCache) bool {
+	log.Debug("Checking impacted polices")
 	for i := range c.ImpactedPolicies {
+		log.Debugf("Checking impacted policy: %s", c.ImpactedPolicies[i].FlowLogName)
 		if c.ImpactedPolicies[i].Applies(flow, cache) == MatchTypeTrue {
 			return true
 		}
@@ -158,15 +158,35 @@ func (ts CompiledTiers) Calculate(flow *api.Flow, ep *api.FlowEndpointData, cach
 	// -- END OF TIERS --
 	// This is Allow for Pods, and Deny for HEPs.
 	log.Debug("Hit end of tiers")
+	var flowLogName string
+	var actionFlag api.ActionFlag
 	if ep.Type == api.EndpointTypeWep {
 		// End of tiers allow is handled by the namespace profile. Add the policy name for this and set the allow flag.
-		addPolicyToResponse("__PROFILE__", "__PROFILE__.kns."+ep.Namespace, api.ActionFlagAllow, &epr)
-		af |= api.ActionFlagAllow
+		flowLogName = "__PROFILE__.kns." + ep.Namespace
+		actionFlag = api.ActionFlagAllow
 	} else {
 		// End of tiers deny is handled implicitly by Felix and has a very specific pseudo-profile name.
-		addPolicyToResponse("__PROFILE__", "__PROFILE__.__NO_MATCH__", api.ActionFlagDeny, &epr)
-		af |= api.ActionFlagDeny
+		flowLogName = "__PROFILE__.__NO_MATCH__"
+		actionFlag = api.ActionFlagDeny
 	}
+
+	// If the calculated values are thus far corroborated by the flow logs then check to see if the end-of-tiers is
+	// also corroborated.
+	if af&ActionFlagsVerified != 0 {
+		if flagsFromFlowLog, ok := getFlagsFromFlowLog(flowLogName, flow); ok {
+			log.Debugf("End-of-tiers action flags found in flow log %d", flagsFromFlowLog)
+
+			if flagsFromFlowLog&actionFlag != 0 {
+				log.Debug("Calculated matches flow log")
+				actionFlag |= ActionFlagFlowLogMatchesCalculated
+			} else {
+				log.Debug("Calculated conflicts with flow log")
+				actionFlag |= ActionFlagFlowLogConflictsWithCalculated
+			}
+		}
+	}
+
+	addPolicyToResponse(&epr, "__PROFILE__", "", flowLogName, actionFlag, true, &af)
 
 	// Store the action in the response object.
 	epr.Action = af
@@ -182,11 +202,13 @@ type CompiledTier []*CompiledPolicy
 // additional certainty, and in the cases where the the calculation was not possible to infer the result from the
 // measured data.
 func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache *flowCache) api.ActionFlag {
-	// In the before branch we track uncertain matches which we can convert to no-matches if we get an exact hit
-	// corroborated by the flow log.
-	var noMatchPolicies []string
+	// In the before branch we track unverifiedNoMatches no-matches. We process these after getting additional confirmation
+	// (or not) from the flow logs.
+	var unverifiedNoMatches []*CompiledPolicy
+	var flowLogsInconsistentWithCalculation bool
 	var lastEnforcedPolicy *CompiledPolicy
 	var lastEnforcedActions api.ActionFlag
+	var combinedPolicyActions api.ActionFlag
 	for _, p := range tier {
 		log.Debugf("Process policy: %s", p.FlowLogName)
 
@@ -197,12 +219,6 @@ func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache
 		}
 		//TODO(rlb): We may want to handle unknown selector matches if we decide to be a little more clever about our
 		//           label aggregation.
-
-		if !p.Staged {
-			// Track the last enforced policy - we use this for end-of-tier drop processing.
-			log.Debug("Policy is enforced")
-			lastEnforcedPolicy = p
-		}
 
 		// Calculate the policy action. This will set at least one action flag.
 		policyActions := p.Action(flow, cache)
@@ -216,6 +232,10 @@ func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache
 			// since that's what we need to cache (in the after processing it may no longer be an end-of-tier drop).
 			if flagsFromFlowLog == api.ActionFlagEndOfTierDeny {
 				log.Debug("Found end of tier drop matching policy - cache as no-match")
+				flagsFromFlowLog = ActionFlagNoMatch
+			} else if flagsFromFlowLog == api.ActionFlagDeny && policyActions&api.ActionFlagDeny == 0 && policyActions&ActionFlagNoMatch != 0 {
+				//TODO(rlb): Fix in flow logs by returning an end of tier deny action value
+				log.Debug("Found a deny action in flow logs, but not a valid action - treat as end of tier deny")
 				flagsFromFlowLog = ActionFlagNoMatch
 			}
 
@@ -236,85 +256,111 @@ func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache
 		// Cache the value so that we don't have to recalculate in the "after" processing.
 		cache.policies[p.FlowLogName] = policyActions
 
-		if !p.Staged {
-			// Track the last enforced policy actions that we calculate.
-			log.Debugf("Policy is not staged - store action flags: %d", policyActions)
+		if p.Enforced {
+			// Track the last enforced policy - we use this for end-of-tier drop processing.
+			log.Debug("Policy is enforced - store policy and action flags")
+			lastEnforcedPolicy = p
 			lastEnforcedActions = policyActions
 		}
 
-		if policyActions&ActionFlagNoMatch == 0 {
-			// Policy has an exactly matching rule so no need to enumerate further.
-			log.Debug("Policy has an exactly matching rule")
-			break
+		// If flow log data is self-consistent with the calculation then we can use the flow data to firm up
+		// uncertain or no-matches.
+		if flowLogsInconsistentWithCalculation {
+			// Flow log data is inconsistent. Add the policy match immediately since there is no need to wait for
+			// verification now.
+			log.Debug("Flow log data is inconsistent with calculation")
+			addPolicyToResponse(r, p.Tier, p.Namespace, p.CalicoV3Name, policyActions, p.Enforced, &combinedPolicyActions)
+		} else if policyActions&(ActionFlagFlowLogMatchesCalculated|ActionFlagFlowLogRemovedUncertainty) != 0 {
+			// The policy calculation was corroborated by the flow log data.
+			log.Debug("Calculated action was corroborated by the flow log policies")
+
+			// The unverified no matches can now be considered verified.
+			for _, n := range unverifiedNoMatches {
+				log.Debugf("Confirm no match for %s", n.FlowLogName)
+				prev := cache.policies[n.FlowLogName]
+				if prev == ActionFlagNoMatch {
+					cache.policies[n.FlowLogName] = ActionFlagNoMatch | ActionFlagFlowLogMatchesCalculated
+				} else {
+					cache.policies[n.FlowLogName] = ActionFlagNoMatch | ActionFlagFlowLogRemovedUncertainty
+				}
+			}
+			unverifiedNoMatches = nil
+
+			// Add the policy to the response immediately. The action may be a no-match in which case nothing will get
+			// added. if this the last enforced policy then processing outside the loop will add it as an end-of-tier
+			// drop.
+			addPolicyToResponse(r, p.Tier, p.Namespace, p.CalicoV3Name, policyActions, p.Enforced, &combinedPolicyActions)
+		} else if policyActions&ActionFlagNoMatch != 0 {
+			// This policy is an unverified no-match, track it - a future policy and corresponding flow log may
+			// verify that this is really a no-match.
+			log.Debug("Policy is no-match or uncertain no-match - track for later verification")
+			unverifiedNoMatches = append(unverifiedNoMatches, p)
+		} else {
+			// This is an unverified match, which means flow log data and calculation are inconsistent.
+			log.Debug("Policy is not a no-match, and has no corroborating flow log data")
+			flowLogsInconsistentWithCalculation = true
+
+			// Add the stored unverified no match policies to the response. Since addPolicyToResponse only adds
+			// allow/deny/pass actions, any definite no-match will not add any policy entry.
+			for _, n := range unverifiedNoMatches {
+				log.Debugf("Add policy to response: %s", n.FlowLogName)
+				addPolicyToResponse(r,
+					n.Tier, n.Namespace, n.CalicoV3Name, cache.policies[n.FlowLogName], n.Enforced, &combinedPolicyActions)
+			}
+			unverifiedNoMatches = nil
+
+			// And add this policy to the response.
+			addPolicyToResponse(r, p.Tier, p.Namespace, p.CalicoV3Name, policyActions, p.Enforced, &combinedPolicyActions)
 		}
 
-		// Track the set of policies that provide no match.
-		noMatchPolicies = append(noMatchPolicies, p.FlowLogName)
+		// If this is enforced and is not a no-match then exit.
+		if p.Enforced && policyActions&ActionFlagNoMatch == 0 {
+			log.Debugf("Policy is enforced and matches: %s", p.FlowLogName)
+			break
+		}
 	}
 
 	if lastEnforcedPolicy == nil {
-		// This flow didn't apply to any policy in this tier, so go to the next tier.
-		log.Debug("Did not match tier - enumerate next tier")
-		return api.ActionFlagNextTier
-	}
-
-	if lastEnforcedActions&(ActionFlagFlowLogMatchesCalculated|ActionFlagFlowLogRemovedUncertainty) != 0 {
-		// The last enforced policy calculation was corroborated the flow log data. This means any uncertain
-		// no-matches can be assumed to really be a no-match where the uncertainty has been removed by the flow log
-		// data, and any certain no-matches can be flagged as exactly matching the flow log.
-		log.Debug("Final enforced action was corroborated by the flow log policies")
-		for _, n := range noMatchPolicies {
-			prev := cache.policies[n]
+		// This flow didn't apply to any policy in this tier, so go to the next tier.  If there were any unverified
+		// no matches then they must be for staged policies. We can firm up any unverified no matches.
+		for _, n := range unverifiedNoMatches {
+			log.Debugf("Confirm no match for %s", n.FlowLogName)
+			prev := cache.policies[n.FlowLogName]
 			if prev == ActionFlagNoMatch {
-				cache.policies[n] = ActionFlagNoMatch | ActionFlagFlowLogMatchesCalculated
+				cache.policies[n.FlowLogName] = ActionFlagNoMatch | ActionFlagFlowLogMatchesCalculated
 			} else {
-				cache.policies[n] = ActionFlagNoMatch | ActionFlagFlowLogRemovedUncertainty
+				cache.policies[n.FlowLogName] = ActionFlagNoMatch | ActionFlagFlowLogRemovedUncertainty
 			}
 		}
 
-		// Given this was corroborated by the flow log, we can finish processing here.
-		addPolicyToResponse(lastEnforcedPolicy.Tier, lastEnforcedPolicy.FlowLogName, lastEnforcedActions, r)
-		return lastEnforcedActions
+		log.Debug("Did not match tier - enumerate next tier")
+		return api.ActionFlagNextTier
 	}
 
 	// At this point, we have a match that has not been corroborated by the flow logs. All we can do is include all of
 	// the possible hits from this tier which may include multiple hits from the same policy and multiple policies. We
 	// do not include staged policies nor do we include the last enforced policy which we handle explicitly.
 	log.Debug("Final enforced policy action was not corroborated by the flow log policies")
-	var combinedPolicyActions api.ActionFlag
-	for _, n := range noMatchPolicies {
-		if n == lastEnforcedPolicy.FlowLogName || strings.Contains(n, model.PolicyNamePrefixStaged) {
-			// This is either the last enforced policy (handled separately below), or a staged policy. In either case
-			// skip.
-			continue
-		}
-
-		// Update previous uncertain no-matches to just be no-match inferred from flow log.
-		noMatchPolicyActions := cache.policies[n]
-		if noMatchPolicyActions == ActionFlagNoMatch {
-			// This was an exact no match, so we don't include that.
-			continue
-		}
-
+	for _, n := range unverifiedNoMatches {
 		// Add each possible action to the flow policy hits.
-		addPolicyToResponse(lastEnforcedPolicy.Tier, n, noMatchPolicyActions, r)
-
-		// Collate all of the action flags, but omit the no-match, we don't need to pass that up the stack since a
-		// no match will never actually happen (due to end-of-tier drop).
-		combinedPolicyActions |= noMatchPolicyActions &^ ActionFlagNoMatch
+		noMatchPolicyActions := cache.policies[n.FlowLogName]
+		addPolicyToResponse(r,
+			lastEnforcedPolicy.Tier, n.Namespace, n.CalicoV3Name, noMatchPolicyActions, n.Enforced, &combinedPolicyActions)
 	}
 
 	if lastEnforcedActions&ActionFlagNoMatch != 0 {
 		// The last enforced policy included a no-match flag. This must be the last enforced policy in the tier because
 		// we'd otherwise exit as soon as we get an exactly matched rule. We need to convert the no-match to an
-		// end-of-tier drop.
+		// end-of-tier drop. Assign the verification flags that we have from the cache for the no-match entry.
 		log.Debug("Final policy included a no-match, include the end of tier action")
-		lastEnforcedActions = (lastEnforcedActions | api.ActionFlagEndOfTierDeny) &^ ActionFlagNoMatch
+		verificationFlags := cache.policies[lastEnforcedPolicy.FlowLogName] & ActionFlagsMeasured
+		addPolicyToResponse(r,
+			lastEnforcedPolicy.Tier, lastEnforcedPolicy.Namespace, lastEnforcedPolicy.CalicoV3Name,
+			api.ActionFlagEndOfTierDeny|verificationFlags, true, &combinedPolicyActions)
 	}
 
-	// And add the final verdict policy.
-	addPolicyToResponse(lastEnforcedPolicy.Tier, lastEnforcedPolicy.FlowLogName, lastEnforcedActions, r)
-	return lastEnforcedActions | combinedPolicyActions
+	// Return the combined set of actions.
+	return combinedPolicyActions
 }
 
 // ActionAfter returns the calculated action for the tier for the supplied flow.
@@ -323,10 +369,9 @@ func (tier CompiledTier) ActionBefore(flow *api.Flow, r *EndpointResponse, cache
 // an identical action with confirmed match, or a different action (confirmed or unconfirmed) that means we cannot
 // determine the result with certainty.
 func (tier CompiledTier) ActionAfter(flow *api.Flow, r *EndpointResponse, cache *flowCache) api.ActionFlag {
-	var lastMatchedPolicy *CompiledPolicy
-	var lastMatchedActions api.ActionFlag
-	var uncertainNoMatchPolicies []string
-	uncertainNoMatchActions := make(map[string]api.ActionFlag)
+	var lastEnforcedPolicy *CompiledPolicy
+	var lastEnforcedActions api.ActionFlag
+	var combinedPolicyActions api.ActionFlag
 	for _, p := range tier {
 		log.Debugf("Process policy: %s", p.FlowLogName)
 
@@ -338,81 +383,120 @@ func (tier CompiledTier) ActionAfter(flow *api.Flow, r *EndpointResponse, cache 
 		//TODO(rlb): We may want to handle unknown selector matches if we decide to be a little more clever about our
 		//           label aggregation.
 
-		// Store the last matched policy. For the "after" processing we treat staged as enforced, so it's not necessary
-		// to treat them differently.
-		lastMatchedPolicy = p
-
 		// If the policy is not modified use the cached value if there is one, otherwise calculate.
+		var actions api.ActionFlag
 		if p.Modified {
 			log.Debug("Policy is modified - calculate action")
-			lastMatchedActions = p.Action(flow, cache)
+			actions = p.Action(flow, cache)
 		} else if cachedActions, ok := cache.policies[p.FlowLogName]; ok {
 			log.Debug("Use cached policy action")
-			lastMatchedActions = cachedActions
+			actions = cachedActions
 		} else {
 			log.Debug("No cached policy action - calculate")
-			lastMatchedActions = p.Action(flow, cache)
+			actions = p.Action(flow, cache)
 		}
 
-		if lastMatchedActions&ActionFlagNoMatch == 0 {
-			// Policy has an exactly matching rule so no need to enumerate further.
-			log.Debug("Policy has an exactly matching rule")
-			break
-		}
+		// Add any policy matches.
+		addPolicyToResponse(r,
+			p.Tier, p.Namespace, p.CalicoV3Name, actions, p.Enforced, &combinedPolicyActions)
 
-		// One of the possible results of the policy is a no-match. If, in addition, one of the real policy action
-		// flags is set (i.e. pass, deny, allow) then this is an uncertain no-match.
-		if lastMatchedActions&ActionFlagsAllPolicyActions != 0 {
-			log.Debug("Policy is an uncertain no-match")
-			uncertainNoMatchPolicies = append(uncertainNoMatchPolicies, p.FlowLogName)
-			uncertainNoMatchActions[p.FlowLogName] = lastMatchedActions
+		// If this is enforced store the policy and actions, and if there was an exact match then exit.
+		if p.Enforced {
+			// Store the last enforced policy.
+			lastEnforcedPolicy = p
+			lastEnforcedActions = actions
+
+			if actions&ActionFlagNoMatch == 0 {
+				// Policy has an exactly matching rule so no need to enumerate further.
+				log.Debug("Policy has an exactly matching rule")
+				break
+			}
 		}
 	}
 
-	if lastMatchedPolicy == nil {
+	if lastEnforcedPolicy == nil {
 		// This flow didn't apply to any policy in this tier, so go to the next tier.
 		log.Debug("Did not match tier - enumerate next tier")
 		return api.ActionFlagNextTier
 	}
 
-	var combinedPolicyActions api.ActionFlag
-	for _, n := range uncertainNoMatchPolicies {
-		if n == lastMatchedPolicy.FlowLogName {
-			// This is the last policy (handled separately below) so skip.
-			continue
-		}
-
-		// Update previous uncertain no-matches to just be no-match inferred from flow log.
-		noMatchPolicyActions := uncertainNoMatchActions[n]
-
-		// Add each possible action to the flow policy hits.
-		addPolicyToResponse(lastMatchedPolicy.Tier, n, noMatchPolicyActions, r)
-
-		// Collate all of the action flags, but omit the no-match, we don't need to pass that up the stack since a
-		// no match will never actually happen (due to end-of-tier drop).
-		combinedPolicyActions |= noMatchPolicyActions &^ ActionFlagNoMatch
-	}
-
-	if lastMatchedActions&ActionFlagNoMatch != 0 {
+	if lastEnforcedActions&ActionFlagNoMatch != 0 {
 		// The last enforced policy included a no-match flag. This must be the last enforced policy in the tier because
 		// we'd otherwise exit as soon as we get an exactly matched rule. We need to convert the no-match to an
 		// end-of-tier drop.
 		log.Debug("Final policy included a no-match, include the end of tier action")
-		lastMatchedActions = (lastMatchedActions | api.ActionFlagEndOfTierDeny) &^ ActionFlagNoMatch
+		var verificationFlags api.ActionFlag
+		if !lastEnforcedPolicy.Modified {
+			verificationFlags = cache.policies[lastEnforcedPolicy.FlowLogName] & ActionFlagsMeasured
+		}
+		addPolicyToResponse(r,
+			lastEnforcedPolicy.Tier, lastEnforcedPolicy.Namespace, lastEnforcedPolicy.CalicoV3Name,
+			api.ActionFlagEndOfTierDeny|verificationFlags, true, &combinedPolicyActions)
 	}
 
-	// And add the final verdict policy.
-	addPolicyToResponse(lastMatchedPolicy.Tier, lastMatchedPolicy.FlowLogName, lastMatchedActions, r)
-	return lastMatchedActions | combinedPolicyActions
+	return combinedPolicyActions
 }
 
-// addPolicyToResponse adds a policy to the endpoint response. This may add multiple entries for the same policy
-// if there is uncertainty in the match.
-func addPolicyToResponse(tier, name string, flags api.ActionFlag, r *EndpointResponse) {
+// addPolicyToResponse adds a policy to the endpoint response. The action flags may indicate multiple possible
+// outcomes when the calculation is uncertain. This may be a no-op if there are no concrete policy actions specified in
+// the flags.
+func addPolicyToResponse(r *EndpointResponse, tier, namespace, name string, flags api.ActionFlag, isEnforced bool, combinedFlags *api.ActionFlag) {
+	if flags&ActionFlagsAllPolicyActions == 0 {
+		return
+	}
+	log.Debugf("Add policy to flow: %s | %s | isEnforced=%v ", name, flags.ToActionStrings(), isEnforced)
+	if *combinedFlags == 0 {
+		// This is the first policy. Set the measured bits first. This is used to provide some indication of the
+		// accuracy of the calculation. The measurement flags are combined below for each consecutive policy hit.
+		// Note that we track the measurement bits for both enforced and non-enforced policies since both provide
+		// insight into whether the measured data agrees with the calculated.
+		*combinedFlags |= (ActionFlagsMeasured & flags)
+	}
+
+	if isEnforced {
+		// This flow is enforced, so update the concrete action flags for the flow.
+		*combinedFlags |= (flags & ActionFlagsAllPolicyActions)
+	}
+
+	// Both enforced and non-enforced policy data provides input into the accuracy of the calculated result. Combine
+	// the measurement flags which provide some indication of certainty.
+	if *combinedFlags&ActionFlagFlowLogConflictsWithCalculated != 0 {
+		// The flow action is flagged as conflicting with measured flow data - we don't update the flags any further.
+	} else if flags&ActionFlagFlowLogConflictsWithCalculated != 0 {
+		// This calculated policy conflicts with measured flow data - mark the flow as conflicting and removed the
+		// verified flags if they were set.
+		*combinedFlags = (*combinedFlags &^ ActionFlagsVerified) | ActionFlagFlowLogConflictsWithCalculated
+	} else if flags&ActionFlagsVerified == 0 {
+		// Action is not verified, so remove verification flags from combined action.
+		*combinedFlags = (*combinedFlags &^ ActionFlagsVerified)
+	} else if flags&ActionFlagFlowLogRemovedUncertainty != 0 && *combinedFlags&ActionFlagFlowLogMatchesCalculated != 0 {
+		// Calculated policy removed uncertainty, but combined flags indicate matches calculated. Downgrade the
+		// combined verified flag to indicatae removed uncertainty.
+		*combinedFlags = (*combinedFlags &^ ActionFlagsVerified) | ActionFlagFlowLogRemovedUncertainty
+	}
+
+	// We set the staged indicator if the policy is not enforced. This means an enforced staged policy will not appear
+	// as staged in the "after" policies - which is correct since we are previewing the effect of enforcing the staged
+	// policy.
+	staged := !isEnforced
+
+	// Determine the match index. We increment it for each different policy - so uncertain matches for the same policy
+	// will have the same match index.
+	var matchIndex int
+	if len(r.Policies) > 0 {
+		lastPolicy := r.Policies[len(r.Policies)-1]
+		matchIndex = lastPolicy.MatchIndex
+		if lastPolicy.Tier != tier || lastPolicy.Namespace != namespace || lastPolicy.Name != name || lastPolicy.Staged != staged {
+			matchIndex++
+		}
+	}
+
 	r.Policies = append(r.Policies, api.PolicyHit{
-		MatchIndex: len(r.Policies),
+		MatchIndex: matchIndex,
 		Tier:       tier,
 		Name:       name,
+		Namespace:  namespace,
+		Staged:     staged,
 		Action:     flags,
 	})
 }

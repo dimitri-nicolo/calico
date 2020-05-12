@@ -59,7 +59,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 				}},
 			},
 		}
-		tiers = Tiers{{{Policy: np}}}
+		tiers = Tiers{{{CalicoV3Policy: np, ResourceID: resources.GetResourceID(np)}}}
 		impacted = make(ImpactedResources)
 		sel = NewEndpointSelectorHandler()
 		rd = &ResourceData{
@@ -1187,7 +1187,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|allow"}))
 	})
 
-	It("checking dest ingress pass inexact match is fixed from flow data", func() {
+	It("checking dest ingress pass inexact match is fixed from flow data, but missing end-of-tiers flow policy hit", func() {
 		f.Source.Type = api.EndpointTypeWep
 		f.Destination.Namespace = "ns1"
 		f.Destination.Type = api.EndpointTypeWep
@@ -1201,9 +1201,60 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Pass
 		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact pass confirmed by flow and exact end-of-all-tiers allow. Action is not flagged as verified by
+		// logs because the final profile hit is not in the logs.
+		r := compute()
+		Expect(r.Action).To(Equal(api.ActionFlagAllow))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+	})
+
+	It("checking dest ingress pass inexact match is fixed and fully verified by flow data", func() {
+		f.Source.Type = api.EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = api.EndpointTypeWep
+		f.Policies = []api.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "meh",
+			Name:       "ns1/meh.policy",
+			Action:     api.ActionFlagNextTier,
+		}, {
+			MatchIndex: 1,
+			Tier:       "__PROFILE__",
+			Name:       "__PROFILE__.kns.ns1",
+			Action:     api.ActionFlagAllow,
+		}}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Pass
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
 		// Inexact pass confirmed by flow and exact end-of-all-tiers allow.
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | ActionFlagFlowLogRemovedUncertainty))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+	})
+
+	It("checking dest ingress pass inexact match is fixed from flow data, but contradicts final profile match", func() {
+		f.Source.Type = api.EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = api.EndpointTypeWep
+		f.Policies = []api.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "meh",
+			Name:       "ns1/meh.policy",
+			Action:     api.ActionFlagNextTier,
+		}, {
+			MatchIndex: 1,
+			Tier:       "__PROFILE__",
+			Name:       "__PROFILE__.kns.ns1",
+			Action:     api.ActionFlagDeny,
+		}}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Pass
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact pass confirmed by flow and exact end-of-all-tiers allow.
+		r := compute()
+		Expect(r.Action).To(Equal(api.ActionFlagAllow | ActionFlagFlowLogConflictsWithCalculated))
 		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
 	})
 
@@ -1215,7 +1266,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 			MatchIndex: 0,
 			Tier:       "meh",
 			Name:       "ns1/meh.policy",
-			Action:     api.ActionFlagDeny,
+			Action:     api.ActionFlagNextTier,
 		}}
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
@@ -1226,6 +1277,27 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(api.ActionFlagAllow | api.ActionFlagEndOfTierDeny | ActionFlagFlowLogConflictsWithCalculated))
 		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|allow", "0|meh|ns1/meh.policy|eot-deny"}))
+	})
+
+	It("checking dest ingress allow inexact match is fixed by end of tier deny flow log", func() {
+		f.Source.Type = api.EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = api.EndpointTypeWep
+		f.Policies = []api.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "meh",
+			Name:       "ns1/meh.policy",
+			Action:     api.ActionFlagDeny, // <- change to end of tier deny when supported.
+		}}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Allow
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact allow and exact end of tier deny means overall is exact end of tier deny confirmed by
+		// flow data.
+		r := compute()
+		Expect(r.Action).To(Equal(api.ActionFlagEndOfTierDeny | ActionFlagFlowLogRemovedUncertainty))
+		Expect(r.Policies.FlowLogPolicyStrings()).To(Equal([]string{"0|meh|ns1/meh.policy|eot-deny"}))
 	})
 
 	It("checking dest ingress allow inexact match is not fixed from flow data when flow contains multiple actions for same policy", func() {
@@ -1321,7 +1393,7 @@ var _ = Describe("Compiled tiers and gnpolicies tests", func() {
 			},
 		}
 
-		tiers = Tiers{{{Policy: gnp}}}
+		tiers = Tiers{{{CalicoV3Policy: gnp, ResourceID: resources.GetResourceID(gnp)}}}
 		impacted = make(ImpactedResources)
 		sel = NewEndpointSelectorHandler()
 		rd = &ResourceData{

@@ -231,7 +231,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Having a single drop all in namespace ns1 policy")
 		rdAfter := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3Policy1,
+				CalicoV3Policy: tier3Policy1,
+				ResourceID:     resources.GetResourceID(tier3Policy1),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -344,7 +345,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Having a single drop all in namespace ns1 policy")
 		rdBefore := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3Policy1,
+				CalicoV3Policy: tier3Policy1,
+				ResourceID:     resources.GetResourceID(tier3Policy1),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -352,9 +354,11 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Adding an allow all ingress rule after the no-rule policy")
 		rdAfter := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3Policy1,
+				CalicoV3Policy: tier3Policy1,
+				ResourceID:     resources.GetResourceID(tier3Policy1),
 			}, {
-				Policy: tier3Policy2,
+				CalicoV3Policy: tier3Policy2,
+				ResourceID:     resources.GetResourceID(tier3Policy2),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -413,7 +417,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Having a single drop all in namespace ns1 policy")
 		rdBefore := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3Policy1,
+				CalicoV3Policy: tier3Policy1,
+				ResourceID:     resources.GetResourceID(tier3Policy1),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -421,9 +426,11 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Adding an allow all egress rule after the no-rule policy")
 		rdAfter := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3Policy1,
+				CalicoV3Policy: tier3Policy1,
+				ResourceID:     resources.GetResourceID(tier3Policy1),
 			}, {
-				Policy: tier3Policy3,
+				CalicoV3Policy: tier3Policy3,
+				ResourceID:     resources.GetResourceID(tier3Policy3),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -489,9 +496,10 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Adding a bunch of policies across multiple tiers")
 		rdAfter := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{
-				{{Policy: tier1Policy1}, {Policy: tier1Policy2}},
-				{{Policy: tier2Policy1}},
-				{{Policy: tier3Policy4}},
+				{{CalicoV3Policy: tier1Policy1, ResourceID: resources.GetResourceID(tier1Policy1)},
+					{CalicoV3Policy: tier1Policy2, ResourceID: resources.GetResourceID(tier1Policy2)}},
+				{{CalicoV3Policy: tier2Policy1, ResourceID: resources.GetResourceID(tier2Policy1)}},
+				{{CalicoV3Policy: tier3Policy4, ResourceID: resources.GetResourceID(tier3Policy4)}},
 			},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -629,7 +637,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Having a policy that denies all")
 		rdBefore := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3PolicyMatchCachedDenyAll,
+				CalicoV3Policy: tier3PolicyMatchCachedDenyAll,
+				ResourceID:     resources.GetResourceID(tier3PolicyMatchCachedDenyAll),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}
@@ -637,9 +646,11 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 		By("Adding a policy that matches on ingress and egress cached data before the deny")
 		rdAfter := &policycalc.ResourceData{
 			Tiers: policycalc.Tiers{{{
-				Policy: tier3PolicyMatchCached,
+				CalicoV3Policy: tier3PolicyMatchCached,
+				ResourceID:     resources.GetResourceID(tier3PolicyMatchCached),
 			}, {
-				Policy: tier3PolicyMatchCachedDenyAll,
+				CalicoV3Policy: tier3PolicyMatchCachedDenyAll,
+				ResourceID:     resources.GetResourceID(tier3PolicyMatchCachedDenyAll),
 			}}},
 			Namespaces: []*corev1.Namespace{ns1, ns2},
 		}

@@ -14,6 +14,12 @@ type CompiledPolicy struct {
 	// Name of the tier with separators in the flow log format.
 	Tier string
 
+	// Policy namespace.
+	Namespace string
+
+	// Calico v3 policy name. This is the name used in the flow log.
+	CalicoV3Name string
+
 	// Name of the policy in flow log format.
 	// -  <name>
 	// -  staged:<name>
@@ -32,9 +38,9 @@ type CompiledPolicy struct {
 	// Whether this policy was modified.
 	Modified bool
 
-	// Whether this policy is staged, and we are therefore performing preview for a staged policy.
-	// Both staged and modified policies are included in the check to see if a flow is potentially affected.
-	Staged bool
+	// Whether this policy is being enforced or not. Generally for staged policies this would be false, however, if we
+	// are previewing the enforcing of a staged policy then this will be set to true.
+	Enforced bool
 
 	// Whether this policy was deleted. Note that if deleted, Modified will also be true.
 	Deleted bool
@@ -95,50 +101,50 @@ loop:
 
 // compilePolicy compiles the Calico v3 policy resource into separate ingress and egress CompiledPolicy structs.
 // If the policy does not contain ingress or egress matches then the corresponding result will be nil.
-func compilePolicy(m *MatcherFactory, p Policy, impact Impact) (ingressPol, egressPol *CompiledPolicy) {
-	log.Debugf("Compiling policy %s", p)
+func compilePolicy(m *MatcherFactory, p Policy, impact Impact, previewingChange bool) (ingressPol, egressPol *CompiledPolicy) {
+	log.Debugf("Compiling policy %s", p.ResourceID)
 
-	// From the resource type, determine the namespace matcher, selector matcher and set of rules to use.
+	// From the resource type, determine the namespace, selector and service account matchers and set of rules to use.
 	//
 	// The resource type here will either be a Calico NetworkPolicy or GlobalNetworkPolicy. Any Kubernetes
 	// NetworkPolicies will have been converted to Calico NetworkPolicies prior to this point.
-	var namespace EndpointMatcher
-	var selector EndpointMatcher
-	var serviceAccount EndpointMatcher
+	var namespaceMatcher EndpointMatcher
+	var selectorMatcher EndpointMatcher
+	var serviceAccountMatcher EndpointMatcher
 	var ingress, egress []v3.Rule
 	var types []v3.PolicyType
-	var name string
+	var flowLogName string
 	var tier string
 
-	// Flag the policy as staged if either the policy itself is staged, or the impact indicates this was a staged
-	// policy that was converted to enforced.
-	staged := p.Staged || impact.UseStaged
+	// The policy is enforced if either the policy is not a staged policy, or it is being previewed (since a staged
+	// policy previewed is always enforced).
+	enforced := !p.Staged || previewingChange
 
-	switch res := p.Policy.(type) {
+	switch res := p.CalicoV3Policy.(type) {
 	case *v3.NetworkPolicy:
-		namespace = m.Namespace(res.Namespace)
+		namespaceMatcher = m.Namespace(res.Namespace)
 		// borrow the ServiceAccounts matcher factory since it's functionality is a superset of what we need
-		serviceAccount = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
-		selector = m.Selector(res.Spec.Selector)
+		serviceAccountMatcher = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
+		selectorMatcher = m.Selector(res.Spec.Selector)
 		ingress, egress = res.Spec.Ingress, res.Spec.Egress
 		types = res.Spec.Types
 		tier = res.Spec.Tier
-		if staged {
-			name = res.Namespace + "/" + model.PolicyNamePrefixStaged + res.Name
+		if p.Staged {
+			flowLogName = res.Namespace + "/" + model.PolicyNamePrefixStaged + res.Name
 		} else {
-			name = res.Namespace + "/" + res.Name
+			flowLogName = res.Namespace + "/" + res.Name
 		}
 	case *v3.GlobalNetworkPolicy:
-		namespace = m.NamespaceSelector(res.Spec.NamespaceSelector)
-		serviceAccount = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
-		selector = m.Selector(res.Spec.Selector)
+		namespaceMatcher = m.NamespaceSelector(res.Spec.NamespaceSelector)
+		serviceAccountMatcher = m.ServiceAccounts(&v3.ServiceAccountMatch{Selector: res.Spec.ServiceAccountSelector})
+		selectorMatcher = m.Selector(res.Spec.Selector)
 		ingress, egress = res.Spec.Ingress, res.Spec.Egress
 		types = res.Spec.Types
 		tier = res.Spec.Tier
-		if staged {
-			name = model.PolicyNamePrefixStaged + res.Name
+		if p.Staged {
+			flowLogName = model.PolicyNamePrefixStaged + res.Name
 		} else {
-			name = res.Name
+			flowLogName = res.Name
 		}
 	default:
 		log.WithField("res", res).Fatal("Unexpected policy resource type")
@@ -147,33 +153,37 @@ func compilePolicy(m *MatcherFactory, p Policy, impact Impact) (ingressPol, egre
 	// Handle ingress policy matchers
 	if policyTypesContains(types, v3.PolicyTypeIngress) {
 		ingressPol = &CompiledPolicy{
-			Tier:        tier,
-			FlowLogName: name,
-			Rules:       compileRules(m, namespace, ingress),
-			Modified:    impact.Modified,
-			Staged:      staged,
-			Deleted:     impact.Deleted,
+			Tier:         tier,
+			Namespace:    p.CalicoV3Policy.GetObjectMeta().GetNamespace(),
+			CalicoV3Name: p.CalicoV3Policy.GetObjectMeta().GetName(),
+			FlowLogName:  flowLogName,
+			Rules:        compileRules(m, namespaceMatcher, ingress),
+			Modified:     impact.Modified,
+			Enforced:     enforced,
+			Deleted:      impact.Deleted,
 		}
 		ingressPol.add(m.Dst(m.CalicoEndpointSelector()))
-		ingressPol.add(m.Dst(namespace))
-		ingressPol.add(m.Dst(serviceAccount))
-		ingressPol.add(m.Dst(selector))
+		ingressPol.add(m.Dst(namespaceMatcher))
+		ingressPol.add(m.Dst(serviceAccountMatcher))
+		ingressPol.add(m.Dst(selectorMatcher))
 	}
 
 	// Handle egress policy matchers
 	if policyTypesContains(types, v3.PolicyTypeEgress) {
 		egressPol = &CompiledPolicy{
-			Tier:        tier,
-			FlowLogName: name,
-			Rules:       compileRules(m, namespace, egress),
-			Modified:    impact.Modified,
-			Staged:      staged,
-			Deleted:     impact.Deleted,
+			Tier:         tier,
+			Namespace:    p.CalicoV3Policy.GetObjectMeta().GetNamespace(),
+			CalicoV3Name: p.CalicoV3Policy.GetObjectMeta().GetName(),
+			FlowLogName:  flowLogName,
+			Rules:        compileRules(m, namespaceMatcher, egress),
+			Modified:     impact.Modified,
+			Enforced:     enforced,
+			Deleted:      impact.Deleted,
 		}
 		egressPol.add(m.Src(m.CalicoEndpointSelector()))
-		egressPol.add(m.Src(namespace))
-		egressPol.add(m.Src(serviceAccount))
-		egressPol.add(m.Src(selector))
+		egressPol.add(m.Src(namespaceMatcher))
+		egressPol.add(m.Src(serviceAccountMatcher))
+		egressPol.add(m.Src(selectorMatcher))
 	}
 
 	return

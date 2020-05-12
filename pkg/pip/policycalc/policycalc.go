@@ -3,6 +3,7 @@ package policycalc
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -22,12 +23,13 @@ import (
 
 // The tiers containing the ordered set of Calico v3 policy resource types.
 type Policy struct {
-	Policy resources.Resource
-	Staged bool
+	CalicoV3Policy resources.Resource
+	ResourceID     v3.ResourceID
+	Staged         bool
 }
 
 func (p Policy) String() string {
-	return fmt.Sprintf("%s; Staged=%v", resources.GetResourceID(p.Policy), p.Staged)
+	return fmt.Sprintf("%s -> %s; staged=%v", p.ResourceID, resources.GetResourceID(p.CalicoV3Policy), p.Staged)
 }
 
 type Tier []Policy
@@ -44,17 +46,14 @@ type Impact struct {
 	// The resource was deleted.
 	Deleted bool
 
-	// Whether or not to use the staged policy data from the flow log to augment the calculation. This will be true for
-	// actual staged policies, or for staged policies that have been converted to enforced policies.
-	UseStaged bool
-
 	// The resource was modified. This is used to determine whether data from the flow logs can be used to augment
 	// calculated data. If the resource was modified then we cannot use flow log data.
 	// Note that for an enforced-staged resource, modified pertains to the staged resource type.
 	Modified bool
 }
 
-// ImpactedResources is a set of impacts for updated resources.
+// ImpactedResources is a set of impacts resources from a resource update preview. Note that the impact of previewing
+// any staged policy has the effect of enforcing the policy as well.
 type ImpactedResources map[v3.ResourceID]Impact
 
 // Add adds a resource to the set of modified resources.
@@ -74,24 +73,19 @@ func (m ImpactedResources) Add(rid v3.ResourceID, impact Impact) {
 }
 
 // Impact returns impact for a particular resource.
-func (m ImpactedResources) Impact(r resources.Resource) (Impact, bool) {
-	impact, isImpacted := m[resources.GetResourceID(r)]
+func (m ImpactedResources) Impact(id v3.ResourceID) (Impact, bool) {
+	impact, isImpacted := m[id]
 	return impact, isImpacted
 }
 
 // IsModified returns if the resource is modified.
-func (m ImpactedResources) IsModified(r resources.Resource) bool {
-	return m[resources.GetResourceID(r)].Modified
+func (m ImpactedResources) IsModified(id v3.ResourceID) bool {
+	return m[id].Modified
 }
 
 // IsDeleted returns if the resource is deleted.
-func (m ImpactedResources) IsDeleted(r resources.Resource) bool {
-	return m[resources.GetResourceID(r)].Deleted
-}
-
-// UseStaged returns if the flow log data from the staged policy should be used to augment the calculation.
-func (m ImpactedResources) UseStaged(r resources.Resource) bool {
-	return m[resources.GetResourceID(r)].UseStaged
+func (m ImpactedResources) IsDeleted(id v3.ResourceID) bool {
+	return m[id].Deleted
 }
 
 // PolicyCalculator is used to determine the calculated behavior from a configuration change for a given flow.
@@ -190,6 +184,9 @@ func (fp *policyCalculator) CalculateDest(flow *api.Flow, sourceActionBefore, so
 func (fp *policyCalculator) calculateBeforeAfterResponse(
 	flow *api.Flow, changeset *CompiledTierAndPolicyChangeSet, isSrc bool, beforeSrcAction, afterSrcAction api.ActionFlag,
 ) (modified bool, before, after EndpointResponse) {
+	var calculatedBefore EndpointResponse
+	var usingCalculatedBefore bool
+
 	// Initialize logger for this flow, and initialize selector caches.
 	clog := log.WithFields(log.Fields{
 		"reporter":        flow.Reporter,
@@ -226,14 +223,16 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 		// Note that we don't calculate the before impact if this is a destination reported flow and the flow was denied
 		// at source.
 		clog.Debug("Calculate before impact")
-		before = changeset.Before.Calculate(flow, cache, true)
+		calculatedBefore = changeset.Before.Calculate(flow, cache, true)
 
-		if ActualFlowAction(before.Action) == ActualFlowAction(flow.ActionFlag) &&
-			(len(flow.Policies) == 0 || PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(flow.Policies, before.Policies)) {
+		if ActualFlowAction(calculatedBefore.Action) == ActualFlowAction(flow.ActionFlag) &&
+			(len(flow.Policies) == 0 || PolicyHitsEqualIgnoringOrderDuplicatesAndStaged(flow.Policies, calculatedBefore.Policies)) {
 			// The original and calculated before actions are the same and the policies match. Use the calculated set
 			// of policies to avoid duplications and to ensure ordering agrees with the current configuration.  This
 			// also fills in the blanks when the policy data was not in the original flow data.
 			clog.Debug("Calculated flow matches original after ignoring duplicate and staged policies")
+			before = calculatedBefore
+			usingCalculatedBefore = true
 		} else if !fp.Config.CalculateOriginalAction {
 			// We are not configured to calculate the original action, so revert back to use the data from the flow.
 			clog.Debug("Use original flow data for before response")
@@ -242,6 +241,10 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 			// Sort the original set of flows so that we can compare to the "after" set to see if anything has actually
 			// changed. We don't need to sort the calculated policies since these will already be sorted.
 			sort.Sort(api.SortablePolicyHits(before.Policies))
+		} else {
+			clog.Debug("Calculated flow does not match original but configured to recalculate before flows")
+			before = calculatedBefore
+			usingCalculatedBefore = true
 		}
 	}
 
@@ -273,6 +276,30 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	modified = before.Include != after.Include ||
 		ActualFlowAction(before.Action) != ActualFlowAction(after.Action) ||
 		!PolicyHitsEqualIgnoringStaged(before.Policies, after.Policies)
+
+	if modified && log.IsLevelEnabled(log.DebugLevel) {
+		log.Debug("|> ====== IMPACTED FLOW START ======")
+		log.Debugf("|> %s/%s -> %s/%s", flow.Source.Namespace, flow.Source.Name, flow.Destination.Namespace, flow.Destination.Name)
+		log.Debugf("|> Reporter: %s", flow.Reporter)
+		log.Debugf("|> Original source labels: %v", flow.Source.Labels)
+		log.Debugf("|> Original destination labels: %v", flow.Destination.Labels)
+		if before.Include {
+			log.Debug("|> Before")
+			log.Debugf("|>   Actions: %s", strings.Join(before.Action.ToActionStrings(), ", "))
+			log.Debugf("|>   Policies: %s", strings.Join(before.Policies.FlowLogPolicyStrings(), ", "))
+		}
+		if !usingCalculatedBefore && calculatedBefore.Include {
+			log.Debug("|> Calculated Before")
+			log.Debugf("|>   Actions: %s", strings.Join(calculatedBefore.Action.ToActionStrings(), ", "))
+			log.Debugf("|>   Policies: %s", strings.Join(calculatedBefore.Policies.FlowLogPolicyStrings(), ", "))
+		}
+		if after.Include {
+			log.Debug("|> Calculated After")
+			log.Debugf("|>   Actions: %s", strings.Join(after.Action.ToActionStrings(), ", "))
+			log.Debugf("|>   Policies: %s", strings.Join(after.Policies.FlowLogPolicyStrings(), ", "))
+		}
+		log.Debug("|> ====== IMPACTED FLOW END ======")
+	}
 
 	return modified, before, after
 }

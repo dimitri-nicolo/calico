@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	// Policy resources
+	// CalicoV3Policy resources
 	pr1 = &v3.NetworkPolicy{
 		TypeMeta: resources.TypeCalicoNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
@@ -198,17 +198,13 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 
 		By("Checking the impacted set")
 		// Only pr1 is modified.
-		Expect(modified.IsModified(pr1)).To(BeTrue())
-		Expect(modified.IsModified(pr2)).To(BeFalse())
-		Expect(modified.IsModified(pr3)).To(BeFalse())
-		// No staged policy updates
-		Expect(modified.UseStaged(pr1)).To(BeFalse())
-		Expect(modified.UseStaged(pr2)).To(BeFalse())
-		Expect(modified.UseStaged(pr3)).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr1))).To(BeTrue())
+		Expect(modified.IsModified(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr3))).To(BeFalse())
 		// These are all sets not deletes.
-		Expect(modified.IsDeleted(pr1)).To(BeFalse())
-		Expect(modified.IsDeleted(pr2)).To(BeFalse())
-		Expect(modified.IsDeleted(pr3)).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr1))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr3))).To(BeFalse())
 	})
 
 	It("Handles setting of staged policy sets (staged policies do not exist)", func() {
@@ -225,22 +221,32 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		}})
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Checking the enforced policies have been updated")
+		By("Checking the enforced policies do not exist")
 		ce := xc.Get(resources.GetResourceID(pr1))
+		Expect(ce).To(BeNil())
+
+		ce = xc.Get(resources.GetResourceID(pr2))
+		Expect(ce).To(BeNil())
+
+		ce = xc.Get(resources.GetResourceID(pr3))
+		Expect(ce).To(BeNil())
+
+		By("Checking the staged policies have been updated")
+		ce = xc.Get(resources.GetResourceID(supr1))
 		Expect(ce).ToNot(BeNil())
-		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
+		p1, ok := ce.GetPrimary().(*v3.StagedNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(p1.Spec.Selector).To(Equal("has(goodbye1)"))
 
-		ce = xc.Get(resources.GetResourceID(pr2))
+		ce = xc.Get(resources.GetResourceID(supr2))
 		Expect(ce).ToNot(BeNil())
-		p2, ok := ce.GetPrimary().(*v3.GlobalNetworkPolicy)
+		p2, ok := ce.GetPrimary().(*v3.StagedGlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(p2.Spec.Selector).To(Equal("has(goodbye2)"))
 
-		ce = xc.Get(resources.GetResourceID(pr3))
+		ce = xc.Get(resources.GetResourceID(supr3))
 		Expect(ce).ToNot(BeNil())
-		p3, ok := ce.GetPrimary().(*networkingv1.NetworkPolicy)
+		p3, ok := ce.GetPrimary().(*v3.StagedKubernetesNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(p3.Spec.PolicyTypes).To(Equal([]networkingv1.PolicyType{
 			networkingv1.PolicyTypeEgress,
@@ -248,17 +254,13 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 
 		By("Checking the impacted set")
 		// Staged policies did not previously exist, so will be flagged as modified.
-		Expect(modified.IsModified(pr1)).To(BeTrue())
-		Expect(modified.IsModified(pr2)).To(BeTrue())
-		Expect(modified.IsModified(pr3)).To(BeTrue())
-		// These are enforced staged policies.
-		Expect(modified.UseStaged(pr1)).To(BeTrue())
-		Expect(modified.UseStaged(pr2)).To(BeTrue())
-		Expect(modified.UseStaged(pr3)).To(BeTrue())
+		Expect(modified.IsModified(resources.GetResourceID(supr1))).To(BeTrue())
+		Expect(modified.IsModified(resources.GetResourceID(supr2))).To(BeTrue())
+		Expect(modified.IsModified(resources.GetResourceID(supr3))).To(BeTrue())
 		// These are all sets not deletes.
-		Expect(modified.IsDeleted(pr1)).To(BeFalse())
-		Expect(modified.IsDeleted(pr2)).To(BeFalse())
-		Expect(modified.IsDeleted(pr3)).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(supr1))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(supr2))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(supr3))).To(BeFalse())
 	})
 
 	It("Handles setting of staged policy sets (staged policies exist)", func() {
@@ -286,22 +288,27 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		}})
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Checking the enforced policies have been updated")
+		By("Checking the enforced policies have been deleted")
 		ce := xc.Get(resources.GetResourceID(pr1))
-		Expect(ce).ToNot(BeNil())
-		p1, ok := ce.GetPrimary().(*v3.NetworkPolicy)
+		Expect(ce).To(BeNil())
+
+		ce = xc.Get(resources.GetResourceID(pr2))
+		Expect(ce).To(BeNil())
+
+		By("Checking the staged policies have been updated")
+		ce = xc.Get(resources.GetResourceID(supr1))
+		p1, ok := ce.GetPrimary().(*v3.StagedNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(p1.Spec.Selector).To(Equal("has(goodbye1)"))
 
-		ce = xc.Get(resources.GetResourceID(pr2))
-		Expect(ce).ToNot(BeNil())
-		p2, ok := ce.GetPrimary().(*v3.GlobalNetworkPolicy)
+		ce = xc.Get(resources.GetResourceID(supr2))
+		p2, ok := ce.GetPrimary().(*v3.StagedGlobalNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(p2.Spec.Selector).To(Equal("has(goodbye2)"))
 
-		ce = xc.Get(resources.GetResourceID(pr3))
+		ce = xc.Get(resources.GetResourceID(supr3))
 		Expect(ce).ToNot(BeNil())
-		p3, ok := ce.GetPrimary().(*networkingv1.NetworkPolicy)
+		p3, ok := ce.GetPrimary().(*v3.StagedKubernetesNetworkPolicy)
 		Expect(ok).To(BeTrue())
 		Expect(p3.Spec.PolicyTypes).To(Equal([]networkingv1.PolicyType{
 			networkingv1.PolicyTypeEgress,
@@ -310,17 +317,16 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		By("Checking the impacted set")
 		// Staged policies 1 and 2 existed before and were not modified, Staged policy 3 did not exist and so will be
 		// flagged as modified.
-		Expect(modified.IsModified(pr1)).To(BeFalse())
-		Expect(modified.IsModified(pr2)).To(BeFalse())
-		Expect(modified.IsModified(pr3)).To(BeTrue())
-		// These are enforced staged policies.
-		Expect(modified.UseStaged(pr1)).To(BeTrue())
-		Expect(modified.UseStaged(pr2)).To(BeTrue())
-		Expect(modified.UseStaged(pr3)).To(BeTrue())
-		// These are all sets not deletes.
-		Expect(modified.IsDeleted(pr1)).To(BeFalse())
-		Expect(modified.IsDeleted(pr2)).To(BeFalse())
-		Expect(modified.IsDeleted(pr3)).To(BeFalse())
+		By("Checking the impacted set has staged policy 3 updated and 1 and 2 not updated")
+		Expect(modified.IsModified(resources.GetResourceID(supr1))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(supr2))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(supr3))).To(BeTrue())
+
+		// The enforced resources will be deleted.
+		By("Checking the impacted set has enforced policies deleted (overidden by staged)")
+		Expect(modified.IsDeleted(resources.GetResourceID(pr1))).To(BeTrue())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr2))).To(BeTrue())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr3))).To(BeTrue())
 	})
 
 	It("Handles deletion of staged policy sets", func() {
@@ -359,15 +365,12 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		}))
 
 		By("Checking the impacted set")
-		Expect(modified.IsModified(pr1)).To(BeFalse())
-		Expect(modified.IsModified(pr2)).To(BeFalse())
-		Expect(modified.IsModified(pr3)).To(BeFalse())
-		Expect(modified.UseStaged(pr1)).To(BeFalse())
-		Expect(modified.UseStaged(pr2)).To(BeFalse())
-		Expect(modified.UseStaged(pr3)).To(BeFalse())
-		Expect(modified.IsDeleted(pr1)).To(BeFalse())
-		Expect(modified.IsDeleted(pr2)).To(BeFalse())
-		Expect(modified.IsDeleted(pr3)).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr1))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr3))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr1))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr3))).To(BeFalse())
 	})
 
 	It("Handles deletion of staged policy deletes", func() {
@@ -406,15 +409,12 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		}))
 
 		By("Checking the impacted set")
-		Expect(modified.IsModified(pr1)).To(BeFalse())
-		Expect(modified.IsModified(pr2)).To(BeFalse())
-		Expect(modified.IsModified(pr3)).To(BeFalse())
-		Expect(modified.UseStaged(pr1)).To(BeFalse())
-		Expect(modified.UseStaged(pr2)).To(BeFalse())
-		Expect(modified.UseStaged(pr3)).To(BeFalse())
-		Expect(modified.IsDeleted(pr1)).To(BeFalse())
-		Expect(modified.IsDeleted(pr2)).To(BeFalse())
-		Expect(modified.IsDeleted(pr3)).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr1))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr3))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr1))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr3))).To(BeFalse())
 	})
 
 	It("Handles setting of staged policy deletes", func() {
@@ -442,15 +442,12 @@ var _ = Describe("Test sending in pip updates to the xrefcache", func() {
 		Expect(ce).To(BeNil())
 
 		By("Checking the impacted set")
-		Expect(modified.IsModified(pr1)).To(BeFalse())
-		Expect(modified.IsModified(pr2)).To(BeFalse())
-		Expect(modified.IsModified(pr3)).To(BeFalse())
-		Expect(modified.UseStaged(pr1)).To(BeTrue())
-		Expect(modified.UseStaged(pr2)).To(BeTrue())
-		Expect(modified.UseStaged(pr3)).To(BeTrue())
-		Expect(modified.IsDeleted(pr1)).To(BeTrue())
-		Expect(modified.IsDeleted(pr2)).To(BeTrue())
-		Expect(modified.IsDeleted(pr3)).To(BeTrue())
+		Expect(modified.IsModified(resources.GetResourceID(pr1))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr2))).To(BeFalse())
+		Expect(modified.IsModified(resources.GetResourceID(pr3))).To(BeFalse())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr1))).To(BeTrue())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr2))).To(BeTrue())
+		Expect(modified.IsDeleted(resources.GetResourceID(pr3))).To(BeTrue())
 	})
 
 	It("Errors setting an invalid Calico policy", func() {

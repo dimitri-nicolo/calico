@@ -196,8 +196,9 @@ func resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData 
 	for i := range xrefTiers {
 		for _, t := range xrefTiers[i].OrderedPolicies {
 			rd.Tiers[i] = append(rd.Tiers[i], policycalc.Policy{
-				Policy: t.GetCalicoV3(),
-				Staged: t.IsStaged(),
+				CalicoV3Policy: t.GetCalicoV3(),
+				ResourceID:     resources.GetResourceID(t.GetPrimary()),
+				Staged:         t.IsStaged(),
 			})
 		}
 	}
@@ -221,29 +222,41 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 	var err error
 
 	for _, r := range rs {
-		// Get the resource ID.
+		// Extract resource data.
+		resource := r.Resource
+		if resource == nil {
+			continue
+		}
+		action := r.Action
 		id := resources.GetResourceID(r.Resource)
-
-		// Trace the input resource.
 		log.Debugf("Applying resource update: %s", id)
 
-		// Convert staged policies to non-staged/enforced policies. Note that we don't care about the ordering
-		// here since we're currently only passing one resource at a time, and that we skip "delete" actions
-		// for staged policies since we don't process staged policies in the "after" processing.
+		// If this is a staged resource set then determine the corresponding "enforced" resource and the staged action.
+		// Depending on both the preview action and the staged action we may need to do additional modifications to the
+		// resource data.
+		var enforced resources.Resource
+		var staged bool
 		var stagedAction v3.StagedAction
+		switch np := resource.(type) {
+		case *v3.StagedNetworkPolicy:
+			log.Debug("Enforcing StagedNetworkPolicy")
+			stagedAction, enforced = v3.ConvertStagedPolicyToEnforced(np)
+			staged = true
+		case *v3.StagedGlobalNetworkPolicy:
+			log.Debug("Enforcing StagedGlobalNetworkPolicy")
+			stagedAction, enforced = v3.ConvertStagedGlobalPolicyToEnforced(np)
+			staged = true
+		case *v3.StagedKubernetesNetworkPolicy:
+			log.Debug("Enforcing StagedKubernetesNetworkPolicy")
+			stagedAction, enforced = v3.ConvertStagedKubernetesPolicyToK8SEnforced(np)
+			staged = true
+		}
 
-		// Unless determined otherwise, the resource is modified and enforced.
-		staged := false
+		// Locate the resource in the xrefcache, if it exists, and determine if it has been modified. If the resource is
+		// not modified then we can use measured flow log data to augment the calculation.
 		modified := true
-
-		// Extract the resource. If this is a staged resource, convert to the enforced equivalent.
-		resource := r.Resource
-		action := r.Action
-
-		// Locate the resource in the xrefcache if it exists and work out if it has been modified. We do this for
-		// staged and enforced policies.
 		existing := xc.Get(id)
-		if existing != nil && resource != nil {
+		if existing != nil {
 			log.Debug("Check if resource is modified")
 			modified, err = IsResourceModifiedForPIP(existing.GetPrimary(), resource)
 			if err != nil {
@@ -251,71 +264,66 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 			}
 		}
 
-		switch np := resource.(type) {
-		case *v3.StagedNetworkPolicy:
-			log.Debug("Enforcing StagedNetworkPolicy")
-			stagedAction, resource = v3.ConvertStagedPolicyToEnforced(np)
-			staged = true
-		case *v3.StagedGlobalNetworkPolicy:
-			log.Debug("Enforcing StagedGlobalNetworkPolicy")
-			stagedAction, resource = v3.ConvertStagedGlobalPolicyToEnforced(np)
-			staged = true
-		case *v3.StagedKubernetesNetworkPolicy:
-			log.Debug("Enforcing StagedKubernetesNetworkPolicy")
-			stagedAction, resource = v3.ConvertStagedKubernetesPolicyToK8SEnforced(np)
-			staged = true
-		}
-
-		if staged {
-			// Update and trace the resource ID.
-			id = resources.GetResourceID(resource)
-			log.Debugf("Converted staged resource update: %s", id)
-
-			if action == "delete" {
-				log.Debug("Staged policy deleted - no op")
-				continue
-			}
-
-			switch stagedAction {
-			case v3.StagedActionDelete:
-				// If the staged action was delete then set the resource action to delete with the enforced resource.
-				action = "delete"
-			case v3.StagedActionSet, "":
-				// If the staged action was set then set the resource action update with the enforced resource. Note
-				// that update and create are handled identically.
-				action = "update"
-			default:
-				log.Warningf("Invalid staged action: %s", stagedAction)
-				return nil, fmt.Errorf("invalid staged action in preview request: %s", stagedAction)
-			}
-		}
-
+		// Apply the update to the xrefcache, and update our set of previewed resources.
 		switch action {
 		case "update", "create":
-			log.Debugf("Update or create resource: id=%s; modified=%v; staged=%v; deleted=false", id, modified, staged)
-			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: modified, Deleted: false})
-			xc.OnUpdates([]syncer.Update{{
-				Type:       syncer.UpdateTypeSet,
-				Resource:   resource,
-				ResourceID: id,
-			}})
+			log.Debugf("Update or create resource: id=%s; modified=%v", id, modified)
+			// If this is a staged policy delete:
+			// - the xrefcache will not add the resource and we do not need to explicitly consider the staged resource
+			//   in the calculation
+			// - the enforced resource will be deleted in the processing below.
+			// Otherwise:
+			// -after applying the update we should have the entry in the cache and the entry should validate correctly
+			//   for both the actual resource and the Calico v3 representation.
+			if staged && stagedAction == v3.StagedActionDelete {
+				log.Infof("Staged delete: %v", resource)
+			} else {
+				// This resource is updated or created so update our impact data and the xrefcache.
+				log.Debug("Updating cache")
+				impacted.Add(id, policycalc.Impact{Modified: modified, Deleted: false})
+				xc.OnUpdates([]syncer.Update{{
+					Type:       syncer.UpdateTypeSet,
+					Resource:   resource,
+					ResourceID: id,
+				}})
 
-			if xcres := xc.Get(id); xcres == nil {
-				// The xrefcache will delete resources that could not be converted (which may be the case with incorrect
-				// data). Check the resource is present, and if not, error.
-				log.Infof("Invalid resource data: %v", resource)
-				return nil, fmt.Errorf("invalid resource in preview request: %s", id.String())
-			} else if v3res := xcres.GetCalicoV3(); v3res != nil {
-				// Validate the calico representation of the resource.
-				log.Debug("Validating Calico v3 resource")
-				if err := validator.Validate(v3res); err != nil {
-					log.WithError(err).Info("previous resource failed validation")
-					return nil, err
+				if xcres := xc.Get(id); xcres == nil {
+					// The xrefcache will delete resources that could not be converted (which may be the case with
+					// incorrect data). Check the resource is present, and if not, error.
+					log.Infof("Invalid resource data: %v", resource)
+					return nil, fmt.Errorf("invalid resource in preview request: %s", id.String())
+				} else if v3res := xcres.GetCalicoV3(); v3res != nil {
+					// Validate the calico representation of the resource.
+					log.Debug("Validating Calico v3 resource")
+					if err := validator.Validate(v3res); err != nil {
+						log.WithError(err).Info("previous resource failed validation")
+						return nil, err
+					}
 				}
 			}
+
+			// If this is a update or create of a staged resource then we enforce the staged policy which effectively
+			// overrides the corresponding enforced resource. In this case delete the enforced resource from the cache
+			// so that it no longer participates in the calculation. Note that we do this for staged deletes as
+			// well.
+			if staged {
+				enforcedId := resources.GetResourceID(enforced)
+				log.Debugf("Delete enforced resource: %s", enforcedId)
+				xc.OnUpdates([]syncer.Update{{
+					Type:       syncer.UpdateTypeDeleted,
+					Resource:   enforced,
+					ResourceID: enforcedId,
+				}})
+				impacted.Add(enforcedId, policycalc.Impact{Modified: false, Deleted: true})
+			}
+
 		case "delete":
-			log.Debugf("Delete resource: id=%s; modified=false; staged=%v; deleted=true", id, staged)
-			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: false, Deleted: true})
+			// We are previewing deletion of a resource.  Simply delete the resource from the xrefcache so it no longer
+			// participates in the calculation. If this is a deletion of a staged delete then this is effectivly a
+			// no-op, but no need to handle this explicitly since the staged resource will no exists in the before or
+			// after data.
+			log.Debugf("Delete resource: id=%s", id)
+			impacted.Add(id, policycalc.Impact{Modified: false, Deleted: true})
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
 				Resource:   resource,
@@ -327,40 +335,7 @@ func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policyc
 		}
 	}
 
-	// Remove the actual staged resources - these are useful for the "before" calculation when we cache data from the
-	// flow logs, but we do not want them in the "after" calculation where we ignore staged policies except for those
-	// we are explicitly performing policy impact on - and in that case we convert the staged policies to the enforced
-	// equivalent.
-	DeleteStagedResources(xc)
-
 	return impacted, nil
-}
-
-// DeleteStagedResources removes all staged resources from the xref cache. We do this for the "after" processing
-// because we don't need to process staged resources in that case.
-func DeleteStagedResources(xc xrefcache.XrefCache) {
-	log.WithField("xc", xc).Debug("Deleting staged resources from xrefcache")
-	_ = xc.EachCacheEntry(resources.TypeCalicoStagedNetworkPolicies, func(ce xrefcache.CacheEntry) error {
-		log.WithField("ce", ce).Debug("Sending delete update")
-		xc.OnUpdates([]syncer.Update{
-			{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce)},
-		})
-		return nil
-	})
-	_ = xc.EachCacheEntry(resources.TypeCalicoStagedGlobalNetworkPolicies, func(ce xrefcache.CacheEntry) error {
-		log.WithField("ce", ce).Debug("Sending delete update")
-		xc.OnUpdates([]syncer.Update{
-			{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce)},
-		})
-		return nil
-	})
-	_ = xc.EachCacheEntry(resources.TypeCalicoStagedKubernetesNetworkPolicies, func(ce xrefcache.CacheEntry) error {
-		log.WithField("ce", ce).Debug("Sending delete update")
-		xc.OnUpdates([]syncer.Update{
-			{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce)},
-		})
-		return nil
-	})
 }
 
 // IsResourceModifiedForPIP compares the before and after resource to determine if the settings have been modified in a
