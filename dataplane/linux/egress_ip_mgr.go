@@ -419,6 +419,12 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		return nil
 	}
 
+	if m.vxlanDeviceLinkIndex == 0 {
+		// vxlan device not configured yet. Defer processing updates.
+		log.Debug("Wait for vxlan device for egress ip configured")
+		return nil
+	}
+
 	if m.dirtyEgressIPSet.Len() > 0 {
 		// Work out all L2 routes updates.
 		m.setL2Routes()
