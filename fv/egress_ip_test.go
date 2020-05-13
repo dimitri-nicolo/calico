@@ -198,6 +198,25 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
 
+			// Create 3rd gateway.
+			gw3 := makeGateway("10.10.10.3", "gw3")
+			defer gw3.Stop()
+
+			// Check ip rules and routes.
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(func() string {
+				return getIPRoute(table1)
+			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3")))
+
+			// Remove 3rd gateway again.
+			gw3.RemoveFromDatastore(infra)
+
+			// Check ip rules and routes.
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(func() string {
+				return getIPRoute(table1)
+			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
+
 			// Remove the first gateway.
 			gw.RemoveFromDatastore(infra)
 
