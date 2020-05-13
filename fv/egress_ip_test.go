@@ -154,23 +154,23 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		})
 
 		It("updates rules and routing as gateways are added and removed", func() {
-			// Create a gateway.
+			By("Create a gateway.")
 			gw := makeGateway("10.10.10.1", "gw1")
 			defer gw.Stop()
 
-			// No egress ip rules expected yet.
+			By("No egress ip rules expected yet.")
 			Consistently(getIPRules).Should(BeEmpty())
 
-			// Create a client.
+			By("Create a client.")
 			app := makeClient("10.65.0.2", "app")
 			defer app.Stop()
 
-			// Check ip rules.
+			By("Check ip rules.")
 			Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
 			Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.2"))
 			table1 := getIPRules()["10.65.0.2"]
 
-			// Check ip routes.
+			By("Check ip routes.")
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1")))
@@ -178,58 +178,58 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1")))
 
-			// Create another client.
+			By("Create another client.")
 			app2 := makeClient("10.65.0.3", "app2")
 			defer app2.Stop()
 
-			// Check ip rules and routes.
+			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
 			Consistently(func() string {
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1")))
 
-			// Create another gateway.
+			By("Create another gateway.")
 			gw2 := makeGateway("10.10.10.2", "gw2")
 			defer gw2.Stop()
 
-			// Check ip rules and routes.
+			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
 			Consistently(func() string {
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
 
-			// Create 3rd gateway.
+			By("Create 3rd gateway.")
 			gw3 := makeGateway("10.10.10.3", "gw3")
 			defer gw3.Stop()
 
-			// Check ip rules and routes.
+			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3")))
 
-			// Remove 3rd gateway again.
+			By("Remove 3rd gateway again.")
 			gw3.RemoveFromDatastore(infra)
 
-			// Check ip rules and routes.
+			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
 
-			// Remove the first gateway.
+			By("Remove the first gateway.")
 			gw.RemoveFromDatastore(infra)
 
-			// Check ip rules and routes.
+			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.2")))
 
-			// Remove the second gateway.
+			By("Remove the second gateway.")
 			gw2.RemoveFromDatastore(infra)
 
-			// Check ip rules and routes.
+			By("Check ip rules and routes.")
 			Consistently(getIPRules, "5s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
 			Eventually(func() string {
 				return getIPRoute(table1)
@@ -243,15 +243,15 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		})
 
 		It("does nothing when egress IP is disabled", func() {
-			// Create a gateway.
+			By("Create a gateway.")
 			gw := makeGateway("10.10.10.1", "gw1")
 			defer gw.Stop()
 
-			// Create a client.
+			By("Create a client.")
 			app := makeClient("10.65.0.2", "app")
 			defer app.Stop()
 
-			// Should be no ip rules.
+			By("Should be no ip rules.")
 			Consistently(getIPRules, "5s", "1s").Should(BeEmpty())
 		})
 	})
@@ -262,18 +262,18 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		})
 
 		It("honours namespace annotations but not per-pod", func() {
-			// Create a gateway.
+			By("Create a gateway.")
 			gw := makeGateway("10.10.10.1", "gw1")
 			defer gw.Stop()
 
-			// Create a client.
+			By("Create a client.")
 			app := makeClient("10.65.0.2", "app")
 			defer app.Stop()
 
-			// Should be no ip rules.
+			By("Should be no ip rules.")
 			Consistently(getIPRules, "5s", "1s").Should(BeEmpty())
 
-			// Add egress annotations to the default namespace.
+			By("Add egress annotations to the default namespace.")
 			coreV1 := infra.(*infrastructure.K8sDatastoreInfra).K8sClient.CoreV1()
 			ns, err := coreV1.Namespaces().Get(app.WorkloadEndpoint.Namespace, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -284,15 +284,16 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			_, err = coreV1.Namespaces().Update(ns)
 			Expect(err).NotTo(HaveOccurred())
 
-			// Check ip rules.  (In this example the gateway is also in the default
-			// namespace, but is prevented from looping around to itself (or to any
-			// other gateway) because it is an egress gateway itself.)
+			By("Check ip rules.")
+			// (In this example the gateway is also in the default namespace, but is
+			// prevented from looping around to itself (or to any other gateway) because
+			// it is an egress gateway itself.)
 			Eventually(getIPRules, "10s", "1s").Should(HaveLen(1))
 			rules := getIPRules()
 			Expect(rules).To(HaveKey("10.65.0.2"))
 			table1 := rules["10.65.0.2"]
 
-			// Check ip routes.
+			By("Check ip routes.")
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1")))
