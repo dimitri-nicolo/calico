@@ -39,6 +39,7 @@ MAPPED_COMPONENTS = {
     'tigera-cni': 'cni-plugin-private',
     'license-agent': 'license-agent',
     'firewall-integration': 'firewall-integration',
+    'egress-gateway': 'egress-gateway',
 }
 
 with open('%s/../_data/versions.yml' % PATH) as f:
