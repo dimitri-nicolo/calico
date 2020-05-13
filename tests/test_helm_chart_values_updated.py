@@ -11,58 +11,58 @@ PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = tests.RELEASE_STREAM
 REGISTRY = tests.REGISTRY
 HELM_CHARTS_BASE_URL = tests.HELM_CHARTS_BASE_URL
-HELM_CORE_BASE_NAME = tests.HELM_CORE_BASE_NAME
-HELM_EE_BASE_NAME = tests.HELM_EE_BASE_NAME
-HELM_CORE_URL = tests.HELM_CORE_URL
-HELM_EE_URL = tests.HELM_EE_URL
+HELM_OPERATOR_BASE_NAME = tests.HELM_OPERATOR_BASE_NAME
+HELM_OPERATOR_URL = tests.HELM_OPERATOR_URL
 VALUES_FILE_NAME = 'values.yaml'
 
 # we don't have a 1:1 naming scheme in values.yaml and versions.yml
-CORE_MAPPED_IMAGES = {
-    # tigera components
-    'cnx-node': 'node',
-    'cnx-kube-controllers': 'kubeControllers',
-    'typha': 'typha',
-    'cnx-apiserver': 'apiserver',
-    'cnx-queryserver': 'queryserver',
+OPERATOR_MAPPED_IMAGES = {
+    'tigera-operator': 'tigeraOperator',
     'calicoctl': 'calicoctl',
-    'dikastes': 'dikastes',
-    'cloud-controllers': 'cloudControllers',
-    # non-tigera components
-    'calico/cni': 'cni',
-    'flexvol': 'flexvol',
-    'cpHorizontalAutoscaler': 'cpHorizontalAutoscaler',
-    'cpVerticalAutoscaler': 'cpVerticalAutoscaler',
-}
-
-EE_MAPPED_IMAGES = {
-    # tigera components
-    'cnx-manager': 'manager',
-    'voltron': 'voltron',
-    'es-proxy': 'esProxy',
-    'fluentd': 'fluentd',
-    'es-curator': 'esCurator',
-    'elastic-tsee-installer': 'elasticTseeInstaller',
-    'compliance-controller': 'complianceController',
-    'compliance-reporter': 'complianceReporter',
-    'compliance-snapshotter': 'complianceSnapshotter',
-    'compliance-server': 'complianceServer',
-    'compliance-benchmarker': 'complianceBenchmarker',
-    'kibana': 'kibana',
-    'intrusion-detection-controller': 'intrusionDetectionController',
     # non-tigera components
     'alertmanager': 'alertmanager',
     'prometheus': 'prometheus',
-    'elasticsearch': 'elasticsearch',
     'prometheus-operator': 'prometheusOperator',
     'prometheus-config-reloader': 'prometheusConfigReloader',
     'configmap-reload': 'configmapReload',
-    'elasticsearch-operator': 'elasticsearchOperator',
 }
 
 EXCLUDED_IMAGES = [
+    # Calico images
+    'cnx-node',
+    'cnx-kube-controllers',
+    'typha',
+    'cnx-apiserver',
+    'cnx-queryserver',
+    'flexvol',
+    'dikastes',
+
+    # Enterprise images
     'calicoq',
     'ingress-collector',
+    'cloud-controllers',
+    'cnx-manager',
+    'voltron',
+    'es-proxy',
+    'fluentd',
+    'es-curator',
+    'elastic-tsee-installer',
+    'compliance-controller',
+    'compliance-reporter',
+    'compliance-snapshotter',
+    'compliance-server',
+    'compliance-benchmarker',
+    'kibana',
+    'intrusion-detection-controller',
+    'firewall-integration',
+    'license-agent',
+    'tigera-cni',
+
+    # third party images
+    'elasticsearch',
+    'elasticsearch-operator',
+    'cpHorizontalAutoscaler',
+    'cpVerticalAutoscaler',
 ]
 
 REGISTRY_EXCEPTION = [
@@ -78,27 +78,22 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 
 def test_all_images_are_mapped():
   mapped_images = dict()
-  mapped_images.update(CORE_MAPPED_IMAGES)
-  mapped_images.update(EE_MAPPED_IMAGES)
+  mapped_images.update(OPERATOR_MAPPED_IMAGES)
 
   release_components = release.get('components')
+  # Always include operator.
+  release_components['tigera-operator'] = release.get('tigera-operator')
   version_mapped_images = {k: v for k, v in release_components.items() if v.has_key('image') and not k in EXCLUDED_IMAGES}
 
   assert len(mapped_images.keys()) == len(version_mapped_images.keys())
   assert set(mapped_images.keys()) == set(version_mapped_images.keys())
 
 @parameterized({
-  'core': {
-    'name': HELM_CORE_BASE_NAME,
-    'url': HELM_CORE_URL,
-    'tgz_env_var': 'HELM_CORE_TGZ_OVERRIDE',
-    'images': CORE_MAPPED_IMAGES,
-  },
-  'ee': {
-    'name': HELM_EE_BASE_NAME,
-    'url': HELM_EE_URL,
-    'tgz_env_var': 'HELM_EE_TGZ_OVERRIDE',
-    'images': EE_MAPPED_IMAGES,
+  'operator': {
+    'name': HELM_OPERATOR_BASE_NAME,
+    'url': HELM_OPERATOR_URL,
+    'tgz_env_var': 'HELM_OPERATOR_TGZ_OVERRIDE',
+    'images': OPERATOR_MAPPED_IMAGES,
   },
 }.items())
 def test_chart_values_updated(name, chart):
@@ -129,5 +124,18 @@ def test_chart_values_updated(name, chart):
         assert config != None
         expected_image = '{0}{1}'.format('' if k in REGISTRY_EXCEPTION else v.get('registry', REGISTRY) + '/', v.get('image'))
         expected_version = v.get('version')
-        assert config.get('image') == expected_image
-        assert config.get('tag') == expected_version
+
+        # Some components inside the helm chart specify a "registry" others
+        # don't.
+        actual_image = config.get('image')
+        if 'registry' in config:
+            actual_image = '{registry}/{image}'.format( registry=config.get('registry'), image=actual_image)
+
+        # Some image tags are called "tags" while operator is called "version".
+        actual_tag = None
+        if 'tag' in config:
+            actual_tag = config.get('tag')
+        elif 'version' in config:
+            actual_tag = config.get('version')
+        assert actual_image == expected_image
+        assert actual_tag == expected_version

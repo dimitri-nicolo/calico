@@ -35,6 +35,9 @@ MAPPED_COMPONENTS = {
     'compliance-server': 'compliance',
     'compliance-benchmarker': 'compliance',
     'ingress-collector': 'ingress-collector',
+    'tigera-cni': 'cni-plugin-private',
+    'license-agent': 'license-agent',
+    'firewall-integration': 'firewall-integration',
 }
 
 with open('%s/../_data/versions.yml' % PATH) as f:
