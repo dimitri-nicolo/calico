@@ -556,6 +556,12 @@ func (kds *K8sDatastoreInfra) AddWorkload(wep *api.WorkloadEndpoint) (*api.Workl
 	if wep.Labels != nil {
 		podIn.ObjectMeta.Labels = wep.Labels
 	}
+	if wep.Spec.EgressGateway != nil {
+		podIn.ObjectMeta.Annotations = map[string]string{
+			"egress.projectcalico.org/selector":          wep.Spec.EgressGateway.Selector,
+			"egress.projectcalico.org/namespaceSelector": wep.Spec.EgressGateway.NamespaceSelector,
+		}
+	}
 	log.WithField("podIn", podIn).Debug("Creating Pod for workload")
 	kds.ensureNamespace(wep.Namespace)
 	podOut, err := kds.K8sClient.CoreV1().Pods(wep.Namespace).Create(podIn)
@@ -584,6 +590,10 @@ func (kds *K8sDatastoreInfra) AddWorkload(wep *api.WorkloadEndpoint) (*api.Workl
 	}
 	log.WithField("name", name).Debug("Getting WorkloadEndpoint")
 	return kds.calicoClient.WorkloadEndpoints().Get(context.Background(), wep.Namespace, name, options.GetOptions{})
+}
+
+func (kds *K8sDatastoreInfra) RemoveWorkload(wep *api.WorkloadEndpoint) error {
+	return kds.K8sClient.CoreV1().Pods(wep.Namespace).Delete(wep.Spec.Pod, DeleteImmediately)
 }
 
 func (kds *K8sDatastoreInfra) AddAllowToDatastore(selector string) error {

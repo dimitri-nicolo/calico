@@ -222,7 +222,14 @@ func (w *Workload) Configure(client client.Interface) {
 	Expect(err).NotTo(HaveOccurred(), "Failed to create workload in the calico datastore.")
 }
 
-func (w *Workload) RemoveFromDatastore(client client.Interface) {
+func (w *Workload) RemoveFromDatastore(infra infrastructure.DatastoreInfra) {
+	wep := w.WorkloadEndpoint
+	log.Infof("Remove WEP from datastore: %#v", *wep)
+	err := infra.RemoveWorkload(wep)
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func (w *Workload) EtcdRemoveFromDatastore(client client.Interface) {
 	_, err := client.WorkloadEndpoints().Delete(utils.Ctx, "fv", w.WorkloadEndpoint.Name, options.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 }
