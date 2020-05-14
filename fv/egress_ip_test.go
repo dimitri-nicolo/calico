@@ -103,6 +103,40 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		return strings.TrimSpace(route)
 	}
 
+	getIPNeigh := func() map[string]string {
+		neigh, err := felix.ExecOutput("ip", "neigh", "show", "dev", "egress.calico")
+		log.WithError(err).Infof("ip neigh said:\n%v", neigh)
+		Expect(err).NotTo(HaveOccurred())
+		mappings := map[string]string{}
+		lladdrRE := regexp.MustCompile(`([0-9.]+) lladdr ([0-9a-f:]+)`)
+		for _, line := range strings.Split(neigh, "\n") {
+			match := lladdrRE.FindStringSubmatch(line)
+			if len(match) < 3 {
+				continue
+			}
+			mappings[match[1]] = match[2]
+		}
+		log.Infof("Found mappings: %v", mappings)
+		return mappings
+	}
+
+	getBridgeFDB := func() map[string]string {
+		fdb, err := felix.ExecOutput("bridge", "fdb", "show", "dev", "egress.calico")
+		log.WithError(err).Infof("bridge fdb said:\n%v", fdb)
+		Expect(err).NotTo(HaveOccurred())
+		mappings := map[string]string{}
+		fdbRE := regexp.MustCompile(`([0-9a-f:]+) dst ([0-9.]+)`)
+		for _, line := range strings.Split(fdb, "\n") {
+			match := fdbRE.FindStringSubmatch(line)
+			if len(match) < 3 {
+				continue
+			}
+			mappings[match[1]] = match[2]
+		}
+		log.Infof("Found mappings: %v", mappings)
+		return mappings
+	}
+
 	JustBeforeEach(func() {
 		infra = getInfra()
 		topologyOptions := infrastructure.DefaultTopologyOptions()
@@ -178,6 +212,14 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1")))
 
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.1": "a2:2a:0a:0a:0a:01",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:01": "10.10.10.1",
+			}))
+
 			By("Create another client.")
 			app2 := makeClient("10.65.0.3", "app2")
 			defer app2.Stop()
@@ -187,6 +229,14 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			Consistently(func() string {
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1")))
+
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.1": "a2:2a:0a:0a:0a:01",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:01": "10.10.10.1",
+			}))
 
 			By("Create another gateway.")
 			gw2 := makeGateway("10.10.10.2", "gw2")
@@ -198,6 +248,16 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 				return getIPRoute(table1)
 			}).Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
 
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.1": "a2:2a:0a:0a:0a:01",
+				"10.10.10.2": "a2:2a:0a:0a:0a:02",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:01": "10.10.10.1",
+				"a2:2a:0a:0a:0a:02": "10.10.10.2",
+			}))
+
 			By("Create 3rd gateway.")
 			gw3 := makeGateway("10.10.10.3", "gw3")
 			defer gw3.Stop()
@@ -208,6 +268,18 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3")))
 
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.1": "a2:2a:0a:0a:0a:01",
+				"10.10.10.2": "a2:2a:0a:0a:0a:02",
+				"10.10.10.3": "a2:2a:0a:0a:0a:03",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:01": "10.10.10.1",
+				"a2:2a:0a:0a:0a:02": "10.10.10.2",
+				"a2:2a:0a:0a:0a:03": "10.10.10.3",
+			}))
+
 			By("Remove 3rd gateway again.")
 			gw3.RemoveFromDatastore(infra)
 
@@ -216,6 +288,16 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.1", "10.10.10.2")))
+
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.1": "a2:2a:0a:0a:0a:01",
+				"10.10.10.2": "a2:2a:0a:0a:0a:02",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:01": "10.10.10.1",
+				"a2:2a:0a:0a:0a:02": "10.10.10.2",
+			}))
 
 			By("Remove the first gateway.")
 			gw.RemoveFromDatastore(infra)
@@ -226,6 +308,14 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute("10.10.10.2")))
 
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.2": "a2:2a:0a:0a:0a:02",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:02": "10.10.10.2",
+			}))
+
 			By("Remove the second gateway.")
 			gw2.RemoveFromDatastore(infra)
 
@@ -234,6 +324,10 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			Eventually(func() string {
 				return getIPRoute(table1)
 			}, "10s", "1s").Should(Equal(expectedRoute()))
+
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{}))
 		})
 	})
 
