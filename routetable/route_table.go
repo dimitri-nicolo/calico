@@ -683,6 +683,14 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool) error {
 
 	// Delete the combined set of routes.
 	for _, route := range routesToDelete {
+		if route.Dst == nil && route.Src == nil && route.Gw == nil {
+			// Fix destination for default route.
+			// We could have a default ECMP route to be deleted.
+			// Without fixing route.Dst, netlink would return error
+			// "one of Dst.IP, Src, or Gw must not be nil"
+			ipsetNet := defaultCidr.ToIPNet()
+			route.Dst = &ipsetNet
+		}
 		if err := nl.RouteDel(&route); err != nil {
 			logCxt.WithError(err).Warnf("Failed to delete route %v", route)
 			updatesFailed = true
