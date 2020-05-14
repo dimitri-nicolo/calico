@@ -48,7 +48,7 @@ Although the following {{site.prodname}} features are supported for your default
 - Floating IPs
 - Specific IPs
 - Specifying IP pools on a per-namespace or per-pod basis
-- IPv6 and dual stack
+- Egress IP
 
 ### Before you begin...
 
