@@ -914,10 +914,8 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 			if expectedTargetFound && expectedTarget.RouteType() != route.Type {
 				routeProblems = append(routeProblems, "incorrect type")
 			}
-			if expectedTargetFound {
-				if linkAttrs != nil && !expectedTarget.EqualGWOrMultiPath(route) {
-					routeProblems = append(routeProblems, "GW or multipath incorrect")
-				}
+			if expectedTargetFound && !expectedTarget.EqualGWOrMultiPath(route) {
+				routeProblems = append(routeProblems, "GW or multipath incorrect")
 			}
 		}
 
