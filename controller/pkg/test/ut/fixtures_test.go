@@ -32,7 +32,7 @@ var elasticClient *oElastic.Client
 
 type exitWithCode struct{ code int }
 
-const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:7.3.2"
+const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:7.6.2"
 
 func TestMain(m *testing.M) {
 	defer func() {

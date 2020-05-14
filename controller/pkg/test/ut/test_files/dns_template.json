@@ -1,5 +1,5 @@
 {
-  "template": "tigera_secure_ee_dns*",
+  "index_patterns": "tigera_secure_ee_dns*",
   "settings": {
     "number_of_shards": 5,
     "analysis": {

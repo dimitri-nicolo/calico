@@ -1,5 +1,5 @@
 {
-  "template": "tigera_secure_ee_audit*",
+  "index_patterns": "tigera_secure_ee_audit*",
   "settings": {
     "number_of_shards": 5
   },

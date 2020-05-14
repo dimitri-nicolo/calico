@@ -458,7 +458,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -516,7 +516,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -856,7 +856,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -1008,7 +1008,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -1066,7 +1066,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch"
       ]
@@ -1124,7 +1124,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch"
       ]
@@ -1174,7 +1174,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -1480,7 +1480,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
@@ -1583,7 +1583,7 @@
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
@@ -1640,7 +1640,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -1697,7 +1697,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch"
       ]
@@ -1848,7 +1848,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -1902,7 +1902,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -2006,7 +2006,7 @@
     "dest_type": "wep",
     "dest_labels": {
       "labels": [
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -2063,7 +2063,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -2172,7 +2172,7 @@
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -2223,7 +2223,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -2276,7 +2276,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ingest=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
@@ -2336,7 +2336,7 @@
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -2636,7 +2636,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -2884,7 +2884,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "projectcalico.org/orchestrator=k8s",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -2941,7 +2941,7 @@
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-master=true"
@@ -3041,7 +3041,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -3250,7 +3250,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -3305,7 +3305,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true"
@@ -3462,7 +3462,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true"
       ]
@@ -3562,7 +3562,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch"
       ]
@@ -3860,7 +3860,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -4100,7 +4100,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -4158,7 +4158,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -4257,7 +4257,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -4312,7 +4312,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -4370,7 +4370,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -4519,7 +4519,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -4623,7 +4623,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -4683,7 +4683,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -4733,7 +4733,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -4834,7 +4834,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -4942,7 +4942,7 @@
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -5092,7 +5092,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -5194,7 +5194,7 @@
       "labels": [
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
@@ -5250,7 +5250,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -5454,7 +5454,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true"
@@ -5560,7 +5560,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -5662,7 +5662,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ingest=true"
       ]
     },
@@ -5760,7 +5760,7 @@
     "dest_type": "wep",
     "dest_labels": {
       "labels": [
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
@@ -5817,7 +5817,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -6113,7 +6113,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -6312,7 +6312,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -6510,7 +6510,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -6568,7 +6568,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -6622,7 +6622,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch"
       ]
@@ -6721,7 +6721,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -6876,7 +6876,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -6930,7 +6930,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
@@ -7086,7 +7086,7 @@
     "dest_type": "wep",
     "dest_labels": {
       "labels": [
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -7291,7 +7291,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -7394,7 +7394,7 @@
       "labels": [
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
@@ -7601,7 +7601,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch"
       ]
@@ -7658,7 +7658,7 @@
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -7711,7 +7711,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -7862,7 +7862,7 @@
     "dest_type": "wep",
     "dest_labels": {
       "labels": [
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -8068,7 +8068,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -8126,7 +8126,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -8180,7 +8180,7 @@
     "dest_type": "wep",
     "dest_labels": {
       "labels": [
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -8235,7 +8235,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
@@ -8392,7 +8392,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -8492,7 +8492,7 @@
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
@@ -8601,7 +8601,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true"
       ]
     },
@@ -8653,7 +8653,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true"
@@ -8708,7 +8708,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true"
       ]
@@ -8813,7 +8813,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -8961,7 +8961,7 @@
     "dest_type": "wep",
     "dest_labels": {
       "labels": [
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -9067,7 +9067,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -9125,7 +9125,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true"
       ]
     },
@@ -9225,7 +9225,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -9282,7 +9282,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true"
@@ -9441,7 +9441,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -9490,7 +9490,7 @@
     "dest_labels": {
       "labels": [
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
@@ -9788,7 +9788,7 @@
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
@@ -9846,7 +9846,7 @@
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ml=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-master=true"
       ]
     },
@@ -9951,7 +9951,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2"
+        "elasticsearch.k8s.elastic.co/version=7.6.2"
       ]
     },
     "proto": "tcp",
@@ -10004,7 +10004,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -10107,7 +10107,7 @@
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/template-hash=101097498"
       ]
     },
@@ -10207,7 +10207,7 @@
       "labels": [
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",

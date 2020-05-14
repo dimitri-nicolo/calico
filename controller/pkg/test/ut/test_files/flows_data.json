@@ -115,7 +115,7 @@
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
         "elasticsearch.k8s.elastic.co/node-data=true",
         "elasticsearch.k8s.elastic.co/node-master=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "common.k8s.elastic.co/type=elasticsearch"
       ]
     },
@@ -168,7 +168,7 @@
         "elasticsearch.k8s.elastic.co/node-master=true",
         "common.k8s.elastic.co/type=elasticsearch",
         "elasticsearch.k8s.elastic.co/node-ingest=true",
-        "elasticsearch.k8s.elastic.co/version=7.3.2",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
         "elasticsearch.k8s.elastic.co/node-ml=true",
         "common.k8s.elastic.co/template-hash=101097498",
         "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch"
