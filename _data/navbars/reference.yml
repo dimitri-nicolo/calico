@@ -200,7 +200,5 @@ section:
       path: /reference/architecture/design/l2-interconnect-fabric
     - title: Calico Enterprise over IP fabrics
       path: /reference/architecture/design/l3-interconnect-fabric
-- title: Attribution
-  path: /reference/attribution/attribution
 - title: Frequently asked questions
   path: /reference/faq
