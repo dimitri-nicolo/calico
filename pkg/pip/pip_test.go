@@ -79,6 +79,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 
 		By("Creating a policy calculator with the required policy updates")
 		np := &v3.NetworkPolicy{
+			TypeMeta: resources.TypeCalicoNetworkPolicies,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "policy",
 				Namespace: "ns1",
@@ -155,7 +156,7 @@ var _ = Describe("Test handling of flow splitting", func() {
 			&policycalc.ResourceData{},
 			&policycalc.ResourceData{
 				Tiers: policycalc.Tiers{
-					{policycalc.Policy{Policy: np}},
+					{policycalc.Policy{CalicoV3Policy: np, ResourceID: resources.GetResourceID(np)}},
 				},
 			},
 			impacted,
