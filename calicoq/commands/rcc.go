@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 package commands
 
 import (
@@ -15,7 +15,7 @@ import (
 
 func NewRemoteClusterHandler() *remoteClusterHandler {
 	return &remoteClusterHandler{
-		status: make(map[model.RemoteClusterStatusKey]model.RemoteClusterStatus, 0),
+		status: make(map[model.RemoteClusterStatusKey]model.RemoteClusterStatus),
 	}
 }
 

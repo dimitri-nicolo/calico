@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -147,7 +147,7 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 	// The selector strings specify whether the endpoint matches a rule for the policy or if the policy applies to this endpoint.
 	// wepNames represents all the Workload Endpoint name strings passed in from Felix.
 	wepNames := []string{}
-	for name, _ := range matches {
+	for name := range matches {
 		wepNames = append(wepNames, name)
 	}
 	sort.Strings(wepNames)
@@ -254,7 +254,9 @@ func EvalPolicySelectorsPrint(output OutputList) {
 	}
 
 	// Write the buffer to Stdout
-	buf.WriteTo(os.Stdout)
+	if _, err := buf.WriteTo(os.Stdout); err != nil {
+		log.Errorf("Failed to write to Stdout: %v", err)
+	}
 }
 
 // These are slightly modified copies (they do not return an error) of
