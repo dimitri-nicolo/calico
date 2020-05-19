@@ -1,4 +1,4 @@
-// Copyright (c) 2012,2015-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2012,2015-2020 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -76,7 +76,8 @@ Options:
 func main() {
 	log.SetLevel(log.FatalLevel)
 
-	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false)
+	// Disabling staticheck lint. TODO: update docopt.Parse (which is a deprecated package)
+	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false) //nolint:golint,staticcheck
 	if err != nil {
 		log.Fatalf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)

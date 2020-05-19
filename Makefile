@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/calicoq
-GO_BUILD_VER    ?= v0.36
+GO_BUILD_VER    ?= v0.38
 GOMOD_VENDOR     = true
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
@@ -200,9 +200,8 @@ replace-logrus-pin:
 update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-licensing-pin replace-logrus-pin
 
 ###############################################################################
-# TODO: re-enable these linters!
-LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
-LINT_ARGS += --timeout 5m
+# See .golangci.yml for golangci-lint config
+LINT_ARGS +=
 
 ###############################################################################
 # CI/CD

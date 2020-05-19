@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -76,7 +76,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 		// Insert an empty map so we'll list this endpoint even if
 		// no policies match it.
 		log.Infof("Found active endpoint %#v", update.Key)
-		cbs.epIDToPolIDs[update.Key] = make(map[model.PolicyKey]bool, 0)
+		cbs.epIDToPolIDs[update.Key] = make(map[model.PolicyKey]bool)
 		arc.OnUpdate(update)
 		return false
 	}
@@ -146,19 +146,15 @@ type noopRuleScanner struct {
 }
 
 func (rs *noopRuleScanner) OnPolicyActive(model.PolicyKey, *model.Policy) {
-	return
 }
 
 func (rs *noopRuleScanner) OnPolicyInactive(model.PolicyKey) {
-	return
 }
 
 func (rs *noopRuleScanner) OnProfileActive(model.ProfileRulesKey, *model.ProfileRules) {
-	return
 }
 
 func (rs *noopRuleScanner) OnProfileInactive(model.ProfileRulesKey) {
-	return
 }
 
 type describeCmd struct {
@@ -305,7 +301,10 @@ func (cbs *describeCmd) print(output OutputList) {
 		}
 	}
 
-	buf.WriteTo(os.Stdout)
+	_, err := buf.WriteTo(os.Stdout)
+	if err != nil {
+		log.Errorf("Failed to write to Stdout: %v", err)
+	}
 }
 
 func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputList {
@@ -434,7 +433,6 @@ func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey int
 
 func (cbs *describeCmd) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey interface{}) {
 	// Matt: Maybe we should remove something here, but it's an edge case
-	return
 }
 
 func (cbs *describeCmd) OnEgressSelectorMatch(es string, endpointKey interface{}) {

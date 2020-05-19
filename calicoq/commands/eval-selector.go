@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016, 2020 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -43,7 +43,9 @@ func EvalSelectorPrint(output OutputList) {
 	for _, endpoint := range output.Endpoints {
 		buf.WriteString(fmt.Sprintf("  %v\n", endpoint.PrintName()))
 	}
-	buf.WriteTo(os.Stdout)
+	if _, err := buf.WriteTo(os.Stdout); err != nil {
+		log.Errorf("Failed to write to Stdout: %v", err)
+	}
 }
 
 func EvalSelectorPrintYAML(output OutputList) {
