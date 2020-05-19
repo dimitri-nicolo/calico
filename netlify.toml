@@ -4,8 +4,8 @@
 
 [build.environment]
   RUBY_VERSION = "2.6.2"
-  CANDIDATE_RELEASE = "v3.0"
-  CURRENT_RELEASE = "v2.8"
+  CANDIDATE_RELEASE = ""
+  CURRENT_RELEASE = "v3.0"
   CUSTOM_ARCHIVE_PATH = ""
 
 [[headers]]
