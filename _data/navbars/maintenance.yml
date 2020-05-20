@@ -3,7 +3,7 @@ path: /maintenance/
 order: 4
 section:
 - title: Configure log storage
-  path: /maintenance/logstorage
+  path: /maintenance/logstorage/
   section:
   - title: Log storage requirements
     path: /maintenance/logstorage/log-storage-requirements
