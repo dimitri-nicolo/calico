@@ -45,7 +45,7 @@ spec:
 | vxlanMode | The mode defining when VXLAN will be used. Cannot be set at the same time as `ipipMode`. | Always, CrossSubnet, Never | string| `Never` |
 | natOutgoing | When enabled, packets sent from {{site.prodname}} networked containers in this pool to destinations outside of this pool will be masqueraded. | true, false | boolean | `false` |
 | disabled | When set to true, {{site.prodname}} IPAM will not assign addresses from this pool. | true, false | boolean | `false` |
-| nodeSelector | Selects the nodes that {{site.prodname}} IPAM should assign addresses from this pool to. | | [selector](#node-selector) | all() |
+| nodeSelector | Selects the nodes where {{site.prodname}} IPAM should assign pod addresses from this pool.  Can be overridden if a pod [explicitly identifies this IP pool by annotation]({{site.baseurl}}/reference/cni-plugin/configuration#using-kubernetes-annotations). | | [selector](#node-selector) | all() |
 
 > **Important**: Do not use a custom `blockSize` until **all** {{site.prodname}} components have been updated to a version that
 > supports it (at least v2.3.0).  Older versions of components do not understand the field so they may corrupt the
