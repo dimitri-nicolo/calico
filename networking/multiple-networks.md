@@ -1,6 +1,6 @@
 ---
 title: Configure multiple Calico Enterprise networks on a pod
-description: Configure a cluster with multiple Calico Enterprise networks on each pod, and enforce security using Calico Enterprise tiered network policy. 
+description: Configure a cluster with multiple Calico Enterprise networks on each pod, and enforce security using Calico Enterprise tiered network policy.
 ---
 
 ### Big picture
@@ -21,9 +21,9 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### About the Multus-CNI plugin
 
-{{site.prodname}} uses the [Multus-CNI plugin](https://github.com/intel/multus-cni/) to create multiple {{site.prodname}} networks and multiple pod interfaces to access these networks. This extends the default network and pod interface that comes with the Calico CNI. 
+{{site.prodname}} uses the [Multus-CNI plugin](https://github.com/intel/multus-cni/) to create multiple {{site.prodname}} networks and multiple pod interfaces to access these networks. This extends the default network and pod interface that comes with the Calico CNI.
 
-You install Multus on a cluster, then simply enable Multus in the {{site.prodname}} Installation resource. Using the Multus **NetworkAttachmentDefinition**, you define the new networks and reference them as an annotation in the pod resource. 
+You install Multus on a cluster, then simply enable Multus in the {{site.prodname}} Installation resource. Using the Multus **NetworkAttachmentDefinition**, you define the new networks and reference them as an annotation in the pod resource.
 
 #### Labels, workload endpoints, and policy
 
@@ -31,7 +31,7 @@ When you set the `MultiInterfaceMode` field to `Multus` in the Installation reso
 
 - `projectcalico.org/network`
 - `projectcalico.org/network-namespace`
-- `projectcalico.org/network-interface` 
+- `projectcalico.org/network-interface`
 
 You can then create {{site.prodname}} policies using these label selectors to target specific networks or network interfaces.
 
@@ -39,7 +39,7 @@ You can then create {{site.prodname}} policies using these label selectors to ta
 
 **Maximum additional networks per pod**
 
-You can define a maximum of nine additional {{site.prodname}} networks on a pod. If you add a network that exceeds the limit for the pod, networking is not configured and the pod fails to start with an associated error. 
+You can define a maximum of nine additional {{site.prodname}} networks on a pod. If you add a network that exceeds the limit for the pod, networking is not configured and the pod fails to start with an associated error.
 
 **{{site.prodname}} features**
 
@@ -48,15 +48,15 @@ Although the following {{site.prodname}} features are supported for your default
 - Floating IPs
 - Specific IPs
 - Specifying IP pools on a per-namespace or per-pod basis
-- Egress IP
+- Egress gateways
 
 ### Before you begin...
 
 **Required**
 
-- [Install Multus on your Kubernetes cluster](https://github.com/intel/multus-cni/) 
+- [Install Multus on your Kubernetes cluster](https://github.com/intel/multus-cni/)
   >**Note**: Multus is installed on OpenShift 4.0+ clusters.
-  {: .alert .alert-info} 
+  {: .alert .alert-info}
 - [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/) or configure access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)
 
 ### How to
@@ -70,28 +70,28 @@ Although the following {{site.prodname}} features are supported for your default
 
 #### Configure cluster for multiple networks
 
-In the [Installation custom resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.CalicoNetworkSpec), set the `MultiInterfaceMode` to **Multus**. 
+In the [Installation custom resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.CalicoNetworkSpec), set the `MultiInterfaceMode` to **Multus**.
 
 #### Create a new network
 
-Create a new network using the Multus **NetworkAttachmentDefinition**, and set the following required field to `"type":"calico"`. 
- 
-```                                                                 
-apiVersion: "k8s.cni.cncf.io/v1"                            
+Create a new network using the Multus **NetworkAttachmentDefinition**, and set the following required field to `"type":"calico"`.
+
+```
+apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: additional-calico-network
-spec:         
-  config: '{                           
+spec:
+  config: '{
       "cniVersion": "0.3.0",
-      "type": "calico",                                                  
+      "type": "calico",
       "log_level": "info",
-      "datastore_type": "kubernetes",                                    
-      "mtu": 1410,      
+      "datastore_type": "kubernetes",
+      "mtu": 1410,
       "nodename_file_optional": false,
-      "ipam": {                                                       
+      "ipam": {
         "type": "calico-ipam",
-        "assign_ipv4" : "true",                     
+        "assign_ipv4" : "true",
         "assign_ipv6" : "false"
       },
       "policy": {
@@ -105,7 +105,7 @@ spec:
 
 #### Create a pod interface for the new network
 
-Create a pod interface that specifies the new network using an annotation. 
+Create a pod interface that specifies the new network using an annotation.
 
 In the following example, we create a pod with an additional pod interface named, `cali1`. The pod interface is attached to the network named, `additional-calico-network`, using the `k8s.v1.cni.cncf.io/networks` annotation.
 Note that all networks in `k8s.v1.cni.cncf.io/networks` are assumed to be {{site.prodname}} networks.
@@ -130,9 +130,9 @@ spec:
 Although not required, you may want to assign IPs from specific pools to specific network interfaces. If you are using the [Calico Enterprise IPAM plugin]({{site.baseurl}}/reference/cni-plugin/configuration#specifying-ip-pools-on-a-per-namespace-or-per-pod-basis), specify the IP pools in the **NetworkAttachmentDefinition** custom resource. For example:
 
 ```
- "ipam": {                                                       
+ "ipam": {
      "type": "calico-ipam",
-     "assign_ipv4" : "true",                     
+     "assign_ipv4" : "true",
      "assign_ipv6" : "false"
      "ipv4_pools": ["10.0.0.0/24", "20.0.0.0/16", "default-ipv4-ippool"],
 },
@@ -142,10 +142,10 @@ Although not required, you may want to assign IPs from specific pools to specifi
 When MultiInterfaceMode is set to Multus, WorkloadEndpoints are created with these labels:
 
 - `projectcalico.org/network`
-- `projectcalico.org/network-namespace` 
-- `projectcalico.org/network-interface` 
+- `projectcalico.org/network-namespace`
+- `projectcalico.org/network-interface`
 
-You can use these labels to enforce policies on specific interfaces and networks using policy label selectors. 
+You can use these labels to enforce policies on specific interfaces and networks using policy label selectors.
 
 >**Note**: Prior to {{site.prodname}} 3.0, if you were using Kubernetes datastore (kdd mode), the workload endpoint field and name suffix were always **eth0**. In 3.0, the value for workload labels may not be what you expect. Before creating policies targeting WorkloadEndpoints using the new labels, you should verify label values using the commands in [View workload endpoints](#view-workload-endpoints).
 {: .alert .alert-info}
@@ -191,12 +191,12 @@ To view all WorkloadEndpoints for pods (default and new), use the following comm
 MULTI_INTERFACE_MODE=multus calicoctl get workloadendpoints -o wide
 ```
 ```
-NAME                                                                 WORKLOAD            NODE                         NETWORKS            INTERFACE         PROFILES                          NATS   
-test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-eth0        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.129/32   calif887e436e8b   kns.default,ksa.default.default          
-test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-net1        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.140/32   calim17CD6INXIX   kns.default,ksa.default.default          
-test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-testiface   multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.142/32   calim27CD6INXIX   kns.default,ksa.default.default          
-test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-net3        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.52.143/32   calim37CD6INXIX   kns.default,ksa.default.default 
-```   
+NAME                                                                 WORKLOAD            NODE                         NETWORKS            INTERFACE         PROFILES                          NATS
+test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-eth0        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.129/32   calif887e436e8b   kns.default,ksa.default.default
+test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-net1        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.140/32   calim17CD6INXIX   kns.default,ksa.default.default
+test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-testiface   multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.53.142/32   calim27CD6INXIX   kns.default,ksa.default.default
+test--bo--72vg--kadm--infra--0-k8s-multus--test--pod--1-net3        multus-test-pod-1   bryan-bo-72vg-kadm-infra-0   192.168.52.143/32   calim37CD6INXIX   kns.default,ksa.default.default
+```
 
 To view specific WorkloadEndpoints, use the following command.
 
@@ -231,4 +231,4 @@ spec:
   profiles:
   - kns.default
   - ksa.default.default
-```   
+```
