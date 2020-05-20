@@ -17,7 +17,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'cnx-apiserver'
+  selector: k8s-app == 'tigera-apiserver'
   types:
   - Ingress
   ingress:
@@ -205,16 +205,6 @@ spec:
       source:
         namespaceSelector: projectcalico.org/name == 'tigera-intrusion-detection'
         selector: job-name == 'intrusion-detection-es-job-installer'
-
----
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: default-deny
-  namespace: tigera-elasticsearch
-spec:
-  podSelector:
-    matchLabels: {}
 
 ---
 
