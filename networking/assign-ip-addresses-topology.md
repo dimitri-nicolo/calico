@@ -1,6 +1,6 @@
 ---
 title: Assign IP addresses based on topology
-description: Configure Calico Enterprise to use specific IP pools for different topologies including zone, rack, or region. 
+description: Configure Calico Enterprise to use specific IP pools for different topologies including zone, rack, or region.
 canonical_url: '/networking/assign-ip-addresses-topology'
 ---
 
@@ -22,12 +22,12 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### IP address assignment
 
-Topology-based IP address assignment requires addresses to be per-host (node). 
+Topology-based IP address assignment requires addresses to be per-host (node).
 As such, Kubernetes annotations cannot be used because annotations are only per-namespace and per-pod. And although you can configure IP addresses for nodes in the CNI configuration, you are making changes within the host’s file system. The best option is to use node-selection IP address assignment using IP pools.
 
 #### Node-selection IP address management
 
-Node selection-based IP address assignment is exactly what it sounds like: node labels are set, and Calico uses node selectors to decide whih IP pools to use when assigning IP addresses to the node.
+Node selection-based IP address assignment is exactly what it sounds like: node labels are set, and Calico uses node selectors to decide which IP pools to use when assigning IP addresses to pods on the node.
 
 #### Best practice
 
@@ -59,7 +59,7 @@ kubectl label nodes kube-node-0 zone=west
 
 ### Tutorial
 
-In this tutorial, we create a cluster with four nodes across two racks (two nodes/rack). 
+In this tutorial, we create a cluster with four nodes across two racks (two nodes/rack).
 
 ```
        -------------------
