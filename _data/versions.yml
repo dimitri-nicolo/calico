@@ -44,10 +44,10 @@
       image: tigera/es-proxy
       version: master
     eck-kibana:
-      version: 7.3.2
+      version: 7.6.2
     kibana:
       image: tigera/kibana
-      version: 7.3
+      version: 7.6.2
     elasticsearch-operator:
       registry: docker.elastic.co
       image: eck/eck-operator
@@ -55,7 +55,7 @@
     elasticsearch:
       registry: docker.elastic.co
       image: elasticsearch/elasticsearch
-      version: 7.3.2
+      version: 7.6.2
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
