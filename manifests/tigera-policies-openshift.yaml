@@ -17,7 +17,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: k8s-app == 'cnx-apiserver'
+  selector: k8s-app == 'tigera-apiserver'
   types:
   - Ingress
   ingress:
