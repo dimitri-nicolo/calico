@@ -109,6 +109,7 @@ the following.
 
 -  [Enable egress gateway support](#enable-egress-gateway-support)
 -  [Provision an egress IP pool](#provision-an-egress-ip-pool)
+-  [Copy pull secret into egress gateway namespace](#copy-pull-secret-into-egress-gateway-namespace)
 -  [Deploy a group of egress gateways](#deploy-a-group-of-egress-gateways)
 -  [Configure a Namespace or Pod to use egress gateways](#configure-a-namespace-or-pod-to-use-egress-gateways)
 -  [Verify the feature operation](#verify-the-feature-operation)
@@ -166,9 +167,21 @@ EOF
 >    annotation.
 {: .alert .alert-info}
 
+#### Copy pull secret into egress gateway namespace
+
+Identify the pull secret that is needed for pulling {{site.prodname}} images, and copy this into the
+namespace where you plan to create your egress gateways.  It is typically named
+`tigera-pull-secret`, in the `calico-system` namespace, so the command to copy that to the `default`
+namespace would be:
+
+```bash
+kubectl get secret tigera-pull-secret --namespace=calico-system --export -o yaml | \
+   kubectl apply --namespace=default -f -
+```
+
 #### Deploy a group of egress gateways
 
-Use a Kubernetes Deployment to deploy a group of egress gateways, using that IP Pool.
+Use a Kubernetes Deployment to deploy a group of egress gateways, using the egress IP Pool.
 
 ```bash
 kubectl apply -f - <<EOF
@@ -208,11 +221,6 @@ EOF
 ```
 
 > **Note**:
->
-> -  Subject to your own cluster policy, egress gateways can be created with any name and in any
->    namespace.  The `tigera-pull-secret`, that is needed to pull the `tigera/egress-gateway`,
->    image must be copied into the namespace where the egress gateways are deployed; or the egress
->    gateways can be deployed into a namespace that already has that pull secret.
 >
 > -  It is advisable to have more than one egress gateway per group, so that the egress IP function
 >    continues if one of the gateways crashes or needs to be restarted.  When there are multiple
