@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "index.js",
   "kibana": {
-    "version": "7.6.0"
+    "version": "7.6.2"
   },
   "website": "https://www.tigera.io/"
 }

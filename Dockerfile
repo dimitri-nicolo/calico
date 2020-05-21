@@ -3,7 +3,7 @@ COPY kibana /kibana
 RUN apk add --no-cache zip
 RUN zip -r /tigera_customization.zip kibana
 
-FROM docker.elastic.co/kibana/kibana:7.6.0
+FROM docker.elastic.co/kibana/kibana:7.6.2
 
 USER root
 RUN yum -y update && yum -y upgrade
