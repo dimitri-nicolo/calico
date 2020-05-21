@@ -105,6 +105,32 @@ the following.
     place on Namespace or Pod resources) and either reject the operation in hand, or allow it
     through after adding the corresponding {{site.prodname}} egress annotations.
 
+#### Policy enforcement for flows via an egress gateway
+
+For an outbound connection from a client pod, via an egress gateway, to a destination outside the
+cluster, any applicable {{site.prodname}} policy will in principle be enforced:
+
+1.  on egress from the client pod
+2.  on ingress to the egress gateway pod
+3.  on egress from the egress gateway pod.
+
+Since an egress gateway will never *originate* any traffic itself, a possible approach is not to
+configure any policy for the egress gateway.  Then the enforcement at points (2) and (3) is a no-op,
+and enforcement at point (1) is the same as for flows that are not via an egress gateway.
+
+On the other hand,
+
+-  if you apply a default-deny ingress policy to your egress gateways, you will need to configure
+   allow policies for the clients that you want to be able to use those gateways;
+
+-  if you apply a default-deny egress policy to your egress gateways, you will need to configure
+   allow policies for the destinations that those gateways should be able to forward to.
+
+Unfortunately it will not work to [specify external destinations by
+name]({{site.baseurl}}/security/domain-based-policy) here, because the gateway's node will not see
+the DNS protocol that maps a destination name to the underlying IP addresses (unless the gateway
+happens to be on the same node as the client).
+
 ### How to
 
 -  [Enable egress gateway support](#enable-egress-gateway-support)
