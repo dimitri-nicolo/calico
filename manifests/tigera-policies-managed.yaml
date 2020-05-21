@@ -114,18 +114,23 @@ spec:
   egress:
   - action: Allow
     destination:
-      namespaceSelector: projectcalico.org/name == "kube-system"
+      selector: >-
+        k8s-app == "kube-dns"||dns.operator.openshift.io/daemonset-dns ==
+        "default"
+      namespaceSelector: >-
+        projectcalico.org/name == "kube-system"||projectcalico.org/name ==
+        "openshift-dns"
       ports:
       - 53
-      selector: k8s-app == "kube-dns"
+      - 5353
     protocol: UDP
     source: {}
   - action: Allow
     destination:
+      selector: k8s-app == "tigera-guardian"
       namespaceSelector: projectcalico.org/name == "tigera-guardian"
       ports:
       - 8080
-      selector: k8s-app == "tigera-guardian"
     protocol: TCP
     source: {}
   order: 1

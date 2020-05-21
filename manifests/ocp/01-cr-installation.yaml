@@ -7,6 +7,13 @@ spec:
   # Install Calico Enterprise
   variant: TigeraSecureEnterprise
 
+  # Define how the cluster will be managed. 
+  # Valid values for this field are: Standalone, Management, Managed.
+  # A Standalone cluster is a fully self-contained installation of Calico Enterprise. 
+  # A Management cluster can manage one or more other Calico Enterprise clusters that connect to it. 
+  # A Managed cluster must connect to a Management cluster in order to operate correctly. 
+  clusterManagementType: Standalone
+
   # List of image pull secrets to use when installing images from a container registry.
   # If specified, secrets must be created in the `tigera-operator` namespace.
   imagePullSecrets:
