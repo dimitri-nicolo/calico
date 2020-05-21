@@ -58,7 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 						Name: "Key",
 						ValueFrom: &apiv3.HTTPHeaderSource{
 							SecretKeyRef: &v1.SecretKeySelector{
-								LocalObjectReference: v1.LocalObjectReference{Name: "tigera.io"},
+								LocalObjectReference: v1.LocalObjectReference{Name: apiv3.SecretConfigMapNamePrefix + "-" + name1 + "-tigera.io"},
 								Key:                  "apikey",
 							},
 						},
@@ -85,7 +85,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 						Name: "Config",
 						ValueFrom: &apiv3.HTTPHeaderSource{
 							ConfigMapKeyRef: &v1.ConfigMapKeySelector{
-								LocalObjectReference: v1.LocalObjectReference{Name: "projectcalico"},
+								LocalObjectReference: v1.LocalObjectReference{Name: apiv3.SecretConfigMapNamePrefix + "-" + name2 + "-projectcalico"},
 								Key:                  "config",
 							},
 						},
@@ -132,10 +132,10 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			// Track the version of the original data for name1.
 			rv1_1 := res1.ResourceVersion
 
-			By("Attempting to create the same GlobalThreatFeed with name1 but with spec2")
+			By("Attempting to create the same GlobalThreatFeed with name1")
 			_, outError = c.GlobalThreatFeeds().Create(ctx, &apiv3.GlobalThreatFeed{
 				ObjectMeta: metav1.ObjectMeta{Name: name1},
-				Spec:       spec2,
+				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal(fmt.Sprintf("resource already exists: GlobalThreatFeed(%s)", name1)))
@@ -178,11 +178,38 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1))
 			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name2, spec2))
 
-			By("Updating GlobalThreatFeed name1 with spec2")
-			res1.Spec = spec2
+			By("Updating GlobalThreatFeed name1")
+			spec1Tmp := apiv3.GlobalThreatFeedSpec{
+				Content: apiv3.ThreatFeedContentIPset,
+				GlobalNetworkSet: &apiv3.GlobalNetworkSetSync{
+					Labels: map[string]string{"level": "high"},
+				},
+				Pull: &apiv3.Pull{
+					Period: "10h",
+					HTTP: &apiv3.HTTPPull{
+						Format: apiv3.ThreatFeedFormat{
+							NewlineDelimited: &apiv3.ThreatFeedFormatNewlineDelimited{},
+						},
+						URL: "https://tigera.io/feed",
+						Headers: []apiv3.HTTPHeader{
+							{Name: "Accept", Value: "text/plain"},
+							{
+								Name: "Key",
+								ValueFrom: &apiv3.HTTPHeaderSource{
+									SecretKeyRef: &v1.SecretKeySelector{
+										LocalObjectReference: v1.LocalObjectReference{Name: apiv3.SecretConfigMapNamePrefix + "-" + name1 + "-tigera.io"},
+										Key:                  "apikey",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			res1.Spec = spec1Tmp
 			res1, outError = c.GlobalThreatFeeds().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res1).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(res1).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1Tmp))
 
 			By("Attempting to update the GlobalThreatFeed without a Creation Timestamp")
 			res, outError = c.GlobalThreatFeeds().Update(ctx, &apiv3.GlobalThreatFeed{
@@ -230,7 +257,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			By("Getting GlobalThreatFeed (name1) with the updated resource version and comparing the output against spec2")
 			res, outError = c.GlobalThreatFeeds().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(res).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1Tmp))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
@@ -245,7 +272,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			outList, outError = c.GlobalThreatFeeds().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(2))
-			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1Tmp))
 			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name2, spec2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
@@ -258,7 +285,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			By("Deleting GlobalThreatFeed (name1) with the new resource version")
 			dres, outError := c.GlobalThreatFeeds().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(dres).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1Tmp))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Updating GlobalThreatFeed name2 with a 2s TTL and waiting for the entry to be deleted")
@@ -377,11 +404,13 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			defer testWatcher2.Stop()
 
 			By("Modifying res2")
+			spec2Tmp := spec2
+			spec2Tmp.Pull.Period = "24h"
 			outRes3, err := c.GlobalThreatFeeds().Update(
 				ctx,
 				&apiv3.GlobalThreatFeed{
 					ObjectMeta: outRes2.ObjectMeta,
-					Spec:       spec1,
+					Spec:       spec2Tmp,
 				},
 				options.SetOptions{},
 			)

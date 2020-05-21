@@ -251,7 +251,7 @@ func init() {
 	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
 	registerStructValidator(validate, validateGlobalAlertSpec, api.GlobalAlertSpec{})
-	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeedSpec{})
+	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeed{})
 	registerStructValidator(validate, validateFeedFormat, api.ThreatFeedFormat{})
 	registerStructValidator(validate, validateFeedFormatJSON, api.ThreatFeedFormatJSON{})
 	registerStructValidator(validate, validateFeedFormatCSV, api.ThreatFeedFormatCSV{})

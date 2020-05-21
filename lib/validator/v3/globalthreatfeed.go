@@ -4,6 +4,7 @@ package v3
 
 import (
 	"reflect"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/yalp/jsonpath"
@@ -15,15 +16,52 @@ import (
 )
 
 func validateGlobalThreatFeedSpec(structLevel validator.StructLevel) {
-	s := structLevel.Current().Interface().(api.GlobalThreatFeedSpec)
-	if s.Content == api.ThreatFeedContentDomainNameSet && s.GlobalNetworkSet != nil {
+	s := structLevel.Current().Interface().(api.GlobalThreatFeed)
+	spec := s.Spec
+	if spec.Content == api.ThreatFeedContentDomainNameSet && spec.GlobalNetworkSet != nil {
 		structLevel.ReportError(
-			reflect.ValueOf(s.Content),
+			reflect.ValueOf(spec.Content),
 			"Content",
 			"",
 			reason(string(api.ThreatFeedContentDomainNameSet)+" does not support syncing with a GlobalNetworkSet"),
 			"",
 		)
+	}
+
+	if spec.Pull != nil && spec.Pull.HTTP != nil {
+
+		// GlobalThreatFeed can reference ConfigMap and Secret. Referenced Kubernetes resource
+		// name must follow this convention: "globalthreatfeed-<GlobalThreatFeed Name>-<name>"
+		// This is required to prevent a GlobalThreatFeed from referencing and so reading, any
+		// Secret/ConfigMap in the tigera-intrusion-detection namespace.
+		longPrefix := api.SecretConfigMapNamePrefix + "-" + s.Name + "-"
+
+		for _, header := range spec.Pull.HTTP.Headers {
+			if header.ValueFrom != nil && header.ValueFrom.SecretKeyRef != nil &&
+				!strings.HasPrefix(header.ValueFrom.SecretKeyRef.Name, longPrefix) {
+				structLevel.ReportError(
+					reflect.ValueOf(header.ValueFrom.SecretKeyRef),
+					"Content",
+					"",
+					reason("SecretKeyRef.Name must have prefix: "+api.SecretConfigMapNamePrefix+"-<GlobalThreatFeed.Name>-. Current name: "+
+						header.ValueFrom.SecretKeyRef.Name+" .Please change name to "+longPrefix+header.ValueFrom.SecretKeyRef.Name+
+						" .Please refer to GlobalThreatFeed documentation section for more information on Secret name format."),
+					"",
+				)
+			}
+			if header.ValueFrom != nil && header.ValueFrom.ConfigMapKeyRef != nil &&
+				!strings.HasPrefix(header.ValueFrom.ConfigMapKeyRef.Name, longPrefix) {
+				structLevel.ReportError(
+					reflect.ValueOf(header.ValueFrom.ConfigMapKeyRef),
+					"Content",
+					"",
+					reason("ConfigMapKeyRef.Name must have prefix:: "+api.SecretConfigMapNamePrefix+"-<GlobalThreatFeed.Name>. Current name:"+
+						header.ValueFrom.ConfigMapKeyRef.Name+" .Please change name to "+longPrefix+header.ValueFrom.ConfigMapKeyRef.Name+
+						" .Please refer to GlobalThreatFeed documentation section for more information on ConfigMap name format."),
+					"",
+				)
+			}
+		}
 	}
 }
 
