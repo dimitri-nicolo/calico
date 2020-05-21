@@ -25,6 +25,10 @@ func (key RemoteClusterStatusKey) defaultPath() (string, error) {
 	if key.Name == "" {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}
 	}
+
+	// RemoteClusterStatusKey's default path is used by typha, to filter out remotecluster
+	// messages. Actually Felix isn't interested in RemoteClusterStatus messages.
+	// Hence any changes in default path must reflect in typha as well.
 	e := fmt.Sprintf("/calico/felix/v1/remotecluster/%s", key.Name)
 	return e, nil
 }
