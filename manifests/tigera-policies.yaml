@@ -365,8 +365,8 @@ spec:
 
 ---
 
-# This policy was generated with policy recommendation in order to make
-# fluend POD marked protected by compliance (network access report) 
+# This policy ensures Fluentd POD is marked as protected by compliance 
+# (network access report).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:

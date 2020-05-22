@@ -101,9 +101,8 @@ spec:
 
 ---
 
-# This policy ensures Fluentd POD is marked as protected by compliance (network access report).
-# Deny all traffic to Guardian (which provides access to Elasticsearch in management plane)
-# except for port 8080 and allow any other egress traffic (e.g. for kube-dns).
+# This policy ensures Fluentd POD is marked as protected by compliance 
+# (network access report).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:

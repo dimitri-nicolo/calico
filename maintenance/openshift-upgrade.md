@@ -97,7 +97,7 @@ mkdir manifests
 
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
    ```bash
-   oc create -f {{ "/manifests/tigera-policies-openshift.yaml" | absolute_url }}
+   oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```
 
 1. You can now monitor the upgrade progress with the following command:
