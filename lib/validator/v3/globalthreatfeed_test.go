@@ -556,7 +556,7 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 						Headers: []api.HTTPHeader{
 							{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
 								ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
-									LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+									LocalObjectReference: k8sv1.LocalObjectReference{Name: api.SecretConfigMapNamePrefix + "-sandwiches-configo"},
 									Key:                  "my-key",
 								},
 							}},
@@ -657,6 +657,64 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		},
 		false,
 	),
+	Entry("allow GlobalThreatFeed with correct ConfigMap name",
+		&api.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{Name: "juve"},
+			Spec: api.GlobalThreatFeedSpec{
+				Content: api.ThreatFeedContentIPset,
+				GlobalNetworkSet: &api.GlobalNetworkSetSync{
+					Labels: map[string]string{"foo": "bar", "biz": "baz"},
+				},
+				Pull: &api.Pull{
+					Period: "12h",
+					HTTP: &api.HTTPPull{
+						URL: "http://tigera.io/threats",
+						Format: api.ThreatFeedFormat{
+							NewlineDelimited: &api.ThreatFeedFormatNewlineDelimited{},
+						},
+						Headers: []api.HTTPHeader{
+							{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+								ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
+									LocalObjectReference: k8sv1.LocalObjectReference{Name: api.SecretConfigMapNamePrefix + "-juve-champion"},
+									Key:                  "my-key",
+								},
+							}},
+						},
+					},
+				},
+			},
+		},
+		true,
+	),
+	Entry("disallow GlobalThreatFeed with incorrect ConfigMap name",
+		&api.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{Name: "juve"},
+			Spec: api.GlobalThreatFeedSpec{
+				Content: api.ThreatFeedContentIPset,
+				GlobalNetworkSet: &api.GlobalNetworkSetSync{
+					Labels: map[string]string{"foo": "bar", "biz": "baz"},
+				},
+				Pull: &api.Pull{
+					Period: "12h",
+					HTTP: &api.HTTPPull{
+						URL: "http://tigera.io/threats",
+						Format: api.ThreatFeedFormat{
+							NewlineDelimited: &api.ThreatFeedFormatNewlineDelimited{},
+						},
+						Headers: []api.HTTPHeader{
+							{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+								ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
+									LocalObjectReference: k8sv1.LocalObjectReference{Name: "juve"},
+									Key:                  "my-key",
+								},
+							}},
+						},
+					},
+				},
+			},
+		},
+		false,
+	),
 	Entry("allow GlobalThreatFeed with HTTP Header value from secret",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
@@ -675,7 +733,7 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 						Headers: []api.HTTPHeader{
 							{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
 								SecretKeyRef: &k8sv1.SecretKeySelector{
-									LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+									LocalObjectReference: k8sv1.LocalObjectReference{Name: api.SecretConfigMapNamePrefix + "-sandwiches-configo"},
 									Key:                  "my-key",
 								},
 							}},
@@ -719,6 +777,47 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 								SecretKeyRef: &k8sv1.SecretKeySelector{
 									LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
 									Key:                  "$$$my-key",
+								},
+							}},
+						},
+					},
+				},
+			},
+		},
+		false,
+	),
+	Entry("allow GlobalThreatFeed with correct secret name",
+		&api.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{Name: "juve"},
+			Spec: api.GlobalThreatFeedSpec{
+				Pull: &api.Pull{
+					HTTP: &api.HTTPPull{
+						URL: "http://tigera.io/threats",
+						Headers: []api.HTTPHeader{
+							{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+								SecretKeyRef: &k8sv1.SecretKeySelector{
+									LocalObjectReference: k8sv1.LocalObjectReference{Name: api.SecretConfigMapNamePrefix + "-juve-champion"},
+									Key:                  "my-key",
+								},
+							}},
+						},
+					},
+				},
+			},
+		},
+		true,
+	),
+	Entry("disallow GlobalThreatFeed with bad secret name",
+		&api.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{Name: "juve"},
+			Spec: api.GlobalThreatFeedSpec{
+				Pull: &api.Pull{
+					HTTP: &api.HTTPPull{
+						URL: "http://tigera.io/threats",
+						Headers: []api.HTTPHeader{
+							{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+								SecretKeyRef: &k8sv1.SecretKeySelector{
+									LocalObjectReference: k8sv1.LocalObjectReference{Name: "juve"},
 								},
 							}},
 						},

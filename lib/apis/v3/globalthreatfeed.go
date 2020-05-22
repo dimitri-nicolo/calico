@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	KindGlobalThreatFeed     = "GlobalThreatFeed"
-	KindGlobalThreatFeedList = "GlobalThreatFeedList"
-	DefaultPullPeriod        = 24 * time.Hour
-	MinPullPeriod            = 5 * time.Minute
+	KindGlobalThreatFeed      = "GlobalThreatFeed"
+	KindGlobalThreatFeedList  = "GlobalThreatFeedList"
+	DefaultPullPeriod         = 24 * time.Hour
+	MinPullPeriod             = 5 * time.Minute
+	SecretConfigMapNamePrefix = "globalthreatfeed"
 )
 
 // +genclient
