@@ -370,8 +370,6 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  labels:
-    projectcalico.org/tier: default
   name: allow-tigera.allow-fluentd-node
   namespace: tigera-fluentd
 spec:

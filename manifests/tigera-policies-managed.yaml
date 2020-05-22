@@ -101,41 +101,28 @@ spec:
 
 ---
 
-# This policy was generated with policy recommendation in order to make
-# fluend POD marked protected by compliance (network access report) 
+# This policy ensures Fluentd POD is marked as protected by compliance (network access report).
+# Deny all traffic to Guardian (which provides access to Elasticsearch in management plane)
+# except for port 8080 and allow any other egress traffic (e.g. for kube-dns).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  labels:
-    projectcalico.org/tier: default
-  name: default.allow-fluentd-node
+  name: allow-tigera.allow-fluentd-node
   namespace: tigera-fluentd
 spec:
+  tier: allow-tigera
   egress:
-  - action: Allow
-    destination:
-      selector: >-
-        k8s-app == "kube-dns"||dns.operator.openshift.io/daemonset-dns ==
-        "default"
-      namespaceSelector: >-
-        projectcalico.org/name == "kube-system"||projectcalico.org/name ==
-        "openshift-dns"
-      ports:
-      - 53
-      - 5353
-    protocol: UDP
-    source: {}
-  - action: Allow
+  - action: Deny
     destination:
       selector: k8s-app == "tigera-guardian"
       namespaceSelector: projectcalico.org/name == "tigera-guardian"
-      ports:
+      notPorts:
       - 8080
     protocol: TCP
     source: {}
+  - action: Allow
   order: 1
   selector: k8s-app == "fluentd-node"
-  tier: default
   types:
   - Ingress
   - Egress
