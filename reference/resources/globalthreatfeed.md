@@ -53,7 +53,7 @@ spec:
           valueFrom:
             # secrets selected must be in the "tigera-intrusion-detection" namespace in order to be used
             secretKeyRef:
-              name: "example-threat-feed"
+              name: "globalthreatfeed-sample-global-threat-feed-example"
               key: "apikey"
 ```
 
@@ -245,7 +245,8 @@ struct fields.
 #### KeyRef
 
 KeyRef tells {{site.prodname}} where to get the value for a header.  The referenced Kubernetes object
-(either a config map or a secret) must be in the `tigera-intrusion-detection` namespace.
+(either a config map or a secret) must be in the `tigera-intrusion-detection` namespace. The referenced
+Kubernetes object should have a name with following prefix format: `globalthreatfeed-<GlobalThreatFeed.Name>-`.
 
 | Field    | Description                                               | Accepted Values | Schema | Default |
 |----------|-----------------------------------------------------------|-----------------|--------|---------|
