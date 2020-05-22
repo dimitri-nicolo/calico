@@ -1634,7 +1634,7 @@ globalthreatfeed_name1 = {
                     {'name': 'Accept', 'value': 'text/plain'},
                     {'name': 'APIKey', 'valueFrom': {
                         'secretKeyRef': {
-                            'name': 'my-secret',
+                            'name': 'globalthreatfeed-name1-my-secret',
                             'key': 'my-key'
                         }
                     }}
