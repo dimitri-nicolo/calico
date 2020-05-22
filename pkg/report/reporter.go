@@ -109,8 +109,8 @@ func Run(
 			ReportTypeName: reportCfg.ReportType.Name,
 			ReportSpec:     reportCfg.Report.Spec,
 			ReportTypeSpec: reportCfg.ReportType.Spec,
-			StartTime:      metav1.Time{cfg.ParsedReportStart},
-			EndTime:        metav1.Time{cfg.ParsedReportEnd},
+			StartTime:      metav1.Time{Time: cfg.ParsedReportStart},
+			EndTime:        metav1.Time{Time: cfg.ParsedReportEnd},
 		},
 		flowLogFilter:    flow.NewFlowLogFilter(),
 		longTermArchiver: longTermArchiver,
@@ -122,7 +122,6 @@ type reporter struct {
 	ctx         context.Context
 	cfg         *Config
 	clog        *logrus.Entry
-	listDest    api.ListDestination
 	xc          xrefcache.XrefCache
 	replayer    syncer.Starter
 	auditer     api.AuditLogReportHandler
@@ -239,7 +238,7 @@ func (r *reporter) run() error {
 	// Set the generation time and store the report data.
 	r.clog.Debug("Storing report into archiver")
 	r.data.GenerationTime = metav1.Now()
-	err = r.archiver.StoreArchivedReport(&api.ArchivedReportData{
+	_ = r.archiver.StoreArchivedReport(&api.ArchivedReportData{
 		ReportData: r.data,
 		UISummary:  summary,
 	}, time.Now())

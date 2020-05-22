@@ -260,7 +260,7 @@ func getSortQueryParams(vals url.Values) (sortBy []api.ReportSortBy, err error) 
 		if strings.HasSuffix(field, SortAscendingSuffix) {
 			ascending = true
 			field = strings.TrimSuffix(field, SortAscendingSuffix)
-		} else if strings.HasSuffix(field, SortDescendingSuffix) {
+		} else if strings.HasSuffix(field, SortDescendingSuffix) { //nolint:golint,gosimple
 			field = strings.TrimSuffix(field, SortDescendingSuffix)
 		}
 

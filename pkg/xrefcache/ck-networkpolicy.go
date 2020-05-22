@@ -100,7 +100,6 @@ type versionedCalicoNetworkPolicy struct {
 	*apiv3.NetworkPolicy
 	v1                 *model.Policy
 	v1Key              model.PolicyKey
-	enforcedFromStaged bool
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -153,7 +152,6 @@ type versionedCalicoGlobalNetworkPolicy struct {
 	*apiv3.GlobalNetworkPolicy
 	v1                 *model.Policy
 	v1Key              model.PolicyKey
-	enforcedFromStaged bool
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -961,7 +959,7 @@ func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId apiv3.R
 		x.SelectedPods.Add(endpointId)
 
 		// Track Nodes that a Pod is scheduled on.
-		pod, ok := c.GetFromXrefCache(endpointId).(*CacheEntryEndpoint)
+		pod, _ := c.GetFromXrefCache(endpointId).(*CacheEntryEndpoint)
 		thePod := pod.GetPrimary().(*corev1.Pod)
 		nodeName := thePod.Spec.NodeName
 		x.clog.Debugf("Tracking Node %+v for Pod %+v", nodeName, thePod)
@@ -998,7 +996,7 @@ func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId apiv3.R
 		x.SelectedPods.Discard(endpointId)
 
 		// Delete and reference check Nodes that Pods were scheduled on.
-		pod, ok := c.GetFromXrefCache(endpointId).(*CacheEntryEndpoint)
+		pod, _ := c.GetFromXrefCache(endpointId).(*CacheEntryEndpoint)
 		thePod := pod.GetPrimary().(*corev1.Pod)
 		nodeName := thePod.Spec.NodeName
 		x.clog.Debugf("Deleting Node %+v for Pod %+v", nodeName, thePod)

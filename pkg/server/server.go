@@ -81,7 +81,6 @@ func (s *server) Start() {
 		}()
 	}
 	s.running = true
-	return
 }
 
 // Wait for the compliance server to terminate.

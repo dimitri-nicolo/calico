@@ -23,7 +23,7 @@ func (s *server) getReportTypes(clusterID string) (map[string]*v3.ReportTypeSpec
 	// report types.
 	s.reportLock.Lock()
 	defer s.reportLock.Unlock()
-	if s.reportTypes != nil && time.Now().Sub(s.lastUpdate) < configUpdatePeriod {
+	if s.reportTypes != nil && time.Since(s.lastUpdate) < configUpdatePeriod {
 		// Another request must have pipped up to the post, no need to refresh.
 		return s.reportTypes, nil
 	}
@@ -35,7 +35,7 @@ func (s *server) getReportTypes(clusterID string) (map[string]*v3.ReportTypeSpec
 	}
 
 	// Transfer the specs into a new map keyed off the name.
-	s.reportTypes = make(map[string]*v3.ReportTypeSpec, 0)
+	s.reportTypes = make(map[string]*v3.ReportTypeSpec)
 	for idx := range grt.Items {
 		s.reportTypes[grt.Items[idx].Name] = &grt.Items[idx].Spec
 	}
@@ -48,7 +48,7 @@ func (s *server) getStoredReportTypes() map[string]*v3.ReportTypeSpec {
 	s.reportLock.RLock()
 	defer s.reportLock.RUnlock()
 
-	if time.Now().Sub(s.lastUpdate) > configUpdatePeriod {
+	if time.Since(s.lastUpdate) > configUpdatePeriod {
 		return nil
 	}
 	return s.reportTypes

@@ -34,7 +34,7 @@ var (
 	}
 
 	DefaultSortBy = []api.ReportSortBy{
-		{"startTime", false}, {"reportTypeName", true}, {"reportName", true},
+		{Field: "startTime", Ascending: false}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true},
 	}
 )
 

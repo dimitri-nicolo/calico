@@ -38,7 +38,6 @@ func main() {
 		for r := 0; ; r++ {
 			res, err := client.Backend().Index().
 				Index(hit.Index).
-				Type(hit.Type).
 				Id(hit.Id).
 				BodyString(string(hit.Source)).
 				Do(context.Background())

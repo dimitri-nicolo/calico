@@ -101,7 +101,6 @@ func NewXrefCache(cfg *config.Config, healthy func()) XrefCache {
 // xc implements the GlobalCache interface.
 type xrefCache struct {
 	healthy                          func()
-	livenessReporter                 string
 	syncerDispatcher                 dispatcher.Dispatcher
 	cacheDispatcher                  dispatcher.Dispatcher
 	consumerDispatcher               dispatcher.Dispatcher

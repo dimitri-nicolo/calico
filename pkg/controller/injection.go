@@ -247,18 +247,6 @@ func (c *realArchivedReportQuery) GetLastReportStartEndTime(name string) (*metav
 	return &ar.StartTime, &ar.EndTime, nil
 }
 
-// fakeArchivedReportQuery is the default fake implementation of archivedReportQueryInterface.
-type fakeArchivedReportQuery struct {
-	t   *metav1.Time
-	err error
-}
-
-var _ reportControlInterface = &fakeReportControl{}
-
-func (c *fakeArchivedReportQuery) GetLastReportStartEndTime(name string) (*metav1.Time, *metav1.Time, error) {
-	return c.t, c.t, c.err
-}
-
 // podTemplateQueryInterface is an interface that knows how to query the archived reports to determine the last
 // report end timestamp.
 type podTemplateQueryInterface interface {
@@ -285,16 +273,4 @@ func (c *realPodTemplateQuery) GetPodTemplate(namespace, name string) (*v1.PodTe
 		return nil, err
 	}
 	return pt, nil
-}
-
-// fakePodTemplateQuery is the default fake implementation of podTemplateQueryInterface.
-type fakePodTemplateQuery struct {
-	t   *v1.PodTemplate
-	err error
-}
-
-var _ reportControlInterface = &fakeReportControl{}
-
-func (c *fakePodTemplateQuery) GetPodTemplate(namespace, name string) (*v1.PodTemplate, error) {
-	return c.t, c.err
 }

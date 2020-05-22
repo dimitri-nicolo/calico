@@ -49,7 +49,7 @@ var _ = Describe("Snapshot", func() {
 		cfg.SnapshotHour = now.Add(time.Hour).Hour()
 
 		By("Starting the snapshotter")
-		Run(ctx, cfg, src, dest, healthy)
+		_ = Run(ctx, cfg, src, dest, healthy)
 		Expect(dest.RetrieveCalls).To(Equal(nResources))
 		Expect(src.RetrieveCalls).To(Equal(0))
 		Expect(dest.StoreCalls).To(Equal(0))
@@ -63,7 +63,7 @@ var _ = Describe("Snapshot", func() {
 			cancel()
 		}()
 
-		Run(ctx, cfg, src, dest, healthy)
+		_ = Run(ctx, cfg, src, dest, healthy)
 		Expect(dest.RetrieveCalls).To(Equal(nResources))
 		Expect(src.RetrieveCalls).To(Equal(nResources))
 		Expect(dest.StoreCalls).To(Equal(0))
@@ -84,7 +84,7 @@ var _ = Describe("Snapshot", func() {
 		cfg.SnapshotHour = now.Hour()
 
 		By("Starting the snapshotter")
-		Run(ctx, cfg, src, dest, healthy)
+		_ = Run(ctx, cfg, src, dest, healthy)
 		Expect(dest.RetrieveCalls).To(Equal(nResources))
 		Expect(src.RetrieveCalls).To(Equal(nResources))
 		Expect(dest.StoreCalls).To(Equal(nResources))

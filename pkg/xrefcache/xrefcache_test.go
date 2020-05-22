@@ -90,7 +90,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints with no endpoint selector", func() {
-		tester.RegisterInScopeEndpoints(nil)
+		_ = tester.RegisterInScopeEndpoints(nil)
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,

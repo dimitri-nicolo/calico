@@ -90,8 +90,8 @@ var _ = Describe("Replay", func() {
 		npList.Items = append(npList.Items, *np)
 		lister.LoadList(&list.TimestampedResourceList{
 			ResourceList:              npList,
-			RequestStartedTimestamp:   metav1.Time{baseTime.Add(15 * time.Second)},
-			RequestCompletedTimestamp: metav1.Time{baseTime.Add(16 * time.Second)},
+			RequestStartedTimestamp:   metav1.Time{Time: baseTime.Add(15 * time.Second)},
+			RequestCompletedTimestamp: metav1.Time{Time: baseTime.Add(16 * time.Second)},
 		})
 
 		By("setting a network policy audit event before the start time")
