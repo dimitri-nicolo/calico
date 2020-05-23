@@ -742,10 +742,14 @@ github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZ
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
 github.com/tigera/apiserver v0.0.0-20200509021204-c3dbe082cd3d h1:gmlCx13/FFsfuWE2U+VLwLyip/V2shzWrICILGAXMck=
 github.com/tigera/apiserver v0.0.0-20200509021204-c3dbe082cd3d/go.mod h1:jmBygXyR1fFFEd0MujejmrA2WgCXxyTslHR6KeWKuPk=
+github.com/tigera/apiserver v0.0.0-20200522154426-06dd2131354b h1:oEGeNMNZPa77vGctPwJIbhLn4n15WOyqUvsJXW0kI7E=
+github.com/tigera/apiserver v0.0.0-20200522154426-06dd2131354b/go.mod h1:kULFG0S5fiKLjCj9TjEeAGW7AOXY5cc8TuiBbN7T03c=
 github.com/tigera/compliance v0.0.0-20200515081354-d56614d9a174 h1:ufDVjpNou2HvF/43p3fqdBe+bZKy6i2CAmmroYE2rtg=
 github.com/tigera/compliance v0.0.0-20200515081354-d56614d9a174/go.mod h1:aw6H1+wAnvjqKkxEhr74SMlSl+hJA+oid4VRdYpon7U=
 github.com/tigera/compliance v0.0.0-20200522081113-e10aa4f99a3c h1:1/SmVSaGp8WTlC+RFeKI/CjcIQ4TykDrIWrVXtb0Q1s=
 github.com/tigera/compliance v0.0.0-20200522081113-e10aa4f99a3c/go.mod h1:+VvIW2Oqdyn6Ah5BL3VTTfSSd1d6IKtgpgs1X6Y4zMU=
+github.com/tigera/compliance v0.0.0-20200523010952-de0b0228c5e4 h1:vmAIUeUcXJUmM832WntxqZebGBJt+xsZbMtOjxq7lhc=
+github.com/tigera/compliance v0.0.0-20200523010952-de0b0228c5e4/go.mod h1:+VvIW2Oqdyn6Ah5BL3VTTfSSd1d6IKtgpgs1X6Y4zMU=
 github.com/tigera/felix-private v0.0.0-20200514164432-a7fa66265913 h1:2lb/OMUiRRStnNuqnjowZMrDJrJLT4w66mv6Pl/R/BU=
 github.com/tigera/felix-private v0.0.0-20200514164432-a7fa66265913/go.mod h1:a0EeinvZLC+2lwR7wi4jYSTNX7txWggofIplxubwqkc=
 github.com/tigera/felix-private v0.0.0-20200522041845-dff8eefbf4ac h1:vgspstCMhZrHKi+MuXCdi7iWZmJXrRieBMOphWKbATo=
