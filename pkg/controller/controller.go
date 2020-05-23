@@ -152,7 +152,6 @@ func (cc *ComplianceController) Run(ctx context.Context) {
 			cc.syncAll(ctx)
 		}
 	}
-	log.Infof("Shutting down Compliance Controller")
 }
 
 // syncAll lists all the Reports and Jobs and reconciles them.
@@ -251,8 +250,6 @@ func (cc *ComplianceController) syncOne(rep *v3.GlobalReport, js []batchv1.Job, 
 
 	// Indicate we are healthy.
 	cc.healthy()
-
-	return
 }
 
 // updateStatus reconciles a Report with a list of any Jobs that it created and updates the Report Status.

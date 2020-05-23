@@ -49,7 +49,7 @@ func (e *Executor) ExecuteBenchmarks(ctx context.Context, ct api.BenchmarkType, 
 		Version:   "1.4",
 		Type:      api.TypeKubernetes,
 		NodeName:  nodename,
-		Timestamp: metav1.Time{time.Now()},
+		Timestamp: metav1.Time{Time: time.Now()},
 		Tests: []api.BenchmarkTest{
 			{
 				Section:     "1.1",

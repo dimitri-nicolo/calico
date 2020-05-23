@@ -32,7 +32,7 @@ func (m *mockLister) Initialize(ts time.Time) {
 		resList := rh.NewResourceList()
 		tm := rh.TypeMeta()
 		resList.GetObjectKind().SetGroupVersionKind((&tm).GroupVersionKind())
-		m.data = append(m.data, &list.TimestampedResourceList{resList, metav1.Time{ts}, metav1.Time{ts}})
+		m.data = append(m.data, &list.TimestampedResourceList{ResourceList: resList, RequestStartedTimestamp: metav1.Time{Time: ts}, RequestCompletedTimestamp: metav1.Time{Time: ts}})
 	}
 }
 

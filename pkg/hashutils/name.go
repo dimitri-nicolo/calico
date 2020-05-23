@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package hashutils
 
@@ -19,7 +19,7 @@ func GetLengthLimitedName(value string, maxLength int) string {
 	if len(value) > maxLength {
 		// Value is too long, shorten it.
 		hasher := sha256.New()
-		hasher.Write([]byte(value))
+		_, _ = hasher.Write([]byte(value))
 		enc := base32.HexEncoding.WithPadding('Z')
 		hash := strings.ToLower(enc.EncodeToString(hasher.Sum(nil)))
 		value = value[:maxLength-numHashChars] + shortenedPrefix + hash[0:numHashChars-len(shortenedPrefix)]

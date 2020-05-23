@@ -23,15 +23,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
-
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
@@ -133,7 +131,7 @@ func getJobStartEndTime(j *batchv1.Job) (*metav1.Time, *metav1.Time) {
 			endFound = true
 		}
 		if startFound && endFound {
-			return &metav1.Time{start}, &metav1.Time{end}
+			return &metav1.Time{Time: start}, &metav1.Time{Time: end}
 		}
 	}
 	return nil, nil
@@ -167,7 +165,7 @@ func (o byCompletedReportEndTime) Less(i, j int) bool {
 
 // eventRecorder implements the EventRecorder interface but simply logs rather than generating events.
 type eventRecorder struct {
-	recorder record.EventRecorder
+	//recorder record.EventRecorder
 }
 
 func newEventRecorder(cfg *config.Config, clientSet datastore.ClientSet) *eventRecorder {

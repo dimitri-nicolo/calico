@@ -202,8 +202,8 @@ var _ = Describe("Report tests", func() {
 				ReportTypeName: "report-type",
 				ReportSpec:     cfg.Report.Spec,
 				ReportTypeSpec: cfg.ReportType.Spec,
-				StartTime:      metav1.Time{cfg.ParsedReportStart},
-				EndTime:        metav1.Time{cfg.ParsedReportEnd},
+				StartTime:      metav1.Time{Time: cfg.ParsedReportStart},
+				EndTime:        metav1.Time{Time: cfg.ParsedReportEnd},
 			},
 			flowLogFilter:    flow.NewFlowLogFilter(),
 			longTermArchiver: longTermArchiver,
@@ -212,7 +212,7 @@ var _ = Describe("Report tests", func() {
 		// Start the reporter and wait until start has been called.
 		var completed bool
 		go func() {
-			r.run()
+			_ = r.run()
 			completed = true
 		}()
 		Eventually(func() bool { return replayer.started }, "5s", "0.1s").Should(BeTrue())

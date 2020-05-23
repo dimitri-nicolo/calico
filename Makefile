@@ -422,9 +422,8 @@ update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin re
 ###############################################################################
 # Static checks
 ###############################################################################
-#TODO: enable linters
-LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
-LINT_ARGS += --timeout 5m
+# See .golangci.yml for golangci-lint config
+LINT_ARGS +=
 
 #TODO: Shoud gometalinter be deleted in favor of golangci-lint?
 .PHONY: go-meta-linter

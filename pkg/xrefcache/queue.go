@@ -1,10 +1,6 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package xrefcache
 
-import (
-	"container/heap"
-)
-
 // An QueueItem is an item in a resources.PriorityQueue used to prioritise apiv3.ResourceID actions.
 type QueueItem struct {
 	// The ID of the resource requiring recalculation.
@@ -47,11 +43,4 @@ func (pq *PriorityQueue) Pop() interface{} {
 	item.index = -1 // for safety
 	*pq = old[0 : n-1]
 	return item
-}
-
-// update modifies the Priority and value of an QueueItem in the queue.
-func (pq *PriorityQueue) update(item *QueueItem, entry CacheEntry, priority int8) {
-	item.Entry = entry
-	item.Priority = priority
-	heap.Fix(pq, item.index)
 }

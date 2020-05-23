@@ -73,7 +73,7 @@ type Action byte
 
 const (
 	Allow Action = 1
-	Deny         = 2
+	Deny  Action = 2
 )
 
 // Entity value referring to the source or destination in a Calico policy rule.

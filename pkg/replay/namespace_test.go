@@ -274,8 +274,8 @@ func (c *mockNamespaceTestClient) RetrieveList(tm metav1.TypeMeta, from, to *tim
 
 	return &list.TimestampedResourceList{
 		ResourceList:              l,
-		RequestStartedTimestamp:   metav1.Time{nowMinus48Hrs},
-		RequestCompletedTimestamp: metav1.Time{nowMinus48Hrs},
+		RequestStartedTimestamp:   metav1.Time{Time: nowMinus48Hrs},
+		RequestCompletedTimestamp: metav1.Time{Time: nowMinus48Hrs},
 	}, nil
 }
 

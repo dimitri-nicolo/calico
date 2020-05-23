@@ -199,7 +199,7 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 		freader, err := f.Open()
 		Expect(err).NotTo(HaveOccurred())
 		var b bytes.Buffer
-		io.Copy(&b, freader)
+		_, _ = io.Copy(&b, freader)
 		files[f.Name] = b.Bytes()
 	}
 

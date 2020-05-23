@@ -85,7 +85,7 @@ type resourceHandler interface {
 // newResourceCache creates a new resourceCache backed by a specific implementation of a resourceHandler.
 func newResourceCache(handler resourceHandler) *resourceCache {
 	return &resourceCache{
-		resources: make(map[apiv3.ResourceID]CacheEntry, 0),
+		resources: make(map[apiv3.ResourceID]CacheEntry),
 		handler:   handler,
 	}
 }

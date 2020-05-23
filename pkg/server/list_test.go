@@ -60,8 +60,8 @@ func newGlobalReportType(typeName string) v3.GlobalReportType {
 }
 
 var (
-	now         = v1.Time{time.Unix(time.Now().Unix(), 0)}
-	nowPlusHour = v1.Time{now.Add(time.Hour)}
+	now         = v1.Time{Time: time.Unix(time.Now().Unix(), 0)}
+	nowPlusHour = v1.Time{Time: now.Add(time.Hour)}
 
 	reportTypeGettable    = newGlobalReportType("inventoryGet")
 	reportTypeNotGettable = newGlobalReportType("inventoryNoGo")
@@ -237,7 +237,7 @@ var _ = Describe("List query parameters", func() {
 			ToTime:   "",
 			Page:     0,
 			MaxItems: &maxItems,
-			SortBy:   []api.ReportSortBy{{"startTime", false}, {"reportTypeName", true}, {"reportName", true}},
+			SortBy:   []api.ReportSortBy{{Field: "startTime", Ascending: false}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true}},
 		}))
 
 		By("parsing all query params in the URL")
@@ -248,12 +248,12 @@ var _ = Describe("List query parameters", func() {
 		qp, err = server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(qp).To(Equal(&api.ReportQueryParams{
-			Reports:  []api.ReportTypeAndName{{"type1", ""}, {"type2", ""}, {"", "name1"}, {"", "name2"}},
+			Reports:  []api.ReportTypeAndName{{ReportTypeName: "type1", ReportName: ""}, {ReportTypeName: "type2", ReportName: ""}, {ReportTypeName: "", ReportName: "name1"}, {ReportTypeName: "", ReportName: "name2"}},
 			FromTime: "now-2d",
 			ToTime:   "now-4d",
 			Page:     2,
 			MaxItems: &maxItems,
-			SortBy:   []api.ReportSortBy{{"endTime", false}, {"reportName", true}, {"reportTypeName", false}, {"startTime", false}},
+			SortBy:   []api.ReportSortBy{{Field:"endTime", Ascending: false}, {Field:"reportName", Ascending: true}, {Field: "reportTypeName", Ascending: false}, {Field: "startTime", Ascending: false}},
 		}))
 
 		By("parsing maxItems=all with page=0")
@@ -267,7 +267,7 @@ var _ = Describe("List query parameters", func() {
 			ToTime:   "",
 			Page:     0,
 			MaxItems: nil,
-			SortBy:   []api.ReportSortBy{{"startTime", false}, {"reportTypeName", true}, {"reportName", true}},
+			SortBy:   []api.ReportSortBy{{Field: "startTime", Ascending: false}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true}},
 		}))
 	})
 

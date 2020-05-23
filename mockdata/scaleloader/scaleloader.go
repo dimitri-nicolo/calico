@@ -185,7 +185,6 @@ func (sl *scaleloader) writeStep(s Step, es elastic.Client, t time.Time, log *lo
 	for r := 0; ; r++ {
 		res, err := es.Backend().Index().
 			Index(index).
-			Type("fluentd").
 			BodyString(msg).
 			Do(context.Background())
 		if err == nil {

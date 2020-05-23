@@ -54,7 +54,7 @@ func (f *Fetcher) LoadAuditEvent(verb string, stage auditv1.Stage, objRef resour
 			APIVersion: objRef.GetObjectKind().GroupVersionKind().Version,
 			Resource:   rh.Plural(),
 		},
-		StageTimestamp: metav1.MicroTime{timestamp},
+		StageTimestamp: metav1.MicroTime{Time: timestamp},
 	}
 
 	// Set the response object if this is a response complete stage event.
@@ -70,5 +70,5 @@ func (f *Fetcher) LoadAuditEvent(verb string, stage auditv1.Stage, objRef resour
 	}
 
 	// Append to event array
-	f.data[tm] = append(f.data[tm], &api.AuditEventResult{ev, nil})
+	f.data[tm] = append(f.data[tm], &api.AuditEventResult{Event: ev, Err: nil})
 }

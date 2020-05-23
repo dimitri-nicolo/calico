@@ -10,7 +10,7 @@ import (
 	. "github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/benchmark/mock"
 	"github.com/tigera/compliance/pkg/config"
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/api"
 )
 
 var _ = Describe("Benchmark", func() {
@@ -35,7 +35,7 @@ var _ = Describe("Benchmark", func() {
 			<-time.After(time.Second)
 			cancel()
 		}()
-		Run(ctx, cfg, mockExec, mockStore, mockStore, healthy)
+		_ = Run(ctx, cfg, mockExec, mockStore, mockStore, healthy)
 		Expect(mockStore.NStoreCalls).To(Equal(1))
 		Expect(mockStore.NRetrieveCalls).To(Equal(1))
 		Expect(isHealthy).To(BeTrue())
@@ -58,12 +58,12 @@ var _ = Describe("Benchmark", func() {
 		Expect((api.Benchmarks{NodeName: "kadm-ms"}).Equal(api.Benchmarks{NodeName: "kadm-node-0"})).To(BeFalse())
 
 		By("tests")
-		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}}).Equal(
-			api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}},
+		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{Section: "section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}}).Equal(
+			api.Benchmarks{Tests: []api.BenchmarkTest{{Section:"section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}},
 		)).To(BeTrue())
 
-		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}}).Equal(
-			api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", false}}},
+		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{Section: "section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}}).Equal(
+			api.Benchmarks{Tests: []api.BenchmarkTest{{Section:"section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: false}}},
 		)).To(BeFalse())
 	})
 })
