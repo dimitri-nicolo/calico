@@ -191,6 +191,8 @@ EOF
 >    used for cluster pods in general.  Specifying this `nodeSelector` means that the IP pool
 >    is only used for pods that explicitly identify it in their `cni.projectcalico.org/ipv4pools`
 >    annotation.
+>
+> -  Set `ipipMode` or `vxlanMode` to `Always` if the pod network has IPIP or VXLAN enabled.
 {: .alert .alert-info}
 
 #### Copy pull secret into egress gateway namespace
