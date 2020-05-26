@@ -883,6 +883,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 	if ipVersion == 4 && r.EgressIPEnabled {
 		var rules []Rule
 
+		// Prerouting chain for egress ip
 		// Restore ConnMark for pod traffic.
 		rules = append(rules,
 			Rule{
@@ -895,6 +896,25 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		)
 
 		chains = append(chains, &Chain{Name: ChainManglePreroutingEgress, Rules: rules})
+
+		// Postrouting chain for egress ip
+		// Fill checksum for packet leaving egress.calico interface and going into tunnel device.
+		tunnelDeviceName := "None"
+		if r.VXLANEnabled {
+			tunnelDeviceName = "vxlan.calico"
+		} else if r.IPIPEnabled {
+			tunnelDeviceName = "tunl0"
+		}
+
+		if tunnelDeviceName != "None" {
+			chains = append(chains, &Chain{
+				Name: ChainManglePostroutingEgress,
+				Rules: []Rule{{
+					Match:  Match().MarkSingleBitSet(r.IptablesMarkEgress).OutInterface(tunnelDeviceName),
+					Action: ChecksumAction{},
+				}},
+			})
+		}
 	}
 
 	chains = append(chains,

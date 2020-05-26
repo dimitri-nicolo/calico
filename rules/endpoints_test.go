@@ -770,8 +770,6 @@ var _ = Describe("Endpoints", func() {
 							// conntrack rules.
 							{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 								Action: AcceptAction{}},
-							{Match: Match().ConntrackState("INVALID"),
-								Action: DropAction{}},
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 

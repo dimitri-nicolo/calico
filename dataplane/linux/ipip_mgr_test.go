@@ -36,9 +36,10 @@ var (
 
 var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	var (
-		ipipMgr   *ipipManager
-		ipSets    *mockIPSets
-		dataplane *mockIPIPDataplane
+		ipipMgr     *ipipManager
+		ipSets      *mockIPSets
+		dataplane   *mockIPIPDataplane
+		mockProcSys *testProcSys
 	)
 
 	ip, _, err := net.ParseCIDR("10.0.0.1/32")
@@ -53,7 +54,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	BeforeEach(func() {
 		dataplane = &mockIPIPDataplane{}
 		ipSets = newMockIPSets()
-		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, dataplane, nil)
+		mockProcSys = &testProcSys{state: map[string]string{}}
+		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, mockProcSys.write, dataplane, nil, Config{EgressIPEnabled: true})
 	})
 
 	Describe("after calling configureIPIPDevice", func() {
@@ -79,6 +81,11 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 		It("should configure the address", func() {
 			Expect(dataplane.addrs).To(HaveLen(1))
 			Expect(dataplane.addrs[0].IP.String()).To(Equal("10.0.0.1"))
+		})
+		It("should have configured correct rp_filter", func() {
+			mockProcSys.checkState(map[string]string{
+				"/proc/sys/net/ipv4/conf/tunl0/rp_filter": "2",
+			})
 		})
 
 		Describe("after second call with same params", func() {
@@ -204,9 +211,10 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 
 var _ = Describe("ipipManager IP set updates", func() {
 	var (
-		ipipMgr   *ipipManager
-		ipSets    *mockIPSets
-		dataplane *mockIPIPDataplane
+		ipipMgr     *ipipManager
+		ipSets      *mockIPSets
+		dataplane   *mockIPIPDataplane
+		mockProcSys *testProcSys
 	)
 
 	const (
@@ -216,7 +224,8 @@ var _ = Describe("ipipManager IP set updates", func() {
 	BeforeEach(func() {
 		dataplane = &mockIPIPDataplane{}
 		ipSets = newMockIPSets()
-		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, dataplane, []string{externalCIDR})
+		mockProcSys = &testProcSys{state: map[string]string{}}
+		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, mockProcSys.write, dataplane, []string{externalCIDR}, Config{EgressIPEnabled: false})
 	})
 
 	It("should not create the IP set until first call to CompleteDeferredWork()", func() {

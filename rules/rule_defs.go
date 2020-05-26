@@ -54,7 +54,9 @@ const (
 	ChainNATOutgoing         = ChainNamePrefix + "nat-outgoing"
 
 	ChainManglePrerouting       = ChainNamePrefix + "PREROUTING"
-	ChainManglePreroutingEgress = ChainNamePrefix + "egress"
+	ChainManglePostrouting      = ChainNamePrefix + "POSTROUTING"
+	ChainManglePreroutingEgress = ChainNamePrefix + "pre-egress"
+	ChainManglePostroutingEgress = ChainNamePrefix + "post-egress"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"

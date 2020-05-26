@@ -88,6 +88,7 @@ var _ = Describe("VXLANManager", func() {
 	var manager *vxlanManager
 	var rt *mockRouteTable
 	var prt *mockRouteTable
+	var mockProcSys *testProcSys
 
 	BeforeEach(func() {
 		rt = &mockRouteTable{
@@ -98,6 +99,7 @@ var _ = Describe("VXLANManager", func() {
 			currentRoutes:   map[string][]routetable.Target{},
 			currentL2Routes: map[string][]routetable.L2Target{},
 		}
+		mockProcSys = &testProcSys{state: map[string]string{}}
 
 		manager = newVXLANManagerWithShims(
 			newMockIPSets(),
@@ -111,7 +113,9 @@ var _ = Describe("VXLANManager", func() {
 					VXLANVNI:  1,
 					VXLANPort: 20,
 				},
+				EgressIPEnabled: true,
 			},
+			mockProcSys.write,
 			&mockVXLANDataplane{
 				links: []netlink.Link{&mockLink{attrs: netlink.LinkAttrs{Name: "eth0"}}},
 			},
@@ -223,5 +227,9 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(manager.routesDirty).To(BeFalse())
 		Expect(prt.currentRoutes["eth0"]).To(HaveLen(1))
+
+		mockProcSys.checkState(map[string]string{
+			"/proc/sys/net/ipv4/conf/vxlan.calico/rp_filter": "2",
+		})
 	})
 })

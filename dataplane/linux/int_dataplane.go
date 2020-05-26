@@ -70,6 +70,9 @@ const (
 
 	// Interface name used by kube-proxy to bind service ips.
 	KubeIPVSInterface = "kube-ipvs0"
+
+	// Size of a VXLAN header.
+	VXLANHeaderSize = 50
 )
 
 var (
@@ -447,8 +450,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.EgressIPEnabled {
+		// If IPIP or VXLAN is enabled, MTU of egress.calico device should be 50 bytes less than
+		// MTU of IPIP or VXLAN device. MTU of the VETH device of a workload should be set to
+		// the same value as MTU of egress.calico device.
+		mtu := config.VXLANMTU
+
+		if config.RulesConfig.VXLANEnabled {
+			mtu = config.VXLANMTU - VXLANHeaderSize
+		} else if config.RulesConfig.IPIPEnabled {
+			mtu = config.IPIPMTU - VXLANHeaderSize
+		}
 		egressIpMgr := newEgressIPManager("egress.calico", config)
-		go egressIpMgr.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
+		go egressIpMgr.KeepVXLANDeviceInSync(mtu, 10*time.Second)
 		dp.RegisterManager(egressIpMgr)
 	} else {
 		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
@@ -663,7 +676,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
-		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs)
+		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs, dp.config)
 	}
 
 	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled || config.EgressIPEnabled {
@@ -1105,7 +1118,8 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		}})
 	}
 	for _, t := range d.iptablesMangleTables {
-		t.UpdateChains(d.ruleRenderer.StaticMangleTableChains(t.IPVersion))
+		chains := d.ruleRenderer.StaticMangleTableChains(t.IPVersion)
+		t.UpdateChains(chains)
 		rs := []iptables.Rule{}
 		if t.IPVersion == 4 && d.config.EgressIPEnabled {
 			// Make sure egress rule at top.
@@ -1117,6 +1131,15 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			Action: iptables.JumpAction{Target: rules.ChainManglePrerouting},
 		})
 		t.InsertOrAppendRules("PREROUTING", rs)
+
+		for _, chain := range chains {
+			if chain.Name == rules.ChainManglePostroutingEgress {
+				t.InsertOrAppendRules("POSTROUTING", []iptables.Rule{{
+					Action: iptables.JumpAction{Target: rules.ChainManglePostroutingEgress},
+				}})
+				break
+			}
+		}
 	}
 	if d.xdpState != nil {
 		if err := d.setXDPFailsafePorts(); err != nil {
