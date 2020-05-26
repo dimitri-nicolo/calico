@@ -70,6 +70,8 @@ type vxlanManager struct {
 	vxlanID     int
 	vxlanPort   int
 
+	writeProcSys procSysWriter
+
 	// Indicates if configuration has changed since the last apply.
 	routesDirty       bool
 	ipsetsDataplane   ipsetsDataplane
@@ -97,6 +99,7 @@ func newVXLANManager(
 		rt,
 		deviceName,
 		dpConfig,
+		writeProcSys,
 		nlHandle,
 		func(interfaceRegexes []string, ipVersion uint8, vxlan bool, netlinkTimeout time.Duration,
 			deviceRouteSourceAddress net.IP, deviceRouteProtocol int, removeExternalRoutes bool) routeTable {
@@ -111,6 +114,7 @@ func newVXLANManagerWithShims(
 	rt routeTable,
 	deviceName string,
 	dpConfig Config,
+	procSysWriter procSysWriter,
 	nlHandle netlinkHandle,
 	noEncapRTConstruct func(interfacePrefixes []string, ipVersion uint8, vxlan bool, netlinkTimeout time.Duration,
 		deviceRouteSourceAddress net.IP, deviceRouteProtocol int, removeExternalRoutes bool) routeTable,
@@ -133,6 +137,7 @@ func newVXLANManagerWithShims(
 		vxlanDevice:        deviceName,
 		vxlanID:            dpConfig.RulesConfig.VXLANVNI,
 		vxlanPort:          dpConfig.RulesConfig.VXLANPort,
+		writeProcSys:       procSysWriter,
 		externalNodeCIDRs:  dpConfig.ExternalNodesCidrs,
 		routesDirty:        true,
 		vtepsDirty:         true,
@@ -475,6 +480,21 @@ func (m *vxlanManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTunne
 	// And the device is up.
 	if err := m.nlHandle.LinkSetUp(link); err != nil {
 		return fmt.Errorf("failed to set interface up: %s", err)
+	}
+
+	if m.dpConfig.EgressIPEnabled {
+		// Enable loose reverse-path filtering for this interface.
+		// From client node point of view, data path for an egress traffic looks like the following:
+		// Outgoing path : client pod -> egress.calico -> tunnel device -> remote gateway pod -> external server.
+		// Return path : external server -> remote gateway pod -> tunnel device -> client pod
+
+		// When return packet arrives in tunnel device of client node, it has external server ip as its' source ip
+		// which is not routable via the tunnel device itself. Enabling loose reverse-path filtering would allow
+		// tunnel device to forward packet back to client pod as long as there is a default route on any host interface.
+		err = m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", m.vxlanDevice), "2")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

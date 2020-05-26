@@ -1265,8 +1265,8 @@ var _ = Describe("Static", func() {
 		})
 
 		It("IPv4: Should return expected mangle PREROUTING chain", func() {
-			Expect(findChain(rr.StaticMangleTableChains(4), "cali-egress")).To(Equal(&Chain{
-				Name: "cali-egress",
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-pre-egress")).To(Equal(&Chain{
+				Name: "cali-pre-egress",
 				Rules: []Rule{
 					{
 						Match: Match().SourceIPSet("cali40all-ipam-pools"),
@@ -1279,9 +1279,38 @@ var _ = Describe("Static", func() {
 			}))
 		})
 
-		It("IPv6: Should return expected mangle PREROUTING chain", func() {
+		It("IPv4: Should return expected mangle POSTROUTING chain", func() {
 			var nilChain *Chain
-			Expect(findChain(rr.StaticMangleTableChains(6), "cali-egress-restore-mark")).To(Equal(nilChain))
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-post-egress")).To(Equal(nilChain))
+
+			rr.IPIPEnabled = true
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-post-egress")).To(Equal(&Chain{
+				Name: "cali-post-egress",
+				Rules: []Rule{
+					{
+						Match:  Match().MarkSingleBitSet(rr.IptablesMarkEgress).OutInterface("tunl0"),
+						Action: ChecksumAction{},
+					},
+				},
+			}))
+
+			rr.IPIPEnabled = false
+			rr.VXLANEnabled = true
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-post-egress")).To(Equal(&Chain{
+				Name: "cali-post-egress",
+				Rules: []Rule{
+					{
+						Match:  Match().MarkSingleBitSet(rr.IptablesMarkEgress).OutInterface("vxlan.calico"),
+						Action: ChecksumAction{},
+					},
+				},
+			}))
+		})
+
+		It("IPv6: Should return expected mangle chain", func() {
+			var nilChain *Chain
+			Expect(findChain(rr.StaticMangleTableChains(6), "cali-pre-egress")).To(Equal(nilChain))
+			Expect(findChain(rr.StaticMangleTableChains(6), "cali-post-egress")).To(Equal(nilChain))
 		})
 	})
 

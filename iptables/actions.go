@@ -266,3 +266,15 @@ func (c RestoreConnMarkAction) ToFragment(features *Features) string {
 func (c RestoreConnMarkAction) String() string {
 	return fmt.Sprintf("RestoreConnMarkWithMask:%#x", c.RestoreMask)
 }
+
+type ChecksumAction struct {
+	TypeChecksum struct{}
+}
+
+func (g ChecksumAction) ToFragment(features *Features) string {
+	return "--jump CHECKSUM --checksum-fill"
+}
+
+func (g ChecksumAction) String() string {
+	return "Checksum-fill"
+}

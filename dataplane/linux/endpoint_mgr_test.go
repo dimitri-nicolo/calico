@@ -394,10 +394,12 @@ func chainsForIfaces(ipVersion uint8,
 					Action: iptables.AcceptAction{},
 				},
 			)
-			inRules = append(inRules, iptables.Rule{
-				Match:  iptables.Match().ConntrackState("INVALID"),
-				Action: iptables.DropAction{},
-			})
+			if !isEgressGateway {
+				inRules = append(inRules, iptables.Rule{
+					Match:  iptables.Match().ConntrackState("INVALID"),
+					Action: iptables.DropAction{},
+				})
+			}
 		}
 
 		if host && tableKind != "applyOnForward" {

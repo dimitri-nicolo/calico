@@ -15,6 +15,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -44,30 +45,38 @@ type ipipManager struct {
 	// Config for creating/refreshing the IP set.
 	ipSetMetadata ipsets.IPSetMetadata
 
+	writeProcSys procSysWriter
+
 	// Dataplane shim.
 	dataplane ipipDataplane
 
 	// Configured list of external node ip cidr's to be added to the ipset.
 	externalNodeCIDRs []string
+
+	dpConfig Config
 }
 
 func newIPIPManager(
 	ipsetsDataplane ipsetsDataplane,
 	maxIPSetSize int,
 	externalNodeCidrs []string,
+	dpConfig Config,
 ) *ipipManager {
-	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, realIPIPNetlink{}, externalNodeCidrs)
+	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, writeProcSys, realIPIPNetlink{}, externalNodeCidrs, dpConfig)
 }
 
 func newIPIPManagerWithShim(
 	ipsetsDataplane ipsetsDataplane,
 	maxIPSetSize int,
+	procSysWriter procSysWriter,
 	dataplane ipipDataplane,
 	externalNodeCIDRs []string,
+	dpConfig Config,
 ) *ipipManager {
 	ipipMgr := &ipipManager{
 		ipsetsDataplane:    ipsetsDataplane,
 		activeHostnameToIP: map[string]string{},
+		writeProcSys:       procSysWriter,
 		dataplane:          dataplane,
 		ipSetMetadata: ipsets.IPSetMetadata{
 			MaxSize: maxIPSetSize,
@@ -75,6 +84,7 @@ func newIPIPManagerWithShim(
 			Type:    ipsets.IPSetTypeHashNet,
 		},
 		externalNodeCIDRs: externalNodeCIDRs,
+		dpConfig:          dpConfig,
 	}
 	return ipipMgr
 }
@@ -141,6 +151,21 @@ func (d *ipipManager) configureIPIPDevice(mtu int, address net.IP) error {
 	if err := d.setLinkAddressV4("tunl0", address); err != nil {
 		log.WithError(err).Warn("Failed to set tunnel device IP")
 		return err
+	}
+
+	if d.dpConfig.EgressIPEnabled {
+		// Enable loose reverse-path filtering for this interface.
+		// From client node point of view, data path for an egress traffic looks like the following:
+		// Outgoing path : client pod -> egress.calico -> tunnel device -> remote gateway pod -> external server.
+		// Return path : external server -> remote gateway pod -> tunnel device -> client pod
+
+		// When return packet arrives in tunnel device of client node, it has external server ip as its' source ip
+		// which is not routable via the tunnel device itself. Enabling loose reverse-path filtering would allow
+		// tunnel device to forward packet back to client pod as long as there is a default route on any host interface.
+		err = d.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", "tunl0"), "2")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
