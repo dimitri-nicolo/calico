@@ -192,7 +192,7 @@ EOF
 >    is only used for pods that explicitly identify it in their `cni.projectcalico.org/ipv4pools`
 >    annotation.
 >
-> -  Set `ipipMode` or `vxlanMode` to `Always` if the pod network has IPIP or VXLAN enabled.
+> -  Set `ipipMode` or `vxlanMode` to `Always` if the pod network has [IPIP or VXLAN](vxlan-ipip) enabled.
 {: .alert .alert-info}
 
 #### Copy pull secret into egress gateway namespace
