@@ -155,7 +155,7 @@ When it shows all components with status `Available`, proceed to the next sectio
 To secure the components which make up {{site.prodname}}, install the following set of network policies.
 
 ```
-oc create -f {{ "/manifests/tigera-policies-openshift.yaml" | absolute_url }}
+oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
 ### Above and beyond
