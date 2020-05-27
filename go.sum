@@ -750,10 +750,14 @@ github.com/tigera/compliance v0.0.0-20200522081113-e10aa4f99a3c h1:1/SmVSaGp8WTl
 github.com/tigera/compliance v0.0.0-20200522081113-e10aa4f99a3c/go.mod h1:+VvIW2Oqdyn6Ah5BL3VTTfSSd1d6IKtgpgs1X6Y4zMU=
 github.com/tigera/compliance v0.0.0-20200523010952-de0b0228c5e4 h1:vmAIUeUcXJUmM832WntxqZebGBJt+xsZbMtOjxq7lhc=
 github.com/tigera/compliance v0.0.0-20200523010952-de0b0228c5e4/go.mod h1:+VvIW2Oqdyn6Ah5BL3VTTfSSd1d6IKtgpgs1X6Y4zMU=
+github.com/tigera/compliance v0.0.0-20200527081235-bd4222bf6a32 h1:61I835UIrUQJuysLRuV6rlBNVCb85X+uVBO9r4Zfing=
+github.com/tigera/compliance v0.0.0-20200527081235-bd4222bf6a32/go.mod h1:iFcM0T8/2p2f8tgifDuUclYo1YRmhYM2z0/hJYNC+Yk=
 github.com/tigera/felix-private v0.0.0-20200514164432-a7fa66265913 h1:2lb/OMUiRRStnNuqnjowZMrDJrJLT4w66mv6Pl/R/BU=
 github.com/tigera/felix-private v0.0.0-20200514164432-a7fa66265913/go.mod h1:a0EeinvZLC+2lwR7wi4jYSTNX7txWggofIplxubwqkc=
 github.com/tigera/felix-private v0.0.0-20200522041845-dff8eefbf4ac h1:vgspstCMhZrHKi+MuXCdi7iWZmJXrRieBMOphWKbATo=
 github.com/tigera/felix-private v0.0.0-20200522041845-dff8eefbf4ac/go.mod h1:H6A5e5IfjG7MM6aTTgzthmkQzWTyOKC9lQ0J3ydhcQc=
+github.com/tigera/felix-private v0.0.0-20200526120722-80e43111461b h1:V1+IpRrJaDkYYAyFOe70OzZpNUMJa30xlCdLcsUghDE=
+github.com/tigera/felix-private v0.0.0-20200526120722-80e43111461b/go.mod h1:H6A5e5IfjG7MM6aTTgzthmkQzWTyOKC9lQ0J3ydhcQc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200508235409-a506e44fde18 h1:JBL0asw3kEm+lUxg46xIhFDRpVP1H+G9jmIn747uo80=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200508235409-a506e44fde18/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56 h1:MhaYRI9GBwqeJ+egYJ/vyGhbndRn52LX9GLcEJ9ms7Y=
