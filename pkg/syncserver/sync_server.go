@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -89,6 +90,10 @@ var (
 		Help: "Number of KV pairs sent in each message.",
 	})
 )
+
+// remoteCluster constant is default path for the RemoteClusterStatusKey. remoteCluster must match with
+// the libcalico-go backend model of RemoteClusterStatusKey defaultpath().
+const remoteCluster = "/calico/felix/v1/remotecluster/"
 
 func init() {
 	prometheus.MustRegister(counterNumConnectionsAccepted)
@@ -857,7 +862,11 @@ func (h *connection) streamSnapshotToClient(logCxt *log.Entry, breadcrumb *snapc
 				summarySnapshotSendTime.Observe(time.Since(startTime).Seconds())
 				return
 			}
-			kvs = append(kvs, entry.Value.(syncproto.SerializedUpdate))
+			// Skip sending remoteClusterStatus to client.
+			if !strings.HasPrefix(entry.Value.(syncproto.SerializedUpdate).Key, remoteCluster) {
+				kvs = append(kvs, entry.Value.(syncproto.SerializedUpdate))
+			}
+
 			if len(kvs) >= h.config.MaxMessageSize {
 				// Buffer is full, send the next batch.
 				err = sendKVs()

@@ -400,6 +400,20 @@ var _ = Describe("With an in-process Server", func() {
 			)
 		})
 
+		It("Should drop RemoteCluster status", func() {
+			valFilter.OnStatusUpdated(api.ResyncInProgress)
+			valFilter.OnUpdates([]api.Update{{
+				KVPair: model.KVPair{
+					Key:      model.RemoteClusterStatusKey{Name: "foobar"},
+					Value:    "deadcafe",
+					Revision: "1234",
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}})
+			valFilter.OnStatusUpdated(api.InSync)
+			expectFelixClientState(api.InSync, map[string]api.Update{})
+		})
+
 		Describe("with a BGP client", func() {
 			var bgpClient clientState
 
