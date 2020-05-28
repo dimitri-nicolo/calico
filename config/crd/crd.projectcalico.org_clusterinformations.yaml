@@ -47,6 +47,10 @@ spec:
               clusterType:
                 description: ClusterType describes the type of the cluster
                 type: string
+              cnxVersion:
+                description: CNXVersion is the version of CNX that the cluster is
+                  running
+                type: string
               datastoreReady:
                 description: DatastoreReady is used during significant datastore migrations
                   to signal to components such as Felix that it should wait before
