@@ -203,16 +203,17 @@ type FelixConfigurationSpec struct {
 	PrometheusMetricsCAFile   string `json:"prometheusMetricsCAFile,omitempty"`
 
 	// FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints
-	// on irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each
+	// on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each
 	// port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it
 	// defaults to “tcp”. To disable all inbound host ports, use the value none. The default value allows ssh access and DHCP.
-	// [Default: tcp:22, udp:68]
+	// [Default: tcp:22, udp:68, tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667]
 	FailsafeInboundHostPorts *[]ProtoPort `json:"failsafeInboundHostPorts,omitempty"`
 	// FailsafeOutboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to
-	// irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port
+	// irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each port
 	// should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults
 	// to “tcp”. To disable all outbound host ports, use the value none. The default value opens etcd’s standard ports to ensure that Felix
-	// does not get cut off from etcd as well as allowing DHCP and DNS. [Default: tcp:2379, tcp:2380, tcp:4001, tcp:7001, udp:53, udp:67]
+	// does not get cut off from etcd as well as allowing DHCP and DNS.
+	// [Default: tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667, udp:53, udp:67]
 	FailsafeOutboundHostPorts *[]ProtoPort `json:"failsafeOutboundHostPorts,omitempty"`
 
 	// KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode.
@@ -323,6 +324,9 @@ type FelixConfigurationSpec struct {
 	// embedded kube-proxy.  Lower values give reduced set-up latency.  Higher values reduce Felix CPU usage by
 	// batching up more work.  [Default: 1s]
 	BPFKubeProxyMinSyncPeriod *metav1.Duration `json:"bpfKubeProxyMinSyncPeriod,omitempty" validate:"omitempty" configv1timescale:"seconds"`
+	// BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls whether Felix's
+	// embedded kube-proxy accepts EndpointSlices or not.
+	BPFKubeProxyEndpointSlicesEnabled *bool `json:"bpfKubeProxyEndpointSlicesEnabled,omitempty" validate:"omitempty"`
 
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
@@ -495,7 +499,7 @@ type FelixConfigurationSpec struct {
 
 	// RouteSource configures where Felix gets its routing information.
 	// - WorkloadIPs: use workload endpoints to construct routes.
-	// - CalicoIPAM: the default - use IPAM data to contruct routes.
+	// - CalicoIPAM: the default - use IPAM data to construct routes.
 	RouteSource string `json:"routeSource,omitempty" validate:"omitempty,routeSource"`
 
 	// Calico programs additional Linux route tables for various purposes.  RouteTableRange

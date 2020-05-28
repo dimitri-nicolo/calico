@@ -167,7 +167,7 @@ func (c cb) OnUpdates(updates []api.Update) {
 			log.Infof("[TEST] Syncer received deleted: %+v", u)
 			Expect(u.Value).To(BeNil())
 		case api.UpdateTypeKVUnknown:
-			panic(fmt.Sprintf("[TEST] Syncer received unkown update: %+v", u))
+			panic(fmt.Sprintf("[TEST] Syncer received unknown update: %+v", u))
 		}
 
 		// Send the update to a goroutine which will process it.
@@ -2973,7 +2973,13 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 				Key: model.BlockKey{
 					CIDR: net.MustParseCIDR("10.0.0.0/26"),
 				},
-				Value: &model.AllocationBlock{},
+				Value: &model.AllocationBlock{
+					Affinity:    nil,
+					Allocations: []*int{},
+					Unallocated: []int{},
+					Attributes:  nil,
+					Deleted:     false,
+				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
