@@ -48,7 +48,8 @@ type LicenseKeySpec struct {
 // LicenseKeyStatus contains the license key information.
 type LicenseKeyStatus struct {
 	// Expiry is the expiry date of License
-	Expiry metav1.Time `json:"expiry" yaml:"expiry"`
+	// +nullable
+	Expiry metav1.Time `json:"expiry,omitempty" yaml:"expiry"`
 	// Maximum Number of Allowed Nodes
 	MaxNodes int `json:"maxnodes,omitempty" yaml:"maxnodes" validate:"omitempty"`
 }

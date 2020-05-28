@@ -7540,7 +7540,6 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"expiry"},
 			},
 		},
 		Dependencies: []string{
