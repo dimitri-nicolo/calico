@@ -28,7 +28,7 @@ the upgrade.
 
 {% include content/hostendpoints-upgrade.md orch="Kubernetes" %}
 
-## Upgrade to {{page.version}} {{site.prodname}}
+## Upgrade from 2.6 or 2.7
 
 1. Export your current LogStorage CR to a file.
    ```bash
@@ -51,6 +51,11 @@ the upgrade.
    No resources found.
    No resources found.
    pvc-bd2eef7d   10Gi       RWO            Retain           Released   tigera-elasticsearch/tigera-secure-es-gqmh-elasticsearch-data   tigera-elasticsearch            7m24s
+   ```
+
+   If kibana resource is not deleted, use
+   ```
+   kubectl patch Kibana tigera-secure -n tigera-kibana --type merge -p '{"metadata":{"finalizers":[null]}}'
    ```
 
 1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage 
@@ -102,6 +107,45 @@ the upgrade.
 1. Apply the LogStorage CR.
    ```bash
    kubectl apply -f log-storage.yaml
+   ```
+
+1. You can monitor progress with the following command:
+   ```bash
+   watch kubectl get tigerastatus
+   ```
+
+   **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
+   {: .alert .alert-info}
+
+1. Kibana password is reset after upgrade, you can generate a [new Kibana password]({{site.baseurl}}/getting-started/cnx/create-user-login#kibana-authentication).
+
+1. If you were upgrading from a version of Calico prior to v3.14 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+   add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
+
+## Upgrade from 2.8
+
+1. Download the new operator manifest.
+   ```bash
+   curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
+   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
+   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
+   downloaded in the previous step.
+
+   **Note**: There is no need to update `custom-resources.yaml` or
+   [configure the operator]({{site.baseurl}}/getting-started/private-registry#configure-the-operator-to-use-images-from-your-private-registry).
+   {: .alert .alert-info}
+
+1. Install the new network policies to secure {{site.prodname}} component communications.
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+
+1. Apply the Tigera operator.
+   ```bash
+   kubectl apply -f tigera-operator.yaml
    ```
 
 1. You can monitor progress with the following command:
