@@ -7680,7 +7680,6 @@ func schema_libcalico_go_lib_apis_v3_ManagedClusterStatus(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"conditions"},
 			},
 		},
 		Dependencies: []string{

@@ -14,7 +14,7 @@ spec:
     listKind: StagedKubernetesNetworkPolicyList
     plural: stagedkubernetesnetworkpolicies
     singular: stagedkubernetesnetworkpolicy
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1
     schema:

@@ -14,7 +14,7 @@ spec:
     listKind: StagedNetworkPolicyList
     plural: stagednetworkpolicies
     singular: stagednetworkpolicy
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1
     schema:

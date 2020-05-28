@@ -48,7 +48,7 @@ type ManagedClusterSpec struct {
 }
 
 type ManagedClusterStatus struct {
-	Conditions []ManagedClusterStatusCondition `json:"conditions"`
+	Conditions []ManagedClusterStatusCondition `json:"conditions,omitempty"`
 }
 
 // Condition contains various status information
