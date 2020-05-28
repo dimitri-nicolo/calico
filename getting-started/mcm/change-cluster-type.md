@@ -1,135 +1,143 @@
 ---
-title: Change cluster type
-description: Change your cluster management type to or from Standalone, Management or Managed.
+title: Change a cluster type
+description: Change an existing Calico Enterprise cluster type to a management cluster, a managed cluster, or standalone. 
 canonical_url: '/getting-started/mcm/change-cluster-type'
 ---
 
-## Big Picture
-In this page we will show you how to change the type of a cluster. The easiest way to find out your current
-type is by using `kubectl`. The field `clusterManagementType` is part of the `Installation` spec.
-```bash
+### Big picture
+
+Change the configuration type for an existing {{site.prodname}} cluster to management, managed, or standalone. 
+
+### Value
+
+As you build out a multi-cluster management deployment, it is critical to have flexibility to repurpose existing cluster types to meet your needs. 
+
+### Features
+
+This how-to guide uses the following {{site.prodname}} features:
+
+- **Installation API** with `clusterManagementType` field
+
+### Before you begin…
+
+To verify the type of an existing cluster, run the following command:
+
+```
 kubectl get installation -o yaml
 ```
 
+### How to
 
-## Change a Standalone cluster into a management cluster
-1.  Change your installation type to Management.
+- [Change a standalone cluster to a management cluster](#change-a-standalone-cluster-to-a-management-cluster)
+- [Change a standalone cluster to a managed cluster](#change-a-standalone-cluster-to-a-managed-cluster)
+- [Change a management cluster to a standalone cluster](#change-a-management-cluster-to-a-standalone-cluster)
+- [Change a managed cluster to a standalone cluster](#change-a-managed-cluster-to-a-standalone-cluster)
+
+#### Change a standalone cluster to a management cluster
+
+1. Change your installation type to `Management`.
+
     ```bash
     kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Management"}}'
     ```
-1.  Create a service to expose the management cluster. For high availability, we recommend that you change the type
-    of the service for a more scalable option. For more information see our [post-installation instructions]({{site.baseurl}}/getting-started/mcm/post-installation).
+1. Create a service to expose the management cluster. 
+   The following example of a NodePort service may not be suitable for production and high availability. For options, see [Fine-tune multi-cluster management for production]({{site.baseurl}}/getting-started/mcm/fine-tune-deployment).
                                                        
-    Apply the following service manifest:
-    ```bash
-    kubectl create -f - <<EOF
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: tigera-manager-mcm
-      namespace: tigera-manager
-    spec:
-      ports:
-      - nodePort: 30449
-        port: 9449
-        protocol: TCP
-        targetPort: 9449
-      selector:
-        k8s-app: tigera-manager
-      type: NodePort
-    EOF
-    ```
+1. Apply the following service manifest.
 
-## Change a Management cluster into a Standalone cluster
-> **Note**: While the operator will automatically clean up the credentials that were created for managed clusters, the
-            data will still be retained in the Elasticsearch cluster of your management cluster for as long as you have 
-            specified in the retention section of your [LogStorage]({{site.baseurl}}/reference/installation/api).
-{: .alert .alert-info}
+   ```bash
+   kubectl create -f - <<EOF
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: tigera-manager-mcm
+     namespace: tigera-manager
+   spec:
+     ports:
+     - nodePort: 30449
+       port: 9449
+       protocol: TCP
+       targetPort: 9449
+     selector:
+       k8s-app: tigera-manager
+     type: NodePort
+   EOF
+   ```
+   
+#### Change a standalone cluster to a managed cluster
 
-1.  Change your installation type to Standalone.
-    ```bash
-    kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Standalone"}}'
-    ```
-1.  Delete the service that you created to expose the management cluster. This example assumes that the service is called
-    `tigera-manager-mcm`.
-    ```bash
-    kubectl delete service tigera-manager-mcm -n tigera-manager
-    ```
-1.  Delete all ManagedCluster resources that are still present in your cluster.
-    ```bash
-    kubectl delete managedcluster --all
-    ```
+The following steps assume that a management cluster is up and running.
 
-## Change a Standalone cluster into a Managed cluster
-For these instructions we assume you already have a management cluster up and running.
-
-> **Note**: Unlike a standalone cluster, a managed cluster does not require log storage (since all log data is sent to the 
-management cluster). While the operator will automatically remove the running components related to log storage from your 
-standalone cluster, you have full control over what happens to the associated log data stored within the persistent volume 
-provisioned for the cluster. Log data will be retained only if the reclaim policy within your storage class 
-is set to Retain. For more details see [Reclaiming](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
-{: .alert .alert-info}
-
-1.  Inside your **Management** cluster, log into the manager UI. Under the `Managed Clusters` page, add a managed cluster and 
-    download the manifest. Complete the manifest by filling in the `ManagementClusterConnection` field. The 
-    [quickstart guide]({{site.baseurl}}/getting-started/mcm/quickstart#add-a-managed-cluster-to-the-management-plane) 
-    elaborates on this step with screenshots. 
-    
-    Apply the manifest to your cluster.
-    ```bash
-    kubectl apply -f <your-managed-cluster.yaml>
-    ```
-    You are now ready to apply the necessary changes to your **Standalone** cluster.
-1.  Change your installation type of your Standalone cluster to Managed.
-    ```bash
-    kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Managed"}}'
-    ```
-1.  Remove the resources that are not necessary in Managed clusters. 
-    ```bash
+1. In the **Management** cluster, log in to the {{site.prodname}} Manager UI. 
+1. Under the `Managed Clusters` page, add a managed cluster and download the manifest. 
+1. Open the manifest and edit the `ManagementClusterConnection` field as described in the [Install multi-cluster management]({{site.baseurl}}/getting-started/mcm/install#add-a-managed-cluster-to-the-management-cluster).
+1. Apply the manifest to your cluster.
+   ```bash
+   kubectl apply -f <your-managed-cluster.yaml>
+   ```
+1. Change the installation type of your standalone cluster to `Managed`.
+   ```bash
+   kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Managed"}}'
+   ```
+1. Remove unnecessary resources in the managed clusters. 
+   ```bash
     kubectl delete manager tigera-secure
     kubectl delete logstorage tigera-secure
-    ```
-1.  Replace the network policies that are used by Standalone clusters with the network policies for Managed clusters.
-    ```bash
-    kubectl delete -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-    kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
-    ```
-1.  You can now monitor progress with the following command until everything is `Available`.
-    ```bash
-    watch kubectl get tigerastatus
-    ```
-1.  In the **Management** cluster, verify that your cluster is connected. Log into the manager UI. On the `Managed Clusters` 
-    page, verify that your cluster has `Connection status: Connected`.
+   ```
+1. Replace the network policies to secure the standalone cluster with network policies for the managed cluster.
+   ```bash
+   kubectl delete -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
+   ```
+1. Monitor progress until everything has the status, `Available`.
+   ```bash
+   watch kubectl get tigerastatus
+   ```
+   >**Note**: A managed cluster does not require log storage (because all log data is sent to the management cluster).  Although the installation automatically removes the log storage components from your standalone cluster, you still have full control over the log data stored within the persistent volume provisioned for the cluster. But, log data is retained only if the reclaim policy within your storage class is set to `Retain`. For details see {% include open-new-window.html text='Reclaiming' url='https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming' %}.
+   {: .alert .alert-info}
 
-## Change a Managed cluster into a Standalone cluster
-> **Note**: Since a managed cluster does not require its own log storage, while a standalone cluster does, 
-in order to perform the conversion you must ensure a persistent volume has been provisioned to store log data. 
-For more information on how to do this, please review [Configure storage for logs and reports]({{site.baseurl}}/getting-started/create-storage).
-{: .alert .alert-info}
+#### Change a management cluster to a standalone cluster
 
-1.  Remove the ManagementClusterConnection from your cluster.
-     ```bash
-     kubectl delete managementclusterconnection tigera-secure
-     kubectl delete secret tigera-managed-cluster-connection -n tigera-operator
-     ```
-1.  Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
-    ```bash
-    kubectl apply -f {{ "/manifests/custom-resources.yaml" | absolute_url }}
-    ```
-1.  Delete the network policies that secure managed clusters.
-    ```bash
-    kubectl delete -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
-    ```
-1.  You can now monitor progress with the following command:
-    ```bash
-    watch kubectl get tigerastatus
-    ```
-    When all components show a status of `Available`, proceed to the next step.
-1.  Apply the network policies that secure standalone clusters.
-    ```bash
-    kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-    ```
+1. Change your installation type to `Standalone`.
+   ```bash
+   kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"clusterManagementType":"Standalone"}}'
+   ```
+1. Delete the service that you created to expose the management cluster.
+   ```bash
+   kubectl delete service <your-service-name> -n tigera-manager
+   ```
+1. Delete all managed cluster resources in your cluster.
+   ```bash
+   kubectl delete managedcluster --all
+   ```
+   >**Note**: Although installation automatically cleans up credentials for managed clusters, the management cluster Elasticsearch still retains managed cluster data based on the retention value that you specify in your [LogStorage]({{site.baseurl}}/reference/installation/api).
+   {: .alert .alert-info}
 
-## Above and beyond
+#### Change a managed cluster to a standalone cluster
 
-- [Configure storage for logs and reports]({{site.baseurl}}/getting-started/create-storage)
+1. Ensure a persistent volume is provisioned to store log data for the standalone cluster. 
+  See [Configure storage for logs and reports]({{site.baseurl}}/getting-started/create-storage).
+
+1. Remove the `ManagementClusterConnection` from your cluster.
+    ```bash
+    kubectl delete managementclusterconnection tigera-secure
+    kubectl delete secret tigera-managed-cluster-connection -n tigera-operator
+    ```
+1. Install the Tigera custom resources. 
+   For more information, see [the installation reference]({{site.baseurl}}/reference/installation/api).
+   ```bash
+   kubectl apply -f {{ "/manifests/custom-resources.yaml" | absolute_url }}
+   ```
+1. Delete the network policies that secure managed clusters.
+   ```bash
+   kubectl delete -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
+   ```
+1. Monitor the progress with the following command:
+   ```bash
+   watch kubectl get tigerastatus
+   ```
+   When all components show a status of `Available`, go to the next step.
+1. Apply the network policies that secure standalone clusters.
+   ```bash
+   kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```

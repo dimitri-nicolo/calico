@@ -23,8 +23,6 @@ section:
     section:
     - title: Standard
       path: /getting-started/kubernetes/self-managed-on-prem/generic-install
-    - title: Helm
-      path: /getting-started/kubernetes/self-managed-on-prem/helm
     - title: Rancher Kubernetes Engine
       path: /getting-started/kubernetes/self-managed-on-prem/rancher
   - title: OpenShift
@@ -37,13 +35,11 @@ section:
   - title: Single management plane for all clusters
     path: /getting-started/mcm/
     section:
-      - title: Overview
-        path: /getting-started/mcm/overview
-      - title: Quickstart
-        path: /getting-started/mcm/quickstart
-      - title: Post-installation
-        path: /getting-started/mcm/post-installation
-      - title: Changing the cluster type
+      - title: Install multi-cluster management
+        path: /getting-started/mcm/install
+      - title: Fine-tune multi-cluster management for production
+        path: /getting-started/mcm/fine-tune-deployment
+      - title: Change a cluster type
         path: /getting-started/mcm/change-cluster-type
   - title: Install from a private registry
     path: /getting-started/private-registry
