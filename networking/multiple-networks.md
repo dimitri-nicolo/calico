@@ -53,7 +53,9 @@ Although the following {{site.prodname}} features are supported for your default
 ### Before you begin...
 
 **Required**
-
+- Calico Enterprise CNI plugin
+  >**Note**: Verify that you are using the Calico Enterprise CNI. On AKS, EKS, and GKE, the CNI plugin used by Kubernetes may be different, which means this feature will not work.
+    {: .alert .alert-info}
 - [Install Multus 3.0+ on your Kubernetes cluster](https://github.com/intel/multus-cni/)
   >**Note**: Multus is installed on OpenShift 4.0+ clusters.
   {: .alert .alert-info}
