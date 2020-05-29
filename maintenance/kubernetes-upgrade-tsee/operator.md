@@ -119,7 +119,7 @@ the upgrade.
 
 1. Kibana password is reset after upgrade, you can generate a [new Kibana password]({{site.baseurl}}/getting-started/cnx/create-user-login#kibana-authentication).
 
-1. If you were upgrading from a version of Calico prior to v3.14 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
    add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
 
 ## Upgrade from 2.8
@@ -156,7 +156,7 @@ the upgrade.
    **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
    {: .alert .alert-info}
 
-1. If you were upgrading from a version of Calico prior to v3.14 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
    add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
 
 {% include content/auto-hostendpoints-migrate.md orch="Kubernetes" %}

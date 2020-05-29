@@ -38,7 +38,7 @@ mkdir manifests
 
 {% include content/openshift-manifests.md %}
 
-## Upgrading to {{page.version}} {{site.prodname}}
+## Upgrade from 2.6 or 2.7
 
 1. Export your current LogStorage CR to a file.
    ```bash
@@ -94,6 +94,26 @@ mkdir manifests
    ```bash
    oc apply -f log-storage.yaml
    ```   
+
+1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
+   ```bash
+   oc apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+
+1. You can now monitor the upgrade progress with the following command:
+   ```bash
+   watch oc get tigerastatus
+   ```
+
+1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
+
+## Upgrade from 2.8
+
+1. Apply the updated manifests.
+   ```bash
+   oc apply -f manifests/
+   ```
 
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
    ```bash
