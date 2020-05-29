@@ -51,7 +51,7 @@ LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 # fail if unable to download
 CURL=curl -C - -sSf
 
-CNI_VERSION=v0.8.0
+CNI_VERSION=v0.8.6
 
 BUILD_IMAGE_ORG?=calico
 
