@@ -495,6 +495,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				lk,
 				options.SetOptions{},
 			)
+			Expect(err).NotTo(HaveOccurred())
 			expectedCacheSize++
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectData(model.KVPair{

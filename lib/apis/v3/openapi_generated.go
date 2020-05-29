@@ -2120,7 +2120,6 @@ func schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"handle_id", "secondary"},
 			},
 		},
 	}
@@ -3295,7 +3294,6 @@ func schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref common.Reference
 						},
 					},
 				},
-				Required: []string{"datastoreReady"},
 			},
 		},
 	}
@@ -4424,7 +4422,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"failsafeInboundHostPorts": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all inbound host ports, use the value none. The default value allows ssh access and DHCP. [Default: tcp:22, udp:68]",
+							Description: "FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all inbound host ports, use the value none. The default value allows ssh access and DHCP. [Default: tcp:22, udp:68, tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667]",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4437,7 +4435,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"failsafeOutboundHostPorts": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailsafeOutboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all outbound host ports, use the value none. The default value opens etcd’s standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP and DNS. [Default: tcp:2379, tcp:2380, tcp:4001, tcp:7001, udp:53, udp:67]",
+							Description: "FailsafeOutboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all outbound host ports, use the value none. The default value opens etcd’s standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP and DNS. [Default: tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667, udp:53, udp:67]",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4693,6 +4691,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFKubeProxyMinSyncPeriod, in BPF mode, controls the minimum time between updates to the dataplane for Felix's embedded kube-proxy.  Lower values give reduced set-up latency.  Higher values reduce Felix CPU usage by batching up more work.  [Default: 1s]",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"bpfKubeProxyEndpointSlicesEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls whether Felix's embedded kube-proxy accepts EndpointSlices or not.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"syslogReporterNetwork": {
@@ -5066,7 +5071,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"routeSource": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RouteSource configures where Felix gets its routing information. - WorkloadIPs: use workload endpoints to construct routes. - CalicoIPAM: the default - use IPAM data to contruct routes.",
+							Description: "RouteSource configures where Felix gets its routing information. - WorkloadIPs: use workload endpoints to construct routes. - CalicoIPAM: the default - use IPAM data to construct routes.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6722,7 +6727,7 @@ func schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"cidr", "affinity", "strictAffinity", "allocations", "unallocated", "attributes", "deleted"},
+				Required: []string{"cidr", "strictAffinity", "allocations", "unallocated", "attributes", "deleted"},
 			},
 		},
 		Dependencies: []string{
@@ -7385,7 +7390,6 @@ func schema_libcalico_go_lib_apis_v3_KubeControllersConfigurationStatus(ref comm
 						},
 					},
 				},
-				Required: []string{"runningConfig", "environmentVars"},
 			},
 		},
 		Dependencies: []string{
@@ -7536,7 +7540,6 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeyStatus(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"expiry"},
 			},
 		},
 		Dependencies: []string{
@@ -7677,7 +7680,6 @@ func schema_libcalico_go_lib_apis_v3_ManagedClusterStatus(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"conditions"},
 			},
 		},
 		Dependencies: []string{
@@ -8304,6 +8306,20 @@ func schema_libcalico_go_lib_apis_v3_NodeStatus(ref common.ReferenceCallback) co
 							Description: "WireguardPublicKey is the Wireguard public-key for this node. wireguardPublicKey validates if the string is a valid base64 encoded key.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"podCIDRs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PodCIDR is a reflection of the Kubernetes node's spec.PodCIDRs field.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},
