@@ -19,6 +19,16 @@ ifeq ($(DEV_NULL),true)
 	CONFIG:=$(CONFIG),_config_null.yml
 endif
 
+# Append any additional config files for jekyll to use.
+# Typically used from hashreleases. The additional configuration
+# files need to present in the current directory to get automatically
+# mounted into the build container.
+# Note that when specifying multiple files, they should be comma separated.
+# Example: make build EXTRA_JEKYLL_CONFIG=_config_url.yml,_config_null.yml
+ifdef EXTRA_JEKYLL_CONFIG
+	CONFIG:=$(CONFIG),$(EXTRA_JEKYLL_CONFIG)
+endif
+
 GO_BUILD_VER?=v0.22
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
