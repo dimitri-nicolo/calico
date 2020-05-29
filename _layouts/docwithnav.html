@@ -45,16 +45,19 @@ The code is a little roundabout for a few reasons:
     {% if site.noindex %}<meta name="robots" content="noindex">{% endif %}
     <link rel="shortcut icon" type="image/png" href="{{site.baseurl}}/images/favicon.png">
     <link href='https://fonts.googleapis.com/css?family=Roboto:400,100,100italic,300,300italic,400italic,500,500italic,700,700italic,900,900italic' rel='stylesheet' type='text/css'>
+    <link href="https://fonts.googleapis.com/css?family=Poppins:100,100italic,200,200italic,300,300italic,400,400italic,500,500italic,600,600italic,700,700italic,800,800italic,900,900italic&amp;ver=5.3.2" rel="stylesheet" media="all">    
     <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
     <link rel="stylesheet" href='https://fonts.googleapis.com/css?family=Roboto+Mono' type='text/css'>
     {% if page.custom_css %}
     <link rel="stylesheet" href="{{site.baseurl}}/{{ page.custom_css }}"/>
     {% endif %}
     <link href="https://www.projectcalico.org/wp-content/plugins/wpfront-notification-bar/css/wpfront-notification-bar.css?ver=1.7.1" rel="stylesheet" type="text/css" media="all">
+    <link rel="stylesheet" href="{{site.baseurl}}/css/font-awesome/font-awesome.min.css"/>
     <link rel="stylesheet" href="{{site.baseurl}}/css/instantsearch/instantsearch.min.css"/>
     <link rel="stylesheet" href="{{site.baseurl}}/css/style.css"/>
     <script src="{{site.baseurl}}/js/jquery-2.2.0.min.js"></script>
     <script src="{{site.baseurl}}/js/bootstrap/bootstrap.min.js"></script>
+    <script src="{{site.baseurl}}/js/algoliasearch/algoliasearch.min.js"></script>
     <script src="{{site.baseurl}}/js/instantsearch/instantsearch.min.js"></script>
     <script src="{{site.baseurl}}/js/script.js"></script>
 <script defer src="{{site.baseurl}}/js/scrollPage.js"></script>
@@ -107,7 +110,6 @@ The code is a little roundabout for a few reasons:
               <li><a data-proofer-ignore href="/releases">Releases</a></li>
               <li><a href="https://support.tigera.io/">Support</a></li>
               <li><a href="https://www.tigera.io/blog">Blog</a></li>
-
             </ul>
             <form class="navbar-form visible-xs">
               <ul class="nav navbar-nav navbar-right">
@@ -126,11 +128,12 @@ The code is a little roundabout for a few reasons:
           <div class="sidebar-container sidebar-offcanvas">
             <div class="sidebar">
               <div class="search">
-                <div class="search-input-container" data-toggle="popover" data-trigger="focus" data-placement="bottom"></div>
+                <div class="search-input-container" data-toggle="popover" data-placement="bottom"></div>
                 <div class="search-container">
                   <div class="search-container__results"></div>
                   <div class="search-container__pagination"></div>
                 </div>
+                <div class="search-powered-by" ></div>
               </div>
               <div id="sidebar">
                 <div class="panel-group" id="sidebar-accordion">
@@ -217,56 +220,9 @@ The code is a little roundabout for a few reasons:
 
     <script src="{{site.baseurl}}/js/searchConfig.js"></script>
 
-    <script type="text/template" id="search-results-template">
-      {% raw %}
-      <div class="search-results">
-        {{#hits}}
-
-        {{#shouldDisplayTopCategory}}
-        {{#hierarchy.lvl0}}
-          <a href="{{url}}" class="search-results__group-header">
-            {{{_highlightResult.hierarchy.lvl0.value}}}
-          </a>
-        {{/hierarchy.lvl0}}
-        {{/shouldDisplayTopCategory}}
-
-        <div class="search-results__search-result search-result columns-layout">
-          <div class="columns-layout__left-column">
-            {{#hierarchy.lvl1}}
-              <a href="{{url}}" class="search-result__subcategory">
-                {{{_highlightResult.hierarchy.lvl1.value}}}
-              </a>
-            {{/hierarchy.lvl1}}
-          </div>
-
-          <div class="columns-layout__right-column">
-            {{#hierarchy.lvl2}}
-              <a href="{{url}}" class="search-result__subsubcategory">
-                {{{_highlightResult.hierarchy.lvl2.value}}}
-              </a>
-            {{/hierarchy.lvl2}}
-
-            {{#hierarchy.lvl3}}
-              <a href="{{url}}" class="search-result__subsubsubcategory">
-                {{{_highlightResult.hierarchy.lvl3.value}}}
-              </a>
-            {{/hierarchy.lvl3}}
-
-            {{#content}}
-              <a href="{{url}}" class="search-result__content">
-                {{{_snippetResult.content.value}}}
-              </a>
-            {{/content}}
-          </div>
-        </div>
-        {{/hits}}
-      </div>
-      {% endraw %}
-    </script>
-
     <script>
       $(document).ready(function() {
-        window.initializeSearch('{{page.version}}', '.search-input-container', '.search-container', '.search-container__results', '.search-container__pagination');
+        window.initializeSearch('{{page.version}}', '.search-powered-by', '.search-input-container', '.search-container', '.search-container__results', '.search-container__pagination');
       });
     </script>
   </body>

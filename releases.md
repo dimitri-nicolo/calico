@@ -10,9 +10,9 @@ layout: docwithnav
 {%- if version.first %}
     {%- for v in version["legacy"] %}
 - [{{ v }}](/{{ v }}){: data-proofer-ignore=""}
-    {%- endfor -%}
-{%- else -%}
+    {%- endfor %}
+{%- else %}
 - [{{ version }}](/{{ version }})
-{% endif -%}
-{%- endfor -%}
+{%- endif %}
+{%- endfor %}
 {% endif %}

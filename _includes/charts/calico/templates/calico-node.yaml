@@ -60,10 +60,27 @@ spec:
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
       priorityClassName: system-node-critical
-{{- if .Values.imagePullSecrets }}
-      imagePullSecrets:
-{{- range $key, $value := .Values.imagePullSecrets }}
-        - name: {{ $key }}
+      initContainers:
+{{- if and (eq .Values.network "calico") (eq .Values.datastore "kubernetes") }}
+        # This container performs upgrade from host-local IPAM to calico-ipam.
+        # It can be deleted if this is a fresh installation, or if you have already
+        # upgraded to use calico-ipam.
+        - name: upgrade-ipam
+          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
+          command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
+          env:
+{{- if .Values.bpf }}
+            # Overrides for kubernetes API server host/port. Needed in BPF mode.
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: kubernetes_service_host
+            - name: KUBERNETES_SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: kubernetes_service_port
 {{- end }}
 {{- end }}
       initContainers:
@@ -75,7 +92,7 @@ spec:
           command: ["/install-cni.sh"]
           env:
 {{- if .Values.bpf }}
-            # Overrides for kubernetes API server host/port.  Needed in BPF mode.
+            # Overrides for kubernetes API server host/port. Needed in BPF mode.
             - name: KUBERNETES_SERVICE_HOST
               valueFrom:
                 configMapKeyRef:
@@ -142,7 +159,7 @@ spec:
           - name: flexvol-driver-host
             mountPath: /host/driver
       containers:
-        # Runs cnx-node container on each Kubernetes node.  This
+        # Runs {{ include "nodeName" . }} container on each Kubernetes node. This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
@@ -150,7 +167,7 @@ spec:
 {{ tuple .Values.node.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
 {{- if .Values.bpf }}
-            # Overrides for kubernetes API server host/port.  Needed in BPF mode.
+            # Overrides for kubernetes API server host/port. Needed in BPF mode.
             - name: KUBERNETES_SERVICE_HOST
               valueFrom:
                 configMapKeyRef:
@@ -236,7 +253,10 @@ spec:
               value: "autodetect"
             # {{- if .Values.bpf }} For best performance, disable {{- else }} Enable {{- end }} IPIP
             - name: CALICO_IPV4POOL_IPIP
-              value: "{{- if .Values.bpf -}} Never {{- else -}} {{ .Values.initialPool.ipIpMode }} {{- end -}}"
+              value: "{{- if .Values.bpf -}} Never {{- else if .Values.vxlan -}} Never {{- else -}} Always {{- end -}}"
+            # Enable or Disable VXLAN on the default IP pool.
+            - name: CALICO_IPV4POOL_VXLAN
+              value: "{{- if .Values.vxlan -}} CrossSubnet {{- else -}} Never {{- end -}}"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:

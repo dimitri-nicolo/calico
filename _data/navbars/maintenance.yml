@@ -34,6 +34,8 @@ section:
     path: /maintenance/monitor/prometheus
   - title: Configure Alertmanager
     path: /maintenance/monitor/alertmanager
+  - title: Visualize component metrics
+    path: /maintenance/monitor/monitor-component-visual  
 - title: Remove nodes from a cluster
   path: /maintenance/decommissioning-a-node
 - title: Troubleshoot

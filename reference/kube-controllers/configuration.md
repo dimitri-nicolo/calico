@@ -19,17 +19,6 @@ The `{{site.imageNames["kubeControllers"]}}` container includes the following co
 1. serviceaccount controller: watches service accounts and programs {{site.prodname}} profiles.
 1. workloadendpoint controller: watches for changes to pod labels and updates {{site.prodname}} workload endpoints.
 1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}, and optionally watches for node updates to create and sync host endpoints for each node.
-1. federation controller: watches Kubernetes services and endpoints locally and across all remote clusters, and programs
-   Kubernetes endpoints for any locally configured service that specifies a service federation selector annotation.
-
-The {{site.prodname}} Kubernetes manifests run these controllers in two different deployments:
-1. calico-kube-controllers
-   - This runs the policy, namespace, serviceaccount, workloadendpoint, and node controllers within the same pod
-1. tigera-federation-controller
-   - This runs the federation controller only
-   - This is only included in the manifests that enable {{site.prodname}} federation
-
-The {{site.prodname}} Kubernetes manifests run these controllers within a single pod in the `calico-kube-controllers` deployment.
 
 ### Configuring datastore access
 
@@ -96,6 +85,7 @@ To enable the node controller when using `etcdv3`, perform the following two ste
 
 1. Add "node" to the list of enabled controllers in the environment for kube-controllers. For example: `ENABLED_CONTROLLERS=workloadendpoint,profile,policy,node`
 1. Configure {{site.nodecontainer}} with a Kubernetes node reference by adding the following snippet to the environment section of the {{site.noderunning}} daemon set.
+
    ```yaml
    - name: CALICO_K8S_NODE_REF
      valueFrom:

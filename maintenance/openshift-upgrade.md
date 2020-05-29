@@ -17,13 +17,13 @@ using the operator.
 
 ### Prepare your cluster for the upgrade
 
-During upgrade, the {{site.prodname}} LogStorage CR is temporarily removed so Elasticsearch can be upgraded. Features 
-that depend on LogStorage are temporarily unavailable, including dashboards in the Manager UI. Data ingestion is paused 
+During upgrade, the {{site.prodname}} LogStorage CR is temporarily removed so Elasticsearch can be upgraded. Features
+that depend on LogStorage are temporarily unavailable, including dashboards in the Manager UI. Data ingestion is paused
 temporarily, but resumes when the LogStorage is up and running again.
 
-To retain data from your current installation (optional), ensure that the currently mounted persistent volumes 
+To retain data from your current installation (optional), ensure that the currently mounted persistent volumes
 have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/).
-Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated 
+Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated
 during upgrade).
 
 {% include content/hostendpoints-upgrade.md orch="OpenShift" %}
@@ -63,8 +63,8 @@ mkdir manifests
    pvc-bd2eef7d   10Gi       RWO            Retain           Released   tigera-elasticsearch/tigera-secure-es-gqmh-elasticsearch-data   tigera-elasticsearch            7m24s
    ```
 
-1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage 
-   class that you specified in `log-storage.yaml`, make sure it is available again. By default the storage class name is 
+1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage
+   class that you specified in `log-storage.yaml`, make sure it is available again. By default the storage class name is
    `tigera-elasticsearch`.
    ```bash
    PV_NAME=<name-of-your-pv>
@@ -93,7 +93,7 @@ mkdir manifests
 1. Apply the LogStorage CR.
    ```bash
    oc apply -f log-storage.yaml
-   ```   
+   ```
 
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
    ```bash
@@ -127,4 +127,3 @@ add any global network policies needed to whitelist traffic, and delete the temp
 
 1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
 add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
-

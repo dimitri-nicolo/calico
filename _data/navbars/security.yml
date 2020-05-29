@@ -162,7 +162,9 @@ section:
       path: /security/high-connection-workloads
     - title: Defend against DoS attacks
       path: /security/defend-dos-attack
-- title: Secure Calico Enterprise component communications
+- title: Try out the node-to-node encryption tech preview
+  path: /security/try-node-to-node-encryption
+- title: Secure Calico component communications
   path: /security/comms/
   section:
   - title: Provide TLS certificates for the manager UI
