@@ -6,22 +6,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: globalnetworksets.crd.projectcalico.org
+  name: globalalerttemplates.crd.projectcalico.org
 spec:
   group: crd.projectcalico.org
   names:
-    kind: GlobalNetworkSet
-    listKind: GlobalNetworkSetList
-    plural: globalnetworksets
-    singular: globalnetworkset
+    kind: GlobalAlertTemplate
+    listKind: GlobalAlertTemplateList
+    plural: globalalerttemplates
+    singular: globalalerttemplate
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs
-          that share labels to allow rules to refer to them via selectors.  The labels
-          of GlobalNetworkSet are not namespaced.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -36,24 +33,37 @@ spec:
           metadata:
             type: object
           spec:
-            description: GlobalNetworkSetSpec contains the specification for a NetworkSet
-              resource.
             properties:
-              allowedEgressDomains:
-                description: The list of domain names that belong to this set and
-                  are honored in egress allow rules only.  Domain names specified
-                  here only work to allow egress traffic from the cluster to external
-                  destinations.  They don't work to _deny_ traffic to destinations
-                  specified by domain name, or to allow ingress traffic from _sources_
-                  specified by domain name.
+              aggregateBy:
                 items:
                   type: string
                 type: array
-              nets:
-                description: The list of IP networks that belong to this set.
-                items:
-                  type: string
-                type: array
+              condition:
+                type: string
+              dataSet:
+                type: string
+              description:
+                type: string
+              field:
+                type: string
+              lookback:
+                type: string
+              metric:
+                type: string
+              period:
+                type: string
+              query:
+                type: string
+              severity:
+                type: integer
+              summary:
+                type: string
+              threshold:
+                type: number
+            required:
+            - dataSet
+            - description
+            - severity
             type: object
         type: object
     served: true

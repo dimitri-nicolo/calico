@@ -6,14 +6,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: networkpolicies.crd.projectcalico.org
+  name: stagednetworkpolicies.crd.projectcalico.org
 spec:
   group: crd.projectcalico.org
   names:
-    kind: NetworkPolicy
-    listKind: NetworkPolicyList
-    plural: networkpolicies
-    singular: networkpolicy
+    kind: StagedNetworkPolicy
+    listKind: StagedNetworkPolicyList
+    plural: stagednetworkpolicies
+    singular: stagednetworkpolicy
   scope: Namespaced
   versions:
   - name: v1
@@ -762,6 +762,10 @@ spec:
               serviceAccountSelector:
                 description: ServiceAccountSelector is an optional field for an expression
                   used to select a pod based on service accounts.
+                type: string
+              stagedAction:
+                description: The staged action. If this is omitted, the default is
+                  Set.
                 type: string
               tier:
                 description: The name of the tier that this policy belongs to.  If

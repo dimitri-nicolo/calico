@@ -6,22 +6,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: globalnetworksets.crd.projectcalico.org
+  name: tiers.crd.projectcalico.org
 spec:
   group: crd.projectcalico.org
   names:
-    kind: GlobalNetworkSet
-    listKind: GlobalNetworkSetList
-    plural: globalnetworksets
-    singular: globalnetworkset
+    kind: Tier
+    listKind: TierList
+    plural: tiers
+    singular: tier
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs
-          that share labels to allow rules to refer to them via selectors.  The labels
-          of GlobalNetworkSet are not namespaced.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -36,24 +33,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: GlobalNetworkSetSpec contains the specification for a NetworkSet
-              resource.
+            description: TierSpec contains the specification for a security policy
+              tier resource.
             properties:
-              allowedEgressDomains:
-                description: The list of domain names that belong to this set and
-                  are honored in egress allow rules only.  Domain names specified
-                  here only work to allow egress traffic from the cluster to external
-                  destinations.  They don't work to _deny_ traffic to destinations
-                  specified by domain name, or to allow ingress traffic from _sources_
-                  specified by domain name.
-                items:
-                  type: string
-                type: array
-              nets:
-                description: The list of IP networks that belong to this set.
-                items:
-                  type: string
-                type: array
+              order:
+                description: Order is an optional field that specifies the order in
+                  which the tier is applied. Tiers with higher "order" are applied
+                  after those with lower order.  If the order is omitted, it may be
+                  considered to be "infinite" - i.e. the tier will be applied last.  Tiers
+                  with identical order will be applied in alphanumerical order based
+                  on the Tier "Name".
+                type: number
             type: object
         type: object
     served: true

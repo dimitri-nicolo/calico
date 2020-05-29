@@ -73,6 +73,10 @@ spec:
                   node appears to use the IP of the ingress node; this requires a
                   permissive L2 network.  [Default: Tunnel]'
                 type: string
+              bpfKubeProxyEndpointSlicesEnabled:
+                description: BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls
+                  whether Felix's embedded kube-proxy accepts EndpointSlices or not.
+                type: boolean
               bpfKubeProxyIptablesCleanupEnabled:
                 description: 'BPFKubeProxyIptablesCleanupEnabled, if enabled in BPF
                   mode, Felix will proactively clean up the upstream Kubernetes kube-proxy''s
@@ -100,6 +104,76 @@ spec:
                   acceptance by falling through to the Calico rules, otherwise the
                   Calico policy will be bypassed. [Default: insert]'
                 type: string
+              cloudWatchLogsAggregationKindForAllowed:
+                description: 'CloudWatchLogsAggregationKindForAllowed is used to choose
+                  the type of aggregation for flow log entries created for allowed
+                  connections. [Default: 2 - pod prefix name based aggregation]. Accepted
+                  values are 0, 1 and 2. 0 - No aggregation 1 - Source port based
+                  aggregation 2 - Pod prefix name based aggreagation.'
+                type: integer
+              cloudWatchLogsAggregationKindForDenied:
+                description: 'CloudWatchLogsAggregationKindForDenied is used to choose
+                  the type of aggregation for flow log entries created for denied
+                  connections. [Default: 1 - source port based aggregation]. Accepted
+                  values are 0, 1 and 2. 0 - No aggregation 1 - Source port based
+                  aggregation 2 - Pod prefix name based aggreagation.'
+                type: integer
+              cloudWatchLogsEnableHostEndpoint:
+                description: 'Deprecated: Use FlowLogsEnableHostEndpoint.'
+                type: boolean
+              cloudWatchLogsEnabledForAllowed:
+                description: CloudWatchLogsEnabledForAllowed is used to enable/disable
+                  flow logs entries created for allowed connections. Default is true.
+                  This parameter only takes effect when CloudWatchLogsReporterEnabled
+                  is set to true.
+                type: boolean
+              cloudWatchLogsEnabledForDenied:
+                description: CloudWatchLogsEnabledForDenied is used to enable/disable
+                  flow logs entries created for denied flows. Default is true. This
+                  parameter only takes effect when CloudWatchLogsReporterEnabled is
+                  set to true.
+                type: boolean
+              cloudWatchLogsFlushInterval:
+                description: 'Deprecated: Use FlowLogsFlushInterval instead.'
+                type: string
+              cloudWatchLogsIncludeLabels:
+                description: CloudWatchLogsIncludeLabels is used to configure if endpoint
+                  labels are included in a Flow log entry.
+                type: boolean
+              cloudWatchLogsIncludePolicies:
+                description: CloudWatchLogsIncludePolicies is used to configure if
+                  policy information are included in a Flow log entry.
+                type: boolean
+              cloudWatchLogsLogGroupName:
+                description: CloudWatchLogsLogGroupName configures the Log group to
+                  use for exporting flow logs. Defaults to "tigera-flowlogs-<cluster-guid>".
+                type: string
+              cloudWatchLogsLogStreamName:
+                description: CloudWatchLogsLogStreamName configures the Log stream
+                  to use for exporting flow logs. Defaults to "<felix-hostname>_Flowlogs".
+                type: string
+              cloudWatchLogsReporterEnabled:
+                description: Enable Flow logs reporting to AWS CloudWatch.
+                type: boolean
+              cloudWatchLogsRetentionDays:
+                description: Number of days for which to retain logs. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
+                  for allowed values.
+                type: integer
+              cloudWatchMetricsPushIntervalSecs:
+                description: CloudWatchMetricsPushInterval configures the interval
+                  at which Felix exports metrics to CloudWatch.
+                type: string
+              cloudWatchMetricsReporterEnabled:
+                description: Enable reporting metrics to CloudWatch.
+                type: boolean
+              cloudWatchNodeHealthPushIntervalSecs:
+                description: CloudWatchNodeHealthPushIntervalSecs configures the frequency
+                  of pushing the node health metrics to CloudWatch.
+                type: string
+              cloudWatchNodeHealthStatusEnabled:
+                description: CloudWatchNodeHealthStatusEnabled enables pushing node
+                  health data to CloudWatch.
+                type: boolean
               dataplaneDriver:
                 type: string
               debugDisableLogDropping:
@@ -124,6 +198,8 @@ spec:
                   from workloads after processing workload endpoint egress policy.
                   [Default: Drop]'
                 type: string
+              deletedMetricsRetentionSecs:
+                type: integer
               deviceRouteProtocol:
                 description: This defines the route protocol added to programmed device
                   routes, by default this will be RTPROT_BOOT when left blank.
@@ -135,6 +211,92 @@ spec:
                 type: string
               disableConntrackInvalidCheck:
                 type: boolean
+              dnsCacheFile:
+                description: 'The name of the file that Felix uses to preserve learnt
+                  DNS information when restarting. [Default: "/var/run/calico/felix-dns-cache.txt"].'
+                type: string
+              dnsCacheSaveInterval:
+                description: 'The periodic interval at which Felix saves learnt DNS
+                  information to the cache file. [Default: 60s].'
+                type: string
+              dnsLogsFileAggregationKind:
+                description: 'DNSLogsFileAggregationKind is used to choose the type
+                  of aggregation for DNS log entries. [Default: 1 - client name prefix
+                  aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1
+                  - Aggregate over clients with the same name prefix'
+                type: integer
+              dnsLogsFileDirectory:
+                description: 'DNSLogsFileDirectory sets the directory where DNS log
+                  files are stored. [Default: /var/log/calico/dnslogs]'
+                type: string
+              dnsLogsFileEnabled:
+                description: 'DNSLogsFileEnabled controls logging DNS logs to a file.
+                  If false no DNS logging to file will occur. [Default: false]'
+                type: boolean
+              dnsLogsFileIncludeLabels:
+                description: 'DNSLogsFileIncludeLabels is used to configure if endpoint
+                  labels are included in a DNS log entry written to file. [Default:
+                  true]'
+                type: boolean
+              dnsLogsFileMaxFileSizeMB:
+                description: 'DNSLogsFileMaxFileSizeMB sets the max size in MB of
+                  DNS log files before rotation. [Default: 100]'
+                type: integer
+              dnsLogsFileMaxFiles:
+                description: 'DNSLogsFileMaxFiles sets the number of DNS log files
+                  to keep. [Default: 5]'
+                type: integer
+              dnsLogsFilePerNodeLimit:
+                description: 'Limit on the number of DNS logs that can be emitted
+                  within each flush interval.  When this limit has been reached, Felix
+                  counts the number of unloggable DNS responses within the flush interval,
+                  and emits a WARNING log with that count at the same time as it flushes
+                  the buffered DNS logs.  [Default: 0, meaning no limit]'
+                type: integer
+              dnsLogsFlushInterval:
+                description: 'DNSLogsFlushInterval configures the interval at which
+                  Felix exports DNS logs. [Default: 300s]'
+                type: string
+              dnsTrustedServers:
+                description: 'The DNS servers that Felix should trust. Each entry
+                  here must be `<ip>[:<port>]` - indicating an explicit DNS server
+                  IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a
+                  Kubernetes DNS service. `<port>` defaults to the first service port,
+                  or 53 for an IP, and `<namespace>` to `kube-system`. An IPv6 address
+                  with a port must use the square brackets convention, for example
+                  `[fd00:83a6::12]:5353`.Note that Felix (calico-node) will need RBAC
+                  permission to read the details of each service specified by a `k8s-service:...`
+                  form. [Default: "k8s-service:kube-dns"].'
+                items:
+                  type: string
+                type: array
+              dropActionOverride:
+                description: 'DropActionOverride overrides the Drop action in Felix,
+                  optionally changing the behavior to Accept, and optionally adding
+                  Log. Possible values are Drop, LogAndDrop, Accept, LogAndAccept.
+                  [Default: Drop]'
+                type: string
+              egressIPRoutingRulePriority:
+                description: 'EgressIPRoutingRulePriority controls the priority value
+                  to use for the egress IP routing rule. [Default: 100]'
+                type: integer
+              egressIPSupport:
+                description: 'EgressIPSupport defines three different support modes
+                  for egress IP function. [Default: Disabled] - Disabled:                    Egress
+                  IP function is disabled. - EnabledPerNamespace:         Egress IP
+                  function is enabled and can be configured on a per-namespace basis;                                per-pod
+                  egress annotations are ignored. - EnabledPerNamespaceOrPerPod: Egress
+                  IP function is enabled and can be configured per-namespace or per-pod,                                with
+                  per-pod egress annotations overriding namespace annotations.'
+                type: string
+              egressIPVXLANPort:
+                description: 'EgressIPVXLANPort is the port number of vxlan tunnel
+                  device for egress traffic. [Default: 4790]'
+                type: integer
+              egressIPVXLANVNI:
+                description: 'EgressIPVXLANVNI is the VNI ID of vxlan tunnel device
+                  for egress traffic. [Default: 4097]'
+                type: integer
               endpointReportingDelay:
                 type: string
               endpointReportingEnabled:
@@ -155,7 +317,7 @@ spec:
                   For back-compatibility, if the protocol is not specified, it defaults
                   to “tcp”. To disable all inbound host ports, use the value none.
                   The default value allows ssh access and DHCP. [Default: tcp:22,
-                  udp:68]'
+                  udp:68, tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667]'
                 items:
                   description: ProtoPort is combination of protocol and port, both
                     must be specified.
@@ -179,7 +341,8 @@ spec:
                   to “tcp”. To disable all outbound host ports, use the value none.
                   The default value opens etcd’s standard ports to ensure that Felix
                   does not get cut off from etcd as well as allowing DHCP and DNS.
-                  [Default: tcp:2379, tcp:2380, tcp:4001, tcp:7001, udp:53, udp:67]'
+                  [Default: tcp:179, tcp:2379, tcp:2380, tcp:6443, tcp:6666, tcp:6667,
+                  udp:53, udp:67]'
                 items:
                   description: ProtoPort is combination of protocol and port, both
                     must be specified.
@@ -193,6 +356,90 @@ spec:
                   - protocol
                   type: object
                 type: array
+              flowLogsAggregationThresholdBytes:
+                description: FlowLogsAggregationThresholdBytes is used specify how
+                  far behind the external pipeline that reads flow logs can be. Default
+                  is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled
+                  is set to true.
+                type: integer
+              flowLogsDynamicAggregationEnabled:
+                description: FlowLogsDynamicAggregationEnabled is used to enable/disable
+                  dynamically changing aggregation levels. Default is true.
+                type: boolean
+              flowLogsEnableHostEndpoint:
+                description: FlowLogsEnableHostEndpoint enables Flow logs reporting
+                  for HostEndpoints.
+                type: boolean
+              flowLogsEnableNetworkSets:
+                description: FlowLogsEnableNetworkSets enables Flow logs reporting
+                  for GlobalNetworkSets.
+                type: boolean
+              flowLogsFileAggregationKindForAllowed:
+                description: 'FlowLogsFileAggregationKindForAllowed is used to choose
+                  the type of aggregation for flow log entries created for allowed
+                  connections. [Default: 2 - pod prefix name based aggregation]. Accepted
+                  values are 0, 1 and 2. 0 - No aggregation 1 - Source port based
+                  aggregation 2 - Pod prefix name based aggreagation.'
+                type: integer
+              flowLogsFileAggregationKindForDenied:
+                description: 'FlowLogsFileAggregationKindForDenied is used to choose
+                  the type of aggregation for flow log entries created for denied
+                  connections. [Default: 1 - source port based aggregation]. Accepted
+                  values are 0, 1 and 2. 0 - No aggregation 1 - Source port based
+                  aggregation 2 - Pod prefix name based aggregation. 3 - No destination
+                  ports based aggregation'
+                type: integer
+              flowLogsFileDirectory:
+                description: FlowLogsFileDirectory sets the directory where flow logs
+                  files are stored.
+                type: string
+              flowLogsFileEnabled:
+                description: FlowLogsFileEnabled when set to true, enables logging
+                  flow logs to a file. If false no flow logging to file will occur.
+                type: boolean
+              flowLogsFileEnabledForAllowed:
+                description: FlowLogsFileEnabledForAllowed is used to enable/disable
+                  flow logs entries created for allowed connections. Default is true.
+                  This parameter only takes effect when FlowLogsFileReporterEnabled
+                  is set to true.
+                type: boolean
+              flowLogsFileEnabledForDenied:
+                description: FlowLogsFileEnabledForDenied is used to enable/disable
+                  flow logs entries created for denied flows. Default is true. This
+                  parameter only takes effect when FlowLogsFileReporterEnabled is
+                  set to true.
+                type: boolean
+              flowLogsFileIncludeLabels:
+                description: FlowLogsFileIncludeLabels is used to configure if endpoint
+                  labels are included in a Flow log entry written to file.
+                type: boolean
+              flowLogsFileIncludePolicies:
+                description: FlowLogsFileIncludePolicies is used to configure if policy
+                  information are included in a Flow log entry written to file.
+                type: boolean
+              flowLogsFileMaxFileSizeMB:
+                description: FlowLogsFileMaxFileSizeMB sets the max size in MB of
+                  flow logs files before rotation.
+                type: integer
+              flowLogsFileMaxFiles:
+                description: FlowLogsFileMaxFiles sets the number of log files to
+                  keep.
+                type: integer
+              flowLogsFlushInterval:
+                description: FlowLogsFlushInterval configures the interval at which
+                  Felix exports flow logs.
+                type: string
+              flowLogsMaxOriginalIPsIncluded:
+                description: FlowLogsMaxOriginalIPsIncluded specifies the number of
+                  unique IP addresses (if relevant) that should be included in Flow
+                  logs.
+                type: integer
+              flowLogsPositionFilePath:
+                description: FlowLogsPositionFilePath is used specify the position
+                  of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos.
+                  This parameter only takes effect when FlowLogsDynamicAggregationEnabled
+                  is set to true.
+                type: string
               genericXDPEnabled:
                 description: 'GenericXDPEnabled enables Generic XDP so network cards
                   that don''t support XDP offload or driver modes can use XDP. This
@@ -230,6 +477,34 @@ spec:
                 description: 'IPIPMTU is the MTU to set on the tunnel device. See
                   Configuring MTU [Default: 1440]'
                 type: integer
+              ipsecAllowUnsecuredTraffic:
+                description: 'IPSecAllowUnsecuredTraffic controls whether non-IPsec
+                  traffic is allowed in addition to IPsec traffic. Enabling this negates
+                  the anti-spoofing protections of IPsec but it is useful when migrating
+                  to/from IPsec. [Default: false]'
+                type: boolean
+              ipsecESPAlgorithm:
+                description: 'IPSecESAlgorithm sets IPSec ESP algorithm. Default is
+                  NIST suite B recommendation. [Default: aes128gcm16-ecp256]'
+                type: string
+              ipsecIKEAlgorithm:
+                description: 'IPSecIKEAlgorithm sets IPSec IKE algorithm. Default
+                  is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]'
+                type: string
+              ipsecLogLevel:
+                description: 'IPSecLogLevel controls log level for IPSec components.
+                  Set to None for no logging. A generic log level terminology is used
+                  [None, Notice, Info, Debug, Verbose]. [Default: Info]'
+                type: string
+              ipsecMode:
+                description: 'IPSecMode controls which mode IPSec is operating on.
+                  Default value means IPSec is not enabled. [Default: ""]'
+                type: string
+              ipsecPolicyRefreshInterval:
+                description: 'IPSecPolicyRefreshInterval is the interval at which
+                  Felix will check the kernel''s IPsec policy tables and repair any
+                  inconsistencies. [Default: 600s]'
+                type: string
               ipsetsRefreshInterval:
                 description: 'IpsetsRefreshInterval is the period at which Felix re-checks
                   all iptables state to ensure that no other process has accidentally
@@ -304,6 +579,10 @@ spec:
                   pattern: ^.*
                   x-kubernetes-int-or-string: true
                 type: array
+              logDropActionOverride:
+                description: LogDropActionOverride specifies whether or not to include
+                  the DropActionOverride in the logs when it is triggered.
+                type: boolean
               logFilePath:
                 description: 'LogFilePath is the full path to the Felix log. Set to
                   none to disable file logging. [Default: /var/log/calico/felix.log]'
@@ -358,6 +637,8 @@ spec:
                 x-kubernetes-int-or-string: true
               netlinkTimeout:
                 type: string
+              nfNetlinkBufSize:
+                type: string
               openstackRegion:
                 description: 'OpenstackRegion is the name of the region that a particular
                   Felix belongs to. In a multi-region Calico/OpenStack deployment,
@@ -377,6 +658,11 @@ spec:
                   to false. This reduces the number of metrics reported, reducing
                   Prometheus load. [Default: true]'
                 type: boolean
+              prometheusMetricsCAFile:
+                type: string
+              prometheusMetricsCertFile:
+                description: TLS credentials for this port.
+                type: string
               prometheusMetricsEnabled:
                 description: 'PrometheusMetricsEnabled enables the Prometheus metrics
                   server in Felix if set to true. [Default: false]'
@@ -384,6 +670,8 @@ spec:
               prometheusMetricsHost:
                 description: 'PrometheusMetricsHost is the host that the Prometheus
                   metrics server should bind to. [Default: empty]'
+                type: string
+              prometheusMetricsKeyFile:
                 type: string
               prometheusMetricsPort:
                 description: 'PrometheusMetricsPort is the TCP port that the Prometheus
@@ -395,6 +683,17 @@ spec:
                   to false. This reduces the number of metrics reported, reducing
                   Prometheus load. [Default: true]'
                 type: boolean
+              prometheusReporterCAFile:
+                type: string
+              prometheusReporterCertFile:
+                type: string
+              prometheusReporterEnabled:
+                description: Felix Denied Packet Metrics configuration parameters.
+                type: boolean
+              prometheusReporterKeyFile:
+                type: string
+              prometheusReporterPort:
+                type: integer
               removeExternalRoutes:
                 description: Whether or not to remove device routes that have not
                   been programmed by Felix. Disabling this will allow external applications
@@ -438,6 +737,12 @@ spec:
                 description: 'SidecarAccelerationEnabled enables experimental sidecar
                   acceleration [Default: false]'
                 type: boolean
+              statsDumpFilePath:
+                type: string
+              syslogReporterAddress:
+                type: string
+              syslogReporterNetwork:
+                type: string
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
                   number and cluster size to projectcalico.org. Logs warnings returned
@@ -465,6 +770,11 @@ spec:
                 type: integer
               vxlanVNI:
                 type: integer
+              windowsNetworkName:
+                description: WindowsNetworkName specifies which Windows HNS networks
+                  Felix should operate on.  The default is to match networks that
+                  start with "calico".  Supports regular expression syntax.
+                type: string
               wireguardEnabled:
                 description: 'WireguardEnabled controls whether Wireguard is enabled.
                   [Default: false]'
@@ -495,8 +805,6 @@ spec:
                   Calico''s BPF maps or attached programs. Set to 0 to disable XDP
                   refresh. [Default: 90s]'
                 type: string
-            required:
-            - bpfLogLevel
             type: object
         type: object
     served: true

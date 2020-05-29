@@ -6,22 +6,19 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: globalnetworksets.crd.projectcalico.org
+  name: managedclusters.crd.projectcalico.org
 spec:
   group: crd.projectcalico.org
   names:
-    kind: GlobalNetworkSet
-    listKind: GlobalNetworkSetList
-    plural: globalnetworksets
-    singular: globalnetworkset
+    kind: ManagedCluster
+    listKind: ManagedClusterList
+    plural: managedclusters
+    singular: managedcluster
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs
-          that share labels to allow rules to refer to them via selectors.  The labels
-          of GlobalNetworkSet are not namespaced.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -36,23 +33,33 @@ spec:
           metadata:
             type: object
           spec:
-            description: GlobalNetworkSetSpec contains the specification for a NetworkSet
+            description: ManagedClusterSpec contains the specification of a ManagedCluster
               resource.
             properties:
-              allowedEgressDomains:
-                description: The list of domain names that belong to this set and
-                  are honored in egress allow rules only.  Domain names specified
-                  here only work to allow egress traffic from the cluster to external
-                  destinations.  They don't work to _deny_ traffic to destinations
-                  specified by domain name, or to allow ingress traffic from _sources_
-                  specified by domain name.
+              installationManifest:
+                description: Field to store dynamically generated manifest for installing
+                  component into the actual application cluster corresponding to this
+                  Managed Cluster
+                type: string
+            type: object
+          status:
+            properties:
+              conditions:
                 items:
-                  type: string
-                type: array
-              nets:
-                description: The list of IP networks that belong to this set.
-                items:
-                  type: string
+                  description: Condition contains various status information
+                  properties:
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
                 type: array
             type: object
         type: object

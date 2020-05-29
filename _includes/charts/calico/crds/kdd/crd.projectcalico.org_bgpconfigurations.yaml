@@ -41,6 +41,12 @@ spec:
                   64512]'
                 format: int32
                 type: integer
+              extensions:
+                additionalProperties:
+                  type: string
+                description: Extensions is a mapping of keys to values that can be
+                  used in custom BGP templates
+                type: object
               logSeverityScreen:
                 description: 'LogSeverityScreen is the log severity above which logs
                   are sent to the stdout. [Default: INFO]'
