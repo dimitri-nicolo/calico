@@ -542,6 +542,8 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
 github.com/tigera/libcalico-go-private v0.0.0-20200527160814-71f7883c4323 h1:RuWpm/hB1mS8oxHjm+Kz10bF1WJ0zRV3pS0kF+UX3s4=
 github.com/tigera/libcalico-go-private v0.0.0-20200527160814-71f7883c4323/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
+github.com/tigera/libcalico-go-private v0.0.0-20200529155941-9edb0d3d0877 h1:ZRtmLwsgygMIkHQ/qMnJx4qSTFx5OztXGjiizt1z9Mo=
+github.com/tigera/libcalico-go-private v0.0.0-20200529155941-9edb0d3d0877/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56 h1:MhaYRI9GBwqeJ+egYJ/vyGhbndRn52LX9GLcEJ9ms7Y=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a h1:UcfIHveY0DOA2L1NC7ML1OGMICOhzA55qDDHf3xsgHE=
