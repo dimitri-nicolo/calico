@@ -69,8 +69,8 @@ const (
 	DatastorePerHost
 	ConfigFile
 	EnvironmentVariable
-	DisabledByLicenseCheck
 	InternalOverride
+	DisabledByLicenseCheck
 )
 
 var SourcesInDescendingOrder = []Source{DisabledByLicenseCheck, InternalOverride, EnvironmentVariable, ConfigFile, DatastorePerHost, DatastoreGlobal}
@@ -560,7 +560,6 @@ func (config *Config) resolve() (changed bool, err error) {
 
 			log.Infof("Parsed value for %v: %v (from %v)",
 				name, value, source)
-			currentSource = nameToSource[name]
 			if source < currentSource {
 				log.Infof("Skipping config value for %v from %v; "+
 					"already have a value from %v", name,

@@ -1518,6 +1518,9 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 
 	if len(licenseOverrides) > 0 {
 		log.Debug("Updating config with license check overrides")
-		configParams.UpdateFrom(licenseOverrides, config.DisabledByLicenseCheck)
+		_, err := configParams.UpdateFrom(licenseOverrides, config.DisabledByLicenseCheck)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to set config overrides.")
+		}
 	}
 }

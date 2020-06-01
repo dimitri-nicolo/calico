@@ -454,6 +454,11 @@ func (t *Table) InsertOrAppendRules(chainName string, rules []Rule) {
 	t.gaugeNumRules.Add(float64(numRulesDelta))
 	t.dirtyInsertAppend.Add(chainName)
 
+	// Incref any newly-referenced chains, then decref the old ones.  By incrementing first we
+	// avoid marking a still-referenced chain as dirty.
+	t.increfReferredChains(rules)
+	t.decrefReferredChains(oldRules)
+	
 	// Defensive: make sure we re-read the dataplane state before we make updates.  While the
 	// code was originally designed not to need this, we found that other users of
 	// iptables-restore can still clobber our updates so it's safest to re-read the state before

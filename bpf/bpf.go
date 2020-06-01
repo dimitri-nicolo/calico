@@ -2200,19 +2200,6 @@ func SupportsBPFDataplane() error {
 
 	// Test endianness
 	if nativeEndian != binary.LittleEndian {
-		return fmt.Errorf("this bpf library only supports little endian architectures")
-	}
-
-	return nil
-}
-
-func SupportsBPFDataplane() error {
-	if err := isAtLeastKernel(v5Dot3Dot0); err != nil {
-		return err
-	}
-
-	// Test endianness
-	if nativeEndian != binary.LittleEndian {
 		return errors.New("this bpf library only supports little endian architectures")
 	}
 

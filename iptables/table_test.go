@@ -337,7 +337,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 		Describe("after adding a reference from another chain", func() {
 			BeforeEach(func() {
-				table.SetRuleInsertions("FORWARD", []Rule{
+				table.InsertOrAppendRules("FORWARD", []Rule{
 					{Action: JumpAction{Target: "cali-FORWARD"}},
 				})
 				table.UpdateChain(&Chain{
@@ -366,7 +366,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 			Describe("after adding a reference from an insert", func() {
 				BeforeEach(func() {
-					table.SetRuleInsertions("FORWARD", []Rule{
+					table.InsertOrAppendRules("FORWARD", []Rule{
 						{Action: JumpAction{Target: "cali-foobar"}},
 					})
 					table.Apply()
@@ -406,7 +406,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 					Describe("after removing the insert", func() {
 						BeforeEach(func() {
-							table.SetRuleInsertions("FORWARD", []Rule{})
+							table.InsertOrAppendRules("FORWARD", []Rule{})
 							table.Apply()
 						})
 						It("chain should be removed", func() {
@@ -423,7 +423,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 		Describe("after adding a reference from an insert", func() {
 			BeforeEach(func() {
-				table.SetRuleInsertions("FORWARD", []Rule{
+				table.InsertOrAppendRules("FORWARD", []Rule{
 					{Action: JumpAction{Target: "cali-foobar"}},
 				})
 				table.Apply()
@@ -444,7 +444,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 			Describe("after removing the reference", func() {
 				BeforeEach(func() {
-					table.SetRuleInsertions("FORWARD", []Rule{})
+					table.InsertOrAppendRules("FORWARD", []Rule{})
 					table.Apply()
 				})
 				It("it should get removed", func() {
@@ -679,7 +679,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 	Describe("applying updates when underlying iptables have changed in a non-whitelisted chain", func() {
 		BeforeEach(func() {
-			table.SetRuleInsertions("FORWARD", []Rule{
+			table.InsertOrAppendRules("FORWARD", []Rule{
 				{Action: JumpAction{Target: "non-cali-chain"}},
 				{Action: JumpAction{Target: "cali-foobar"}},
 			})

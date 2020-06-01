@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	v1 "k8s.io/api/core/v1"
-	discovery "k8s.io/api/discovery/v1alpha1"
+	discovery "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
@@ -659,7 +659,7 @@ func epsToSlice(eps *v1.Endpoints) *discovery.EndpointSlice {
 				"kubernetes.io/service-name": eps.ObjectMeta.Name,
 			},
 		},
-		AddressType: &addrType,
+		AddressType: addrType,
 	}
 
 	for i, subset := range eps.Subsets {

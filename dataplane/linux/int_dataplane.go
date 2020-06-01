@@ -1074,7 +1074,7 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			Action: iptables.ReturnAction{},
 		}}
 
-		rpfRules = append(rpfRules, rules.RPFilter(t.IPVersion, 0xca100000, 0xfff00000,
+		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, 0xca100000, 0xfff00000,
 			d.config.RulesConfig.OpenStackSpecialCasesEnabled, true)...)
 
 		rpfChain := []*iptables.Chain{{
