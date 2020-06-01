@@ -2,6 +2,7 @@
 
 import logging
 import re
+import json
 import subprocess
 from random import randint
 
@@ -10,32 +11,17 @@ from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, node
 
 _log = logging.getLogger(__name__)
 
-class TestEgressIP(TestBase):
+# Note: The very first step for egress ip test cases is to setup ipipMode/vxlanMode accordingly.
+# If we add more test cases for other feature, we would need to refactor overlay mode setup and
+# make it easier for each test case to configure it.
+
+class _TestEgressIP(TestBase):
 
     def setUp(self):
-        super(TestEgressIP, self).setUp()
-
-        # Enable egress IP.
-        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod"}
-        self.update_ds_env("calico-node", "kube-system", newEnv)
-
-        # Create egress IP pool.
-        self.egress_cidr = "10.10.10.0/29"
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: IPPool
-metadata:
-  name: egress-ippool-1
-spec:
-  cidr: %s
-  blockSize: 29
-  nodeSelector: '!all()'
-EOF
-""" % self.egress_cidr)
-        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
+        super(_TestEgressIP, self).setUp()
 
     def tearDown(self):
-        super(TestEgressIP, self).tearDown()
+        super(_TestEgressIP, self).tearDown()
 
     def test_access_service_node_port(self):
 
@@ -74,11 +60,11 @@ EOF
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
 
-            # Prepare six external servers with random port number.
-            # The number is twice of the number of gateway pods to make sure
+            # Prepare nine external servers with random port number.
+            # The number is three times of the number of gateway pods to make sure
             # every ECMP route get chance to be used.
             servers = []
-            for i in range(6):
+            for i in range(9):
                 s = NetcatServerTCP(randint(100, 65000))
                 self.add_cleanup(s.kill)
                 s.wait_running()
@@ -150,11 +136,11 @@ EOF
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns="ns3")
             gw3_1 = self.create_gateway_pod("kind-worker3", "gw3-1", self.egress_cidr, ns="ns3")
 
-            # Prepare six external servers with random port number.
-            # The number is twice of the number of gateway pods to make sure
+            # Prepare nine external servers with random port number.
+            # The number is three times of the number of gateway pods to make sure
             # every ECMP route get chance to be used.
             servers = []
-            for i in range(6):
+            for i in range(9):
                 s = NetcatServerTCP(randint(100, 65000))
                 self.add_cleanup(s.kill)
                 s.wait_running()
@@ -200,11 +186,11 @@ EOF
             run("docker exec -t kind-worker2 sysctl -w net.ipv4.fib_multipath_hash_policy=1")
 
             # client_red should send egress packets via gw3, gw3_1
-            self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip])
+            self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
             # client_red2 should send egress packets via gw3, gw3_1
-            self.check_ecmp_routes(client_red2, servers, [gw3.ip, gw3_1.ip])
+            self.check_ecmp_routes(client_red2, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
             # client blue should send egress packets via gw2, gw2_1
-            self.check_ecmp_routes(client_blue, servers, [gw2.ip, gw2_1.ip])
+            self.check_ecmp_routes(client_blue, servers, [gw2.ip, gw2_1.ip], allowed_untaken_count=1)
             # client_red all should send egress packets via gw, gw3, gw3_1
             self.check_ecmp_routes(client_red_all, servers, [gw.ip, gw3.ip, gw3_1.ip], allowed_untaken_count=1)
 
@@ -221,11 +207,11 @@ EOF
             self.add_cleanup(lambda: self.update_ds_env("calico-node", "kube-system", oldEnv))
 
             # client_red should send egress packets via gw3, gw3_1
-            self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip])
+            self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
             # client_red2 should send egress packets via gw3, gw3_1
-            self.check_ecmp_routes(client_red2, servers, [gw3.ip, gw3_1.ip])
+            self.check_ecmp_routes(client_red2, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
             # client blue should send egress packets via gw2, gw2_1
-            self.check_ecmp_routes(client_blue, servers, [gw2.ip, gw2_1.ip])
+            self.check_ecmp_routes(client_blue, servers, [gw2.ip, gw2_1.ip], allowed_untaken_count=1)
             # client_red all should send egress packets via gw, gw3, gw3_1
             self.check_ecmp_routes(client_red_all, servers, [gw.ip, gw3.ip, gw3_1.ip], allowed_untaken_count=1)
 
@@ -328,6 +314,12 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress-to-gateway"))
             retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
 
+    def has_ip_rule(self, nodename, ip):
+        # Validate egress ip rule exists for a client pod ip on a node.
+        output = run("docker exec -t %s ip rule" % nodename)
+        if output.find(ip) == -1:
+            raise Exception('ip rule does not exist for client pod ip %s, log %s' % (ip, output))
+
     def check_ecmp_routes(self, client, servers, gw_ips, allowed_untaken_count=0):
         """
         Validate that client went though every ECMP route when
@@ -341,6 +333,10 @@ EOF
                 retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": s.ip, "port": s.port})
             return
 
+        # In case calico-node just restarted and egress ip rule has not been programmed yet,
+        # we should wait for it to happen.
+        retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": client.nodename, "ip": client.ip})
+
         expected_ips = gw_ips[:]
         for s in servers:
             _log.info("Checking can-connect, Client IP: %s Server IP: %s Port: %d", client.ip, s.ip, s.port)
@@ -349,6 +345,9 @@ EOF
             client_ip = s.get_recent_client_ip()
             _log.info("xxxxx ecmp route xxxxxxxxx   Client IPs: %r", client_ip)
             if client_ip not in gw_ips:
+                run("docker exec -t %s ip rule" % client.nodename)
+                run("docker exec -t %s ip route show table 250" % client.nodename)
+                run("docker exec -t %s ip route show table 249" % client.nodename)
                 _log.info("stop for debug ecmp route %s  Client IPs: %r", gw_ips, client_ip)
                 stop_for_debug()
             assert client_ip in gw_ips, \
@@ -479,8 +478,8 @@ spec:
         return gateway
 
 
-TestEgressIP.vanilla = True
-TestEgressIP.dual_stack = False
+_TestEgressIP.vanilla = True
+_TestEgressIP.dual_stack = False
 
 
 class NetcatServerTCP(Container):
@@ -539,3 +538,107 @@ class NetcatClientTCP(Pod):
 
     class ConnectionError(Exception):
         pass
+
+class TestEgressIPNoOverlay(_TestEgressIP):
+
+    def setUp(self):
+        super(_TestEgressIP, self).setUp()
+
+        # Enable egress IP.
+        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
+                  "FELIX_IPINIPENABLED": "false",
+                  "FELIX_VXLANENABLED": "false"}
+        self.update_ds_env("calico-node", "kube-system", newEnv)
+
+        json_str = calicoctl("get ippool default-ipv4-ippool -o json")
+        node_dict = json.loads(json_str)
+        self.old_ipip_mode = node_dict['spec']['ipipMode']
+        self.old_vxlan_mode = node_dict['spec']['vxlanMode']
+
+        calicoctl("""patch ippool default-ipv4-ippool --patch '{"spec":{"ipipMode": "Never", "vxlanMode": "Never"}}'""")
+        _log.info("Update ipipMode of default ippool from %s to Never, vxlanMode from %s to Never", self.old_ipip_mode, self.old_vxlan_mode)
+
+        # Create egress IP pool.
+        self.egress_cidr = "10.10.10.0/29"
+        calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-ippool-1
+spec:
+  cidr: %s
+  blockSize: 29
+  nodeSelector: '!all()'
+EOF
+""" % self.egress_cidr)
+        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
+
+class TestEgressIPWithIPIP(_TestEgressIP):
+
+    def setUp(self):
+        super(_TestEgressIP, self).setUp()
+
+        # Enable egress IP.
+        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
+                  "FELIX_IPINIPENABLED": "true",
+                  "FELIX_VXLANENABLED": "false"}
+        self.update_ds_env("calico-node", "kube-system", newEnv)
+
+        json_str = calicoctl("get ippool default-ipv4-ippool -o json")
+        node_dict = json.loads(json_str)
+        self.old_ipip_mode = node_dict['spec']['ipipMode']
+        self.old_vxlan_mode = node_dict['spec']['vxlanMode']
+
+        calicoctl("""patch ippool default-ipv4-ippool --patch '{"spec":{"ipipMode": "Always", "vxlanMode": "Never"}}'""")
+        _log.info("Update ipipMode of default ippool from %s to Always, vxlanMode from %s to Never", self.old_ipip_mode, self.old_vxlan_mode)
+
+        # Create egress IP pool.
+        self.egress_cidr = "10.10.10.0/29"
+        calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-ippool-1
+spec:
+  cidr: %s
+  blockSize: 29
+  nodeSelector: '!all()'
+  ipipMode: Always
+EOF
+""" % self.egress_cidr)
+        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
+
+class TestEgressIPWithVXLAN(_TestEgressIP):
+
+    def setUp(self):
+        super(_TestEgressIP, self).setUp()
+
+        # Enable egress IP.
+        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
+                  "FELIX_IPINIPENABLED": "false",
+                  "FELIX_VXLANENABLED": "true"}
+        self.update_ds_env("calico-node", "kube-system", newEnv)
+
+        json_str = calicoctl("get ippool default-ipv4-ippool -o json")
+        node_dict = json.loads(json_str)
+        self.old_ipip_mode = node_dict['spec']['ipipMode']
+        self.old_vxlan_mode = node_dict['spec']['vxlanMode']
+
+        calicoctl("""patch ippool default-ipv4-ippool --patch '{"spec":{"vxlanMode": "Always", "ipipMode": "Never"}}'""")
+        _log.info("Update vxlanMode of default ippool from %s to Always, ipipMode from %s to Never", self.old_vxlan_mode, self.old_ipip_mode)
+
+        # Create egress IP pool.
+        self.egress_cidr = "10.10.10.0/29"
+        calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-ippool-1
+spec:
+  cidr: %s
+  blockSize: 29
+  nodeSelector: '!all()'
+  vxlanMode: Always
+EOF
+""" % self.egress_cidr)
+        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))

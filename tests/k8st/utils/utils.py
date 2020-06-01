@@ -52,6 +52,9 @@ class DiagsCollector(object):
         _log.info("============= COLLECTED DIAGS FOR TEST ============")
         _log.info("===================================================")
 
+def log_calico_node(node_ip):
+    pod_name = run(" kubectl get pod -n kube-system -o wide | grep calico-node | grep %s | awk '{print $1}'" % node_ip)
+    kubectl("logs %s -n kube-system " % pod_name.strip())
 
 def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=None):
     # Check how much disk space we have.
