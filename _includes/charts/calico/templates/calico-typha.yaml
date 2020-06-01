@@ -500,5 +500,4 @@ metadata:
   name: calico-typha-cpva
   namespace: kube-system
 
-  {{- end }}
 {{- end }}
