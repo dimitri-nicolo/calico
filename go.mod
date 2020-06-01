@@ -21,6 +21,8 @@ require (
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
+	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
