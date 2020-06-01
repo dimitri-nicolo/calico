@@ -190,7 +190,7 @@ var _ = Describe("Benchmark elastic tests", func() {
 
 		elasticClient, err := NewFromConfig(cfg)
 		Expect(err).ToNot(HaveOccurred())
-		elasticClient.StoreBenchmarks(context.Background(), b1)
+		_ = elasticClient.StoreBenchmarks(context.Background(), b1)
 
 		index := elasticClient.ClusterIndex(BenchmarksIndex, b1.Timestamp.Format(IndexTimeFormat))
 

@@ -717,7 +717,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(ok).To(BeTrue())
 		buckets, ok := flog_buckets_map["buckets"]
 		Expect(ok).To(BeTrue())
-		buckets_slice, ok := buckets.([]map[string]interface{})
+		buckets_slice, _ := buckets.([]map[string]interface{})
 		Expect(buckets_slice).To(HaveLen(1))
 		bucket := buckets_slice[0]
 

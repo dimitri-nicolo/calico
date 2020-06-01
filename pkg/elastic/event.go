@@ -68,7 +68,7 @@ func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
 					continue
 				}
-				ch <- &api.AuditEventResult{ev, nil}
+				ch <- &api.AuditEventResult{Event: ev}
 			}
 		}
 

@@ -319,7 +319,6 @@ func (c *client) retrieveArchivedReportSummary(queries []elastic.Query, includeR
 		return nil, nil
 	case 1:
 		log.Debug("result found")
-		break
 	default:
 		log.WithField("hits", len(res.Hits.Hits)).
 			Warn("expected to receive only one hit")

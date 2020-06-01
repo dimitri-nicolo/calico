@@ -110,9 +110,10 @@ stop-elastic:
 ###############################################################################
 .PHONY: ci
 
-# TODO: enable these linters
-LINT_ARGS  = --disable "deadcode,errcheck,gosimple,govet,staticcheck,structcheck,gosimple,varcheck,unused,ineffassign"
-LINT_ARGS += --timeout 5m
+###############################################################################
+# See .golangci.yml for golangci-lint config
+LINT_ARGS +=
+
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ci: static-checks ut
