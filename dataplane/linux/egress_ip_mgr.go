@@ -97,11 +97,54 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 		tableIndex)
 }
 
+type routeRulesGenerator interface {
+	NewRouteRules(
+		ipVersion int,
+		priority int,
+		tableIndexSet set.Set,
+		updateFunc, removeFunc routerule.RulesMatchFunc,
+		netlinkTimeout time.Duration,
+	) routeRules
+}
+
+type routeRulesFactory struct {
+	count int
+}
+
+func (f *routeRulesFactory) NewRouteRules(
+	ipVersion int,
+	priority int,
+	tableIndexSet set.Set,
+	updateFunc, removeFunc routerule.RulesMatchFunc,
+	netlinkTimeout time.Duration,
+) routeRules {
+
+	f.count += 1
+	rr, err := routerule.New(
+		ipVersion,
+		priority,
+		tableIndexSet,
+		updateFunc,
+		removeFunc,
+		netlinkTimeout)
+
+	if err != nil {
+		// table index has been checked by config.
+		// This should not happen.
+		log.Panicf("error creating routerule instance")
+	}
+
+	return rr
+}
+
 type egressIPManager struct {
 	routerules routeRules
 
 	// route table for programming L2 routes.
 	l2Table routeTable
+
+	// rrGenerator dynamically creates routerules instance to program route rules.
+	rrGenerator routeRulesGenerator
 
 	// rtGenerator dynamically creates route tables to program L3 routes.
 	rtGenerator routeTableGenerator
@@ -140,6 +183,8 @@ type egressIPManager struct {
 
 	nlHandle netlinkHandle
 	dpConfig Config
+
+	tableIndexSet set.Set
 }
 
 func newEgressIPManager(
@@ -165,23 +210,16 @@ func newEgressIPManager(
 		tableIndexSet.Add(element)
 	}
 
-	// Create routerules to manage routing rules.
-	rr, err := routerule.New(4, dpConfig.EgressIPRoutingRulePriority, tableIndexSet, routerule.RulesMatchSrcFWMarkTable, routerule.RulesMatchSrcFWMark, dpConfig.NetlinkTimeout)
-	if err != nil {
-		// table index has been checked by config.
-		// This should not happen.
-		log.Panicf("error creating routerule instance")
-	}
-
 	// Create main route table to manage L2 routing rules.
 	l2Table := routetable.New([]string{"^" + deviceName + "$"},
 		4, true, dpConfig.NetlinkTimeout, nil,
 		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC)
 
 	return newEgressIPManagerWithShims(
-		rr,
 		l2Table,
+		&routeRulesFactory{count: 0},
 		&routeTableFactory{count: 0},
+		tableIndexSet,
 		tableIndexStack,
 		deviceName,
 		dpConfig,
@@ -190,9 +228,10 @@ func newEgressIPManager(
 }
 
 func newEgressIPManagerWithShims(
-	routerules routeRules,
 	mainTable routeTable,
+	rrGenerator routeRulesGenerator,
 	rtGenerator routeTableGenerator,
+	tableIndexSet set.Set,
 	tableIndexStack *stack.Stack,
 	deviceName string,
 	dpConfig Config,
@@ -200,9 +239,10 @@ func newEgressIPManagerWithShims(
 ) *egressIPManager {
 
 	return &egressIPManager{
-		routerules:              routerules,
 		l2Table:                 mainTable,
+		rrGenerator:             rrGenerator,
 		rtGenerator:             rtGenerator,
+		tableIndexSet:           tableIndexSet,
 		tableIndexStack:         tableIndexStack,
 		tableIndexToRouteTable:  make(map[int]routeTable),
 		egressIPSetToTableIndex: make(map[string]int),
@@ -425,6 +465,13 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		return nil
 	}
 
+	if m.routerules == nil {
+		// Create routerules to manage routing rules.
+		// We create routerule inside CompleteDeferedWork to make sure datastore is in sync and all WEP/EgressIPSet updates
+		// will be processed before routerule's apply() been called.
+		m.routerules = m.rrGenerator.NewRouteRules(4, m.dpConfig.EgressIPRoutingRulePriority, m.tableIndexSet, routerule.RulesMatchSrcFWMarkTable, routerule.RulesMatchSrcFWMark, m.dpConfig.NetlinkTimeout)
+	}
+
 	if m.dirtyEgressIPSet.Len() > 0 {
 		// Work out all L2 routes updates.
 		m.setL2Routes()
@@ -546,7 +593,10 @@ func (m *egressIPManager) GetRouteTableSyncers() []routeTableSyncer {
 }
 
 func (m *egressIPManager) GetRouteRules() []routeRules {
-	return []routeRules{m.routerules}
+	if m.routerules != nil {
+		return []routeRules{m.routerules}
+	}
+	return nil
 }
 
 func ipStringToMac(s string) net.HardwareAddr {
