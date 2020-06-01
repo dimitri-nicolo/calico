@@ -182,9 +182,27 @@ var _ = Describe("Config override empty", func() {
 			Expect(cp.BPFEnabled).To(BeFalse())
 
 			By("Ignoring a lower-priority config update")
-			changed, err = cp.UpdateFrom(map[string]string{"BPFEnabled": "true"}, EnvironmentVariable)
+			// Env vars get converted to lower-case before calling UpdateFrom.
+			changed, err = cp.UpdateFrom(map[string]string{"bpfenabled": "true"}, EnvironmentVariable)
 			Expect(changed).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
+			Expect(cp.BPFEnabled).To(BeFalse())
+		})
+	})
+
+	Describe("with env var set", func() {
+		BeforeEach(func() {
+			// Env vars get converted to lower-case before calling UpdateFrom.
+			changed, err := cp.UpdateFrom(map[string]string{"bpfenabled": "true"}, EnvironmentVariable)
+			Expect(changed).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cp.BPFEnabled).To(BeTrue())
+		})
+
+		It("should be overridable", func() {
+			changed, err := cp.OverrideParam("BPFEnabled", "false")
+			Expect(changed).To(BeTrue())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(cp.BPFEnabled).To(BeFalse())
 		})
 	})
@@ -401,6 +419,7 @@ var _ = DescribeTable("Config parsing",
 			{Protocol: "tcp", Port: 179},
 			{Protocol: "tcp", Port: 2379},
 			{Protocol: "tcp", Port: 2380},
+			{Protocol: "tcp", Port: 6443},
 			{Protocol: "tcp", Port: 6666},
 			{Protocol: "tcp", Port: 6667},
 		},
@@ -413,6 +432,7 @@ var _ = DescribeTable("Config parsing",
 			{Protocol: "tcp", Port: 179},
 			{Protocol: "tcp", Port: 2379},
 			{Protocol: "tcp", Port: 2380},
+			{Protocol: "tcp", Port: 6443},
 			{Protocol: "tcp", Port: 6666},
 			{Protocol: "tcp", Port: 6667},
 		},
@@ -429,6 +449,7 @@ var _ = DescribeTable("Config parsing",
 			{Protocol: "tcp", Port: 179},
 			{Protocol: "tcp", Port: 2379},
 			{Protocol: "tcp", Port: 2380},
+			{Protocol: "tcp", Port: 6443},
 			{Protocol: "tcp", Port: 6666},
 			{Protocol: "tcp", Port: 6667},
 		},
@@ -440,6 +461,7 @@ var _ = DescribeTable("Config parsing",
 			{Protocol: "tcp", Port: 179},
 			{Protocol: "tcp", Port: 2379},
 			{Protocol: "tcp", Port: 2380},
+			{Protocol: "tcp", Port: 6443},
 			{Protocol: "tcp", Port: 6666},
 			{Protocol: "tcp", Port: 6667},
 		},

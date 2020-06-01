@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -384,7 +383,7 @@ func (f *Felix) Stop() {
 
 func (f *Felix) Restart() {
 	oldPID := f.GetFelixPID()
-	f.Signal(syscall.SIGHUP)
+	f.Exec("kill", "-HUP", fmt.Sprint(oldPID))
 	Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(oldPID))
 }
 

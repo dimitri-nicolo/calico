@@ -10,6 +10,8 @@ import (
 type Time interface {
 	Now() time.Time
 	Since(t time.Time) time.Duration
+	Until(t time.Time) time.Duration
+	After(t time.Duration) <-chan time.Time
 }
 
 func NewRealTime() Time {
@@ -18,6 +20,14 @@ func NewRealTime() Time {
 
 // realTime is the real implementation of timeIface, which calls through to the real time package.
 type realTime struct{}
+
+func (realTime) Until(t time.Time) time.Duration {
+	return time.Until(t)
+}
+
+func (realTime) After(t time.Duration) <-chan time.Time {
+	return time.After(t)
+}
 
 func (realTime) Now() time.Time {
 	return time.Now()

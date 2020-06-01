@@ -34,7 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-GO_BUILD_VER?=v0.38
+GO_BUILD_VER?=v0.40
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins
@@ -145,7 +145,7 @@ clean:
 	       $(GENERATED_FILES) \
 	       go/docs/calc.pdf \
 	       release-notes-* \
-	       fv/infrastructure/crds.yaml \
+	       fv/infrastructure/crds/ \
 	       docs/*.pdf \
 	       .go-pkg-cache
 	find . -name "junit.xml" -type f -delete
@@ -155,6 +155,8 @@ clean:
 	find . -name "*.pyc" -type f -delete
 	$(DOCKER_GO_BUILD) make -C bpf-apache clean
 	$(DOCKER_GO_BUILD) make -C bpf-gpl clean
+	-docker rmi $(BUILD_IMAGE)-wgtool:latest-amd64
+	-docker rmi $(BUILD_IMAGE)-wgtool:latest
 
 ###############################################################################
 # Updating pins
@@ -172,7 +174,7 @@ update-pins: update-licensing-pin replace-libcalico-pin replace-typha-pin
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/calico-felix
+build: bin/calico-felix build-bpf
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -304,10 +306,16 @@ ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
 
-image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection
+image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection image-wgtool
 	docker build -t $(BUILD_IMAGE)-test:latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./fv/Dockerfile.test.$(ARCH) bin;
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE)-test:latest-$(ARCH) $(BUILD_IMAGE)-test:latest
+endif
+
+image-wgtool: fv/Dockerfile.wgtool.amd64
+	docker build -t $(BUILD_IMAGE)-wgtool:latest-$(ARCH) --file ./fv/Dockerfile.wgtool.$(ARCH) fv;
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE)-wgtool:latest-$(ARCH) $(BUILD_IMAGE)-wgtool:latest
 endif
 
 ###############################################################################
@@ -434,12 +442,13 @@ fv/fv.test: $(SRC_FILES)
 	# outside a container and allow them to interact with docker.
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@'
 
-REMOTE_DEPS=fv/infrastructure/crds.yaml
+REMOTE_DEPS=fv/infrastructure/crds
 
-fv/infrastructure/crds.yaml: mod-download
+fv/infrastructure/crds: go.mod go.sum $(LOCAL_BUILD_DEP)
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml fv/infrastructure/crds.yaml; \
-	chmod +w fv/infrastructure/crds.yaml'
+	go list all; \
+	cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config/crd fv/infrastructure/crds; \
+	chmod +w fv/infrastructure/crds/'
 
 .PHONY: fv
 # runs all of the fv tests
@@ -483,6 +492,20 @@ fv fv/latency.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-worklo
 
 fv-bpf:
 	$(MAKE) fv FELIX_FV_ENABLE_BPF=true
+
+KO_DIR := "/lib/modules/$(shell uname -r)/"
+WIREGUARD_KO_PATH := $(shell find $(KO_DIR) -name "wireguard.ko")
+fv-wireguard:
+ifndef FORCE_WIREGUARD_FV
+	@if test -z $(WIREGUARD_KO_PATH); then \
+		echo "WireGuard not available."; \
+		exit 1; \
+	else \
+		$(MAKE) fv FELIX_FV_WIREGUARD_AVAILABLE=true GINKGO_FOCUS="WireGuard-Supported"; \
+	fi
+else
+	$(MAKE) fv FELIX_FV_WIREGUARD_AVAILABLE=true GINKGO_FOCUS="WireGuard-Supported"
+endif
 
 ###############################################################################
 # K8SFV Tests
@@ -560,7 +583,7 @@ stop-grafana:
 
 bin/calico-bpf: $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	@echo Building calico-bpf...
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
 
 bin/pktgen: $(SRC_FILES) $(LOCAL_BUILD_DEP)

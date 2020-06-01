@@ -27,10 +27,18 @@ struct cali_tc_state {
 	__be32 ip_src;
 	__be32 ip_dst;
 	__be32 post_nat_ip_dst;
-	__be32 nat_tun_src;
+	__be32 tun_ip;
 	__s32 pol_rc;
 	__u16 sport;
-	__u16 dport;
+	union
+	{
+		__u16 dport;
+		struct
+		{
+			__u8 icmp_type;
+			__u8 icmp_code;
+		};
+	};
 	__u16 post_nat_dport;
 	__u8 ip_proto;
 	__u8 flags;

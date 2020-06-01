@@ -42,13 +42,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
+
+	"github.com/projectcalico/felix/proto"
 )
 
 type epIface struct {
 	ifacemonitor.State
-	addrs []net.IP
 }
 
 type bpfEndpointManager struct {
@@ -66,6 +66,8 @@ type bpfEndpointManager struct {
 	dirtyIfaces    set.Set
 
 	bpfLogLevel      string
+	hostname         string
+	hostIP           net.IP
 	fibLookupEnabled bool
 	dataIfaceRegex   *regexp.Regexp
 	ipSetIDAlloc     *idalloc.IDAllocator
@@ -79,6 +81,7 @@ type bpfEndpointManager struct {
 
 func newBPFEndpointManager(
 	bpfLogLevel string,
+	hostname string,
 	fibLookupEnabled bool,
 	epToHostDrop bool,
 	dataIfaceRegex *regexp.Regexp,
@@ -98,6 +101,7 @@ func newBPFEndpointManager(
 		dirtyWorkloads:      set.New(),
 		dirtyIfaces:         set.New(),
 		bpfLogLevel:         bpfLogLevel,
+		hostname:            hostname,
 		fibLookupEnabled:    fibLookupEnabled,
 		dataIfaceRegex:      dataIfaceRegex,
 		ipSetIDAlloc:        ipSetIDAlloc,
@@ -116,8 +120,6 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 	// Interface updates.
 	case *ifaceUpdate:
 		m.onInterfaceUpdate(msg)
-	case *ifaceAddrsUpdate:
-		m.onInterfaceAddrsUpdate(msg)
 
 	// Updates from the datamodel:
 
@@ -136,51 +138,42 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 		m.onProfileUpdate(msg)
 	case *proto.ActiveProfileRemove:
 		m.onProfileRemove(msg)
+
+	case *proto.HostMetadataUpdate:
+		if msg.Hostname == m.hostname {
+			log.WithField("HostMetadataUpdate", msg).Info("Host IP changed")
+			ip := net.ParseIP(msg.Ipv4Addr)
+			if ip != nil {
+				m.hostIP = ip
+				for iface := range m.ifaces {
+					m.dirtyIfaces.Add(iface)
+				}
+			} else {
+				log.WithField("HostMetadataUpdate", msg).Warn("Cannot parse IP, no change applied")
+			}
+		}
 	}
 }
 
 func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 	if update.State == ifacemonitor.StateUnknown {
-		delete(m.ifaces, update.Name)
+		log.WithField("iface", update.Name).Debug("Interface no longer present.")
+		if _, ok := m.ifaces[update.Name]; ok {
+			delete(m.ifaces, update.Name)
+			m.dirtyIfaces.Add(update.Name)
+		}
 	} else {
+		log.WithFields(log.Fields{
+			"name":  update.Name,
+			"state": update.State,
+		}).Debug("Interface state updated.")
 		iface := m.ifaces[update.Name]
-		iface.State = update.State
-		m.ifaces[update.Name] = iface
+		if iface.State != update.State {
+			iface.State = update.State
+			m.ifaces[update.Name] = iface
+			m.dirtyIfaces.Add(update.Name)
+		}
 	}
-	m.dirtyIfaces.Add(update.Name)
-}
-
-func (m *bpfEndpointManager) onInterfaceAddrsUpdate(update *ifaceAddrsUpdate) {
-	var addrs []net.IP
-
-	if update == nil || update.Addrs == nil {
-		return
-	}
-
-	update.Addrs.Iter(func(s interface{}) error {
-		str, ok := s.(string)
-		if !ok {
-			log.WithField("addr", s).Errorf("wrong type %T", s)
-			return nil
-		}
-		ip := net.ParseIP(str)
-		if ip == nil {
-			return nil
-		}
-		ip = ip.To4()
-		if ip == nil {
-			return nil
-		}
-		addrs = append(addrs, ip)
-		return nil
-	})
-
-	iface := m.ifaces[update.Name]
-	iface.addrs = addrs
-	m.ifaces[update.Name] = iface
-	m.dirtyIfaces.Add(update.Name)
-	log.WithField("iface", update.Name).WithField("addrs", addrs).WithField("State", iface.State).
-		Debugf("onInterfaceAddrsUpdate")
 }
 
 // onWorkloadEndpointUpdate adds/updates the workload in the cache along with the index from active policy to
@@ -417,6 +410,11 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			log.WithField("id", iface).Info("Applied program to host interface")
 			return set.RemoveItem
 		}
+		if err == tc.ErrDeviceNotFound {
+			log.WithField("iface", iface).Debug(
+				"Tried to apply BPF program to interface but the interface wasn't present.  " +
+					"Will retry if it shows up.")
+		}
 		log.WithError(err).Warn("Failed to apply policy to interface")
 		return nil
 	})
@@ -451,6 +449,11 @@ func (m *bpfEndpointManager) applyProgramsToDirtyWorkloadEndpoints() {
 		if err == nil {
 			log.WithField("id", wlID).Info("Applied policy to workload")
 			return set.RemoveItem
+		}
+		if err == tc.ErrDeviceNotFound {
+			log.WithField("wep", wlID).Debug(
+				"Tried to apply BPF program to interface but the interface wasn't present.  " +
+					"Will retry if it shows up.")
 		}
 		log.WithError(err).Warn("Failed to apply policy to endpoint")
 		return nil
@@ -499,10 +502,12 @@ func (m *bpfEndpointManager) ensureQdisc(ifaceName string) {
 	tc.EnsureQdisc(ifaceName)
 }
 
+var calicoRouterIP = net.IPv4(169, 254, 1, 1).To4()
+
 func (m *bpfEndpointManager) attachWorkloadProgram(endpoint *proto.WorkloadEndpoint, polDirection PolDirection) error {
 	ap := m.calculateTCAttachPoint(tc.EpTypeWorkload, polDirection, endpoint.Name)
 	// Host side of the veth is always configured as 169.254.1.1.
-	ap.IP = net.IPv4(169, 254, 1, 1)
+	ap.IP = calicoRouterIP
 	// * VXLAN MTU should be the host ifaces MTU -50, in order to allow space for VXLAN.
 	// * We also expect that to be the MTU used on veths.
 	// * We do encap on the veths, and there's a bogus kernel MTU check in the BPF helper
@@ -609,10 +614,7 @@ func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, polDirecti
 		epType = tc.EpTypeTunnel
 	}
 	ap := m.calculateTCAttachPoint(epType, polDirection, ifaceName)
-	iface := m.ifaces[ifaceName]
-	if len(iface.addrs) > 0 {
-		ap.IP = iface.addrs[0]
-	}
+	ap.IP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)
 	return ap.AttachProgram()
 }
