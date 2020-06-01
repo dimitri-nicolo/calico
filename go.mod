@@ -11,11 +11,13 @@ require (
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
-	github.com/projectcalico/felix v3.8.5+incompatible // indirect
-	github.com/projectcalico/libcalico-go v1.7.3
-	github.com/projectcalico/typha v0.0.0-00010101000000-000000000000
+	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
+	github.com/projectcalico/libcalico-go v1.7.2
+	github.com/projectcalico/typha v0.0.0-20200523040929-7115ed00b715
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a // indirect
+	github.com/tinylib/msgp v1.1.0 // indirect
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
