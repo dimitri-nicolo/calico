@@ -37,6 +37,7 @@ import (
 	k8sp "k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis"
 	"k8s.io/kubernetes/pkg/proxy/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/util/async"
 )
 
@@ -90,11 +91,9 @@ type proxy struct {
 	syncPeriod time.Duration
 
 	// event recorder to update node events
-	recorder record.EventRecorder
-	// FIXME MERGE Commenting out proxy health checker for now; API has changed
-	// // LB health checker proxy
-	// healthChecker healthcheck.ProxierHealthUpdater
-	// healthzServer healthcheck.ProxierHealthServer
+	recorder        record.EventRecorder
+	svcHealthServer healthcheck.ServiceHealthServer
+	healthzServer   healthcheck.ProxierHealthUpdater
 
 	stopCh   chan struct{}
 	stopWg   sync.WaitGroup
@@ -140,7 +139,7 @@ func New(k8s kubernetes.Interface, dp DPSyncer, hostname string, opts ...Option)
 	p.runner = async.NewBoundedFrequencyRunner("dp-sync-runner",
 		p.invokeDPSyncer, p.minDPSyncPeriod, time.Hour /* XXX might be infinite? */, 1)
 
-	// p.healthChecker = healthcheck.NewProxierHealthServer(p.hostname, p.recorder, nil, nil)
+	p.svcHealthServer = healthcheck.NewServiceHealthServer(p.hostname, p.recorder)
 	isIPv6 := false
 	p.epsChanges = k8sp.NewEndpointChangeTracker(p.hostname,
 		nil, // change if you want to provide more ctx
@@ -228,7 +227,7 @@ func (p *proxy) invokeDPSyncer() {
 
 	svcUpdateResult := k8sp.UpdateServiceMap(p.svcMap, p.svcChanges)
 	epsUpdateResult := p.epsMap.Update(p.epsChanges)
-	_ = epsUpdateResult
+
 	staleUDPSvcs := svcUpdateResult.UDPStaleClusterIP
 
 	// merge stale UDP services
@@ -243,17 +242,12 @@ func (p *proxy) invokeDPSyncer() {
 		}
 	}
 
-	// // XXX perhaps in a different thread that runs regularly
-	// if p.healthzServer != nil {
-	// 	p.healthzServer.UpdateTimestamp()
-	// }
-	//
-	// if err := p.healthChecker.SyncServices(svcUpdateResult.HCServiceNodePorts); err != nil {
-	// 	log.WithError(err).Error("Error syncing healthcheck services")
-	// }
-	// if err := p.healthChecker.SyncEndpoints(epsUpdateResult.HCEndpointsLocalIPSize); err != nil {
-	// 	log.WithError(err).Error("Error syncing healthcheck endpoints")
-	// }
+	if err := p.svcHealthServer.SyncServices(svcUpdateResult.HCServiceNodePorts); err != nil {
+		log.WithError(err).Error("Error syncing healthcheck services")
+	}
+	if err := p.svcHealthServer.SyncEndpoints(epsUpdateResult.HCEndpointsLocalIPSize); err != nil {
+		log.WithError(err).Error("Error syncing healthcheck endpoints")
+	}
 	err := p.dpSyncer.Apply(DPSyncerState{
 		SvcMap:       p.svcMap,
 		EpsMap:       p.epsMap,
@@ -264,6 +258,10 @@ func (p *proxy) invokeDPSyncer() {
 		log.WithError(err).Errorf("applying changes failed")
 		// TODO log the error or panic as the best might be to restart
 		// completely to wipe out the loaded bpf maps
+	}
+
+	if p.healthzServer != nil {
+		p.healthzServer.Updated()
 	}
 }
 
