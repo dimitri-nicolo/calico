@@ -19,6 +19,8 @@ The `{{site.imageNames["kubeControllers"]}}` container includes the following co
 1. serviceaccount controller: watches service accounts and programs {{site.prodname}} profiles.
 1. workloadendpoint controller: watches for changes to pod labels and updates {{site.prodname}} workload endpoints.
 1. node controller: watches for the removal of Kubernetes nodes and removes corresponding data from {{site.prodname}}, and optionally watches for node updates to create and sync host endpoints for each node.
+1. federation controller: watches Kubernetes services and endpoints locally and across all remote clusters, and programs
+   Kubernetes endpoints for any locally configured service that specifies a service federation selector annotation.
 
 ### Configuring datastore access
 
