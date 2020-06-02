@@ -69,8 +69,8 @@ const (
 	DatastorePerHost
 	ConfigFile
 	EnvironmentVariable
-	DisabledByLicenseCheck
 	InternalOverride
+	DisabledByLicenseCheck
 )
 
 var SourcesInDescendingOrder = []Source{DisabledByLicenseCheck, InternalOverride, EnvironmentVariable, ConfigFile, DatastorePerHost, DatastoreGlobal}
@@ -97,7 +97,7 @@ func (source Source) String() string {
 
 func (source Source) Local() bool {
 	switch source {
-	case Default, ConfigFile, EnvironmentVariable:
+	case Default, ConfigFile, EnvironmentVariable, InternalOverride:
 		return true
 	default:
 		return false
@@ -126,6 +126,7 @@ type Config struct {
 	BPFExternalServiceMode             string         `config:"oneof(tunnel,dsr);tunnel;non-zero"`
 	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
 	BPFKubeProxyMinSyncPeriod          time.Duration  `config:"seconds;1"`
+	BPFKubeProxyEndpointSlicesEnabled  bool           `config:"bool;false"`
 
 	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
 	// are configured for cgroup v1, which prevents all but hte root cgroup v2 from working so this is only useful
@@ -249,8 +250,8 @@ type Config struct {
 	CloudWatchNodeHealthStatusEnabled    bool          `config:"bool;false"`
 	CloudWatchNodeHealthPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
 
-	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
-	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
+	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
+	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 
 	NfNetlinkBufSize int `config:"int;65536"`
 
@@ -359,23 +360,22 @@ type Config struct {
 
 	RouteTableRange idalloc.IndexRange `config:"route-table-range;1-250;die-on-fail"`
 
+	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
+
+	SidecarAccelerationEnabled bool `config:"bool;false"`
+	XDPEnabled                 bool `config:"bool;true"`
+	GenericXDPEnabled          bool `config:"bool;false"`
+
+	// Config for egress gateways.
 	EgressIPSupport             string `config:"oneof(Disabled,EnabledPerNamespace,EnabledPerNamespaceOrPerPod);Disabled"`
 	EgressIPVXLANPort           int    `config:"int;4790"`
 	EgressIPVXLANVNI            int    `config:"int;4097"`
 	EgressIPRoutingRulePriority int    `config:"int;100"`
 
-	// State tracking.
-
-	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
-
 	// Config for DNS policy.
 	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
-
-	SidecarAccelerationEnabled bool `config:"bool;false"`
-	XDPEnabled                 bool `config:"bool;false"`
-	GenericXDPEnabled          bool `config:"bool;false"`
 
 	// State tracking.
 
@@ -492,19 +492,23 @@ func (c *Config) GetPSKFromFile() string {
 
 func (config *Config) resolve() (changed bool, err error) {
 	newRawValues := make(map[string]string)
+	// Map from lower-case version of name to the highest-priority source found so far.
+	// We use the lower-case version of the name since we can calculate it both for
+	// expected and "raw" parameters, which may be used by plugins.
 	nameToSource := make(map[string]Source)
 	for _, source := range SourcesInDescendingOrder {
 	valueLoop:
 		for rawName, rawValue := range config.sourceToRawConfig[source] {
-			currentSource := nameToSource[rawName]
-			param, ok := knownParams[strings.ToLower(rawName)]
+			lowerCaseName := strings.ToLower(rawName)
+			currentSource := nameToSource[lowerCaseName]
+			param, ok := knownParams[lowerCaseName]
 			if !ok {
 				if source >= currentSource {
-					// Stash the raw value in case it's useful for
-					// a plugin.  Since we don't know the canonical
-					// name, use the raw name.
+					// Stash the raw value in case it's useful for an external
+					// dataplane driver.  Use the raw name since the driver may
+					// want it.
 					newRawValues[rawName] = rawValue
-					nameToSource[rawName] = source
+					nameToSource[lowerCaseName] = source
 				}
 				log.WithField("raw name", rawName).Info(
 					"Ignoring unknown config param.")
@@ -527,7 +531,7 @@ func (config *Config) resolve() (changed bool, err error) {
 				// the default value.  Typically, the zero value means "turn off
 				// the feature".
 				if metadata.NonZero {
-					err = errors.New("Non-zero field cannot be set to none")
+					err = errors.New("non-zero field cannot be set to none")
 					log.Errorf(
 						"Failed to parse value for %v: %v from source %v. %v",
 						name, rawValue, source, err)
@@ -556,7 +560,6 @@ func (config *Config) resolve() (changed bool, err error) {
 
 			log.Infof("Parsed value for %v: %v (from %v)",
 				name, value, source)
-			currentSource = nameToSource[name]
 			if source < currentSource {
 				log.Infof("Skipping config value for %v from %v; "+
 					"already have a value from %v", name,
@@ -566,7 +569,7 @@ func (config *Config) resolve() (changed bool, err error) {
 			field := reflect.ValueOf(config).Elem().FieldByName(name)
 			field.Set(reflect.ValueOf(value))
 			newRawValues[name] = rawValue
-			nameToSource[name] = source
+			nameToSource[lowerCaseName] = source
 		}
 	}
 
@@ -581,7 +584,7 @@ func (config *Config) resolve() (changed bool, err error) {
 	// Preferentially use the new FlowLogsFlushInterval if explicitly set or if the deprecated
 	// CloudWatchLogsFlushInterval is not explicitly set, otherwise use the explicitly set CloudWatchLogsFlushInterval
 	// value.
-	if nameToSource["FlowLogsFlushInterval"] != Default || nameToSource["CloudWatchLogsFlushInterval"] == Default {
+	if nameToSource["flowlogsflushinterval"] != Default || nameToSource["cloudwatchlogsflushinterval"] == Default {
 		config.CloudWatchLogsFlushInterval = config.FlowLogsFlushInterval
 		newRawValues["CloudWatchLogsFlushInterval"] = newRawValues["FlowLogsFlushInterval"]
 	} else {
@@ -593,7 +596,7 @@ func (config *Config) resolve() (changed bool, err error) {
 	// Preferentially use the new FlowLogsEnableHostEndpoint if explicitly set or if the deprecated
 	// CloudWatchLogsEnableHostEndpoint is not explicitly set, otherwise use the explicitly set
 	// CloudWatchLogsEnableHostEndpoint value.
-	if nameToSource["FlowLogsEnableHostEndpoint"] != Default || nameToSource["CloudWatchLogsEnableHostEndpoint"] == Default {
+	if nameToSource["flowlogsenablehostendpoint"] != Default || nameToSource["cloudwatchlogsenablehostendpoint"] == Default {
 		config.CloudWatchLogsEnableHostEndpoint = config.FlowLogsEnableHostEndpoint
 		newRawValues["CloudWatchLogsEnableHostEndpoint"] = newRawValues["FlowLogsEnableHostEndpoint"]
 	} else {

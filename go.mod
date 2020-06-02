@@ -64,15 +64,15 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200527160814-71f7883c4323
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200528030447-9b62bdfac8b4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200529155941-9edb0d3d0877
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200601140917-65671580395f
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for
 	// trandient imports.
-	k8s.io/api v0.0.0 => k8s.io/api v0.17.2
+	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.2
 	k8s.io/apiserver => k8s.io/apiserver v0.17.2

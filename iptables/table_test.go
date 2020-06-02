@@ -17,17 +17,14 @@ package iptables_test
 import (
 	"os/exec"
 	"strings"
-
-	. "github.com/projectcalico/felix/iptables"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/projectcalico/felix/rules"
-
-	"time"
-
 	log "github.com/sirupsen/logrus"
+
+	. "github.com/projectcalico/felix/iptables"
+	"github.com/projectcalico/felix/rules"
 )
 
 var _ = Describe("Table with an empty dataplane (nft)", func() {
@@ -329,90 +326,142 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 			})
 			table.Apply()
 		})
-		It("should be in the dataplane", func() {
+
+		It("it should not get programmed because it's not referenced", func() {
 			Expect(dataplane.Chains).To(Equal(map[string][]string{
 				"FORWARD": {},
 				"INPUT":   {},
 				"OUTPUT":  {},
-				"cali-foobar": {
-					"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
-					"-m comment --comment \"cali:0sUFHicPNNqNyNx8\" --jump DROP",
-				},
 			}))
 		})
-		Describe("then updating the chain", func() {
+
+		Describe("after adding a reference from another chain", func() {
 			BeforeEach(func() {
-				table.UpdateChains([]*Chain{
-					{Name: "cali-foobar", Rules: []Rule{
-						// We swap the rules.
-						{Action: DropAction{}},
-						{Action: AcceptAction{}},
-					}},
+				table.InsertOrAppendRules("FORWARD", []Rule{
+					{Action: JumpAction{Target: "cali-FORWARD"}},
 				})
+				table.UpdateChain(&Chain{
+					Name: "cali-FORWARD",
+					Rules: []Rule{
+						{Action: JumpAction{Target: "cali-foobar"}},
+					}})
 				table.Apply()
 			})
-			It("should be updated", func() {
+			It("it should get programmed", func() {
 				Expect(dataplane.Chains).To(Equal(map[string][]string{
-					"FORWARD": {},
-					"INPUT":   {},
-					"OUTPUT":  {},
-					"cali-foobar": {
-						"-m comment --comment \"cali:I9LKcIJU9vtw4suw\" --jump DROP",
-						"-m comment --comment \"cali:2XsaWB87aQT7Fxgc\" --jump ACCEPT",
+					"FORWARD": {
+						"-m comment --comment \"cali:wUHhoiAYhphO9Mso\" --jump cali-FORWARD",
 					},
-				}))
-			})
-			It("shouldn't get written more than once", func() {
-				dataplane.ResetCmds()
-				table.Apply()
-				Expect(dataplane.CmdNames).To(BeEmpty())
-			})
-			It("should squash idempotent updates", func() {
-				table.UpdateChains([]*Chain{
-					{Name: "cali-foobar", Rules: []Rule{
-						// Same data as above.
-						{Action: DropAction{}},
-						{Action: AcceptAction{}},
-					}},
-				})
-				dataplane.ResetCmds()
-				table.Apply()
-				// Should do a save but then figure out that there's nothing to do
-				if dataplaneMode == "nft" {
-					Expect(dataplane.CmdNames).To(ConsistOf("iptables", "iptables-nft-save"))
-				} else {
-					Expect(dataplane.CmdNames).To(ConsistOf("iptables", "iptables-save"))
-				}
-			})
-		})
-		Describe("then extending the chain", func() {
-			BeforeEach(func() {
-				table.UpdateChains([]*Chain{
-					{Name: "cali-foobar", Rules: []Rule{
-						{Action: AcceptAction{}},
-						{Action: DropAction{}},
-						{Action: ReturnAction{}},
-					}},
-				})
-				table.Apply()
-			})
-			It("should be updated", func() {
-				Expect(dataplane.Chains).To(Equal(map[string][]string{
-					"FORWARD": {},
-					"INPUT":   {},
-					"OUTPUT":  {},
+					"INPUT":  {},
+					"OUTPUT": {},
+					"cali-FORWARD": {
+						"-m comment --comment \"cali:WiiHgeRwfPX6Ol7d\" --jump cali-foobar",
+					},
 					"cali-foobar": {
 						"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
 						"-m comment --comment \"cali:0sUFHicPNNqNyNx8\" --jump DROP",
-						"-m comment --comment \"cali:yilSOZ62PxMhMnS9\" --jump RETURN",
 					},
 				}))
 			})
 
-			Describe("then truncating the chain", func() {
+			Describe("after adding a reference from an insert", func() {
+				BeforeEach(func() {
+					table.InsertOrAppendRules("FORWARD", []Rule{
+						{Action: JumpAction{Target: "cali-foobar"}},
+					})
+					table.Apply()
+				})
+				It("intermediate chain should be removed", func() {
+					Expect(dataplane.Chains).To(Equal(map[string][]string{
+						"FORWARD": {
+							"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+						},
+						"INPUT":  {},
+						"OUTPUT": {},
+						"cali-foobar": {
+							"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
+							"-m comment --comment \"cali:0sUFHicPNNqNyNx8\" --jump DROP",
+						},
+					}))
+				})
+
+				Describe("after deleting the intermediate chain", func() {
+					BeforeEach(func() {
+						table.RemoveChainByName("cali-FORWARD")
+						table.Apply()
+					})
+					It("should make no change", func() {
+						Expect(dataplane.Chains).To(Equal(map[string][]string{
+							"FORWARD": {
+								"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+							},
+							"INPUT":  {},
+							"OUTPUT": {},
+							"cali-foobar": {
+								"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
+								"-m comment --comment \"cali:0sUFHicPNNqNyNx8\" --jump DROP",
+							},
+						}))
+					})
+
+					Describe("after removing the insert", func() {
+						BeforeEach(func() {
+							table.InsertOrAppendRules("FORWARD", []Rule{})
+							table.Apply()
+						})
+						It("chain should be removed", func() {
+							Expect(dataplane.Chains).To(Equal(map[string][]string{
+								"FORWARD": {},
+								"INPUT":   {},
+								"OUTPUT":  {},
+							}))
+						})
+					})
+				})
+			})
+		})
+
+		Describe("after adding a reference from an insert", func() {
+			BeforeEach(func() {
+				table.InsertOrAppendRules("FORWARD", []Rule{
+					{Action: JumpAction{Target: "cali-foobar"}},
+				})
+				table.Apply()
+			})
+			It("it should get programmed", func() {
+				Expect(dataplane.Chains).To(Equal(map[string][]string{
+					"FORWARD": {
+						"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+					},
+					"INPUT":  {},
+					"OUTPUT": {},
+					"cali-foobar": {
+						"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
+						"-m comment --comment \"cali:0sUFHicPNNqNyNx8\" --jump DROP",
+					},
+				}))
+			})
+
+			Describe("after removing the reference", func() {
+				BeforeEach(func() {
+					table.InsertOrAppendRules("FORWARD", []Rule{})
+					table.Apply()
+				})
+				It("it should get removed", func() {
+					Expect(dataplane.Chains).To(Equal(map[string][]string{
+						"FORWARD": {},
+						"INPUT":   {},
+						"OUTPUT":  {},
+					}))
+				})
+			})
+
+			Describe("then updating the chain", func() {
 				BeforeEach(func() {
 					table.UpdateChains([]*Chain{
 						{Name: "cali-foobar", Rules: []Rule{
+							// We swap the rules.
+							{Action: DropAction{}},
 							{Action: AcceptAction{}},
 						}},
 					})
@@ -420,19 +469,46 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 				})
 				It("should be updated", func() {
 					Expect(dataplane.Chains).To(Equal(map[string][]string{
-						"FORWARD": {},
-						"INPUT":   {},
-						"OUTPUT":  {},
+						"FORWARD": {
+							"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+						},
+						"INPUT":  {},
+						"OUTPUT": {},
 						"cali-foobar": {
-							"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
+							"-m comment --comment \"cali:I9LKcIJU9vtw4suw\" --jump DROP",
+							"-m comment --comment \"cali:2XsaWB87aQT7Fxgc\" --jump ACCEPT",
 						},
 					}))
 				})
+				It("shouldn't get written more than once", func() {
+					dataplane.ResetCmds()
+					table.Apply()
+					Expect(dataplane.CmdNames).To(BeEmpty())
+				})
+				It("should squash idempotent updates", func() {
+					table.UpdateChains([]*Chain{
+						{Name: "cali-foobar", Rules: []Rule{
+							// Same data as above.
+							{Action: DropAction{}},
+							{Action: AcceptAction{}},
+						}},
+					})
+					dataplane.ResetCmds()
+					table.Apply()
+					// Should do a save but then figure out that there's nothing to do
+					if dataplaneMode == "nft" {
+						Expect(dataplane.CmdNames).To(ConsistOf("iptables", "iptables-nft-save"))
+					} else {
+						Expect(dataplane.CmdNames).To(ConsistOf("iptables", "iptables-save"))
+					}
+				})
 			})
-			Describe("then replacing the chain", func() {
+			Describe("then extending the chain", func() {
 				BeforeEach(func() {
 					table.UpdateChains([]*Chain{
 						{Name: "cali-foobar", Rules: []Rule{
+							{Action: AcceptAction{}},
+							{Action: DropAction{}},
 							{Action: ReturnAction{}},
 						}},
 					})
@@ -440,45 +516,98 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 				})
 				It("should be updated", func() {
 					Expect(dataplane.Chains).To(Equal(map[string][]string{
-						"FORWARD": {},
-						"INPUT":   {},
-						"OUTPUT":  {},
+						"FORWARD": {
+							"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+						},
+						"INPUT":  {},
+						"OUTPUT": {},
 						"cali-foobar": {
-							"-m comment --comment \"cali:ZqwJQBzCmuABAOQt\" --jump RETURN",
+							"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
+							"-m comment --comment \"cali:0sUFHicPNNqNyNx8\" --jump DROP",
+							"-m comment --comment \"cali:yilSOZ62PxMhMnS9\" --jump RETURN",
 						},
 					}))
 				})
-			})
-		})
-		Describe("then removing the chain by name", func() {
-			BeforeEach(func() {
-				table.RemoveChainByName("cali-foobar")
-				table.Apply()
-			})
-			It("should be gone from the dataplane", func() {
-				Expect(dataplane.Chains).To(Equal(map[string][]string{
-					"FORWARD": {},
-					"INPUT":   {},
-					"OUTPUT":  {},
-				}))
-			})
-		})
-		Describe("then removing the chain", func() {
-			BeforeEach(func() {
-				table.RemoveChains([]*Chain{
-					{Name: "cali-foobar", Rules: []Rule{
-						{Action: AcceptAction{}},
-						{Action: DropAction{}},
-					}},
+
+				Describe("then truncating the chain", func() {
+					BeforeEach(func() {
+						table.UpdateChains([]*Chain{
+							{Name: "cali-foobar", Rules: []Rule{
+								{Action: AcceptAction{}},
+							}},
+						})
+						table.Apply()
+					})
+					It("should be updated", func() {
+						Expect(dataplane.Chains).To(Equal(map[string][]string{
+							"FORWARD": {
+								"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+							},
+							"INPUT":  {},
+							"OUTPUT": {},
+							"cali-foobar": {
+								"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
+							},
+						}))
+					})
 				})
-				table.Apply()
+				Describe("then replacing the chain", func() {
+					BeforeEach(func() {
+						table.UpdateChains([]*Chain{
+							{Name: "cali-foobar", Rules: []Rule{
+								{Action: ReturnAction{}},
+							}},
+						})
+						table.Apply()
+					})
+					It("should be updated", func() {
+						Expect(dataplane.Chains).To(Equal(map[string][]string{
+							"FORWARD": {
+								"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+							},
+							"INPUT":  {},
+							"OUTPUT": {},
+							"cali-foobar": {
+								"-m comment --comment \"cali:ZqwJQBzCmuABAOQt\" --jump RETURN",
+							},
+						}))
+					})
+				})
 			})
-			It("should be gone from the dataplane", func() {
-				Expect(dataplane.Chains).To(Equal(map[string][]string{
-					"FORWARD": {},
-					"INPUT":   {},
-					"OUTPUT":  {},
-				}))
+			Describe("then removing the chain by name", func() {
+				BeforeEach(func() {
+					table.RemoveChainByName("cali-foobar")
+					table.Apply()
+				})
+				It("should be gone from the dataplane", func() {
+					Expect(dataplane.Chains).To(Equal(map[string][]string{
+						"FORWARD": {
+							"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+						},
+						"INPUT":  {},
+						"OUTPUT": {},
+					}))
+				})
+			})
+			Describe("then removing the chain", func() {
+				BeforeEach(func() {
+					table.RemoveChains([]*Chain{
+						{Name: "cali-foobar", Rules: []Rule{
+							{Action: AcceptAction{}},
+							{Action: DropAction{}},
+						}},
+					})
+					table.Apply()
+				})
+				It("should be gone from the dataplane", func() {
+					Expect(dataplane.Chains).To(Equal(map[string][]string{
+						"FORWARD": {
+							"-m comment --comment \"cali:JttcEuxbGad9jG6N\" --jump cali-foobar",
+						},
+						"INPUT":  {},
+						"OUTPUT": {},
+					}))
+				})
 			})
 		})
 	})
@@ -488,6 +617,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 			table.InsertOrAppendRules("FORWARD", []Rule{
 				{Action: AcceptAction{}},
 				{Action: DropAction{}},
+				{Action: JumpAction{Target: "cali-foobar"}},
 			})
 			table.UpdateChains([]*Chain{
 				{Name: "cali-foobar", Rules: []Rule{
@@ -502,6 +632,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 				"FORWARD": {
 					"-m comment --comment \"cali:3gUkOfVeYRgMeHF4\" --jump ACCEPT",
 					"-m comment --comment \"cali:8MgbRleZ5Rc5cBEf\" --jump DROP",
+					"-m comment --comment \"cali:Ox1x6pjEMCqtMxFb\" --jump cali-foobar",
 				},
 				"INPUT":  {},
 				"OUTPUT": {},
@@ -524,6 +655,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 				table.InsertOrAppendRules("FORWARD", []Rule{
 					{Action: DropAction{}, Comment: []string{"new drop rule"}},
+					{Action: JumpAction{Target: "cali-foobar"}},
 				})
 				table.Apply()
 			})
@@ -531,6 +663,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 				Expect(dataplane.Chains).To(Equal(map[string][]string{
 					"FORWARD": {
 						"-m comment --comment \"cali:67cGS74-1PBXlOtK\" -m comment --comment \"new drop rule\" --jump DROP",
+						"-m comment --comment \"cali:RA5Tbu3HSwkGWuZM\" --jump cali-foobar",
 						"-j randomly-inserted-rule",
 					},
 					"INPUT":  {},
@@ -546,6 +679,10 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 
 	Describe("applying updates when underlying iptables have changed in a non-whitelisted chain", func() {
 		BeforeEach(func() {
+			table.InsertOrAppendRules("FORWARD", []Rule{
+				{Action: JumpAction{Target: "non-cali-chain"}},
+				{Action: JumpAction{Target: "cali-foobar"}},
+			})
 			table.UpdateChains([]*Chain{
 				{Name: "non-cali-chain", Rules: []Rule{
 					{Action: AcceptAction{}, Comment: []string{"non-cali 1"}},
@@ -560,9 +697,12 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 		})
 		It("should be in the dataplane", func() {
 			Expect(dataplane.Chains).To(Equal(map[string][]string{
-				"FORWARD": {},
-				"INPUT":   {},
-				"OUTPUT":  {},
+				"FORWARD": {
+					"-m comment --comment \"cali:ta5MhgrxEtcvsaNe\" --jump non-cali-chain",
+					"-m comment --comment \"cali:jBG6MfhPnbAhthUp\" --jump cali-foobar",
+				},
+				"INPUT":  {},
+				"OUTPUT": {},
 				"non-cali-chain": {
 					"-m comment --comment \"cali:Z-OWODLe_LbHxmqg\" -m comment --comment \"non-cali 1\" --jump ACCEPT",
 					"-m comment --comment \"cali:tq-yEo1_1XQHZnMs\" -m comment --comment \"non-cali 2\" --jump DROP",
@@ -591,9 +731,12 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 			})
 			It("should be updated", func() {
 				Expect(dataplane.Chains).To(Equal(map[string][]string{
-					"FORWARD": {},
-					"INPUT":   {},
-					"OUTPUT":  {},
+					"FORWARD": {
+						"-m comment --comment \"cali:ta5MhgrxEtcvsaNe\" --jump non-cali-chain",
+						"-m comment --comment \"cali:jBG6MfhPnbAhthUp\" --jump cali-foobar",
+					},
+					"INPUT":  {},
+					"OUTPUT": {},
 					"non-cali-chain": {
 						"-m comment --comment \"cali:O9yEP97Dd2y-EskM\" -m comment --comment \"new drop rule\" --jump DROP",
 						"-j randomly-inserted-rule"},
@@ -1059,6 +1202,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 			table.InsertOrAppendRules("FORWARD", []Rule{
 				{Action: DropAction{}},
 				{Action: AcceptAction{}},
+				{Action: GotoAction{Target: "cali-foobar"}},
 			})
 			table.AppendRules("FORWARD", []Rule{
 				{Action: ReturnAction{}},
@@ -1066,6 +1210,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 			})
 			table.InsertOrAppendRules("OUTPUT", []Rule{
 				{Action: DropAction{}},
+				{Action: JumpAction{Target: "cali-correct"}},
 			})
 			table.UpdateChains([]*Chain{
 				{Name: "cali-foobar", Rules: []Rule{
@@ -1094,6 +1239,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 				"INPUT": {},
 				"OUTPUT": {
 					"-m comment --comment \"cali:RtPHXnCQBd3uyJfJ\" --jump DROP",
+					"-m comment --comment \"cali:Eq8toINAJuMTNYmX\" --jump cali-correct",
 				},
 				"non-calico": {
 					"--jump ACCEPT",
@@ -1110,6 +1256,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 					"--jump foo-bar",
 					"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 					"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
+					"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
 					"-m comment --comment \"cali:TQaqIrW2HQal-sdp\" --jump RETURN",
 					"-m comment --comment \"cali:EDon0sGIntr1CQga\" --jump DROP",
 				}
@@ -1117,6 +1264,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 				expChains["FORWARD"] = []string{
 					"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 					"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
+					"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
 					"--jump RETURN",
 					"--jump ACCEPT",
 					"--jump foo-bar",
@@ -1125,7 +1273,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 				}
 			}
 
-			Expect(dataplane.Chains).To(Equal(expChains))
+			ExpectWithOffset(1, dataplane.Chains).To(Equal(expChains))
 		}
 		It("with no errors, it should get to correct final state", func() {
 			table.Apply()
@@ -1292,6 +1440,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 					"FORWARD": {
 						"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 						"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
+						"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
 						"-m comment --comment \"cali:TQaqIrW2HQal-sdp\" --jump RETURN",
 						"-m comment --comment \"cali:EDon0sGIntr1CQga\" --jump DROP",
 					},
@@ -1303,6 +1452,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 					"INPUT": {},
 					"OUTPUT": {
 						"-m comment --comment \"cali:RtPHXnCQBd3uyJfJ\" --jump DROP",
+						"-m comment --comment \"cali:Eq8toINAJuMTNYmX\" --jump cali-correct",
 					},
 					"cali-correct": {
 						"-m comment --comment \"cali:dCKeL4JtUEDC2GQu\" --jump ACCEPT",
@@ -1342,6 +1492,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 				// And we make some updates in the same batch.
 				table.InsertOrAppendRules("OUTPUT", []Rule{
 					{Action: AcceptAction{}},
+					{Action: JumpAction{Target: "cali-correct"}},
 				})
 				table.UpdateChains([]*Chain{
 					{Name: "cali-foobar", Rules: []Rule{
@@ -1364,6 +1515,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 					"INPUT": {},
 					"OUTPUT": {
 						"-m comment --comment \"cali:CZ70AKmne2ck3c5b\" --jump ACCEPT",
+						"-m comment --comment \"cali:7XdOSW_DYWLuCNDD\" --jump cali-correct",
 					},
 					"non-calico": {
 						"--jump ACCEPT",
@@ -1380,6 +1532,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 						"--jump foo-bar",
 						"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 						"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
+						"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
 						"-m comment --comment \"cali:TQaqIrW2HQal-sdp\" --jump RETURN",
 						"-m comment --comment \"cali:EDon0sGIntr1CQga\" --jump DROP",
 					}
@@ -1387,6 +1540,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 					expChains["FORWARD"] = []string{
 						"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 						"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
+						"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
 						"--jump RETURN",
 						"--jump ACCEPT",
 						"--jump foo-bar",

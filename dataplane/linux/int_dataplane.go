@@ -24,22 +24,12 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/sys/unix"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-
-	"github.com/projectcalico/felix/bpf/state"
-	"github.com/projectcalico/felix/bpf/tc"
-
-	"github.com/projectcalico/felix/idalloc"
-
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-
-	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"golang.org/x/sys/unix"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -47,8 +37,11 @@ import (
 	"github.com/projectcalico/felix/bpf/nat"
 	bpfproxy "github.com/projectcalico/felix/bpf/proxy"
 	"github.com/projectcalico/felix/bpf/routes"
+	"github.com/projectcalico/felix/bpf/state"
+	"github.com/projectcalico/felix/bpf/tc"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
@@ -60,6 +53,8 @@ import (
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/throttle"
 	"github.com/projectcalico/felix/wireguard"
+	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (
@@ -175,6 +170,7 @@ type Config struct {
 	BPFMapRepin                        bool
 	BPFNodePortDSREnabled              bool
 	KubeProxyMinSyncPeriod             time.Duration
+	KubeProxyEndpointSlicesEnabled     bool
 
 	SidecarAccelerationEnabled bool
 
@@ -583,6 +579,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 		dp.RegisterManager(newBPFEndpointManager(
 			config.BPFLogLevel,
+			config.Hostname,
 			fibLookupEnabled,
 			config.RulesConfig.EndpointToHostAction == "DROP",
 			config.BPFDataIfacePattern,
@@ -616,6 +613,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Panic("Failed to create routes BPF map.")
 		}
 
+		bpfproxyOpts := []bpfproxy.Option{
+			bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
+		}
+
+		if config.KubeProxyEndpointSlicesEnabled {
+			bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithEndpointsSlices())
+		}
+
 		if config.KubeClientSet != nil {
 			// We have a Kubernetes connection, start watching services and populating the NAT maps.
 			kp, err := bpfproxy.StartKubeProxy(
@@ -624,7 +629,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				frontendMap,
 				backendMap,
 				backendAffinityMap,
-				bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
+				bpfproxyOpts...,
 			)
 			if err != nil {
 				log.WithError(err).Panic("Failed to start kube-proxy.")
@@ -1064,12 +1069,28 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 	}
 
 	for _, t := range d.iptablesRawTables {
+		rpfRules := []iptables.Rule{{
+			Match:  iptables.Match().MarkMatchesWithMask(0xca140000, 0xffff0000),
+			Action: iptables.ReturnAction{},
+		}}
+
+		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, 0xca100000, 0xfff00000,
+			d.config.RulesConfig.OpenStackSpecialCasesEnabled, true)...)
+
+		rpfChain := []*iptables.Chain{{
+			Name:  rules.ChainNamePrefix + "RPF",
+			Rules: rpfRules,
+		}}
+		t.UpdateChains(rpfChain)
+
 		rawChains := []*iptables.Chain{{
 			Name: rules.ChainRawPrerouting,
-			Rules: d.ruleRenderer.RPFilter(t.IPVersion, 0xca100000, 0xfff00000,
-				d.config.RulesConfig.OpenStackSpecialCasesEnabled, true),
+			Rules: []iptables.Rule{{
+				Action: iptables.JumpAction{Target: rpfChain[0].Name},
+			}},
 		}}
 		t.UpdateChains(rawChains)
+
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
@@ -1478,6 +1499,20 @@ func (d *InternalDataplane) configureKernel() {
 	mp := newModProbe(moduleConntrackSCTP, newRealCmd)
 	out, err := mp.Exec()
 	log.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleConntrackSCTP)
+
+	log.Info("Making sure IPv4 forwarding is enabled.")
+	err = writeProcSys("/proc/sys/net/ipv4/ip_forward", "1")
+	if err != nil {
+		log.WithError(err).Error("Failed to set IPv4 forwarding sysctl")
+	}
+
+	if d.config.IPv6Enabled {
+		log.Info("Making sure IPv6 forwarding is enabled.")
+		err = writeProcSys("/proc/sys/net/ipv6/conf/all/forwarding", "1")
+		if err != nil {
+			log.WithError(err).Error("Failed to set IPv6 forwarding sysctl")
+		}
+	}
 
 	// Enable conntrack packet and byte accounting.
 	err = writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")

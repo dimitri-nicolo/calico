@@ -18,12 +18,14 @@
 package proxy
 
 import (
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	discovery "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,6 +37,7 @@ import (
 	k8sp "k8s.io/kubernetes/pkg/proxy"
 	"k8s.io/kubernetes/pkg/proxy/apis"
 	"k8s.io/kubernetes/pkg/proxy/config"
+	"k8s.io/kubernetes/pkg/proxy/healthcheck"
 	"k8s.io/kubernetes/pkg/util/async"
 )
 
@@ -73,6 +76,8 @@ type proxy struct {
 	svcMap k8sp.ServiceMap
 	epsMap k8sp.EndpointsMap
 
+	endpointSlicesEnabled bool
+
 	dpSyncer DPSyncer
 	// executes periodic the dataplane updates
 	runner *async.BoundedFrequencyRunner
@@ -86,15 +91,17 @@ type proxy struct {
 	syncPeriod time.Duration
 
 	// event recorder to update node events
-	recorder record.EventRecorder
-	// FIXME MERGE Commenting out proxy health checker for now; API has changed
-	// // LB health checker proxy
-	// healthChecker healthcheck.ProxierHealthUpdater
-	// healthzServer healthcheck.ProxierHealthServer
+	recorder        record.EventRecorder
+	svcHealthServer healthcheck.ServiceHealthServer
+	healthzServer   healthcheck.ProxierHealthUpdater
 
 	stopCh   chan struct{}
 	stopWg   sync.WaitGroup
 	stopOnce sync.Once
+}
+
+type stoppableRunner interface {
+	Run(stopCh <-chan struct{})
 }
 
 // New returns a new Proxy for the given k8s interface
@@ -132,13 +139,13 @@ func New(k8s kubernetes.Interface, dp DPSyncer, hostname string, opts ...Option)
 	p.runner = async.NewBoundedFrequencyRunner("dp-sync-runner",
 		p.invokeDPSyncer, p.minDPSyncPeriod, time.Hour /* XXX might be infinite? */, 1)
 
-	// p.healthChecker = healthcheck.NewProxierHealthServer(p.hostname, p.recorder, nil, nil)
+	p.svcHealthServer = healthcheck.NewServiceHealthServer(p.hostname, p.recorder)
 	isIPv6 := false
 	p.epsChanges = k8sp.NewEndpointChangeTracker(p.hostname,
 		nil, // change if you want to provide more ctx
 		&isIPv6,
 		p.recorder,
-		false, // endpointSlicesEnabled
+		p.endpointSlicesEnabled,
 	)
 	p.svcChanges = k8sp.NewServiceChangeTracker(nil, &isIPv6, p.recorder)
 
@@ -166,12 +173,20 @@ func New(k8s kubernetes.Interface, dp DPSyncer, hostname string, opts ...Option)
 	)
 	svcConfig.RegisterEventHandler(p)
 
-	// TODO check if EndpointSlices are available and use them instead
-	epsConfig := config.NewEndpointsConfig(informerFactory.Core().V1().Endpoints(), p.syncPeriod)
-	epsConfig.RegisterEventHandler(p)
+	var epsRunner stoppableRunner
+
+	if p.endpointSlicesEnabled {
+		epsConfig := config.NewEndpointSliceConfig(informerFactory.Discovery().V1beta1().EndpointSlices(), p.syncPeriod)
+		epsConfig.RegisterEventHandler(p)
+		epsRunner = epsConfig
+	} else {
+		epsConfig := config.NewEndpointsConfig(informerFactory.Core().V1().Endpoints(), p.syncPeriod)
+		epsConfig.RegisterEventHandler(p)
+		epsRunner = epsConfig
+	}
 
 	p.startRoutine(func() { p.runner.Loop(p.stopCh) })
-	p.startRoutine(func() { epsConfig.Run(p.stopCh) })
+	p.startRoutine(func() { epsRunner.Run(p.stopCh) })
 	p.startRoutine(func() { informerFactory.Start(p.stopCh) })
 	p.startRoutine(func() { svcConfig.Run(p.stopCh) })
 
@@ -212,32 +227,27 @@ func (p *proxy) invokeDPSyncer() {
 
 	svcUpdateResult := k8sp.UpdateServiceMap(p.svcMap, p.svcChanges)
 	epsUpdateResult := p.epsMap.Update(p.epsChanges)
-	_ = epsUpdateResult
+
 	staleUDPSvcs := svcUpdateResult.UDPStaleClusterIP
 
-	/* XXX no tincluded in 1.15 yet
 	// merge stale UDP services
-	for _, svcPortName := range endpointUpdateResult.StaleServiceNames {
+	for _, svcPortName := range epsUpdateResult.StaleServiceNames {
 		if svcInfo, ok := p.svcMap[svcPortName]; ok && svcInfo != nil && svcInfo.Protocol() == v1.ProtocolUDP {
+			log.Infof("Stale %s service %v -> %s",
+				strings.ToLower(string(svcInfo.Protocol())), svcPortName, svcInfo.ClusterIP().String())
 			staleUDPSvcs.Insert(svcInfo.ClusterIP().String())
 			for _, extIP := range svcInfo.ExternalIPStrings() {
 				staleUDPSvcs.Insert(extIP)
 			}
 		}
 	}
-	*/
 
-	// // XXX perhaps in a different thread that runs regularly
-	// if p.healthzServer != nil {
-	// 	p.healthzServer.UpdateTimestamp()
-	// }
-	//
-	// if err := p.healthChecker.SyncServices(svcUpdateResult.HCServiceNodePorts); err != nil {
-	// 	log.WithError(err).Error("Error syncing healthcheck services")
-	// }
-	// if err := p.healthChecker.SyncEndpoints(epsUpdateResult.HCEndpointsLocalIPSize); err != nil {
-	// 	log.WithError(err).Error("Error syncing healthcheck endpoints")
-	// }
+	if err := p.svcHealthServer.SyncServices(svcUpdateResult.HCServiceNodePorts); err != nil {
+		log.WithError(err).Error("Error syncing healthcheck services")
+	}
+	if err := p.svcHealthServer.SyncEndpoints(epsUpdateResult.HCEndpointsLocalIPSize); err != nil {
+		log.WithError(err).Error("Error syncing healthcheck endpoints")
+	}
 	err := p.dpSyncer.Apply(DPSyncerState{
 		SvcMap:       p.svcMap,
 		EpsMap:       p.epsMap,
@@ -248,6 +258,10 @@ func (p *proxy) invokeDPSyncer() {
 		log.WithError(err).Errorf("applying changes failed")
 		// TODO log the error or panic as the best might be to restart
 		// completely to wipe out the loaded bpf maps
+	}
+
+	if p.healthzServer != nil {
+		p.healthzServer.Updated()
 	}
 }
 
@@ -285,6 +299,29 @@ func (p *proxy) OnEndpointsDelete(eps *v1.Endpoints) {
 }
 
 func (p *proxy) OnEndpointsSynced() {
+	p.setEpsSynced()
+	p.forceSyncDP()
+}
+
+func (p *proxy) OnEndpointSliceAdd(eps *discovery.EndpointSlice) {
+	if p.epsChanges.EndpointSliceUpdate(eps, false) && p.isInitialized() {
+		p.syncDP()
+	}
+}
+
+func (p *proxy) OnEndpointSliceUpdate(_, eps *discovery.EndpointSlice) {
+	if p.epsChanges.EndpointSliceUpdate(eps, false) && p.isInitialized() {
+		p.syncDP()
+	}
+}
+
+func (p *proxy) OnEndpointSliceDelete(eps *discovery.EndpointSlice) {
+	if p.epsChanges.EndpointSliceUpdate(eps, true) && p.isInitialized() {
+		p.syncDP()
+	}
+}
+
+func (p *proxy) OnEndpointSlicesSynced() {
 	p.setEpsSynced()
 	p.forceSyncDP()
 }

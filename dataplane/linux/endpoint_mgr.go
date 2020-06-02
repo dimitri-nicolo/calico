@@ -1131,14 +1131,16 @@ func (m *endpointManager) configureInterface(name string) error {
 			"Skipping configuration of interface because it is oper down.")
 		return nil
 	}
-	log.WithField("ifaceName", name).Info(
-		"Applying /proc/sys configuration to interface.")
 
-	// Disable route advertisement from the containers, regardless of the ipVersion
+	// Try setting accept_ra to 0 and just log if it failed (it might fail if IPv6
+	// was disabled).
 	err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/accept_ra", name), "0")
 	if err != nil {
-		return err
+		log.WithField("ifaceName", name).Warnf("Could not set accept_ra: %v", err)
 	}
+
+	log.WithField("ifaceName", name).Info(
+		"Applying /proc/sys configuration to interface.")
 
 	if m.ipVersion == 4 {
 		if m.ifaceIsForEgressGateway(name) {
