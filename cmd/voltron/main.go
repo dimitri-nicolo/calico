@@ -113,7 +113,6 @@ func main() {
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithExternalCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
-		server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 	}
 
 	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
@@ -142,6 +141,7 @@ func main() {
 			log.Fatalf("Failed to parse tunnel target whitelist: %s", err)
 		}
 		opts = append(opts,
+			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithTemplate(cfg.TemplatePath),
 			server.WithPublicAddr(cfg.PublicIP),
 			server.WithKeepClusterKeys(),

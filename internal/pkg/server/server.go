@@ -116,14 +116,16 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 		log.Errorf("Could not load certificates for external traffic(UI) due to - %s", err)
 		return nil, err
 	}
+	cfg.Certificates = append(cfg.Certificates, certExt)
 
-	certInt, err := tls.LoadX509KeyPair(srv.internalCertFile, srv.internalKeyFile)
-	if err != nil {
-		log.Errorf("Could not load certificates for internal traffic due to - %s", err)
-		return nil, err
+	if len(srv.internalKeyFile) != 0 || len(srv.internalCertFile) != 0 {
+		certInt, err := tls.LoadX509KeyPair(srv.internalCertFile, srv.internalKeyFile)
+		if err != nil {
+			log.Errorf("Could not load certificates for internal traffic due to - %s", err)
+			return nil, err
+		}
+		cfg.Certificates = append(cfg.Certificates, certInt)
 	}
-
-	cfg.Certificates = append(cfg.Certificates, certExt, certInt)
 	cfg.BuildNameToCertificate()
 
 	srv.http = &http.Server{
