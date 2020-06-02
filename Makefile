@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.38
+GO_BUILD_VER    ?= v0.40
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
@@ -7,6 +7,8 @@ LOCAL_CHECKS     = lint-cache-dir vendor goimports
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 # Used only when doing local build
 LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
+# Used so semaphore commits generated files when pins are updated
+EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
 build: image
 
