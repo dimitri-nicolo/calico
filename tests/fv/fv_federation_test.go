@@ -300,15 +300,17 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			return err
 		}, eventuallyTimeout, eventuallyPoll).Should(BeNil())
 
-		// For Kubernetes backend on the local cluster, configured the required CRDs. These are defined in libcalico-go
-		// which we can get from our vendor directory.
 		if !isCalicoEtcdDatastore {
-			// Copy CRD registration manifest into the API server container, and apply it.
-			name := "calico-crds.yaml"
-			err = localApiserver.CopyFileIntoContainer("../crds.yaml", name)
-			Expect(err).NotTo(HaveOccurred())
-			err = localApiserver.ExecMayFail("kubectl", "apply", "-f", name)
-			Expect(err).NotTo(HaveOccurred())
+			// Apply the necessary CRDs. There can somtimes be a delay between starting
+			// the API server and when CRDs are apply-able, so retry here.
+			apply := func() error {
+				out, err := localApiserver.ExecOutput("kubectl", "apply", "-f", "/crds/")
+				if err != nil {
+					return fmt.Errorf("%s: %s", err, out)
+				}
+				return nil
+			}
+			Eventually(apply, 10*time.Second).ShouldNot(HaveOccurred())
 		}
 
 		// Run the federation controller on the local cluster.
