@@ -436,7 +436,9 @@ commit-pin-updates: update-pins git-status ci git-config git-commit git-push
 # Static checks
 ###############################################################################
 .PHONY: static-checks
-LINT_ARGS := --deadline 5m --max-issues-per-linter 0 --max-same-issues 0
+###############################################################################
+# See .golangci.yml for golangci-lint config
+LINT_ARGS +=
 static-checks: build
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); GO111MODULE=off golangci-lint run $(LINT_ARGS)'
 
