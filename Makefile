@@ -56,6 +56,7 @@ DOCS_TEST_CONTAINER?=tigera/docs-test
 
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title')
+OPERATOR_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].tigera-operator.version')
 NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.cnx-node.version')
 CTL_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calicoctl.version')
 CNI_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/cni.version')
@@ -350,6 +351,8 @@ release: release-prereqs
 	@echo ""
 	@echo "  make release-publish"
 	@echo ""
+	@echo "Later push the archive at $(RELEASE_DIR).tgz for the release to S3 s3://tigera-public/ee/archives/ "
+	@echo ""
 
 ## Produces a git tag for the release.
 release-tag: release-prereqs
@@ -416,11 +419,9 @@ ifeq (, $(shell which ghr))
 endif
 
 OUTPUT_DIR?=_output
-RELEASE_DIR_NAME?=release-$(CALICO_VER)
+RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
 RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
-RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/k8s-manifests
-RELEASE_DIR_IMAGES?=$(RELEASE_DIR)/images
-RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
+RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
 
 # Determine where the manifests live. For older versions we used
 # a different location, but we still need to package them up for patch
@@ -432,36 +433,29 @@ DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/instal
 endif
 MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
 
-## Create an archive that contains a complete "Calico" release
+## Creates archive of all the manifests
 release-archive: release-prereqs $(RELEASE_DIR).tgz
 
-$(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IMAGES) $(RELEASE_DIR_BIN) $(RELEASE_DIR)/README
+$(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README
+	cp collect-ocp-manifests.sh $(RELEASE_DIR)
 	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
-$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar $(RELEASE_DIR_IMAGES)/calico-pod2daemon-flexvol.tar $(RELEASE_DIR_IMAGES)/calico-dikastes.tar $(RELEASE_DIR_IMAGES)/calico-flannel-migration-controller.tar
-
-
-$(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64
-
 $(RELEASE_DIR)/README:
-	@echo "This directory contains a complete release of Calico $(CALICO_VER)" >> $@
-	@echo "Documentation for this release can be found at http://docs.projectcalico.org/$(RELEASE_STREAM)" >> $@
+	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
+	@echo "Documentation for this release can be found at https://docs.tigera.io/$(RELEASE_STREAM)" >> $@
 	@echo "" >> $@
-	@echo "Docker images (under 'images'). Load them with 'docker load'" >> $@
-	@echo "* The calico/node docker image  (version $(NODE_VERS))" >> $@
-	@echo "* The calico/typha docker image  (version $(TYPHA_VER))" >> $@
-	@echo "* The calico/cni docker image  (version $(CNI_VERS))" >> $@
-	@echo "* The calico/kube-controllers docker image (version $(KUBE_CONTROLLERS_VER))" >> $@
-	@echo "* The calico/dikastes docker image (version $(DIKASTES_VER))" >> $@
-	@echo "* The calico/pod2daemon-flexvol docker image (version $(POD2DAEMON_VER))" >> $@
-	@echo "* The calico/flannel-migration-controller docker image (version $(FLANNEL_MIGRATION_VER))" >> $@
+	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/$(RELEASE_STREAM)/reference/manifest-archive" >> $@
+	@echo "and use the appropriate manifest from the archive where ever you are prompted to download a manifest" >> $@
 	@echo "" >> $@
-	@echo "Binaries (for amd64) (under 'bin')" >> $@
-	@echo "* The calicoctl binary (for Linux) (version $(CTL_VER))" >> $@
-	@echo "* The calicoctl-windows-amd64.exe binary (for Windows) (version $(CTL_VER))" >> $@
-	@echo "* The calicoctl-darwin-amd64 binary (for Mac) (version $(CTL_VER))" >> $@
+	@echo "Example:" >> $@
 	@echo "" >> $@
-	@echo "Kubernetes manifests (under 'k8s-manifests directory')" >> $@
+	@echo "From the docs for OpenShift installation, we have the following command" >> $@
+	@echo "" >> $@
+	@echo "curl https://docs.tigera.io/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml" >> $@
+	@echo "" >> $@
+	@echo "For this example, instead of download the manifest using curl, you need to navigate the archive (after extracting) " >> $@
+	@echo "and copy the relevant file at manifests/ocp/01-cr-installation.yaml and paste it into your local manifests folder " >> $@
+	@echo "" >> $@
 
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)
@@ -477,46 +471,6 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 	  xargs -I FILE sh -c \
 	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
 	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'
-
-$(RELEASE_DIR_IMAGES)/calico-node.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/node:$(NODE_VER)
-	docker save --output $@ calico/node:$(NODE_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-typha.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/typha:$(TYPHA_VER)
-	docker save --output $@ calico/typha:$(TYPHA_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-cni.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/cni:$(CNI_VER)
-	docker save --output $@ calico/cni:$(CNI_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
-	docker save --output $@ calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-pod2daemon-flexvol.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/pod2daemon-flexvol:$(POD2DAEMON_VER)
-	docker save --output $@ calico/pod2daemon-flexvol:$(POD2DAEMON_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-dikastes.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/dikastes:$(DIKASTES_VER)
-	docker save --output $@ calico/dikastes:$(DIKASTES_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-flannel-migration-controller.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/flannel-migration-controller:$(FLANNEL_MIGRATION_VER)
-	docker save --output $@ calico/flannel-migration-controller:$(FLANNEL_MIGRATION_VER)
-
-$(RELEASE_DIR_BIN)/%:
-	mkdir -p $(RELEASE_DIR_BIN)
-	wget https://github.com/projectcalico/calicoctl/releases/download/$(CTL_VER)/$(@F) -O $@
-	chmod +x $@
 
 ###############################################################################
 # Utilities

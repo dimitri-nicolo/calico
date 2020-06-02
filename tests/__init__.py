@@ -21,6 +21,8 @@ HELM_CORE_BASE_NAME = os.environ.get('HELM_CORE_BASE_NAME', 'tigera-secure-ee-co
 HELM_EE_BASE_NAME = os.environ.get('HELM_CORE_BASE_NAME', 'tigera-secure-ee')
 HELM_CORE_URL = os.environ.get('HELM_CORE_URL', '{charts_base_url}/' + HELM_CORE_BASE_NAME + '-{release_version}-{helm_release}.tgz')
 HELM_EE_URL = os.environ.get('HELM_EE_URL', '{charts_base_url}/' + HELM_EE_BASE_NAME + '-{release_version}-{helm_release}.tgz')
+ARCHIVES_BASE_URL = os.environ.get('ARCHIVES_BASE_URL', 'https://s3.amazonaws.com/tigera-public/ee/archives')
+ARCHIVE_FILE_URL = os.environ.get('ARCHIVE_FILE_URL', '{archives_base_url}/' + 'release-{release_version}-{operator_version}.tgz')
 
 # EE Release Branch Prefix
 EE_RELEASE_BRANCH_PREFIX = os.environ.get('EE_RELEASE_BRANCH_PREFIX', 'release-calient')
