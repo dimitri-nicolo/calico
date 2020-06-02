@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/kelseyhightower/confd
-GO_BUILD_VER=v0.32
+GO_BUILD_VER=v0.40
 
 GIT_USE_SSH = true
 
@@ -123,7 +123,7 @@ UPDATE_EXPECTED_DATA?=false
 ## Run template tests against KDD
 test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl bin/typha run-k8s-apiserver
 	-git clean -fx etc/calico/confd
-	-mkdir tests/logs
+	mkdir -p tests/logs
 	docker run --rm --net=host \
 	        $(EXTRA_DOCKER_ARGS) \
 		-v $(CURDIR)/tests/:/tests/ \
@@ -131,7 +131,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		-e GOPATH=/go \
-		-e LOCAL_USER_ID=0 \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
 		-e FELIX_TYPHAREADTIMEOUT=50 \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
@@ -157,7 +157,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 ## Run template tests against etcd
 test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl bin/calicoctl run-etcd run-k8s-apiserver
 	-git clean -fx etc/calico/confd
-	-mkdir tests/logs
+	mkdir -p tests/logs
 	docker run --rm --net=host \
 	        $(EXTRA_DOCKER_ARGS) \
 		-v $(CURDIR)/tests/:/tests/ \
@@ -165,7 +165,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		-e GOPATH=/go \
-		-e LOCAL_USER_ID=0 \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		-e GO111MODULE=on \
@@ -178,7 +178,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 .PHONY: ut
 ## Run the fast set of unit tests in a container.
 ut: $(LOCAL_BUILD_DEP)
-	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r .'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r .'
 
 ## Etcd is used by the kubernetes
 # NOTE: https://quay.io/repository/coreos/etcd is available *only* for the following archs with the following tags:

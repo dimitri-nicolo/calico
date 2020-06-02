@@ -14,7 +14,7 @@ require (
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/typha v0.0.0-20200523040929-7115ed00b715
+	github.com/projectcalico/typha v0.7.3-0.20200601160722-b55a2f1ba49b
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a // indirect
 	github.com/tinylib/msgp v1.1.0 // indirect
