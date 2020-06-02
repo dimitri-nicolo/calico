@@ -57,6 +57,8 @@ const (
 	// ----- Valid for policies -----
 	EventNodeAssigned
 	EventNodeRemoved
+	EventEndpointMatchStarted
+	EventEndpointMatchStopped
 )
 
 const (
@@ -84,6 +86,8 @@ const (
 	CacheEntryEnvoyEnabled                 = CacheEntryFlags(EventEnvoyEnabled)
 	CacheEntryNodeAssigned                 = CacheEntryFlags(EventNodeAssigned)
 	CacheEntryNodeRemoved                  = CacheEntryFlags(EventNodeRemoved)
+	CacheEntryEndpointMatchStarted         = CacheEntryFlags(EventEndpointMatchStarted)
+	CacheEntryEndpointMatchStopped         = CacheEntryFlags(EventEndpointMatchStopped)
 )
 
 const (
@@ -102,7 +106,9 @@ const (
 		CacheEntryOtherNamespaceExposedIngress |
 		CacheEntryOtherNamespaceExposedEgress |
 		CacheEntryNodeAssigned |
-		CacheEntryNodeRemoved
+		CacheEntryNodeRemoved |
+		CacheEntryEndpointMatchStarted |
+		CacheEntryEndpointMatchStopped
 
 	CacheEntryFlagsNetworkSets = CacheEntryInternetExposed
 )

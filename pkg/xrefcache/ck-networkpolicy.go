@@ -98,8 +98,8 @@ func (c *CacheEntryNetworkPolicy) setVersionedResource(r VersionedResource) {
 // versionedCalicoNetworkPolicy implements the VersionedNetworkSetResource for a Calico NetworkPolicy kind.
 type versionedCalicoNetworkPolicy struct {
 	*apiv3.NetworkPolicy
-	v1                 *model.Policy
-	v1Key              model.PolicyKey
+	v1    *model.Policy
+	v1Key model.PolicyKey
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -150,8 +150,8 @@ func (v *versionedCalicoNetworkPolicy) IsStaged() bool {
 // versionedCalicoGlobalNetworkPolicy implements the VersionedNetworkSetResource for a Calico GlobalNetworkPolicy kind.
 type versionedCalicoGlobalNetworkPolicy struct {
 	*apiv3.GlobalNetworkPolicy
-	v1                 *model.Policy
-	v1Key              model.PolicyKey
+	v1    *model.Policy
+	v1Key model.PolicyKey
 }
 
 // GetPrimary implements the VersionedNetworkSetResource interface.
@@ -980,6 +980,9 @@ func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId apiv3.R
 		x.clog.Debugf("Adding %s to heps for %s", endpointId, policyId)
 		x.SelectedHostEndpoints.Add(endpointId)
 	}
+
+	// Queue an update for a endpoint matched with the networkpolicy
+	c.QueueUpdate(policyId, x, EventEndpointMatchStarted)
 }
 
 func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId apiv3.ResourceID) {
@@ -1019,4 +1022,6 @@ func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId apiv3.R
 		x.clog.Debugf("Removing %s from heps for %s", endpointId, policyId)
 		x.SelectedHostEndpoints.Discard(endpointId)
 	}
+	// Queue an update for a endpoint matched with the networkpolicy
+	c.QueueUpdate(policyId, x, EventEndpointMatchStopped)
 }
