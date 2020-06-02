@@ -584,7 +584,7 @@ func (config *Config) resolve() (changed bool, err error) {
 	// Preferentially use the new FlowLogsFlushInterval if explicitly set or if the deprecated
 	// CloudWatchLogsFlushInterval is not explicitly set, otherwise use the explicitly set CloudWatchLogsFlushInterval
 	// value.
-	if nameToSource["FlowLogsFlushInterval"] != Default || nameToSource["CloudWatchLogsFlushInterval"] == Default {
+	if nameToSource["flowlogsflushinterval"] != Default || nameToSource["cloudwatchlogsflushinterval"] == Default {
 		config.CloudWatchLogsFlushInterval = config.FlowLogsFlushInterval
 		newRawValues["CloudWatchLogsFlushInterval"] = newRawValues["FlowLogsFlushInterval"]
 	} else {
@@ -596,7 +596,7 @@ func (config *Config) resolve() (changed bool, err error) {
 	// Preferentially use the new FlowLogsEnableHostEndpoint if explicitly set or if the deprecated
 	// CloudWatchLogsEnableHostEndpoint is not explicitly set, otherwise use the explicitly set
 	// CloudWatchLogsEnableHostEndpoint value.
-	if nameToSource["FlowLogsEnableHostEndpoint"] != Default || nameToSource["CloudWatchLogsEnableHostEndpoint"] == Default {
+	if nameToSource["flowlogsenablehostendpoint"] != Default || nameToSource["cloudwatchlogsenablehostendpoint"] == Default {
 		config.CloudWatchLogsEnableHostEndpoint = config.FlowLogsEnableHostEndpoint
 		newRawValues["CloudWatchLogsEnableHostEndpoint"] = newRawValues["FlowLogsEnableHostEndpoint"]
 	} else {

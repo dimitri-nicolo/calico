@@ -458,7 +458,7 @@ func (t *Table) InsertOrAppendRules(chainName string, rules []Rule) {
 	// avoid marking a still-referenced chain as dirty.
 	t.increfReferredChains(rules)
 	t.decrefReferredChains(oldRules)
-	
+
 	// Defensive: make sure we re-read the dataplane state before we make updates.  While the
 	// code was originally designed not to need this, we found that other users of
 	// iptables-restore can still clobber our updates so it's safest to re-read the state before

@@ -12,6 +12,7 @@
 /.noseids
 /nosetests.xml
 /release-notes-*
+*.test
 
 # Build directories.
 /bin/

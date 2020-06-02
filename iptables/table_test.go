@@ -1257,6 +1257,8 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 					"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 					"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
 					"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
+					"-m comment --comment \"cali:TQaqIrW2HQal-sdp\" --jump RETURN",
+					"-m comment --comment \"cali:EDon0sGIntr1CQga\" --jump DROP",
 				}
 			} else {
 				expChains["FORWARD"] = []string{
@@ -1439,6 +1441,8 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 						"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 						"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
 						"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
+						"-m comment --comment \"cali:TQaqIrW2HQal-sdp\" --jump RETURN",
+						"-m comment --comment \"cali:EDon0sGIntr1CQga\" --jump DROP",
 					},
 					"cali-foobar": {
 						"-m comment --comment \"cali:42h7Q64_2XDzpwKe\" --jump ACCEPT",
@@ -1529,6 +1533,8 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 						"-m comment --comment \"cali:hecdSCslEjdBPBPo\" --jump DROP",
 						"-m comment --comment \"cali:plvr29-ZiKUwbzDV\" --jump ACCEPT",
 						"-m comment --comment \"cali:vKEEfdy_QeXafpRE\" --goto cali-foobar",
+						"-m comment --comment \"cali:TQaqIrW2HQal-sdp\" --jump RETURN",
+						"-m comment --comment \"cali:EDon0sGIntr1CQga\" --jump DROP",
 					}
 				} else {
 					expChains["FORWARD"] = []string{
