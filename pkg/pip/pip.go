@@ -68,7 +68,7 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 		before = append(before, bucket.Before...)
 		after = append(after, bucket.After...)
 	}
-	took := int64(time.Now().Sub(startTime) / time.Millisecond)
+	took := int64(time.Since(startTime) / time.Millisecond)
 
 	// Check for errors.
 	// We can use the blocking version of the channel operator since the error channel will have been closed (it
@@ -82,7 +82,7 @@ func (p *pip) GetFlows(ctxIn context.Context, params *PolicyImpactParams, rbacHe
 	// -  We exceed the context deadline.
 	var timedOut bool
 	if err != nil {
-		if _, ok := err.(pelastic.TimedOutError); ok {
+		if err == err.(pelastic.TimedOutError) {
 			// Response from ES indicates a handled timeout.
 			log.Info("Response from ES indicates time out - flag results as timedout")
 			timedOut = true

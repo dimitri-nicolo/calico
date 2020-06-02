@@ -35,12 +35,12 @@ var (
 	namesTimeout = 10 * time.Second
 
 	NamesCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{"source_namespace", "source_namespace"},
-		{"source_name_aggr", "source_name_aggr"},
-		{"source_type", "source_type"},
-		{"dest_namespace", "dest_namespace"},
-		{"dest_name_aggr", "dest_name_aggr"},
-		{"dest_type", "dest_type"},
+		{Name: "source_namespace", Field: "source_namespace"},
+		{Name: "source_name_aggr", Field: "source_name_aggr"},
+		{Name: "source_type", Field: "source_type"},
+		{Name: "dest_namespace", Field: "dest_namespace"},
+		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
+		{Name: "dest_type", Field: "dest_type"},
 	}
 )
 

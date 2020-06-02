@@ -37,8 +37,6 @@ func createAndReturnError(err error, errorStr string, code int, featureID lmaerr
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	return
 }
 
 // NewMockSearchClient creates a mock client used for testing search results that will return

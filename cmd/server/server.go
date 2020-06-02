@@ -35,7 +35,7 @@ func main() {
 
 	flag.Parse()
 	if version {
-		PrintVersion()
+		_ = PrintVersion()
 		os.Exit(0)
 	}
 
@@ -69,7 +69,7 @@ func main() {
 		}
 	}
 
-	server.Start(config)
+	_ = server.Start(config)
 
 	server.Wait()
 }

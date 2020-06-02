@@ -91,62 +91,6 @@ const (
     }
 }
 `
-	filterPrefixResponse = `{
-    "took": 65,
-    "timed_out": false,
-    "_shards": {
-        "total": 40,
-        "successful": 40,
-        "skipped": 0,
-        "failed": 0
-    },
-    "hits": {
-        "total": {
-            "value": 10000,
-            "relation": "gte"
-        },
-        "max_score": null,
-        "hits": []
-    },
-    "aggregations": {
-        "source_dest_name_aggrs": {
-            "after_key": {
-                "date": 1494201600000,
-                "source_namespace": "tigera-manager",
-                "source_name_aggr": "tigera-manager-778447894c-*",
-                "source_type": "wep",
-                "dest_namespace": "tigera-elasticsearch",
-                "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
-                "dest_type": "wep"
-            },
-            "buckets": [
-                {
-                    "key": {
-                        "source_namespace": "tigera-manager",
-                        "source_name_aggr": "tigera-manager-778447894c-*",
-                        "source_type": "wep",
-                        "dest_namespace": "tigera-elasticsearch",
-                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
-                        "dest_type": "wep"
-                    },
-                    "doc_count": 4370
-                },
-                {
-                    "key": {
-			"source_namespace": "default",
-                        "source_name_aggr": "tigera-app-83958379dc",
-			"source_type": "wep",
-			"dest_namespace": "tigera-elasticsearch",
-                        "dest_name_aggr": "tigera-secure-es-xg2jxdtnqn",
-			"dest_type": "wep"
-                    },
-                    "doc_count": 3698
-                }
-            ]
-        }
-    }
-}
-`
 	duplicateNamesResponse = `{
     "took": 13,
     "timed_out": false,

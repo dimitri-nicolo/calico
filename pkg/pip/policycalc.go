@@ -118,7 +118,6 @@ func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, c
 	// Populate the cache from the replayer.
 	r := replay.New(*params.FromTime, *params.ToTime, s.esClient, s.esClient, cb)
 	r.Start(cxt)
-	return
 }
 
 // syncFromDatastore will load the current set of configuration from the datastore and invoke the syncer callbacks.
@@ -364,7 +363,7 @@ func IsResourceModifiedForPIP(r1, r2 resources.Resource) (bool, error) {
 	// Copy the resources since we modify them to do the comparison.
 	r1 = r1.DeepCopyObject().(resources.Resource)
 	r2 = r2.DeepCopyObject().(resources.Resource)
-	mod := true
+	var mod bool
 
 	switch rc1 := r1.(type) {
 	case *v3.NetworkPolicy:

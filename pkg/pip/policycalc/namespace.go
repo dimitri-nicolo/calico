@@ -111,7 +111,7 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 	var parsedSel selector.Selector
 	if sa.Selector != "" {
 		// We have a selector, so initialize the names per namespace map.
-		saNamesPerNamespace = make(map[string][]string, 0)
+		saNamesPerNamespace = make(map[string][]string)
 
 		var err error
 		parsedSel, err = selector.Parse(sa.Selector)

@@ -77,7 +77,7 @@ var _ = Describe("Test flowlog request validation functions", func() {
 		It("should return a limit of 1000 when no limit param is included in url", func() {
 			req, err := http.NewRequest(http.MethodGet, "", nil)
 			Expect(err).NotTo(HaveOccurred())
-			limit, err := extractLimitParam(req.URL.Query())
+			limit, _ := extractLimitParam(req.URL.Query())
 			Expect(limit).To(BeNumerically("==", 1000))
 		})
 

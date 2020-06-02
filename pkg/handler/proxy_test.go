@@ -14,8 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const insertedHeaderValue = "This is an test header inserted by a response modifier"
-
 var _ = Describe("Proxy Handler", func() {
 	targetName := "target"
 	var proxyServer, target *httptest.Server
@@ -41,7 +39,7 @@ var _ = Describe("Proxy Handler", func() {
 		testmux.Handle("/test200", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("X-Target-Name", targetName)
 			w.WriteHeader(200)
-			w.Write([]byte(targetName))
+			_, _ = w.Write([]byte(targetName))
 		}))
 		testmux.Handle("/test400", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(400)

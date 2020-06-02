@@ -77,7 +77,7 @@ func validateActions(actions []string) bool {
 }
 
 func validateActionsAndUnprotected(actions []string, unprotected bool) bool {
-	if unprotected == true {
+	if unprotected {
 		for _, action := range actions {
 			switch action {
 			case actionDeny:
