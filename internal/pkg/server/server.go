@@ -7,6 +7,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -66,8 +67,11 @@ type Server struct {
 
 	tunSrv *tunnel.Server
 
-	certFile string
-	keyFile  string
+	certFile         string
+	keyFile          string
+	internalCertFile string
+	internalKeyFile  string
+	addr             string
 
 	// Creds to be used for the tunnel endpoints and to generate creds for the
 	// tunnel clients a.k.a guardians
@@ -88,7 +92,6 @@ type Server struct {
 func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:  k8s,
-		http: new(http.Server),
 		clusters: &clusters{
 			clusters: make(map[string]*cluster),
 		},
@@ -105,9 +108,29 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	}
 
 	srv.clusters.k8sCLI = srv.k8s
-
 	srv.proxyMux = http.NewServeMux()
-	srv.http.Handler = srv.proxyMux
+
+	cfg := &tls.Config{}
+	certExt, err := tls.LoadX509KeyPair(srv.certFile, srv.keyFile)
+	if err != nil {
+		log.Errorf("Could not load certificates for external traffic(UI) due to - %s", err)
+		return nil, err
+	}
+
+	certInt, err := tls.LoadX509KeyPair(srv.internalCertFile, srv.internalKeyFile)
+	if err != nil {
+		log.Errorf("Could not load certificates for internal traffic due to - %s", err)
+		return nil, err
+	}
+
+	cfg.Certificates = append(cfg.Certificates, certExt, certInt)
+	cfg.BuildNameToCertificate()
+
+	srv.http = &http.Server{
+		Addr: srv.addr,
+		Handler: srv.proxyMux,
+		TLSConfig: cfg,
+	}
 
 	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
 	// Special case: For POST request on ManagedCluster resource we want to intercept the response before
@@ -143,25 +166,14 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	return srv, nil
 }
 
-// ListenAndServeHTTP starts listening and serving HTTP requests
-func (s *Server) ListenAndServeHTTP() error {
-	return s.http.ListenAndServe()
-
-}
-
-// ServeHTTP starts serving HTTP requests
-func (s *Server) ServeHTTP(lis net.Listener) error {
-	return s.http.Serve(lis)
+// ServeHTTPS starts serving HTTPS requests
+func (s *Server) ServeHTTPS(lis net.Listener, certFile, keyFile string) error {
+	return s.http.ServeTLS(lis, certFile, keyFile)
 }
 
 // ListenAndServeHTTPS starts listening and serving HTTPS requests
 func (s *Server) ListenAndServeHTTPS() error {
-	return s.http.ListenAndServeTLS(s.certFile, s.keyFile)
-}
-
-// ServeHTTPS starts serving HTTPS requests
-func (s *Server) ServeHTTPS(lis net.Listener) error {
-	return s.http.ServeTLS(lis, s.certFile, s.keyFile)
+	return s.http.ListenAndServeTLS("", "")
 }
 
 // Close stop the server

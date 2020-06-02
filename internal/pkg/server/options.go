@@ -25,7 +25,7 @@ type Option func(*Server) error
 // connections when Listener is not provided.
 func WithDefaultAddr(addr string) Option {
 	return func(s *Server) error {
-		s.http.Addr = addr
+		s.addr = addr
 		return nil
 	}
 }
@@ -58,17 +58,19 @@ type ProxyTarget struct {
 	Dest    string
 }
 
-// WithCredsFiles sets the default cert and key to be used for the TLS
-// connections and for the tunnel.
-func WithCredsFiles(cert, key string) Option {
+var missingFileErrorMessage = "file %s not found : %s"
+
+// WithExternalCredsFiles sets the default cert and key to be used for the TLS
+// connections for external traffic (UI).
+func WithExternalCredsFiles(cert, key string) Option {
 	return func(s *Server) error {
 		// Check if files exist
 		if _, err := os.Stat(cert); os.IsNotExist(err) {
-			return errors.Errorf("cert file: %s", err)
+			return errors.Errorf(missingFileErrorMessage, cert, err)
 		}
 
 		if _, err := os.Stat(key); os.IsNotExist(err) {
-			return errors.Errorf("cert file: %s", err)
+			return errors.Errorf(missingFileErrorMessage, key, err)
 		}
 
 		s.certFile = cert
@@ -78,9 +80,28 @@ func WithCredsFiles(cert, key string) Option {
 	}
 }
 
+// WithInternalCredsFiles sets the default cert and key to be used for the TLS
+// connections within the management cluster.
+func WithInternalCredFiles(cert, key string) Option {
+	return func(s *Server) error {
+		// Check if files exist
+		if _, err := os.Stat(cert); os.IsNotExist(err) {
+			return errors.Errorf(missingFileErrorMessage, cert, err)
+		}
+
+		if _, err := os.Stat(key); os.IsNotExist(err) {
+			return errors.Errorf(missingFileErrorMessage, key, err)
+		}
+
+		s.internalCertFile = cert
+		s.internalKeyFile = key
+
+		return nil
+	}
+}
+
 // WithTunnelCreds sets the credentials to be used for the tunnel server and to
-// be used to generate creds for guardians. If not populated WithCredsFiles
-// creds will be used.
+// be used to generate creds for guardians.
 func WithTunnelCreds(cert *x509.Certificate, key crypto.Signer) Option {
 	return func(s *Server) error {
 		s.tunnelCert = cert

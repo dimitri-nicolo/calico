@@ -31,22 +31,22 @@ import (
 )
 
 var (
-	srvCert    *x509.Certificate
-	srvPrivKey *rsa.PrivateKey
-	rootCAs    *x509.CertPool
+	tunnelCert    *x509.Certificate
+	tunnelPrivKey *rsa.PrivateKey
+	rootCAs       *x509.CertPool
 )
 
 func init() {
 	log.SetOutput(GinkgoWriter)
 	log.SetLevel(log.DebugLevel)
 
-	srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+	tunnelCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
 
 	block, _ := pem.Decode([]byte(test.PrivateRSA))
-	srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+	tunnelPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	rootCAs = x509.NewCertPool()
-	rootCAs.AddCert(srvCert)
+	rootCAs.AddCert(tunnelCert)
 }
 
 type testClient struct {
@@ -171,19 +171,10 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	It("should start voltron", func() {
 		var err error
 
-		// we need some credentials
-		key, _ := utils.KeyPEMEncode(srvPrivKey)
-		cert := utils.CertPEMEncode(srvCert)
-
-		xcert, _ := tls.X509KeyPair(cert, key)
-
 		lisHTTP11, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
-		lisHTTP2, err = tls.Listen("tcp", "localhost:0", &tls.Config{
-			Certificates: []tls.Certificate{xcert},
-			NextProtos:   []string{"h2"},
-		})
+		lisHTTP2, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
 		lisTun, err = net.Listen("tcp", "localhost:0")
@@ -197,7 +188,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		voltron, err = server.New(
 			k8sAPI,
 			server.WithKeepClusterKeys(),
-			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
+			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
+			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
 			server.WithAuthentication(&rest.Config{}),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
@@ -207,13 +200,13 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			_ = voltron.ServeHTTP(lisHTTP11)
+			_ = voltron.ServeHTTPS(lisHTTP11, "", "")
 		}()
 
 		wgSrvCnlt.Add(1)
 		go func() {
 			defer wgSrvCnlt.Done()
-			_ = voltron.ServeHTTP(lisHTTP2)
+			_ = voltron.ServeHTTPS(lisHTTP2, "", "")
 		}()
 
 		wgSrvCnlt.Add(1)
@@ -333,10 +326,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		Expect(msg).To(Equal(ts2.msg))
 	})
 
-	It("should be possible to reach the test server on http", func() {
-		msg, err := ui.doHTTPRequest(clusterID)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(msg).To(Equal(ts.msg))
+	It("should not be possible to reach the test server on http", func() {
+		_, err := ui.doHTTPRequest(clusterID)
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("should be possible to stop guardian", func() {

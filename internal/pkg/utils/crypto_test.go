@@ -13,8 +13,8 @@ func TestLoadingCertificates(t *testing.T) {
 		certFile string
 		keyFile  string
 	}{
-		{"../server/testdata/cert.pem", "../server/testdata/key.pem"},
-		{"../server/testdata/self-signed-cert.pem", "../server/testdata/self-signed-key.pem"},
+		{"../server/testdata/cert-pkcs8-format.pem", "../server/testdata/key-pkcs8-format.pem"},
+		{"../server/testdata/rootCA-tunnel-generation.pem", "../server/testdata/rootCA-tunnel-generation.key"},
 	}
 
 	for _, entry := range data {

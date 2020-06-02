@@ -5,6 +5,7 @@ package server_test
 import (
 	"crypto"
 	"crypto/rsa"
+	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
 
@@ -41,9 +42,9 @@ import (
 )
 
 var (
-	srvCert    *x509.Certificate
-	srvPrivKey *rsa.PrivateKey
-	rootCAs    *x509.CertPool
+	tunnelCert    *x509.Certificate
+	tunnelPrivKey *rsa.PrivateKey
+	rootCAs       *x509.CertPool
 
 	clusterA = "clusterA"
 	clusterB = "clusterB"
@@ -53,13 +54,13 @@ func init() {
 	log.SetOutput(GinkgoWriter)
 	log.SetLevel(log.DebugLevel)
 
-	srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+	tunnelCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
 
 	block, _ := pem.Decode([]byte(test.PrivateRSA))
-	srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+	tunnelPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	rootCAs = x509.NewCertPool()
-	rootCAs.AddCert(srvCert)
+	rootCAs.AddCert(tunnelCert)
 }
 
 var _ = Describe("Server", func() {
@@ -77,7 +78,8 @@ var _ = Describe("Server", func() {
 	It("should fail to use invalid path", func() {
 		_, err := server.New(
 			nil,
-			server.WithCredsFiles("dog/gopher.crt", "dog/gopher.key"),
+			server.WithExternalCredsFiles("dog/gopher.crt", "dog/gopher.key"),
+			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
 		Expect(err).To(HaveOccurred())
 	})
@@ -90,7 +92,9 @@ var _ = Describe("Server", func() {
 		srv, err = server.New(
 			k8sAPI,
 			server.WithKeepClusterKeys(),
-			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
+			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
+			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 			server.WithAuthentication(&rest.Config{}),
 			server.WithWatchAdded(),
 		)
@@ -98,7 +102,7 @@ var _ = Describe("Server", func() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = srv.ServeHTTP(lis)
+			err = srv.ServeHTTPS(lis, "", "")
 		}()
 
 		wg.Add(1)
@@ -185,10 +189,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		wg     sync.WaitGroup
 		srv    *server.Server
 		lis    net.Listener
-		lis2   net.Listener
 		lisTun net.Listener
-		key    []byte
-		cert   []byte
 	)
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
@@ -198,22 +199,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	defaultServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	It("Should get some credentials for the server", func() {
-		key, _ = utils.KeyPEMEncode(srvPrivKey)
-		cert = utils.CertPEMEncode(srvCert)
-	})
-
 	startServer := func(opts ...server.Option) {
 		var e error
 		lis, e = net.Listen("tcp", "localhost:0")
-		Expect(e).NotTo(HaveOccurred())
-
-		xcert, _ := tls.X509KeyPair(cert, key)
-
-		lis2, e = tls.Listen("tcp", "localhost:0", &tls.Config{
-			Certificates: []tls.Certificate{xcert},
-			NextProtos:   []string{"h2"},
-		})
 		Expect(e).NotTo(HaveOccurred())
 
 		lisTun, e = net.Listen("tcp", "localhost:0")
@@ -241,7 +229,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		opts = append(opts,
 			server.WithKeepClusterKeys(),
-			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
+			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
+			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 			server.WithAuthentication(&rest.Config{}),
 			server.WithDefaultProxy(defaultProxy),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
@@ -257,13 +247,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_ = srv.ServeHTTP(lis)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = srv.ServeHTTP(lis2)
+			_ = srv.ServeHTTPS(lis, "", "")
 		}()
 
 		wg.Add(1)
@@ -292,11 +276,18 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("Should not proxy anywhere - multiple headers", func() {
-			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
+			tr := &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+					ServerName:         "localhost",
+				},
+			}
+			client := &http.Client{Transport: tr}
+			req, err := http.NewRequest("GET", "https://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
 			req.Header.Add(server.ClusterHeaderField, clusterA)
 			req.Header.Add(server.ClusterHeaderField, "helloworld")
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := client.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
 		})
@@ -316,15 +307,22 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		It("Should proxy to default even with header, if request path matches one of bypass tunnel targets", func() {
 			req, err := http.NewRequest(
 				"GET",
-				"http://"+lis.Addr().String()+"/compliance/reports",
+				"https://"+lis.Addr().String()+"/compliance/reports",
 				strings.NewReader("HELLO"),
 			)
 			Expect(err).NotTo(HaveOccurred())
 			req.Header.Add(server.ClusterHeaderField, clusterA)
 			test.AddJaneToken(req)
-			resp, err := http.DefaultClient.Do(req)
+
+			var httpClient = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true,
+					},
+				},
+			}
+			resp, err := httpClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
-			log.Infof("\n\n\nSTEVE GAO TEST resp = %+v\n", resp)
 			Expect(resp.StatusCode).To(Equal(200))
 		})
 
@@ -343,7 +341,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certA)})).ShouldNot(HaveOccurred())
 
-			cert, err := tls.X509KeyPair(certPemA, keyPemA)
+			var cert tls.Certificate
+			cert, err = tls.X509KeyPair(certPemA, keyPemA)
 			Expect(err).NotTo(HaveOccurred())
 
 			cfg := &tls.Config{
@@ -366,20 +365,22 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					http2Srv(clnT)
 				}()
 
-				rootCAs = x509.NewCertPool()
-				rootCAs.AppendCertsFromPEM(cert)
+				var rootCAs = x509.NewCertPool()
+				caCert, _ := ioutil.ReadFile("testdata/localhost-intermediate-CA.pem")
+				rootCAs.AppendCertsFromPEM(caCert)
 
 				clnt := &http.Client{
 					Transport: &http2.Transport{
 						TLSClientConfig: &tls.Config{
 							NextProtos: []string{"h2"},
 							RootCAs:    rootCAs,
+							ServerName: "localhost",
 						},
 					},
 				}
 
 				req, err := http.NewRequest("GET",
-					"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
+					"https://"+lis.Addr().String()+"/some/path", strings.NewReader("HELLO"))
 				Expect(err).NotTo(HaveOccurred())
 				req.Header[server.ClusterHeaderField] = []string{clusterA}
 				test.AddJaneToken(req)
@@ -532,8 +533,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				var xCert tls.Certificate
 
 				It("should get some certs for test server", func() {
-					key, _ := utils.KeyPEMEncode(srvPrivKey)
-					cert := utils.CertPEMEncode(srvCert)
+					key, _ := utils.KeyPEMEncode(tunnelPrivKey)
+					cert := utils.CertPEMEncode(tunnelCert)
 
 					xCert, _ = tls.X509KeyPair(cert, key)
 				})
@@ -651,15 +652,19 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 				server.WithAuthentication(&rest.Config{}),
 				server.WithDefaultProxy(defaultProxy),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
+				server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 				server.WithWatchAdded(),
 			)
 		} else {
 			opts = append(opts,
 				server.WithKeepClusterKeys(),
-				server.WithTunnelCreds(srvCert, srvPrivKey),
+				server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 				server.WithAuthentication(&rest.Config{}),
 				server.WithDefaultProxy(defaultProxy),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
+				server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 				server.WithWatchAdded(),
 			)
 		}
@@ -758,38 +763,34 @@ var _ = Describe("Server authenticates requests", func() {
 	var srv *server.Server
 	var tun *tunnel.Tunnel
 	var lisHTTPS net.Listener
-	var lisHTTP net.Listener
 	var lisTun net.Listener
-	var xCert tls.Certificate
+	var tunnelCert tls.Certificate
+	var voltronCert *x509.Certificate
+	var voltronPrivKey crypto.Signer
+	var rootCAs *x509.CertPool
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	watchSync := make(chan error)
 
 	By("Creating credentials for server", func() {
-		srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+		voltronCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
 
 		block, _ := pem.Decode([]byte(test.PrivateRSA))
-		srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+		voltronPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
 
 		rootCAs = x509.NewCertPool()
-		rootCAs.AddCert(srvCert)
+		rootCAs.AddCert(voltronCert)
 
-		key, _ := utils.KeyPEMEncode(srvPrivKey)
-		cert := utils.CertPEMEncode(srvCert)
+		key, _ := utils.KeyPEMEncode(voltronPrivKey)
+		cert := utils.CertPEMEncode(voltronCert)
 
-		xCert, _ = tls.X509KeyPair(cert, key)
+		tunnelCert, _ = tls.X509KeyPair(cert, key)
 	})
 
 	It("Should start the server", func() {
 		var err error
 
-		lisHTTP, err = net.Listen("tcp", "localhost:0")
-		Expect(err).NotTo(HaveOccurred())
-
-		lisHTTPS, err = tls.Listen("tcp", "localhost:0", &tls.Config{
-			Certificates: []tls.Certificate{xCert},
-			NextProtos:   []string{"h2"},
-		})
+		lisHTTPS, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
 		lisTun, err = net.Listen("tcp", "localhost:0")
@@ -802,7 +803,9 @@ var _ = Describe("Server authenticates requests", func() {
 		srv, err = server.New(
 			k8sAPI,
 			server.WithKeepClusterKeys(),
-			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithTunnelCreds(voltronCert, voltronPrivKey),
+			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
+			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 			server.WithAuthentication(&rest.Config{}),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
@@ -812,12 +815,7 @@ var _ = Describe("Server authenticates requests", func() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_ = srv.ServeHTTP(lisHTTPS)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = srv.ServeHTTP(lisHTTP)
+			_ = srv.ServeHTTPS(lisHTTPS, "", "")
 		}()
 		wg.Add(1)
 		go func() {
@@ -851,27 +849,26 @@ var _ = Describe("Server authenticates requests", func() {
 	binC := make(chan struct{}, 1)
 
 	It("Should open a tunnel for cluster A", func() {
-		certPem, keyPem, _ := srv.ClusterCreds(clusterA)
-		cert, _ := tls.X509KeyPair(certPem, keyPem)
+		var certPem, keyPem, _ = srv.ClusterCreds(clusterA)
+		var cert, _ = tls.X509KeyPair(certPem, keyPem)
 
-		cfg := &tls.Config{
+		var rootCAs = x509.NewCertPool()
+		rootCAs.AddCert(voltronCert)
+
+		var cfg = &tls.Config{
 			Certificates: []tls.Certificate{cert},
 			RootCAs:      rootCAs,
 		}
+		var err error
+		tun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+		Expect(err).NotTo(HaveOccurred())
 
-		Eventually(func() error {
-			var err error
-			tun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
-			return err
-		}).ShouldNot(HaveOccurred())
-
-		bin = test.NewHTTPSBin(tun, xCert, func(r *http.Request) {
+		bin = test.NewHTTPSBin(tun, tunnelCert, func(r *http.Request) {
 			Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
 			Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
 			Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
 			binC <- struct{}{}
 		})
-
 	})
 
 	authJane := func() {
@@ -937,65 +934,6 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 })
 
-var _ = Describe("Creating an HTTP server that proxies traffic", func() {
-	var k8sAPI = test.NewK8sSimpleFakeClient(nil, nil)
-	var srv *server.Server
-	var certFile string
-	var keyFile string
-	var listener net.Listener
-
-	JustBeforeEach(func() {
-		By("Creating a server that only serves HTTPS traffic")
-		var err error
-		listener, err = net.Listen("tcp", "localhost:0")
-		address := listener.Addr()
-		Expect(address).ShouldNot(BeNil())
-		Expect(err).NotTo(HaveOccurred())
-
-		var opts = []server.Option{
-			server.WithDefaultAddr(address.String()),
-			server.WithKeepAliveSettings(true, 100),
-			server.WithCredsFiles(certFile, keyFile),
-		}
-
-		srv, err = server.New(
-			k8sAPI,
-			opts...,
-		)
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	JustAfterEach(func() {
-		By("Closing the server")
-		var err = srv.Close()
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	Context("Using self signed certs", func() {
-		BeforeEach(func() {
-			certFile = "testdata/self-signed-cert.pem"
-			keyFile = "testdata/self-signed-key.pem"
-		})
-
-		It("Does not initiate a tunnel server when the tunnel destination doesn't have tls certificates", func() {
-			var err = srv.ServeTunnelsTLS(listener)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Context("Using certs", func() {
-		BeforeEach(func() {
-			certFile = "testdata/cert.pem"
-			keyFile = "testdata/key.pem"
-		})
-
-		It("Does not initiate a tunnel server when the tunnel destination doesn't have tls certificates", func() {
-			var err = srv.ServeTunnelsTLS(listener)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-})
-
 func requestToClusterA(address string) *http.Request {
 	defer GinkgoRecover()
 	req, err := http.NewRequest("GET",
@@ -1018,7 +956,15 @@ func configureHTTPSClient() *http.Client {
 }
 
 func listClusters(server string) ([]clusters.ManagedCluster, int) {
-	resp, err := http.Get("http://" + server + "/voltron/api/clusters")
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+			ServerName:         "localhost",
+		},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get("https://" + server + "/voltron/api/clusters")
 	Expect(err).NotTo(HaveOccurred())
 
 	if resp.StatusCode != 200 {
@@ -1036,12 +982,19 @@ func listClusters(server string) ([]clusters.ManagedCluster, int) {
 
 func clientHelloReq(addr string, target string, expectStatus int) {
 	Eventually(func() bool {
-		req, err := http.NewRequest("GET", "http://"+addr+"/some/path", strings.NewReader("HELLO"))
+		req, err := http.NewRequest("GET", "https://"+addr+"/some/path", strings.NewReader("HELLO"))
 		Expect(err).NotTo(HaveOccurred())
 
 		req.Header[server.ClusterHeaderField] = []string{target}
 		test.AddJaneToken(req)
-		resp, err := http.DefaultClient.Do(req)
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+			},
+		}
+		client := &http.Client{Transport: tr}
+		resp, err := client.Do(req)
 
 		return err == nil && resp.StatusCode == expectStatus
 	}, 2*time.Second, 400*time.Millisecond).Should(BeTrue())
@@ -1049,8 +1002,8 @@ func clientHelloReq(addr string, target string, expectStatus int) {
 
 func http2Srv(t *tunnel.Tunnel) {
 	// we need some credentials
-	key, _ := utils.KeyPEMEncode(srvPrivKey)
-	cert := utils.CertPEMEncode(srvCert)
+	key, _ := utils.KeyPEMEncode(tunnelPrivKey)
+	cert := utils.CertPEMEncode(tunnelCert)
 
 	xcert, _ := tls.X509KeyPair(cert, key)
 

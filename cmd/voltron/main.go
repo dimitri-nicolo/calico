@@ -42,8 +42,16 @@ type config struct {
 	LogLevel                     string `default:"INFO"`
 	TemplatePath                 string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
 	PublicIP                     string `default:"127.0.0.1:32453" split_words:"true"`
+
+	// HTTPSCert, HTTPSKey - path to an x509 certificate and its private key used
+	// for external communication (Tigera UI <-> Voltron)
 	HTTPSCert                    string `default:"/certs/https/cert" split_words:"true" json:"-"`
 	HTTPSKey                     string `default:"/certs/https/key" split_words:"true" json:"-"`
+	// InternalHTTPSCert, InternalHTTPSKey - path to an x509 certificate and its private key used
+	//for internal communication within the K8S cluster
+	InternalHTTPSCert            string `default:"/certs/internal/cert" split_words:"true" json:"-"`
+	InternalHTTPSKey             string `default:"/certs/internal/key" split_words:"true" json:"-"`
+
 	K8sConfigPath                string `split_words:"true"`
 	KeepAliveEnable              bool   `default:"true" split_words:"true"`
 	KeepAliveInterval            int    `default:"100" split_words:"true"`
@@ -104,7 +112,8 @@ func main() {
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
-		server.WithCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
+		server.WithExternalCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
+		server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 	}
 
 	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
