@@ -85,6 +85,16 @@ mkdir manifests
    oc delete service -n tigera-eck-operator elastic-webhook-service
    ```
 
+1. Export your current CRs for PrometheusRule to a file.
+   ```bash
+   oc get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
+   ```
+
+1. Delete the PrometheusRule CRD.
+   ```bash
+   oc delete crd prometheusrules.monitoring.coreos.com 
+   ```
+   
 1. Apply the updated manifests.
    ```bash
    oc apply -f manifests/
@@ -93,6 +103,11 @@ mkdir manifests
 1. Apply the LogStorage CR.
    ```bash
    oc apply -f log-storage.yaml
+   ```
+
+1. Apply the CRs for PrometheusRule.
+    ```bash
+   oc apply -f prometheusrules.yaml  
    ```
 
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
@@ -110,6 +125,16 @@ add any global network policies needed to whitelist traffic, and delete the temp
 
 ## Upgrade from 2.8
 
+1. Export your current CRs for PrometheusRule to a file.
+   ```bash
+   oc get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
+   ```
+
+1. Delete the PrometheusRule CRD.
+    ```bash
+   oc delete crd prometheusrules.monitoring.coreos.com 
+   ```
+   
 1. Apply the updated manifests.
    ```bash
    oc apply -f manifests/
@@ -119,6 +144,11 @@ add any global network policies needed to whitelist traffic, and delete the temp
    ```bash
    oc apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```
+
+1. Apply the CRs for PrometheusRule.
+   ```bash
+   oc apply -f prometheusrules.yaml  
+   ```   
 
 1. You can now monitor the upgrade progress with the following command:
    ```bash

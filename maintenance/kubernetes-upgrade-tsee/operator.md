@@ -79,7 +79,17 @@ the upgrade.
    kubectl delete validatingwebhookconfigurations validating-webhook-configuration
    kubectl delete service -n tigera-eck-operator elastic-webhook-service
    ```
+   
+1. Export your current CRs for PrometheusRule to a file.
+   ```bash
+   kubectl get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
+   ```
 
+1. Delete the PrometheusRule CRD.
+   ```bash
+   kubectl delete crd prometheusrules.monitoring.coreos.com 
+   ```
+   
 1. Download the new operator manifest.
    ```bash
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
@@ -109,6 +119,11 @@ the upgrade.
    kubectl apply -f log-storage.yaml
    ```
 
+1. Apply the CRs for PrometheusRule.
+    ```bash
+   kubectl apply -f prometheusrules.yaml  
+   ```
+
 1. You can monitor progress with the following command:
    ```bash
    watch kubectl get tigerastatus
@@ -123,6 +138,16 @@ the upgrade.
    add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
 
 ## Upgrade from 2.8
+
+1. Export your current CRs for PrometheusRule to a file.
+   ```bash
+   kubectl get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
+   ```
+
+1. Delete the PrometheusRule CRD.
+    ```bash
+   kubectl delete crd prometheusrules.monitoring.coreos.com 
+   ```
 
 1. Download the new operator manifest.
    ```bash
@@ -146,6 +171,11 @@ the upgrade.
 1. Apply the Tigera operator.
    ```bash
    kubectl apply -f tigera-operator.yaml
+   ```
+   
+1. Apply the CRs for PrometheusRule.
+   ```bash
+   kubectl apply -f prometheusrules.yaml  
    ```
 
 1. You can monitor progress with the following command:
