@@ -63,5 +63,5 @@ spec:
 ```
 
 ### Definition
-See the [Kubernetes NetworkPolicy documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#networkpolicyspec-v1-networking-k8s-io)
+See the [Kubernetes NetworkPolicy documentation](https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#networkpolicyspec-v1-networking-k8s-io)
 for more information.
