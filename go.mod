@@ -10,11 +10,10 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
-
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
 	github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627
-	github.com/projectcalico/felix v0.0.0-00010101000000-000000000000
+	github.com/projectcalico/felix v0.0.0-20200530082554-d7efcf1ff34b
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
@@ -22,7 +21,12 @@ require (
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
 	github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
+	golang.org/x/mod v0.3.0 // indirect
+	golang.org/x/tools v0.0.0-20200601175630-2caf76543d99 // indirect
+	gopkg.in/yaml.v2 v2.3.0 // indirect
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 
+	// k8s.io/api v1.16.3 is at 16d7abae0d2a
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
