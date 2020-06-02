@@ -933,6 +933,8 @@ start_typha() {
     echo "Starting Typha"
     TYPHA_DATASTORETYPE=kubernetes \
         TYPHA_LOGSEVERITYSCREEN=debug \
+	TYPHA_LOGSEVERITYSYS=none \
+	TYPHA_LOGFILEPATH=none \
 	typha >$LOGPATH/typha 2>&1 &
     TYPHA_PID=$!
 
