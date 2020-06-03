@@ -1,3 +1,4 @@
+{{- if .Values.typha.enabled -}}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
 # It is a requirement when using Kubernetes API datastore with more than 50 nodes, or when
@@ -500,4 +501,5 @@ metadata:
   name: calico-typha-cpva
   namespace: kube-system
 
+{{- end }}
 {{- end }}
