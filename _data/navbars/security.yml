@@ -164,7 +164,7 @@ section:
       path: /security/high-connection-workloads
     - title: Defend against DoS attacks
       path: /security/defend-dos-attack
-- title: Secure Calico component communications
+- title: Secure Calico Enterprise component communications
   path: /security/comms/
   section:
   - title: Provide TLS certificates for the manager UI
