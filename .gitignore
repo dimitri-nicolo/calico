@@ -28,3 +28,4 @@ kubectl
 /tests/k8st/kind
 /tests/k8st/infra/calico.yaml
 filesystem/included-source
+config/
