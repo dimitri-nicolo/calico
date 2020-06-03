@@ -14,6 +14,10 @@ To select a different version, click **Releases** in the top navigation bar.
 {% for release in site.data.versions %}
 ## Calico Enterprise {{ release.title }}
 
+{% unless release.title == "master" %} 
+[Release archive](https://s3.amazonaws.com/tigera-public/ee/archives/release-{{release.title}}-{{release.tigera-operator.version}}.tgz) with Kubernetes manifests.
+{% endunless %}
+
 {% if release.note %}
 {{ release.note }}
 {% else %}
