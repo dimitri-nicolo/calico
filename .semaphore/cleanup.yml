@@ -1,0 +1,24 @@
+version: v1.0
+name: Felix
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+execution_time_limit:
+  minutes: 10
+
+blocks:
+- name: Clean up GCE resources
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - checkout
+      - aws ec2 delete-key-pair --key-name cni-plugin-private-pr-$SEMAPHORE_GIT_PR_NUMBER
+    jobs:
+    - name: Clean up GCE insances
+      commands:
+      - ./.semaphore/clean-up-vms ${VM_PREFIX}
+    secrets:
+    - name: google-service-account-for-gce

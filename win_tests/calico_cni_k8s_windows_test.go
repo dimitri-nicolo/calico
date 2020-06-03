@@ -28,7 +28,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -642,6 +642,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	   					"log_level":"debug"
 	   				}`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
 
+				log.Infof("Network pod again with another subnet")
 				err = testutils.NetworkPod(netconf2, name, ip, ctx, calicoClient, result, containerID, testutils.HnsNoneNs, nsName)
 				Expect(err).ShouldNot(HaveOccurred())
 				ip = result.IPs[0].Address.IP.String()
@@ -661,11 +662,9 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				containerEP, err = hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
 				Expect(containerEP.GatewayAddress).Should(Equal("20.0.0.2"))
-
 				Expect(containerEP.IPAddress.String()).Should(Equal(ip))
 				Expect(containerEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
 				Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
-
 			})
 
 			It("Network exists but missing management endpoint, should be added", func() {
@@ -1817,7 +1816,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			"etcd_endpoints": "%s",
 			"datastore_type": "%s",
 			"windows_use_single_network":true,
-			"windows_pod_deletion_timestamp_timeout": 10,
+			"windows_pod_deletion_timestamp_timeout": 12,
 			"ipam": {
 				"type": "host-local",
 				"subnet": "10.254.112.0/20"
@@ -1956,17 +1955,17 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			time.Sleep(time.Second * 7)
 
 			log.Infof("Checking timestamp container 1 %s", containerID1)
-			justDeleted, err := dataplane.CheckWepJustDeleted(containerID1, 10)
+			justDeleted, err := dataplane.CheckWepJustDeleted(containerID1, 12)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(justDeleted).To(Equal(true))
 
 			log.Infof("Checking timestamp container 2 %s", containerID2)
-			justDeleted, err = dataplane.CheckWepJustDeleted(containerID2, 10)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID2, 12)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(justDeleted).To(Equal(true))
 
 			log.Infof("Checking timestamp container 3 %s", containerID3)
-			justDeleted, err = dataplane.CheckWepJustDeleted(containerID3, 10)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID3, 12)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(justDeleted).To(Equal(false))
 
@@ -1975,18 +1974,18 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			ensureTimestamp(containerID3)
 
-			// Make sure timeout on pod1, pod2 deletion timestamp. 7+5 > 10
-			log.Infof("Sleeping further 5 seonds")
-			time.Sleep(time.Second * 5)
-			justDeleted, err = dataplane.CheckWepJustDeleted(containerID1, 10)
+			// Make sure timeout on pod1, pod2 deletion timestamp. 7+7 > 12
+			log.Infof("Sleeping further 7 seonds")
+			time.Sleep(time.Second * 7)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID1, 12)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(justDeleted).To(Equal(false))
 
-			justDeleted, err = dataplane.CheckWepJustDeleted(containerID2, 10)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID2, 12)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(justDeleted).To(Equal(false))
 
-			justDeleted, err = dataplane.CheckWepJustDeleted(containerID3, 10)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID3, 12)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(justDeleted).To(Equal(true))
 

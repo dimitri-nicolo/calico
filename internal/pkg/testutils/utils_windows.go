@@ -74,7 +74,7 @@ func CreateContainerUsingDocker() (string, error) {
 		image = "mcr.microsoft.com/windows/servercore:1809"
 	}
 
-	command := fmt.Sprintf("docker run --net none -d %s powershell", image)
+	command := fmt.Sprintf("docker run --net none -d %s powershell.exe -command start-sleep -s 300", image)
 	cmd := exec.Command("powershell.exe", command)
 
 	out, err := cmd.CombinedOutput()

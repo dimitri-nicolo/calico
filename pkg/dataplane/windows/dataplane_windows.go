@@ -202,7 +202,7 @@ func (d *windowsDataplane) CheckWepJustDeleted(containerID string, timeout int) 
 
 	logrus.WithField("id", containerID).Infof("Get timestamp for pod deletion [%s]", val)
 	if time.Since(t) < (time.Second * time.Duration(timeout)) {
-		logrus.WithField("id", containerID).Infof("timestamp for pod deletion [%s] within %s seconds", val, timeout)
+		logrus.WithField("id", containerID).Infof("timestamp for pod deletion [%s] within %d seconds", val, timeout)
 		return true, nil
 	}
 
@@ -849,8 +849,10 @@ func (d *windowsDataplane) createAndAttachContainerEP(args *skel.CmdArgs,
 
 	attempts := 3
 	for {
+		var hnsEndpointCont *hcsshim.HNSEndpoint
+		var err error
 		d.logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
-		hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, args.Netns, func() (*hcsshim.HNSEndpoint, error) {
+		_, err = hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, args.Netns, func() (*hcsshim.HNSEndpoint, error) {
 			hnsEP := &hcsshim.HNSEndpoint{
 				Name:           endpointName,
 				VirtualNetwork: hnsNetwork.Id,
@@ -863,6 +865,22 @@ func (d *windowsDataplane) createAndAttachContainerEP(args *skel.CmdArgs,
 			}
 			return hnsEP, nil
 		})
+
+		// We cannot trust hns.ProvisionEndpoint error status. https://github.com/containernetworking/plugins/blob/v0.8.6/pkg/hns/endpoint_windows.go#L244
+		// For instance, if a container exited for any reason when we reach here,
+		// hns.ProvisionEndpoint will follow the execution steps below:
+		// 1. Create endpoint
+		// 2. Failed to attach endpoint because of error "The requested virtual machine or container operation is not valid in the current state."
+		//    and return hcsshim.ErrComputeSystemDoesNotExist
+		// 3. Deprovision endpoint
+		// 4. Return endpoint with no error. However, endpoint is no longer in the system.
+
+		// However, both upstream win_bridge and win_overlay plugins do not handle this case.
+		if err == nil {
+			// Evaluate endpoint status by reading from the system.
+			hnsEndpointCont, err = hcsshim.GetHNSEndpointByName(endpointName)
+		}
+
 		if err != nil {
 			d.logger.WithError(err).Error("Error provisioning endpoint, checking if we need to clean it up.")
 
@@ -921,7 +939,7 @@ func cleanUpEndpointByIP(IP net.IP, logger *logrus.Entry) error {
 func cleanUpEndpointByName(endpointName string, logger *logrus.Entry) error {
 	hnsEndpoint, err := hcsshim.GetHNSEndpointByName(endpointName)
 	if hcsshim.IsNotExist(err) {
-		logger.Debug("Endpoint already gone.  Nothing to do.")
+		logger.Debugf("Endpoint already gone.  Nothing to do.")
 		return nil
 	}
 	if err != nil {
