@@ -554,11 +554,17 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       endpoints:
       # Authentication information for accessing secure etcd instances.
       tls:
-        crt:
-        ca:
-        key:
-    
-    # Configuration for setting up Calico node
+        crt: null
+        ca: null
+        key: null
+    # Sets the networking mode. Can be 'calico', 'flannel', or 'none'
+    network: calico
+    # Sets the ipam. Can be 'calico-ipam' or 'host-local'
+    ipam: calico-ipam
+
+    # Sets the mtu.
+    mtu: "1440"
+
     node:
       image: #{imageRegistry}#{versions["cnx-node"].image}
       tag: #{versions["cnx-node"].version}

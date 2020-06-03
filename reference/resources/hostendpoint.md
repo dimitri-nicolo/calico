@@ -30,6 +30,9 @@ may be used to specify the resource type on the CLI:
 `hostendpoint.projectcalico.org`, `hostendpoints.projectcalico.org` and abbreviations such as
 `hostendpoint.p` and `hostendpoints.p`.
 
+For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
+aliases are supported (all case insensitive): `hostendpoint`, `hostendpoints`, `hep`, `heps`.
+
 **Default behavior of external traffic to/from host**
 
 If a host endpoint is created and network policy is not in place, the {{site.prodname}} default is to deny traffic to/from that endpoint (except for traffic allowed by failsafe rules).
@@ -42,7 +45,7 @@ Host endpoints with the `projectcalico-default-allow` profile attached will have
 
 Note: If you have custom iptables rules, using host endpoints with allow-all rules (with no policies) will accept all traffic and therefore bypass those custom rules.
 
-> Auto host endpoints specify the `projectcalico-default-allow` profile so they behave similary to pod workload endpoints.
+> Auto host endpoints specify the `projectcalico-default-allow` profile so they behave similarly to pod workload endpoints.
 {: .alert .alert-info}
 
 > **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the

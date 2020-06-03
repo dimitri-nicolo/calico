@@ -13,10 +13,10 @@ metadata:
     k8s-app: {{include "typha_service_name" . }}
 spec:
   ports:
-    - port: 5473
-      protocol: TCP
-      targetPort: {{include "typha_service_name" . }}
-      name: calico-typha
+  - port: 5473
+    protocol: TCP
+    targetPort: {{include "typha_service_name" . }}
+    name: calico-typha
   selector:
     k8s-app: {{include "typha_service_name" . }}
 
@@ -32,7 +32,7 @@ metadata:
   labels:
     k8s-app: {{include "typha_service_name" . }}
 spec:
-  # Number of Typha replicas.  To enable Typha, set this to a non-zero value *and* set the
+  # Number of Typha replicas. To enable Typha, set this to a non-zero value *and* set the
   # typha_service_name variable in the calico-config ConfigMap above.
   #
   # We recommend using Typha if you have more than 50 nodes or if you are using Federated Endpoint Identity.
@@ -138,7 +138,7 @@ spec:
             value: "gke"
   {{- end }}
 {{- if .Values.bpf }}
-          # Overrides for kubernetes API server host/port.  Needed in BPF mode.
+          # Overrides for kubernetes API server host/port. Needed in BPF mode.
           - name: KUBERNETES_SERVICE_HOST
             valueFrom:
               configMapKeyRef:
@@ -150,7 +150,7 @@ spec:
                 name: calico-config
                 key: kubernetes_service_port
 {{- end }}
-          # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
+          # Enable "info" logging by default. Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
             value: "info"
           # Disable logging to file and syslog since those don't make sense in Kubernetes.
@@ -200,34 +200,8 @@ spec:
           # Configure route aggregation based on pod CIDR.
           - name: USE_POD_CIDR
             value: "true"
-  {{- end }}
-          # Sets Default Security Groups if tigera-aws-config exists
-          - name: TIGERA_DEFAULT_SECURITY_GROUPS
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-aws-config
-                key: default_sgs
-                optional: true
-          # Sets Pod Security Group if tigera-aws-config exists
-          - name: TIGERA_POD_SECURITY_GROUP
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-aws-config
-                key: pod_sg
-                optional: true
-          # Location of the CA bundle Typha uses to authenticate Felix; volume mount
-          - name: TYPHA_CAFILE
-            value: /calico-typha-ca/caBundle
-          # Common name on the Felix certificate
-          - name: TYPHA_CLIENTCN
-            value: {{ .Values.typha.tls.felixCommonName }}
-          # Location of the server certificate for Typha; volume mount
-          - name: TYPHA_SERVERCERTFILE
-            value: /calico-typha-certs/typha.crt
-          # Location of the server certificate key for Typha; volume mount
-          - name: TYPHA_SERVERKEYFILE
-            value: /calico-typha-certs/typha.key
-          # Uncomment these lines to enable prometheus metrics.  Since Typha is host-networked,
+{{- end }}
+          # Uncomment these lines to enable prometheus metrics. Since Typha is host-networked,
           # this opens a port on the host, which may need to be secured.
           #- name: TYPHA_PROMETHEUSMETRICSENABLED
           #  value: "true"
@@ -527,5 +501,5 @@ metadata:
   name: calico-typha-cpva
   namespace: kube-system
 
-  {{- end }}
+{{- end }}
 {{- end }}

@@ -1,4 +1,4 @@
-### Host Endpoints
+## Host Endpoints
 
 > **Important**: If your cluster has host endpoints with `interfaceName: *` you must prepare your cluster before
 > upgrading. Failure to do so will result in an outage.
