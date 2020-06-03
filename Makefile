@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.38
+GO_BUILD_VER?=v0.40
 
 GIT_USE_SSH = true
 
@@ -169,6 +169,7 @@ clean:
 	rm -rf filesystem/included-source
 	rm -rf dist
 	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
+	rm -rf config/
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -205,13 +206,13 @@ remote-deps: mod-download
 	mkdir -p filesystem/usr/lib/calico/bpf/
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
-		cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml crds.yaml; \
+		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config config; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/conf.d; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/config filesystem/etc/calico/confd/config; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd` vendor/github.com/tigera/confd-private; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/Microsoft/SDN` vendor/github.com/Microsoft/SDN; \
-		chmod -R +w filesystem/etc/calico/confd/ crds.yaml vendor'
+		chmod -R +w filesystem/etc/calico/confd/ config/ vendor'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), amd64)
@@ -329,9 +330,7 @@ run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 		-v $(CURDIR):/manifests \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 		--detach \
-		${HYPERKUBE_IMAGE} sh -c '\
-		go mod download; \
-		/hyperkube apiserver \
+		${HYPERKUBE_IMAGE} kube-apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
 			--etcd-servers=http://127.0.0.1:2379 \
@@ -339,7 +338,7 @@ run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 			--authorization-mode=RBAC \
 			--service-cluster-ip-range=10.101.0.0/16 \
 			--v=10 \
-			--logtostderr=true'
+			--logtostderr=true
 
 	# Wait until we can configure a cluster role binding which allows anonymous auth.
 	while ! docker exec st-apiserver kubectl create \
@@ -353,9 +352,8 @@ run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 	# ClusterRoleBinding created
 
 	# Create CustomResourceDefinition (CRD) for Calico resources
-	# from the manifest crds.yaml
 	while ! docker exec st-apiserver kubectl \
-		apply -f /manifests/crds.yaml; \
+		apply -f /manifests/config/crd/; \
 		do echo "Trying to create CRDs"; \
 		sleep 1; \
 		done
