@@ -5,14 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func copyMap(src map[string]string) map[string]string {
-	dst := make(map[string]string, len(src))
-	for k, v := range src {
-		dst[k] = v
-	}
-	return dst
-}
-
 func extendMap(src, extraMap map[string]string) map[string]string {
 	dst := make(map[string]string, len(src))
 	for k, v := range src {
@@ -58,7 +50,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_PASSWORD": "cannotsetapassword",
 		})
 		getEnv = me.getEnv
-		cfg, err = NewConfigFromEnv()
+		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
 		By("Catching error for HTTPS backend with no CA.")
@@ -69,7 +61,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_PORT":        "9200",
 		})
 		getEnv = me.getEnv
-		cfg, err = NewConfigFromEnv()
+		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
 		By("Validating HTTPS backend with CA.")
@@ -106,7 +98,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_PORT":   "9200",
 		})
 		getEnv = me.getEnv
-		cfg, err := NewConfigFromEnv()
+		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
 		By("Validating when credentials are set in serviceuser access mode.")
@@ -115,7 +107,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_PASSWORD": "cannotsetapassword",
 		})
 		getEnv = me.getEnv
-		cfg, err = NewConfigFromEnv()
+		cfg, err := NewConfigFromEnv()
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(cfg).ShouldNot(BeNil())
 
@@ -124,7 +116,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_SCHEME": "https",
 		})
 		getEnv = me.getEnv
-		cfg, err = NewConfigFromEnv()
+		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
 		By("Validating HTTPS backend with CA.")
@@ -171,7 +163,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_PASSWORD": "cannotsetapassword",
 		})
 		getEnv = me.getEnv
-		cfg, err = NewConfigFromEnv()
+		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
 		By("Catching error for HTTPS backend with no CA.")
@@ -182,7 +174,7 @@ var _ = Describe("Test configuration validation", func() {
 			"ELASTIC_PORT":        "9200",
 		})
 		getEnv = me.getEnv
-		cfg, err = NewConfigFromEnv()
+		_, err = NewConfigFromEnv()
 		Expect(err).Should(HaveOccurred())
 
 		By("Validating HTTPS backend with CA.")

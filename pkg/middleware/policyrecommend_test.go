@@ -37,7 +37,6 @@ var (
 	destPort       = uint16(80)
 	destPortInRule = numorstring.SinglePort(destPort)
 
-	proto       = uint8(6)
 	protoInRule = numorstring.ProtocolFromString("TCP")
 
 	app1Dep = &appsv1.Deployment{
@@ -443,13 +442,11 @@ func (fa *fakeAuthorizer) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 	// This is unused in this test.
 	// TODO(doublek): Should make the interface in authorizer tighter.
 	panic("This method should be unused")
-	return nil
 }
 
 func (fa *fakeAuthorizer) KubernetesAuthn(h http.Handler) http.Handler {
 	// This is unused in this test.
 	panic("This method should be unused")
-	return nil
 }
 
 func (fa *fakeAuthorizer) Authorize(*http.Request) (int, error) {
@@ -458,10 +455,6 @@ func (fa *fakeAuthorizer) Authorize(*http.Request) (int, error) {
 
 func (fa *fakeAuthorizer) setNextResult(nr int) {
 	fa.nextResult = nr
-}
-
-func (fa *fakeAuthorizer) setNextError(err error) {
-	fa.nextError = err
 }
 
 func (fa *fakeAuthorizer) DefaultK8sAuth() auth.K8sAuthInterface {

@@ -20,24 +20,24 @@ var (
 		// This first set of fields matches the set requested by the API (see elastic.FlowCompositeSources) and will never
 		// be modified by the policy calculation. These are non-aggregated and non-cached in the pipeline converter and
 		// a single set of these values represents a single flow.
-		{"source_type", "source_type"},
-		{"source_namespace", "source_namespace"},
-		{"source_name", "source_name_aggr"},
-		{"dest_type", "dest_type"},
-		{"dest_namespace", "dest_namespace"},
-		{"dest_name", "dest_name_aggr"},
+		{Name: "source_type", Field: "source_type"},
+		{Name: "source_namespace", Field: "source_namespace"},
+		{Name: "source_name", Field: "source_name_aggr"},
+		{Name: "dest_type", Field: "dest_type"},
+		{Name: "dest_namespace", Field: "dest_namespace"},
+		{Name: "dest_name", Field: "dest_name_aggr"},
 
 		// These are additional fields that we require to do the policy calculation, but we aggregate out
 		// in the pipeline processing. These are before the reporter and action (which we don't aggregate out),
 		// because we need to correlate source/dest flows - in particular when we are making use of archived policy
 		// data to fill in the gaps.
-		{"proto", "proto"},
-		{"source_ip", "source_ip"},
-		{"source_name_full", "source_name"},
-		{"source_port", "source_port"},
-		{"dest_ip", "dest_ip"},
-		{"dest_name_full", "dest_name"},
-		{"dest_port", "dest_port"},
+		{Name: "proto", Field: "proto"},
+		{Name: "source_ip", Field: "source_ip"},
+		{Name: "source_name_full", Field: "source_name"},
+		{Name: "source_port", Field: "source_port"},
+		{Name: "dest_ip", Field: "dest_ip"},
+		{Name: "dest_name_full", Field: "dest_name"},
+		{Name: "dest_port", Field: "dest_port"},
 
 		// We need to group together source and dest flows for the same connection (or related connections), so that we
 		// are able to use the calculated source action in the destination flow (so we can marry up the two halves of the
@@ -49,8 +49,8 @@ var (
 		//
 		// For the cases we get multiple source actions, then we only expect dest results when the source result was
 		// "allow", and no dest results when it was "deny".
-		{"action", "action"},
-		{"reporter", "reporter"},
+		{Name: "action", Field: "action"},
+		{Name: "reporter", Field: "reporter"},
 	}
 
 	// ^^^ A note on the above regarding source/dest names ^^^
@@ -574,7 +574,7 @@ func (s sortedCache) Less(i, j int) bool {
 	// Action index is equal, check source action.
 	si = s[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
 	sj = s[j].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
-	if si < sj {
+	if si < sj {	//nolint:golint,gosimple
 		return true
 	}
 

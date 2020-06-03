@@ -28,8 +28,8 @@ var (
 	namespaceTimeout = 10 * time.Second
 
 	NamespaceCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{"source_namespace", "source_namespace"},
-		{"dest_namespace", "dest_namespace"},
+		{Name: "source_namespace", Field: "source_namespace"},
+		{Name: "dest_namespace", Field: "dest_namespace"},
 	}
 )
 
@@ -85,7 +85,6 @@ func FlowLogNamespaceHandler(mcmAuth MCMAuth, esClient lmaelastic.Client) http.H
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
 			return
 		}
-		return
 	})
 }
 

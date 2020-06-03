@@ -35,10 +35,6 @@ func (bam basicAuthMech) setAuthHeader(req *http.Request) {
 	req.SetBasicAuth(bam.username, bam.password)
 }
 
-const (
-	proxyListenHost = "127.0.0.1:8000"
-)
-
 var _ = Describe("Elasticsearch access", func() {
 	proxyScheme := getEnvOrDefaultString("TEST_PROXY_SCHEME", "https")
 	proxyHost := getEnvOrDefaultString("TEST_PROXY_HOST", "127.0.0.1:8000")
