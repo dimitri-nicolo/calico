@@ -41,8 +41,6 @@ var (
 	pod3        = "pod-3"
 	pod4Rs1Aggr = "pod-4-rs-1-*"
 	pod4Rs2Aggr = "pod-4-rs-2-*"
-	pod4Rs1     = "pod-4-rs-1"
-	pod4Rs2     = "pod-4-rs-2"
 	ns1         = "netset-1"
 	ns1Aggr     = "netset-1"
 	gns1        = "gns-1"
@@ -103,12 +101,6 @@ var (
 		Name:      pod2Aggr,
 		Namespace: namespace1,
 		Labels:    pod2Labels,
-	}
-	flowEndpointNamespace2Pod3Source = api.FlowEndpointData{
-		Type:      api.FlowLogEndpointTypeWEP,
-		Name:      pod3Aggr,
-		Namespace: namespace2,
-		Labels:    pod3Labels,
 	}
 	flowEndpointGlobalNamespaceGlobalNetworkSet1Source = api.FlowEndpointData{
 		Type:      api.FlowLogEndpointTypeNetworkSet,

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 package elastic_test
 
 import (
@@ -32,9 +32,9 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			ReportData: &apiv3.ReportData{
 				ReportTypeName: typeName,
 				ReportName:     name,
-				StartTime:      metav1.Time{ts.Add(time.Duration(reportIdx) * time.Minute)},
-				EndTime:        metav1.Time{ts.Add((time.Duration(reportIdx) * time.Minute) + (2 * time.Minute))},
-				GenerationTime: metav1.Time{ts.Add(-time.Duration(reportIdx) * time.Minute)},
+				StartTime:      metav1.Time{Time: ts.Add(time.Duration(reportIdx) * time.Minute)},
+				EndTime:        metav1.Time{Time: ts.Add((time.Duration(reportIdx) * time.Minute) + (2 * time.Minute))},
+				GenerationTime: metav1.Time{Time: ts.Add(-time.Duration(reportIdx) * time.Minute)},
 			},
 		}
 		Expect(elasticClient.StoreArchivedReport(rep, ts)).ToNot(HaveOccurred())
@@ -112,27 +112,27 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r).To(HaveLen(6))
 		Expect(r).To(ConsistOf(
-			api.ReportTypeAndName{"type1", "report1"},
-			api.ReportTypeAndName{"type2", "report1"},
-			api.ReportTypeAndName{"type1", "report2"},
-			api.ReportTypeAndName{"type3", "report3"},
-			api.ReportTypeAndName{"type3", "report2"},
-			api.ReportTypeAndName{"type4", "report3"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report1"},
+			api.ReportTypeAndName{ReportTypeName: "type2", ReportName: "report1"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report2"},
+			api.ReportTypeAndName{ReportTypeName: "type3", ReportName: "report3"},
+			api.ReportTypeAndName{ReportTypeName: "type3", ReportName: "report2"},
+			api.ReportTypeAndName{ReportTypeName: "type4", ReportName: "report3"},
 		))
 
 		By("retrieving the set of unique reportTypeName/reportName combinations with report filter")
 		r, err = elasticClient.RetrieveArchivedReportTypeAndNames(cxt, api.ReportQueryParams{
-			Reports: []api.ReportTypeAndName{{"type1", ""}, {"", "report2"}, {"type3", "report3"}},
+			Reports: []api.ReportTypeAndName{{ReportTypeName: "type1"}, {ReportName: "report2"}, {ReportTypeName: "type3", ReportName: "report3"}},
 		})
 
 		By("checking we have the correct set of unique combinations")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r).To(HaveLen(4))
 		Expect(r).To(ConsistOf(
-			api.ReportTypeAndName{"type1", "report1"},
-			api.ReportTypeAndName{"type1", "report2"},
-			api.ReportTypeAndName{"type3", "report3"},
-			api.ReportTypeAndName{"type3", "report2"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report1"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report2"},
+			api.ReportTypeAndName{ReportTypeName: "type3", ReportName: "report3"},
+			api.ReportTypeAndName{ReportTypeName: "type3", ReportName: "report2"},
 		))
 
 		By("retrieving the set of unique reportTypeName/reportName combinations with upper time filter")
@@ -144,7 +144,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r).To(HaveLen(1))
 		Expect(r).To(ConsistOf(
-			api.ReportTypeAndName{"type1", "report1"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report1"},
 		))
 
 		By("retrieving the set of unique reportTypeName/reportName combinations with lower time filter")
@@ -156,7 +156,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r).To(HaveLen(1))
 		Expect(r).To(ConsistOf(
-			api.ReportTypeAndName{"type4", "report3"},
+			api.ReportTypeAndName{ReportTypeName: "type4", ReportName: "report3"},
 		))
 
 		By("retrieving the set of unique reportTypeName/reportName combinations with time range filter")
@@ -169,12 +169,12 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r).To(HaveLen(6))
 		Expect(r).To(ConsistOf(
-			api.ReportTypeAndName{"type1", "report1"},
-			api.ReportTypeAndName{"type2", "report1"},
-			api.ReportTypeAndName{"type1", "report2"},
-			api.ReportTypeAndName{"type3", "report3"},
-			api.ReportTypeAndName{"type3", "report2"},
-			api.ReportTypeAndName{"type4", "report3"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report1"},
+			api.ReportTypeAndName{ReportTypeName: "type2", ReportName: "report1"},
+			api.ReportTypeAndName{ReportTypeName: "type1", ReportName: "report2"},
+			api.ReportTypeAndName{ReportTypeName: "type3", ReportName: "report3"},
+			api.ReportTypeAndName{ReportTypeName: "type3", ReportName: "report2"},
+			api.ReportTypeAndName{ReportTypeName: "type4", ReportName: "report3"},
 		))
 
 		By("checking we handle cancelled context")
@@ -192,7 +192,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			rn := fmt.Sprintf("report%d", ii)
 			_ = addReport(tn, rn)
 			_ = addReport(tn, rn)
-			unique = append(unique, api.ReportTypeAndName{tn, rn})
+			unique = append(unique, api.ReportTypeAndName{ReportTypeName: tn, ReportName: rn})
 		}
 		waitForReports()
 
@@ -228,7 +228,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("retrieving the full set of report summaries (sort by startTime)")
 		cxt, cancel := context.WithCancel(context.Background())
 		r, err := elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy: []api.ReportSortBy{{"startTime", false}},
+			SortBy: []api.ReportSortBy{{Field: "startTime"}},
 		})
 
 		By("checking we have the correct set of reports in the correct order")
@@ -239,7 +239,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 		By("retrieving the full set of report summaries (sort by ascending startTime)")
 		r, err = elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy: []api.ReportSortBy{{"startTime", true}},
+			SortBy: []api.ReportSortBy{{Field: "startTime", Ascending: true}},
 		})
 
 		By("checking we have the correct set of reports in the correct order")
@@ -250,7 +250,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 		By("retrieving the full set of report summaries (sort by ascending endTime)")
 		r, err = elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy: []api.ReportSortBy{{"endTime", true}},
+			SortBy: []api.ReportSortBy{{Field: "endTime", Ascending: true}},
 		})
 
 		By("checking we have the correct set of reports in the correct order")
@@ -261,7 +261,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 		By("retrieving the full set of report summaries (sort by generationTime)")
 		r, err = elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy: []api.ReportSortBy{{"generationTime", false}}, // generationTime is in opposite order to start/end times
+			SortBy: []api.ReportSortBy{{Field: "generationTime"}}, // generationTime is in opposite order to start/end times
 		})
 
 		By("checking we have the correct set of reports in the correct order")
@@ -272,7 +272,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 		By("retrieving the full set of report summaries (sort by descending reportTypeName and descending startTime)")
 		r, err = elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy: []api.ReportSortBy{{"reportTypeName", false}, {"startTime", false}},
+			SortBy: []api.ReportSortBy{{Field: "reportTypeName"}, {Field: "startTime"}},
 		})
 
 		By("checking we have the correct set of reports in the correct order")
@@ -284,7 +284,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("retrieving the full set of report summaries (sort by ascending reportName and descending startTime), maxItems=4")
 		maxItems := 4
 		r, err = elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy:   []api.ReportSortBy{{"reportName", true}, {"startTime", false}},
+			SortBy:   []api.ReportSortBy{{Field: "reportName", Ascending: true}, {Field: "startTime"}},
 			MaxItems: &maxItems,
 		})
 
@@ -296,7 +296,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 
 		By("checking we can query page 1")
 		r, err = elasticClient.RetrieveArchivedReportSummaries(cxt, api.ReportQueryParams{
-			SortBy:   []api.ReportSortBy{{"reportName", true}, {"startTime", false}},
+			SortBy:   []api.ReportSortBy{{Field: "reportName", Ascending: true}, {Field: "startTime"}},
 			MaxItems: &maxItems,
 			Page:     1,
 		})
@@ -333,7 +333,7 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 		By("retrieving the full set of report summaries (sort by startTime, reportTypeName, reportName)")
 		r, err := elasticClient.RetrieveArchivedReportSummaries(context.Background(), api.ReportQueryParams{
 			SortBy: []api.ReportSortBy{
-				{"startTime", false}, {"reportTypeName", true}, {"reportName", true},
+				{Field: "startTime"}, {Field: "reportTypeName", Ascending: true}, {Field: "reportName", Ascending: true},
 			},
 		})
 
@@ -354,9 +354,9 @@ var _ = Describe("Compliance elasticsearch report list tests", func() {
 			ReportData: &apiv3.ReportData{
 				ReportTypeName: "testindexsettings",
 				ReportName:     "testindexsettings",
-				StartTime:      metav1.Time{t},
-				EndTime:        metav1.Time{t.Add(2 * time.Minute)},
-				GenerationTime: metav1.Time{t.Add(-time.Minute)},
+				StartTime:      metav1.Time{Time: t},
+				EndTime:        metav1.Time{Time: t.Add(2 * time.Minute)},
+				GenerationTime: metav1.Time{Time: t.Add(-time.Minute)},
 			},
 		}
 

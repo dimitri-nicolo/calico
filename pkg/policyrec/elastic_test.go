@@ -308,7 +308,6 @@ func matchInnerMustQuery(mustQuery []interface{}, params *policyrec.PolicyRecomm
 func buildWildcardQuery(tierName string, namespace string) string {
 	if tierName != "" && namespace != "" {
 		panic("Both tiername and namespace cannot be specified")
-		return ""
 	} else if tierName != "" {
 		return fmt.Sprintf("*|%s|*|*", tierName)
 	} else {

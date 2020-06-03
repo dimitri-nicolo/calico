@@ -102,7 +102,7 @@ func GetCompositeAggrFlows(
 	for bucket := range buckets {
 		results = append(results, bucket)
 	}
-	took := int64(time.Now().Sub(startTime) / time.Millisecond)
+	took := int64(time.Since(startTime) / time.Millisecond)
 
 	// Check for errors.
 	// We can use the blocking version of the channel operator since the error channel will have been closed (it
@@ -116,7 +116,7 @@ func GetCompositeAggrFlows(
 	// -  We exceed the context deadline.
 	var timedOut bool
 	if err != nil {
-		if _, ok := err.(TimedOutError); ok {
+		if err == err.(TimedOutError) {
 			// Response from ES indicates a handled timeout.
 			log.Info("Response from ES indicates time out - flag results as timedout")
 			timedOut = true

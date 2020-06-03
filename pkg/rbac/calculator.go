@@ -253,7 +253,6 @@ type userCalculator struct {
 	calculator        *calculator
 	allTiers          []string
 	gettableTiers     []string
-	watchableTiers    []string
 	clusterRules      []rbacv1.PolicyRule
 	namespacedRules   map[string][]rbacv1.PolicyRule
 	canGetAllTiersVal *bool

@@ -43,16 +43,16 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		By("storing a network policy list")
 		npResList := &list.TimestampedResourceList{
 			ResourceList:              apiv3.NewNetworkPolicyList(),
-			RequestStartedTimestamp:   metav1.Time{ts.Add(time.Minute)},
-			RequestCompletedTimestamp: metav1.Time{ts.Add(time.Minute)},
+			RequestStartedTimestamp:   metav1.Time{Time: ts.Add(time.Minute)},
+			RequestCompletedTimestamp: metav1.Time{Time: ts.Add(time.Minute)},
 		}
 		npResList.ResourceList.GetObjectKind().SetGroupVersionKind((&resources.TypeCalicoNetworkPolicies).GroupVersionKind())
 
 		Expect(elasticClient.StoreList(resources.TypeCalicoNetworkPolicies, npResList)).ToNot(HaveOccurred())
 
 		By("storing a second network policy list one hour in the future")
-		npResList.RequestStartedTimestamp = metav1.Time{ts.Add(2 * time.Minute)}
-		npResList.RequestCompletedTimestamp = metav1.Time{ts.Add(2 * time.Minute)}
+		npResList.RequestStartedTimestamp = metav1.Time{Time: ts.Add(2 * time.Minute)}
+		npResList.RequestCompletedTimestamp = metav1.Time{Time: ts.Add(2 * time.Minute)}
 		Expect(elasticClient.StoreList(resources.TypeCalicoNetworkPolicies, npResList)).ToNot(HaveOccurred())
 
 		By("having the appropriate snapshot indices")
@@ -77,7 +77,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		rep := &api.ArchivedReportData{
 			ReportData: &apiv3.ReportData{
 				ReportName: "report-foo",
-				EndTime:    metav1.Time{ts.Add(time.Minute)},
+				EndTime:    metav1.Time{Time: ts.Add(time.Minute)},
 			},
 		}
 		reportTime := time.Now()
@@ -114,7 +114,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		rep2 := &api.ArchivedReportData{
 			ReportData: &apiv3.ReportData{
 				ReportName: "report-foo",
-				EndTime:    metav1.Time{ts.Add(2 * time.Minute)},
+				EndTime:    metav1.Time{Time: ts.Add(2 * time.Minute)},
 			},
 		}
 		Expect(elasticClient.StoreArchivedReport(rep2, reportTime.Add(time.Minute))).ToNot(HaveOccurred())
@@ -133,7 +133,7 @@ var _ = Describe("Compliance elasticsearch integration tests", func() {
 		rep3 := &api.ArchivedReportData{
 			ReportData: &apiv3.ReportData{
 				ReportName: "report-foo2",
-				EndTime:    metav1.Time{ts.Add(3 * time.Minute)},
+				EndTime:    metav1.Time{Time: ts.Add(3 * time.Minute)},
 			},
 		}
 		Expect(elasticClient.StoreArchivedReport(rep3, reportTime.Add(time.Minute))).ToNot(HaveOccurred())

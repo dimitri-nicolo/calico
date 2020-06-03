@@ -16,64 +16,28 @@ const defaultTier = "default"
 
 const (
 	FlowlogBuckets = "flog_buckets"
-	flowQuery      = `{
-  "bool": {
-    "must": [
-      {"range": {"start_time": { "gte": "{{.StartTime}}"}}},
-      {"range": {"end_time": { "lte": "{{.EndTime}}"}}},
-      {"terms":{"source_type":["net","ns","wep","hep"]}},
-      {"terms":{"dest_type":["net","ns","wep","hep"]}},
-      {"nested": {
-        "path": "policies",
-        "query": {
-          "wildcard": {
-            "policies.all_policies": {
-              "value": "*|__PROFILE__|__PROFILE__.kns.{{.Namespace}}|allow"
-            }
-          }
-        }
-      }},
-      {"bool": {
-        "should": [
-          {"bool": {
-            "must": [
-              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
-              {"term": {"source_namespace": "{{.Namespace}}"}}
-            ]
-          }},
-          {"bool": {
-            "must": [
-              {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
-              {"term": {"dest_namespace": "{{.Namespace}}"}}
-            ]
-          }}
-        ]
-      }}
-    ]
-  }
-}`
 )
 
 var (
 	CompositeSources = []pelastic.AggCompositeSourceInfo{
-		{"source_type", "source_type"},
-		{"source_namespace", "source_namespace"},
-		{"source_name_aggr", "source_name_aggr"},
-		{"dest_type", "dest_type"},
-		{"dest_namespace", "dest_namespace"},
-		{"dest_name_aggr", "dest_name_aggr"},
-		{"proto", "proto"},
-		{"dest_ip", "dest_ip"},
-		{"source_ip", "source_ip"},
-		{"source_port", "source_port"},
-		{"dest_port", "dest_port"},
-		{"reporter", "reporter"},
-		{"action", "action"},
+		{Name: "source_type", Field: "source_type"},
+		{Name: "source_namespace", Field: "source_namespace"},
+		{Name: "source_name_aggr", Field: "source_name_aggr"},
+		{Name: "dest_type", Field: "dest_type"},
+		{Name: "dest_namespace", Field: "dest_namespace"},
+		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
+		{Name: "proto", Field: "proto"},
+		{Name: "dest_ip", Field: "dest_ip"},
+		{Name: "source_ip", Field: "source_ip"},
+		{Name: "source_port", Field: "source_port"},
+		{Name: "dest_port", Field: "dest_port"},
+		{Name: "reporter", Field: "reporter"},
+		{Name: "action", Field: "action"},
 	}
 	AggregatedTerms = []pelastic.AggNestedTermInfo{
-		{"policies", "policies", "by_tiered_policy", "policies.all_policies"},
-		{"source_labels", "source_labels", "by_kvpair", "source_labels.labels"},
-		{"dest_labels", "dest_labels", "by_kvpair", "dest_labels.labels"},
+		{Name: "policies", Path: "policies", Term: "by_tiered_policy", Field: "policies.all_policies"},
+		{Name: "source_labels", Path: "source_labels", Term: "by_kvpair", Field: "source_labels.labels"},
+		{Name: "dest_labels", Path: "dest_labels", Term: "by_kvpair", Field: "dest_labels.labels"},
 	}
 
 	// Indexes for policy recommendation into the raw flow data
@@ -91,7 +55,7 @@ var (
 	PRCompositeSourcesRawIdxReporter        = 11
 	PRCompositeSourcesRawIdxAction          = 12
 
-	PRCompositeSourcesIdxs = map[string]int{
+	PRCompositeSourcesIdxs map[string]int = map[string]int{
 		"source_type":      PRCompositeSourcesRawIdxSourceType,
 		"source_namespace": PRCompositeSourcesRawIdxSourceNamespace,
 		"source_name_aggr": PRCompositeSourcesRawIdxSourceNameAggr,
@@ -113,7 +77,7 @@ var (
 	PRAggregatedTermsNameSourceLabels = "source_labels"
 	PRAggregatedTermsNameDestLabels   = "dest_labels"
 
-	PRAggregatedTermNames = map[string]string{
+	PRAggregatedTermNames map[string]string = map[string]string{
 		"policies":      PRAggregatedTermsNamePolicies,
 		"source_labels": PRAggregatedTermsNameSourceLabels,
 		"dest_labels":   PRAggregatedTermsNameDestLabels,

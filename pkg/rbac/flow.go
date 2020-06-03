@@ -2,8 +2,6 @@
 package rbac
 
 import (
-	"net/http"
-
 	"github.com/tigera/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
@@ -129,7 +127,6 @@ func (r flowHelper) CanListNetworkSets(namespace string) (bool, error) {
 
 // flowHelper implements the FlowHelper interface.
 type flowHelper struct {
-	userReg         *http.Request
 	authorizer      RBACAuthorizer
 	authorizedCache map[authzv1.ResourceAttributes]bool
 }
