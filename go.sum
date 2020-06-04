@@ -681,6 +681,8 @@ github.com/tigera/felix-private v0.0.0-20200528042119-c8efc32f38cd h1:8lXje792ZM
 github.com/tigera/felix-private v0.0.0-20200528042119-c8efc32f38cd/go.mod h1:o2pk9NPb+yvbcpMLb7S+j9ZqRrmHVtGT6e4ZNFDp+XA=
 github.com/tigera/felix-private v0.0.0-20200601133516-34f1bc6aeba5 h1:YfSuHgBtckW7mT+IAXEY6JEu6/a9Lo/0K8MTJI5ylVg=
 github.com/tigera/felix-private v0.0.0-20200601133516-34f1bc6aeba5/go.mod h1:o2pk9NPb+yvbcpMLb7S+j9ZqRrmHVtGT6e4ZNFDp+XA=
+github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf h1:xsRuf/OpImM8eaZB8n+hmOZAwnWFGZI7TLapslLPfAc=
+github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf/go.mod h1:0i/5ZcV1aumiFOdbhweFUD8WJry9oha+DeJf5DzOwSc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56 h1:MhaYRI9GBwqeJ+egYJ/vyGhbndRn52LX9GLcEJ9ms7Y=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200527160814-71f7883c4323 h1:FOxhFHz3LuqBMq6Fm+uPyiyXOf+H9i9K3qkMuXlMMw0=
@@ -696,6 +698,8 @@ github.com/tigera/lma v0.0.0-20200527190516-af276d611add h1:kQ1pfnOsPPR65FqxC9z3
 github.com/tigera/lma v0.0.0-20200527190516-af276d611add/go.mod h1:YksNTjFkHjYQrGoA3JaujyCcCv8VXTQouob3iv/9eOA=
 github.com/tigera/lma v0.0.0-20200529190501-c6ba7f4b3a78 h1:3Ut/gnqz/TPiJHU202JIhwwhup6/NyI0xduJDqW3tII=
 github.com/tigera/lma v0.0.0-20200529190501-c6ba7f4b3a78/go.mod h1:zcB3UffNXfCqnlvHbmAtbHHq76I7KQuAnzeF3Z81Q+k=
+github.com/tigera/lma v0.0.0-20200603195405-049a7046c780 h1:dNYcc+KoKLHcjF7QfYaW/OmXRap6Sxjz2ENRpOFkbFI=
+github.com/tigera/lma v0.0.0-20200603195405-049a7046c780/go.mod h1:zcB3UffNXfCqnlvHbmAtbHHq76I7KQuAnzeF3Z81Q+k=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200522030523-6bf40a9b3418/go.mod h1:dx58Wyk2Xw9neQX1UOUq0v3+wdpuKSXP23Fvea0SLLk=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200528030447-9b62bdfac8b4/go.mod h1:NC3wnyW/AawWEGLDr1sR4+Q3CXCtQloloVKFY4sGV2s=
