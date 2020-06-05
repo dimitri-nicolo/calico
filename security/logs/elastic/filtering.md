@@ -9,12 +9,6 @@ configuration.  Use filtering to suppress logs of low significance.
 
 ## Configure flow filtering
 
-Configure filtering based on how {{site.prodname}} was deployed:
-- [Operator deployment](#operator-deployment)
-- [Helm deployment](#helm-deployment)
-
-### Operator deployment
-
 Flow log filtering is configured through a ConfigMap in the `tigera-operator`
 namespace.
 
@@ -30,25 +24,6 @@ To enable flow log filtering, follow these steps:
 
    ```bash
    kubectl create configmap fluentd-filters -n tigera-operator --from-file=filters
-   ```
-
-### Helm deployment
-
-Flow log filtering is configured in the `tigera-es-config` ConfigMap.
-
-To enable flow log filtering, follow these steps:
-
-1. Set the `tigera.elasticsearch.flow-filtering` field in the `tigera-es-config`
-   ConfigMap in the `calico-monitoring` Namespace to "true".  This ConfigMap can
-   be found in `monitor-calico.yaml`.
-
-1. Set the filters you wish to use in the `tigera.elasticsearch.flow-filters.conf`
-   field.  See the following section for more information on writing those filters.
-
-1. Force a rolling update of fluentd by patching the DaemonSet.
-   ```bash
-   kubectl patch daemonset -n calico-monitoring tigera-fluentd-node -p \
-     "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"update-date\":\"`date +'%s'`\"}}}}}"
    ```
 
 ## Filter configuration files
