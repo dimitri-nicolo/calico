@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package federatedservices
 
@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	log "github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
@@ -112,7 +113,7 @@ type federatedServiceConfig struct {
 }
 
 // NewFederatedServicesController returns a controller which manages FederatedServices objects.
-func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernetes.Clientset, c client.Interface, cfg config.GenericControllerConfig) controller.Controller {
+func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernetes.Clientset, c client.Interface, cfg config.GenericControllerConfig, restartChan chan<- string) controller.Controller {
 	fec := &federatedServicesController{
 		calicoClient:  c,
 		ctx:           ctx,
@@ -157,10 +158,13 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 
 	fec.cache = rcache.NewResourceCache(cacheArgs)
 	fec.serviceLabelHandler = labelindex.NewInheritIndex(fec.onServiceMatchStarted, fec.onServiceMatchStopped)
+	restartMonitor := remotecluster.NewRemoteClusterRestartMonitor(fec.decoupler, func(msg string) {
+		restartChan <- msg
+	})
 	fec.syncer = federationsyncer.New(
 		c.(backendClientAccessor).Backend(),
 		k8s.NewK8sResourceWrapperClient(k8sClientset),
-		fec.decoupler,
+		restartMonitor,
 	)
 
 	return fec

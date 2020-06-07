@@ -175,6 +175,7 @@ func main() {
 		controllerStates: make(map[string]*controllerState),
 		stop:             stop,
 		licenseMonitor:   monitor.New(calicoClient.(backendClientAccessor).Backend()),
+		restartCntrlChan: make(chan string),
 	}
 
 	var runCfg config.RunConfig
@@ -201,7 +202,7 @@ func main() {
 
 		// this channel will never receive, and thus flannelmigration will never
 		// restart due to a config change.
-		controllerCtrl.restart = make(chan config.RunConfig)
+		controllerCtrl.restartCfgChan = make(chan config.RunConfig)
 	} else {
 		log.Info("Getting initial config snapshot from datastore")
 		cCtrlr := config.NewRunConfigController(ctx, *cfg, calicoClient.KubeControllersConfiguration())
@@ -210,7 +211,7 @@ func main() {
 		log.Debugf("Initial config: %+v", runCfg)
 
 		// any subsequent changes trigger a restart
-		controllerCtrl.restart = cCtrlr.ConfigChan()
+		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
 		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient)
 	}
 
@@ -434,7 +435,8 @@ type controllerControl struct {
 	ctx                   context.Context
 	controllerStates      map[string]*controllerState
 	stop                  chan struct{}
-	restart               <-chan config.RunConfig
+	restartCfgChan        <-chan config.RunConfig
+	restartCntrlChan      chan string
 	licenseMonitor        monitor.LicenseMonitor
 	needLicenseMonitoring bool
 	shortLicensePolling   bool
@@ -478,7 +480,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.controllerStates["Service"] = &controllerState{controller: serviceController}
 	}
 	if cfg.Controllers.FederatedServices != nil {
-		federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient, *cfg.Controllers.FederatedServices)
+		federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient, *cfg.Controllers.FederatedServices, cc.restartCntrlChan)
 		cc.controllerStates["FederatedServices"] = &controllerState{
 			controller:     federatedEndpointsController,
 			licenseFeature: features.FederatedServices,
@@ -600,7 +602,11 @@ func (cc *controllerControl) RunControllers() {
 			log.Warn("context cancelled")
 			close(cc.stop)
 			return
-		case <-cc.restart:
+		case msg := <-cc.restartCntrlChan:
+			log.Warnf("controller requested restart: %s", msg)
+			close(cc.stop)
+			return
+		case <-cc.restartCfgChan:
 			log.Warn("configuration changed; restarting")
 			// TODO: handle this more gracefully, like tearing down old controllers and starting new ones
 			close(cc.stop)
