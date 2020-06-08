@@ -90,6 +90,9 @@ sub-build-%:
 bin/calico-typha: bin/calico-typha-$(ARCH)
 	ln -f bin/calico-typha-$(ARCH) bin/calico-typha
 
+bin/wrapper: bin/wrapper-$(ARCH)
+	ln -f bin/wrapper-$(ARCH) bin/wrapper
+
 bin/calico-typha-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	mkdir -p bin
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
@@ -97,6 +100,14 @@ bin/calico-typha-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/calico-typha was not statically linked"; false ) )'
+
+bin/wrapper-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
+	mkdir -p bin
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/wrapper" && \
+		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
+		-e "not a dynamic executable" || \
+		( echo "Error: bin/wrapper was not statically linked"; false ) )'
 
 bin/typha-client-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	@echo Building typha client...
@@ -122,10 +133,11 @@ sub-image-%:
 
 # Build the calico/typha docker image, which contains only Typha.
 .PHONY: image $(BUILD_IMAGE)
-$(BUILD_IMAGE): bin/calico-typha-$(ARCH) register
+$(BUILD_IMAGE): bin/calico-typha-$(ARCH) bin/wrapper-$(ARCH) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-typha-$(ARCH) docker-image/bin/
+	cp bin/wrapper-$(ARCH) docker-image/bin/
 	cp LICENSE docker-image/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)

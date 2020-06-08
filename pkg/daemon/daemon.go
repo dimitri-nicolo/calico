@@ -34,6 +34,7 @@ import (
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/bgpsyncer"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
+	remotecluster "github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/tunnelipsyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/health"
@@ -42,6 +43,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/typha/pkg/buildinfo"
 	"github.com/projectcalico/typha/pkg/calc"
+	"github.com/projectcalico/typha/pkg/cmdwrapper"
 	"github.com/projectcalico/typha/pkg/config"
 	"github.com/projectcalico/typha/pkg/jitter"
 	"github.com/projectcalico/typha/pkg/k8s"
@@ -85,6 +87,8 @@ type TyphaDaemon struct {
 
 	// Node counting.
 	nodeCounter *calc.NodeCounter
+
+	restartChan chan interface{}
 }
 
 type syncerPipeline struct {
@@ -121,6 +125,7 @@ func New() *TyphaDaemon {
 		ConfigureEarlyLogging: logutils.ConfigureEarlyLogging,
 		ConfigureLogging:      logutils.ConfigureLogging,
 		CachesBySyncerType:    map[syncproto.SyncerType]syncserver.BreadcrumbProvider{},
+		restartChan:           make(chan interface{}),
 	}
 }
 
@@ -338,7 +343,11 @@ func (t *TyphaDaemon) addSyncerPipeline(
 		// the number of nodes in the cluster. We only want to count nodes once, which is why we only do this
 		// for the felix syncer and not the BGP syncer as well.
 		t.nodeCounter = calc.NewNodeCounter(toCache)
-		validator = calc.NewValidationFilter(t.nodeCounter)
+		restartMonitor := remotecluster.NewRemoteClusterRestartMonitor(t.nodeCounter, func(msg string) {
+			log.Warnf("received remote cluster restart: %s", msg)
+			t.restartChan <- "restart"
+		})
+		validator = calc.NewValidationFilter(restartMonitor)
 	} else {
 		// Otherwise, just go from validator to cache directly.
 		validator = calc.NewValidationFilter(toCache)
@@ -435,6 +444,11 @@ func (t *TyphaDaemon) WaitAndShutDown(cxt context.Context) {
 	signal.Notify(termChan, syscall.SIGTERM)
 	for {
 		select {
+		case <-t.restartChan:
+			log.Warn("Restart signalled, shutting down")
+			// Sleep for a little bit to avoid getting into a tight restart loop
+			time.Sleep(3 * time.Second)
+			os.Exit(cmdwrapper.RestartReturnCode)
 		case <-termChan:
 			log.Fatal("Received SIGTERM, shutting down")
 		case <-usr1SignalChan:
