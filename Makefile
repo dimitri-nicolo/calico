@@ -42,6 +42,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yq.v2"
 YAML_CMD:=$(shell which yq.v2 || echo docker run --rm -i mikefarah/yq:2.4.2 yq)
+HTML_CMD:=$(shell which pandoc || echo docker run --rm --volume "`pwd`:/data" pandoc/core:2.9.2)
 
 # Local directories to ignore when running htmlproofer
 HP_IGNORE_LOCAL_DIRS="/v2.0/"
@@ -436,11 +437,13 @@ MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
 ## Creates archive of all the manifests
 release-archive: release-prereqs $(RELEASE_DIR).tgz
 
-$(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README
+$(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
 	cp collect-ocp-manifests.sh $(RELEASE_DIR)
+	# converting the generated html file to markdown format for manifest archive.
+	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
 	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
-$(RELEASE_DIR)/README:
+$(RELEASE_DIR)/README.md:
 	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
 	@echo "Documentation for this release can be found at https://docs.tigera.io/$(RELEASE_STREAM)" >> $@
 	@echo "" >> $@
