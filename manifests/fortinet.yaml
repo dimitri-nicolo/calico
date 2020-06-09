@@ -113,6 +113,11 @@ spec:
                 configMapKeyRef:
                   name: tigera-firewall-controller
                   key: tigera.firewall.policy.selector
+            - name: FW_ADDRESS_SELECTION
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-firewall-controller
+                  key: tigera.firewall.addressSelection
 
 ---
 apiVersion: projectcalico.org/v3
