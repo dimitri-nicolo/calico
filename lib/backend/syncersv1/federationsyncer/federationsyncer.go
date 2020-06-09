@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2020 Tigera, Inc. All rights reserved.
 
 package federationsyncer
 
@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -27,7 +28,8 @@ var (
 
 // New creates a new federation syncer. This particular syncer requires both Calico datastore access and Kubernetes
 // datastore access (using the Kubernetes wrapped client). For the remote clusters, only Kubernetes access is required.
-func New(calicoClient api.Client, k8sServicesClient api.Client, callbacks api.SyncerCallbacks) api.Syncer {
+func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks api.SyncerCallbacks) api.Syncer {
+	k8sServicesClient := k8s.NewK8sResourceWrapperClient(k8sClientset)
 	// The resources in this syncer are backed by two different clients, so we specify which client for each
 	// resource type.
 	clients := map[string]api.Client{
@@ -57,7 +59,7 @@ func New(calicoClient api.Client, k8sServicesClient api.Client, callbacks api.Sy
 	return watchersyncer.NewMultiClient(
 		clients,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, federationRemoteClusterProcessor{}),
+		remotecluster.NewWrappedCallbacks(callbacks, k8sClientset, federationRemoteClusterProcessor{}),
 	)
 }
 
@@ -107,6 +109,7 @@ func (_ federationRemoteClusterProcessor) GetCalicoAPIConfig(config *apiv3.Remot
 	datastoreConfig.Spec.K8sCAFile = config.Spec.K8sCAFile
 	datastoreConfig.Spec.K8sAPIToken = config.Spec.K8sAPIToken
 	datastoreConfig.Spec.K8sInsecureSkipTLSVerify = config.Spec.K8sInsecureSkipTLSVerify
+	datastoreConfig.Spec.KubeconfigInline = config.Spec.KubeconfigInline
 
 	// If the datastore config is still empty then the RCC did not contain any kubernetes data,
 	// we cannot use this RCC in the syncer.

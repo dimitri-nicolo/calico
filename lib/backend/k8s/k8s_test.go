@@ -41,12 +41,14 @@ import (
 
 	k8sapi "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var (
 	zeroOrder                  = float64(0.0)
+	zeroInt64                  = int64(0)
 	calicoAllowPolicyModelSpec = apiv3.GlobalNetworkPolicySpec{
 		Order: &zeroOrder,
 		Ingress: []apiv3.Rule{
@@ -355,23 +357,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 
 	ctx := context.Background()
 
-	BeforeEach(func() {
-		log.SetLevel(log.DebugLevel)
-
-		// Create a Kubernetes client, callbacks, and a syncer.
-		cfg := apiconfig.KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
-		c, cb, syncer = CreateClientAndSyncer(cfg)
-
-		// Start the syncer.
-		syncer.Start()
-
-		// Node object is created by applying the mock-node.yaml manifest in advance.
-
-		// Start processing updates.
-		go cb.ProcessUpdates()
-	})
-
-	AfterEach(func() {
+	cleanup := func() {
 		// Clean up all Calico resources.
 		err := c.Clean()
 		Expect(err).NotTo(HaveOccurred())
@@ -403,7 +389,32 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		for _, p := range pods.Items {
 			err = c.ClientSet.CoreV1().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				_, err = c.ClientSet.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
+				return kerrors.IsNotFound(err)
+			}, 30*time.Second).Should(BeTrue())
 		}
+	}
+
+	BeforeEach(func() {
+		log.SetLevel(log.DebugLevel)
+
+		// Create a Kubernetes client, callbacks, and a syncer.
+		cfg := apiconfig.KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
+		c, cb, syncer = CreateClientAndSyncer(cfg)
+		cleanup()
+
+		// Start the syncer.
+		syncer.Start()
+
+		// Node object is created by applying the mock-node.yaml manifest in advance.
+
+		// Start processing updates.
+		go cb.ProcessUpdates()
+	})
+
+	AfterEach(func() {
+		cleanup()
 		syncer.Stop()
 	})
 
@@ -1710,6 +1721,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 						Command: []string{"sleep", "3600"},
 					},
 				},
+				TerminationGracePeriodSeconds: &zeroInt64,
 			},
 		}
 		pod, err := c.ClientSet.CoreV1().Pods("default").Create(pod)
@@ -1961,6 +1973,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 						Command: []string{"sleep", "3600"},
 					},
 				},
+				TerminationGracePeriodSeconds: &zeroInt64,
 			},
 		}
 		// Note: assigning back to pod variable in order to pick up revision information. If we don't do that then
@@ -2844,6 +2857,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 							Command: []string{"sleep", "3600"},
 						},
 					},
+					TerminationGracePeriodSeconds: &zeroInt64,
 				},
 			}
 			_, err := c.ClientSet.CoreV1().Pods("default").Create(pod)
@@ -3036,8 +3050,20 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 
 var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testutils.DatastoreK8sInline, func(cfg apiconfig.CalicoAPIConfig) {
 	var (
-		c *k8s.KubeClient
+		c  *k8s.KubeClient
+		ns k8sapi.Namespace
 	)
+
+	cleanup := func() {
+		// Clean up all Calico resources.
+		err := c.Clean()
+		Expect(err).NotTo(HaveOccurred())
+		// Ensure the namespace is removed
+		Eventually(func() bool {
+			err = c.ClientSet.CoreV1().Namespaces().Delete(ns.Name, &metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
+			return kerrors.IsNotFound(err)
+		}, 30*time.Second).Should(BeTrue())
+	}
 
 	BeforeEach(func() {
 		Expect(cfg.Spec.KubeConfig.KubeconfigInline).NotTo(BeEmpty())
@@ -3045,27 +3071,26 @@ var _ = testutils.E2eDatastoreDescribe("Test Inline kubeconfig support", testuti
 		client, err := k8s.NewKubeClient(&cfg.Spec)
 		Expect(err).NotTo(HaveOccurred())
 		c = client.(*k8s.KubeClient)
-	})
-
-	AfterEach(func() {
-		// Clean up all Calico resources.
-		err := c.Clean()
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("should handle creating and deleting a namespace", func() {
-		ns := k8sapi.Namespace{
+		ns = k8sapi.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-inline-ns",
 			},
 		}
 
+		cleanup()
+	})
+
+	AfterEach(func() {
+		cleanup()
+	})
+
+	It("should handle creating and deleting a namespace", func() {
 		By("Creating a namespace", func() {
 			_, err := c.ClientSet.CoreV1().Namespaces().Create(&ns)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		By("Deleting the namespace", func() {
-			err := c.ClientSet.CoreV1().Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{})
+			err := c.ClientSet.CoreV1().Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{GracePeriodSeconds: &zeroInt64})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

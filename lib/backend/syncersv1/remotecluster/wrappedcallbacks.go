@@ -1,14 +1,16 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package remotecluster
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -16,6 +18,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+	validatorv3 "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
 // Time to wait before retry failed connections to datastores.
@@ -40,11 +43,14 @@ type RemoteClusterClientInterface interface {
 	CreateClient(config apiconfig.CalicoAPIConfig) (api.Client, error)
 }
 
-func NewWrappedCallbacks(callbacks api.SyncerCallbacks, rci RemoteClusterInterface) api.SyncerCallbacks {
+func NewWrappedCallbacks(callbacks api.SyncerCallbacks, k8sClientset *kubernetes.Clientset, rci RemoteClusterInterface) api.SyncerCallbacks {
 	// Store remotes as they are created so that they can be stopped.
 	// A non-thread safe map is fine, because a mutex is used when it's accessed.
-	remotes := make(map[model.Key]*RemoteSyncer)
-	return &wrappedCallbacks{callbacks: callbacks, remotes: remotes, rci: rci}
+	remotes := make(map[model.ResourceKey]*RemoteSyncer)
+	wcb := wrappedCallbacks{callbacks: callbacks, remotes: remotes, rci: rci}
+	sw := NewSecretWatcher(&wcb, k8sClientset)
+	wcb.secretWatcher = sw
+	return &wcb
 }
 
 // The callbacks used for remote cluster configs watcher
@@ -56,7 +62,7 @@ type wrappedCallbacks struct {
 	callbacks api.SyncerCallbacks
 
 	// A map of remote clusters (and some associated tracking information)
-	remotes map[model.Key]*RemoteSyncer
+	remotes map[model.ResourceKey]*RemoteSyncer
 
 	// The lock should be used for all accesses to the remotes map. It's also used for some coordination between adding and deleting remote clusters.
 	lock sync.Mutex
@@ -66,11 +72,18 @@ type wrappedCallbacks struct {
 
 	// Set to true once the initial list of RCCs is fetched.
 	allRCCsAreSynced bool
+
+	secretWatcher *secretWatcher
 }
 
 type RemoteSyncer struct {
 	// The watchersyncer used to get updates from this remote cluster.
 	syncer api.Syncer
+
+	// Flag set true while RemoteSyncer is being stopped to ensure two stops cannot
+	// run in parallel for this syncer.
+	beingStopped bool
+	needsRemoval bool
 
 	// The client used by the watchersyncer
 	client api.Client
@@ -81,6 +94,8 @@ type RemoteSyncer struct {
 	// If the remote can be connected to then it will block the insync status coming from the local cluster.
 	// Once any error is received from the remote, then it no longer blocks.
 	shouldBlockInsync bool
+
+	remoteClusterConfig *apiv3.RemoteClusterConfiguration
 
 	// The datastore configuration for this cluster.
 	datastoreConfig *apiconfig.CalicoAPIConfig
@@ -152,95 +167,186 @@ func (a *wrappedCallbacks) handleRCCUpdate(update api.Update) {
 		// New remote cluster update. Use the RemoteClusterInterface to obtain the CalicoAPIConfig.
 		// If this returns nil, then this remote cluster is excluded from the syncer.
 		clog.Debug("Received new RCC update")
-		datastoreConfig := a.rci.GetCalicoAPIConfig(update.Value.(*apiv3.RemoteClusterConfiguration))
-		if datastoreConfig != nil {
-			clog.Info("Handling new valid RCC update")
-			a.newRCC(key, datastoreConfig)
-		}
-	case api.UpdateTypeKVDeleted:
-		// Delete the remote cluster if it was previously valid.
-		clog.Debug("Received delete RCC update")
-		_, wasValid := a.remotes[key]
-		if wasValid {
-			clog.Info("Handling delete valid RCC update")
-			a.deleteRCC(key)
-		}
-	case api.UpdateTypeKVUpdated:
-		// Updates are only partially handled. If the remote cluster config is modified such that
-		// the validity (i.e. whether or not the remote cluster will be used in the syncer) changes
-		// then treat that as a creation or a deletion. The existence of the entry in the remotes
-		// map indicates that it was previously valid.
-		//
-		// Updates to the connection configuration are not supported, so just log. To support this, the code would need
-		// to handle the following.
-		// - If the config is updated to point at a new cluster then the endpoints contained there need to be switched out (atomically?)
-		// - If the config is updated to just change the connection info, then a new "client" needs to be created.
-		//   But switching out clients for updated connection info isn't generally supported so don't handle it here.
-		clog.Debug("Received modified RCC update")
+		rcConfig := update.Value.(*apiv3.RemoteClusterConfiguration)
+		if rcConfig != nil {
+			clog.Info("Handling new RCC update")
 
-		// Use the RemoteClusterInterface to obtain the CalicoAPIConfig. If this returns nil, then this remote cluster
-		// is excluded from the syncer (i.e. it's not valid)
-		datastoreConfig := a.rci.GetCalicoAPIConfig(update.Value.(*apiv3.RemoteClusterConfiguration))
-		isValid := datastoreConfig != nil
-
-		// Get the existing remote data for this cluster. The existence of this data in the remotes map indicates that
-		// this cluster was previously valid for this syncer.
-		remote, wasValid := a.remotes[update.Key]
-
-		if isValid && !wasValid {
-			// It is now valid, but was not previously. Treat as a new cluster.
-			clog.Info("Handling modified RCC update as a new valid RCC")
-			a.newRCC(key, datastoreConfig)
-		} else if !isValid && wasValid {
-			// It is now not valid, but was previously. Treat as a deleted cluster.
-			clog.Info("Handling modified RCC update as a delete valid RCC")
-			a.deleteRCC(key)
-		} else if isValid && wasValid && !reflect.DeepEqual(remote.datastoreConfig, datastoreConfig) {
-			// It was valid before and is still valid, and the datastore config has changed. Log and send status update
-			// warn that the change requires a restart.
-			log.Warnf("Received update for %s. Restart process to pick up changes to the connection data.", key)
+			// Send a status update for the remote cluster indicating that it is starting connection processing. We do
+			// this synchronously from the RCC update thread to ensure this is the first event for each RCC.
+			log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVNew))
 			a.callbacks.OnUpdates([]api.Update{{
 				KVPair: model.KVPair{
 					Key: model.RemoteClusterStatusKey{Name: key.Name},
 					Value: &model.RemoteClusterStatus{
-						Status: model.RemoteClusterConfigChangeRestartRequired,
+						Status: model.RemoteClusterConnecting,
 					},
 				},
-				UpdateType: api.UpdateTypeKVUpdated,
+				UpdateType: api.UpdateTypeKVNew,
 			}})
+			a.updateRCC(key, rcConfig, "new RCC", clog)
 		}
+	case api.UpdateTypeKVDeleted:
+		// Delete the remote cluster if it was previously valid.
+		clog.Debug("Received delete RCC update")
+		_, existed := a.remotes[key]
+		if existed {
+			clog.Info("Handling delete RCC update")
+			a.stopRCC(key, true)
+		}
+	case api.UpdateTypeKVUpdated:
+		clog.Debug("Received modified RCC update")
+
+		rcConfig := update.Value.(*apiv3.RemoteClusterConfiguration)
+		a.updateRCC(key, rcConfig, "modified RCC", clog)
 	default:
-		clog.Warnf("Unknown update type received: %s", update.UpdateType)
+		clog.Warnf("Unknown update type received: %s", updateTypeToString(update.UpdateType))
 	}
+}
+
+func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.RemoteClusterConfiguration, updateSrc string, log *log.Entry) {
+	// Updates are only partially handled. If the remote cluster config is modified such that
+	// the validity (i.e. whether or not the remote cluster will be used in the syncer) changes
+	// then treat that as a creation or a deletion. The existence of the entry in the remotes
+	// map and having a non-nil datastoreConfig indicates that it was previously valid.
+	//
+	// Updates to the connection configuration are not supported, so just log and trigger restart. To support this, the code would need
+	// to handle the following.
+	// - If the config is updated to point at a new cluster then the endpoints contained there need to be switched out (atomically?)
+	// - If the config is updated to just change the connection info, then a new "client" needs to be created.
+	//   But switching out clients for updated connection info isn't generally supported so don't handle it here.
+	_, existed := a.remotes[key]
+	if !existed {
+		log.Infof("Adding RCC to remotes %v", key)
+		a.remotes[key] = &RemoteSyncer{shouldBlockInsync: false, remoteClusterConfig: rcConfig}
+	}
+	remote := a.remotes[key]
+	remote.remoteClusterConfig = rcConfig
+
+	// If this returns nil, then this remote cluster is excluded from the syncer (i.e. it's not valid)
+	datastoreConfig, err := a.getDatastoreConfig(rcConfig)
+	if err != nil {
+		log.Warnf("Received %s. Unable to get datastore config: %s", updateSrc, err)
+		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: key.Name},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterConfigIncomplete,
+					Error:  err.Error(),
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}})
+	}
+
+	isValid := datastoreConfig != nil
+
+	// Get the existing remote data for this cluster. If it is not present then add as a new RCC
+	if !existed {
+		// Treat as a new cluster.
+		log.Info("Handling modified RCC update as a new RCC")
+		a.startRemoteSyncer(key, datastoreConfig)
+		return
+	}
+	wasValid := remote.datastoreConfig != nil
+
+	if isValid && !wasValid {
+		// It is now valid, but was not previously. Treat as a new cluster.
+		log.Infof("Handling %s as a valid RCC", updateSrc)
+		a.startRemoteSyncer(key, datastoreConfig)
+	} else if !isValid && wasValid {
+		// It is now not valid, but was previously. Treat as a deleted cluster.
+		log.Infof("Handling %s as invalidating remote cluster", updateSrc)
+		a.stopRCC(key, false)
+	} else if isValid && wasValid && !reflect.DeepEqual(remote.datastoreConfig, datastoreConfig) {
+		// It was valid before and is still valid, and the datastore config has changed. Log and send status update
+		// warn that the change requires a restart.
+		log.Warnf("Received %s. Restart process to pick up changes to the connection data.", updateSrc)
+		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: key.Name},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterConfigChangeRestartRequired,
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}})
+	}
+}
+
+func (a *wrappedCallbacks) getDatastoreConfig(rcConfig *apiv3.RemoteClusterConfiguration) (*apiconfig.CalicoAPIConfig, error) {
+	// If no secret is specified then everything is in the RCC so convert to a datstoreConfig
+	if rcConfig.Spec.ClusterAccessSecret == nil {
+		return a.rci.GetCalicoAPIConfig(rcConfig), nil
+	}
+	if a.secretWatcher == nil {
+		return nil, fmt.Errorf("secret watcher not available, unable to get secrets for cluster access")
+	}
+	data, err := a.secretWatcher.GetSecretData(rcConfig.Spec.ClusterAccessSecret.Namespace, rcConfig.Spec.ClusterAccessSecret.Name)
+	if err == nil && data == nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	rcc := apiv3.RemoteClusterConfiguration{
+		ObjectMeta: rcConfig.ObjectMeta,
+		Spec: apiv3.RemoteClusterConfigurationSpec{
+			DatastoreType: string(data["datastoreType"]),
+			EtcdConfig: apiv3.EtcdConfig{
+				EtcdEndpoints: string(data["etcdEndpoints"]),
+				EtcdUsername:  string(data["etcdUsername"]),
+				EtcdPassword:  string(data["etcdPassword"]),
+				EtcdKey:       string(data["etcdKey"]),
+				EtcdCert:      string(data["etcdCert"]),
+				EtcdCACert:    string(data["etcdCACert"]),
+			},
+			KubeConfig: apiv3.KubeConfig{
+				KubeconfigInline: string(data["kubeconfig"]),
+			},
+		},
+	}
+
+	err = validatorv3.Validate(rcc)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.rci.GetCalicoAPIConfig(&rcc), nil
+}
+
+func (a *wrappedCallbacks) addRCC(key model.ResourceKey, rcConfig *apiv3.RemoteClusterConfiguration) (isNew bool) {
+	_, existed := a.remotes[key]
+	log.Infof("Adding RCC by addRCC to remotes %v", key)
+	a.remotes[key] = &RemoteSyncer{shouldBlockInsync: false, remoteClusterConfig: rcConfig}
+	return !existed
 }
 
 // Create and start a watchersyncer using the config in the update.
-func (a *wrappedCallbacks) newRCC(key model.ResourceKey, datastoreConfig *apiconfig.CalicoAPIConfig) {
-	// Send a status update for the remote cluster indicating that it is starting connection processing. We do
-	// this synchronously from the RCC update thread to ensure this is the first event for each RCC.
-	a.callbacks.OnUpdates([]api.Update{{
-		KVPair: model.KVPair{
-			Key: model.RemoteClusterStatusKey{Name: key.Name},
-			Value: &model.RemoteClusterStatus{
-				Status: model.RemoteClusterConnecting,
-			},
-		},
-		UpdateType: api.UpdateTypeKVNew,
-	}})
+func (a *wrappedCallbacks) startRemoteSyncer(key model.ResourceKey, datastoreConfig *apiconfig.CalicoAPIConfig) {
+	// If datastoreConfig is nil then we can't start a syncer yet.
+	if datastoreConfig == nil {
+		// TODO: Should there be callback update sent for this case?
+		return
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	a.remotes[key].cancel = cancel
+	a.remotes[key].datastoreConfig = datastoreConfig
 	if a.allRCCsAreSynced {
 		// The initial list of remote clusters are synced. This update is after the initial sync so it shouldn't block.
-		a.remotes[key] = &RemoteSyncer{cancel: cancel, shouldBlockInsync: false, datastoreConfig: datastoreConfig}
+		a.remotes[key].shouldBlockInsync = false
 	} else {
 		// Need to wait for this remote to sync. Done() is called on the wg when the in-sync message is received.
-		a.remotes[key] = &RemoteSyncer{cancel: cancel, shouldBlockInsync: true, datastoreConfig: datastoreConfig}
+		a.remotes[key].shouldBlockInsync = true
 		a.activeUnsyncedRemotes.Add(1)
 	}
-	go a.createRemoteSyncer(ctx, key, key.Name, datastoreConfig)
+	go a.createRemoteSyncer(ctx, key, datastoreConfig)
 }
 
-func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key, name string, datastoreConfig *apiconfig.CalicoAPIConfig) {
+func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.ResourceKey, datastoreConfig *apiconfig.CalicoAPIConfig) {
 	// Create a backend client.
 	// This can fail (e.g. if the remote cluster can't be reached) and should be retried in the background.
 	// If there are any failures then Typha won't be blocked from starting, it will be allowed to start, potentially
@@ -253,6 +359,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 		// that interface, otherwise, just use the standard Calico client.
 		if rcci, ok := a.rci.(RemoteClusterClientInterface); ok {
 			backendClient, err = rcci.CreateClient(*datastoreConfig)
+
 		} else {
 			backendClient, err = backend.NewClient(*datastoreConfig)
 		}
@@ -260,7 +367,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 		if err != nil {
 			// Hit an error. Handle by not blocking on this remote, and by sending a status update.
 			log.Warnf("Could not connect to remote cluster. Will retry in %v: %s %v", retrySeconds, key, err)
-			if done := a.handleConnectionFailed(ctx, key, name, err); done {
+			if done := a.handleConnectionFailed(ctx, key, err); done {
 				log.Infof("Abandoning creation of syncer for %s", key)
 				return
 			}
@@ -298,14 +405,14 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 		remoteEndpointCallbacks := remoteEndpointCallbacks{
 			wrappedCallbacks: a.callbacks,
 			rci:              a.rci,
-			clusterName:      name,
-			insync:           func() { a.handleRemoteInSync(ctx, key, name) },
-			syncErr:          func(err error) { a.handleConnectionFailed(ctx, key, name, err) },
+			clusterName:      key.Name,
+			insync:           func() { a.handleRemoteInSync(ctx, key) },
+			syncErr:          func(err error) { a.handleConnectionFailed(ctx, key, err) },
 			resync: func() {
 				// Send a status update for this remote cluster, to indicate that we are synchronizing data.
 				a.callbacks.OnUpdates([]api.Update{{
 					KVPair: model.KVPair{
-						Key: model.RemoteClusterStatusKey{Name: name},
+						Key: model.RemoteClusterStatusKey{Name: key.Name},
 						Value: &model.RemoteClusterStatus{
 							Status: model.RemoteClusterResyncInProgress,
 						},
@@ -324,7 +431,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 
 // handleRemoteInSync processes an in-sync event from a remote cluster syncer. This sends an in-sync status message
 // for that cluster and then flags the cluster that we should no longer block waiting for it.
-func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Key, name string) {
+func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.ResourceKey) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	select {
@@ -333,9 +440,10 @@ func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Key
 	default:
 		log.Infof("Sending in-sync update for %s", key)
 		// Send a status update to indicate that we are in-sync for a particular remote cluster.
+		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
 		a.callbacks.OnUpdates([]api.Update{{
 			KVPair: model.KVPair{
-				Key: model.RemoteClusterStatusKey{Name: name},
+				Key: model.RemoteClusterStatusKey{Name: key.Name},
 				Value: &model.RemoteClusterStatus{
 					Status: model.RemoteClusterInSync,
 				},
@@ -349,7 +457,7 @@ func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Key
 // handleConnectionFailed processes a connection failure by flagging that we should not block on this remote, and
 // sending an error provided the remote has not been deleted. Returns true if the remote cluster has been
 // deleted.
-func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model.Key, name string, err error) bool {
+func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model.ResourceKey, err error) bool {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	a.finishRemote(key)
@@ -360,9 +468,10 @@ func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model
 	default:
 		log.WithError(err).Infof("Sending connection failed update for %s", key)
 		// Send a status update to indicate that the connection has failed to a particular remote cluster.
+		log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
 		a.callbacks.OnUpdates([]api.Update{{
 			KVPair: model.KVPair{
-				Key: model.RemoteClusterStatusKey{Name: name},
+				Key: model.RemoteClusterStatusKey{Name: key.Name},
 				Value: &model.RemoteClusterStatus{
 					Status: model.RemoteClusterConnectionFailed,
 					Error:  err.Error(),
@@ -374,10 +483,22 @@ func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model
 	}
 }
 
-// deleteRCC processes a remote cluster deletion. The internal lock is held by the caller.
-func (a *wrappedCallbacks) deleteRCC(key model.ResourceKey) {
+// stopRCC processes a remote cluster deletion. The internal lock is held by the caller.
+func (a *wrappedCallbacks) stopRCC(key model.ResourceKey, remove bool) {
 	// This will only be called when the remote cluster was previously valid and included in the syncer.
 	remote := a.remotes[key]
+
+	// Do this before we check if it is already beingStopped, so that if the removal
+	// stopRCC returns because it is already being stopped this remote will be removed anyway.
+	if remove {
+		remote.needsRemoval = remove
+	}
+	if remote.beingStopped {
+		// This remote is already being stopped, nothing to do.
+		return
+	}
+	remote.beingStopped = true
+	defer func() { remote.beingStopped = false }()
 
 	// Grab the syncer and client.
 	syncer := remote.syncer
@@ -407,31 +528,114 @@ func (a *wrappedCallbacks) deleteRCC(key model.ResourceKey) {
 	// processing.
 	remote, ok := a.remotes[key]
 	if ok {
-		log.Infof("Cancel remote context for %s", key)
-		remote.cancel()
+		if remote.cancel != nil {
+			log.Infof("Cancel remote context for %s", key)
+			remote.cancel()
 
-		// Finish the remote (before deleting it)
-		a.finishRemote(key)
+			// Finish the remote (before deleting it)
+			a.finishRemote(key)
 
-		// Delete the remote from the list of remotes.
-		delete(a.remotes, key)
+			remote.syncer = nil
+			remote.client = nil
+			remote.datastoreConfig = nil
+		} else {
+			log.Infof("Cancel remote context for %s was not needed", key)
+		}
+		if remote.needsRemoval {
+			// Delete the remote from the list of remotes.
+			delete(a.remotes, key)
 
-		// Send a delete for the remote cluster status. We do this after all other deletion processing to ensure
-		// no other events for this remote cluster occur after this deletion event.
-		a.callbacks.OnUpdates([]api.Update{{
-			KVPair: model.KVPair{
-				Key: model.RemoteClusterStatusKey{Name: key.Name},
-			},
-			UpdateType: api.UpdateTypeKVDeleted,
-		}})
+			// Send a delete for the remote cluster status. We do this after all other deletion processing to ensure
+			// no other events for this remote cluster occur after this deletion event.
+			log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVDeleted))
+			a.callbacks.OnUpdates([]api.Update{{
+				KVPair: model.KVPair{
+					Key: model.RemoteClusterStatusKey{Name: key.Name},
+				},
+				UpdateType: api.UpdateTypeKVDeleted,
+			}})
+		} else {
+			log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
+			a.callbacks.OnUpdates([]api.Update{{
+				KVPair: model.KVPair{
+					Key: model.RemoteClusterStatusKey{Name: key.Name},
+					Value: &model.RemoteClusterStatus{
+						Status: model.RemoteClusterConfigIncomplete,
+						Error:  "Config is incomplete, stopping watch remote",
+					},
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			}})
+		}
 	}
+	a.cleanStaleSecrets()
 }
 
 // finishRemote signals that the remote should no longer block insync messages
-func (a *wrappedCallbacks) finishRemote(key model.Key) {
+func (a *wrappedCallbacks) finishRemote(key model.ResourceKey) {
 	if a.remotes[key] != nil && a.remotes[key].shouldBlockInsync {
 		log.Infof("--> Finish processing for remote cluster: %s", key)
 		a.remotes[key].shouldBlockInsync = false
 		a.activeUnsyncedRemotes.Done()
 	}
+}
+
+func (a *wrappedCallbacks) OnSecretUpdated(namespace, name string) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	for k, v := range a.remotes {
+		if v.remoteClusterConfig == nil {
+			continue
+		}
+
+		if v.remoteClusterConfig.Spec.ClusterAccessSecret == nil {
+			continue
+		}
+
+		secretRef := v.remoteClusterConfig.Spec.ClusterAccessSecret
+		if secretRef.Namespace == namespace && secretRef.Name == name {
+			fields := log.Fields{"Namespace": namespace, "Secret": name}
+			l := log.WithFields(fields)
+			a.updateRCC(k, v.remoteClusterConfig, "Secret update", l)
+		}
+
+	}
+
+	a.cleanStaleSecrets()
+}
+
+func (a *wrappedCallbacks) cleanStaleSecrets() {
+	if a.secretWatcher == nil {
+		return
+	}
+	// Is it too often to clean up stale on every Secret update?
+	a.secretWatcher.MarkStale()
+	for _, v := range a.remotes {
+		if v.remoteClusterConfig == nil {
+			continue
+		}
+
+		if v.remoteClusterConfig.Spec.ClusterAccessSecret == nil {
+			continue
+		}
+
+		secretRef := v.remoteClusterConfig.Spec.ClusterAccessSecret
+		_, _ = a.secretWatcher.GetSecretData(secretRef.Namespace, secretRef.Name)
+	}
+	a.secretWatcher.SweepStale()
+}
+
+func updateTypeToString(ut api.UpdateType) string {
+	switch ut {
+	case api.UpdateTypeKVUnknown:
+		return "UpdateTypeKVUnknown"
+	case api.UpdateTypeKVNew:
+		return "UpdateTypeKVNew"
+	case api.UpdateTypeKVUpdated:
+		return "UpdateTypeKVUpdated"
+	case api.UpdateTypeKVDeleted:
+		return "UpdateTypeKVDeleted"
+	}
+	return "UknownUpdateType"
 }

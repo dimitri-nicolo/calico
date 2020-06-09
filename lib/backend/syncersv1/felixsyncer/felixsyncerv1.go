@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
@@ -106,13 +107,14 @@ func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.Syn
 	if !cfg.K8sUsePodCIDR {
 		resourceTypes = append(resourceTypes, watchersyncer.ResourceType{ListInterface: model.BlockListOptions{}})
 	}
+	_, clientset, _ := k8s.CreateKubernetesClientset(&cfg)
 
 	// The "main" watchersyncer will spawn additional watchersyncers for any remote clusters that are found.
 	// The callbacks are wrapped to allow the messages to be intercepted so that the additional watchersyncers can be spawned.
 	return watchersyncer.New(
 		client,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, felixRemoteClusterProcessor{}),
+		remotecluster.NewWrappedCallbacks(callbacks, clientset, felixRemoteClusterProcessor{}),
 	)
 }
 
@@ -224,6 +226,9 @@ func (_ felixRemoteClusterProcessor) GetCalicoAPIConfig(config *apiv3.RemoteClus
 		datastoreConfig.Spec.EtcdKeyFile = config.Spec.EtcdKeyFile
 		datastoreConfig.Spec.EtcdCertFile = config.Spec.EtcdCertFile
 		datastoreConfig.Spec.EtcdCACertFile = config.Spec.EtcdCACertFile
+		datastoreConfig.Spec.EtcdKey = config.Spec.EtcdKey
+		datastoreConfig.Spec.EtcdCert = config.Spec.EtcdCert
+		datastoreConfig.Spec.EtcdCACert = config.Spec.EtcdCACert
 		return datastoreConfig
 	case apiconfig.Kubernetes:
 		datastoreConfig.Spec.Kubeconfig = config.Spec.Kubeconfig
@@ -233,6 +238,7 @@ func (_ felixRemoteClusterProcessor) GetCalicoAPIConfig(config *apiv3.RemoteClus
 		datastoreConfig.Spec.K8sCAFile = config.Spec.K8sCAFile
 		datastoreConfig.Spec.K8sAPIToken = config.Spec.K8sAPIToken
 		datastoreConfig.Spec.K8sInsecureSkipTLSVerify = config.Spec.K8sInsecureSkipTLSVerify
+		datastoreConfig.Spec.KubeconfigInline = config.Spec.KubeconfigInline
 		return datastoreConfig
 	}
 	return nil
