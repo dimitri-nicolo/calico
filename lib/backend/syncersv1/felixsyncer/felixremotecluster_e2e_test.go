@@ -911,6 +911,125 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
 			})
 		})
+		Describe("should only see restart callbacks when the appropriate config change happens", func() {
+			var restartMonitor *remotecluster.RestartMonitor
+			var restartCallbackCalled bool
+			var restartCallbackMsg string
+			BeforeEach(func() {
+				By("Creating and starting a syncer")
+				syncTester = testutils.NewSyncerTester()
+				restartCallbackCalled = false
+				restartCallbackMsg = ""
+				restartMonitor = remotecluster.NewRemoteClusterRestartMonitor(syncTester, func(reason string) {
+					restartCallbackCalled = true
+					restartCallbackMsg = reason
+				})
+				syncer = felixsyncer.New(localBackend, localConfig.Spec, restartMonitor)
+				syncer.Start()
+
+				By("Checking status is updated to sync'd at start of day")
+				syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+				syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+				syncTester.ExpectStatusUpdate(api.InSync)
+
+				By("Checking we received the expected events")
+				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
+				// those events too.
+				for _, r := range defaultKubernetesResource() {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
+
+				// Sanitize the actual events received to remove revision info and compare against those expected.
+				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
+			})
+			It("should see no callback when reapplying the RCC", func() {
+
+				By("Updating the remote cluster config (but without changing the syncer connection config)")
+				// Just re-apply the last settings.
+				var outError error
+				rcc, outError = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
+				Expect(outError).NotTo(HaveOccurred())
+
+				By("Checking we received no events")
+				syncTester.ExpectUpdates([]api.Update{}, false)
+
+				Expect(restartCallbackCalled).To(BeFalse())
+			})
+			It("should see restart callback when RCC is changed", func() {
+				By("Updating the remote cluster config (changing the syncer connection config)")
+				rcc.Spec.EtcdUsername = "fakeusername"
+				var err error
+				rcc, err = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Checking we received a restart required event")
+				expectedEvents = []api.Update{
+					{
+						KVPair: model.KVPair{
+							Key: model.RemoteClusterStatusKey{Name: rcc.Name},
+							Value: &model.RemoteClusterStatus{
+								Status: model.RemoteClusterConfigChangeRestartRequired,
+							},
+						},
+						UpdateType: api.UpdateTypeKVUpdated,
+					},
+				}
+
+				// Sanitize the actual events received to remove revision info and compare against those expected.
+				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
+
+				By("Expecting that the RestartMonitor is appropriately calling back")
+				Expect(restartCallbackCalled).To(BeTrue())
+				Expect(restartCallbackMsg).NotTo(BeEmpty())
+			})
+			It("should see no callback when config is changed to an invalid one", func() {
+				By("Deleting the remote cluster")
+				_, err := localClient.RemoteClusterConfigurations().Delete(
+					ctx, rcc.Name, options.DeleteOptions{ResourceVersion: rcc.ResourceVersion},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Checking we received an update event")
+				expectedEvents = []api.Update{
+					{
+						KVPair: model.KVPair{
+							Key: model.RemoteClusterStatusKey{Name: rcc.Name},
+						},
+						UpdateType: api.UpdateTypeKVDeleted,
+					},
+				}
+				for _, kv := range kvResources {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair:     kv,
+						UpdateType: api.UpdateTypeKVDeleted,
+					})
+				}
+
+				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
+				Expect(restartCallbackCalled).To(BeFalse())
+			})
+		})
 	})
 })
 
@@ -1333,165 +1452,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 					})
 				})
 			}
-		})
-		Describe("should only see restart callbacks when the appropriate config change happens", func() {
-			var restartMonitor *remotecluster.RestartMonitor
-			var restartCallbackCalled bool
-			var restartCallbackMsg string
-			var expectedEvents []api.Update
-			var rcc *apiv3.RemoteClusterConfiguration
-			BeforeEach(func() {
-				By("Configuring the RemoteClusterConfiguration for the remote")
-				rcc = &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "remote-cluster"}}
-				rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
-				rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
-				rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
-				rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
-				rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
-				rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
-				rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
-				var err error
-				rcc, err = localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-
-				// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
-				// cluster staus updates as the connection succeeds.
-				expectedEvents := []api.Update{
-					{
-						KVPair: model.KVPair{
-							Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
-							Value: &model.RemoteClusterStatus{
-								Status: model.RemoteClusterConnecting,
-							},
-						},
-						UpdateType: api.UpdateTypeKVNew,
-					},
-					{
-						KVPair: model.KVPair{
-							Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
-							Value: &model.RemoteClusterStatus{
-								Status: model.RemoteClusterResyncInProgress,
-							},
-						},
-						UpdateType: api.UpdateTypeKVUpdated,
-					},
-					{
-						KVPair: model.KVPair{
-							Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
-							Value: &model.RemoteClusterStatus{
-								Status: model.RemoteClusterInSync,
-							},
-						},
-						UpdateType: api.UpdateTypeKVUpdated,
-					},
-				}
-				By("Creating and starting a syncer")
-				syncTester = testutils.NewSyncerTester()
-				restartCallbackCalled = false
-				restartCallbackMsg = ""
-				restartMonitor = remotecluster.NewRemoteClusterRestartMonitor(syncTester, func(reason string) {
-					restartCallbackCalled = true
-					restartCallbackMsg = reason
-				})
-				syncer = felixsyncer.New(localBackend, localConfig.Spec, restartMonitor)
-				syncer.Start()
-
-				By("Checking status is updated to sync'd at start of day")
-				syncTester.ExpectStatusUpdate(api.WaitForDatastore)
-				syncTester.ExpectStatusUpdate(api.ResyncInProgress)
-				syncTester.ExpectStatusUpdate(api.InSync)
-
-				By("Checking we received the expected events")
-				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
-				// those events too.
-				for _, r := range defaultKubernetesResource() {
-					expectedEvents = append(expectedEvents, api.Update{
-						KVPair:     r,
-						UpdateType: api.UpdateTypeKVNew,
-					})
-				}
-
-				// Add an expected event for the node object.
-				expectedEvents = append(expectedEvents, api.Update{
-					UpdateType: api.UpdateTypeKVNew,
-					KVPair: model.KVPair{
-						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
-						Value: &apiv3.Node{
-							Spec: apiv3.NodeSpec{
-								OrchRefs: []apiv3.OrchRef{
-									{
-										NodeName:     "127.0.0.1",
-										Orchestrator: "k8s",
-									},
-								},
-							},
-						},
-					},
-				})
-
-				// Sanitize the actual events received to remove revision info and compare against those expected.
-				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
-			})
-			It("should see no callback when reapplying the RCC", func() {
-
-				By("Updating the remote cluster config (but without changing the syncer connection config)")
-				// Just re-apply the last settings.
-				var outError error
-				rcc, outError = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
-				Expect(outError).NotTo(HaveOccurred())
-
-				By("Checking we received no events")
-				syncTester.ExpectUpdates([]api.Update{}, false)
-
-				Expect(restartCallbackCalled).To(BeFalse())
-			})
-			It("should see restart callback when RCC is changed", func() {
-				By("Updating the remote cluster config (changing the syncer connection config)")
-				rcc.Spec.EtcdUsername = "fakeusername"
-				var err error
-				rcc, err = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-
-				By("Checking we received a restart required event")
-				expectedEvents = []api.Update{
-					{
-						KVPair: model.KVPair{
-							Key: model.RemoteClusterStatusKey{Name: rcc.Name},
-							Value: &model.RemoteClusterStatus{
-								Status: model.RemoteClusterConfigChangeRestartRequired,
-							},
-						},
-						UpdateType: api.UpdateTypeKVUpdated,
-					},
-				}
-
-				// Sanitize the actual events received to remove revision info and compare against those expected.
-				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
-
-				By("Expecting that the RestartMonitor is appropriately calling back")
-				Expect(restartCallbackCalled).To(BeTrue())
-				Expect(restartCallbackMsg).NotTo(BeEmpty())
-			})
-			It("should see no callback when config is changed to an invalid one", func() {
-				By("Deleting the remote cluster")
-				_, err := localClient.RemoteClusterConfigurations().Delete(
-					ctx, rcc.Name, options.DeleteOptions{ResourceVersion: rcc.ResourceVersion},
-				)
-				Expect(err).NotTo(HaveOccurred())
-
-				By("Checking we received an update event")
-				expectedEvents = []api.Update{
-					{
-						KVPair: model.KVPair{
-							Key: model.RemoteClusterStatusKey{Name: rcc.Name},
-						},
-						UpdateType: api.UpdateTypeKVDeleted,
-					},
-				}
-
-				syncTester.ExpectUpdatesSanitized(expectedEvents, false, commonSanitizer)
-				Expect(restartCallbackCalled).To(BeFalse())
-			})
 		})
 	})
 })
