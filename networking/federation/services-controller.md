@@ -5,7 +5,7 @@ canonical_url: /networking/federation/services-controller
 ---
 
 Federated Services is a feature that provides cross-cluster service discovery for your local cluster. It uses the
-separately installable Federated Services Controller
+separately enabled Federated Services Controller
 to provide cross-cluster service discovery. It is expected that this will be used in conjunction with federated
 endpoint identity, although this controller is optional if you have an alternative service discovery mechanism.
 
@@ -15,9 +15,7 @@ are the pod IPs rather than the service IPs. The conservation of the pod IP in t
 policy to be applied between the clusters.
 
 The Federated Services Controller accesses service and endpoints data in the remote clusters directly through the
-Kubernetes API. This means that if the remote cluster is using etcd for the {{site.prodname}} datastore, it is necessary to configure
-both etcd access details and Kubernetes API datastore access details in the same Remote Cluster Configuration resource. See
-[Configuring access to remote clusters](./configure-rcc) for more details.
+Kubernetes API. See [configuring access to remote clusters](./configure-rcc) for more details.
 
 ## Configuring a federated service
 

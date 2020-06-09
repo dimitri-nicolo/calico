@@ -8,19 +8,12 @@ Before installing {{site.prodname}}, you must complete the following steps on ea
 
 1. Access the cluster using a `kubeconfig` with administrative privileges.
 
-1. If RBAC is enabled, apply the manifest that matches the cluster's datastore type.
+1. If RBAC is enabled, apply this manifest.
 
-   - **Kubernetes API datastore**
-     ```bash
-     kubectl apply -f \
-     {{ "/getting-started/kubernetes/installation/federation-rem-rbac-kdd.yaml" | absolute_url }}
-     ```
-
-   - **etcd datastore**
-     ```bash
-     kubectl apply -f \
-     {{ "/getting-started/kubernetes/installation/federation-rem-rbac-etcd.yaml" | absolute_url }}
-     ```
+   ```bash
+   kubectl apply -f \
+   {{ "/getting-started/kubernetes/installation/federation-rem-rbac-kdd.yaml" | absolute_url }}
+   ```
 
 1. Apply the following manifest to create a service account called `tigera-federation-remote-cluster`.
 

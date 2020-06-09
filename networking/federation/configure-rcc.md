@@ -26,73 +26,89 @@ After installing {{site.prodname}} on each of the clusters:
 In addition to adding the necessary Remote Cluster Configuration resources, you may need to
 [modify the local cluster's IP pool configuration](#configuring-ip-pool-resources).
 
-## Adding a Remote Cluster Configuration resource
+
+## Adding resources for a remote cluster
+
+To configure a Remote Cluster Configuration resource [create a Secret](#adding-a-secret-with-cluster-access-information)
+which contains the remote cluster connection information, [ensure the secrets can be accessed](#ensure-secrets-can-be-retrieved)
+ and then [create a Remote Cluster Configuration resource](#adding-a-remote-cluster-configuration)
+that references the Secret.
 
 ### Prerequisite
 
 Before you can add a Remote Cluster Configuration resource to a cluster, you must
-install {{site.prodname}} on the cluster, following the procedure appropriate to the
-cluster's datastore type.
-- [etcd]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-etcd)
-- [Kubernetes API datastore]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
+[install {{site.prodname}}]({{site.baseurl}}/getting-started/kubernetes) on the cluster.
 
-You will also need [calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/install) installed. `RemoteClusterConfiguration` is created with calicoctl.
 
-### About adding a Remote Cluster Configuration resource
+### Adding a Secret with Cluster Access information
+
+The simplest method to create a secret with the appropriate fields is to use the `kubectl` command
+as it will correctly encode the data and format the file.
+
+Create a Secret with a command like the following for a remote cluster.
+```bash
+kubectl create secret generic remote-cluster-secret-name -n calico-system \
+    --from-literal=datastoreType=kubernetes \
+    --from-file=kubeconfig=<kubeconfig file>
+```
+
+Additional fields can be added by adding arguments to the command:
+- `--from-literal=<key>=<value>` for adding literal values
+- `--from-file=<key>=<file>` for adding values with file contents
+
+### Ensure secrets can be retrieved
+
+{{site.prodname}} does not generally have access to all secrets in a cluster so it is necessary to create a
+Role and RoleBinding for each namespace where the secrets for RemoteClusterConfigurations are being created. You can reduce the
+number of Role and RoleBindings needed by putting the remote cluster Secrets in a dedicated namespace.
+
+```
+kubectl create -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: remote-cluster-secret-access
+  namespace: <namespace>
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["watch", "list", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: remote-cluster-secret-access
+  namespace: <namespace>
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: remote-cluster-secret-access
+subjects:
+- kind: ServiceAccount
+  name: calico-typha
+  namespace: calico-system
+EOF
+```
+
+> **Note**: If you need to configure access to multiple namespaces you will need to change the name used
+> for the Role and RoleBinding so they are unique for each namespace.
+{: .alert .alert-info}
+
+### Adding a Remote Cluster Configuration
 
 Each instance of the [Remote Cluster Configuration]({{site.baseurl}}/reference/resources/remoteclusterconfiguration)
 resource represents a single remote cluster from which the local cluster can retrieve endpoint information.
 
-The resource definition varies according to your datastore type. Refer to the section that corresponds to your datastore
-type for instructions.
-- [etcd](#adding-a-remote-cluster-configuration-resource-with-the-etcd-datastore)
-- [Kubernetes API datastore](#remote-cluster-configuration-resource-with-the-kubernetes-api-datastore)
-
-### Adding a Remote Cluster Configuration resource with the etcd datastore
-
-If the remote cluster uses etcd as the {{site.prodname}} datastore, set the `datastoreType` in the Remote Cluster Configuration
-resource to `etcdv3` and populate the `etcd*` fields. You must also fill in either the `kubeconfig` or the `k8s*` fields.
-
-As long as you followed the installation instructions, the files in the
-[`tigera-federation-remotecluster` secret created during installation]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-etcd)
-will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and
-the Remote Cluster Configuration resource can reference the files using this path.
-
-An example Remote Cluster Configuration resource for etcd follows.
-
 ```yaml
 apiVersion: projectcalico.org/v3
 kind: RemoteClusterConfiguration
 metadata:
   name: cluster-n
 spec:
-  datastoreType: etcdv3
-  etcdEndpoints: "https://10.0.0.1:2379,https://10.0.0.2:2379"
-  # Include the remote-cluster kubeconfig for the federated services controller
-  kubeconfig: /etc/tigera-federation-remotecluster/kubeconfig-rem-cluster-n
-```
-
-### Remote Cluster Configuration resource with the Kubernetes API datastore
-
-If the remote cluster uses the Kubernetes API datastore for {{site.prodname}} data,
-set the `datastoreType` in the Remote Cluster Configuration resource
-to `kubernetes` and populate the `kubeconfig` or `k8s*` fields.
-
-As long as you followed the installation instructions, the files in the
-[`tigera-federation-remotecluster` secret created during installation]({{site.baseurl}}/reference/other-install-methods/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
-will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration]({{site.baseurl}}/reference/resources/remoteclusterconfiguration)
-can reference the files using this path.
-
-An example Remote Cluster Configuration resource for the Kubernetes API datastore follows.
-
-```yaml
-apiVersion: projectcalico.org/v3
-kind: RemoteClusterConfiguration
-metadata:
-  name: cluster-n
-spec:
-  datastoreType: kubernetes
-  kubeconfig: /etc/tigera-federation-remotecluster/kubeconfig-rem-cluster-n
+  clusterAccessSecret:
+    name: remote-cluster-secret-name
+    namespace: remote-cluster-secret-namespace
+    kind: Secret
 ```
 
 ## Configuring IP pool resources

@@ -40,6 +40,15 @@ spec:
                 description: Controllers enables and configures individual Kubernetes
                   controllers
                 properties:
+                  federatedServices:
+                    description: FederatedServices enables and configures the federatedservices
+                      controller. Disabled by default.
+                    properties:
+                      reconcilerPeriod:
+                        description: 'ReconcilerPeriod is the period to perform reconciliation.
+                          [Default: 5m]'
+                        type: string
+                    type: object
                   namespace:
                     description: Namespace enables and configures the namespace controller.
                       Enabled by default, set to nil to disable.
@@ -135,6 +144,15 @@ spec:
                     description: Controllers enables and configures individual Kubernetes
                       controllers
                     properties:
+                      federatedServices:
+                        description: FederatedServices enables and configures the
+                          federatedservices controller. Disabled by default.
+                        properties:
+                          reconcilerPeriod:
+                            description: 'ReconcilerPeriod is the period to perform
+                              reconciliation. [Default: 5m]'
+                            type: string
+                        type: object
                       namespace:
                         description: Namespace enables and configures the namespace
                           controller. Enabled by default, set to nil to disable.

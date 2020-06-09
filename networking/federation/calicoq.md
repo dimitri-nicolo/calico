@@ -27,9 +27,20 @@ Endpoints matching selector all():
 {: .no-select-button}
 
 If a remote cluster is inaccessible, for example due to network failure or due to a misconfiguration,
-the `calicoq` output includes details about the error. For example, the following output describes
-an error indicating the kubeconfig file configured in the Remote Cluster Configuration resource
-`remote-cluster-1` has not been mounted correctly into the `calicoq` pod. The `calicoq.yaml` has instructions on how to mount in the corresponding remote cluster secret.
+the `calicoq` output includes details about the error.
+
+For example, the following output shows an error indicating the secret `remote-cluster-secret` is not accessible.
+
+```bash
+E0615 12:24:04.895079   30873 reflector.go:153] github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster/secret_watcher.go:111: Failed to list *v1.Secret: secrets "remote-cluster-secret" is forbidden: User "system:serviceaccount:policy-demo:limited-sa" cannot list resource "secrets" in API group "" in the namespace "remote-cluster-ns"
+Endpoints matching selector all():
+  Workload endpoint host-a/k8s/kube-system.kube-dns-5fbcb4d67b-7wbhv/eth0
+  Workload endpoint host-b/k8s/kube-system.cnx-manager-66c4dbc5b7-6ghsm/eth0
+```
+{: .no-select-button}
+
+The following example output shows an error indicating the connection information for the Remote Cluster Configuration resource
+`remote-cluster-1` is not correct.
 
 ```bash
 Endpoints matching selector all():
@@ -37,6 +48,6 @@ Endpoints matching selector all():
   Workload endpoint host-b/k8s/kube-system.cnx-manager-66c4dbc5b7-6ghsm/eth0
 The following problems were encountered connecting to the remote clusters
 which may have resulted in incomplete data:
--  RemoteClusterConfiguration(remote-cluster-1): connection to remote cluster failed: stat /etc/remote-cluster-1/kubeconfig: no such file or directory
+-  RemoteClusterConfiguration(remote-cluster-1): connection to remote cluster failed: Get https://192.168.0.55:6443/api/v1/pods: dial tcp 192.168.0.55:6443: i/o timeout
 ```
 {: .no-select-button}

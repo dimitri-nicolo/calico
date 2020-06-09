@@ -65,6 +65,7 @@ spec:
 | workloadEndpoint | Enable and configure the workload endpoint controller | omit to disable, or [WorkloadEndpointController](#workloadendpointcontroller) |
 | serviceAccout    | Enable and configure the service account controller   | omit to disable, or [ServiceAccountController](#serviceaccountcontroller)  |
 | namespace        | Enable and configure the namespace controller         | omit to disable, or [NamespaceController](#namespacecontroller)        |
+| federatedservices | Enable and configure the federated services controller | omit to disable, or [FederatedServicesController](#federatedservicescontroller)        |
 
 #### NodeController
 
@@ -112,6 +113,14 @@ the {{site.prodname}} datastore.
 
 The namespace controller syncs Kubernetes namespace label changes to the {{site.prodname}} datastore. This controller is only valid when using etcd as the
 {{site.prodname}} datastore.
+
+| Field            | Description                                                           | Schema                            | Default |
+|------------------|-----------------------------------------------------------------------|-----------------------------------|---------|
+| reconcilerPeriod | Period to perform reconciliation with the {{site.prodname}} datastore | [Duration string][parse-duration] | 5m      |
+
+#### FederatedServicesController
+
+The federated services controller syncs Kubernetes services from remote clusters defined through [RemoteClusterConfigurations]({{ site.baseurl }}/reference/resources/remoteclusterconfiguration).
 
 | Field            | Description                                                           | Schema                            | Default |
 |------------------|-----------------------------------------------------------------------|-----------------------------------|---------|
