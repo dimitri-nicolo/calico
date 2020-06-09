@@ -15,6 +15,7 @@
 package clientv3_test
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -200,6 +201,8 @@ var _ = testutils.E2eDatastoreDescribe("Profile tests", testutils.DatastoreEtcdV
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res).To(MatchResource(apiv3.KindProfile, testutils.ExpectNoNamespace, name1, spec2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
+			// Saving for use further down
+			rev := res.ResourceVersion
 
 			By("Listing Profiles with the original resource version and checking for 2 results, including name1/spec1")
 			outList, outError = c.Profiles().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
@@ -280,8 +283,9 @@ var _ = testutils.E2eDatastoreDescribe("Profile tests", testutils.DatastoreEtcdV
 			Expect(outError.Error()).To(ContainSubstring("resource already exists: projectcalico-default-allow"))
 
 			By("Getting Profile (projectcalico-default-allow) with any rv should return the resource")
-			rvs := []string{"", "0", "1", "2"}
+			rvs := []string{"", "0", rev}
 			for _, rv := range rvs {
+				By(fmt.Sprintf("using ResourceVersion %s", rv))
 				res, outError = c.Profiles().Get(ctx, defaultAllowName, options.GetOptions{ResourceVersion: rv})
 				Expect(outError).NotTo(HaveOccurred())
 
@@ -292,12 +296,13 @@ var _ = testutils.E2eDatastoreDescribe("Profile tests", testutils.DatastoreEtcdV
 			}
 
 			By("Listing all Profiles with any rv should return the default-allow profile")
-			rvs = []string{"", "0", "1", "2"}
+			rvs = []string{"", "0", rev}
 			for _, rv := range rvs {
+				By(fmt.Sprintf("using ResourceVersion %s", rv))
 				outList, outError = c.Profiles().List(ctx, options.ListOptions{ResourceVersion: rv})
 				Expect(outError).NotTo(HaveOccurred())
 
-				Expect(outList.Items).To(ConsistOf(
+				Expect(outList.Items).To(ContainElement(
 					testutils.Resource(apiv3.KindProfile, testutils.ExpectNoNamespace, defaultAllowName, defaultAllowSpec),
 				))
 			}
