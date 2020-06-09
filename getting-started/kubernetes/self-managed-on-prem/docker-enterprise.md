@@ -104,9 +104,18 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
-### Above and beyond
+### Next steps
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
-- [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
-- [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)
+**Recommended**
+
+- [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- [Configure user authentication and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)
+
+**Recommended - Networking**
+
+- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
+- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+
+**Recommended - Security**
+
+- [Get started with {{site.prodname}} tiered network policy]({{site.baseurl}}/security/tiered-policy)

@@ -5,17 +5,17 @@ description: Enable Calico network policy in EKS.
 
 ### Big picture
 
-Install {{ site.prodname }} in EKS managed Kubernetes service.
+Install {{site.prodname}} in EKS managed Kubernetes service.
 
 ### Before you begin
 
-- Ensure that you have an EKS cluster without Calico installed and with [Kubernetes version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html) at least v1.15.
+- Ensure that you have an EKS cluster without {{site.prodname}} installed and with {% include open-new-window.html text='Kubernetes version' url='https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html' %} []() at least v1.15.
 
 - Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
 
-- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components.
+- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
 
 ### How to
 
@@ -43,7 +43,7 @@ Install {{ site.prodname }} in EKS managed Kubernetes service.
        --from-file=.dockerconfigjson=<path/to/pull/secret>
    ```
 
-1. Install any extra [Calico resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+1. Install any extra [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
@@ -84,10 +84,13 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
-### Above and beyond
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:AWS,CNI:AWS,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
 
-- [Video: Everything you need to know about Kubernetes pod networking on AWS](https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-pod-networking-on-aws/)
-- [Install calicoctl command line tool]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
+### Next steps
+
+- [Configure access to {{site.prodname}} Manager]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- {% include open-new-window.html text='Video: Everything you need to know about Kubernetes pod networking with AWS and EKS' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-pod-networking-on-aws/' %}
 - [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
-- [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)
+- [Get started with {{site.prodname}} network policy]({{ site.baseurl }}/security/calico-enterprise-policy)
 - [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)

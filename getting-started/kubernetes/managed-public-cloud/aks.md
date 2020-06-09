@@ -11,12 +11,13 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 
 - [Gather required resources](#gather-required-resources)
 - [Create a compatible AKS cluster](#create-a-compatible-aks-cluster)
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
-- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components.
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
+- Review [network requirements]({{site.baseurl}}/getting-started/kubernetes/requirements#network-requirements) to ensure network access is properly configured for {{site.prodname}} components
 
 #### Gather required resources
 
-- Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings. This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see [AKS access control](https://docs.microsoft.com/en-us/azure/aks/control-kubeconfig-access).
+- Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings.   
+This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see {% include open-new-window.html text='AKS access control' url='https://docs.microsoft.com/en-us/azure/aks/control-kubeconfig-access' %}.
 - Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 #### Create a compatible AKS cluster
@@ -24,16 +25,17 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 Ensure that your AKS cluster meets the following requirements.
 
   - Azure CNI networking plugin is used with transparent mode
-  - Network policy is not set. This is to avoid conflicts between other network policy providers in the cluster and {{site.prodname}}.
+  - Network policy is not set.   
+  This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
 
 ##### Using Azure Resource Manager (ARM) template
 
-AKS clusters created using [ARM templates](https://azure.microsoft.com/en-us/resources/templates/?resourceType=Microsoft.Containerservice&term=AKS) can leverage native support for enabling Azure CNI plugin with transparent mode
+AKS clusters created using {% include open-new-window.html text='ARM templates' url='https://azure.microsoft.com/en-us/resources/templates/?resourceType=Microsoft.Containerservice&term=AKS' %} can leverage native support for enabling Azure CNI plugin with transparent mode
 
-> NOTE: ARM templates must create resources using [Microsoft.ContainerService apiVersion 2020-02-01](https://docs.microsoft.com/en-us/azure/templates/microsoft.containerservice/2020-02-01/managedclusters) or newer
+> **Note**: ARM templates must create resources using {% include open-new-window.html text='Microsoft.ContainerService apiVersion 2020-02-01' url='https://docs.microsoft.com/en-us/azure/templates/microsoft.containerservice/2020-02-01/managedclusters' %} or newer
 {: .alert .alert-info}
 
-1. Enable network mode using the `aks-preview` extension
+1. Enable network mode using the `aks-preview` extension.
 
    ```sh
    az extension add --name aks-preview
@@ -52,9 +54,9 @@ AKS clusters created using [ARM templates](https://azure.microsoft.com/en-us/res
 
 ##### Using Azure CLI
 
-1. Create cluster using `az aks create` with the option `--network-plugin azure`
+1. Create cluster using `az aks create` with the option `--network-plugin azure`.
 
-1. Create the following daemon set to update Azure CNI plugin so that it operates in transparent mode
+1. Create the following daemon set to update Azure CNI plugin so that it operates in transparent mode.
 
    ```sh
    kubectl apply -f https://raw.githubusercontent.com/jonielsen/istioworkshop/master/03-TigeraSecure-Install/bridge-to-transparent.yaml
@@ -71,7 +73,7 @@ AKS clusters created using [ARM templates](https://azure.microsoft.com/en-us/res
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
+1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage).
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -89,7 +91,7 @@ AKS clusters created using [ARM templates](https://azure.microsoft.com/en-us/res
        --from-file=.dockerconfigjson=<path/to/pull/secret>
    ```
 
-1. Install any extra [Calico resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+1. Install any extra [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) needed at cluster start using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
@@ -130,16 +132,16 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
-> **Note**: The Calico network policy feature can only be enabled when the cluster is created. You can't enable Calico network policy on an existing AKS cluster.
+> **Note**: The {{site.prodname}} network policy feature can only be enabled when the cluster is created. You can't enable {{site.prodname}} network policy on an existing AKS cluster.
 {: .alert .alert-info}
 
 The geeky details of what you get:
 {% include geek-details.html details='Policy:Calico,IPAM:Azure,CNI:Azure,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
 
-### Above and beyond
+### Next steps
 
-- [Video: Everything you need to know about Kubernetes networking on Azure](https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-azure/)
-- [Install calicoctl command line tool]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
+- [Configure access to {{site.prodname}} Enterprise Manager]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- {% include open-new-window.html text='Video: Everything you need to know about Kubernetes networking on Azure' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-azure/' %}
 - [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
 - [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)

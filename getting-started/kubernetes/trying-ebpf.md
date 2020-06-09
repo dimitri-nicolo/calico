@@ -248,9 +248,6 @@ To re-enable BPF mode:
 
 ### Next steps
 
-**Tools**
-
-- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/install)
 
 **Networking**
 

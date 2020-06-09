@@ -1,5 +1,5 @@
 ---
-title: Installing Calico Enterprise on OpenShift with a dedicated etcd cluster
+title: Install Calico Enterprise on OpenShift with a dedicated etcd cluster
 description: Install Calico Enterprise on OpenShift with a dedicated etcd cluster.
 canonical_url: /getting-started/openshift/installation/dedicated-etcd
 ---

@@ -32,13 +32,13 @@ When you install {{site.prodname}} on your cluster for the first time, you get t
 **Recommended**
 
 - [Options for installing {{site.prodname}}]({{site.baseurl}}/getting-started/options-install)
-- If you are installing {{site.prodname}} from a private registry, see [using a private registry]({{site.baseurl}}/getting-started/private-registry).
+- If you are installing {{site.prodname}} from a private registry, see [using a private registry]({{site.baseurl}}/getting-started/private-registry)
 
 ### How to
 
-- [Install Calico Enterprise](#install-calico-enterprise)
-- [Install Calico Enterprise license](#install-calico-enterprise-license)
-- [Secure Calico Enterprise with network policy](#secure-calico-enterprise-with-network-policy)
+- [Install {{site.prodname}}](#install-calico-enterprise)
+- [Install {{site.prodname}} license](#install-calico-enterprise-license)
+- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
 
 #### Install {{site.prodname}}
 
@@ -101,10 +101,6 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
 ### Next steps
-
-**Required**
-
-- [Install and configure CLIs]({{site.baseurl}}/getting-started/clis/calicoctl/configure/kdd)
 
 **Recommended**
 

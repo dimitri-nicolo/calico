@@ -17,7 +17,7 @@ to install {{site.prodname}}.
 
 #### Before you begin
 
-- Ensure that your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements).
+- Ensure that your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements)
 
 - Ensure that you have the [private registry credentials and license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
@@ -27,7 +27,7 @@ to install {{site.prodname}}.
 
 - Ensure that you have a {% include open-new-window.html text='RedHat account' url='https://cloud.redhat.com/' %}. A RedHat account is required to obtain the pull secret necessary to provision an OpenShift cluster.
 
-- Ensure that you have installed the OpenShift installer **v4.3 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}.
+- Ensure that you have installed the OpenShift installer **v4.3 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}
 
 - Ensure that you have {% include open-new-window.html text='generated a local SSH private key' url='https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-default.html#ssh-agent-using_installing-aws-default' %} and have added it to your ssh-agent
 
@@ -56,7 +56,7 @@ Once the installer has finished, your staging directory will contain the configu
 
 #### Update the configuration file to use {{site.prodname}}
 
-Override the OpenShift networking to use Calico and update the AWS instance types to meet the [system requirements]({{site.baseurl}}/getting-started/openshift/requirements):
+Override the OpenShift networking to use {{site.prodname}} and update the AWS instance types to meet the [system requirements]({{site.baseurl}}/getting-started/openshift/requirements):
 
 ```bash
 sed -i 's/OpenShiftSDN/Calico/' install-config.yaml
@@ -93,13 +93,11 @@ openshift-install create manifests
    ```
 #### Optionally provide additional configuration
 
-You may want to provide Calico with additional configuration at install-time. For example, BGP configuration or peers.
-You can use a Kubernetes ConfigMap with your desired Calico resources in order to set configuration as part of the installation.
-If you do not need to provide additional configuration, you can skip this section.
+You may want to provide {{site.prodname}} with additional configuration at install-time. For example, BGP configuration or peers. You can use a Kubernetes ConfigMap with your desired {{site.prodname}} resources in order to set configuration as part of the installation. If you do not need to provide additional configuration, you can skip this section.
 
-To include [Calico resources]({{site.baseurl}}/reference/resources) during installation, edit `manifests/02-configmap-calico-resources.yaml` in order to add your own configuration.
+To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) during installation, edit `manifests/02-configmap-calico-resources.yaml` in order to add your own configuration.
 
-> **Note**: If you have a directory with the Calico resources, you can create the file with the command:
+> **Note**: If you have a directory with the {{site.prodname}} resources, you can create the file with the command:
 > ```
 > kubectl create configmap -n tigera-operator calico-resources \
 >   --from-file=<resource-directory> --dry-run -o yaml \
@@ -157,9 +155,18 @@ To secure the components which make up {{site.prodname}}, install the following 
 oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
-### Above and beyond
+### Next steps
 
-- [Configure access to the manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
-- [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
-- [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)
+**Recommended**
+
+- [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- [Configure user authentication and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)
+
+**Recommended - Networking**
+
+- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
+- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+
+**Recommended - Security**
+
+- [Get started with {{site.prodname}} tiered network policy]({{site.baseurl}}/security/tiered-policy)

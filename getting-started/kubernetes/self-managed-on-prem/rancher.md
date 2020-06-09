@@ -12,25 +12,22 @@ Install {{side.prodname}} as the required CNI for networking and/or network poli
 
 - [Create a compatible Rancher Kubernetes Engine (RKE) cluster](#create-a-compatible-rancher-cluster)
 - [Gather the necessary resources](#gather-required-resources)
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
+- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
 
 #### Create a compatible Rancher cluster
 
-- Ensure that your [Rancher Kubernetes Engine cluster](https://rancher.com/docs/rke/latest/en/)
-  meets the [requirements](../requirements) for {{site.prodname}}.
-  - Configure your cluster with a [Cluster Config File](https://rancher.com/docs/rancher/v2.x/en/cluster-provisioning/rke-clusters/options/#cluster-config-file)
-    and specify [no network plugin](https://rancher.com/docs/rke/latest/en/config-options/add-ons/network-plugins/) by setting
-    `plugin: none` under `network` in your configuration file.
+- Ensure that your {% include open-new-window.html text='Rancher Kubernetes Engine cluster' url='https://rancher.com/docs/rke/latest/en/' %} meets the [requirements](../requirements) for {{site.prodname}}.
+  - Configure your cluster with a {% include open-new-window.html text='Cluster Config File' url='https://rancher.com/docs/rancher/v2.x/en/cluster-provisioning/rke-clusters/options/#cluster-config-file' %} and specify {% include open-new-window.html text='no network plugin' url='https://rancher.com/docs/rke/latest/en/config-options/add-ons/network-plugins/' %} by setting `plugin: none` under `network` in your configuration file.
 
 #### Gather required resources
 
 - Ensure that you have the [credentials for the Tigera private registry and a license key](../../../getting-started/calico-enterprise).
 
 - Ensure you have a kubectl environment with access to your cluster
-  - Use [Rancher kubectl Shell](https://rancher.com/docs/rancher/v2.x/en/cluster-admin/cluster-access/kubectl/) for access
-  - Ensure you have the [Kubeconfig file that was generated when you created the cluster](https://rancher.com/docs/rke/latest/en/installation/#save-your-files).
+  - Use {% include open-new-window.html text='Rancher kubectl Shell' url='https://rancher.com/docs/rancher/v2.x/en/cluster-admin/cluster-access/kubectl/' %} for access
+  - Ensure you have the {% include open-new-window.html text='Kubeconfig file that was generated when you created the cluster' url='https://rancher.com/docs/rke/latest/en/installation/#save-your-files' %}.
 
-- If using a Kubeconfig file locally, [install and set up the Kubectl CLI tool](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+- If using a Kubeconfig file locally, {% include open-new-window.html text='install and set up the Kubectl CLI tool' url='https://kubernetes.io/docs/tasks/tools/install-kubectl/' %}.
 
 ### How to
 
@@ -41,7 +38,7 @@ Install {{side.prodname}} as the required CNI for networking and/or network poli
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
+1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage).
 
 1. Install the Tigera operators and custom resource definitions.
 
@@ -97,9 +94,18 @@ To secure {{site.prodname}} component communications, install the following set 
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
 
-### Above and beyond
+### Next steps
 
-- [Configure access to Calico Enterprise Manager]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- [Get started with Kubernetes network policy]({{site.baseurl}}/security/kubernetes-network-policy)
-- [Get started with Calico network policy]({{site.baseurl}}/security/calico-network-policy)
-- [Enable default deny for Kubernetes pods]({{site.baseurl}}/security/kubernetes-default-deny)
+**Recommended**
+
+- [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- [Configure user authentication and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)
+
+**Recommended - Networking**
+
+- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
+- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+
+**Recommended - Security**
+
+- [Get started with {{site.prodname}} tiered network policy]({{site.baseurl}}/security/tiered-policy)
