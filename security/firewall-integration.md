@@ -69,29 +69,28 @@ Familiarity with [Calico tiered policy]({{site.baseurl}}/security/tiered-policy)
 
 1. Create a namespace for tigera-firewall-controller.
 
-```
-kubectl create namespace tigera-firewall-controller
-```
-
+        ```
+        kubectl create namespace tigera-firewall-controller
+        ```
 
 2. Create config map with FortiGate firewall information
 
-for example
+      for example
+        
+        ```
+        kubectl -n tigera-firewall-controller create configmap  tigera-firewall-controller \
+                --from-literal=tigera.firewall.policy.selector="projectcalico.org/tier == 'default'" \
+                --from-literal=tigera.firewall.addressSelection="node" \
+                --from-literal=tigera.firewall.host=<IP-address-Of-FortiGate-firewall>
+        ```
 
-```
-kubectl -n tigera-firewall-controller create configmap  tigera-firewall-controller \
-        --from-literal=tigera.firewall.policy.selector="projectcalico.org/tier == 'default'" \
-        --from-literal=tigera.firewall.addressSelection="node" \
-        --from-literal=tigera.firewall.host=<IP-address-Of-FortiGate-firewall>
-```
+      Description of ConfigMap section as follows
 
-Description of ConfigMap section as follows
-
-| Field                            | Enter values...                                                                                                                                                                                                                                                                     |
-|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| tigera.firewall.host             | IP address of the FortiGate device.                                                                                                                                                                                                                                                 |
-| tigera.firewall.policy.selector  | The tier name with the global network policies with the Fortigate address group mappings.<br>For example, this selects the global network policies in the `default` tier:<br>`tigera.firewall.policy.selector: "projectcalico.org/tier == 'default'"                                |
-| tigera.firewall.addressSelection | The addressSelection for outbound traffic leaving the cluster.<br>For example, if outgoingNat is enabled in cluster and compute Node IP address is used "tigera.firewall.addressSelection == `node` or <br> If pod IP address used then "tigera.firewall.addressSelection == `pod`" |
+    | Field                            | Enter values...                                                                                                                                                                                                                                                                     |
+    |----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+    | tigera.firewall.host             | IP address of the FortiGate device.                                                                                                                                                                                                                                                 |
+    | tigera.firewall.policy.selector  | The tier name with the global network policies with the Fortigate address group mappings.<br>For example, this selects the global network policies in the `default` tier:<br>`tigera.firewall.policy.selector: "projectcalico.org/tier == 'default'"                                |
+    | tigera.firewall.addressSelection | The addressSelection for outbound traffic leaving the cluster.<br>For example, if outgoingNat is enabled in cluster and compute Node IP address is used "tigera.firewall.addressSelection == `node` or <br> If pod IP address used then "tigera.firewall.addressSelection == `pod`" |
 
 
 #### Deploy firewall controller in the Kubernetes cluster
@@ -99,48 +98,48 @@ Description of ConfigMap section as follows
 
 1. Install your pull secret
 
-```
-   kubectl create secret generic tigera-pull-secret \
-     --from-file=.dockerconfigjson=<path/to/pull/secret> \
-     --type=kubernetes.io/dockerconfigjson -n tigera-firewall-controller
-```
+    ```
+       kubectl create secret generic tigera-pull-secret \
+         --from-file=.dockerconfigjson=<path/to/pull/secret> \
+         --type=kubernetes.io/dockerconfigjson -n tigera-firewall-controller
+    ```
 
 2. Install a secret to store the FortiGate API Key.
 
-```
-   kubectl create secret generic tigera-firewall-controller \
-     --from-literal=apikey=<fortigate-api-secret> \
-     -n tigera-firewall-controller
-   ```
+    ```
+       kubectl create secret generic tigera-firewall-controller \
+         --from-literal=apikey=<fortigate-api-secret> \
+         -n tigera-firewall-controller
+    ```
 3. Apply manifest
 
-```
-   kubectl apply -f {{ "/manifests/fortinet.yaml" | absolute_url }}
-```
+    ```
+       kubectl apply -f {{ "/manifests/fortinet.yaml" | absolute_url }}
+    ```
 
 #### Create tier and global network policy
 
 
 1. Create a tier for organizing global network policies.
 
-We recommend creating a separate [Calico tiered policy]({{site.baseurl}}/security/tiered-policy) for organizing all Fortigate firewall global network policies in a single location. (Use the Tier name as a selector in the ConfigMap for choosing global network policies for Fortigate firewalls.)
+    We recommend creating a separate [Calico tiered policy]({{site.baseurl}}/security/tiered-policy) for organizing all Fortigate firewall global network policies in a single location. (Use the Tier name as a selector in the ConfigMap for choosing global network policies for Fortigate firewalls.)
 
 2. Create a GlobalNetworkPolicy for address group mappings.
 
-For example, a GlobalNetworkPolicy can select a set of pods that require egress access to external workloads. In the following GlobalNetworkPolicy, the firewall controller creates an address group named, ‘default.production-microservice1’ in the Fortigate firewall. The members of ‘default.production-microservice1’ address group include IP addresses of nodes. Each node can host one or more pods whose label selector match with “"env == 'prod' && role == 'microservice1'". Each GlobalNetworkPolicy maps to an address group in FortiGate Firewall.
+    For example, a GlobalNetworkPolicy can select a set of pods that require egress access to external workloads. In the following GlobalNetworkPolicy, the firewall controller creates an address group named, ‘default.production-microservice1’ in the Fortigate firewall. The members of ‘default.production-microservice1’ address group include IP addresses of nodes. Each node can host one or more pods whose label selector match with “"env == 'prod' && role == 'microservice1'". Each GlobalNetworkPolicy maps to an address group in FortiGate Firewall.
 
-```
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
-metadata:
-  name: default.production-microservice1
-spec:
-  selector: "env == 'prod' && role == 'microservice1'"
-  types:
-  - Egress
-  egress:
-  - action: Allow
-```
+    ```
+    apiVersion: projectcalico.org/v3
+    kind: GlobalNetworkPolicy
+    metadata:
+      name: default.production-microservice1
+    spec:
+      selector: "env == 'prod' && role == 'microservice1'"
+      types:
+      - Egress
+      egress:
+      - action: Allow
+    ```
 
 ### Verify integration is working
 
