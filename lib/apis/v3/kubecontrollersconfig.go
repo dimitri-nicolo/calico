@@ -68,6 +68,9 @@ type ControllersConfig struct {
 
 	// Namespace enables and configures the namespace controller. Enabled by default, set to nil to disable.
 	Namespace *NamespaceControllerConfig `json:"namespace,omitempty"`
+
+	// FederatedServices enables and configures the federatedservices controller. Disabled by default.
+	FederatedServices *FederatedServicesControllerConfig `json:"federatedServices,omitempty"`
 }
 
 // NodeControllerConfig configures the node controller, which automatically cleans up configuration
@@ -113,6 +116,13 @@ type ServiceAccountControllerConfig struct {
 // service accounts to Calico profiles (only used for etcdv3 datastore).
 type NamespaceControllerConfig struct {
 	// ReconcilerPeriod is the period to perform reconciliation with the Calico datastore. [Default: 5m]
+	ReconcilerPeriod *metav1.Duration `json:"reconcilerPeriod,omitempty" validate:"omitempty"`
+}
+
+// FederatedServicesControllerConfig configures the federated services controller, which syncs Kubernetes
+// services from remote clusters.
+type FederatedServicesControllerConfig struct {
+	// ReconcilerPeriod is the period to perform reconciliation. [Default: 5m]
 	ReconcilerPeriod *metav1.Duration `json:"reconcilerPeriod,omitempty" validate:"omitempty"`
 }
 
