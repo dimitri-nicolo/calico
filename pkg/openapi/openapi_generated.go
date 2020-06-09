@@ -4253,7 +4253,7 @@ func schema_libcalico_go_lib_apis_v3_EtcdConfig(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"etcdEndpoints": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+							Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.  [Default: ]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4291,6 +4291,25 @@ func schema_libcalico_go_lib_apis_v3_EtcdConfig(ref common.ReferenceCallback) co
 							Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"etcdKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "These config file parameters are to support inline certificates, keys and CA / Trusted certificate.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdCert": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"etcdCACert": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 				},
@@ -7548,6 +7567,13 @@ func schema_libcalico_go_lib_apis_v3_KubeConfig(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"kubeconfigInline": {
+						SchemaProps: spec.SchemaProps{
+							Description: "This is an alternative to Kubeconfig and if specified overrides Kubeconfig. This contains the contents that would normally be in the file pointed at by Kubeconfig.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -9030,9 +9056,15 @@ func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref common.R
 							Format:      "",
 						},
 					},
+					"clusterAccessSecret": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specifies a Secret to read for the RemoteClusterconfiguration. If defined all datastore configuration in this struct will be cleared and overwritten with the appropriate fields in the Secret.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
 					"etcdEndpoints": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+							Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.  [Default: ]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -9070,6 +9102,25 @@ func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref common.R
 							Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"etcdKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "These config file parameters are to support inline certificates, keys and CA / Trusted certificate.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdCert": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"etcdCACert": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"kubeconfig": {
@@ -9120,10 +9171,18 @@ func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref common.R
 							Format: "",
 						},
 					},
+					"kubeconfigInline": {
+						SchemaProps: spec.SchemaProps{
+							Description: "This is an alternative to Kubeconfig and if specified overrides Kubeconfig. This contains the contents that would normally be in the file pointed at by Kubeconfig.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
-				Required: []string{"datastoreType"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference"},
 	}
 }
 
