@@ -10,7 +10,7 @@ The following table details key/value pairs for constructing queries, including 
 | Name                  | Datatype          | Description |
 | --------------------- | ----------------- | ----------- |
 | `logtime`             | date              | When the log was collected in UTC timestamp format. |
-| `host`                | keyword           | When the collection of the log concluded in UNIX timestamp format. |
+| `host`                | keyword           | The name of the node where log was collected. |
 | `ip_version`          | keyword           | Contains one of the following values:<br>&#x25cf;&nbsp;<code>IPv4</code>: Log from BIRD process <br>&#x25cf;&nbsp;<code>IPv6</code>: Log from BIRD6 process|
 | `message`             | text              | The message contained in the log. |
 

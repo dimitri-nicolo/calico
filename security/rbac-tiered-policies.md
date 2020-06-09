@@ -30,7 +30,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### RBAC for policies and tiers
 
-In {{site.prodname}}, global network policy and network policy resources are associated with a specific tier. Admins can configure access control for these {{site.prodname}} policies using standard Kubernetes `Role` and `ClusterRole` resource types. This makes it easy to manage RBAC for both Kubernetes network policies and {{site.prodname}} tiered network policies. RBAC permissions include managing resources using {{site.prodname}} Manager, `calicoctl`, `calicoq`, and `kubectl`. 
+In {{site.prodname}}, global network policy and network policy resources are associated with a specific tier. Admins can configure access control for these {{site.prodname}} policies using standard Kubernetes `Role` and `ClusterRole` resource types. This makes it easy to manage RBAC for both Kubernetes network policies and {{site.prodname}} tiered network policies. RBAC permissions include managing resources using {{site.prodname}} Manager, and `kubectl`.
 
 #### Fine-grained RBAC for policies and tiers
 
@@ -40,8 +40,8 @@ Here are a few examples of how you can fine-tune RBAC for tiers and policies.
 
 | **User**  | **Permissions**                                              |
 | --------- | ------------------------------------------------------------ |
-| Admin     | The default **tigera-network-admin** role lets you create, update, delete, get, watch, and list all {{site.prodname}} resources (full control). Examples of limiting Admin access: <li>List tiers only</li><li>List only specific tiers</li> |
-| Non-Admin | The default **tigera-ui-user** role allows users to only list {{site.prodname}} policy and tier resources. Examples of limiting user access: <li>Read-only access to all policy resources across all tiers, but only write access for NetworkPolicies with a specific tier and namespace.</li> <li>Perform any operations on NetworkPolicies and GlobalNetworkPolicies. </li><li>List tiers only.</li> <li>List or modify any policies in any tier.Fully manage only Kubernetes network policies in the default tier, in the default namespace, with read-only access for all other tiers.</li> |
+| Admin     | The default **tigera-network-admin** role lets you create, update, delete, get, watch, and list all {{site.prodname}} resources (full control). Examples of limiting Admin access: {::nomarkdown}<ul><li>List tiers only</li><li>List only specific tiers</li></ul>{:/}|
+| Non-Admin | The default **tigera-ui-user** role allows users to only list {{site.prodname}} policy and tier resources. Examples of limiting user access: {::nomarkdown}<ul><li>Read-only access to all policy resources across all tiers, but only write access for NetworkPolicies with a specific tier and namespace.</li> <li>Perform any operations on NetworkPolicies and GlobalNetworkPolicies. </li><li>List tiers only.</li> <li>List or modify any policies in any tier.Fully manage only Kubernetes network policies in the default tier, in the default namespace, with read-only access for all other tiers.</li></ul>{:/} |
 
 #### RBAC definitions for Calico Enterprise network policy
 
@@ -73,7 +73,7 @@ Where:
 
 **Required**
 
-A **tigera-network-admin** role with full permissions to create and modify resources. See [Log in to {{site.prodname}} Enterprise Manager]({{site.baseurl}}/getting-started/cnx/create-user-login).
+A **cluster-admin** role with full permissions to create and modify resources.
 
 **Recommended**
 
@@ -190,13 +190,13 @@ Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: U
   the underlying CRDs (if using the Kubernetes Datastore Driver).
 {: .alert .alert-info}
 
-> **Note**: Currently, the tier collection on a Policy resource through the
-  `kubectl` client (pre 1.9) of the APIs, is implemented using labels because
-  `kubectl` lacks field selector support. The label used for tier collection
-  is `projectcalico.org/tier`. When a label selection is not specified, the
-  server defaults the collection to the `default` tier. Field selection based
-  policy collection is enabled at the API level. spec.tier is the field to select
-  on for the purpose.
+> **Note**: The label for selecting a tier is `projectcalico.org/tier`.
+  When a label selector is not specified, the server defaults the selection to the
+  `default` tier. Alternatively, a field selector (`spec.tier`) may be used to select
+  a tier.
+  ```
+  kubectl get networkpolicies.p --field-selector spec.tier=net-sec
+  ```
 {: .alert .alert-info}
 
 #### User can read policies in the default tier

@@ -12,6 +12,7 @@ This information should assist you in constructing queries.
 
 | Name                  | Datatype          | Description |
 | --------------------- | ----------------- | ----------- |
+| `host`                | keyword           | The name of the node that collected the flow log entry. |
 | `start_time`          | date              | When the collection of the log began in UNIX timestamp format. |
 | `end_time`            | date              | When the collection of the log concluded in UNIX timestamp format. |
 | `action`              | keyword           | {::nomarkdown}<p>&#x25cf;&nbsp;<code>allow</code>: {{site.prodname}} accepted the flow.<br>&#x25cf;&nbsp;<code>deny</code>: {{site.prodname}} denied the flow.</p>{:/}  |
