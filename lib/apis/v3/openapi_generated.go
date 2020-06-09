@@ -113,6 +113,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule":                         schema_libcalico_go_lib_apis_v3_EntityRule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition":                     schema_libcalico_go_lib_apis_v3_ErrorCondition(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig":                         schema_libcalico_go_lib_apis_v3_EtcdConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FederatedServicesControllerConfig":  schema_libcalico_go_lib_apis_v3_FederatedServicesControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration":                 schema_libcalico_go_lib_apis_v3_FelixConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationList":             schema_libcalico_go_lib_apis_v3_FelixConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec":             schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref),
@@ -3376,11 +3377,17 @@ func schema_libcalico_go_lib_apis_v3_ControllersConfig(ref common.ReferenceCallb
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig"),
 						},
 					},
+					"federatedServices": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FederatedServices enables and configures the federatedservices controller. Disabled by default.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FederatedServicesControllerConfig"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointControllerConfig"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.FederatedServicesControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.NamespaceControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountControllerConfig", "github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointControllerConfig"},
 	}
 }
 
@@ -3988,6 +3995,27 @@ func schema_libcalico_go_lib_apis_v3_EtcdConfig(ref common.ReferenceCallback) co
 				},
 			},
 		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_FederatedServicesControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "FederatedServicesControllerConfig configures the federated services controller, which syncs Kubernetes services from remote clusters.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reconcilerPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcilerPeriod is the period to perform reconciliation. [Default: 5m]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
