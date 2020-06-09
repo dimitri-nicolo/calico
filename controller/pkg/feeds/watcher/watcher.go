@@ -11,8 +11,8 @@ import (
 
 	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	v32 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

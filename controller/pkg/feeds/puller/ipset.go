@@ -13,7 +13,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	calico "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
