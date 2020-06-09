@@ -17,7 +17,7 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
-	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

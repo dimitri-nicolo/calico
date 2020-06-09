@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/alert/elastic"
