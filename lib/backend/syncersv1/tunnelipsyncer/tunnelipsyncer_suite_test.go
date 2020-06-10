@@ -1,4 +1,4 @@
-// Copyright (c) 2019,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1
+package tunnelipsyncer
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/onsi/ginkgo/reporters"
+
+	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// +k8s:openapi-gen=true
-// +kubebuilder:resource:scope=Cluster
-type IPAMBlock struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              v3.IPAMBlockSpec `json:"spec,omitempty"`
+func TestClient(t *testing.T) {
+	testutils.HookLogrusForGinkgo()
+	RegisterFailHandler(Fail)
+	junitReporter := reporters.NewJUnitReporter("../../../../report/tunnelipsyncer_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Tunnel IP syncer test suite", []Reporter{junitReporter})
 }

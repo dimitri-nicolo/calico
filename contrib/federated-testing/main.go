@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	syncer := felixsyncer.New(backendClient, datastoreConfig.Spec, new(SyncerCallbacksLogger))
+	syncer := felixsyncer.New(backendClient, datastoreConfig.Spec, new(SyncerCallbacksLogger), true)
 	syncer.Start()
 
 	log.Println(http.ListenAndServe("localhost:6060", nil))

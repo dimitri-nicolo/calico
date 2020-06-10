@@ -14,3 +14,4 @@ checkouts
 /release
 cscope.*
 Makefile.common*
+*.test

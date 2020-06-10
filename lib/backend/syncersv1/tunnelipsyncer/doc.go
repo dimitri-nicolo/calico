@@ -1,4 +1,4 @@
-// Copyright (c) 2019,2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1
+package tunnelipsyncer
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+/*
+tunnelipsyncer implements an api.Syncer for consumers of configuration used to determine tunnel IP addresses.
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-)
+The primary use case here is for the allocate-tunnel-ip script used within calico-node.
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// +k8s:openapi-gen=true
-// +kubebuilder:resource:scope=Cluster
-type IPAMBlock struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              v3.IPAMBlockSpec `json:"spec,omitempty"`
-}
+This implementation uses the watchersyncer.
+*/
