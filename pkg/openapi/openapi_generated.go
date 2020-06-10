@@ -3057,8 +3057,9 @@ func schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref common.ReferenceCallb
 					},
 					"deleted": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "Deleted indicates that this block affinity is being deleted. This field is a string for compatibility with older releases that mistakenly treat this field as a string.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
@@ -3592,6 +3593,13 @@ func schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Description: "DatastoreReady is used during significant datastore migrations to signal to components such as Felix that it should wait before accessing the datastore.",
 							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"variant": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Variant declares which variant of Calico should be active.",
+							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
