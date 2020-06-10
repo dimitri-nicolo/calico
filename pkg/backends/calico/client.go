@@ -16,7 +16,6 @@ package calico
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -24,10 +23,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"github.com/kelseyhightower/confd/pkg/buildinfo"
 	"github.com/kelseyhightower/confd/pkg/config"
@@ -49,7 +44,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/selector"
-	"github.com/projectcalico/typha/pkg/syncclient"
+	"github.com/projectcalico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/typha/pkg/syncproto"
 )
 
@@ -68,9 +63,9 @@ type backendClientAccessor interface {
 }
 
 func NewCalicoClient(confdConfig *config.Config) (*client, error) {
-	// Load the client config.  This loads from the environment if a filename
+	// Load the client clientCfg.  This loads from the environment if a filename
 	// has not been specified.
-	config, err := apiconfig.LoadClientConfig(confdConfig.CalicoConfig)
+	clientCfg, err := apiconfig.LoadClientConfig(confdConfig.CalicoConfig)
 	if err != nil {
 		log.Errorf("Failed to load Calico client configuration: %v", err)
 		return nil, err
@@ -80,7 +75,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	// not.  If it is we need to monitor all node configuration.  If it is not enabled then we
 	// only need to monitor our own node.  If this setting changes, we terminate confd (so that
 	// when restarted it will start watching the correct resources).
-	cc, err := clientv3.New(*config)
+	cc, err := clientv3.New(*clientCfg)
 	if err != nil {
 		log.Errorf("Failed to create main Calico client: %v", err)
 		return nil, err
@@ -178,43 +173,18 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	c.nodeLogKey = fmt.Sprintf("/calico/bgp/v1/host/%s/loglevel", template.NodeName)
 	c.nodeIPv4Key = fmt.Sprintf("/calico/bgp/v1/host/%s/ip_addr_v4", template.NodeName)
 	c.nodeIPv6Key = fmt.Sprintf("/calico/bgp/v1/host/%s/ip_addr_v6", template.NodeName)
-	c.nodeV1Processor = updateprocessors.NewBGPNodeUpdateProcessor(config.Spec.K8sUsePodCIDR)
+	c.nodeV1Processor = updateprocessors.NewBGPNodeUpdateProcessor(clientCfg.Spec.K8sUsePodCIDR)
 
-	typhaAddr, err := discoverTyphaAddr(&confdConfig.Typha)
-	if err != nil {
-		log.WithError(err).Fatal("Typha discovery enabled but discovery failed.")
-	}
-	if typhaAddr != "" {
-		// Use a remote Syncer, via the Typha server.
-		log.WithField("addr", typhaAddr).Info("Connecting to Typha.")
-		typhaConnection := syncclient.New(
-			typhaAddr,
-			buildinfo.GitVersion,
-			template.NodeName,
-			fmt.Sprintf("confd %s", buildinfo.GitVersion),
-			c,
-			&syncclient.Options{
-				SyncerType:   syncproto.SyncerTypeBGP,
-				ReadTimeout:  confdConfig.Typha.ReadTimeout,
-				WriteTimeout: confdConfig.Typha.WriteTimeout,
-				KeyFile:      confdConfig.Typha.KeyFile,
-				CertFile:     confdConfig.Typha.CertFile,
-				CAFile:       confdConfig.Typha.CAFile,
-				ServerCN:     confdConfig.Typha.CN,
-				ServerURISAN: confdConfig.Typha.URISAN,
-			},
-		)
-		err := typhaConnection.Start(context.Background())
-		if err != nil {
-			log.WithError(err).Fatal("Failed to connect to Typha")
-		}
-		go func() {
-			typhaConnection.Finished.Wait()
-			log.Fatal("Connection to Typha failed")
-		}()
+	if syncclientutils.MustStartSyncerClientIfTyphaConfigured(
+		&confdConfig.Typha, syncproto.SyncerTypeBGP,
+		buildinfo.GitVersion, template.NodeName, fmt.Sprintf("confd %s", buildinfo.GitVersion),
+		c,
+	) {
+		log.Debug("Using typha syncclient")
 	} else {
 		// Use the syncer locally.
-		c.syncer = bgpsyncer.New(c.client, c, template.NodeName, config.Spec)
+		log.Debug("Using local syncer")
+		c.syncer = bgpsyncer.New(c.client, c, template.NodeName, clientCfg.Spec)
 		c.syncer.Start()
 	}
 
@@ -255,54 +225,6 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	}()
 
 	return c, nil
-}
-
-var ErrServiceNotReady = errors.New("Kubernetes service missing IP or port.")
-
-func discoverTyphaAddr(typhaConfig *config.TyphaConfig) (string, error) {
-	if typhaConfig.Addr != "" {
-		// Explicit address; trumps other sources of config.
-		return typhaConfig.Addr, nil
-	}
-
-	if typhaConfig.K8sServiceName == "" {
-		// No explicit address, and no service name, not using Typha.
-		return "", nil
-	}
-
-	// If we get here, we need to look up the Typha service using the k8s API.
-	// TODO Typha: support Typha lookup without using rest.InClusterConfig().
-	k8sconf, err := rest.InClusterConfig()
-	if err != nil {
-		log.WithError(err).Error("Unable to create Kubernetes config.")
-		return "", err
-	}
-	clientset, err := kubernetes.NewForConfig(k8sconf)
-	if err != nil {
-		log.WithError(err).Error("Unable to create Kubernetes client set.")
-		return "", err
-	}
-	svcClient := clientset.CoreV1().Services(typhaConfig.K8sNamespace)
-	svc, err := svcClient.Get(typhaConfig.K8sServiceName, v1.GetOptions{})
-	if err != nil {
-		log.WithError(err).Error("Unable to get Typha service from Kubernetes.")
-		return "", err
-	}
-	host := svc.Spec.ClusterIP
-	log.WithField("clusterIP", host).Info("Found Typha ClusterIP.")
-	if host == "" {
-		log.WithError(err).Error("Typha service had no ClusterIP.")
-		return "", ErrServiceNotReady
-	}
-	for _, p := range svc.Spec.Ports {
-		if p.Name == "calico-typha" {
-			log.WithField("port", p).Info("Found Typha service port.")
-			typhaAddr := net.JoinHostPort(host, fmt.Sprintf("%v", p.Port))
-			return typhaAddr, nil
-		}
-	}
-	log.Error("Didn't find Typha service port.")
-	return "", ErrServiceNotReady
 }
 
 var (
@@ -789,7 +711,7 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 	needUpdatePeersReasons := []string{}
 
 	// Track whether these updates require service advertisement to be recomputed.
-	needsServiceAdvertismentUpdates := false
+	needServiceAdvertismentUpdates := false
 
 	log.WithField("cacheRevision", c.cacheRevision).Debug("Processing OnUpdates from syncer")
 	for _, u := range updates {
@@ -819,7 +741,7 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 
 				if cfgKey.Name == "svc_external_ips" {
 					log.Debugf("Global service external IP ranges update.")
-					needsServiceAdvertismentUpdates = true
+					needServiceAdvertismentUpdates = true
 				}
 
 				if cfgKey.Name == "svc_cluster_ips" {
@@ -829,7 +751,7 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 						// that variable takes precedence over datastore config, so we should ignore the update.
 						log.Debugf("Ignoring serviceClusterIPs update due to environment variable %s", envAdvertiseClusterIPs)
 					} else {
-						needsServiceAdvertismentUpdates = true
+						needServiceAdvertismentUpdates = true
 					}
 				}
 			}
@@ -926,7 +848,7 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 	}
 
 	// If we need to update Service advertisement based on the updates, then do so.
-	if needsServiceAdvertismentUpdates {
+	if needServiceAdvertismentUpdates {
 		log.Info("Updates included service advertisment changes.")
 		if c.rg == nil {
 			// If this is the first time we've needed to start the route generator, then do so here.
@@ -944,14 +866,18 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 		// string. If the string isn't empty, split on the comma and pass a list of strings
 		// to the route generator.  An empty string indicates a withdrawal of that set of
 		// service IPs.
+		var externalIPs []string
 		if len(c.cache["/calico/bgp/v1/global/svc_external_ips"]) > 0 {
-			c.onExternalIPsUpdate(strings.Split(c.cache["/calico/bgp/v1/global/svc_external_ips"], ","))
+			externalIPs = strings.Split(c.cache["/calico/bgp/v1/global/svc_external_ips"], ",")
 		}
+		c.onExternalIPsUpdate(externalIPs)
 
 		// Same for cluster CIDRs.
+		var clusterIPs []string
 		if len(c.cache["/calico/bgp/v1/global/svc_cluster_ips"]) > 0 {
-			c.onClusterIPsUpdate(strings.Split(c.cache["/calico/bgp/v1/global/svc_cluster_ips"], ","))
+			clusterIPs = strings.Split(c.cache["/calico/bgp/v1/global/svc_cluster_ips"], ",")
 		}
+		c.onClusterIPsUpdate(clusterIPs)
 
 		if c.rg != nil {
 			// Trigger the route generator to recheck and advertise or withdraw
