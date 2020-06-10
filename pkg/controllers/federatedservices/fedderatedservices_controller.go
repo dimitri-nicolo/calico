@@ -25,7 +25,6 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/federationsyncer"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -163,7 +162,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 	})
 	fec.syncer = federationsyncer.New(
 		c.(backendClientAccessor).Backend(),
-		k8s.NewK8sResourceWrapperClient(k8sClientset),
+		k8sClientset,
 		restartMonitor,
 	)
 
