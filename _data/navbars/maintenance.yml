@@ -21,6 +21,8 @@ section:
     path: /maintenance/openshift-upgrade
   - title: Helm
     path: /maintenance/helm-upgrade-tsee
+- title: Options for managing Calico Enterprise license expiry
+  path: /maintenance/license-options
 - title: Monitor
   path: /maintenance/monitor/
   section: 

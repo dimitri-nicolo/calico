@@ -47,9 +47,8 @@ The **License Agent** is a containerized application that monitors the following
  All {{site.prodname}} features will work without interruption.
 
 **What happens to nodes after the license grace period?**
-- Only policies in the default Kubernetes tier are applied
-- Users can still access the {{site.prodname}} Manager, but data collection and flow logs will stop working
-- {{site.prodname}} Manager displays an error message to change the license.
+- Initially, users can access the {{site.prodname}} Manager, and a message is displayed to change the license. Users will not be able to access {{site.prodname}} Manager after two days.
+- Although components appear to function when the license expires and grace period is over, {{site.prodname}} tiers and policies no longer work, so any changes using {{site.prodname}} Manager do not take affect. Only policies in the default Kubernetes tier are applied.
 
 **What happens if I add nodes beyond what I'm licensed for?**
 - New nodes that you add past your limit, are still added
