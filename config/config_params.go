@@ -979,6 +979,7 @@ func New() *Config {
 		hostname = strings.ToLower(os.Getenv("HOSTNAME"))
 	}
 	p.FelixHostname = hostname
+	p.EnableNflogSize = isNflogSizeAvailable()
 	p.loadClientConfigFromEnvironment = apiconfig.LoadClientConfigFromEnvironment
 
 	return p
