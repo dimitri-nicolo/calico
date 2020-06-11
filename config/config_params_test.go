@@ -59,6 +59,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"ClusterGUID",
 		"ClusterType",
 		"CalicoVersion",
+		"Variant",
 		"CNXVersion",
 
 		// Moved to Node.

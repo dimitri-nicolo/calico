@@ -353,6 +353,8 @@ type Config struct {
 
 	IPSecRekeyTime time.Duration `config:"seconds;3600"`
 
+	DebugPanicAfter time.Duration `config:"seconds;0"`
+
 	// Configure where Felix gets its routing information.
 	// - workloadIPs: use workload endpoints to construct routes.
 	// - calicoIPAM: use IPAM data to contruct routes.
@@ -376,6 +378,8 @@ type Config struct {
 	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
+
+	Variant string `config:"string;CalicoEnterprise"`
 
 	// State tracking.
 
@@ -427,6 +431,10 @@ func (config *Config) UpdateFrom(rawData map[string]string, source Source) (chan
 
 	changed, err = config.resolve()
 	return
+}
+
+func (config *Config) IsLeader() bool {
+	return config.Variant == "CalicoEnterprise"
 }
 
 func (c *Config) InterfacePrefixes() []string {

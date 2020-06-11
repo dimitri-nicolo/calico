@@ -396,6 +396,14 @@ configRetry:
 		lookupsCache = nil
 	}
 
+	if configParams.DebugPanicAfter > 0 {
+		go func(delay time.Duration) {
+			log.WithField("delay", delay).Warn("DebugPanicAfter is set, will panic after delay.")
+			time.Sleep(delay)
+			log.Panic("Panicking because config told me to!")
+		}(configParams.DebugPanicAfter)
+	}
+
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
 	var dpDriver dp.DataplaneDriver
@@ -432,7 +440,7 @@ configRetry:
 	var policySyncProcessor *policysync.Processor
 	var policySyncAPIBinder binder.Binder
 	calcGraphClientChannels := []chan<- interface{}{dpConnector.ToDataplane}
-	if configParams.PolicySyncPathPrefix != "" {
+	if configParams.IsLeader() && configParams.PolicySyncPathPrefix != "" {
 		log.WithField("policySyncPathPrefix", configParams.PolicySyncPathPrefix).Info(
 			"Policy sync API enabled.  Creating the policy sync server.")
 		toPolicySync := make(chan interface{})
@@ -487,7 +495,7 @@ configRetry:
 		)
 	} else {
 		// Use the syncer locally.
-		syncer = felixsyncer.New(backendClient, datastoreConfig.Spec, syncerToValidator)
+		syncer = felixsyncer.New(backendClient, datastoreConfig.Spec, syncerToValidator, configParams.IsLeader())
 
 		log.Info("using resource updates where applicable")
 		configParams.SetUseNodeResourceUpdates(true)

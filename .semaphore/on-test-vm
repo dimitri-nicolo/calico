@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Copyright (c) 2020 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# WireGuard FVs use `wg` tool.
-# With this image, we avail the tool for felix-test image to use.
-
-FROM ubuntu:eoan
-LABEL maintainer="Gaurav <gaurav@tigera.io>"
-
-RUN apt-get update && \
-    apt-get install --no-install-recommends wireguard-tools -y
+exec gcloud --quiet compute ssh "--zone=${ZONE}" "ubuntu@${VM_NAME}" -- -A -o ServerAliveInterval=10 "$@"

@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	extdataplane "github.com/projectcalico/felix/dataplane/external"
+	"github.com/projectcalico/felix/dataplane/inactive"
 	intdataplane "github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -48,6 +49,13 @@ func StartDataplaneDriver(configParams *config.Config,
 	configChangedRestartCallback func(),
 	childExitedRestartCallback func(),
 	k8sClientSet *kubernetes.Clientset) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+
+	if !configParams.IsLeader() {
+		// Return an inactive dataplane, since we're not the leader.
+		log.Info("Not the leader, using an inactive dataplane")
+		return &inactive.InactiveDataplane{}, nil, make(chan *sync.WaitGroup)
+	}
+
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal (linux) dataplane driver.")
 		// If kube ipvs interface is present, enable ipvs support.

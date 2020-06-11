@@ -36,6 +36,10 @@ import (
 
 var cwLogDir = os.Getenv("FV_CWLOGDIR")
 
+// FIXME: isolate individual Felix instances in their own cgroups.  Unfortunately, this doesn't work on systems that are using cgroupv1
+// see https://elixir.bootlin.com/linux/v5.3.11/source/include/linux/cgroup-defs.h#L788 for explanation.
+const CreateCgroupV2 = false
+
 type Felix struct {
 	*containers.Container
 
@@ -222,12 +226,18 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 
 	// Add in the environment variables.
 	envVars := map[string]string{
+		// Enable core dumps.
+		"GOTRACEBACK": "crash",
+		// Tell the wrapper to set the core file name pattern so we can find the dump.
+		"SET_CORE_PATTERN": "true",
+
 		"FELIX_LOGSEVERITYSCREEN":         options.FelixLogSeverity,
 		"FELIX_PROMETHEUSMETRICSENABLED":  "true",
 		"FELIX_PROMETHEUSREPORTERENABLED": "true",
 		"FELIX_BPFLOGLEVEL":               "debug",
 		"FELIX_USAGEREPORTINGENABLED":     "false",
 		"FELIX_IPV6SUPPORT":               ipv6Enabled,
+
 		// Disable log dropping, because it can cause flakes in tests that look for particular logs.
 		"FELIX_DEBUGDISABLELOGDROPPING": "true",
 	}
@@ -240,9 +250,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 		// share maps.
 		envVars["FELIX_DebugBPFMapRepinEnabled"] = "false"
 
-		// FIXME: isolate individual Felix instances in their own cgroups.  Unfortunately, this doesn't work on systems that are using cgroupv1
-		// see https://elixir.bootlin.com/linux/v5.3.11/source/include/linux/cgroup-defs.h#L788 for explanation.
-		// envVars["FELIX_DEBUGBPFCGROUPV2"] = containerName
+		if CreateCgroupV2 {
+			envVars["FELIX_DEBUGBPFCGROUPV2"] = containerName
+		}
 	}
 
 	// For FV, tell Felix to write CloudWatch logs to a file instead of to the real
@@ -309,6 +319,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	// Add in the volumes.
 	volumes := map[string]string{
 		"/lib/modules": "/lib/modules",
+		"/tmp":         "/tmp",
 	}
 	for k, v := range options.ExtraVolumes {
 		volumes[k] = v
@@ -372,7 +383,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 }
 
 func (f *Felix) Stop() {
-	_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
+	if CreateCgroupV2 {
+		_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
+	}
 	f.Container.Stop()
 	if f.cwlCallsExpected {
 		Expect(cwLogDir + "/" + f.cwlFile).To(BeAnExistingFile())
