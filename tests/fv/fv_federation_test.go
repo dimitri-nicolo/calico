@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -367,6 +368,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 	AfterEach(func() {
 		By("Cleaning up after the test should complete")
 		federationController.Stop()
+		federationController.Remove()
 		localApiserver.Stop()
 		localEtcd.Stop()
 		remoteApiserver.Stop()
@@ -486,15 +488,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		}
 		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal(eSubset))
 
+		// Stop the federationController container so we can register the watch on Stdout
+		federationController.Stop()
+		watchChan := federationController.WatchStdoutFor(regexp.MustCompile("Received exit status [[:digit:]]*, restarting"))
+		federationController.Start()
+
 		By("Updating the license to an invalid license")
 		infrastructure.ApplyExpiredLicense(localCalicoClient)
-		federationController.WaitNotRunning(60 * time.Second)
-		federationController = testutils.RunFederationController(
-			localEtcd.IP,
-			localKubeconfig,
-			[]string{remoteKubeconfig},
-			isCalicoEtcdDatastore,
-		)
+		Eventually(watchChan, 10*time.Second).Should(BeClosed())
 
 		By("Updating back2 to have a different set of endpoints while the controller should be stopped")
 		epsBacking2, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(makeEndpoints(eps2, "backing2", epsBacking2))

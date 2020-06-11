@@ -96,6 +96,12 @@ bin/kube-controllers-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	  go build -v -o $@ -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/kube-controllers/'
 
+bin/wrapper-$(ARCH):
+	$(DOCKER_RUN) \
+	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
+	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	  go build -v -o $@ -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/wrapper'
+
 bin/check-status-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
@@ -115,7 +121,7 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH) bin/kubectl-$(ARCH)
+image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH) bin/wrapper-$(ARCH) bin/kubectl-$(ARCH)
 	# Build the docker image for the policy controller.
 	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 	# Build the docker image for the flannel migration controller.

@@ -46,5 +46,6 @@ COPY --from=base /licenses /licenses
 COPY --from=base /status.json /status.json
 ADD bin/kube-controllers-linux-amd64 /usr/bin/kube-controllers
 ADD bin/check-status-linux-amd64 /usr/bin/check-status
+ADD bin/wrapper-amd64 /usr/bin/wrapper
 USER 999
-ENTRYPOINT ["/usr/bin/kube-controllers"]
+ENTRYPOINT ["/usr/bin/wrapper", "/usr/bin/kube-controllers"]

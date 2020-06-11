@@ -57,15 +57,11 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/status"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
+	"github.com/projectcalico/typha/pkg/cmdwrapper"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
-)
-
-const (
-	// Same RC as the one used for a config change by Felix.
-	configChangedRC = 129
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -243,7 +239,7 @@ func main() {
 	//       but many of our controllers are based on cache.ResourceCache which
 	//       runs forever once it is started.  It needs to be enhanced to respect
 	//       the stop channel passed to the controllers.
-	os.Exit(configChangedRC)
+	os.Exit(cmdwrapper.RestartReturnCode)
 }
 
 // Run the controller health checks.
@@ -604,10 +600,14 @@ func (cc *controllerControl) RunControllers() {
 			return
 		case msg := <-cc.restartCntrlChan:
 			log.Warnf("controller requested restart: %s", msg)
+			// Sleep for a bit to make sure we don't have a tight restart loop
+			time.Sleep(3 * time.Second)
 			close(cc.stop)
 			return
 		case <-cc.restartCfgChan:
 			log.Warn("configuration changed; restarting")
+			// Sleep for a bit to make sure we don't have a tight restart loop
+			time.Sleep(3 * time.Second)
 			// TODO: handle this more gracefully, like tearing down old controllers and starting new ones
 			close(cc.stop)
 			return
