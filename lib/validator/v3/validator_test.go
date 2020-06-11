@@ -74,6 +74,15 @@ func init() {
 	validWireguardPortOrRulePriority := 12345
 	invalidWireguardPortOrRulePriority := 99999
 
+	var awsCheckEnable, awsCheckDisable, awsCheckDoNothing,
+		awsCheckbadVal, awsCheckenable api.AWSSrcDstCheckOption
+
+	awsCheckEnable = api.AWSSrcDstCheckOptionEnable
+	awsCheckDisable = api.AWSSrcDstCheckOptionDisable
+	awsCheckDoNothing = api.AWSSrcDstCheckOptionDoNothing
+	awsCheckbadVal = api.AWSSrcDstCheckOption("badVal")
+	awsCheckenable = api.AWSSrcDstCheckOption("enable")
+
 	// longLabelsValue is 63 and 64 chars long
 	maxAnnotationsLength := 256 * (1 << 10)
 	longValue := make([]byte, maxAnnotationsLength)
@@ -1618,6 +1627,13 @@ func init() {
 			WireguardPublicKey: "foobar",
 		}, false),
 
+		// AWS source-destination-check.
+		Entry("should accept a valid AWSSrcDstCheck value 'DoNothing'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckDoNothing}, true),
+		Entry("should accept a valid AWSSrcDstCheck value 'Enable'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckEnable}, true),
+		Entry("should accept a valid AWSSrcDstCheck value 'Disable'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckDisable}, true),
+		Entry("should reject an invalid AWSSrcDstCheck value 'enable'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckenable}, false),
+		Entry("should reject an invalid AWSSrcDstCheck value 'badVal'", api.FelixConfigurationSpec{AWSSrcDstCheck: &awsCheckbadVal}, false),
+
 		// GlobalNetworkPolicy validation.
 		Entry("disallow name with invalid character", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
 		Entry("disallow name with mixed case characters", &api.GlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"}}, false),
@@ -1888,6 +1904,63 @@ func init() {
 					Types:  []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
 			}, false,
+		),
+		Entry("disallow global() in namespaceSelector field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					NamespaceSelector: "global()",
+				},
+			}, false,
+		),
+		Entry("disallow global() in selector field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					Selector: "global()",
+				},
+			}, false,
+		),
+		Entry("disallow global() in serviceAccountSelector field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					ServiceAccountSelector: "global()",
+				},
+			}, false,
+		),
+		Entry("disallow global() in EntityRule selector field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					Ingress: []api.Rule{
+						{
+							Action: "Allow",
+							Source: api.EntityRule{
+								Selector: "global()",
+							},
+						},
+					},
+				},
+			}, false,
+		),
+		Entry("allow global() and projectcalico.org/name in EntityRule namespaceSelector field",
+			&api.GlobalNetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.GlobalNetworkPolicySpec{
+					Ingress: []api.Rule{
+						{
+							Action: "Allow",
+							Source: api.EntityRule{
+								NamespaceSelector: "global()",
+							},
+							Destination: api.EntityRule{
+								NamespaceSelector: "projectcalico.org/name == 'test'",
+							},
+						},
+					},
+				},
+			}, true,
 		),
 
 		// StagedGlobalNetworkPolicySpec Types field checks.
@@ -2369,6 +2442,67 @@ func init() {
 					Egress: []api.Rule{{Action: "Allow", HTTP: &api.HTTPMatch{Methods: []string{"GET"}}}},
 					Types:  []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 				},
+			}, false,
+		),
+		Entry("disallow global() in selector field",
+			&api.NetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.NetworkPolicySpec{
+					Selector: "global()",
+				},
+			}, false,
+		),
+		Entry("disallow global() in serviceAccountSelector field",
+			&api.NetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.NetworkPolicySpec{
+					ServiceAccountSelector: "global()",
+				},
+			}, false,
+		),
+		Entry("allow global() and projectcalico.org/name in EntityRule namespaceSelector field",
+			&api.NetworkPolicy{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.NetworkPolicySpec{
+					Ingress: []api.Rule{
+						{
+							Action: "Allow",
+							Source: api.EntityRule{
+								NamespaceSelector: "global()",
+							},
+							Destination: api.EntityRule{
+								NamespaceSelector: "projectcalico.org/name == 'test'",
+							},
+						},
+					},
+				},
+			}, true,
+		),
+		// Validate EntityRule against special selectors global().
+		// Extra spaces added in some cases to make sure validation handles it.
+		Entry("disallow global() in EntityRule selector field",
+			&api.EntityRule{
+				Selector: "  global()  ",
+			}, false,
+		),
+		Entry("allow global() in EntityRule namespaceSelector field",
+			&api.EntityRule{
+				NamespaceSelector: "  global()  ",
+			}, true,
+		),
+		Entry("disallow global() in EntityRule namespaceSelector field AND'd with other expressions",
+			&api.EntityRule{
+				NamespaceSelector: " global() && all()",
+			}, false,
+		),
+		Entry("disallow global() in EntityRule namespaceSelector field OR'd other expressions",
+			&api.EntityRule{
+				NamespaceSelector: "global()||all()",
+			}, false,
+		),
+		Entry("disallow bad selectors in EntityRule selector field",
+			&api.EntityRule{
+				Selector: "global() && bad",
 			}, false,
 		),
 		Entry("allow HTTP Path with permitted match clauses",
