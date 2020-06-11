@@ -23,9 +23,9 @@ Other versions may work, but we do not actively test {{site.prodname}}
 
 We test {{site.prodname}} {{page.version}} against the following managed Kubernetes versions.
 
-- AKS: 1.17 (preview), 1.16, 1.15
-- GKE: 1.17 (preview), 1.16, 1.15
-- EKS: 1.15
+- AKS: 1.17 (preview), 1.16
+- GKE: 1.17 (preview), 1.16
+- EKS: 1.16
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
