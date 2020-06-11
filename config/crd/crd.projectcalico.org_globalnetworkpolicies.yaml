@@ -83,7 +83,7 @@ spec:
                             by the rule. \n For NetworkPolicy, an empty NamespaceSelector
                             implies that the Selector is limited to selecting only
                             workload endpoints in the same namespace as the NetworkPolicy.
-                            \n For NetworkPolicy, `global` NamespaceSelector implies
+                            \n For NetworkPolicy, `global()` NamespaceSelector implies
                             that the Selector is limited to selecting only GlobalNetworkSet
                             or HostEndpoint. \n For GlobalNetworkPolicy, an empty
                             NamespaceSelector implies the Selector applies to workload
@@ -297,7 +297,7 @@ spec:
                             by the rule. \n For NetworkPolicy, an empty NamespaceSelector
                             implies that the Selector is limited to selecting only
                             workload endpoints in the same namespace as the NetworkPolicy.
-                            \n For NetworkPolicy, `global` NamespaceSelector implies
+                            \n For NetworkPolicy, `global()` NamespaceSelector implies
                             that the Selector is limited to selecting only GlobalNetworkSet
                             or HostEndpoint. \n For GlobalNetworkPolicy, an empty
                             NamespaceSelector implies the Selector applies to workload
@@ -432,7 +432,7 @@ spec:
                             by the rule. \n For NetworkPolicy, an empty NamespaceSelector
                             implies that the Selector is limited to selecting only
                             workload endpoints in the same namespace as the NetworkPolicy.
-                            \n For NetworkPolicy, `global` NamespaceSelector implies
+                            \n For NetworkPolicy, `global()` NamespaceSelector implies
                             that the Selector is limited to selecting only GlobalNetworkSet
                             or HostEndpoint. \n For GlobalNetworkPolicy, an empty
                             NamespaceSelector implies the Selector applies to workload
@@ -646,7 +646,7 @@ spec:
                             by the rule. \n For NetworkPolicy, an empty NamespaceSelector
                             implies that the Selector is limited to selecting only
                             workload endpoints in the same namespace as the NetworkPolicy.
-                            \n For NetworkPolicy, `global` NamespaceSelector implies
+                            \n For NetworkPolicy, `global()` NamespaceSelector implies
                             that the Selector is limited to selecting only GlobalNetworkSet
                             or HostEndpoint. \n For GlobalNetworkPolicy, an empty
                             NamespaceSelector implies the Selector applies to workload

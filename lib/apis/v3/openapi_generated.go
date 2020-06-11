@@ -3847,7 +3847,7 @@ func schema_libcalico_go_lib_apis_v3_EntityRule(ref common.ReferenceCallback) co
 					},
 					"namespaceSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NamespaceSelector is an optional field that contains a selector expression. Only traffic that originates from (or terminates at) endpoints within the selected namespaces will be matched. When both NamespaceSelector and Selector are defined on the same rule, then only workload endpoints that are matched by both selectors will be selected by the rule.\n\nFor NetworkPolicy, an empty NamespaceSelector implies that the Selector is limited to selecting only workload endpoints in the same namespace as the NetworkPolicy.\n\nFor NetworkPolicy, `global` NamespaceSelector implies that the Selector is limited to selecting only GlobalNetworkSet or HostEndpoint.\n\nFor GlobalNetworkPolicy, an empty NamespaceSelector implies the Selector applies to workload endpoints across all namespaces.",
+							Description: "NamespaceSelector is an optional field that contains a selector expression. Only traffic that originates from (or terminates at) endpoints within the selected namespaces will be matched. When both NamespaceSelector and Selector are defined on the same rule, then only workload endpoints that are matched by both selectors will be selected by the rule.\n\nFor NetworkPolicy, an empty NamespaceSelector implies that the Selector is limited to selecting only workload endpoints in the same namespace as the NetworkPolicy.\n\nFor NetworkPolicy, `global()` NamespaceSelector implies that the Selector is limited to selecting only GlobalNetworkSet or HostEndpoint.\n\nFor GlobalNetworkPolicy, an empty NamespaceSelector implies the Selector applies to workload endpoints across all namespaces.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5198,6 +5198,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Description: "WireguardMTU controls the MTU on the Wireguard interface. See Configuring MTU [Default: 1420]",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"awsSrcDstCheck": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Set source-destination-check on AWS EC2 instances. Accepted value must be one of \"DoNothing\", \"Enabled\" or \"Disabled\". [Default: DoNothing]",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
