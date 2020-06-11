@@ -42,6 +42,7 @@ COPY --from=base /licenses /licenses
 # Put our binary in /code rather than directly in /usr/bin.  This allows the downstream builds
 # to more easily extract the build artefacts from the container.
 ADD bin/calico-typha-amd64 /code/calico-typha
+ADD bin/wrapper-amd64 /code/wrapper
 ADD typha.cfg /etc/calico/typha.cfg
 
 # Add nsswitch.conf so that we correctly resolve localhost based on /etc/hosts.
@@ -53,4 +54,4 @@ ENV PATH="$PATH:/code"
 USER 999
 # Run Typha by default
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["calico-typha"]
+CMD ["wrapper", "/code/calico-typha"]
