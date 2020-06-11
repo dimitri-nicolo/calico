@@ -1453,6 +1453,26 @@ func validateNetworkPolicySpec(spec *api.NetworkPolicySpec, structLevel validato
 			}
 		}
 	}
+
+	// Check that the selector doesn't have the global() selector which is only
+	// valid as an EntityRule namespaceSelector.
+	if strings.Contains(spec.Selector, globalSelector) {
+		structLevel.ReportError(
+			reflect.ValueOf(spec.Selector),
+			"NetworkPolicySpec.Selector",
+			"",
+			reason(globalSelectorEntRule),
+			"")
+	}
+
+	if strings.Contains(spec.ServiceAccountSelector, globalSelector) {
+		structLevel.ReportError(
+			reflect.ValueOf(spec.ServiceAccountSelector),
+			"NetworkPolicySpec.ServiceAccountSelector",
+			"",
+			reason(globalSelectorEntRule),
+			"")
+	}
 }
 
 func validateNetworkPolicy(structLevel validator.StructLevel) {
@@ -1528,26 +1548,6 @@ func validateStagedNetworkPolicy(structLevel validator.StructLevel) {
 		}
 	} else {
 		validateNetworkPolicySpec(&enforced.Spec, structLevel)
-	}
-
-	// Check that the selector doesn't have the global() selector which is only
-	// valid as an EntityRule namespaceSelector.
-	if strings.Contains(spec.Selector, globalSelector) {
-		structLevel.ReportError(
-			reflect.ValueOf(spec.Selector),
-			"NetworkPolicySpec.Selector",
-			"",
-			reason(globalSelectorEntRule),
-			"")
-	}
-
-	if strings.Contains(spec.ServiceAccountSelector, globalSelector) {
-		structLevel.ReportError(
-			reflect.ValueOf(spec.ServiceAccountSelector),
-			"NetworkPolicySpec.ServiceAccountSelector",
-			"",
-			reason(globalSelectorEntRule),
-			"")
 	}
 }
 
@@ -1629,6 +1629,35 @@ func validateGlobalNetworkPolicySpec(spec *api.GlobalNetworkPolicySpec, structLe
 				structLevel.ReportError(v, f, "", reason("not allowed in egress rules"), "")
 			}
 		}
+	}
+
+	// Check that the selector doesn't have the global() selector which is only
+	// valid as an EntityRule namespaceSelector.
+	if strings.Contains(spec.Selector, globalSelector) {
+		structLevel.ReportError(
+			reflect.ValueOf(spec.Selector),
+			"GlobalNetworkPolicySpec.Selector",
+			"",
+			reason(globalSelectorEntRule),
+			"")
+	}
+
+	if strings.Contains(spec.ServiceAccountSelector, globalSelector) {
+		structLevel.ReportError(
+			reflect.ValueOf(spec.Selector),
+			"GlobalNetworkPolicySpec.ServiceAccountSelector",
+			"",
+			reason(globalSelectorEntRule),
+			"")
+	}
+
+	if strings.Contains(spec.NamespaceSelector, globalSelector) {
+		structLevel.ReportError(
+			reflect.ValueOf(spec.Selector),
+			"GlobalNetworkPolicySpec.NamespaceSelector",
+			"",
+			reason(globalSelectorEntRule),
+			"")
 	}
 }
 
@@ -1813,35 +1842,6 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 				)
 			}
 		}
-	}
-
-	// Check that the selector doesn't have the global() selector which is only
-	// valid as an EntityRule namespaceSelector.
-	if strings.Contains(spec.Selector, globalSelector) {
-		structLevel.ReportError(
-			reflect.ValueOf(spec.Selector),
-			"GlobalNetworkPolicySpec.Selector",
-			"",
-			reason(globalSelectorEntRule),
-			"")
-	}
-
-	if strings.Contains(spec.ServiceAccountSelector, globalSelector) {
-		structLevel.ReportError(
-			reflect.ValueOf(spec.Selector),
-			"GlobalNetworkPolicySpec.ServiceAccountSelector",
-			"",
-			reason(globalSelectorEntRule),
-			"")
-	}
-
-	if strings.Contains(spec.NamespaceSelector, globalSelector) {
-		structLevel.ReportError(
-			reflect.ValueOf(spec.Selector),
-			"GlobalNetworkPolicySpec.NamespaceSelector",
-			"",
-			reason(globalSelectorEntRule),
-			"")
 	}
 }
 
