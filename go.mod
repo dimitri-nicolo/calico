@@ -32,8 +32,7 @@ replace (
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.17.3
 	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20200406201717-c612ebea4f6b
 
-	// Using cloned tigera/apiserver-private cloned off k8s apiserver kubernetes 1.17.3
-	k8s.io/apiserver => github.com/tigera/apiserver-private v0.0.0-20200406231525-9c3c1cab108c
+	k8s.io/apiserver => k8s.io/apiserver v0.17.3
 
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.17.3
 	k8s.io/client-go => k8s.io/client-go v0.17.3
