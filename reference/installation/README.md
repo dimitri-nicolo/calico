@@ -22,7 +22,7 @@ Then, run the following.
 1. Run it, passing the location of the APIs
 
    ```
-   ./gen-crd-api-reference-docs -config ./example-config.json -api-dir github.com/tigera/operator/pkg/apis/operator/v1 -out-file api.html
+   ./gen-crd-api-reference-docs -config ./example-config.json -api-dir github.com/tigera/operator/pkg/apis/operator -out-file api.html
    ```
 
 Then, there are a few bits of cleanup you'll need to do
