@@ -10,11 +10,11 @@
 
   All {{site.prodname}} features work without interruption.
 
-**How do I know the license grace period?**
+**How long is the grace period?**
 
-  Grace period terms are communicated to you when you get your commercial license. 
+  Grace period terms are fixed and are communicated to you when you get your commercial license. 
 
-**What happens to nodes after the license grace period?**
+**What happens to nodes after the grace period?**
 
 - Initially, users can access the {{site.prodname}} Manager, and a message is displayed to change the license. But after two days, users will not be able to access {{site.prodname}} Manager.
 - Although components appear to function in {{site.prodname}} Manager when the grace period expires, functionality falls back to open source Calico behavior; no tiers, and policy enforcement is limited to the default Kubernetes tier.  
@@ -24,6 +24,6 @@
 - Node limits are not currently enforced
 - All {{site.prodname}} features still work
 
-**How do I access information about my license?**
+**Is there a way to track license expiry?**
 
-The best way is to [use Prometheus]({{site.baseurl}}/maintenance/monitor/license-agent) to monitor {{site.prodname}} license metrics and set alerts. (License metrics are not available in {{site.prodname}} Manager.)
+Yes! Set alerts and [get license metrics using Prometheus]({{site.baseurl}}/maintenance/monitor/license-agent). (License metrics are not available in {{site.prodname}} Manager.)
