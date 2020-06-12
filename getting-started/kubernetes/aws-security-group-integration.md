@@ -38,10 +38,10 @@ Your Kubernetes cluster must meet the following specifications:
   ```
 
 - You have already installed
-  [Calico Enterprise for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
-  on your cluster. The AWS security group integration requires the Kubernetes API datastore.
+  [{{ site.prodname }} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
+  on your cluster. Note that the EKS install guide also works on Kops clusters configured with `--networking amazon-vpc-routed-eni`.
 
-  Verify Calico Enterprise has been installed by confirming that all tigerastatuses are available:
+  Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
 
   ```bash
   kubectl get tigerastatus
