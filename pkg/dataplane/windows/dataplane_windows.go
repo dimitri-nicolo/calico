@@ -939,7 +939,7 @@ func cleanUpEndpointByIP(IP net.IP, logger *logrus.Entry) error {
 func cleanUpEndpointByName(endpointName string, logger *logrus.Entry) error {
 	hnsEndpoint, err := hcsshim.GetHNSEndpointByName(endpointName)
 	if hcsshim.IsNotExist(err) {
-		logger.Debugf("Endpoint already gone.  Nothing to do.")
+		logger.Debug("Endpoint already gone.  Nothing to do.")
 		return nil
 	}
 	if err != nil {

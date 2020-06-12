@@ -665,6 +665,37 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(containerEP.IPAddress.String()).Should(Equal(ip))
 				Expect(containerEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
 				Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
+
+				// Create network with new subnet again
+				podIP, subnet, _ = net.ParseCIDR("30.0.0.30/8")
+				result.IPs[0].Address = *subnet
+				result.IPs[0].Address.IP = podIP
+
+				netconf3 := fmt.Sprintf(`
+	   				{
+	   					"cniVersion": "%s",
+	   					"name": "%s",
+	   					"type": "calico",
+	   					"etcd_endpoints": "%s",
+	   					"datastore_type": "%s",
+	   					"windows_use_single_network":true,
+	   					"ipam": {
+	   						"type": "host-local",
+	   						"subnet": "30.0.0.0/8"
+	   					},
+	   					"kubernetes": {
+	   						"k8s_api_root": "%s",
+							"kubeconfig": "C:\\k\\config"
+	   					},
+	   					"policy": {"type": "k8s"},
+	   					"nodename_file_optional": true,
+	   					"log_level":"debug"
+	   				}`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
+
+				testutils.DeleteContainerUsingDocker(containerID)
+				log.Infof("Network pod again with another subnet and a stopped container")
+				err = testutils.NetworkPod(netconf3, name, ip, ctx, calicoClient, result, containerID, testutils.HnsNoneNs, nsName)
+				Expect(err).Should(HaveOccurred())
 			})
 
 			It("Network exists but missing management endpoint, should be added", func() {

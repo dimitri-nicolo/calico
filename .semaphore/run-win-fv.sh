@@ -3,7 +3,7 @@
 set -e
 set -x
 
-FV_DIR="process/testing/winfv"
+FV_DIR="/home/semaphore/process/testing/winfv"
 
 pushd ${FV_DIR}
 # Prepare local files
@@ -18,20 +18,11 @@ chmod 600 $WIN_PPK_KEY
 aws ec2 import-key-pair --key-name ${KEYPAIR_NAME} --public-key-material file://${MASTER_CONNECT_KEY_PUB}
 
 # Set up the cluster.
-NAME_PREFIX="$CURRENT_CLUSTER_NAME" KUBE_VERSION="$K8S_VERSION" WINDOWS_KEYPAIR_NAME="$KEYPAIR_NAME" WINDOWS_PEM_FILE="$MASTER_CONNECT_KEY" WINDOWS_PPK_FILE="$WIN_PPK_KEY" WINDOWS_OS="Windows1809container" ./setup-fv.sh -q | tee fv.log
+NAME_PREFIX="$CLUSTER_NAME" KUBE_VERSION="$K8S_VERSION" WINDOWS_KEYPAIR_NAME="$KEYPAIR_NAME" WINDOWS_PEM_FILE="$MASTER_CONNECT_KEY" WINDOWS_PPK_FILE="$WIN_PPK_KEY" WINDOWS_OS="Windows1809container" ./setup-fv.sh -q | tee fv.log
 
 # Run FV
 MASTER_IP=$(grep ubuntu@ fv.log | cut -d '@' -f2)
 SSH_CMD=$(echo ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ${MASTER_CONNECT_KEY} ubuntu@${MASTER_IP})
-
-# Stop for debug
-echo "Check for pause file..."
-while [ -f /home/semaphore/pause-for-debug ];
-do
-    echo "#"
-    sleep 30
-done
-echo "Run Windows FV is done."
 
 ${SSH_CMD} ls -ltr /home/ubuntu
 ${SSH_CMD} ls -ltr /home/ubuntu/winfv
