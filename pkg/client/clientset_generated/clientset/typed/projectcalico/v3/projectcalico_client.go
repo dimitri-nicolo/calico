@@ -12,6 +12,7 @@ import (
 
 type ProjectcalicoV3Interface interface {
 	RESTClient() rest.Interface
+	AuthenticationReviewsGetter
 	BGPConfigurationsGetter
 	BGPPeersGetter
 	ClusterInformationsGetter
@@ -41,6 +42,10 @@ type ProjectcalicoV3Interface interface {
 // ProjectcalicoV3Client is used to interact with features provided by the projectcalico.org group.
 type ProjectcalicoV3Client struct {
 	restClient rest.Interface
+}
+
+func (c *ProjectcalicoV3Client) AuthenticationReviews() AuthenticationReviewInterface {
+	return newAuthenticationReviews(c)
 }
 
 func (c *ProjectcalicoV3Client) BGPConfigurations() BGPConfigurationInterface {

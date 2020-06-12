@@ -14,6 +14,10 @@ type FakeProjectcalicoV3 struct {
 	*testing.Fake
 }
 
+func (c *FakeProjectcalicoV3) AuthenticationReviews() v3.AuthenticationReviewInterface {
+	return &FakeAuthenticationReviews{c}
+}
+
 func (c *FakeProjectcalicoV3) BGPConfigurations() v3.BGPConfigurationInterface {
 	return &FakeBGPConfigurations{c}
 }

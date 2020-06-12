@@ -25,6 +25,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	calicoauthenticationreview "github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
 	calicobgpconfiguration "github.com/tigera/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgppeer "github.com/tigera/apiserver/pkg/registry/projectcalico/bgppeer"
 	calicoclusterinformation "github.com/tigera/apiserver/pkg/registry/projectcalico/clusterinformation"
@@ -640,7 +641,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["managedclusters/status"] = managedClusterStatusStorage
 
 	storage["clusterinformations"] = rESTInPeace(calicoclusterinformation.NewREST(scheme, *clusterInformationOpts))
-
+	storage["authenticationreviews"] = calicoauthenticationreview.NewREST()
 	return storage, nil
 }
 

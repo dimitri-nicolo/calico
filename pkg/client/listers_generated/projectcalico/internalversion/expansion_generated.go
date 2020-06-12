@@ -4,6 +4,10 @@
 
 package internalversion
 
+// AuthenticationReviewListerExpansion allows custom methods to be added to
+// AuthenticationReviewLister.
+type AuthenticationReviewListerExpansion interface{}
+
 // BGPConfigurationListerExpansion allows custom methods to be added to
 // BGPConfigurationLister.
 type BGPConfigurationListerExpansion interface{}

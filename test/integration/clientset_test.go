@@ -33,6 +33,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -41,6 +43,7 @@ import (
 	_ "github.com/tigera/apiserver/pkg/apis/projectcalico/install"
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
 )
 
 // TestGroupVersion is trivial.
@@ -2683,5 +2686,64 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 		return fmt.Errorf("expected error creating invalidClusterInfo with name other than \"default\"")
 	}
 
+	return nil
+}
+
+// TestAuthenticationReviewsClient exercises the AuthenticationReviews client.
+func TestAuthenticationReviewsClient(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.AuthenticationReview{}
+			})
+			defer shutdownServer()
+			if err := testAuthenticationReviewsClient(client); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("test-authentication-reviews", rootTestFunc()) {
+		t.Errorf("test-authentication-reviews failed")
+	}
+}
+
+func testAuthenticationReviewsClient(client calicoclient.Interface) error {
+
+	ar := v3.AuthenticationReview{}
+	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(&ar)
+
+	if err != nil {
+		return err
+	}
+
+	var name = "name"
+	var groups = []string{name}
+	var extra = map[string][]string{name: groups}
+	var uid = "uid"
+
+	ctx := request.NewContext()
+	ctx = request.WithUser(ctx, &user.DefaultInfo{
+		Name:   name,
+		Groups: groups,
+		Extra:  extra,
+		UID:    uid,
+	})
+
+	auth := authenticationreview.NewREST()
+	obj, err := auth.Create(ctx, auth.New(), nil, nil)
+
+	if err != nil {
+		return err
+	}
+
+	if obj == nil {
+		return errors.New("expected an authentication review")
+	}
+
+	status := obj.(*projectcalico.AuthenticationReview).Status
+	if status.Name != name || status.Groups[0] != name || status.UID != uid || status.Extra[name][0] != name {
+		return errors.New("unexpected user info from authentication review")
+	}
 	return nil
 }

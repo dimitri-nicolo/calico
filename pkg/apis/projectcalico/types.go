@@ -3,9 +3,9 @@
 package projectcalico
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -537,4 +537,27 @@ type ClusterInformation struct {
 	metav1.ObjectMeta
 
 	Spec calico.ClusterInformationSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AuthenticationReviewList is a list of AuthenticationReview objects.
+type AuthenticationReviewList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []AuthenticationReview
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+
+type AuthenticationReview struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Status calico.AuthenticationReviewStatus
 }

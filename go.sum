@@ -601,6 +601,8 @@ github.com/tigera/apimachinery-private v0.0.0-20200406201717-c612ebea4f6b h1:8PY
 github.com/tigera/apimachinery-private v0.0.0-20200406201717-c612ebea4f6b/go.mod h1:gxLnyZcGNdZTCLnq3fgzyg2A5BVCHTNDFrw8AmuJ+0g=
 github.com/tigera/apiserver-private v0.0.0-20200406231525-9c3c1cab108c h1:5Y2ed/gDR8OJiDJZsjBu5GKdFDfZTAKhhApylLSg5Bs=
 github.com/tigera/apiserver-private v0.0.0-20200406231525-9c3c1cab108c/go.mod h1:iJtsPpu1ZpEnHaNawpSV0nYTGBhhX2dUlnn7/QS7QiY=
+github.com/tigera/libcalico-go-private v0.0.0-20200601184644-2e123cc32ebe h1:G7F7I2sc1DG/9FWCuenCrXHHfq/J7VzspaWmdJZZfZw=
+github.com/tigera/libcalico-go-private v0.0.0-20200601184644-2e123cc32ebe/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56 h1:MhaYRI9GBwqeJ+egYJ/vyGhbndRn52LX9GLcEJ9ms7Y=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200527160814-71f7883c4323 h1:FOxhFHz3LuqBMq6Fm+uPyiyXOf+H9i9K3qkMuXlMMw0=
@@ -619,6 +621,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200610113652-a3ec22ff7b93 h1:r
 github.com/tigera/libcalico-go-private v1.7.2-0.20200610113652-a3ec22ff7b93/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3 h1:q2H6t1ZpHiOtR33X129nqfY/LVTTQopAMM3BOaautwA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631 h1:FGUGDLAApFGrHMr1Gd4UgVGxwmYtv78P17aKIeqQssM=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe h1:3CN6BEUVVfOJy36NKkh/+/zjMPfXtfrJkPwoJsv1FhE=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=

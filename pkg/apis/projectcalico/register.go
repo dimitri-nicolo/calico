@@ -82,6 +82,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClusterInformationList{},
 		&NetworkSet{},
 		&NetworkSetList{},
+		&AuthenticationReview{},
+		&AuthenticationReviewList{},
 	)
 	return nil
 }

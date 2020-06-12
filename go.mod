@@ -6,6 +6,7 @@ require (
 	github.com/go-openapi/spec v0.19.3
 	github.com/google/gofuzz v1.0.0
 	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe
@@ -22,7 +23,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 
 	k8s.io/api => k8s.io/api v0.17.3
