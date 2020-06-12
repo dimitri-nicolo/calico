@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
+
 	"github.com/projectcalico/typha/pkg/jitter"
 	"github.com/projectcalico/typha/pkg/syncproto"
 )
@@ -37,7 +39,7 @@ const (
 )
 
 var (
-	summaryUpdateSize = prometheus.NewSummary(prometheus.SummaryOpts{
+	summaryUpdateSize = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "typha_breadcrumb_size",
 		Help: "Number of KVs recorded in each breadcrumb.",
 	})
