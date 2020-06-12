@@ -42,7 +42,7 @@ popd
 
 # Get results and logs 
 SCP_CMD=$(echo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ${FV_DIR}/${MASTER_CONNECT_KEY})
-${SCP_CMD} -r ubuntu@${MASTER_IP}:/home/ubuntu/report /home/semaphore || true
+${SCP_CMD} -r ubuntu@${MASTER_IP}:/home/ubuntu/report /home/semaphore
 
 ls -ltr ./report
 mkdir /home/semaphore/fv.log
@@ -55,4 +55,12 @@ do
     echo "#"
     sleep 30
 done
+
+# Search for error code file
+if [ -f /home/semaphore/report/error-codes ];
+then
+    echo "Windows FV return error."
+    exit 1
+fi
+   
 echo "Run Windows FV is done."
