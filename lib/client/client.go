@@ -34,7 +34,8 @@ import (
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v1"
 )
 
-// Client contains
+// Client creates a rest client for the model defined in lib/api.
+// Authentication Reviews are omitted from the client. For more details, see authenticationreview.go.
 type Client struct {
 	// The backend client is currently public to allow access to datastore
 	// specific functions that are used by calico/node.  This is a temporary

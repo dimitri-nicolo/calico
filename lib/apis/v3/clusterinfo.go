@@ -73,7 +73,7 @@ func NewClusterInformation() *ClusterInformation {
 	}
 }
 
-// NewClusterInformationList creates a new 9zeroed) ClusterInformationList struct with the TypeMetadata
+// NewClusterInformationList creates a new (zeroed) ClusterInformationList struct with the TypeMetadata
 // initialized to the current version.
 func NewClusterInformationList() *ClusterInformationList {
 	return &ClusterInformationList{
