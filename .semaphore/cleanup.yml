@@ -20,7 +20,7 @@ blocks:
       - chmod 0600 ~/.keys/*
       - ssh-add ~/.keys/*
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-      - export CURRENT_CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-${SEMAPHORE_JOB_INDEX:-ut}
+      - export CURRENT_CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${SHORT_WORKFLOW_ID}
       - export KEYPAIR_NAME=${CURRENT_CLUSTER_NAME}
       - echo CLUSTER_NAME=${CURRENT_CLUSTER_NAME}
     jobs:
