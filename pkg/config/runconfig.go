@@ -365,14 +365,14 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	if rc.Namespace != nil {
 		rc.Namespace.NumberOfWorkers = envCfg.ProfileWorkers
 	}
+	if rc.FederatedServices != nil {
+		rc.FederatedServices.NumberOfWorkers = envCfg.FederatedServicesWorkers
+	}
 
 	// These controllers aren't supported on the API yet, so no need to merge
 	// configuration. So, we just apply the fields from the environment variables
 	if rc.Service != nil {
 		rc.Service.NumberOfWorkers = envCfg.ServiceWorkers
-	}
-	if rc.FederatedServices != nil {
-		rc.FederatedServices.NumberOfWorkers = envCfg.FederatedServicesWorkers
 	}
 	if rc.ElasticsearchConfiguration != nil {
 		rc.ElasticsearchConfiguration.NumberOfWorkers = envCfg.ManagedClusterWorkers
@@ -542,7 +542,7 @@ func mergeReconcilerPeriod(envVars map[string]string, status *v3.KubeControllers
 		}
 		if rc.FederatedServices != nil {
 			rc.FederatedServices.ReconcilerPeriod = d
-			// not supported on KubeControllersConfiguration
+			sc.FederatedServices.ReconcilerPeriod = &v1.Duration{Duration: d}
 		}
 		if rc.ManagedCluster != nil {
 			rc.ManagedCluster.ReconcilerPeriod = d
@@ -561,6 +561,7 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 	w := ac.WorkloadEndpoint
 	s := ac.ServiceAccount
 	ns := ac.Namespace
+	f := ac.FederatedServices
 
 	v, p := envVars[EnvEnabledControllers]
 	if p {
@@ -591,7 +592,7 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 				// service not supported on KubeControllersConfiguration yet
 			case "federatedservices":
 				rc.FederatedServices = &GenericControllerConfig{}
-				// federated services not supported on KubeControllersConfiguration yet
+				sc.FederatedServices = &v3.FederatedServicesControllerConfig{}
 			case "elasticsearchconfiguration":
 				rc.ElasticsearchConfiguration = &ElasticsearchCfgControllerCfg{}
 				// elasticsearchconfiguration not supported on KubeControllersConfiguration yet
@@ -634,6 +635,11 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			rc.Namespace = &GenericControllerConfig{}
 			sc.Namespace = &v3.NamespaceControllerConfig{}
 		}
+
+		if f != nil {
+			rc.FederatedServices = &GenericControllerConfig{}
+			sc.FederatedServices = &v3.FederatedServicesControllerConfig{}
+		}
 	}
 
 	// Set reconciler periods, if enabled
@@ -668,6 +674,14 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			rc.ServiceAccount.ReconcilerPeriod = s.ReconcilerPeriod.Duration
 		}
 		sc.ServiceAccount.ReconcilerPeriod = s.ReconcilerPeriod
+	}
+	if rc.FederatedServices != nil && f != nil {
+		if f.ReconcilerPeriod == nil {
+			rc.FederatedServices.ReconcilerPeriod = time.Minute * 5
+		} else {
+			rc.FederatedServices.ReconcilerPeriod = f.ReconcilerPeriod.Duration
+		}
+		sc.FederatedServices.ReconcilerPeriod = f.ReconcilerPeriod
 	}
 }
 
