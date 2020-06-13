@@ -371,6 +371,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200610113652-a3ec22ff7b93 h1:r
 github.com/tigera/libcalico-go-private v1.7.2-0.20200610113652-a3ec22ff7b93/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3 h1:q2H6t1ZpHiOtR33X129nqfY/LVTTQopAMM3BOaautwA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631 h1:FGUGDLAApFGrHMr1Gd4UgVGxwmYtv78P17aKIeqQssM=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5 h1:xM0NXtWnlqB83al1HoHAODwZc2Y/0SzclonznKHw9wQ=
 github.com/tigera/licensing v0.0.0-20200331233106-fb744365c2e5/go.mod h1:kWmrQYFC2ZQhgMlMUxGVUNkzThLlEpiibN4nUaKBItE=
@@ -434,6 +436,8 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200610211302-bf4e884ef6a2 h1:8K
 github.com/tigera/typha-private v0.6.0-beta1.0.20200610211302-bf4e884ef6a2/go.mod h1:YjA5gYhC+FEQwUG+cRhCcZzIuNk5N/0F7/tDMbAjkko=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200612000204-cec874a6ce3b h1:WjM9KLJ6wxvYFVO9Y7o4I5H6WlcKtrBWWYNCXAomxcs=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200612000204-cec874a6ce3b/go.mod h1:uyXaXqdMBQZvCU3YYEmHag3tiB3hzC6+YNY3ljZEdRk=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200613030454-cd1e84443b25 h1:8lEx8vXAmj08XNfB6DZmYPzV612ocRZ3xCoVAYgQQH4=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200613030454-cd1e84443b25/go.mod h1:zjMbYVE2xde0CiQsjZ3vK2iBQnxCJkcnLXypzVFqUmM=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
