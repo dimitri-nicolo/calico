@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -34,12 +35,14 @@ import (
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 )
 
 var _ = Describe("KubeControllersConfiguration tests", func() {
 	var (
 		etcd              *containers.Container
 		uut               *containers.Container
+		autoRemoveUut     bool
 		apiserver         *containers.Container
 		c                 client.Interface
 		k8sClient         *kubernetes.Clientset
@@ -81,12 +84,18 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 		// server.  We use Eventually to allow for possible delay when doing
 		// initial pod creation below.
 		controllerManager = testutils.RunK8sControllerManager(apiserver.IP)
+
+		// Default the removal of the uut to on
+		autoRemoveUut = true
 	})
 
 	AfterEach(func() {
 		os.Remove(kconfigFile.Name())
 		controllerManager.Stop()
 		uut.Stop()
+		if !autoRemoveUut {
+			uut.Remove()
+		}
 		apiserver.Stop()
 		etcd.Stop()
 	})
@@ -94,7 +103,8 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 	Context("with no KubeControllersConfig at start of day", func() {
 
 		BeforeEach(func() {
-			uut = testutils.RunKubeControllerWithEnv(apiconfig.EtcdV3, etcd.IP, kconfigFile.Name(), nil)
+			autoRemoveUut = false
+			uut = testutils.RunKubeControllerWithEnv(apiconfig.EtcdV3, etcd.IP, kconfigFile.Name(), nil, autoRemoveUut)
 		})
 
 		It("should create default config", func() {
@@ -132,6 +142,14 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 		})
 
 		It("should restart if config is changed", func() {
+			uut.Stop()
+			// Delete so we can be sure when kube-controllers starts back up
+			_, err := c.KubeControllersConfiguration().Delete(context.Background(), "default", options.DeleteOptions{})
+			if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
+				Expect(err).ToNot(HaveOccurred())
+			}
+			restartChan := uut.WatchStdoutFor(regexp.MustCompile("Received exit status [[:digit:]]*, restarting"))
+			uut.Start()
 			var out *v3.KubeControllersConfiguration
 			Eventually(func() *v3.KubeControllersConfiguration {
 				out, _ = c.KubeControllersConfiguration().Get(context.Background(), "default", options.GetOptions{})
@@ -140,11 +158,12 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 
 			// disable the namespace controller
 			out.Spec.Controllers.Namespace = nil
-			out, err := c.KubeControllersConfiguration().Update(context.Background(), out, options.SetOptions{})
+			out, err = c.KubeControllersConfiguration().Update(context.Background(), out, options.SetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			// container stops
-			Eventually(uut.Stopped, time.Second*30, time.Second).Should(BeTrue())
+			// kube-controller restarts due to configuration change
+			// the cmdWrapper we use in the image will restart kube-controllers
+			Eventually(restartChan, time.Second*30, time.Second).Should(BeClosed())
 
 			// Clear the status, so we know when the new system comes up
 			out, err = c.KubeControllersConfiguration().Get(context.Background(), "default", options.GetOptions{})
@@ -152,9 +171,6 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 			out.Status = v3.KubeControllersConfigurationStatus{}
 			out, err = c.KubeControllersConfiguration().Update(context.Background(), out, options.SetOptions{})
 			Expect(err).ToNot(HaveOccurred())
-
-			// restart the container (in a real system, Kubernetes restarts it)
-			uut = testutils.RunKubeControllerWithEnv(apiconfig.EtcdV3, etcd.IP, kconfigFile.Name(), nil)
 
 			// Wait for status to get set again, by checking a field for non-empty value
 			Eventually(func() bool {
@@ -180,7 +196,7 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 			_, err := c.KubeControllersConfiguration().Create(context.Background(), kcc, options.SetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 
-			uut = testutils.RunKubeControllerWithEnv(apiconfig.EtcdV3, etcd.IP, kconfigFile.Name(), nil)
+			uut = testutils.RunKubeControllerWithEnv(apiconfig.EtcdV3, etcd.IP, kconfigFile.Name(), nil, autoRemoveUut)
 		})
 
 		It("should set status matching config with defaults for unset values", func() {
@@ -217,7 +233,7 @@ var _ = Describe("KubeControllersConfiguration tests", func() {
 
 			uut = testutils.RunKubeControllerWithEnv(apiconfig.EtcdV3, etcd.IP, kconfigFile.Name(), map[string]string{
 				"ENABLED_CONTROLLERS": "node",
-			})
+			}, autoRemoveUut)
 		})
 
 		It("should not restart after change that is overridden", func() {

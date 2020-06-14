@@ -55,7 +55,7 @@ func RunNodeController(datastoreType apiconfig.DatastoreType, etcdIP, kconfigfil
 		os.Getenv("CONTAINER_NAME"))
 }
 
-func RunKubeControllerWithEnv(datastoreType apiconfig.DatastoreType, etcdIP, kconfigfile string, env map[string]string) *containers.Container {
+func RunKubeControllerWithEnv(datastoreType apiconfig.DatastoreType, etcdIP, kconfigfile string, env map[string]string, autoRemove bool) *containers.Container {
 	args := []string{
 		"--privileged",
 	}
@@ -72,7 +72,7 @@ func RunKubeControllerWithEnv(datastoreType apiconfig.DatastoreType, etcdIP, kco
 		os.Getenv("CONTAINER_NAME"))
 
 	return containers.Run("calico-kube-controllers",
-		containers.RunOpts{AutoRemove: true},
+		containers.RunOpts{AutoRemove: autoRemove},
 		args...)
 }
 
