@@ -18,6 +18,10 @@
   },
   "mappings": {
     "properties": {
+      "@timestamp" : {
+        "type" : "alias",
+        "path" : "end_time"
+      },
       "start_time": {
         "type": "date"
       },
@@ -49,6 +53,42 @@
       },
       "client_labels": {
         "type": "object"
+      },
+      "dns" : {
+        "properties" : {
+          "question" : {
+            "properties" : {
+              "name" : {
+                "type" : "alias",
+                "path" : "qname"
+              },
+              "registered_domain" : {
+                "type" : "alias",
+                "path" : "qname"
+              },
+              "type" : {
+                "type" : "alias",
+                "path" : "qtype"
+              },
+              "class" : {
+                "type" : "alias",
+                "path" : "qclass"
+              }
+            }
+          },
+          "response_code" : {
+            "type" : "alias",
+            "path" : "rcode"
+          }
+        }
+      },
+      "source" : {
+        "properties" : {
+          "ip" : {
+            "type" : "alias",
+            "path" : "client_ip"
+          }
+        }
       },
       "servers": {
         "type": "nested",

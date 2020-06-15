@@ -6,6 +6,9 @@
   },
   "mappings": {
       "properties" : {
+        "@timestamp": {
+           "type": "date"
+        },
         "start_time": {
             "type": "date",
             "format": "epoch_second"
@@ -50,6 +53,42 @@
                         "labels": {"type": "keyword"}
                 }
 	},
+        "destination" : {
+            "properties" : {
+                "bytes" : {
+                    "type" : "alias",
+                    "path" : "bytes_in"
+                },
+                "ip" : {
+                    "type" : "alias",
+                    "path" : "dest_ip"
+                },
+                "port" : {
+                    "type" : "alias",
+                    "path" : "dest_port"
+                },
+                "packets" : {
+                  "type" : "alias",
+                  "path" : "packets_in"
+                }
+            }
+        },
+        "network": {
+            "properties" : {
+                "protocol" : {
+                    "type" : "alias",
+                    "path" : "proto"
+                }
+            }
+        },
+        "event": {
+            "properties" : {
+                "action" : {
+                    "type" : "alias",
+                    "path" : "action"
+                }
+            }
+        },
         "reporter": {
             "type": "keyword"
         },
@@ -111,6 +150,26 @@
                         "labels": {"type": "keyword"}
                 }
 	},
+        "source" : {
+            "properties" : {
+                "bytes" : {
+                    "type" : "alias",
+                    "path" : "bytes_out"
+                },
+                "ip" : {
+                    "type" : "alias",
+                    "path" : "source_ip"
+                },
+                "port" : {
+                    "type" : "alias",
+                    "path" : "source_port"
+                },
+                "packets" : {
+                    "type" : "alias",
+                    "path" : "packets_out"
+                }
+            }
+        },
         "original_source_ips": {
             /* This is an array of IP addresses. It is not necessary to declare this as an array. Elastic will automatically accept a list of IP addresses here */
             "type": "ip",
