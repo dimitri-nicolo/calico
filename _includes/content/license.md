@@ -32,4 +32,4 @@
 
 **How do I access information about my license?**
 
-  [Prometheus!]({{site.baseurl}}/maintenance/monitor/license-agent) 
+  [Prometheus!]({{site.baseurl}}/maintenance/monitor/license-agent). Monitor days till expiration, nodes available, and nodes used
