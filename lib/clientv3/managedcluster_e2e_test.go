@@ -26,12 +26,8 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 	name1 := "cluster-1"
 	name2 := "cluster-2"
 	invalidClusterName := "cluster"
-	spec1 := apiv3.ManagedClusterSpec{
-		InstallationManifest: "manifest 1",
-	}
-	spec2 := apiv3.ManagedClusterSpec{
-		InstallationManifest: "manifest 2",
-	}
+	spec1 := apiv3.ManagedClusterSpec{}
+	spec2 := apiv3.ManagedClusterSpec{}
 
 	DescribeTable("ManagedCluster e2e CRUD tests",
 		func(name1, name2 string, spec1, spec2 apiv3.ManagedClusterSpec) {
@@ -239,7 +235,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 		Entry("Fully populated ManagedClusterSpec instances", name1, name2, spec1, spec2),
 	)
 
-	Describe("ManagedCluster Create", func() {
+	Describe("ManagedCluster Create/Update", func() {
 		It("should not allow cluster with name \"cluster\"", func() {
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
@@ -251,6 +247,39 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("Invalid name for managed cluster"))
 
+		})
+
+		It("should not create a managed cluster with a populated installation manifest", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "any"},
+				Spec: apiv3.ManagedClusterSpec{
+					InstallationManifest: "bogus",
+				},
+			}, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(ContainSubstring(clientv3.ErrMsgNotEmpty))
+		})
+
+		It("should not update a managed cluster with a populated installation manifest", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, outError := c.ManagedClusters().Create(ctx, &apiv3.ManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "any"},
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			_, outError = c.ManagedClusters().Update(ctx, &apiv3.ManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "any"},
+				Spec: apiv3.ManagedClusterSpec{
+					InstallationManifest: "bogus",
+				},
+			}, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(ContainSubstring(clientv3.ErrMsgNotEmpty))
 		})
 	})
 

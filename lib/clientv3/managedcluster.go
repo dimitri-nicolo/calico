@@ -28,6 +28,9 @@ type managedClusters struct {
 	client client
 }
 
+// ErrMsgNotEmpty is the error message returned when editing InstallationManifest field for a ManagedCluster
+const ErrMsgNotEmpty = "InstallationManifest is a reserved field and is not editable"
+
 // Create takes the representation of a ManagedCluster and creates it.  Returns the stored
 // representation of the ManagedCluster, and an error, if there is any.
 func (r managedClusters) Create(ctx context.Context, res *apiv3.ManagedCluster, opts options.SetOptions) (*apiv3.ManagedCluster, error) {
@@ -48,6 +51,19 @@ func (r managedClusters) Create(ctx context.Context, res *apiv3.ManagedCluster, 
 		}
 	}
 
+	// InstallationManifest is a reserved field that will be populated by the API server
+	// when generating a managed cluster resource. This field contains the manifest
+	// that will be applied on the managed cluster to setup a TLS connection
+	if len(res.Spec.InstallationManifest) != 0 {
+		return nil, cerrors.ErrorValidation{
+			ErroredFields: []cerrors.ErroredField{{
+				Name:   "Metadata.Name",
+				Reason: ErrMsgNotEmpty,
+				Value:  res.ObjectMeta.Name,
+			}},
+		}
+	}
+
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindManagedCluster, res)
 	if out != nil {
 		return out.(*apiv3.ManagedCluster), err
@@ -60,6 +76,19 @@ func (r managedClusters) Create(ctx context.Context, res *apiv3.ManagedCluster, 
 func (r managedClusters) Update(ctx context.Context, res *apiv3.ManagedCluster, opts options.SetOptions) (*apiv3.ManagedCluster, error) {
 	if err := validator.Validate(res); err != nil {
 		return nil, err
+	}
+
+	// InstallationManifest is a reserved field that will be populated by the API server
+	// when generating a managed cluster resource. This field contains the manifest
+	// that will be applied on the managed cluster to setup a TLS connection
+	if len(res.Spec.InstallationManifest) != 0 {
+		return nil, cerrors.ErrorValidation{
+			ErroredFields: []cerrors.ErroredField{{
+				Name:   "Metadata.Name",
+				Reason: ErrMsgNotEmpty,
+				Value:  res.ObjectMeta.Name,
+			}},
+		}
 	}
 
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindManagedCluster, res)
