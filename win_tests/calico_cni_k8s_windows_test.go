@@ -16,8 +16,6 @@ import (
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/types/current"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"
@@ -34,6 +32,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 func ensureNamespace(clientset *kubernetes.Clientset, name string) {
@@ -641,6 +642,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	   					"log_level":"debug"
 	   				}`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
 
+				log.Infof("Network pod again with another subnet")
 				err = testutils.NetworkPod(netconf2, name, ip, ctx, calicoClient, result, containerID, testutils.HnsNoneNs, nsName)
 				Expect(err).ShouldNot(HaveOccurred())
 				ip = result.IPs[0].Address.IP.String()
@@ -660,11 +662,40 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				containerEP, err = hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
 				Expect(containerEP.GatewayAddress).Should(Equal("20.0.0.2"))
-
 				Expect(containerEP.IPAddress.String()).Should(Equal(ip))
 				Expect(containerEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
 				Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
+				// Create network with new subnet again
+				podIP, subnet, _ = net.ParseCIDR("30.0.0.30/8")
+				result.IPs[0].Address = *subnet
+				result.IPs[0].Address.IP = podIP
+
+				netconf3 := fmt.Sprintf(`
+	   				{
+	   					"cniVersion": "%s",
+	   					"name": "%s",
+	   					"type": "calico",
+	   					"etcd_endpoints": "%s",
+	   					"datastore_type": "%s",
+	   					"windows_use_single_network":true,
+	   					"ipam": {
+	   						"type": "host-local",
+	   						"subnet": "30.0.0.0/8"
+	   					},
+	   					"kubernetes": {
+	   						"k8s_api_root": "%s",
+							"kubeconfig": "C:\\k\\config"
+	   					},
+	   					"policy": {"type": "k8s"},
+	   					"nodename_file_optional": true,
+	   					"log_level":"debug"
+	   				}`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
+
+				testutils.DeleteContainerUsingDocker(containerID)
+				log.Infof("Network pod again with another subnet and a stopped container")
+				err = testutils.NetworkPod(netconf3, name, ip, ctx, calicoClient, result, containerID, testutils.HnsNoneNs, nsName)
+				Expect(err).Should(HaveOccurred())
 			})
 
 			It("Network exists but missing management endpoint, should be added", func() {
@@ -1797,6 +1828,212 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(containerEP.MacAddress).Should(Equal(epMacAddr))
 			Expect(containerEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
 			Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
+		})
+	})
+
+	Context("overlay network:: Pod DEL timestamp", func() {
+		var nsName, name string
+		var clientset *kubernetes.Clientset
+
+		// Set windows_pod_deletion_timestamp_timeout to 10 seconds
+		vxlanConf := fmt.Sprintf(`
+		{
+			"cniVersion": "%s",
+			"name": "%s",
+			"type": "calico",
+			"mode": "vxlan",
+			"vxlan_mac_prefix": "%s",
+			"vxlan_vni": 4096,
+			"etcd_endpoints": "%s",
+			"datastore_type": "%s",
+			"windows_use_single_network":true,
+			"windows_pod_deletion_timestamp_timeout": 12,
+			"ipam": {
+				"type": "host-local",
+				"subnet": "10.254.112.0/20"
+			},
+			"kubernetes": {
+				"k8s_api_root": "%s",
+				"kubeconfig": "C:\\k\\config"
+			},
+			"policy": {"type": "k8s"},
+			"nodename_file_optional": true,
+			"log_level":"debug"
+		}`, cniVersion, networkName, os.Getenv("MAC_PREFIX"), os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
+
+		conf := types.NetConf{}
+		if err := json.Unmarshal([]byte(vxlanConf), &conf); err != nil {
+			panic(err)
+		}
+		logger := log.WithFields(log.Fields{
+			"Namespace": testutils.HnsNoneNs,
+		})
+
+		dataplane := windows.NewWindowsDataplane(conf, logger)
+
+		clientset, err = k8s.NewK8sClient(conf, logger)
+		if err != nil {
+			panic(err)
+		}
+
+		cleanup := func() {
+			// Cleanup hns network
+			hnsNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
+			if hnsNetwork != nil {
+				_, err := hnsNetwork.Delete()
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// Delete node
+			_ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
+		}
+
+		setupPodResource := func(podName string) {
+			// Create a K8s pod w/o any special params
+			_, err = clientset.CoreV1().Pods(nsName).Create(&v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: podName},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  podName,
+						Image: "ignore",
+					}},
+					NodeName: hostname,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		BeforeEach(func() {
+			testutils.WipeK8sPods(vxlanConf)
+
+			nsName = fmt.Sprintf("ns%d", rand.Uint32())
+			name = fmt.Sprintf("run%d", rand.Uint32())
+			cleanup()
+
+			// Create namespace
+			ensureNamespace(clientset, nsName)
+
+			// Create a K8s Node object with PodCIDR and name equal to hostname.
+			_, err = clientset.CoreV1().Nodes().Create(&v1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: hostname},
+				Spec: v1.NodeSpec{
+					PodCIDR: "10.0.0.0/24",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			setupPodResource(name)
+		})
+
+		AfterEach(func() {
+			cleanup()
+			// Delete namespace
+			deleteNamespace(clientset, nsName)
+		})
+
+		ensureTimestamp := func(id string) {
+			log.Infof("Ensure timestamp for pod deletion")
+			t, err := testutils.GetTimestampValue(windows.PodDeletedKey, id)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(t.Before(time.Now())).To(Equal(true))
+		}
+
+		It("should create pod deletion timestamp in registry", func() {
+			log.Infof("Delete pod deletion subkey")
+			err = testutils.DeleteSubKey(windows.CalicoRegistryKey, windows.PodDeletedKeyString)
+			Expect(err).NotTo(HaveOccurred())
+
+			log.Infof("Creating container")
+			containerID, _, _, _, _, err := testutils.CreateContainer(vxlanConf, name, testutils.HnsNoneNs, "", nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			defer func() {
+				log.Infof("Container Delete call")
+				_, err = testutils.DeleteContainerWithId(vxlanConf, name, testutils.HnsNoneNs, containerID, nsName)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				time.Sleep(time.Second)
+				ensureTimestamp(containerID)
+			}()
+
+			keyExists, err := testutils.CheckRegistryKeyExists(windows.PodDeletedKey)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(keyExists).To(Equal(true))
+		})
+
+		It("should checking pod deletion timestamp on ADD", func() {
+			log.Infof("Creating three containers")
+			// First pod has been created by BeforeEach
+			containerID1, _, _, _, _, err := testutils.CreateContainer(vxlanConf, name, testutils.HnsNoneNs, "", nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			name2 := "secondpod"
+			setupPodResource(name2)
+			containerID2, _, _, _, _, err := testutils.CreateContainer(vxlanConf, name2, testutils.HnsNoneNs, "", nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			name3 := "thirdpod"
+			setupPodResource(name3)
+			containerID3, _, _, _, _, err := testutils.CreateContainer(vxlanConf, name3, testutils.HnsNoneNs, "", nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			log.Infof("Deleting first two containers")
+			_, err = testutils.DeleteContainerWithId(vxlanConf, name, testutils.HnsNoneNs, containerID1, nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			ensureTimestamp(containerID1)
+			_, err = testutils.DeleteContainerWithId(vxlanConf, name2, testutils.HnsNoneNs, containerID2, nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			ensureTimestamp(containerID2)
+
+			log.Infof("Sleeping 7 seonds")
+			time.Sleep(time.Second * 7)
+
+			log.Infof("Checking timestamp container 1 %s", containerID1)
+			justDeleted, err := dataplane.CheckWepJustDeleted(containerID1, 12)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(justDeleted).To(Equal(true))
+
+			log.Infof("Checking timestamp container 2 %s", containerID2)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID2, 12)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(justDeleted).To(Equal(true))
+
+			log.Infof("Checking timestamp container 3 %s", containerID3)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID3, 12)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(justDeleted).To(Equal(false))
+
+			log.Infof("Deleting last container")
+			_, err = testutils.DeleteContainerWithId(vxlanConf, name3, testutils.HnsNoneNs, containerID3, nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			ensureTimestamp(containerID3)
+
+			// Make sure timeout on pod1, pod2 deletion timestamp. 7+7 > 12
+			log.Infof("Sleeping further 7 seonds")
+			time.Sleep(time.Second * 7)
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID1, 12)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(justDeleted).To(Equal(false))
+
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID2, 12)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(justDeleted).To(Equal(false))
+
+			justDeleted, err = dataplane.CheckWepJustDeleted(containerID3, 12)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(justDeleted).To(Equal(true))
+
+			log.Infof("Adding last container [%s] again", containerID3)
+			// Should fail adding last container
+			_, _, _, _, _, err = testutils.CreateContainerWithId(vxlanConf, name3, testutils.HnsNoneNs, "", containerID3, nsName)
+			Expect(err).Should(HaveOccurred())
+
+			// first two timestamp are gone
+			_, err = testutils.GetTimestampValue(windows.PodDeletedKey, containerID1)
+			Expect(err).Should(HaveOccurred())
+
+			_, err = testutils.GetTimestampValue(windows.PodDeletedKey, containerID2)
+			Expect(err).Should(HaveOccurred())
+
+			_, err = testutils.GetTimestampValue(windows.PodDeletedKey, containerID3)
+			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
 })

@@ -158,3 +158,15 @@ func (d *grpcDataplane) NetworkApplicationContainer(args *skel.CmdArgs) error {
 func (d *grpcDataplane) EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet) error {
 	return nil // No-op on Linux.
 }
+
+func (d *grpcDataplane) MaintainWepDeletionTimestamps(timeout int) error {
+	return nil
+}
+
+func (d *grpcDataplane) CheckWepJustDeleted(containerID string, timeout int) (bool, error) {
+	return false, nil
+}
+
+func (d *grpcDataplane) RegisterDeletedWep(containerID string) error {
+	return nil
+}

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/projectcalico/cni-plugin/pkg/dataplane/windows"
 
@@ -26,6 +27,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 const HnsNoneNs = "none"
@@ -66,11 +69,12 @@ func WipeK8sPods(netconf string) {
 func CreateContainerUsingDocker() (string, error) {
 	var image string
 	if os.Getenv("WINDOWS_OS") == "Windows1903container" {
-		image = "mcr.microsoft.com/windows/servercore/insider:10.0.18362.113"
+		image = "mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000"
 	} else if os.Getenv("WINDOWS_OS") == "Windows1809container" {
 		image = "mcr.microsoft.com/windows/servercore:1809"
 	}
-	command := fmt.Sprintf("docker run --net none -d -i %s powershell", image)
+
+	command := fmt.Sprintf("docker run --net none -d %s powershell.exe -command start-sleep -s 300", image)
 	cmd := exec.Command("powershell.exe", command)
 
 	out, err := cmd.CombinedOutput()
@@ -114,6 +118,10 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 	containerID, err = CreateContainerUsingDocker()
 	if err != nil {
 		return "", nil, "", []string{}, []string{}, err
+	}
+
+	if overrideContainerID != "" {
+		containerID = overrideContainerID
 	}
 
 	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
@@ -366,4 +374,60 @@ func CreateEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HN
 	}
 
 	return hnsEndpoint, nil
+}
+
+// Return true if a key exists.
+func CheckRegistryKeyExists(path string) (bool, error) {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, path, registry.QUERY_VALUE)
+	if err == registry.ErrNotExist {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	defer k.Close()
+
+	return true, nil
+}
+
+// Return a timestamp value.
+func GetTimestampValue(key, id string) (time.Time, error) {
+	zTime := time.Time{}
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, key, registry.QUERY_VALUE)
+	if err != nil {
+		return zTime, err
+	}
+	defer k.Close()
+
+	val, _, err := k.GetStringValue(id)
+	if err != nil {
+		return zTime, err
+	}
+
+	t, err := time.Parse(time.RFC3339, val)
+	if err != nil {
+		return zTime, err
+	}
+
+	return t, nil
+}
+
+func DeleteSubKey(key, subkeyName string) error {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, key+`\`+subkeyName, registry.QUERY_VALUE)
+	if err == registry.ErrNotExist {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	k, err = registry.OpenKey(registry.LOCAL_MACHINE, key, registry.QUERY_VALUE)
+	if err != nil {
+		return err
+	}
+	defer k.Close()
+
+	err = registry.DeleteKey(k, subkeyName)
+	if err != nil {
+		return err
+	}
+	return nil
 }

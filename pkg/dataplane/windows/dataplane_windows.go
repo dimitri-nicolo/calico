@@ -41,10 +41,19 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 	utilexec "k8s.io/utils/exec"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 const (
-	DefaultVNI = 4096
+	DefaultVNI          = 4096
+	CalicoRegistryKey   = `Software\tigera\calico`
+	PodDeletedKeyString = `PodDeleted`
+	PodDeletedKey       = CalicoRegistryKey + `\` + PodDeletedKeyString
+
+	// Wait for 10 minutes for pod deletion timestamp timeout.
+	// Sandbox operations timeout is 4 minutes.
+	defaultPodDeletionTimestampTimeout = 600
 )
 
 type windowsDataplane struct {
@@ -82,6 +91,148 @@ func acquireLock() (mutex.Releaser, error) {
 	}
 	logrus.Infof("Acquired lock %v", spec)
 	return m, nil
+}
+
+// Create calico key if not exists.
+func ensureCalicoKey() error {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, "software", registry.CREATE_SUB_KEY)
+	if err != nil {
+		return err
+	}
+	defer k.Close()
+
+	// CreateKey creates a key named path under open key k.
+	// CreateKey returns the new key and a boolean flag that reports whether the key already existed.
+	tigeraK, _, err := registry.CreateKey(k, "tigera", registry.CREATE_SUB_KEY)
+	if err != nil {
+		return err
+	}
+	defer tigeraK.Close()
+
+	calicoK, _, err := registry.CreateKey(tigeraK, "calico", registry.CREATE_SUB_KEY)
+	if err != nil {
+		return err
+	}
+	defer calicoK.Close()
+
+	return nil
+}
+
+// Create key for deletion timestamps if not exists.
+// Remove obsolete  entries.
+func (d *windowsDataplane) MaintainWepDeletionTimestamps(timeout int) error {
+	if timeout == 0 {
+		timeout = defaultPodDeletionTimestampTimeout
+	}
+	// Open or Create subkey if not exists.
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, PodDeletedKey, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err == registry.ErrNotExist {
+		// Create calico key if not exists.
+		err := ensureCalicoKey()
+		if err != nil {
+			logrus.Errorf("Failed to ensure Calico registry key. err: %v", err)
+			return err
+		}
+		calicoK, err := registry.OpenKey(registry.LOCAL_MACHINE, CalicoRegistryKey, registry.CREATE_SUB_KEY)
+		if err != nil {
+			return err
+		}
+		defer calicoK.Close()
+
+		k, _, err = registry.CreateKey(calicoK, PodDeletedKeyString, registry.QUERY_VALUE|registry.SET_VALUE)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return nil
+	}
+	defer k.Close()
+
+	// Delete obsolete timestamps.
+	containerIDs, err := k.ReadValueNames(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range containerIDs {
+		val, _, err := k.GetStringValue(id)
+		if err != nil {
+			return err
+		}
+
+		t, err := time.Parse(time.RFC3339, val)
+		if err != nil {
+			return err
+		}
+
+		logrus.WithField("id", id).Debugf("Maintainer get timestamp for pod deletion [%s]", val)
+		if time.Since(t) > (time.Second * time.Duration(timeout)) {
+			logrus.WithField("id", id).Debugf("Found old pod deletion timestamp [%s] with timeout %d seconds, cleaning it up.", val, timeout)
+			err := k.DeleteValue(id)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (d *windowsDataplane) CheckWepJustDeleted(containerID string, timeout int) (bool, error) {
+	if timeout == 0 {
+		timeout = defaultPodDeletionTimestampTimeout
+	}
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, PodDeletedKey, registry.QUERY_VALUE)
+	if err != nil {
+		return false, err
+	}
+	defer k.Close()
+
+	val, _, err := k.GetStringValue(containerID)
+	if err == registry.ErrNotExist {
+		logrus.WithField("id", containerID).Infof("No timestamp for pod deletion")
+		return false, nil
+	}
+
+	t, err := time.Parse(time.RFC3339, val)
+	if err != nil {
+		// Time format is wrong, return true anyway.
+		return true, err
+	}
+
+	logrus.WithField("id", containerID).Infof("Get timestamp for pod deletion [%s]", val)
+	if time.Since(t) < (time.Second * time.Duration(timeout)) {
+		logrus.WithField("id", containerID).Infof("timestamp for pod deletion [%s] within %d seconds", val, timeout)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (d *windowsDataplane) RegisterDeletedWep(containerID string) error {
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, PodDeletedKey, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		return err
+	}
+	defer k.Close()
+
+	if err := k.SetStringValue(containerID, time.Now().Format(time.RFC3339)); err != nil {
+		return err
+	}
+
+	// loop 3 seconds until successfully read back
+	retry := 0
+	for retry < 30 {
+		val, _, err := k.GetStringValue(containerID)
+		if err == nil {
+			logrus.WithField("id", containerID).Infof("Saved timestamp for pod deletion [%s]", val)
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+		retry++
+	}
+
+	return fmt.Errorf("timeout waiting registry update for %s", containerID)
 }
 
 // DoNetworking performs the networking for the given config and IPAM result
@@ -698,8 +849,10 @@ func (d *windowsDataplane) createAndAttachContainerEP(args *skel.CmdArgs,
 
 	attempts := 3
 	for {
+		var hnsEndpointCont *hcsshim.HNSEndpoint
+		var err error
 		d.logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
-		hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, args.Netns, func() (*hcsshim.HNSEndpoint, error) {
+		_, err = hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, args.Netns, func() (*hcsshim.HNSEndpoint, error) {
 			hnsEP := &hcsshim.HNSEndpoint{
 				Name:           endpointName,
 				VirtualNetwork: hnsNetwork.Id,
@@ -712,6 +865,22 @@ func (d *windowsDataplane) createAndAttachContainerEP(args *skel.CmdArgs,
 			}
 			return hnsEP, nil
 		})
+
+		// We cannot trust hns.ProvisionEndpoint error status. https://github.com/containernetworking/plugins/blob/v0.8.6/pkg/hns/endpoint_windows.go#L244
+		// For instance, if a container exited for any reason when we reach here,
+		// hns.ProvisionEndpoint will follow the execution steps below:
+		// 1. Create endpoint
+		// 2. Failed to attach endpoint because of error "The requested virtual machine or container operation is not valid in the current state."
+		//    and return hcsshim.ErrComputeSystemDoesNotExist
+		// 3. Deprovision endpoint
+		// 4. Return endpoint with no error. However, endpoint is no longer in the system.
+
+		// However, both upstream win_bridge and win_overlay plugins do not handle this case.
+		if err == nil {
+			// Evaluate endpoint status by reading from the system.
+			hnsEndpointCont, err = hcsshim.GetHNSEndpointByName(endpointName)
+		}
+
 		if err != nil {
 			d.logger.WithError(err).Error("Error provisioning endpoint, checking if we need to clean it up.")
 

@@ -95,6 +95,12 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		// Windows special case: Kubelet has a hacky implementation of GetPodNetworkStatus() that uses a
 		// CNI ADD to check the status of the pod.  Detect such spurious adds and return early, avoiding trying to
 		// network the pod multiple times.
+
+		err := d.MaintainWepDeletionTimestamps(conf.WindowsPodDeletionTimestampTimeout)
+		if err != nil {
+			logger.WithError(err).Warn("Failed to do maintenance on pod deletion timestamps.")
+		}
+
 		lookupRequest := false
 		const pauseContainerNetNS = "none"
 		if args.Netns == "" {
@@ -129,6 +135,23 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 			}
 			return result, err
 		}
+
+		// After checking wep not exists, next step is to check wep deletion timestamp.
+		// The order is important because with DEL command running in parallel registering timestamp before deleting wep,
+		// ADD command should run the process in reverse order to avoid race condition.
+
+		// No WEP and no network, check deletion timestamp to skip recent deleted wep.
+		// If WEP just been deleted, report back error.
+		justDeleted, err := d.CheckWepJustDeleted(epIDs.ContainerID, conf.WindowsPodDeletionTimestampTimeout)
+		if err != nil {
+			logger.Warnf("Failed to check pod deletion timestamp. %v", err)
+			return nil, err
+		}
+		if justDeleted {
+			logger.Info("Pod just been deleted. Report error for pod status")
+			return nil, fmt.Errorf("endpoint with same ID was recently deleted")
+		}
+
 	}
 
 	// Allocate the IP and update/create the endpoint. Do this even if the endpoint already exists and has an IP
@@ -565,6 +588,15 @@ func CmdDelK8s(ctx context.Context, c calicoclient.Interface, epIDs utils.WEPIde
 		return err
 	}
 
+	// Register timestamp before deleting wep. This is important.
+	// Because with ADD command running in parallel checking wep before checking timestamp,
+	// DEL command should run the process in reverse order to avoid race condition.
+	err = d.RegisterDeletedWep(args.ContainerID)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to register pod deletion timestamp.")
+		return err
+	}
+
 	wep, err := c.WorkloadEndpoints().Get(ctx, epIDs.Namespace, epIDs.WEPName, options.GetOptions{})
 	if err != nil {
 		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
@@ -606,7 +638,7 @@ func CmdDelK8s(ctx context.Context, c calicoclient.Interface, epIDs utils.WEPIde
 	}
 
 	// Clean up namespace by removing the interfaces.
-	logger.Info("Cleaning up netns")
+	logger.Info("Deleted WEP, Cleaning up netns")
 	err = d.CleanUpNamespace(args)
 	if err != nil {
 		return err
