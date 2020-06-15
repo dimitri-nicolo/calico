@@ -1,17 +1,13 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package server
 
 import (
 	"context"
 	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"fmt"
-	"math/big"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -27,7 +23,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/auth"
-	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
@@ -81,7 +76,6 @@ type Server struct {
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
 
-	template      string
 	publicAddress string
 
 	auth *auth.Identity
@@ -91,7 +85,7 @@ type Server struct {
 // or not if they set its user and return an error if it is nil
 func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	srv := &Server{
-		k8s:  k8s,
+		k8s: k8s,
 		clusters: &clusters{
 			clusters: make(map[string]*cluster),
 		},
@@ -100,7 +94,6 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	}
 
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
-	srv.clusters.generateCreds = srv.generateCreds
 	for _, o := range opts {
 		if err := o(srv); err != nil {
 			return nil, errors.WithMessage(err, "applying option failed")
@@ -129,21 +122,12 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	cfg.BuildNameToCertificate()
 
 	srv.http = &http.Server{
-		Addr: srv.addr,
-		Handler: srv.proxyMux,
+		Addr:      srv.addr,
+		Handler:   srv.proxyMux,
 		TLSConfig: cfg,
 	}
 
 	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
-	// Special case: For POST request on ManagedCluster resource we want to intercept the response before
-	// it gets sent back to client. The interception allows us to generate the manifest for Guardian that
-	// corresponds to the ManagedCluster that was just created.
-	// We accomplish this using a middlewares that wraps the clusterMux handler.
-	srv.proxyMux.Handle(
-		"/apis/projectcalico.org/v3/managedclusters",
-		srv.clusters.managedClusterHandler(http.HandlerFunc(srv.clusterMuxer)),
-	)
-
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 	srv.proxyMux.HandleFunc("/voltron/api/clusters", srv.clusters.apiHandle)
 
@@ -159,7 +143,6 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 		go srv.acceptTunnels(
 			tunnel.WithKeepAliveSettings(srv.tunnelEnableKeepAlive, srv.tunnelKeepAliveInterval),
 		)
-		srv.clusters.renderManifest, err = newRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
 		if err != nil {
 			return nil, errors.WithMessage(err, "Could not create a template to render manifests")
 		}
@@ -185,16 +168,6 @@ func (s *Server) Close() error {
 		s.tunSrv.Stop()
 	}
 	return s.http.Close()
-}
-
-// ServeTunnels starts serving tunnels using the provided listener
-func (s *Server) ServeTunnels(lis net.Listener) error {
-	err := s.tunSrv.Serve(lis)
-	if err != nil {
-		return errors.WithMessage(err, "ServeTunnels")
-	}
-
-	return nil
 }
 
 // ServeTunnelsTLS start serving TLS secured tunnels using the provided listener and
@@ -394,60 +367,6 @@ func addImpersonationHeaders(r *http.Request, user *auth.User) {
 		r.Header.Add("Impersonate-Group", group)
 	}
 	log.Debugf("Adding impersonation headers")
-}
-
-func (s *Server) generateCreds(clusterInfo *jclust.ManagedCluster) (*x509.Certificate, crypto.Signer, error) {
-	if s.tunnelCert == nil || s.tunnelKey == nil {
-		return nil, nil, errors.Errorf("no credential to sign generated cert")
-	}
-
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-
-	if err != nil {
-		return nil, nil, errors.Errorf("generating RSA key: %s", err)
-	}
-
-	tmpl := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: clusterInfo.ID},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(1000000 * time.Hour), // XXX TBD
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-	}
-
-	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, s.tunnelCert, &key.PublicKey, s.tunnelKey)
-	if err != nil {
-		return nil, nil, errors.Errorf("creating X509 cert: %s", err)
-	}
-
-	cert, err := x509.ParseCertificate(bytes)
-	if err != nil {
-		// should never happen, we just generated the key
-		return nil, nil, errors.Errorf("parsing X509 cert: %s", err)
-	}
-
-	return cert, key, nil
-}
-
-// ClusterCreds returns credential assigned to a registered cluster as PEM blocks
-func (s *Server) ClusterCreds(id string) ([]byte, []byte, error) {
-	c := s.clusters.get(id)
-	if c == nil {
-		return nil, nil, errors.Errorf("cluster id %q does not exist", id)
-	}
-
-	c.RLock()
-	defer c.RUnlock()
-
-	cPem := utils.CertPEMEncode(c.cert)
-
-	pem, err := utils.KeyPEMEncode(c.key)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "generated key - NEVER HAPPENS")
-	}
-
-	return cPem, pem, nil
 }
 
 // WatchK8s starts watching k8s resources, always exits with an error

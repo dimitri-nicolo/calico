@@ -1,11 +1,10 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package server
 
 import (
 	"crypto"
 	"crypto/x509"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"time"
@@ -26,19 +25,6 @@ type Option func(*Server) error
 func WithDefaultAddr(addr string) Option {
 	return func(s *Server) error {
 		s.addr = addr
-		return nil
-	}
-}
-
-// WithTemplate adds the path to the manifest template
-func WithTemplate(templatePath string) Option {
-	return func(s *Server) error {
-		templateContent, err := ioutil.ReadFile(templatePath)
-		if err != nil {
-			return errors.Errorf("Could not read template from path %s", err)
-		}
-
-		s.template = string(templateContent)
 		return nil
 	}
 }
@@ -106,15 +92,6 @@ func WithTunnelCreds(cert *x509.Certificate, key crypto.Signer) Option {
 	return func(s *Server) error {
 		s.tunnelCert = cert
 		s.tunnelKey = key
-		return nil
-	}
-}
-
-// WithKeepClusterKeys allows the server to keep the generated private keys.
-// This is to be used only for debugging and testing
-func WithKeepClusterKeys() Option {
-	return func(s *Server) error {
-		s.clusters.keepKeys = true
 		return nil
 	}
 }

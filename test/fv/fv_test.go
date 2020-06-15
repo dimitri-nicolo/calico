@@ -187,7 +187,6 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		voltron, err = server.New(
 			k8sAPI,
-			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
 			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
@@ -223,48 +222,33 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		ui.voltronHTTP = lisHTTP11.Addr().String()
 	})
 
+	var certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
+	var fingerprintID1, fingerprintID2 string
+
 	It("should register 2 clusters", func() {
-		var err error
-		var cert []byte
-		var block *pem.Block
-		var certCluster, otherCertCluster *x509.Certificate
-
 		k8sAPI.WaitForManagedClustersWatched()
-		Expect(k8sAPI.AddCluster(clusterID, clusterID, nil)).ShouldNot(HaveOccurred())
+		var err error
+		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+		annotationsID1 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID1}
+
+		Expect(k8sAPI.AddCluster(clusterID, clusterID, annotationsID1)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		cert, _, err = voltron.ClusterCreds(clusterID)
+		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
 		Expect(err).NotTo(HaveOccurred())
-		block, _ = pem.Decode(cert)
-		Expect(block).NotTo(BeNil())
-		certCluster, err = x509.ParseCertificate(block.Bytes)
-		Expect(err).NotTo(HaveOccurred())
+		annotationsID2 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID2}
 
-		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sAPI.UpdateCluster(clusterID, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certCluster)})).ShouldNot(HaveOccurred())
-
-		Expect(k8sAPI.AddCluster(clusterID2, clusterID2, nil)).ShouldNot(HaveOccurred())
+		Expect(k8sAPI.AddCluster(clusterID2, clusterID2, annotationsID2)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
-
-		cert, _, err = voltron.ClusterCreds(clusterID2)
-		Expect(err).NotTo(HaveOccurred())
-		block, _ = pem.Decode(cert)
-		Expect(block).NotTo(BeNil())
-		otherCertCluster, err = x509.ParseCertificate(block.Bytes)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sAPI.UpdateCluster(clusterID2, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(otherCertCluster)})).ShouldNot(HaveOccurred())
-
 	})
 
 	It("should start guardian", func() {
-		cert, key, err := voltron.ClusterCreds(clusterID)
-		Expect(err).NotTo(HaveOccurred())
+		var err error
 
 		guardian, err = client.New(
 			lisTun.Addr().String(),
-			client.WithTunnelCreds(cert, key, rootCAs),
+			client.WithTunnelCreds(certPemID1, keyPemID1, rootCAs),
 			client.WithProxyTargets(
 				[]proxy.Target{
 					{
@@ -283,12 +267,11 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should start guardian2", func() {
-		cert, key, err := voltron.ClusterCreds(clusterID2)
-		Expect(err).NotTo(HaveOccurred())
+		var err error
 
 		guardian2, err = client.New(
 			lisTun.Addr().String(),
-			client.WithTunnelCreds(cert, key, rootCAs),
+			client.WithTunnelCreds(certPemID2, keyPemID2, rootCAs),
 			client.WithProxyTargets(
 				[]proxy.Target{
 					{

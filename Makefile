@@ -149,7 +149,7 @@ endif
 #############################################
 
 ## Build all app docker images.
-images: manifests $(BUILD_IMAGES)
+images: $(BUILD_IMAGES)
 tigera/%: tigera/%-$(ARCH) ;
 tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 	rm -rf docker-image/$*/bin
@@ -159,21 +159,6 @@ tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif
-
-MANIFESTS = docker-image/voltron/templates/guardian.yaml.tmpl
-
-.PHONY: manifests
-manifests: $(MANIFESTS)
-
-.PHONY: docker-image/voltron/templates/guardian.yaml.tmpl
-docker-image/voltron/templates/guardian.yaml.tmpl: manifests/guardian.yaml.tmpl
-	mkdir -p docker-image/voltron/templates/
-	sed -e "s;{{VOLTRON_DOCKER_PUSH_REPO}};$(PUSH_REPO);" \
-	    -e "s;{{VOLTRON_DOCKER_TAG}};$(BRANCH_NAME);" $< > $@
-
-clean-manifests:
-	rm -f $(MANIFESTS)
-	scripts/certs/clean-self-signed.sh scripts/certs
 
 ##########################################################################################
 # TESTING
@@ -214,10 +199,9 @@ endif
 ##########################################################################################
 .PHONY: clean
 ## Remove binary files.
-clean: clean-build-image clean-manifests
+clean: clean-build-image
 	rm -rf $(BINDIR) docker-image/bin
 	find . -name "*.coverprofile" -type f -delete
-	rm -rf docker-image/templates docker-image/scripts
 
 clean-build-image:
 	# Remove all variations e.g. tigera/voltron:latest + tigera/voltron:latest-amd64
@@ -308,7 +292,7 @@ mod-regen-sum:
 ##########################################################################################
 
 run-voltron:
-	VOLTRON_TEMPLATE_PATH=docker-image/voltron/templates/guardian.yaml.tmpl VOLTRON_CERT_PATH=test go run cmd/voltron/main.go
+	VOLTRON_CERT_PATH=test go run cmd/voltron/main.go
 
 run-guardian:
 	GUARDIAN_VOLTRON_URL=127.0.0.1:5555 go run cmd/guardian/main.go

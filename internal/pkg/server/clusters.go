@@ -1,26 +1,18 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package server
 
 import (
-	"bytes"
 	"context"
-	"crypto"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"net/http/httputil"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
-
-	"github.com/tigera/voltron/internal/pkg/utils"
 
 	vtls "github.com/tigera/voltron/pkg/tls"
 
@@ -38,9 +30,6 @@ import (
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
-// AppYaml is the content-type that will be returned when returning a yaml file
-const AppYaml = "application/vnd.yaml"
-
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
 // managed cluster certificate that is allowed to initiate connections.
 const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
@@ -57,9 +46,6 @@ type cluster struct {
 	tunnelManager tunnelmgr.Manager
 	proxy         *httputil.ReverseProxy
 
-	cert *x509.Certificate
-	key  crypto.Signer
-
 	k8sCLI K8sInterface
 
 	tlsProxy vtls.Proxy
@@ -67,13 +53,9 @@ type cluster struct {
 
 type clusters struct {
 	sync.RWMutex
-	clusters      map[string]*cluster
-	generateCreds func(*jclust.ManagedCluster) (*x509.Certificate, crypto.Signer, error)
+	clusters map[string]*cluster
 
-	// keep the generated keys, only for testing and debugging
-	keepKeys       bool
-	renderManifest manifestRenderer
-
+	// adding/deleting a cluster will be done by watching the API, only for testing and debugging
 	watchAdded bool
 
 	k8sCLI K8sInterface
@@ -93,12 +75,6 @@ func returnJSON(w http.ResponseWriter, data interface{}) {
 		// error codes and user-friendly error messages here
 		http.Error(w, "\"An error occurred\"", 500)
 	}
-}
-
-func returnManifests(w http.ResponseWriter, manifest io.Reader) error {
-	w.Header().Set("Content-Type", AppYaml)
-	_, err := io.Copy(w, manifest)
-	return err
 }
 
 func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
@@ -156,37 +132,15 @@ func (cs *clusters) List() []jclust.ManagedCluster {
 	return clusterList
 }
 
-func (cs *clusters) addNew(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
+func (cs *clusters) addNew(mc *jclust.ManagedCluster) error {
 	log.Infof("Adding cluster ID: %q", mc.ID)
 
-	resp := new(bytes.Buffer)
-
-	cert, key, err := cs.generateCreds(mc)
+	_, err := cs.add(mc)
 	if err != nil {
-		return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
+		return err
 	}
 
-	mc.ActiveFingerprint = utils.GenerateFingerprint(cert)
-	c, err := cs.add(mc)
-	if err != nil {
-		return nil, err
-	}
-
-	c.cert = cert
-	if cs.keepKeys {
-		c.key = key
-	}
-
-	err = cs.renderManifest(resp, cert, key)
-	if err != nil {
-		return nil, errors.WithMessage(err, "fail not renderer manifest")
-	}
-	err = storeFingerprint(cs.k8sCLI, mc.ID, mc.ActiveFingerprint)
-	if err != nil {
-		return nil, errors.WithMessage(err, "fail to renderer manifest")
-	}
-
-	return resp, nil
+	return nil
 }
 
 func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
@@ -196,24 +150,24 @@ func (cs *clusters) addRecovered(mc *jclust.ManagedCluster) error {
 	return err
 }
 
-func (cs *clusters) update(mc *jclust.ManagedCluster) (*bytes.Buffer, error) {
+func (cs *clusters) update(mc *jclust.ManagedCluster) error {
 	cs.Lock()
 	defer cs.Unlock()
 	return cs.updateLocked(mc, false)
 }
 
-func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) (*bytes.Buffer, error) {
+func (cs *clusters) updateLocked(mc *jclust.ManagedCluster, recovery bool) error {
 	if c, ok := cs.clusters[mc.ID]; ok {
 		c.Lock()
 		log.Infof("Updating cluster ID: %q", c.ID)
 		c.ManagedCluster = *mc
 		log.Infof("New cluster ID: %q", c.ID)
 		c.Unlock()
-		return nil, nil
+		return nil
 	}
 
 	if recovery {
-		return nil, cs.addRecovered(mc)
+		return cs.addRecovered(mc)
 	}
 
 	return cs.addNew(mc)
@@ -257,15 +211,10 @@ func (cs *clusters) updateClusterREST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := cs.update(mc)
+	err = cs.update(mc)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
-	}
-
-	err = returnManifests(w, resp)
-	if err != nil {
-		log.Errorf("Sending manifest to %q failed: %s", r.RemoteAddr, err)
 	}
 }
 
@@ -292,23 +241,6 @@ func (cs *clusters) deleteClusterREST(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Deleted")
 }
 
-// storeFingerprint uses the given K8sInterface to store the active certificate fingerprint for the
-// ManagedCluster specified by "name"
-func storeFingerprint(k8s K8sInterface, name, activeFingerprint string) error {
-	var newManagedCluster *apiv3.ManagedCluster
-	var err error
-	newManagedCluster, err = k8s.ManagedClusters().Get(name, metav1.GetOptions{})
-	if err != nil {
-		return errors.WithMessage(err, "failed to retrieve ManagedCluster")
-	}
-	if newManagedCluster.ObjectMeta.Annotations == nil {
-		newManagedCluster.ObjectMeta.Annotations = make(map[string]string)
-	}
-	newManagedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint] = activeFingerprint
-	_, err = k8s.ManagedClusters().Update(newManagedCluster)
-	return err
-}
-
 // Determine which handler to execute based on HTTP method.
 func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
@@ -328,103 +260,6 @@ func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 		cs.deleteClusterREST(w, r)
 	default:
 		http.NotFound(w, r)
-	}
-}
-
-// Determine which handler to execute based on HTTP method.
-func (cs *clusters) managedClusterHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		// Special case: We intercept the handling for a create ManagedCluster request
-		case http.MethodPost:
-			cs.interceptCreateManagedCluster(h, w, r)
-		// All other requests for ManagedCluster resource do not need interception
-		default:
-			h.ServeHTTP(w, r)
-		}
-	})
-}
-
-// Intercept the request and response for the given handler (assumed to be for create ManagedCluster),
-// so that we can generate the Guardian manifest for the corresponding ManagedCluster and inject it
-// into the response body.
-func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.ResponseWriter, r *http.Request) {
-	// Use a recorder to capture the response from the proxied request
-	recorder := httptest.NewRecorder()
-
-	// Execute the actual handler
-	h.ServeHTTP(recorder, r)
-
-	recordedData := recorder.Body.Bytes()
-
-	// Copy the recorded response headers first
-	for k, v := range recorder.Header() {
-		w.Header()[k] = v
-	}
-
-	// Do not modify the response for any response type other than HTTP 201 Created
-	// (error related or otherwise).
-	if recorder.Code != 201 {
-		w.WriteHeader(recorder.Code)
-
-		if _, err := w.Write(recordedData); err != nil {
-			log.WithError(err).Error("failed to write out response")
-		}
-		return
-	}
-
-	// Perform interception with manifest generation if the proxied request had
-	// a HTTP 201 Created response.
-
-	// Set up data structure and buffer to manipulate recorded response body
-	var data map[string]interface{}
-	var dataBuffer bytes.Buffer // A Buffer needs no initialization.
-
-	if err := json.Unmarshal(recordedData, &data); err != nil {
-		log.Errorf("managedClusterHandler: Could not decode JSON %s", recordedData)
-		http.Error(w, "ManagedCluster was created, but unable to decode resource entity", 500)
-		return
-	}
-
-	log.Debugf("ManagedClusterHandler: Successfully decoded received data")
-
-	// New cluster used to generate manifest
-	metadataObj := data["metadata"].(map[string]interface{})
-	mc := jclust.ManagedCluster{
-		ID: metadataObj["name"].(string),
-	}
-
-	renderedManifest, err := cs.update(&mc)
-	if err != nil {
-		log.Errorf("managedClusterHandler: Manifest generation failed %s", err.Error())
-		http.Error(w, "managedCluster was created, but installation manifest could not be generated", 500)
-		return
-	}
-
-	// Create object for the spec including the generated manifest
-	data["spec"] = struct {
-		InstallationManifest string `json:"installationManifest"`
-	}{
-		renderedManifest.String(),
-	}
-
-	if err := json.NewEncoder(&dataBuffer).Encode(data); err != nil {
-		log.Errorf("managedClusterHandler: Error while encoding data for response: %s", err.Error())
-		http.Error(w, "ManagedCluster was created, but unable to encode resource entity", 500)
-		return
-	}
-
-	// Set the correct content length corresponding to our modified version of the response data.
-	w.Header().Set("Content-Length", strconv.Itoa(dataBuffer.Len()))
-
-	// Only write the status code after headers, as this call writes out the headers
-	w.WriteHeader(recorder.Code)
-
-	log.Debugf("managedClusterHandler: Encoded object %s", dataBuffer.String())
-
-	// Finally write the modified response output
-	if _, err := w.Write(dataBuffer.Bytes()); err != nil {
-		log.WithError(err).Error("failed to write out response")
 	}
 }
 
@@ -472,7 +307,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				}
 				fallthrough
 			case watch.Modified:
-				_, err = cs.update(mc)
+				err = cs.update(mc)
 			case watch.Deleted:
 				err = cs.remove(mc)
 			default:
@@ -515,7 +350,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context) (string, error) {
 		known[id] = struct{}{}
 
 		log.Debugf("Sync K8s watch for cluster : %s", mc.ID)
-		_, err = cs.updateLocked(mc, true)
+		err = cs.updateLocked(mc, true)
 		if err != nil {
 			log.Errorf("ManagedClusters listing failed: %s", err)
 		}

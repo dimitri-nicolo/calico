@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -33,24 +33,23 @@ var (
 
 // Config is a configuration used for Voltron
 type config struct {
-	Port                         int `default:"5555"`
-	Host                         string
-	TunnelPort                   int    `default:"5566" split_words:"true"`
-	TunnelHost                   string `split_words:"true"`
-	TunnelCert                   string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
-	TunnelKey                    string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
-	LogLevel                     string `default:"INFO"`
-	TemplatePath                 string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
-	PublicIP                     string `default:"127.0.0.1:32453" split_words:"true"`
+	Port       int `default:"5555"`
+	Host       string
+	TunnelPort int    `default:"5566" split_words:"true"`
+	TunnelHost string `split_words:"true"`
+	TunnelCert string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
+	TunnelKey  string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
+	LogLevel   string `default:"INFO"`
+	PublicIP   string `default:"127.0.0.1:32453" split_words:"true"`
 
 	// HTTPSCert, HTTPSKey - path to an x509 certificate and its private key used
 	// for external communication (Tigera UI <-> Voltron)
-	HTTPSCert                    string `default:"/certs/https/cert" split_words:"true" json:"-"`
-	HTTPSKey                     string `default:"/certs/https/key" split_words:"true" json:"-"`
+	HTTPSCert string `default:"/certs/https/cert" split_words:"true" json:"-"`
+	HTTPSKey  string `default:"/certs/https/key" split_words:"true" json:"-"`
 	// InternalHTTPSCert, InternalHTTPSKey - path to an x509 certificate and its private key used
 	//for internal communication within the K8S cluster
-	InternalHTTPSCert            string `default:"/certs/internal/cert" split_words:"true" json:"-"`
-	InternalHTTPSKey             string `default:"/certs/internal/key" split_words:"true" json:"-"`
+	InternalHTTPSCert string `default:"/certs/internal/cert" split_words:"true" json:"-"`
+	InternalHTTPSKey  string `default:"/certs/internal/key" split_words:"true" json:"-"`
 
 	K8sConfigPath                string `split_words:"true"`
 	KeepAliveEnable              bool   `default:"true" split_words:"true"`
@@ -142,9 +141,7 @@ func main() {
 		}
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
-			server.WithTemplate(cfg.TemplatePath),
 			server.WithPublicAddr(cfg.PublicIP),
-			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
 			server.WithAuthentication(config),
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),

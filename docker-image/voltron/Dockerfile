@@ -7,7 +7,6 @@ RUN adduser -S -D 999 voltrongroup
 
 # Add your binary to the image
 ADD bin/voltron-amd64 /voltron
-COPY templates/*.yaml.tmpl /tmp/
 
 # Set the working directory to where you can run your application
 WORKDIR /

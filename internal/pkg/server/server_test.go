@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package server_test
 
@@ -91,7 +91,6 @@ var _ = Describe("Server", func() {
 
 		srv, err = server.New(
 			k8sAPI,
-			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
@@ -127,12 +126,6 @@ var _ = Describe("Server", func() {
 		It("should be able to register a new cluster", func() {
 			Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
-		})
-
-		It("should be able to get the clusters creds", func() {
-			cert, key, err := srv.ClusterCreds(clusterA)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cert != nil && key != nil).To(BeTrue())
 		})
 
 		It("should be able to list the cluster", func() {
@@ -228,7 +221,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		opts = append(opts,
-			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
@@ -266,6 +258,11 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 
 	Context("when server is up", func() {
+		var clnT *tunnel.Tunnel
+
+		var certPemA, keyPemA []byte
+		var fingerprintA string
+
 		It("Should not proxy anywhere - invalid cluster", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -293,7 +290,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 
 		It("should not be able to proxy to a cluster without a tunnel", func() {
-			Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
+			certPemA, keyPemA, fingerprintA, err = test.GenerateTestCredentials(clusterA, tunnelCert, tunnelPrivKey)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintA}
+			Expect(k8sAPI.AddCluster(clusterA, clusterA, annotations)).ShouldNot(HaveOccurred())
 			Expect(<-watchSync).NotTo(HaveOccurred())
 			clientHelloReq(lis.Addr().String(), clusterA, 400)
 		})
@@ -326,20 +326,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(resp.StatusCode).To(Equal(200))
 		})
 
-		var clnT *tunnel.Tunnel
-
-		var certPemA, keyPemA []byte
-
 		It("should be possible to open a tunnel", func() {
 			var err error
-			var certA *x509.Certificate
-
-			certPemA, keyPemA, err = srv.ClusterCreds(clusterA)
-			Expect(err).NotTo(HaveOccurred())
-			block, _ := pem.Decode(certPemA)
-			certA, err = x509.ParseCertificate(block.Bytes)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certA)})).ShouldNot(HaveOccurred())
 
 			var cert tls.Certificate
 			cert, err = tls.X509KeyPair(certPemA, keyPemA)
@@ -413,25 +401,16 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		When("opening another tunnel", func() {
 			var certPem, keyPem []byte
-
-			It("should fail to get creds if it does not exist yet", func() {
-				var err error
-				certPem, keyPem, err = srv.ClusterCreds(clusterB)
-				Expect(err).To(HaveOccurred())
-			})
+			var fingerprintB string
 
 			It("should be able to register another cluster", func() {
-				Expect(k8sAPI.AddCluster(clusterB, clusterB, nil)).ShouldNot(HaveOccurred())
+				certPem, keyPem, fingerprintB, err = test.GenerateTestCredentials(clusterB, tunnelCert, tunnelPrivKey)
+				Expect(err).NotTo(HaveOccurred())
+				annotations := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintB}
+
+				Expect(k8sAPI.AddCluster(clusterB, clusterB, annotations)).ShouldNot(HaveOccurred())
 				Expect(<-watchSync).NotTo(HaveOccurred())
 				clientHelloReq(lis.Addr().String(), clusterB, 400)
-
-				block, _ := pem.Decode(certPemA)
-				Expect(block).NotTo(BeNil())
-				certB, err := x509.ParseCertificate(block.Bytes)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(k8sAPI.UpdateCluster(clusterB, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certB)})).ShouldNot(HaveOccurred())
 			})
 
 			When("another cluster is registered", func() {
@@ -439,9 +418,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 				It("should be possible to get creds for clusterB", func() {
 					var err error
-					certPem, keyPem, err = srv.ClusterCreds(clusterB)
-					Expect(err).NotTo(HaveOccurred())
-
 					cert, err := tls.X509KeyPair(certPem, keyPem)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -648,7 +624,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 
 		if withTunnelCreds {
 			opts = append(opts,
-				server.WithKeepClusterKeys(),
 				server.WithAuthentication(&rest.Config{}),
 				server.WithDefaultProxy(defaultProxy),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
@@ -658,7 +633,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 			)
 		} else {
 			opts = append(opts,
-				server.WithKeepClusterKeys(),
 				server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 				server.WithAuthentication(&rest.Config{}),
 				server.WithDefaultProxy(defaultProxy),
@@ -702,36 +676,32 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 	It("shouldn't be possible to open a tunnel using client cert as the tunnel cert", func() {
 		var err error
 
+		By("Getting the certificates for clusterA")
+		certPemA, keyPemA, fingerprintA, err := test.GenerateTestCredentials(clusterA, tunnelCert, tunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+		annotationsA := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintA}
+
 		By("adding ClusterA")
-		Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
+		Expect(k8sAPI.AddCluster(clusterA, clusterA, annotationsA)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		By("Getting the certificates for clusterA")
-		certPemA, keyPemA, err := srv.ClusterCreds(clusterA)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Setting the fingerprint annotation for clusterA certificate")
 		block, _ := pem.Decode(certPemA)
 		Expect(block).NotTo(BeNil())
-		certA, err := x509.ParseCertificate(block.Bytes)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(certA)})).ShouldNot(HaveOccurred())
 
 		By("adding a managed cluster named voltron to generate credentials faking management cluster")
-		Expect(k8sAPI.AddCluster("voltron", "voltron", nil)).ShouldNot(HaveOccurred())
+		certPem, keyPem, fingerprint, err := test.GenerateTestCredentials("voltron", tunnelCert, tunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+		annotations := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprint}
+
+		Expect(k8sAPI.AddCluster("voltron", "voltron", annotations)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		By("Getting the certificates for fake voltron")
-		certPem, keyPem, err := srv.ClusterCreds("voltron")
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Setting the fingerprint annotation for voltron certificate")
+		By("Decoding voltron certificate")
 		block, _ = pem.Decode(certPem)
 		k, _ := ssh.ParseRawPrivateKey(keyPem)
 		Expect(block).NotTo(BeNil())
 		c, err := x509.ParseCertificate(block.Bytes)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sAPI.UpdateCluster("voltron", map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(c)})).ShouldNot(HaveOccurred())
 
 		By("Trying to connect clusterA to the fake voltron")
 		//close the server
@@ -802,7 +772,6 @@ var _ = Describe("Server authenticates requests", func() {
 
 		srv, err = server.New(
 			k8sAPI,
-			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(voltronCert, voltronPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
@@ -830,26 +799,23 @@ var _ = Describe("Server authenticates requests", func() {
 		k8sAPI.WaitForManagedClustersWatched()
 	})
 
+	var certPem, keyPem []byte
+	var fingerprintA string
+
 	It("Should add cluster A", func() {
-		Expect(k8sAPI.AddCluster(clusterA, clusterA, nil)).ShouldNot(HaveOccurred())
+		var err error
+		certPem, keyPem, fingerprintA, err = test.GenerateTestCredentials(clusterA, voltronCert, voltronPrivKey)
+		Expect(err).NotTo(HaveOccurred())
+		annotations := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintA}
+
+		Expect(k8sAPI.AddCluster(clusterA, clusterA, annotations)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
-
-		certPem, _, err := srv.ClusterCreds(clusterA)
-		Expect(err).NotTo(HaveOccurred())
-		block, _ := pem.Decode(certPem)
-		Expect(block).NotTo(BeNil())
-		cert, err := x509.ParseCertificate(block.Bytes)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(k8sAPI.UpdateCluster(clusterA, map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(cert)})).ShouldNot(HaveOccurred())
-
 	})
 
 	var bin *test.HTTPSBin
 	binC := make(chan struct{}, 1)
 
 	It("Should open a tunnel for cluster A", func() {
-		var certPem, keyPem, _ = srv.ClusterCreds(clusterA)
 		var cert, _ = tls.X509KeyPair(certPem, keyPem)
 
 		var rootCAs = x509.NewCertPool()

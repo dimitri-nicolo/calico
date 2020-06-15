@@ -1,15 +1,17 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 // Package test provides utilities for writing tests
 package test
 
 import (
 	"crypto"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
@@ -234,4 +236,48 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	}
 
 	return res, err
+}
+
+func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey crypto.Signer) (cert []byte, key []byte, fingerprint string, err error) {
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: clusterName},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(1000000 * time.Hour), // XXX TBD
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, caCert, &privKey.PublicKey, caKey)
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	x509Cert, _ := x509.ParseCertificate(bytes)
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	var block1 = &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
+	}
+
+	key = pem.EncodeToMemory(block1)
+
+	var block2 = &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: x509Cert.Raw,
+	}
+
+	fingerprint = fmt.Sprintf("%x", md5.Sum(x509Cert.Raw))
+	cert = pem.EncodeToMemory(block2)
+
+	return cert, key, fingerprint, nil
+
 }
