@@ -34,26 +34,7 @@ The **License Agent** is a containerized application that monitors the following
 
 #### FAQ
 
-**Are license metrics are available through {{site.prodname}} Manager?**
-
- No. Currently, the only interface is Prometheus. 
-
-**How long does it take to get a new {{site.prodname}} license?**
-
- After receiving a Sales purchase order, approximately 1-2 days.
-
-**What happens to nodes during the license grace period?**
-
- All {{site.prodname}} features will work without interruption.
-
-**What happens to nodes after the license grace period?**
-- Only policies in the default Kubernetes tier are applied
-- Users can still access the {{site.prodname}} Manager, but data collection and flow logs will stop working
-- {{site.prodname}} Manager displays an error message to change the license.
-
-**What happens if I add nodes beyond what I'm licensed for?**
-- New nodes that you add past your limit, are still added
-- All {{site.prodname}} features still work
+{% include content/license.md %}
 
 ### How to
 
