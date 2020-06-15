@@ -45,8 +45,11 @@ func init() {
 }
 
 type TestServerConfig struct {
-	etcdServerList []string
-	emptyObjFunc   func() runtime.Object
+	etcdServerList                []string
+	emptyObjFunc                  func() runtime.Object
+	enableManagedClusterCreateAPI bool
+	managedClustersCACertPath     string
+	managedClustersCAKeyPath      string
 }
 
 // NewTestServerConfig is a default constructor for the standard test-apiserver setup
@@ -87,6 +90,9 @@ func withConfigGetFreshApiserverAndClient(
 		// Set this so that we avoid RecommendedOptions.CoreAPI's initialization from calling InClusterConfig()
 		// and uses our fv kubeconfig instead.
 		options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../test-apiserver-kubeconfig.conf"
+		options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
+		options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
+		options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
 
 		//options.RecommendedOptions.SecureServing.BindAddress=
 		if err := server.RunServer(options); err != nil {
@@ -117,6 +123,14 @@ func getFreshApiserverAndClient(
 		etcdServerList: []string{"http://localhost:2379"},
 		emptyObjFunc:   newEmptyObj,
 	}
+	client, _, shutdownFunc := withConfigGetFreshApiserverAndClient(t, serverConfig)
+	return client, shutdownFunc
+}
+
+func customizeFreshApiserverAndClient(
+	t *testing.T,
+	serverConfig *TestServerConfig,
+) (calicoclient.Interface, func()) {
 	client, _, shutdownFunc := withConfigGetFreshApiserverAndClient(t, serverConfig)
 	return client, shutdownFunc
 }

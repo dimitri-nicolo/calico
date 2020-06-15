@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -2502,9 +2503,17 @@ func TestManagedClusterClient(t *testing.T) {
 	const name = "test-managedcluster"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.ManagedCluster{}
-			})
+			serverConfig := &TestServerConfig{
+				etcdServerList: []string{"http://localhost:2379"},
+				emptyObjFunc: func() runtime.Object {
+					return &projectcalico.ManagedCluster{}
+				},
+				enableManagedClusterCreateAPI: true,
+				managedClustersCACertPath:     "../ca.crt",
+				managedClustersCAKeyPath:      "../ca.key",
+			}
+
+			client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
 			defer shutdownServer()
 			if err := testManagedClusterClient(client, name); err != nil {
 				t.Fatal(err)
@@ -2515,15 +2524,42 @@ func TestManagedClusterClient(t *testing.T) {
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-managedcluster test failed")
 	}
+
+	t.Run(fmt.Sprintf("%s-Create API is disabled", name), func(t *testing.T) {
+		serverConfig := &TestServerConfig{
+			etcdServerList: []string{"http://localhost:2379"},
+			emptyObjFunc: func() runtime.Object {
+				return &projectcalico.ManagedCluster{}
+			},
+			enableManagedClusterCreateAPI: false,
+			managedClustersCACertPath:     "../ca.crt",
+			managedClustersCAKeyPath:      "../ca.key",
+		}
+
+		client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
+		defer shutdownServer()
+
+		managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
+		managedCluster := &v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       calico.ManagedClusterSpec{},
+		}
+		_, err := managedClusterClient.Create(managedCluster)
+
+		if err == nil {
+			t.Fatal("Expected API to be disabled")
+		}
+		if !strings.Contains(err.Error(), "This API is not available") {
+			t.Fatalf("Expected API err to indicate that API is disabled. Received: %v", err)
+		}
+	})
 }
 
 func testManagedClusterClient(client calicoclient.Interface, name string) error {
 	managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
 	managedCluster := &v3.ManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: calico.ManagedClusterSpec{
-			InstallationManifest: "manifest v1",
-		},
+		Spec:       calico.ManagedClusterSpec{},
 	}
 
 	expectedInitialStatus := calico.ManagedClusterStatus{
@@ -2552,6 +2588,41 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	if name != managedClusterServer.Name {
 		return fmt.Errorf("didn't get the same managedCluster back from the server \n%+v\n%+v", managedCluster, managedClusterServer)
 	}
+	endpoint := regexp.MustCompile("managementClusterAddr:\\s\"\\$\\{HOST\\}:\\$\\{PORT\\}\"")
+	ca := regexp.MustCompile("management-cluster\\.crt:\\s\\w+")
+	cert := regexp.MustCompile("managed-cluster\\.crt:\\s\\w+")
+	key := regexp.MustCompile("managed-cluster\\.key:\\s\\w+")
+
+	if len(managedClusterServer.Spec.InstallationManifest) == 0 {
+		return fmt.Errorf("expected installationManifest to be populated when creating "+
+			"%s \n%+v", managedCluster.Name, managedClusterServer)
+	}
+
+	if endpoint.FindStringIndex(managedClusterServer.Spec.InstallationManifest) == nil {
+		return fmt.Errorf("expected installationManifest to contain %s when creating "+
+			"%s \n%+v", "managementClusterAddr", managedCluster.Name, managedClusterServer)
+	}
+
+	if ca.FindStringIndex(managedClusterServer.Spec.InstallationManifest) == nil {
+		return fmt.Errorf("expected installationManifest to contain %s when creating "+
+			"%s \n%+v", "management-cluster.crt", managedCluster.Name, managedClusterServer)
+	}
+
+	if cert.FindStringIndex(managedClusterServer.Spec.InstallationManifest) == nil {
+		return fmt.Errorf("expected installationManifest to contain %s when creating "+
+			"%s \n%+v", "managed-cluster.crt", managedCluster.Name, managedClusterServer)
+	}
+
+	if key.FindStringIndex(managedClusterServer.Spec.InstallationManifest) == nil {
+		return fmt.Errorf("expected installationManifest to contain %s when creating "+
+			"%s \n%+v", "managed-cluster.key", managedCluster.Name, managedClusterServer)
+	}
+
+	fingerprint := managedClusterServer.ObjectMeta.Annotations["certs.tigera.io/active-fingerprint"]
+	if len(fingerprint) == 0 {
+		return fmt.Errorf("expected fingerprint when creating %s instead of \n%+v",
+			managedCluster.Name, managedClusterServer)
+	}
 
 	// ------------------------------------------------------------------------------------------
 	managedClusters, err = managedClusterClient.List(metav1.ListOptions{})
@@ -2574,9 +2645,11 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	if !reflect.DeepEqual(managedClusterServer.Status, expectedInitialStatus) {
 		return fmt.Errorf("status was set on create to %#v", managedClusterServer.Status)
 	}
+	if len(managedClusterServer.Spec.InstallationManifest) != 0 {
+		return fmt.Errorf("expected installation manifest to be empty after creation instead of \n%+v", managedCluster)
+	}
 	// ------------------------------------------------------------------------------------------
 	managedClusterUpdate := managedClusterServer.DeepCopy()
-	managedClusterUpdate.Spec.InstallationManifest = "manifest v2"
 	managedClusterUpdate.Status.Conditions = []calico.ManagedClusterStatusCondition{
 		{
 			Message: "Connected to Managed Cluster",
@@ -2588,9 +2661,6 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	managedClusterServer, err = managedClusterClient.Update(managedClusterUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating managedCluster %s (%s)", name, err)
-	}
-	if managedClusterServer.Spec.InstallationManifest != managedClusterUpdate.Spec.InstallationManifest {
-		return errors.New("didn't update spec.installationManifest")
 	}
 	if !reflect.DeepEqual(managedClusterServer.Status, managedClusterUpdate.Status) {
 		return fmt.Errorf("didn't update status %#v", managedClusterServer.Status)
@@ -2609,7 +2679,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	var events []watch.Event
 	done := sync.WaitGroup{}
 	done.Add(1)
-	timeout := time.After(500 * time.Millisecond)
+	timeout := time.After(1000 * time.Millisecond)
 	var timeoutErr error
 	// watch for 2 events
 	go func() {

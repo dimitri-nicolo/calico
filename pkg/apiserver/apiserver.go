@@ -3,7 +3,9 @@
 package apiserver
 
 import (
+	"github.com/tigera/apiserver/pkg/helpers"
 	calicorest "github.com/tigera/apiserver/pkg/registry/projectcalico/rest"
+	"github.com/tigera/apiserver/pkg/storage/calico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -40,6 +42,9 @@ func init() {
 
 type ExtraConfig struct {
 	// Place you custom config here.
+	ManagedClustersCACert          string
+	ManagedClustersCAKey           string
+	EnableManagedClustersCreateAPI bool
 }
 
 type Config struct {
@@ -93,7 +98,24 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 
 	// TODO: Make the storage type configurable
 	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}
-	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer)
+
+	var res *calico.ManagedClusterResources
+	if c.ExtraConfig.EnableManagedClustersCreateAPI {
+		cert, key, err := helpers.ReadCredentials(c.ExtraConfig.ManagedClustersCACert, c.ExtraConfig.ManagedClustersCAKey)
+		if err != nil {
+			return nil, err
+		}
+		x509Cert, rsaKey, err := helpers.DecodeCertAndKey(cert, key)
+		if err != nil {
+			return nil, err
+		}
+		res = &calico.ManagedClusterResources{
+			CACert: x509Cert,
+			CAKey:  rsaKey,
+		}
+	}
+
+	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res)
 	if err != nil {
 		return nil, err
 	}

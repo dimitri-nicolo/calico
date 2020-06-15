@@ -3,7 +3,15 @@
 package calico
 
 import (
+	"crypto/md5"
+	"fmt"
 	"reflect"
+
+	"k8s.io/klog"
+
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+
+	"github.com/tigera/apiserver/pkg/helpers"
 
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,14 +28,58 @@ import (
 	aapi "github.com/tigera/apiserver/pkg/apis/projectcalico"
 )
 
+// AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
+// managed cluster certificate that is allowed to initiate connections.
+const AnnotationActiveCertificateFingerprint = "certs.tigera.io/active-fingerprint"
+
 // NewManagedClusterStorage creates a new libcalico-based storage.Interface implementation for ManagedClusters
 func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
 	c := createClientFromConfig()
+	resources := opts.ManagedClusterResources
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.ManagedCluster)
-		return c.ManagedClusters().Create(ctx, res, oso)
+
+		if resources == nil {
+			return nil, cerrors.ErrorValidation{
+				ErroredFields: []cerrors.ErroredField{{
+					Name:   "Metadata.Name",
+					Reason: fmt.Sprintf("This API is not available"),
+					Value:  res.ObjectMeta.Name,
+				}},
+			}
+		}
+
+		// Generate x509 certificate and private key for the managed cluster
+		certificate, privKey, err := helpers.Generate(resources.CACert, resources.CAKey, res.ObjectMeta.Name)
+		if err != nil {
+			klog.Errorf("Cannot generate managed cluster certificate and key due to %s", err)
+			return nil, cerrors.ErrorValidation{
+				ErroredFields: []cerrors.ErroredField{{
+					Name:   "Metadata.Name",
+					Reason: "Failed to generate client credentials",
+					Value:  res.ObjectMeta.Name,
+				}},
+			}
+		}
+		// Store the hash of the certificate as an annotation
+		fingerprint := fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+		if res.Annotations == nil {
+			res.Annotations = make(map[string]string)
+		}
+		res.Annotations[AnnotationActiveCertificateFingerprint] = fingerprint
+
+		// Create the managed cluster resource
+		out, err := c.ManagedClusters().Create(ctx, res, oso)
+		if err != nil {
+			return nil, err
+		}
+
+		// Populate the installation manifest in the response
+		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey)
+		return out, nil
 	}
+
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.ManagedCluster)

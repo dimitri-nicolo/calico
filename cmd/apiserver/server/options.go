@@ -48,13 +48,28 @@ type CalicoServerOptions struct {
 	// Enable Admission Controller support.
 	EnableAdmissionController bool
 
+	// Path to CA cert and key required for managed cluster creation
+	// The parameters below can only be used in conjunction with
+	// EnableManagedClustersCreateAPI flag
+	ManagedClustersCACertPath      string
+	ManagedClustersCAKeyPath       string
+	EnableManagedClustersCreateAPI bool
+
 	StopCh <-chan struct{}
 }
 
 func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 	s.RecommendedOptions.AddFlags(flags)
-	flags.BoolVar(&s.EnableAdmissionController, "enable-admission-controller-support", s.EnableAdmissionController, ""+
+	flags.BoolVar(&s.EnableAdmissionController, "enable-admission-controller-support", s.EnableAdmissionController,
 		"If true, admission controller hooks will be enabled.")
+	flags.BoolVar(&s.EnableManagedClustersCreateAPI, "enable-managed-clusters-create-api", false,
+		"If true, --set-managed-clusters-ca-cert and --set-managed-clusters-ca-key will be evaluated.")
+	flags.StringVar(&s.ManagedClustersCACertPath, "set-managed-clusters-ca-cert",
+		"/code/apiserver.local.config/multicluster/certificates/cert",
+		"If set, the path to the CA cert will be used to generate managed clusters")
+	flags.StringVar(&s.ManagedClustersCAKeyPath, "set-managed-clusters-ca-key",
+		"/code/apiserver.local.config/multicluster/certificates/key",
+		"If set, the path to the CA key will be used to generate managed clusters")
 }
 
 func (o CalicoServerOptions) Validate(args []string) error {
@@ -139,7 +154,11 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
-		ExtraConfig:   apiserver.ExtraConfig{},
+		ExtraConfig: apiserver.ExtraConfig{
+			ManagedClustersCACert:          o.ManagedClustersCACertPath,
+			ManagedClustersCAKey:           o.ManagedClustersCAKeyPath,
+			EnableManagedClustersCreateAPI: o.EnableManagedClustersCreateAPI,
+		},
 	}
 
 	return config, nil

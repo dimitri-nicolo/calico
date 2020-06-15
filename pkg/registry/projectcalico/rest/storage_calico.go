@@ -66,6 +66,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	scheme *runtime.Scheme,
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
+	resources *calicostorage.ManagedClusterResources,
 ) (map[string]rest.Storage, error) {
 	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"))
 	if err != nil {
@@ -544,7 +545,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions: managedClusterRESTOptions,
+			RESTOptions:             managedClusterRESTOptions,
+			ManagedClusterResources: resources,
 		},
 		p.StorageType,
 		authorizer,
