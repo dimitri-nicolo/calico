@@ -30,6 +30,6 @@
 - All {{site.prodname}} features still work
 
 
-**Is there a way to track license expiry?**
+**How do I access information about my license?**
 
-  Yes! Set alerts and [get license metrics using Prometheus]({{site.baseurl}}/maintenance/monitor/license-agent). (License metrics are not available in {{site.prodname}} Manager.)
+  [Prometheus!]({{site.baseurl}}/maintenance/monitor/license-agent) 
