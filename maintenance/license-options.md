@@ -14,7 +14,3 @@ We highly recommend using the [license agent using Prometheus]({{site.baseurl}}/
 #### FAQ
 
 {% include content/license.md %}
-
-### Above and beyond
-
-- [Monitor {{site.prodname}} license metrics]({{site.baseurl}}/maintenance/monitor/license-agent)
