@@ -6,10 +6,11 @@
   The following distributions have the required kernel, its dependencies, and are
   known to work well with {{site.prodname}} and {{include.orch}}.{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
   - CentOS 7
-  - Ubuntu 16.04
+  - Ubuntu 16.04 and 18.04
+  - RHEL 7
   - Debian 9
   {% endif %}{% if include.orch == "OpenShift" %}
-  - RedHat Container OS
+  - Red Hat Enterprise Linux CoreOS
   {% endif %}{% if include.orch == "OpenStack" %}
   - Ubuntu 16.04 and 18.04
   - CentOS 7
