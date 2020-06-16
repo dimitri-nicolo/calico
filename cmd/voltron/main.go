@@ -17,6 +17,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
@@ -102,7 +103,7 @@ func main() {
 	if cfg.PProf {
 		go func() {
 			err := bootstrap.StartPprof()
-			log.Fatalf("PProf exited: %s", err)
+			log.WithError(err).Fatal("PProf exited.")
 		}()
 	}
 
@@ -114,7 +115,11 @@ func main() {
 		server.WithExternalCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 	}
 
-	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
+	k8s := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
+	authn, err := authentication.ConfigureAuthenticator()
+	if err != nil {
+		log.WithError(err).Fatalf("Failed to configure authenticator.")
+	}
 
 	if cfg.EnableMultiClusterManagement {
 		tunnelX509Cert, tunnelX509Key, err := utils.LoadX509Pair(cfg.TunnelCert, cfg.TunnelKey)
@@ -137,13 +142,12 @@ func main() {
 		})
 
 		if err != nil {
-			log.Fatalf("Failed to parse tunnel target whitelist: %s", err)
+			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 		}
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithPublicAddr(cfg.PublicIP),
 			server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
-			server.WithAuthentication(config),
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
@@ -187,38 +191,39 @@ func main() {
 	})
 
 	if err != nil {
-		log.Fatalf("Failed to parse default proxy targets: %s", err)
+		log.WithError(err).Fatal("Failed to parse default proxy targets.")
 	}
 
 	defaultProxy, err := proxy.New(targets)
 	if err != nil {
-		log.Fatalf("Failed to create a default k8s proxy: %s", err)
+		log.WithError(err).Fatalf("Failed to create a default k8s proxy.")
 	}
 	opts = append(opts, server.WithDefaultProxy(defaultProxy))
 
 	srv, err := server.New(
 		k8s,
+		authn,
 		opts...,
 	)
 
 	if err != nil {
-		log.Fatalf("Failed to create server: %s", err)
+		log.WithError(err).Fatal("Failed to create server.")
 	}
 
 	if cfg.EnableMultiClusterManagement {
 		lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
 		if err != nil {
-			log.Fatalf("Failed to create tunnel listener: %s", err)
+			log.WithError(err).Fatal("Failed to create tunnel listener.")
 		}
 
 		go func() {
 			err := srv.ServeTunnelsTLS(lisTun)
-			log.Fatalf("Tunnel server exited: %s", err)
+			log.WithError(err).Fatal("Tunnel server exited.")
 		}()
 
 		go func() {
 			err := srv.WatchK8s()
-			log.Fatalf("K8s watcher exited: %s", err)
+			log.WithError(err).Fatal("K8s watcher exited.")
 		}()
 
 		log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())

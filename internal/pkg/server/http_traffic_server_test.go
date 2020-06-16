@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
 )
@@ -30,6 +31,7 @@ func init() {
 
 var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 	var k8sAPI = test.NewK8sSimpleFakeClient(nil, nil)
+	var authenticator = authentication.NewFakeAuthenticator()
 	var srv *server.Server
 	var externalCertFile string
 	var externalKeyFile string
@@ -82,6 +84,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			authenticator,
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())

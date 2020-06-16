@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -9,9 +9,6 @@ import (
 	"regexp"
 	"time"
 
-	"k8s.io/client-go/rest"
-
-	"github.com/tigera/voltron/internal/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 
 	"github.com/pkg/errors"
@@ -92,17 +89,6 @@ func WithTunnelCreds(cert *x509.Certificate, key crypto.Signer) Option {
 	return func(s *Server) error {
 		s.tunnelCert = cert
 		s.tunnelKey = key
-		return nil
-	}
-}
-
-// WithAuthentication sets the kubernetes client that will be used to interact with its api
-func WithAuthentication(k8sConfig *rest.Config) Option {
-	return func(s *Server) error {
-		if s.k8s == nil {
-			return errors.Errorf("WithAuthentication requires the k8s.Interface to be set")
-		}
-		s.auth = auth.NewIdentity(s.k8s, k8sConfig)
 		return nil
 	}
 }

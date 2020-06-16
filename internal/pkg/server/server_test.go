@@ -11,12 +11,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/regex"
-
-	"github.com/tigera/voltron/internal/pkg/utils"
-	"github.com/tigera/voltron/pkg/tunnel"
-
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -28,17 +22,21 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/rest"
-
 	"golang.org/x/net/http2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/clusters"
+	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/regex"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
+	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/tigera/voltron/pkg/tunnel"
 )
 
 var (
@@ -72,12 +70,14 @@ var _ = Describe("Server", func() {
 	)
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-	k8sAPI.AddJaneIdentity()
+	authenticator := authentication.NewFakeAuthenticator()
+	authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
 	watchSync := make(chan error)
 
 	It("should fail to use invalid path", func() {
 		_, err := server.New(
-			nil,
+			k8sAPI,
+			authenticator,
 			server.WithExternalCredsFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
@@ -91,10 +91,10 @@ var _ = Describe("Server", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			authenticator,
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
-			server.WithAuthentication(&rest.Config{}),
 			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -186,7 +186,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	)
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-	k8sAPI.AddJaneIdentity()
+	authenticator := authentication.NewFakeAuthenticator()
+	authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
 	watchSync := make(chan error)
 
 	defaultServer := httptest.NewServer(
@@ -224,7 +225,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
-			server.WithAuthentication(&rest.Config{}),
 			server.WithDefaultProxy(defaultProxy),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
@@ -232,6 +232,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			authenticator,
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -591,6 +592,7 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 		lisTun net.Listener
 	)
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+	authenticator := authentication.NewFakeAuthenticator()
 	watchSync := make(chan error)
 
 	defaultServer := httptest.NewServer(
@@ -624,7 +626,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 
 		if withTunnelCreds {
 			opts = append(opts,
-				server.WithAuthentication(&rest.Config{}),
 				server.WithDefaultProxy(defaultProxy),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 				server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
@@ -634,7 +635,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 		} else {
 			opts = append(opts,
 				server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
-				server.WithAuthentication(&rest.Config{}),
 				server.WithDefaultProxy(defaultProxy),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 				server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
@@ -645,6 +645,7 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			authenticator,
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -740,6 +741,7 @@ var _ = Describe("Server authenticates requests", func() {
 	var rootCAs *x509.CertPool
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+	authenticator := authentication.NewFakeAuthenticator()
 	watchSync := make(chan error)
 
 	By("Creating credentials for server", func() {
@@ -772,10 +774,10 @@ var _ = Describe("Server authenticates requests", func() {
 
 		srv, err = server.New(
 			k8sAPI,
+			authenticator,
 			server.WithTunnelCreds(voltronCert, voltronPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
-			server.WithAuthentication(&rest.Config{}),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
 		)
@@ -850,12 +852,12 @@ var _ = Describe("Server authenticates requests", func() {
 	}
 
 	It("should authenticate Jane", func() {
-		k8sAPI.AddJaneIdentity()
+		authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
 		authJane()
 	})
 
 	It("should not authenticate Bob - Bob exists, does not have rights", func() {
-		k8sAPI.AddBobIdentity()
+		authenticator.AddErrorAPIServerResponse(test.BobBearerToken, nil, http.StatusUnauthorized)
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
 		test.AddBobToken(req)
@@ -865,10 +867,10 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("should not authenticate user that does not exist", func() {
-		k8sAPI.AddBobIdentity()
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
-		req.Header.Add("Authorization", "Bearer "+"someRandomTokenThatShouldNotMatch")
+		randomToken := "Bearer someRandomTokenThatShouldNotMatch"
+		authenticator.AddErrorAPIServerResponse(randomToken, nil, http.StatusUnauthorized)
 		resp, err := clnt.Do(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(401))

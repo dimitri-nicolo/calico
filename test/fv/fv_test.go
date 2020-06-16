@@ -14,14 +14,13 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/client-go/rest"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/regex"
@@ -128,7 +127,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	clusterID2 := "other-cluster"
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-	k8sAPI.AddJaneIdentity()
+	authenticator := authentication.NewFakeAuthenticator()
+	authenticator.AddValidApiResponse(test.JaneBearerToken, test.Jane, []string{test.Developers})
 	watchSync := make(chan error)
 
 	// client to be used to interact with voltron (mimic UI)
@@ -187,10 +187,10 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		voltron, err = server.New(
 			k8sAPI,
+			authenticator,
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
 			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
-			server.WithAuthentication(&rest.Config{}),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithWatchAdded(),
 		)

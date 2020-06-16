@@ -14,18 +14,19 @@ import (
 	"regexp"
 	"time"
 
-	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/tigera/voltron/pkg/tunnelmgr"
-
 	"github.com/pkg/errors"
+
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/internal/pkg/auth"
+	"github.com/tigera/apiserver/pkg/authentication"
+	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/tigera/voltron/pkg/tunnelmgr"
+
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -52,7 +53,8 @@ type Server struct {
 	http     *http.Server
 	proxyMux *http.ServeMux
 
-	k8s K8sInterface
+	k8s           K8sInterface
+	authenticator authentication.Authenticator
 
 	defaultProxy          *proxy.Proxy
 	tunnelTargetWhitelist []regexp.Regexp
@@ -77,15 +79,14 @@ type Server struct {
 	tunnelKeepAliveInterval time.Duration
 
 	publicAddress string
-
-	auth *auth.Identity
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s K8sInterface, opts ...Option) (*Server, error) {
+func New(k8s K8sInterface, authenticator authentication.Authenticator, opts ...Option) (*Server, error) {
 	srv := &Server{
-		k8s: k8s,
+		k8s:           k8s,
+		authenticator: authenticator,
 		clusters: &clusters{
 			clusters: make(map[string]*cluster),
 		},
@@ -329,10 +330,10 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
 
-	user, err := s.auth.Authenticate(r)
+	user, status, err := s.authenticator.Authenticate(r.Header.Get(authentication.AuthorizationHeader))
 	if err != nil {
 		log.Errorf("Could not authenticate user from request: %s", err)
-		http.Error(w, err.Error(), 401)
+		http.Error(w, err.Error(), status)
 		return
 	}
 	addImpersonationHeaders(r, user)
@@ -361,9 +362,9 @@ func removeAuthHeaders(r *http.Request) {
 	r.Header.Del("Auth")
 }
 
-func addImpersonationHeaders(r *http.Request, user *auth.User) {
-	r.Header.Add("Impersonate-User", user.Name)
-	for _, group := range user.Groups {
+func addImpersonationHeaders(r *http.Request, user user.Info) {
+	r.Header.Add("Impersonate-User", user.GetName())
+	for _, group := range user.GetGroups() {
 		r.Header.Add("Impersonate-Group", group)
 	}
 	log.Debugf("Adding impersonation headers")
