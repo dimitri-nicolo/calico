@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -439,6 +439,57 @@ var _ = Describe("Config", func() {
 
 			}, 4)
 
+		})
+
+		It("should send new update when FederatedServices is added", func(done Done) {
+			kcc := v3.NewKubeControllersConfiguration()
+			kcc.Name = "default"
+			kcc.Spec = v3.KubeControllersConfigurationSpec{
+				LogSeverityScreen:      "Warning",
+				HealthChecks:           v3.Enabled,
+				EtcdV3CompactionPeriod: &v1.Duration{Duration: 0},
+				Controllers: v3.ControllersConfig{
+					Node: &v3.NodeControllerConfig{
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 29},
+						SyncLabels:       v3.Disabled,
+						HostEndpoint:     &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled},
+					},
+					Policy: &v3.PolicyControllerConfig{
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 30}},
+					WorkloadEndpoint: &v3.WorkloadEndpointControllerConfig{
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 31}},
+					Namespace: &v3.NamespaceControllerConfig{
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32}},
+					ServiceAccount: &v3.ServiceAccountControllerConfig{
+						ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33}},
+				},
+			}
+			m := &mockKCC{get: kcc}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			ctrl := config.NewRunConfigController(ctx, *cfg, m)
+			runCfg := <-ctrl.ConfigChan()
+			Expect(runCfg.Controllers.FederatedServices).To(BeNil())
+
+			// Wait for the watch
+			Eventually(func() int { return m.watchcount }).Should(Equal(1), "Failed to wait for watch")
+
+			kup := kcc.DeepCopy()
+			kup.Spec.Controllers.FederatedServices = &v3.FederatedServicesControllerConfig{
+				ReconcilerPeriod: &v1.Duration{Duration: time.Second * 105},
+			}
+			m.watchchan <- watch.Event{
+				Type:     watch.Modified,
+				Previous: kcc,
+				Object:   kup,
+				Error:    nil,
+			}
+
+			// get the update
+			runCfg = <-ctrl.ConfigChan()
+			Expect(runCfg.Controllers.FederatedServices).NotTo(BeNil())
+
+			close(done)
 		})
 
 	})
