@@ -401,6 +401,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3 h1:q
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631 h1:FGUGDLAApFGrHMr1Gd4UgVGxwmYtv78P17aKIeqQssM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200612214121-4f91fa3c0631/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385 h1:Gj5n0WsPo8CuQxlfgCEL8Ou6//QrByYXOvjcAo6paaM=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
