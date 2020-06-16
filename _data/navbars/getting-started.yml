@@ -80,8 +80,6 @@ section:
       section:
       - title: Overview
         path: /getting-started/clis/calicoctl/configure/overview
-      - title: Configure calicoctl to connect to an etcd datastore
-        path: /getting-started/clis/calicoctl/configure/etcd
       - title: Configure calicoctl to connect to the Kubernetes API datastore
         path: /getting-started/clis/calicoctl/configure/kdd
 
@@ -95,8 +93,6 @@ section:
       section:
       - title: Overview
         path: /getting-started/clis/calicoq/configure/overview
-      - title: etcd datastore options
-        path: /getting-started/clis/calicoq/configure/etcd
       - title: Kubernetes API datastore options
         path: /getting-started/clis/calicoq/configure/kdd
 

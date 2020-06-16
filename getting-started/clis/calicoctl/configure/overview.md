@@ -20,20 +20,14 @@ It must be valid and readable by `calicoctl`. A YAML example follows.
    kind: CalicoAPIConfig
    metadata:
    spec:
-     datastoreType: "etcdv3"
-     etcdEndpoints: "http://etcd1:2379,http://etcd2:2379"
+     datastoreType: "kdd"
      ...
    ```
 
 1. **Environment variables**: If `calicoctl` cannot locate, read, or access a configuration
 file, it will check a specific set of environment variables.
 
-Refer to the section that corresponds to your datastore type for a full set of options
-and examples.
-
-- [etcd datastore](etcd)
-
-- [Kubernetes API datastore](kdd)
+For a full set of options and examples, see [Kubernetes API datastore]({{site.baseurl}}/getting-started/clis/calicoctl/configure/kdd).
 
 > **Note**: When running `calicoctl` inside a container, any environment variables and
 > configuration files must be passed to the container so they are available to
