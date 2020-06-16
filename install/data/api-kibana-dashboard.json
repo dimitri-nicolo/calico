@@ -108,7 +108,7 @@
       "description": "",
       "hits": 0,
       "columns": [
-        "timestamp",
+        "stageTimestamp",
         "user.username",
         "verb",
         "objectRef.resource",
