@@ -314,6 +314,11 @@ func (m *mock) KubernetesAuthnAuthz(handler http.Handler) http.Handler {
 }
 
 // Authorized to satisfy K8sAuthInterface
+func (m *mock) Authenticate(req *http.Request) (*http.Request, int, error) {
+	return req, 0, nil
+}
+
+// Authorized to satisfy K8sAuthInterface
 func (m *mock) Authorize(req *http.Request) (status int, err error) {
 	if m.shouldIt {
 		return 0, nil

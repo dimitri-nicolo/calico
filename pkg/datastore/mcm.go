@@ -1,16 +1,18 @@
 package datastore
 
 import (
-	"github.com/tigera/compliance/pkg/config"
 	"net/http"
 	"os"
 	"sync"
+
+	"github.com/tigera/compliance/pkg/config"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
 	v3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/lma/pkg/auth"
@@ -19,8 +21,8 @@ import (
 
 const (
 	// Default cluster name for standalone and management cluster.
-	DefaultCluster    = "cluster"
-	XClusterIDHeader  = "x-cluster-id"
+	DefaultCluster   = "cluster"
+	XClusterIDHeader = "x-cluster-id"
 )
 
 // Bundles clientMap behind convenience methods for multi cluster setups.
@@ -51,11 +53,15 @@ func MustGetRESTClient(config *config.Config) RESTClientFactory {
 	client := RESTClientHolder{}
 	client.multiClusterForwardingCA = config.MultiClusterForwardingCA
 	client.multiClusterForwardingEndpoint = config.MultiClusterForwardingEndpoint
+	authenticator, err := authentication.ConfigureAuthenticator()
+	if err != nil {
+		log.WithError(err).Panic("Unable to create auth configuration")
+	}
 	client.clientMap = map[string]clusterClients{
 		DefaultCluster: {
 			MustGetCalicoClient(),
 			elastic.MustGetElasticClient(),
-			auth.NewK8sAuth(MustGetKubernetesClient(), MustGetConfig()),
+			auth.NewK8sAuth(MustGetKubernetesClient(), authenticator),
 		},
 	}
 	return &client
@@ -116,10 +122,15 @@ func (c *RESTClientHolder) mustAddCluster(clusterID, caPath, host string) {
 		log.WithError(err).Panic("Failed to load Calico client")
 	}
 
+	authenticator, err := authentication.ConfigureAuthenticator()
+	if err != nil {
+		log.WithError(err).Panic("Unable to create auth configuration")
+	}
+
 	c.clientMap[clusterID] = clusterClients{
 		client.ProjectcalicoV3(),
 		mustCreateESClientForCluster(clusterID),
-		auth.NewK8sAuth(k8sClient, cfg),
+		auth.NewK8sAuth(k8sClient, authenticator),
 	}
 }
 
