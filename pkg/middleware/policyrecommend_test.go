@@ -453,6 +453,11 @@ func (fa *fakeAuthorizer) Authorize(*http.Request) (int, error) {
 	return fa.nextResult, fa.nextError
 }
 
+func (fa *fakeAuthorizer) Authenticate(*http.Request) (*http.Request, int, error) {
+	// This is unused in this test.
+	panic("This method should be unused")
+}
+
 func (fa *fakeAuthorizer) setNextResult(nr int) {
 	fa.nextResult = nr
 }

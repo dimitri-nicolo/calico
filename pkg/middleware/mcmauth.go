@@ -6,7 +6,10 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/lma/pkg/auth"
+
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -93,7 +96,13 @@ func (c *mcmAuth) K8sAuth(clusterID string) auth.K8sAuthInterface {
 func createClusterConfig(clusterID, voltronCAPath string) auth.K8sAuthInterface {
 	cfg := mustCreateClusterConfig(clusterID, voltronCAPath)
 	k8sClient := k8s.NewForConfigOrDie(cfg)
-	return auth.NewK8sAuth(k8sClient, cfg)
+
+	authenticator, err := authentication.ConfigureAuthenticator()
+	if err != nil {
+		log.WithError(err).Panic("Unable to create auth configuration")
+	}
+
+	return auth.NewK8sAuth(k8sClient, authenticator)
 }
 
 // Create a config that routes requests through Voltron to a target cluster.

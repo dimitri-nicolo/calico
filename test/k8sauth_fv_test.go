@@ -9,7 +9,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	fv "github.com/tigera/es-proxy/test"
+	"github.com/tigera/lma/pkg/auth"
+
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -18,8 +22,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
-	lmaauth "github.com/tigera/lma/pkg/auth"
 )
 
 // HttpHandler to see that the 'next' handler was called or not
@@ -31,8 +33,8 @@ func (dhh *DummyHttpHandler) ServeHTTP(http.ResponseWriter, *http.Request) {
 	dhh.serveCalled = true
 }
 
-var tigera_flow_path string = "/tigera_secure_ee_flows*/_search"
-var path_to_something string = "/path/to/something"
+var tigeraFlowPath = "/tigera_secure_ee_flows*/_search"
+var pathToSomething = "/path/to/something"
 
 func genPath(q string) string {
 	return fmt.Sprintf("/%s/_search", q)
@@ -40,25 +42,26 @@ func genPath(q string) string {
 
 var _ = Describe("Authenticate against K8s apiserver", func() {
 	var k8sClient k8s.Interface
-	var k8sConfig restclient.Config
 	var dhh *DummyHttpHandler
 	var rr *httptest.ResponseRecorder
-	var k8sAuth lmaauth.K8sAuthInterface
+	var k8sAuth auth.K8sAuthInterface
+	var authenticator authentication.Authenticator
 
 	BeforeEach(func() {
-		k8sConfig = restclient.Config{}
-		k8sConfig.Host = "https://localhost:6443"
-		k8sConfig.Insecure = true
-		if k8sConfig.RateLimiter == nil && k8sConfig.QPS > 0 {
-			k8sConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(k8sConfig.QPS, k8sConfig.Burst)
+		restCfg := restclient.Config{}
+		restCfg.Host = "https://localhost:6443"
+		restCfg.Insecure = true
+		if restCfg.RateLimiter == nil && restCfg.QPS > 0 {
+			restCfg.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(restCfg.QPS, restCfg.Burst)
 		}
 
-		k8sClient = k8s.NewForConfigOrDie(&k8sConfig)
+		k8sClient = k8s.NewForConfigOrDie(&restCfg)
 		Expect(k8sClient).NotTo(BeNil())
 
 		dhh = &DummyHttpHandler{serveCalled: false}
 		rr = httptest.NewRecorder()
-		k8sAuth = lmaauth.NewK8sAuth(k8sClient, &k8sConfig)
+		authenticator = fv.NewAuthnClient()
+		k8sAuth = auth.NewK8sAuth(k8sClient, authenticator)
 	})
 	AfterEach(func() {
 	})
@@ -69,7 +72,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	It("Should cause StatusForbidden with valid token but missing URL", func() {
 		By("authenticating the token", func() {
 			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
-			req := &http.Request{Header: http.Header{"Authorization": []string{"bearer deadbeef"}}}
+			req := &http.Request{Header: http.Header{"Authorization": []string{"Bearer deadbeef"}}}
 			uut.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusForbidden), fmt.Sprintf("Token deadbeef authentication failed"))
@@ -85,7 +88,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 						fmt.Sprintf("Basic %s",
 							base64.StdEncoding.EncodeToString([]byte("basicusernoselfaccess:basicpwnos")))},
 				},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}
 
 			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
@@ -113,12 +116,12 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 					"Authorization": []string{fmt.Sprintf("Basic %s",
 						base64.StdEncoding.EncodeToString([]byte("basicuserall:badpw")))},
 				},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Bad bearer token",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer d00dbeef"}},
-				URL:    &url.URL{Path: tigera_flow_path},
+				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 	)
 
@@ -138,7 +141,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		Entry("Allow all token access flow",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
-				URL:    &url.URL{Path: tigera_flow_path},
+				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Allow all token access audit*",
 			&http.Request{
@@ -163,7 +166,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		Entry("Flow token access flow",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeeff"}},
-				URL:    &url.URL{Path: tigera_flow_path},
+				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("All Audit token access audit*",
 			&http.Request{
@@ -185,7 +188,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			&http.Request{
 				Header: http.Header{
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Allow all basic auth access audit*",
 			&http.Request{
@@ -209,7 +212,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			&http.Request{
 				Header: http.Header{
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("All audit basic auth access audit*",
 			&http.Request{
@@ -233,7 +236,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			&http.Request{
 				Header: http.Header{
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserallgrp:basicpwgrp")))}},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 	)
 
@@ -251,12 +254,12 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		Entry("Token for user tokenuserauditonly try to access flows",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeefaa"}},
-				URL:    &url.URL{Path: tigera_flow_path},
+				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Token with no access (user tokenusernone) try to access flows",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer deadbeef0"}},
-				URL:    &url.URL{Path: tigera_flow_path},
+				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Token with only audit_kube access try to access audit*",
 			&http.Request{
@@ -269,7 +272,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 					"Authorization": []string{
 						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditonly:basicpwaa"))),
 					}},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Basic auth with no access (user basicusernone) try to access flows",
 			&http.Request{
@@ -277,7 +280,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 					"Authorization": []string{
 						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernone:basicpw0"))),
 					}},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Basic auth with audit* access try to access flows",
 			&http.Request{
@@ -285,7 +288,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 					"Authorization": []string{
 						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditonly:basicpwaa"))),
 					}},
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Basic auth with audit_kube access try to access audit*",
 			&http.Request{
@@ -312,7 +315,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
 				// The URL should not matter but include it anyway to ensure the
 				// KubernetesAuthnAuthz does not parse the path.
-				URL: &url.URL{Path: tigera_flow_path},
+				URL: &url.URL{Path: tigeraFlowPath},
 			}
 			uut.ServeHTTP(rr, req)
 
@@ -336,7 +339,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			Entry("Token for user tokenusernru try to access /path/to/something is allowed",
 				&http.Request{
 					Header: http.Header{"Authorization": []string{"Bearer deadbeefnru"}},
-					URL:    &url.URL{Path: path_to_something},
+					URL:    &url.URL{Path: pathToSomething},
 				}, http.StatusOK, true),
 			Entry("Basic auth for user basicusernonresourceurl try to access /path/to/something is allowed",
 				&http.Request{
@@ -344,12 +347,12 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 						"Authorization": []string{
 							fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernonresourceurl:basicpwnru"))),
 						}},
-					URL: &url.URL{Path: path_to_something},
+					URL: &url.URL{Path: pathToSomething},
 				}, http.StatusOK, true),
 			Entry("Token for user tokenusernone try to access /path/to/something is forbidden",
 				&http.Request{
 					Header: http.Header{"Authorization": []string{"Bearer deadbeef0"}},
-					URL:    &url.URL{Path: path_to_something},
+					URL:    &url.URL{Path: pathToSomething},
 				}, http.StatusForbidden, false),
 			Entry("Basic auth for user basicusernone try to accesss /path/to/something is forbidden",
 				&http.Request{
@@ -357,7 +360,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 						"Authorization": []string{
 							fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernone:basicpw0"))),
 						}},
-					URL: &url.URL{Path: path_to_something},
+					URL: &url.URL{Path: pathToSomething},
 				}, http.StatusForbidden, false),
 		)
 	})
@@ -366,7 +369,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 func dummyNonResourceMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		h.ServeHTTP(w, req.WithContext(lmaauth.NewContextWithReviewNonResource(req.Context(), getNonResourceAttributes(req.URL.Path))))
+		h.ServeHTTP(w, req.WithContext(auth.NewContextWithReviewNonResource(req.Context(), getNonResourceAttributes(req.URL.Path))))
 	})
 }
 

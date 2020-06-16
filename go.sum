@@ -770,6 +770,8 @@ github.com/tigera/apiserver v0.0.0-20200610004745-cd70b291e8cd h1:ZVd13AOZtKKvUL
 github.com/tigera/apiserver v0.0.0-20200610004745-cd70b291e8cd/go.mod h1:Lz9vnG+yHC0h8uNuhVuagwysss/TJNFOnc7mKFNe3a4=
 github.com/tigera/apiserver v0.0.0-20200610180934-4ffb578610f6 h1:d8arPBO0mOtXDOmFBIlyvq920y7BI8ZC4D30T4p1W6c=
 github.com/tigera/apiserver v0.0.0-20200610180934-4ffb578610f6/go.mod h1:Euq+r6S+knVBPIgxRlEYIk9pWXZBm9xmpCE5vIWwmJk=
+github.com/tigera/apiserver v0.0.0-20200615144849-4905f5bf6e65 h1:pC760ldZ1FUBkTSlS14ef4myfzAqHX8p0vayOSPrb9Y=
+github.com/tigera/apiserver v0.0.0-20200615144849-4905f5bf6e65/go.mod h1:ZxumkbUyFXzGhP1c11fYn0b65tD9x0Ym3fXfvVEbbAA=
 github.com/tigera/compliance v0.0.0-20200602235354-fc15a384de5e h1:u4mbPDTzfGl9geEpgg3LivHydU4mkp1GWHd1rtcxjuE=
 github.com/tigera/compliance v0.0.0-20200602235354-fc15a384de5e/go.mod h1:gIDeugSYI/B//r/LeA1y1bYsyIzclXjCR5K4H39sFzk=
 github.com/tigera/compliance v0.0.0-20200604081253-46bc922bb280 h1:lj42VcyLx0MJYzVrRdrBIasHxtOr8Tf+C0qSqtKc75A=
@@ -778,6 +780,8 @@ github.com/tigera/compliance v0.0.0-20200610081458-fb1389dff6e0 h1:DnIfd32N3sFaB
 github.com/tigera/compliance v0.0.0-20200610081458-fb1389dff6e0/go.mod h1:BVfPMesxoxaACGXozcef8TlU745viV6udd5OwmoNdeY=
 github.com/tigera/compliance v0.0.0-20200612081525-32d1ce917bad h1:ekc5V3IBChT6/qjOnJZUkxTlW/eW9KeYZFR/zI90H5w=
 github.com/tigera/compliance v0.0.0-20200612081525-32d1ce917bad/go.mod h1:TnFc1zzLtdw7s/aEAmTJZ1MQo4s/hTkp0Er/VdoXm6o=
+github.com/tigera/compliance v0.0.0-20200616194911-63f6bbd43009 h1:hS5chj2dErFRmSiutxoFfcSc3oiJQUzLndvUZt3N1xI=
+github.com/tigera/compliance v0.0.0-20200616194911-63f6bbd43009/go.mod h1:WETF/l9ZaIlo9dh7TBOaddct9Lg49bcpc3mYgxrg9VM=
 github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf h1:xsRuf/OpImM8eaZB8n+hmOZAwnWFGZI7TLapslLPfAc=
 github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf/go.mod h1:0i/5ZcV1aumiFOdbhweFUD8WJry9oha+DeJf5DzOwSc=
 github.com/tigera/felix-private v0.0.0-20200611221354-f35bf292044e h1:rqzrBpClCOHJgWNcJkJdjbYVieV7WL7eq4Ma6oWhBWo=
@@ -790,6 +794,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200610113652-a3ec22ff7b93 h1:r
 github.com/tigera/libcalico-go-private v1.7.2-0.20200610113652-a3ec22ff7b93/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3 h1:q2H6t1ZpHiOtR33X129nqfY/LVTTQopAMM3BOaautwA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385 h1:Gj5n0WsPo8CuQxlfgCEL8Ou6//QrByYXOvjcAo6paaM=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a h1:maYOHHjIuWEyMZyvPbKaDjcpDaoHyaXPQB9pb6gMRaU=
@@ -800,6 +806,8 @@ github.com/tigera/lma v0.0.0-20200610190510-55f66a2863f8 h1:BTfAL/qenWcYPV6+BiCx
 github.com/tigera/lma v0.0.0-20200610190510-55f66a2863f8/go.mod h1:shec2ItacYhT6bDBN16tI2dR0D49KgvJyLEEhDzsMcM=
 github.com/tigera/lma v0.0.0-20200612020505-bb1c2db07538 h1:1Iqh2CY1QvtPEJ0RBVEyjI9E3iiABK/QHmI97CYaDOM=
 github.com/tigera/lma v0.0.0-20200612020505-bb1c2db07538/go.mod h1:kE03Adw8H5D1Xtn2spUD8ieY6j5HSssjLxfzQD5C+8U=
+github.com/tigera/lma v0.0.0-20200613004830-945148751bfd h1:uYPSdyo/fV+ssXiqTZAtgGynhglggw/IiuJnxx7ITP8=
+github.com/tigera/lma v0.0.0-20200613004830-945148751bfd/go.mod h1:zI5UqJcyeFLMD9cB+iqfBgQj9hTgWEMcF4hdlGWwfEY=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200601141056-c2c4cdb19c4b/go.mod h1:oppUNphA7GQOGfsDhVNmYwskTbTplnb4Zk9bPEOS1Cs=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200610030616-fceb1141f45b/go.mod h1:yiwzyKv4k+ocIR9XJInpHumoWUfMV0HxwYMtJPC/Lm8=
