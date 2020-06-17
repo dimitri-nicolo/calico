@@ -31,6 +31,8 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
+	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
+
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	bpfipsets "github.com/projectcalico/felix/bpf/ipsets"
@@ -79,21 +81,21 @@ var (
 		Name: "felix_int_dataplane_messages",
 		Help: "Number dataplane messages by type.",
 	}, []string{"type"})
-	summaryApplyTime = prometheus.NewSummary(prometheus.SummaryOpts{
+	summaryApplyTime = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_int_dataplane_apply_time_seconds",
 		Help: "Time in seconds that it took to apply a dataplane update.",
 	})
-	summaryBatchSize = prometheus.NewSummary(prometheus.SummaryOpts{
+	summaryBatchSize = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_int_dataplane_msg_batch_size",
 		Help: "Number of messages processed in each batch. Higher values indicate we're " +
 			"doing more batching to try to keep up.",
 	})
-	summaryIfaceBatchSize = prometheus.NewSummary(prometheus.SummaryOpts{
+	summaryIfaceBatchSize = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_int_dataplane_iface_msg_batch_size",
 		Help: "Number of interface state messages processed in each batch. Higher " +
 			"values indicate we're doing more batching to try to keep up.",
 	})
-	summaryAddrBatchSize = prometheus.NewSummary(prometheus.SummaryOpts{
+	summaryAddrBatchSize = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_int_dataplane_addr_msg_batch_size",
 		Help: "Number of interface address messages processed in each batch. Higher " +
 			"values indicate we're doing more batching to try to keep up.",
@@ -903,13 +905,13 @@ func (d *InternalDataplane) routeRules() []routeRules {
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
 	tableMgr, ok := mgr.(ManagerWithRouteTables)
 	if ok {
-		log.WithField("manager", mgr).Debug("registering ManagerWithRouteTables")
+		log.WithField("manager", reflect.TypeOf(mgr).Name()).Debug("registering ManagerWithRouteTables")
 		d.managersWithRouteTables = append(d.managersWithRouteTables, tableMgr)
 	}
 
 	rulesMgr, ok := mgr.(ManagerWithRouteRules)
 	if ok {
-		log.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
+		log.WithField("manager", reflect.TypeOf(mgr).Name()).Debug("registering ManagerWithRouteRules")
 		d.managersWithRouteRules = append(d.managersWithRouteRules, rulesMgr)
 	}
 	d.allManagers = append(d.allManagers, mgr)
@@ -1552,7 +1554,8 @@ func (d *InternalDataplane) apply() {
 	for _, mgr := range d.allManagers {
 		err := mgr.CompleteDeferredWork()
 		if err != nil {
-			log.WithField("manager", mgr).WithError(err).Debug("couldn't complete deferred work for manager, will try again later")
+			log.WithField("manager", reflect.TypeOf(mgr).Name()).WithError(err).Debug(
+				"couldn't complete deferred work for manager, will try again later")
 			d.dataplaneNeedsSync = true
 		}
 		d.reportHealth()

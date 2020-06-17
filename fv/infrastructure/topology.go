@@ -43,6 +43,7 @@ type TopologyOptions struct {
 	IPIPEnabled               bool
 	IPIPRoutesEnabled         bool
 	VXLANMode                 api.VXLANMode
+	WireguardEnabled          bool
 	InitialFelixConfiguration *api.FelixConfiguration
 	WithPrometheusPortTLS     bool
 	NATOutgoingEnabled        bool
@@ -222,6 +223,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		}
 		if opts.VXLANMode != api.VXLANModeNever {
 			infra.SetExpectedVXLANTunnelAddr(felix, i, bool(n > 1))
+		}
+		if opts.WireguardEnabled {
+			infra.SetExpectedWireguardTunnelAddr(felix, i, bool(n > 1))
 		}
 
 		var w chan struct{}

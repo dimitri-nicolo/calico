@@ -197,5 +197,21 @@ var _ = infrastructure.DatastoreDescribe("Container self tests",
 				Expect(s.Size()).To(BeNumerically(">", 4096))
 			})
 		})
+
+		Describe("with DebugSimulateDataRace set", func() {
+			BeforeEach(func() {
+				options.ExtraEnvVars["FELIX_DebugSimulateDataRace"] = "true"
+			})
+
+			if os.Getenv("FV_RACE_DETECTOR_ENABLED") == "true" {
+				It("should detect a race", func() {
+					Eventually(felixes[0].DataRaces).ShouldNot(BeEmpty())
+				})
+			} else {
+				It("should not detect a race because race detector is disabled", func() {
+					Consistently(felixes[0].DataRaces).Should(BeEmpty())
+				})
+			}
+		})
 	},
 )

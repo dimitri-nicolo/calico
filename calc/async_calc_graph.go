@@ -25,6 +25,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
 
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
@@ -57,7 +58,7 @@ var (
 		Name: "felix_calc_graph_output_events",
 		Help: "Number of events emitted by the calculation graph.",
 	})
-	summaryUpdateTime = prometheus.NewSummary(prometheus.SummaryOpts{
+	summaryUpdateTime = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_calc_graph_update_time_seconds",
 		Help: "Seconds to update calculation graph for each datastore OnUpdate call.",
 	})
