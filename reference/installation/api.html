@@ -1121,7 +1121,7 @@ SplunkStoreSpec
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -2169,6 +2169,87 @@ specified IP or domain.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.NodeSet">NodeSet
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.Nodes">Nodes</a>)
+</p>
+<p>NodeSets defines configuration specific to each Elasticsearch Node Set</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>selectionAttributes</code><br>
+<em>
+<a href="#operator.tigera.io/v1.NodeSetSelectionAttribute">
+[]NodeSetSelectionAttribute
+</a>
+</em>
+</td>
+<td>
+<p>SelectionAttributes defines K8s node attributes a NodeSet should use when setting the Node Affinity selectors and
+Elasticsearch cluster awareness attributes for the Elasticsearch nodes. The list of SelectionAttributes are used
+to define Node Affinities and set the node awareness configuration in the running Elasticsearch instance.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.NodeSetSelectionAttribute">NodeSetSelectionAttribute
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.NodeSet">NodeSet</a>)
+</p>
+<p>NodeSetSelectionAttribute defines a K8s node &ldquo;attribute&rdquo; the Elasticsearch nodes should be aware of. The &ldquo;Name&rdquo; and &ldquo;Value&rdquo;
+are used together to set the &ldquo;awareness&rdquo; attributes in Elasticsearch, while the &ldquo;NodeLabel&rdquo; and &ldquo;Value&rdquo; are used together
+to define Node Affinity for the Pods created for the Elasticsearch nodes.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeLabel</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>value</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.Nodes">Nodes
 </h3>
 <p>
@@ -2197,6 +2278,20 @@ int64
 </tr>
 <tr>
 <td>
+<code>nodeSets</code><br>
+<em>
+<a href="#operator.tigera.io/v1.NodeSet">
+[]NodeSet
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeSets defines configuration specific to each Elasticsearch Node Set</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>resourceRequirements</code><br>
 <em>
 <a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core">
@@ -2215,7 +2310,7 @@ Kubernetes core/v1.ResourceRequirements
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
