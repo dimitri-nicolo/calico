@@ -4,9 +4,10 @@ import (
 	"os"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/node/pkg/startup/autodetection"
-	log "github.com/sirupsen/logrus"
 )
 
 // Default interfaces to exclude for any logic following the first-found
@@ -14,7 +15,7 @@ import (
 var DEFAULT_INTERFACES_TO_EXCLUDE []string = []string{
 	"docker.*", "cbr.*", "dummy.*",
 	"virbr.*", "lxcbr.*", "veth.*", "lo",
-	"cali.*", "tunl.*", "flannel.*", "kube-ipvs.*",
+	"cali.*", "tunl.*", "flannel.*", "kube-ipvs.*", "cni.*",
 }
 
 const defaultNodenameFile = "/var/lib/calico/nodename"

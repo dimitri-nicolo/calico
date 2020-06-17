@@ -5,9 +5,10 @@ package main_test
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
 )
 
 var _ = Describe("CNI config template tests", func() {
