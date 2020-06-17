@@ -7,6 +7,7 @@ require (
 	github.com/buger/jsonparser v0.0.0-20180808090653-f4dd9f5a6b44
 	github.com/containernetworking/cni v0.7.1
 	github.com/containernetworking/plugins v0.8.5
+
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
@@ -24,11 +25,12 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
+
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
@@ -39,6 +41,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200617204528-35a7eaa21090
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
