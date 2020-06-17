@@ -5346,13 +5346,6 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
-					"awsSrcDstCheck": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Set source-destination-check on AWS EC2 instances. Accepted value must be one of \"DoNothing\", \"Enabled\" or \"Disabled\". [Default: DoNothing]",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 				},
 			},
 		},
@@ -8550,7 +8543,7 @@ func schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref common.ReferenceCallb
 				Description: "NodeWireguardSpec contains the specification for the Node wireguard configuration.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"interfaceIpv4Address": {
+					"interfaceIPv4Address": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InterfaceIPv4Address is the IPv4 address for the Wireguard interface.",
 							Type:        []string{"string"},
