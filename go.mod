@@ -18,12 +18,9 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708 // indirect
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
-	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	gopkg.in/yaml.v2 v2.2.8
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200416182706-b8193f845c4a
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2
