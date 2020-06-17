@@ -8,6 +8,7 @@ require (
 	// Elastic repo for ECK v1.0.1
 	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
+
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.10.1
@@ -21,25 +22,27 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
 	github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a
-	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
+	go.etcd.io/etcd v0.5.0-alpha.5.0.20200401174654-e694b7bb0875
 	golang.org/x/mod v0.3.0 // indirect
+	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
 	golang.org/x/tools v0.0.0-20200601175630-2caf76543d99 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 
-	// k8s.io/api v1.16.3 is at 16d7abae0d2a
+	// k8s.io/api v0.17.2 is at 16d7abae0d2a
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
-	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
+	k8s.io/client-go v8.0.0+incompatible
+
 	k8s.io/klog v1.0.0
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200615134742-42d3ba185adc
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200615154255-aa883fc90797
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200616030500-9f8cc298348f
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200617214853-e45a9532910c
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200617210821-b7333bc9b9e2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200617204528-35a7eaa21090
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200617210450-e4e61dfe7c3e
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
@@ -51,6 +54,7 @@ replace (
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
 	// Using cloned tigera/apimachinery-private cloned off k8s apimachinery kubernetes 1.17.2
 	k8s.io/apimachinery => github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340
+
 	k8s.io/apiserver => k8s.io/apiserver v0.17.2
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.17.2
 	k8s.io/client-go => k8s.io/client-go v0.17.2
