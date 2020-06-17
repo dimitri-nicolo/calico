@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -17,7 +17,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"
@@ -31,11 +30,11 @@ import (
 // Pause time before felix will generate CNX metrics
 var pollingInterval = time.Duration(10) * time.Second
 
-var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
+var _ = infrastructure.DatastoreDescribe("CNX Metrics, etcd datastore, 4 workloads", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
+		infra          infrastructure.DatastoreInfra
 		defaultProfile *api.Profile
-		etcd           *containers.Container
 		felix          *infrastructure.Felix
 		client         client.Interface
 		w              [4]*workload.Workload
@@ -43,7 +42,11 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		infra = getInfra()
+
+		var felixes []*infrastructure.Felix
+		felixes, client = infrastructure.StartNNodeTopology(1, infrastructure.DefaultTopologyOptions(), infra)
+		felix = felixes[0]
 
 		// Default profile that ensures connectivity.
 		defaultProfile = api.NewProfile()
@@ -66,7 +69,6 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 	})
 
 	AfterEach(func() {
-
 		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -100,9 +102,10 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			infra.DumpErrorData()
 		}
-		etcd.Stop()
+
+		infra.Stop()
 	})
 
 	It("should generate connection metrics for rule matches on a profile", func() {
@@ -898,6 +901,7 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
+		infra    infrastructure.DatastoreInfra
 		felixes  []*infrastructure.Felix
 		felix    *infrastructure.Felix
 		client   client.Interface
@@ -905,7 +909,7 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 	)
 
 	BeforeEach(func() {
-		infra := getInfra()
+		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
 
 		// Start felix instances.
@@ -954,6 +958,8 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 		ep1.Stop()
 		ep2.Stop()
 		felix.Stop()
+
+		infra.Stop()
 	})
 
 	Context("should generate metrics for staged policies", func() {
