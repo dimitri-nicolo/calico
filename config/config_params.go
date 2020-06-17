@@ -250,8 +250,8 @@ type Config struct {
 	CloudWatchNodeHealthStatusEnabled    bool          `config:"bool;false"`
 	CloudWatchNodeHealthPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
 
-	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
-	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
+	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
+	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 
 	NfNetlinkBufSize int `config:"int;65536"`
 
@@ -353,7 +353,8 @@ type Config struct {
 
 	IPSecRekeyTime time.Duration `config:"seconds;3600"`
 
-	DebugPanicAfter time.Duration `config:"seconds;0"`
+	DebugPanicAfter       time.Duration `config:"seconds;0"`
+	DebugSimulateDataRace bool          `config:"bool;false"`
 
 	// Configure where Felix gets its routing information.
 	// - workloadIPs: use workload endpoints to construct routes.
@@ -398,6 +399,34 @@ type Config struct {
 	useNodeResourceUpdates bool
 }
 
+// Copy makes a copy of the object.  Internal state is deep copied but config parameters are only shallow copied.
+// This saves work since updates to the copy will trigger the config params to be recalculated.
+func (config *Config) Copy() *Config {
+	// Start by shallow-copying the object.
+	cp := *config
+
+	// Copy the internal state over as a deep copy.
+	cp.internalOverrides = map[string]string{}
+	for k, v := range config.internalOverrides {
+		cp.internalOverrides[k] = v
+	}
+
+	cp.sourceToRawConfig = map[Source]map[string]string{}
+	for k, v := range config.sourceToRawConfig {
+		cp.sourceToRawConfig[k] = map[string]string{}
+		for k2, v2 := range v {
+			cp.sourceToRawConfig[k][k2] = v2
+		}
+	}
+
+	cp.rawValues = map[string]string{}
+	for k, v := range config.rawValues {
+		cp.rawValues[k] = v
+	}
+
+	return &cp
+}
+
 type ProtoPort struct {
 	Protocol string
 	Port     uint16
@@ -437,8 +466,8 @@ func (config *Config) IsLeader() bool {
 	return config.Variant == "CalicoEnterprise"
 }
 
-func (c *Config) InterfacePrefixes() []string {
-	return strings.Split(c.InterfacePrefix, ",")
+func (config *Config) InterfacePrefixes() []string {
+	return strings.Split(config.InterfacePrefix, ",")
 }
 
 func (config *Config) OpenstackActive() bool {

@@ -341,6 +341,9 @@ type Config struct {
 	// Same for VXLAN.
 	VXLANTunnelAddress net.IP
 
+	WireguardEnabled       bool
+	WireguardInterfaceName string
+
 	IptablesLogPrefix         string
 	IncludeDropActionInPrefix bool
 	EndpointToHostAction      string

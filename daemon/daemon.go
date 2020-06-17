@@ -397,11 +397,13 @@ configRetry:
 	}
 
 	if configParams.DebugPanicAfter > 0 {
-		go func(delay time.Duration) {
-			log.WithField("delay", delay).Warn("DebugPanicAfter is set, will panic after delay.")
-			time.Sleep(delay)
-			log.Panic("Panicking because config told me to!")
-		}(configParams.DebugPanicAfter)
+		log.WithField("delay", configParams.DebugPanicAfter).Warn("DebugPanicAfter is set, will panic after delay!")
+		go panicAfter(configParams.DebugPanicAfter)
+	}
+
+	if configParams.DebugSimulateDataRace {
+		log.Warn("DebugSimulateDataRace is set, will start some racing goroutines!")
+		simulateDataRace()
 	}
 
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
@@ -415,7 +417,7 @@ configRetry:
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
 	dpDriver, dpDriverCmd, dpStopChan = dp.StartDataplaneDriver(
-		configParams,
+		configParams.Copy(), // Copy to avoid concurrent access.
 		healthAggregator,
 		dpStatsCollector,
 		configChangedRestartCallback,
@@ -432,7 +434,13 @@ configRetry:
 		// (Otherwise, we pass in a nil channel, which disables such updates.)
 		connToUsageRepUpdChan = make(chan map[string]string, 1)
 	}
-	dpConnector := newConnector(configParams, connToUsageRepUpdChan, backendClient, v3Client, dpDriver, failureReportChan)
+	dpConnector := newConnector(
+		configParams.Copy(), // Copy to avoid concurrent access.
+		connToUsageRepUpdChan,
+		backendClient,
+		v3Client,
+		dpDriver,
+		failureReportChan)
 
 	// If enabled, create a server for the policy sync API.  This allows clients to connect to
 	// Felix over a socket and receive policy updates.
@@ -548,7 +556,7 @@ configRetry:
 	// do the dynamic calculation of ipset memberships and active policies
 	// etc.
 	asyncCalcGraph := calc.NewAsyncCalcGraph(
-		configParams,
+		configParams.Copy(), // Copy to avoid concurrent access.
 		licenseMonitor,
 		calcGraphClientChannels,
 		healthAggregator,

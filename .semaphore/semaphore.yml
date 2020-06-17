@@ -64,6 +64,8 @@ blocks:
   task:
     prologue:
       commands:
+      # Free up space on the build machine.
+      - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl
       - checkout
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
@@ -81,7 +83,7 @@ blocks:
       always:
         commands:
         - ./.semaphore/collect-artifacts
-        - artifact push --expire-in 4w job artifacts
+        - ./.semaphore/publish-artifacts
 - name: BPF UT/FV tests on new kernel
   dependencies: []
   task:
@@ -112,7 +114,7 @@ blocks:
         commands:
         - ./.semaphore/on-test-vm ${REPO_NAME}/.semaphore/collect-artifacts
         - gcloud --quiet compute scp "--zone=${ZONE}" "ubuntu@${VM_NAME}:${REPO_NAME}/artifacts" ./ --recurse
-        - artifact push --expire-in 4w job artifacts
+        - ./.semaphore/publish-artifacts
         - gcloud --quiet compute instances delete ${VM_NAME} --zone=${ZONE}
     secrets:
     - name: google-service-account-for-gce

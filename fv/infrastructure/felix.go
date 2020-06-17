@@ -49,6 +49,9 @@ type Felix struct {
 	// ExpectedVXLANTunnelAddr contains the IP that the infrastructure expects to
 	// get assigned to the VXLAN tunnel.  Filled in by AddNode().
 	ExpectedVXLANTunnelAddr string
+	// ExpectedWireguardTunnelAddr contains the IP that the infrastructure expects to
+	// get assigned to the Wireguard tunnel.  Filled in by AddNode().
+	ExpectedWireguardTunnelAddr string
 
 	// IP of the Typha that this Felix is using (if any).
 	TyphaIP string
@@ -228,6 +231,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	envVars := map[string]string{
 		// Enable core dumps.
 		"GOTRACEBACK": "crash",
+		"GORACE":      "history_size=2",
 		// Tell the wrapper to set the core file name pattern so we can find the dump.
 		"SET_CORE_PATTERN": "true",
 
