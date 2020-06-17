@@ -406,7 +406,11 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		CertFile:      config.Spec.EtcdCertFile,
 		KeyFile:       config.Spec.EtcdKeyFile,
 	}
-	tlsClient, _ := tlsInfo.ClientConfig()
+
+	tlsClient, err := tlsInfo.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	// go 1.13 defaults to TLS 1.3, which we don't support just yet
 	tlsClient.MaxVersion = tls.VersionTLS13
