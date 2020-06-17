@@ -5,7 +5,7 @@ description: Use Calico with a self-managed Kubernetes cluster in Microsoft Azur
 
 ### Big picture
 
-Use {{site.prodname}} with a self-managed Kubernetes cluster in Microsoft Azure. 
+Use {{site.prodname}} with a self-managed Kubernetes cluster in Microsoft Azure.
 
 ### Value
 
@@ -39,17 +39,17 @@ Before deploying, customize your cluster definition to use {{site.prodname}} for
    "networkPolicy": "calico"
  }
 ```
- 
-Or, start with this {% include open-new-window.html text='example cluster definition' url='https://github.com/Azure/aks-engine/blob/master/examples/networkpolicy/kubernetes-calico-azure.json' %} with these value already set, and customize to meet your needs. 
 
-Then, {% include open-new-window.html text='follow the ask-engine documentation to deploy your cluster' url='https://github.com/Azure/aks-engine/blob/master/docs/tutorials/deploy.md' %}, passing your cluster definition to `aks-engine deploy` via the `-m` flag. 
+Or, start with this {% include open-new-window.html text='example cluster definition' url='https://github.com/Azure/aks-engine/blob/master/examples/networkpolicy/kubernetes-calico-azure.json' %} with these value already set, and customize to meet your needs.
+
+Then, {% include open-new-window.html text='follow the ask-engine documentation to deploy your cluster' url='https://github.com/Azure/aks-engine/blob/master/docs/tutorials/deploy.md' %}, passing your cluster definition to `aks-engine deploy` via the `-m` flag.
 
 The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:Azure,CNI:Azure,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}  
+{% include geek-details.html details='Policy:Calico,IPAM:Azure,CNI:Azure,Overlay:No,Routing:VPC Native,Datastore:Kubernetes' %}
 
 #### Other options and tools
 
-##### {{site.prodname}} networking 
+##### {{site.prodname}} networking
 
 You can also deploy {{site.prodname}} for both networking and policy enforcement. In this mode, {{site.prodname}} uses a VXLAN-based overlay network that masks the IP addresses of the pods from the underlying Azure VNET. This can be useful in large deployments or when running multiple clusters and IP address space is a big concern.
 
@@ -64,7 +64,7 @@ Terraform is a tool for automating infrastructure provisioning using declarative
 
 ##### kubeadm
 
-{% include open-new-window.html text='kubeadm' url='https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/' %} is a command line tool for bootstrapping a Kubernetes cluster on top of already-provisioned compute resources, like VMs in a cloud or bare metal hosts. Unlike aks-engine which handles provisioning cloud resources, installing Kubernetes, and installing {{site.prodname}}, kubeadm only handles the second step of installing Kubernetes. You should proceed to install {{site.prodname}} after completing kubeadm install. 
+{% include open-new-window.html text='kubeadm' url='https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/' %} is a command line tool for bootstrapping a Kubernetes cluster on top of already-provisioned compute resources, like VMs in a cloud or bare metal hosts. Unlike aks-engine which handles provisioning cloud resources, installing Kubernetes, and installing {{site.prodname}}, kubeadm only handles the second step of installing Kubernetes. You should proceed to install {{site.prodname}} after completing kubeadm install.
 
 ##### Kubespray
 

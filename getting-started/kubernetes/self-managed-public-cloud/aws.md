@@ -5,7 +5,7 @@ description: Use Calico with a self-managed Kubernetes cluster in Amazon Web Ser
 
 ### Big picture
 
-Use {{site.prodname}} with a self-managed Kubernetes cluster in Amazon Web Services (AWS). 
+Use {{site.prodname}} with a self-managed Kubernetes cluster in Amazon Web Services (AWS).
 
 ### Value
 
@@ -34,11 +34,11 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
 1. {% include open-new-window.html text='Install kops' url='https://kops.sigs.k8s.io/install/' %} on your workstation.
 1. {% include open-new-window.html text='Set up your environment for AWS' url='https://kops.sigs.k8s.io/getting_started/aws/' %} .
   1. Be sure to {% include open-new-window.html text='set up an S3 state store' url='https://kops.sigs.k8s.io/getting_started/aws/#cluster-state-storage' %} and export its name:
-  
+
      ```
      export KOPS_STATE_STORE=s3://name-of-your-state-store-bucket
      ```
-1. Configure kops to use {{site.prodname}} for networking.  
+1. Configure kops to use {{site.prodname}} for networking.
    The easiest way to do this is to pass `--networking calico` to kops when creating the cluster. For example:
 
    ```
@@ -55,9 +55,9 @@ To use kops to create a cluster with {{site.prodname}} networking and network po
    ```
 
 The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:etcd' %}   
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:etcd' %}
 
-You can further customize the {{site.prodname}} install with {% include open-new-window.html text='options listed in the kops documentation' url='https://kops.sigs.k8s.io/networking/#calico-example-for-cni-and-network-policy' %}. 
+You can further customize the {{site.prodname}} install with {% include open-new-window.html text='options listed in the kops documentation' url='https://kops.sigs.k8s.io/networking/#calico-example-for-cni-and-network-policy' %}.
 
 #### Other options and tools
 
