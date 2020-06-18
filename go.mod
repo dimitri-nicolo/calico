@@ -32,11 +32,11 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/olivere/elastic/v7 v7.0.6
 	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.0
-	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
+	github.com/onsi/gomega v1.7.1
+	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/apiserver v0.0.0-20200612232129-da11a3ec04bd
+	github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
