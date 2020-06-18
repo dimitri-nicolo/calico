@@ -1,6 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
-
-package commands
+package common
 
 import (
 	. "github.com/onsi/ginkgo/extensions/table"
