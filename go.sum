@@ -326,6 +326,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20200506164255-6c40e2856338 h1:8JS
 github.com/tigera/libcalico-go-private v0.0.0-20200506164255-6c40e2856338/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v0.0.0-20200615141454-fabaf0f18385 h1:9MA5f8yCFFKLG/YUvnpRUP/JMUAM/l455rcP3C0NnFk=
 github.com/tigera/libcalico-go-private v0.0.0-20200615141454-fabaf0f18385/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2 h1:Bn39foXEj+W8M+98UW/wr5oLh0/gY4eBh3SS/4vsKtw=
+github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
 github.com/tigera/licensing v2.5.1+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/ts-queryserver v2.6.2+incompatible h1:48kCGSe+n70FKRcGErVBbUX7R8r6xQv9gO4ugMBUCms=
