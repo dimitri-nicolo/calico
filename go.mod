@@ -28,6 +28,7 @@ require (
 
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
+	github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 
@@ -41,6 +42,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200617204528-35a7eaa21090
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
