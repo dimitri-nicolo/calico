@@ -635,6 +635,8 @@ github.com/tigera/libcalico-go-private v0.0.0-20200612214121-4f91fa3c0631 h1:WOE
 github.com/tigera/libcalico-go-private v0.0.0-20200612214121-4f91fa3c0631/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v0.0.0-20200615141454-fabaf0f18385 h1:9MA5f8yCFFKLG/YUvnpRUP/JMUAM/l455rcP3C0NnFk=
 github.com/tigera/libcalico-go-private v0.0.0-20200615141454-fabaf0f18385/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2 h1:Bn39foXEj+W8M+98UW/wr5oLh0/gY4eBh3SS/4vsKtw=
+github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56 h1:MhaYRI9GBwqeJ+egYJ/vyGhbndRn52LX9GLcEJ9ms7Y=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2 h1:7+/xd2p9ukwVQooJyeFR9XdpHAV4J+gRts3uLG/NAII=
@@ -642,8 +644,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2/go.m
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a h1:UcfIHveY0DOA2L1NC7ML1OGMICOhzA55qDDHf3xsgHE=
 github.com/tigera/licensing v0.0.0-20200508070150-c531b3ea4a9a/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
-github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 h1:d3s/0EKVB1BsRoQ12TWHbO7xWmplpU1bXJPSYu9qupI=
-github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
+github.com/tigera/licensing v0.0.0-20200617233549-fa90126a1814 h1:x+gj+Po9qW34G2MdMLSo24YkAGKBsL0Y00tPaXjBGs0=
+github.com/tigera/licensing v0.0.0-20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
