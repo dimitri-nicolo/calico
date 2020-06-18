@@ -5,7 +5,7 @@ description: Use Calico with a self-managed Kubernetes cluster in Google Compute
 
 ### Big picture
 
-Use {{site.prodname}} with a self-managed Kubernetes cluster in Google Compute Engine (GCE). 
+Use {{site.prodname}} with a self-managed Kubernetes cluster in Google Compute Engine (GCE).
 
 ### Value
 
@@ -105,7 +105,7 @@ Install Docker on the controller VM and each worker VM.  On each VM run:
 
 ```
 sudo apt update
-sudo apt install -y docker.io 
+sudo apt install -y docker.io
 sudo systemctl enable docker.service
 sudo apt install -y apt-transport-https curl
 ```
@@ -173,7 +173,7 @@ kubectl apply -f calico.yaml
 ```
 
 The geeky details of what you get:
-{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}   
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
 
 #### Other tools and options
 
@@ -187,5 +187,5 @@ You may have noticed that the bulk of the above instructions are about provision
 
 ### Next steps
 
-- {% include open-new-window.html text='Video: Everything you need to know about Kubernetes networking on Google cloud' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-google-cloud/' %} 
+- {% include open-new-window.html text='Video: Everything you need to know about Kubernetes networking on Google cloud' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-google-cloud/' %}
 - [Try out {{site.prodname}} network policy]({{site.baseurl}}/security/calico-network-policy)

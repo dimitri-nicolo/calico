@@ -35,7 +35,7 @@ You can control which pools {{site.prodname}} uses for each pod using
 
 - node selectors
 - an annotation on the pod’s namespace, or
-- an annotation on the pod’s namespace
+- an annotation on the pod
 
 {{site.prodname}} also supports the **host-local** IPAM plugin. However, when using the host-local IPAM plugin some {{site.prodname}} features are not available.
 

@@ -16,7 +16,7 @@ Install {{site.prodname}} on an AKS managed Kubernetes cluster.
 
 #### Gather required resources
 
-- Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings.   
+- Ensure that your Azure account has IAM permissions to create Kubernetes ClusterRoles and ClusterRoleBindings.
 This is required for applying manifests. The easiest way to grant permissions is to assign the "Azure Kubernetes Service Cluster Admin Role" to your user account. For help, see {% include open-new-window.html text='AKS access control' url='https://docs.microsoft.com/en-us/azure/aks/control-kubeconfig-access' %}.
 - Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
@@ -25,7 +25,7 @@ This is required for applying manifests. The easiest way to grant permissions is
 Ensure that your AKS cluster meets the following requirements.
 
   - Azure CNI networking plugin is used with transparent mode
-  - Network policy is not set.   
+  - Network policy is not set.
   This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
 
 ##### Using Azure Resource Manager (ARM) template
@@ -143,5 +143,5 @@ The geeky details of what you get:
 - [Configure access to {{site.prodname}} Enterprise Manager]({{site.baseurl}}/getting-started/cnx/access-the-manager)
 - {% include open-new-window.html text='Video: Everything you need to know about Kubernetes networking on Azure' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-azure/' %}
 - [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
-- [Get started with Calico network policy]({{ site.baseurl }}/security/calico-network-policy)
+- [Get started with {{site.prodname}} network policy]({{ site.baseurl }}/security/calico-network-policy)
 - [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)

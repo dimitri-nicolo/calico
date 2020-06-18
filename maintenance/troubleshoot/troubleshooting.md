@@ -146,7 +146,7 @@ varies by Linux distribution. The following steps work best on Ubuntu systems.
 
    ```
    [keyfile]
-   unmanaged-devices=interface-name:cali*;interface-name:tunl*
+   unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico
    ```
 
 1. Restart NetworkManager.

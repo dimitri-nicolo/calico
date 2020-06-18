@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: logstorages.operator.tigera.io
   annotations:
-    "helm.sh/hook": "crd-install"
+    helm.sh/hook: crd-install
 spec:
   group: operator.tigera.io
   names:
