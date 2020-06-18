@@ -699,6 +699,8 @@ github.com/tigera/apiserver v0.0.0-20200421235523-112604167a7b h1:XCB/qqtqtZFXUT
 github.com/tigera/apiserver v0.0.0-20200421235523-112604167a7b/go.mod h1:Amt3+ZSrUVojcVgOB5pb/HGawLHsRRNA9RWncn1sWdM=
 github.com/tigera/apiserver v0.0.0-20200615144849-4905f5bf6e65 h1:pC760ldZ1FUBkTSlS14ef4myfzAqHX8p0vayOSPrb9Y=
 github.com/tigera/apiserver v0.0.0-20200615144849-4905f5bf6e65/go.mod h1:ZxumkbUyFXzGhP1c11fYn0b65tD9x0Ym3fXfvVEbbAA=
+github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32 h1:viKxUQ8CxDitCz1m8SqdtEgwTgFx4qhZUy5mIkoWmhM=
+github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32/go.mod h1:qX4LqrxahAYcQhNg3hu3yNpuJtSORp3DwBt21yVLvUU=
 github.com/tigera/felix-private v0.0.0-20200522041845-dff8eefbf4ac h1:vgspstCMhZrHKi+MuXCdi7iWZmJXrRieBMOphWKbATo=
 github.com/tigera/felix-private v0.0.0-20200522041845-dff8eefbf4ac/go.mod h1:H6A5e5IfjG7MM6aTTgzthmkQzWTyOKC9lQ0J3ydhcQc=
 github.com/tigera/felix-private v0.0.0-20200526120722-80e43111461b h1:V1+IpRrJaDkYYAyFOe70OzZpNUMJa30xlCdLcsUghDE=
@@ -749,6 +751,8 @@ github.com/tigera/lma v0.0.0-20200613004830-945148751bfd h1:uYPSdyo/fV+ssXiqTZAt
 github.com/tigera/lma v0.0.0-20200613004830-945148751bfd/go.mod h1:zI5UqJcyeFLMD9cB+iqfBgQj9hTgWEMcF4hdlGWwfEY=
 github.com/tigera/lma v0.0.0-20200615190527-e7670d515313 h1:ySbvMyWukInoK0BfuRoLhj97y/xInSAi61okmPg/bgE=
 github.com/tigera/lma v0.0.0-20200615190527-e7670d515313/go.mod h1:zdEm077oMXTEysDzuoojc9+UDcGMsiwj8RqMkO+yeBs=
+github.com/tigera/lma v0.0.0-20200618192437-3938b1d1758e h1:suNDb80/6JUmVAvNOKY24Rw4t3/G6xu8A6EDcCvmRhk=
+github.com/tigera/lma v0.0.0-20200618192437-3938b1d1758e/go.mod h1:2u+ymmK7gKJM3vLDUeNi09JylghJr478M6ydlhG1+Os=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200522030523-6bf40a9b3418/go.mod h1:dx58Wyk2Xw9neQX1UOUq0v3+wdpuKSXP23Fvea0SLLk=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200528030447-9b62bdfac8b4/go.mod h1:NC3wnyW/AawWEGLDr1sR4+Q3CXCtQloloVKFY4sGV2s=
