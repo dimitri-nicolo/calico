@@ -713,6 +713,8 @@ github.com/tigera/felix-private v0.0.0-20200611221354-f35bf292044e h1:rqzrBpClCO
 github.com/tigera/felix-private v0.0.0-20200611221354-f35bf292044e/go.mod h1:lSMKWC129uKQutswLcyTKZRtjqHqLFdTjHD1l3IAvr0=
 github.com/tigera/felix-private v0.0.0-20200615154255-aa883fc90797 h1:j4CNuKgx+pkNOQGT1I9MWp+1RYG1JPSI+TRUTUIKJsA=
 github.com/tigera/felix-private v0.0.0-20200615154255-aa883fc90797/go.mod h1:lSMKWC129uKQutswLcyTKZRtjqHqLFdTjHD1l3IAvr0=
+github.com/tigera/felix-private v0.0.0-20200618040425-3b8ab8aad499 h1:fg4ki8lZq7T5CxVVQ9fRxeqe9IHycCZbjn04RgdO+5k=
+github.com/tigera/felix-private v0.0.0-20200618040425-3b8ab8aad499/go.mod h1:k+RE+yPhomthdR730dvPUBqcUMzpRfLYMMAV085xeYM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56 h1:MhaYRI9GBwqeJ+egYJ/vyGhbndRn52LX9GLcEJ9ms7Y=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200522000952-c66abd166b56/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200527160814-71f7883c4323 h1:FOxhFHz3LuqBMq6Fm+uPyiyXOf+H9i9K3qkMuXlMMw0=
@@ -725,10 +727,14 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3 h1:q
 github.com/tigera/libcalico-go-private v1.7.2-0.20200611234147-cc1d0dd2bea3/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385 h1:Gj5n0WsPo8CuQxlfgCEL8Ou6//QrByYXOvjcAo6paaM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200615141454-fabaf0f18385/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2 h1:7+/xd2p9ukwVQooJyeFR9XdpHAV4J+gRts3uLG/NAII=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a h1:maYOHHjIuWEyMZyvPbKaDjcpDaoHyaXPQB9pb6gMRaU=
 github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a/go.mod h1:HBMpt+8q5SLjN/LBNq4/JcGuQRCL3G1xwGrerz5q/L0=
+github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 h1:d3s/0EKVB1BsRoQ12TWHbO7xWmplpU1bXJPSYu9qupI=
+github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
 github.com/tigera/lma v0.0.0-20200522020433-4f897e47e836 h1:ob8INE9vg6n/H+KMDJLfIhiphcyIEun1CqxWP0qSFp0=
 github.com/tigera/lma v0.0.0-20200522020433-4f897e47e836/go.mod h1:Xts9TsMbZlD/xtkTr14NTWUKoy1OPGRruMCmQ/LO9HU=
 github.com/tigera/lma v0.0.0-20200527190516-af276d611add h1:kQ1pfnOsPPR65FqxC9z36UuULlQ+F/fMIjblt+MraRA=
@@ -750,6 +756,7 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200601141056-c2c4cdb19c4b/go.mo
 github.com/tigera/typha-private v0.6.0-beta1.0.20200610030616-fceb1141f45b/go.mod h1:yiwzyKv4k+ocIR9XJInpHumoWUfMV0HxwYMtJPC/Lm8=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200612000204-cec874a6ce3b/go.mod h1:uyXaXqdMBQZvCU3YYEmHag3tiB3hzC6+YNY3ljZEdRk=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200616030500-9f8cc298348f/go.mod h1:pK5IK2wHMcr3TzqNQj1ldijXVcj14sJWHHbTMHY4tOA=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200618030533-03bdc09c783b/go.mod h1:DCuQ107MtMCkXd+tOPiHbOTByRGas1MqTNo/9eF6caw=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
