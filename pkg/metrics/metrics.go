@@ -6,8 +6,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/projectcalico/node/pkg/bgp"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/node/pkg/bgp"
 )
 
 // DefaultPrometheusPort is the default port value for the Prometheus metrics server

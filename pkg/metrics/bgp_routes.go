@@ -7,8 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/node/pkg/bgp"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/projectcalico/node/pkg/bgp"
 )
 
 // Calico Enterprise BGP Metrics

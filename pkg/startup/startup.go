@@ -27,6 +27,14 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	kapiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -41,13 +49,6 @@ import (
 	"github.com/projectcalico/node/pkg/calicoclient"
 	"github.com/projectcalico/node/pkg/startup/autodetection"
 	"github.com/projectcalico/node/pkg/startup/autodetection/ipv4"
-	log "github.com/sirupsen/logrus"
-	kapiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -372,7 +373,7 @@ func waitForConnection(ctx context.Context, c client.Interface) {
 		if err != nil {
 			switch err.(type) {
 			case cerrors.ErrorConnectionUnauthorized:
-				log.Warn("Connection to the datastore is unauthorized")
+				log.WithError(err).Warn("Connection to the datastore is unauthorized")
 				terminate()
 			case cerrors.ErrorDatastoreError:
 				log.WithError(err).Info("Hit error connecting to datastore - retry")

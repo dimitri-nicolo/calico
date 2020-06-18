@@ -24,10 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/node/pkg/bgp"
-	"github.com/projectcalico/node/pkg/metrics"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/projectcalico/node/pkg/bgp"
+	"github.com/projectcalico/node/pkg/metrics"
 )
 
 var felixReadinessEp string

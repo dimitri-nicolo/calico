@@ -16,8 +16,8 @@
 package ipv4
 
 import (
-	"net"
 	"errors"
+	"net"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -12,11 +12,13 @@ require (
 	github.com/projectcalico/felix v3.8.5+incompatible
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
+	github.com/projectcalico/typha v0.7.3-0.20200601160722-b55a2f1ba49b
 	github.com/prometheus/client_golang v1.1.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
+
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v8.0.0+incompatible
@@ -25,11 +27,11 @@ require (
 replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200603041419-404294b9cd77
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200602042504-32fdece72c38
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200529155941-9edb0d3d0877
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200601141056-c2c4cdb19c4b
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200617223621-7c00e77f8ff2
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200617214853-e45a9532910c
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200617210821-b7333bc9b9e2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200617204528-35a7eaa21090
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200617210450-e4e61dfe7c3e
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
