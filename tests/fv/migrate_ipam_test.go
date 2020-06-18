@@ -43,6 +43,7 @@ func init() {
 }
 
 func TestDatastoreMigrationIPAM(t *testing.T) {
+	t.Skip("Datastore migration not supported in Enterprise")
 	RegisterTestingT(t)
 
 	ctx := context.Background()

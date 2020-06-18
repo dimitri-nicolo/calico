@@ -14,6 +14,7 @@
 import logging
 import copy
 import os
+import unittest
 
 from nose_parameterized import parameterized
 
@@ -27,6 +28,7 @@ from tests.st.utils.data import *
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 logger = logging.getLogger(__name__)
 
+@unittest.skip("Datastore migration not supported in Enterprise")
 class TestCalicoctlMigrate(TestBase):
     """
     Test calicoctl datastore migration works
