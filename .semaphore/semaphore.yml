@@ -12,6 +12,7 @@ global_job_config:
     - name: private-repo
     # Mount a secret for pulling images from GCR.
     - name: tigera-dev-ci-pull-credentials
+    - name: google-service-account-for-gcr
   prologue:
     commands:
       # Correct permissions since they are too open by default:
@@ -40,6 +41,23 @@ blocks:
     minutes: 90
   dependencies: []
   task:
+    secrets:
+      # Mount the github SSH secret for pulling private repositories.
+      - name: private-repo
+      # Mount a secret for pulling images from GCR.
+      - name: tigera-dev-ci-pull-credentials
+    prologue:
+      commands:
+        # Correct permissions since they are too open by default:
+        - chmod 0600 ~/.keys/*
+        # Add the key to the ssh agent:
+        - ssh-add ~/.keys/*
+        # Login to docker in order to pull images.
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+        - checkout
+        # Semaphore is doing shallow clone on a commit without tags.
+        # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+        - git fetch --unshallow
     jobs:
     - name: "make ci"
       commands:
@@ -59,6 +77,21 @@ blocks:
 - name: "Push images (non-PR builds only)"
   dependencies: ["Tests"]
   task:
+    secrets:
+      # Mount a secret for pulling images from GCR.
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        # Correct permissions since they are too open by default:
+        - chmod 0600 ~/.keys/*
+        # Add the key to the ssh agent:
+        - ssh-add ~/.keys/*
+        # Login to docker in order to pull images.
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+        - checkout
+        # Semaphore is doing shallow clone on a commit without tags.
+        # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+        - git fetch --unshallow
     jobs:
     - name: "make cd"
       commands:
