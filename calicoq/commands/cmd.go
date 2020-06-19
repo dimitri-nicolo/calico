@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -84,7 +84,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient, cfg := GetClient(cbs.configFile)
-	syncer := felixsyncer.New(bclient, cfg.Spec, cbs)
+	syncer := felixsyncer.New(bclient, cfg.Spec, cbs, true)
 	syncer.Start()
 }
 
