@@ -104,7 +104,7 @@ fv-containerized: build-image run-etcd
 
 .PHONY: st st-containerized
 st: bin/calicoq
-	CALICOQ=`pwd`/$^ st/run-test
+	KUBECONFIG=st/kubeconfig CALICOQ=`pwd`/$^ st/run-test
 
 st-containerized: build-image $(TOOLING_IMAGE_CREATED)
 	docker run --net=host --privileged \
@@ -113,6 +113,7 @@ st-containerized: build-image $(TOOLING_IMAGE_CREATED)
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
+		-e KUBECONFIG=st/kubeconfig \
 		$(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) \
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 
