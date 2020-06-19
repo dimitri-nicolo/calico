@@ -24,7 +24,13 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+# Figure out the GID of the docker group so that we can set the user inside the
+# container to be a member of that group. This, combined with mounting the
+# docker socket, allows the UTs to start docker containers.
+MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/* -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) -v /var/run/docker.sock:/var/run/docker.sock:rw -e FOSSA_API_KEY=$(FOSSA_API_KEY)
 
 include Makefile.common
 
@@ -100,35 +106,6 @@ VERSION_FLAGS=-X main.VERSION=$(CONTROLLER_VERSION) \
 	-X main.GIT_REVISION=$(CONTROLLER_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
-
-# Figure out the GID of the docker group so that we can set the user inside the
-# container to be a member of that group. This, combined with mounting the
-# docker socket, allows the UTs to start docker containers.
-MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
-
-# A note on GOCACHE: the default directory for the build cache is
-# `/home/user/.cache/go-build`. However, if we ask Docker to volume mount this
-# directory, then the parent directory `/home/user` gets owned by root, meaning
-# our later attempts to set gitconfig will fail. So, we mount the cache in
-# `/go-build` and set the GOCACHE environment variable to use it.
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   mkdir -p .go-build-cache && \
-                   mkdir -p bin $(GOMOD_CACHE) && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -e GOARCH=$(ARCH) \
-                              -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-                              -v $(CURDIR)/../:/intrusion-detection/:rw \
-                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -v $(CURDIR)/.go-build-cache:/go-build:rw \
-                              -e GOCACHE=/go-build \
-                              -e GOSUMDB=off \
-                              -v /var/run/docker.sock:/var/run/docker.sock:rw \
-                              -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) \
-                              -w /intrusion-detection/controller \
-                              $(CALICO_BUILD)
 
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
