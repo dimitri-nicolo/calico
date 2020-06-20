@@ -26,8 +26,6 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
 the upgrade.
 
-{% include content/hostendpoints-upgrade.md orch="Kubernetes" %}
-
 ## Upgrade from 3.0 or later
 
 1. Download the new operator manifest.
@@ -101,8 +99,6 @@ the upgrade.
 
 1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
    add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
-
-{% include content/auto-hostendpoints-migrate.md orch="Kubernetes" %}
 
 ## Upgrade from 2.6 or 2.7
 
