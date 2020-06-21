@@ -26,7 +26,79 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Retaining data is only recommended for users that use a valid Elastic license. Trial licenses can get invalidated during 
 the upgrade.
 
-{% include content/hostendpoints-upgrade.md orch="Kubernetes" %}
+## Upgrade from 3.0 or later
+
+1. Download the new operator manifest.
+   ```bash
+   curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
+   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
+   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
+   downloaded in the previous step.
+
+1. Apply the Tigera operator.
+   ```bash
+   kubectl apply -f tigera-operator.yaml
+   ```
+
+1. Install the new network policies to secure {{site.prodname}} component communications.
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+
+## Upgrade from 2.8
+
+1. Export your current CRs for PrometheusRule to a file.
+   ```bash
+   kubectl get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
+   ```
+
+1. Delete the PrometheusRule CRD.
+    ```bash
+   kubectl delete crd prometheusrules.monitoring.coreos.com 
+   ```
+
+1. Download the new operator manifest.
+   ```bash
+   curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
+   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
+   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
+   downloaded in the previous step.
+
+   **Note**: There is no need to update `custom-resources.yaml` or
+   [configure the operator]({{site.baseurl}}/getting-started/private-registry#configure-the-operator-to-use-images-from-your-private-registry).
+   {: .alert .alert-info}
+
+1. Install the new network policies to secure {{site.prodname}} component communications.
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+
+1. Apply the Tigera operator.
+   ```bash
+   kubectl apply -f tigera-operator.yaml
+   ```
+   
+1. Apply the CRs for PrometheusRule.
+   ```bash
+   kubectl apply -f prometheusrules.yaml  
+   ```
+
+1. You can monitor progress with the following command:
+   ```bash
+   watch kubectl get tigerastatus
+   ```
+
+   **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
+   {: .alert .alert-info}
+
+1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
+   add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
 
 ## Upgrade from 2.6 or 2.7
 
@@ -137,56 +209,3 @@ the upgrade.
 1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
    add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
 
-## Upgrade from 2.8
-
-1. Export your current CRs for PrometheusRule to a file.
-   ```bash
-   kubectl get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
-   ```
-
-1. Delete the PrometheusRule CRD.
-    ```bash
-   kubectl delete crd prometheusrules.monitoring.coreos.com 
-   ```
-
-1. Download the new operator manifest.
-   ```bash
-   curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
-   ```
-
-1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
-   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
-   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
-   downloaded in the previous step.
-
-   **Note**: There is no need to update `custom-resources.yaml` or
-   [configure the operator]({{site.baseurl}}/getting-started/private-registry#configure-the-operator-to-use-images-from-your-private-registry).
-   {: .alert .alert-info}
-
-1. Install the new network policies to secure {{site.prodname}} component communications.
-   ```bash
-   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-   ```
-
-1. Apply the Tigera operator.
-   ```bash
-   kubectl apply -f tigera-operator.yaml
-   ```
-   
-1. Apply the CRs for PrometheusRule.
-   ```bash
-   kubectl apply -f prometheusrules.yaml  
-   ```
-
-1. You can monitor progress with the following command:
-   ```bash
-   watch kubectl get tigerastatus
-   ```
-
-   **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
-   {: .alert .alert-info}
-
-1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
-   add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
-
-{% include content/auto-hostendpoints-migrate.md orch="Kubernetes" %}
