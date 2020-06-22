@@ -1,9 +1,11 @@
 ---
 title: Install from a private registry
 description: Install and configure Calico Enterprise in a private registry. 
+canonical_url: '/getting-started/private-registry/private-registry-regular'
 ---
 
 {% assign operator = site.data.versions.first.tigera-operator %}
+{% assign operator-init = site.data.versions.first.tigera-operator-init %}
 
 ### Big picture
 
@@ -30,7 +32,10 @@ An **image pull secret** is used in Kubernetes to deploy container images from a
 - [Run the operator using images from your private registry](#run-the-operator-using-images-from-your-private-registry)
 - [Configure the operator to use images from your private registry](#configure-the-operator-to-use-images-from-your-private-registry)
 
-{% include content/private-registry.md %}
+{% include content/private-registry-regular.md %}
+
+>**Note:** See [Install from an image path in a private registry]({{site.baseurl}}/getting-started/private-registry/private-registry-image-path#big-picture) page for more information on installing using a private registry image path.
+{: .alert .alert-info }
 
 >**Note:** See [the Installation resource reference page]({{site.baseurl}}/reference/installation/api) for more information on the `imagePullSecrets` and `registry` fields.
 {: .alert .alert-info }

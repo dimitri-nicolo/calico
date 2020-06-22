@@ -34,8 +34,8 @@ the upgrade.
    ```
 
 1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
-   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
-   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
+   [push the new images]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#push-calico-enterprise-images-to-your-private-registry)
+   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#run-the-operator-using-images-from-your-private-registry)
    downloaded in the previous step.
 
 1. Apply the Tigera operator.
@@ -66,12 +66,12 @@ the upgrade.
    ```
 
 1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
-   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
-   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
+   [push the new images]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#push-calico-enterprise-images-to-your-private-registry)
+   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#run-the-operator-using-images-from-your-private-registry)
    downloaded in the previous step.
 
    **Note**: There is no need to update `custom-resources.yaml` or
-   [configure the operator]({{site.baseurl}}/getting-started/private-registry#configure-the-operator-to-use-images-from-your-private-registry).
+   [configure the operator]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#configure-the-operator-to-use-images-from-your-private-registry).
    {: .alert .alert-info}
 
 1. Install the new network policies to secure {{site.prodname}} component communications.
@@ -167,13 +167,13 @@ the upgrade.
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
 
-1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
-   [push the new images]({{site.baseurl}}/getting-started/private-registry#push-calico-enterprise-images-to-your-private-registry)
-   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry#run-the-operator-using-images-from-your-private-registry)
+1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry/private-registry-regular), you will need to
+   [push the new images]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#push-calico-enterprise-images-to-your-private-registry)
+   and then [update the manifest]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#run-the-operator-using-images-from-your-private-registry)
    downloaded in the previous step.
 
    **Note**: There is no need to update `custom-resources.yaml` or
-   [configure the operator]({{site.baseurl}}/getting-started/private-registry#configure-the-operator-to-use-images-from-your-private-registry).
+   [configure the operator]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#configure-the-operator-to-use-images-from-your-private-registry).
    {: .alert .alert-info}
 
 1. Install the new network policies to secure {{site.prodname}} component communications.

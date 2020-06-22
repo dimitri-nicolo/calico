@@ -440,7 +440,7 @@ release-archive: release-prereqs $(RELEASE_DIR).tgz
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
 	cp collect-ocp-manifests.sh $(RELEASE_DIR)
 	# converting the generated html file to markdown format for manifest archive.
-	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
+	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
 	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
 $(RELEASE_DIR)/README.md:

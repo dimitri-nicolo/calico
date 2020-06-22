@@ -14,7 +14,7 @@ layout: null
 - [Configure pull access to Tigera's private container registry]({{ "/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key" | absolute_url }} ).
 
 
-{% include content/private-registry.md %}
+{% include content/private-registry-regular.md %}
 
 >**Note:** See [the Installation resource reference page]( {{ "/reference/installation/api" | absolute_url }} ) for more information on the `imagePullSecrets` and `registry` fields.
 

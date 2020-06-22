@@ -18,7 +18,7 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
 
 def test_tigera_image_registry_updated():
-    req = requests.get("%s/%s/getting-started/private-registry" % (DOCS_URL, RELEASE_STREAM))
+    req = requests.get("%s/%s/getting-started/private-registry/private-registry-regular" % (DOCS_URL, RELEASE_STREAM))
     assert req.status_code == 200
 
     print '[INFO] checking image registry update in docs uses {0} registry'.format(REGISTRY)
@@ -37,7 +37,7 @@ def test_tigera_image_registry_updated():
         assert ver_image[1] == expected_ver
 
 def test_non_tigera_image_registry_updated():
-    req = requests.get("%s/%s/getting-started/private-registry" % (DOCS_URL, RELEASE_STREAM))
+    req = requests.get("%s/%s/getting-started/private-registry/private-registry-regular" % (DOCS_URL, RELEASE_STREAM))
     assert req.status_code == 200
 
     expected_images = {k: v for k, v in release.get('components').items() if v.has_key('image') and not v.get('image').startswith('tigera/')}

@@ -42,7 +42,12 @@ section:
       - title: Change a cluster type
         path: /getting-started/mcm/change-cluster-type
   - title: Install from a private registry
-    path: /getting-started/private-registry
+    path: /getting-started/private-registry/
+    section:
+      - title: Install using default directories
+        path: /getting-started/private-registry/private-registry-regular
+      - title: Install using custom directories
+        path: /getting-started/private-registry/private-registry-image-path
   - title: Configure storage for logs and reports
     path: /getting-started/create-storage
   - title: AWS Security Group integration
