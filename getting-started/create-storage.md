@@ -125,6 +125,7 @@ parameters:
   type: pd-ssd
   replication-type: none
 reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
 ```
 
