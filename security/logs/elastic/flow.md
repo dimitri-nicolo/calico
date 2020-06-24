@@ -18,7 +18,7 @@ This information should assist you in constructing queries.
 | `action`              | keyword           | {::nomarkdown}<p>&#x25cf;&nbsp;<code>allow</code>: {{site.prodname}} accepted the flow.<br>&#x25cf;&nbsp;<code>deny</code>: {{site.prodname}} denied the flow.</p>{:/}  |
 | `bytes_in`            | long              | Number of incoming bytes since the last export. |
 | `bytes_out`           | long              | Number of outgoing bytes since the last export. |
-| `dest_ip`             | ip                | The IP address of the destination pod. |
+| `dest_ip`             | ip                | The IP address of the destination pod. A null value indicates aggregation. |
 | `dest_name`           | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the destination pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated or the endpoint is not a pod. Check <code>dest_name_aggr</code> for more information, such as the name of the pod if it was aggregated.</p>{:/} |
 | `dest_name_aggr`      | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The aggregated name of the destination pod.<br>&#x25cf;&nbsp;<code>pvt</code>: the endpoint is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet.</p>{:/} |
 | `dest_namespace`      | keyword           | Namespace of the destination pod. |
@@ -35,11 +35,11 @@ This information should assist you in constructing queries.
 | `packets_out`         | long              | Number of outgoing packets since the last export. |
 | `proto`               | keyword           | Protocol. |
 | `policies`            | array of keywords | The policy or policies that allowed or denied this flow. Staged policy names are prefixed with "staged:". |
-| `source_ip`           | ip                | The IP address of the source pod. A hyphen indicates aggregation. |
+| `source_ip`           | ip                | The IP address of the source pod. A null value indicates aggregation. |
 | `source_name`         | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the source pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated.</p>{:/} |
 | `source_name_aggr`    | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The aggregated name of the source pod.<br>&#x25cf;&nbsp;<code>pvt</code>: the endpoint is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet.</p>{:/} |
 | `source_namespace`    | keyword           | Namespace of the source pod. |
-| `source_port`         | long              | The source port. |
+| `source_port`         | long              | The source port. A null value indicates aggregation. |
 | `source_type`         | keyword           | Source endpoint type:wep: podnet: not a pod |
 | `source_labels`       | array of keywords | Labels applied to the source pod. A hyphen indicates aggregation. |
 | `original_source_ips` | array of ips      | List of external IP addresses collected from requests made to the cluster through an ingress resource. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
