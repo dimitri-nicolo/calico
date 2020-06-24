@@ -366,8 +366,9 @@ type Config struct {
 	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
 
 	SidecarAccelerationEnabled bool `config:"bool;false"`
-	XDPEnabled                 bool `config:"bool;true"`
-	GenericXDPEnabled          bool `config:"bool;false"`
+	// XDP is not supported in Calico Enterprise. Disable it by default.
+	XDPEnabled        bool `config:"bool;false"`
+	GenericXDPEnabled bool `config:"bool;false"`
 
 	// Config for egress gateways.
 	EgressIPSupport             string `config:"oneof(Disabled,EnabledPerNamespace,EnabledPerNamespaceOrPerPod);Disabled"`
