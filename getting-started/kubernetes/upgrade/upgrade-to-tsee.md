@@ -22,10 +22,10 @@ instead.
 
 {% include content/upgrade-operator-simple.md %}
 
-### Upgrade managed cloud clusters
+### Upgrade managed cloud clusters (EKS)
 
 Follow a slightly modified operator-based install process for {{site.prodname}}
-for your platform: substitute `kubectl apply` in place of `kubectl create`.
+for your EKS cluster: substitute `kubectl apply` in place of `kubectl create`.
 
 For example, in order to upgrade an [EKS cluster]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks):
 
@@ -34,9 +34,9 @@ For example, in order to upgrade an [EKS cluster]({{site.baseurl}}/getting-start
    kubectl apply -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}  # replace "create" with "apply"
    ```
 
-> **Note**: GKE upgrades from open source Calico are not currently supported.
+> **Note**: GKE and AKS upgrades from open source Calico are not currently supported. EKS is not production
+> ready due to limited testing.
 {: .alert .alert-info}
-
 
 ### Upgrade OpenShift clusters
 
