@@ -794,6 +794,8 @@ github.com/tigera/compliance v0.0.0-20200618203506-fae1a60ac80b h1:usOVx8dXh+tWN
 github.com/tigera/compliance v0.0.0-20200618203506-fae1a60ac80b/go.mod h1:8KFHWpZ3dSv0S+iwkJ1ZGasbDNqPo2BwSmqMfODZXgU=
 github.com/tigera/compliance v0.0.0-20200619081353-c259618c8035 h1:P5ClxNa0LBWbof9fKpU/aDsbwApAtPBnDvMCpncI0yI=
 github.com/tigera/compliance v0.0.0-20200619081353-c259618c8035/go.mod h1:JIt9oKuEkw28LPPDGUaBXdp+AISYnazrDMhLGj0F7TM=
+github.com/tigera/compliance v0.0.0-20200625081232-9a5e2e4a8a29 h1:rFiwQ7ZvlGmwE1aKifuo3b0Oz5UEdm2SqwFpogtEs+g=
+github.com/tigera/compliance v0.0.0-20200625081232-9a5e2e4a8a29/go.mod h1:ocQY7rkv5VxISx5Y7MafP/I08wytnit0ooS0R3g+syg=
 github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf h1:xsRuf/OpImM8eaZB8n+hmOZAwnWFGZI7TLapslLPfAc=
 github.com/tigera/felix-private v0.0.0-20200603013429-4cd8f79accaf/go.mod h1:0i/5ZcV1aumiFOdbhweFUD8WJry9oha+DeJf5DzOwSc=
 github.com/tigera/felix-private v0.0.0-20200611221354-f35bf292044e h1:rqzrBpClCOHJgWNcJkJdjbYVieV7WL7eq4Ma6oWhBWo=
@@ -804,6 +806,8 @@ github.com/tigera/felix-private v0.0.0-20200618040425-3b8ab8aad499 h1:fg4ki8lZq7
 github.com/tigera/felix-private v0.0.0-20200618040425-3b8ab8aad499/go.mod h1:k+RE+yPhomthdR730dvPUBqcUMzpRfLYMMAV085xeYM=
 github.com/tigera/felix-private v0.0.0-20200619040435-2ebdcc5abf14 h1:RDR0UANt1cYJ1oCWLweGp6vIQhk45i2jih+90wAVnh4=
 github.com/tigera/felix-private v0.0.0-20200619040435-2ebdcc5abf14/go.mod h1:4SELwD/B7OHACNtMVNWCWPazLgdfRR7nD0P1LLsJvEI=
+github.com/tigera/felix-private v0.0.0-20200624195757-433f0651a35d h1:On0LwBAOT2b44jXa6cq0pHHEtfq75OeGIWG9P88NHFg=
+github.com/tigera/felix-private v0.0.0-20200624195757-433f0651a35d/go.mod h1:4SELwD/B7OHACNtMVNWCWPazLgdfRR7nD0P1LLsJvEI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200529155941-9edb0d3d0877 h1:LJuMBaYj5KxD1S7MJueB7s/9Jpp7PiajFKRqVWjz7X0=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200529155941-9edb0d3d0877/go.mod h1:vEtrG/d4lOImVuQz/i8i9mo7dbLyXS6N+9Z+g5Tl3Ks=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200609230732-489c17c247ba h1:9KDdEa1+mPgmmdoQ+VEQILgzPvkDN5oT2XWWYnSBM4U=
