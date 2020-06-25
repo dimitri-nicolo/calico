@@ -24,7 +24,6 @@ require (
 	github.com/tigera/licensing v1.0.1-0.20200618213636-f5bf5cf12edb
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200401174654-e694b7bb0875
 	golang.org/x/mod v0.3.0 // indirect
-	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
 	golang.org/x/tools v0.0.0-20200601175630-2caf76543d99 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
@@ -40,7 +39,7 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200622141708-23e73be0507f
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200619040435-2ebdcc5abf14
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200624195757-433f0651a35d
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200618213614-8621ac10a305
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200619030524-2726713ebeae
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
