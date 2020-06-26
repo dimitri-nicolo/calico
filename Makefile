@@ -212,7 +212,15 @@ remote-deps: mod-download
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd` vendor/github.com/tigera/confd-private; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/Microsoft/SDN` vendor/github.com/Microsoft/SDN; \
-		chmod -R +w filesystem/etc/calico/confd/ config/ vendor'
+		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
+		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-apache bin/bpf; \
+		chmod -R +w bin/bpf; \
+		chmod +x bin/bpf/bpf-gpl/list-* bin/bpf/bpf-gpl/calculate-*; \
+		make -j 16 -C ./bin/bpf/bpf-apache/ all; \
+		make -j 16 -C ./bin/bpf/bpf-gpl/ all; \
+		cp bin/bpf/bpf-gpl/bin/* filesystem/usr/lib/calico/bpf/; \
+		cp bin/bpf/bpf-apache/bin/* filesystem/usr/lib/calico/bpf/; \
+		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/ vendor'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), amd64)
