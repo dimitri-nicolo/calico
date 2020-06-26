@@ -1,19 +1,26 @@
-FROM alpine:3
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1 as ubi
+RUN microdnf update
 
-RUN apk update && apk add ca-certificates
+# Create Empty root filesystem on /rootfs, copy only required linux utils
+# and supporting files.This filesystem act as placeholder for 
+# all files required in container.
 
-RUN addgroup -S voltrongroup 
-RUN adduser -S -D 999 voltrongroup 
+WORKDIR /rootfs
 
-# Add your binary to the image
+RUN mkdir -p etc/ssl/certs && \
+    cp /etc/ssl/certs/* etc/ssl/certs
+
 ADD bin/guardian-amd64 /guardian
+
+FROM scratch
+COPY --from=ubi /rootfs /
+# Add your binary to the image
+COPY --chown=1001 --from=ubi /guardian /guardian
 
 # Set the working directory to where you can run your application
 WORKDIR /
 
-RUN chown -R 999 /guardian
-
-USER 999
+USER 1001 
 
 # Now define the command-line call to start your application
 ENTRYPOINT ["/guardian"]
