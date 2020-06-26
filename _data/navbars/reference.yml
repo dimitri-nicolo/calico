@@ -80,6 +80,8 @@ section:
       path: /reference/resources/licensekey
     - title: Kubernetes controllers configuration
       path: /reference/resources/kubecontrollersconfig
+    - title: Managed cluster
+      path: /reference/resources/managedcluster
     - title: Network policy
       path: /reference/resources/networkpolicy
     - title: Network set
