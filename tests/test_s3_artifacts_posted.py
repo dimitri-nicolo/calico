@@ -9,8 +9,7 @@ from parameterized import parameterized
 PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = tests.RELEASE_STREAM
 HELM_CHARTS_BASE_URL = tests.HELM_CHARTS_BASE_URL
-HELM_CORE_URL = tests.HELM_CORE_URL
-HELM_EE_URL = tests.HELM_EE_URL
+HELM_OPERATOR_URL = tests.HELM_OPERATOR_URL
 ARCHIVES_BASE_URL = tests.ARCHIVES_BASE_URL
 ARCHIVES_FILE_URL = tests.ARCHIVE_FILE_URL
 
@@ -22,11 +21,8 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     print '[INFO] using _data/versions.yaml, discovered version: {0}-{1}'.format(RELEASE_VERSION, HELM_RELEASE)
 
 @parameterized({
-  'core': {
-    'url': HELM_CORE_URL,
-  },
-  'ee': {
-    'url': HELM_EE_URL,
+  'operator': {
+    'url': HELM_OPERATOR_URL,
   },
 }.items())
 def test_helm_chart_posted(name, chart):
