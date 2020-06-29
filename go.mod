@@ -5,8 +5,8 @@ go 1.13
 require (
 	github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4 // indirect
 	github.com/kelseyhightower/confd v0.0.0-00010101000000-000000000000
-	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.12.0
+	github.com/onsi/gomega v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/cni-plugin v3.8.2+incompatible
 	github.com/projectcalico/felix v3.8.5+incompatible
