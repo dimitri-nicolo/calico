@@ -447,7 +447,7 @@ $(RELEASE_DIR)/README.md:
 	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
 	@echo "Documentation for this release can be found at https://docs.tigera.io/$(RELEASE_STREAM)" >> $@
 	@echo "" >> $@
-	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/$(RELEASE_STREAM)/reference/manifest-archive" >> $@
+	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/$(RELEASE_STREAM)/operations/manifest-archive" >> $@
 	@echo "and use the appropriate manifest from the archive where ever you are prompted to download a manifest" >> $@
 	@echo "" >> $@
 	@echo "Example:" >> $@

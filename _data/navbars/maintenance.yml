@@ -9,6 +9,8 @@ section:
     path: /maintenance/logstorage/log-storage-requirements
   - title: Adjust log storage size
     path: /maintenance/logstorage/adjust-log-storage-size
+- title: Install a patch release
+  path: /maintenance/manifest-archive
 - title: Upgrade
   path: /maintenance/upgrading
   section:
