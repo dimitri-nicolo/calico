@@ -1,9 +1,10 @@
-#force remove system packages
+#core elastic dependancies are zlib, ncurses, bash, glibc, coreutils, libstdc++, libgcc
+#force remove other system packages
 rpm -e tar curl libcurl file-libs libdb-utils procps-ng libssh2 libsmartcols krb5-libs libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base openldap libidn gnupg2 gpgme libpng libtasn1 json-c  systemd-libs freetype shadow-utils bind-license systemd sqlite --nodeps
 
 #cleanup yum traces for libs
 #packages are installed using yum
-for i in tar curl libcurl file-libs libdb-utils procps-ng libssh2 libsmartcols krb5-libs libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base ncurses-libs openldap libidn gnupg2 gpgme libpng libtasn1 json-c systemd-libs sqlite freetype shadow-utils bind-license systemd nss libdb dbus elfutils-libelf bzip2-libs lua rpm nspr pcre2
+for i in tar curl libcurl file-libs libdb-utils procps-ng libssh2 libsmartcols krb5-libs libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base openldap libidn gnupg2 gpgme libpng libtasn1 json-c systemd-libs sqlite freetype shadow-utils bind-license systemd nss libdb dbus elfutils-libelf bzip2-libs lua rpm nspr pcre2
 do
 	echo "$i"
 	find /var/lib/yum/ -depth -name "*$i*" -type d -exec rm -r "{}" \;
