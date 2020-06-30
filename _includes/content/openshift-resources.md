@@ -7,7 +7,7 @@ Download the {{site.prodname}} custom resources for OpenShift and add them to th
 {% endif %}
 
 ```bash
-{% unless page.ignore_installation_cr == true %}curl {{ "/manifests/ocp/01-cr-installation.yaml" | absolute_url }} -o {{manifests_dir}}/01-cr-installation.yaml
+{% unless page.ignore_installation_cr %}curl {{ "/manifests/ocp/01-cr-installation.yaml" | absolute_url }} -o {{manifests_dir}}/01-cr-installation.yaml
 {% endunless %}curl {{ "/manifests/ocp/01-cr-apiserver.yaml" | absolute_url }} -o {{manifests_dir}}/01-cr-apiserver.yaml
 curl {{ "/manifests/ocp/01-cr-manager.yaml" | absolute_url }} -o {{manifests_dir}}/01-cr-manager.yaml
 curl {{ "/manifests/ocp/01-cr-compliance.yaml" | absolute_url }} -o {{manifests_dir}}/01-cr-compliance.yaml
