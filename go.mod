@@ -5,8 +5,8 @@ go 1.13
 require (
 	github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4 // indirect
 	github.com/kelseyhightower/confd v0.0.0-00010101000000-000000000000
-	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.12.0
+	github.com/onsi/gomega v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/cni-plugin v3.8.2+incompatible
 	github.com/projectcalico/felix v3.8.5+incompatible
@@ -27,7 +27,7 @@ require (
 replace (
 	github.com/Microsoft/SDN => github.com/Microsoft/SDN v0.0.0-20181031164916-0d7593e5c8d4
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200617223621-7c00e77f8ff2
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200626163217-dc1bab7ffabf
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200617214853-e45a9532910c
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200617210821-b7333bc9b9e2
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200617204528-35a7eaa21090
