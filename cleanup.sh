@@ -1,5 +1,5 @@
 #force remove system packages
-#Readiness probe needs `curl libcurl libcrypt libnspr`
+#Readiness probe shell script needs curl and bash.
 rpm -e tar file-libs libdb-utils procps-ng libssh2 libsmartcols krb5-libs libblkid libuuid libmount util-linux python python-libs glib2 binutils lz4 libxml2 libxml2-python readline elfutils-libs nss-sysinit nss-tools expat vim-minimal elfutils-default-yama-scope ncurses-base openldap libidn gnupg2 gpgme libpng libtasn1 json-c systemd-libs freetype shadow-utils bind-license systemd sqlite --nodeps
 
 #cleanup yum traces for libs
