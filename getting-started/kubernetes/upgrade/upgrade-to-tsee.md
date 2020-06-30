@@ -2,6 +2,8 @@
 title: Upgrade from Calico to Calico Enterprise
 description: Steps to upgrade from open source Calico to Calico Enterprise.
 canonical_url: /getting-started/kubernetes/upgrade/upgrade-to-tsee
+ignore_installation_cr: true
+cr_directory: manifests_cr
 ---
 
 {% assign calico_minor_version = site.data.versions.first["calico"].minor_version %}
@@ -46,28 +48,15 @@ For example, in order to upgrade an [EKS cluster]({{site.baseurl}}/getting-start
 
 #### Download the new manifests
 
-Make a manifests directory.
+Make the manifests directories.
 
 ```bash
-mkdir manifests
+mkdir manifests manifests_cr
 ```
 
 {% include content/openshift-manifests.md %}
 
-Move the directory and create a new manifests directory.
-
-```bash
-mv manifests manifests_crd
-mkdir manifests
-```
-
 {% include content/openshift-resources.md %}
-
-Remove installation resources.
-
-```bash
-rm manifests_crd/01-crd-installation.yaml manifests/01-cr-installation.yaml
-```
 
 #### Add an image pull secret
 
@@ -86,32 +75,13 @@ rm manifests_crd/01-crd-installation.yaml manifests/01-cr-installation.yaml
    sed -i "s/SECRET/${SECRET}/" manifests/02-pull-secret.yaml
    ```
 
-#### Optionally provide additional configuration
-
-You may want to provide {{site.prodname}} with additional configuration at install-time. For example, BGP configuration or peers. You can use a Kubernetes ConfigMap with your desired {{site.prodname}} resources in order to set configuration as part of the installation. If you do not need to provide additional configuration, you can skip this section.
-
-To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) during installation, edit `manifests/02-configmap-calico-resources.yaml` in order to add your own configuration.
-
-> **Note**: If you have a directory with the {{site.prodname}} resources, you can create the file with the command:
-> ```
-> kubectl create configmap -n tigera-operator calico-resources \
->   --from-file=<resource-directory> --dry-run -o yaml \
->   > manifests/02-configmap-calico-resources.yaml
-> ```
-> With recent versions of kubectl it is necessary to have a kubeconfig configured or add `--server='127.0.0.1:443'`
-> even though it is not used.
-
-> **Note**: If you have provided a `calico-resources` configmap and the tigera-operator pod fails to come up with `Init:CrashLoopBackOff`,
-> check the output of the init-container with `kubectl logs -n tigera-operator -l k8s-app=tigera-operator -c create-initial-resources`.
-{: .alert .alert-info}
-
 #### Install {{site.prodname}}
 
 1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
 1. Export your current CRs for PrometheusRule to a file.
    ```bash
-   oc get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
+   oc get prometheusrules.monitoring.coreos.com -A -o yaml > prometheusrules.yaml
    ```
 
 1. Delete the PrometheusRule CRD.
@@ -119,14 +89,19 @@ To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) d
    oc delete crd prometheusrules.monitoring.coreos.com 
    ```
    
-1. Apply the updated manifests.
+1. Apply the Tigera operators and custom resource definitions.
    ```bash
-   oc apply -f manifests_crd/
    oc apply -f manifests/
    ```
 
-1. Patch installation.
+1. [Optional] If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
+1. Apply the Tigera custom resources. For more information on configuration options available, see [the installation reference]({{site.baseurl}}/reference/installation/api).
+   ```bash
+   oc apply -f manifests_cr/
+   ```
+
+1. Patch installation.
    ```bash
    oc patch installations.operator.tigera.io default --type merge -p '{"spec":{"variant":"TigeraSecureEnterprise","clusterManagementType":"Standalone","imagePullSecrets":[{"name":"tigera-pull-secret"}]}}'
    ```
