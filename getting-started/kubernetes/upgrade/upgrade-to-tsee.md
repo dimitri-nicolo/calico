@@ -120,7 +120,7 @@ To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) d
 1. Patch installation.
 
    ```bash
-   kubectl patch installations.operator.tigera.io default --type merge -p '{"spec":{"variant":"TigeraSecureEnterprise","clusterManagementType":"Standalone","imagePullSecrets":[{"name":"tigera-pull-secret"}]}}'
+   oc patch installations.operator.tigera.io default --type merge -p '{"spec":{"variant":"TigeraSecureEnterprise","clusterManagementType":"Standalone","imagePullSecrets":[{"name":"tigera-pull-secret"}]}}'
    ```
 
 1. Apply the CRs for PrometheusRule.
