@@ -54,12 +54,19 @@ mkdir manifests
 
 {% include content/openshift-manifests.md %}
 
+Move the directory and create a new manifests directory.
+
+```bash
+mv manifests manifests_crd
+mkdir manifests
+```
+
 {% include content/openshift-resources.md %}
 
 Remove installation resources.
 
 ```bash
-rm manifests/01-crd-installation.yaml manifests/01-cr-installation.yaml
+rm manifests_crd/01-crd-installation.yaml manifests/01-cr-installation.yaml
 ```
 
 #### Add an image pull secret
@@ -114,6 +121,7 @@ To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) d
    
 1. Apply the updated manifests.
    ```bash
+   oc apply -f manifests_crd/
    oc apply -f manifests/
    ```
 
