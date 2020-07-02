@@ -89,6 +89,7 @@ type ControllersConfig struct {
 	Service                    *GenericControllerConfig
 	FederatedServices          *GenericControllerConfig
 	ElasticsearchConfiguration *ElasticsearchCfgControllerCfg
+	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
 }
 
@@ -109,6 +110,11 @@ type NodeControllerConfig struct {
 type ElasticsearchCfgControllerCfg struct {
 	NumberOfWorkers int
 	RESTConfig      *restclient.Config
+}
+
+type AuthorizationControllerCfg struct {
+	NumberOfWorkers  int
+	ReconcilerPeriod time.Duration
 }
 
 type ManagedClusterControllerConfig struct {
@@ -393,6 +399,9 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		}
 		rc.ManagedCluster.RESTConfig = restCfg
 	}
+	if rc.AuthorizationConfiguration != nil {
+		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
+	}
 
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
 
@@ -548,6 +557,10 @@ func mergeReconcilerPeriod(envVars map[string]string, status *v3.KubeControllers
 			rc.ManagedCluster.ReconcilerPeriod = d
 			// not supported on KubeControllersConfiguration
 		}
+		if rc.AuthorizationConfiguration != nil {
+			rc.AuthorizationConfiguration.ReconcilerPeriod = d
+			// not supported on KubeControllersConfiguration
+		}
 	}
 }
 
@@ -599,6 +612,9 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "managedcluster":
 				rc.ManagedCluster = &ManagedClusterControllerConfig{}
 				// managed cluster not supported on KubeControllersConfiguration yet
+			case "authorization":
+				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
+				// authorization not supported on KubeControllersConfiguration yet
 			default:
 				log.Fatalf("Invalid controller '%s' provided.", controllerType)
 			}

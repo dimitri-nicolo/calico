@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 
 	log "github.com/sirupsen/logrus"
@@ -537,6 +537,16 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				calicoV3Client,
 				esK8sREST,
 				*cfg.Controllers.ManagedCluster),
+		}
+	}
+	if cfg.Controllers.AuthorizationConfiguration != nil {
+		cc.controllerStates["Authorization"] = &controllerState{
+			controller: authorization.New(
+				k8sClientset,
+				resource.ElasticsearchServiceURL,
+				cfg.Controllers.AuthorizationConfiguration.NumberOfWorkers,
+				cfg.Controllers.AuthorizationConfiguration.ReconcilerPeriod,
+			),
 		}
 	}
 }

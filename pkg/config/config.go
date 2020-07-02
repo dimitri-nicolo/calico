@@ -54,6 +54,7 @@ type Config struct {
 	ServiceWorkers                                  int `default:"1" split_words:"true"`
 	NodeWorkers                                     int `default:"1" split_words:"true"`
 	FederatedServicesWorkers                        int `default:"1" split_words:"true"`
+	AuthorizationWorkers                            int `default:"1" split_words:"true"`
 	ManagedClusterWorkers                           int `default:"1" split_words:"true"`
 	ManagedClusterElasticsearchConfigurationWorkers int `default:"1" split_words:"true"`
 
