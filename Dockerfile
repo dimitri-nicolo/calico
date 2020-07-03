@@ -1,7 +1,6 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.3.2
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.6.2
 
-RUN yum -y update && yum -y upgrade
-RUN yum clean all
+RUN yum -y update && yum -y upgrade && yum clean all
 
 COPY cleanup.sh /
 RUN /cleanup.sh
