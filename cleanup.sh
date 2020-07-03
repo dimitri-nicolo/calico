@@ -19,8 +19,6 @@ do
 	find /var/lib/yum/ -depth -name "*$i*" -type d -exec rm -r "{}" \;
 done
 
-
-
 #cleanup binaries which can not be removed by rpm
 echo 'Removing related package paths:'
 for i in "${packagefiles[@]}"
