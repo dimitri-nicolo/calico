@@ -32,7 +32,7 @@ import (
 
 // windwowsReservedHandle is the handle used to reserve addresses required for Windows
 // networking so that workloads do not get assigned these addresses.
-const windowsReservedHandle = "windows-reserved-IPAM-handle"
+const WindowsReservedHandle = "windows-reserved-IPAM-handle"
 
 // Wrap the backend AllocationBlock struct so that we can
 // attach methods to it.
@@ -40,7 +40,7 @@ type allocationBlock struct {
 	*model.AllocationBlock
 }
 
-func newBlock(cidr cnet.IPNet, windowsHost bool) allocationBlock {
+func newBlock(cidr cnet.IPNet, rsvdAttr *HostReservedAttr) allocationBlock {
 	ones, size := cidr.Mask.Size()
 	numAddresses := 1 << uint(size-ones)
 	b := model.AllocationBlock{}
@@ -53,27 +53,30 @@ func newBlock(cidr cnet.IPNet, windowsHost bool) allocationBlock {
 		b.Unallocated[i] = i
 	}
 
-	// For windows OS, the following IP addresses of the block are
-	// reserved. This is done by pre-allocating them during initialization
-	// time only.
-	// IPs : x.0, x.1, x.2 and x.bcastAddr (e.g. x.255 for /24 subnet)
-	if windowsHost {
-		log.Debugf("Block %s reserving IPs for windows", b.CIDR.String())
+	if rsvdAttr != nil {
+		// Reserve IPs based on host reserved attributes.
+		// For example, with windows OS, the following IP addresses of the block are
+		// reserved. This is done by pre-allocating them during initialization
+		// time only.
+		// IPs : x.0, x.1, x.2 and x.bcastAddr (e.g. x.255 for /24 subnet)
+
+		log.Infof("Block %s reserving IPs", b.CIDR.String())
 		// nil attributes
-		winAttrs := make(map[string]string)
-		winAttrs["note"] = "reserved for Windows networking"
-		handleID := windowsReservedHandle
-		// use first 3 Unallocated values which are 0,1,2 by default
-		b.Unallocated = b.Unallocated[3 : numAddresses-1]
+		attrs := make(map[string]string)
+		attrs["note"] = rsvdAttr.Note
+		handleID := rsvdAttr.Handle
+		b.Unallocated = b.Unallocated[rsvdAttr.StartOfBlock : numAddresses-rsvdAttr.EndOfBlock]
 		attrIndex := len(b.Attributes)
-		b.Allocations[0] = &attrIndex
-		b.Allocations[1] = &attrIndex
-		b.Allocations[2] = &attrIndex
-		b.Allocations[numAddresses-1] = &attrIndex
+		for i := 0; i < rsvdAttr.StartOfBlock; i++ {
+			b.Allocations[i] = &attrIndex
+		}
+		for i := 1; i <= rsvdAttr.EndOfBlock; i++ {
+			b.Allocations[numAddresses-i] = &attrIndex
+		}
 
 		// Create slice of IPs and perform the allocations.
-		log.Debugf("Reserving allocation attribute: %#v handle %s", winAttrs, windowsReservedHandle)
-		attr := model.AllocationAttribute{&handleID, winAttrs}
+		log.Debugf("Reserving allocation attribute: %#v handle %s", attrs, handleID)
+		attr := model.AllocationAttribute{&handleID, attrs}
 		b.Attributes = append(b.Attributes, attr)
 	}
 
@@ -170,7 +173,7 @@ func getHostAffinity(block *model.AllocationBlock) string {
 	return ""
 }
 
-func (b allocationBlock) numFreeAddresses() int {
+func (b allocationBlock) NumFreeAddresses() int {
 	return len(b.Unallocated)
 }
 
@@ -178,7 +181,7 @@ func (b allocationBlock) empty(windowsHost bool) bool {
 	if windowsHost && b.containsOnlyReservedIPs() {
 		return true
 	}
-	return b.numFreeAddresses() == b.NumAddresses()
+	return b.NumFreeAddresses() == b.NumAddresses()
 }
 
 // containsOnlyReservedIPs returns true if the block is empty excepted for
@@ -189,7 +192,7 @@ func (b *allocationBlock) containsOnlyReservedIPs() bool {
 			continue
 		}
 		attrs := b.Attributes[*attrIdx]
-		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != windowsReservedHandle {
+		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != WindowsReservedHandle {
 			return false
 		}
 	}

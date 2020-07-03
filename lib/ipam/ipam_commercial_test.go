@@ -38,7 +38,21 @@ func (c ipamClientWindows) GetAssignmentBlockCIDR(ctx context.Context, addr cnet
 }
 
 var (
-	ipPoolsWindows = &ipPoolAccessor{pools: map[string]pool{}}
+	ipPoolsWindows  = &ipPoolAccessor{pools: map[string]pool{}}
+	rsvdAttrWindows = &HostReservedAttr{
+		StartOfBlock: 3,
+		EndOfBlock:   1,
+		Handle:       WindowsReservedHandle,
+		Note:         "ipam ut",
+	}
+
+	// With default block size 26 or 122, there are 64 ips in one block.
+	rsvdAttrTooBig = &HostReservedAttr{
+		StartOfBlock: 32,
+		EndOfBlock:   33,
+		Handle:       WindowsReservedHandle,
+		Note:         "ipam ut",
+	}
 )
 
 type testArgsClaimAff1 struct {
@@ -96,10 +110,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			fromPool := cnet.MustParseNetwork(usePool)
 			args := AutoAssignArgs{
-				Num4:      inv4,
-				Num6:      0,
-				Hostname:  host,
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  inv4,
+				Num6:                  0,
+				Hostname:              host,
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 
 			ctx := context.WithValue(context.Background(), "windowsHost", windowsHost)
@@ -170,10 +185,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			By("Trying to allocate an ip for windows host 1")
 			ctx1 := context.WithValue(context.Background(), "windowsHost", "windows")
 			args1 := AutoAssignArgs{
-				Num4:      1,
-				Num6:      0,
-				Hostname:  "Windows-TestHost-1",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  1,
+				Num6:                  0,
+				Hostname:              "Windows-TestHost-1",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 			outv4_1, _, outErr := ic.AutoAssign(ctx1, args1)
 			Expect(outErr).ToNot(HaveOccurred())
@@ -181,10 +197,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			By("Trying to allocate an ip for windows host 2")
 			args2 := AutoAssignArgs{
-				Num4:      1,
-				Num6:      0,
-				Hostname:  "Windows-TestHost-2",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  1,
+				Num6:                  0,
+				Hostname:              "Windows-TestHost-2",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 			outv4_2, _, outErr := ic.AutoAssign(ctx1, args2)
 			Expect(outErr).ToNot(HaveOccurred())
@@ -194,10 +211,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			By("Trying to allocate an ip for linux host 1")
 			ctx2 := context.WithValue(context.Background(), "windowsHost", "linux")
 			args3 := AutoAssignArgs{
-				Num4:      1,
-				Num6:      0,
-				Hostname:  "Linux-TestHost-1",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  1,
+				Num6:                  0,
+				Hostname:              "Linux-TestHost-1",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 			outv4_3, _, outErr := ic.AutoAssign(ctx2, args3)
 			Expect(outErr).ToNot(HaveOccurred())
@@ -205,10 +223,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			By("Trying to allocate an ip for linux host 2")
 			args4 := AutoAssignArgs{
-				Num4:      1,
-				Num6:      0,
-				Hostname:  "Linux-TestHost-2",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  1,
+				Num6:                  0,
+				Hostname:              "Linux-TestHost-2",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 
 			outv4_4, _, outErr := ic.AutoAssign(ctx2, args4)
@@ -217,10 +236,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			By("Trying to allocate 100 IPs for windows host 1")
 			args5 := AutoAssignArgs{
-				Num4:      100,
-				Num6:      0,
-				Hostname:  "Windows-TestHost-1",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  100,
+				Num6:                  0,
+				Hostname:              "Windows-TestHost-1",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 			outv4_5, _, outErr := ic.AutoAssign(ctx1, args5)
 			Expect(outErr).ToNot(HaveOccurred())
@@ -228,10 +248,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			By("Trying to allocate 100 IPs for linux host 1")
 			args6 := AutoAssignArgs{
-				Num4:      100,
-				Num6:      0,
-				Hostname:  "Linux-TestHost-1",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  100,
+				Num6:                  0,
+				Hostname:              "Linux-TestHost-1",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 			outv4_6, _, outErr := ic.AutoAssign(ctx2, args6)
 			Expect(outErr).ToNot(HaveOccurred())
@@ -239,10 +260,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			By("Trying to allocate 100 IPs for linux host 2")
 			args7 := AutoAssignArgs{
-				Num4:      100,
-				Num6:      0,
-				Hostname:  "Linux-TestHost-2",
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  100,
+				Num6:                  0,
+				Hostname:              "Linux-TestHost-2",
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 			outv4_7, _, outErr := ic.AutoAssign(ctx2, args7)
 			Expect(outErr).ToNot(HaveOccurred())
@@ -254,9 +276,10 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		// Assign an IP address, don't pass a pool, make sure we can get an
 		// address.
 		args := AutoAssignArgs{
-			Num4:     1,
-			Num6:     0,
-			Hostname: "test-host",
+			Num4:                  1,
+			Num6:                  0,
+			Hostname:              "test-host",
+			HostReservedAttrIPv4s: rsvdAttrWindows,
 		}
 
 		BeforeEach(func() {
@@ -315,10 +338,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		It("Windows: Should get an IP from pool1 when explicitly requesting from that pool", func() {
 
 			args_1 := AutoAssignArgs{
-				Num4:      1,
-				Num6:      0,
-				Hostname:  host,
-				IPv4Pools: []cnet.IPNet{pool1},
+				Num4:                  1,
+				Num6:                  0,
+				Hostname:              host,
+				IPv4Pools:             []cnet.IPNet{pool1},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 
 			ctx := context.WithValue(context.Background(), "windowsHost", "windows")
@@ -336,10 +360,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			By("Windows: Should get an IP from pool2 when explicitly requesting from that pool")
 
 			args_2 := AutoAssignArgs{
-				Num4:      1,
-				Num6:      0,
-				Hostname:  host,
-				IPv4Pools: []cnet.IPNet{pool2},
+				Num4:                  1,
+				Num6:                  0,
+				Hostname:              host,
+				IPv4Pools:             []cnet.IPNet{pool2},
+				HostReservedAttrIPv4s: rsvdAttrWindows,
 			}
 
 			v4_2, _, outErr := ic.AutoAssign(ctx, args_2)
@@ -390,7 +415,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 	})
 
 	DescribeTable("Windows: AutoAssign: requested IPs vs returned IPs",
-		func(host string, cleanEnv bool, pools []pool, usePool string, inv4, inv6, expv4, expv6 int, expError error) {
+		func(host string, cleanEnv bool, pools []pool, rsvd *HostReservedAttr, usePool string, inv4, inv6, expv4, expv6 int, expError error) {
 			if cleanEnv {
 				bc.Clean()
 				deleteAllPoolsWindows()
@@ -406,16 +431,18 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			fromPool := cnet.MustParseNetwork(usePool)
 			args := AutoAssignArgs{
-				Num4:      inv4,
-				Num6:      inv6,
-				Hostname:  host,
-				IPv4Pools: []cnet.IPNet{fromPool},
+				Num4:                  inv4,
+				Num6:                  inv6,
+				Hostname:              host,
+				IPv4Pools:             []cnet.IPNet{fromPool},
+				HostReservedAttrIPv4s: rsvd,
+				HostReservedAttrIPv6s: rsvd,
 			}
 
 			ctx := context.WithValue(context.Background(), "windowsHost", "windows")
 			outv4, outv6, outErr := ic.AutoAssign(ctx, args)
 			if expError != nil {
-				Expect(outErr).To(HaveOccurred())
+				Expect(outErr).To(Equal(expError))
 			} else {
 				Expect(outErr).ToNot(HaveOccurred())
 			}
@@ -427,18 +454,22 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		Entry("256 v4 256 v6", "testHost", true, []pool{
 			{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
 			{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true},
-		}, "192.168.1.0/24", 256, 256, 240, 240, nil),
+		}, rsvdAttrWindows, "192.168.1.0/24", 256, 256, 240, 240, nil),
 
 		// Test 2: AutoAssign 257 IPv4, 0 IPv6 - expect 240 IPv4 addresses, no IPv6, and no error.
-		Entry("257 v4 0 v6", "testHost", true, []pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true}}, "192.168.1.0/24", 257, 0, 240, 0, nil),
+		Entry("257 v4 0 v6", "testHost", true, []pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true}}, rsvdAttrWindows, "192.168.1.0/24", 257, 0, 240, 0, nil),
 
 		// Test 3: AutoAssign 0 IPv4, 257 IPv6 - expect 240 IPv6 addresses, no IPv4, and no error.
 		Entry("0 v4 257 v6", "testHost", true, []pool{
 			{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
 			{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true},
-		}, "192.168.1.0/24", 0, 257, 0, 240, nil),
-	)
+		}, rsvdAttrWindows, "192.168.1.0/24", 0, 257, 0, 240, nil),
 
+		// Test 4: AutoAssign with invalid HostReserveAttr should return error.
+		Entry("1 v4 0 v6", "testHost", true, []pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true}}, rsvdAttrTooBig, "192.168.1.0/24", 1, 0, 0, 0, ErrNoQualifiedPool),
+
+		Entry("0 v4 1 v6", "testHost", true, []pool{{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true}}, rsvdAttrTooBig, "fd80:24e2:f998:72d6::/120", 0, 1, 0, 0, ErrNoQualifiedPool),
+	)
 })
 
 func deleteAllPoolsWindows() {
