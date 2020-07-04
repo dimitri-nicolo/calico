@@ -811,6 +811,8 @@ github.com/tigera/felix-private v0.0.0-20200619040435-2ebdcc5abf14 h1:RDR0UANt1c
 github.com/tigera/felix-private v0.0.0-20200619040435-2ebdcc5abf14/go.mod h1:4SELwD/B7OHACNtMVNWCWPazLgdfRR7nD0P1LLsJvEI=
 github.com/tigera/felix-private v0.0.0-20200624195757-433f0651a35d h1:On0LwBAOT2b44jXa6cq0pHHEtfq75OeGIWG9P88NHFg=
 github.com/tigera/felix-private v0.0.0-20200624195757-433f0651a35d/go.mod h1:4SELwD/B7OHACNtMVNWCWPazLgdfRR7nD0P1LLsJvEI=
+github.com/tigera/felix-private v0.0.0-20200704040428-09e7736acf08 h1:nbxgQkNXEuYT1UiuFBAWUPx0maeDEBJq153CBkp2oCw=
+github.com/tigera/felix-private v0.0.0-20200704040428-09e7736acf08/go.mod h1:aAd4xhPyOfRtXU3gWDYJsNQGnj4B4Hz6FuIsCI6zq/I=
 github.com/tigera/libcalico-go-private v0.0.0-20200130020649-1e0d913b77f8 h1:f/QT+sj/hEy+aKMB60/iC1jc2hAL9/NtRFHhE3mA/ps=
 github.com/tigera/libcalico-go-private v0.0.0-20200130020649-1e0d913b77f8/go.mod h1:mEjIpeepVwFhgt1j7wliRr/iSzJNV/MV98OFOcttFBU=
 github.com/tigera/libcalico-go-private v0.0.0-20200130203734-85760318d620 h1:9dSnilB+yiiZHC3wrPJExPMfj9oQ699ncJHq7pmew/I=
@@ -908,6 +910,7 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200528030447-9b62bdfac8b4/go.mo
 github.com/tigera/typha-private v0.6.0-beta1.0.20200601141056-c2c4cdb19c4b/go.mod h1:oppUNphA7GQOGfsDhVNmYwskTbTplnb4Zk9bPEOS1Cs=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200616030500-9f8cc298348f/go.mod h1:pK5IK2wHMcr3TzqNQj1ldijXVcj14sJWHHbTMHY4tOA=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200619030524-2726713ebeae/go.mod h1:VCGE7nuWT/EyyIvn4Qfksa4uKBLN33c16gA1wlX4l1I=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200704030611-217991484a22/go.mod h1:9XPggrEvXugTs6uQqX+d4KbI/tWix/sOCPlb2tUHo2s=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
