@@ -52,7 +52,7 @@
         "null_value": "0.0.0.0"
       },
       "client_labels": {
-        "type": "object"
+        "type": "flattened"
       },
       "dns" : {
         "properties" : {
