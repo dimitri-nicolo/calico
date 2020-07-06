@@ -29,11 +29,11 @@ Choose one of the following methods for accessing the manager UI:
 
 #### Access using Kubernetes ingress
 
-Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/). This approach requires that your cluster be configured with an ingress controller to implement the `Ingress` resource.
+Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/). This approach requires that your cluster is configured with an ingress controller to implement the `Ingress` resource.
 
 **Basic ingress controller, no modification**
 
- The following example uses `tigera-manager` as the backend service name without modification. Because `tigera-manager` service cannot be edited, this works only for basic ingress controller configurations. (If you make changes to `tigera-manager`, the changes may appear to take effect, but the service will always reset to the default with no overwrites.)
+ The following example uses `tigera-manager` as the backend service name without modification. Because the `tigera-manager` service cannot be edited, this works only for basic ingress controller configurations when edits to the service are not required. (Note if you do make changes to `tigera-manager`, the changes may appear to take effect, but the service always resets to the default with no overwrites.)
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
