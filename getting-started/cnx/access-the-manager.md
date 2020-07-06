@@ -29,7 +29,7 @@ Kubernetes services can be exposed outside of the cluster using [the Kubernetes 
 
 **Basic ingress controller, no modification**
 
- The following example uses `tigera-manager` as the backend service name without modification. Because the `tigera-manager` service cannot be edited, it only when edits to the service are not required. (Note if you make changes to `tigera-manager`, they may appear to take effect, but the service always resets back to the default and is not overwritten.)
+ The following example uses `tigera-manager` as the backend service without modification. Use the `tigera-manager` service only when edits to the service are not required. (Note if you try to make changes to `tigera-manager`, changes may appear to take effect, but the service always resets to the default and is not overwritten.)
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
