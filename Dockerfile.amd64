@@ -1,15 +1,14 @@
-FROM alpine:3
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1 as ubi
+RUN microdnf update
 
-ADD bin/es-proxy-amd64 /es-proxy
+# create /etc/es-proxy directory and provide RW permission access to USER 1001
+RUN mkdir -p /etc/es-proxy
+RUN chown -R 1001 /etc/es-proxy
 
-RUN addgroup -S esproxygroup
-RUN adduser -S -D 999 esproxygroup
+FROM scratch
+# /etc/es-proxy directory used for storing self-signed certificates
+COPY --chown=1001 --from=ubi /etc/es-proxy /etc/es-proxy
+ADD --chown=1001 bin/es-proxy-amd64 /es-proxy
 
-RUN chgrp -R 0 /etc && \
-    chmod -R g=u /etc
-
-RUN chown -R 999 /etc
-
-USER 999
-
+USER 1001
 ENTRYPOINT ["/es-proxy"]
