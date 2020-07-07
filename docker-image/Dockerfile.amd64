@@ -1,13 +1,21 @@
-FROM alpine:3
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1 as ubi
+RUN microdnf update
 
-# Put our binary in /code rather than directly in /usr/bin.  This allows the downstream builds
-# to more easily extract the apiserver build artifacts from the container.
+# At runtime, apiserver generate certificates in /code directory
+# hence, provide RW permission for user 1001
 RUN mkdir /code
-RUN chgrp -R 0 /code && \
-    chmod -R g=u /code
-ADD bin/apiserver /code
-WORKDIR /code
-RUN ln -s /code/apiserver /usr/bin
+RUN chown -R 1001 /code
+RUN rm -rf /tmp
+RUN mkdir /tmp
+RUN chown -R 1001 /tmp
 
-# Run apiserver by default
-ENTRYPOINT ["apiserver"]
+FROM scratch
+COPY --chown=1001 --from=ubi /code /code
+COPY --chown=1001 --from=ubi /tmp /tmp
+ADD --chown=1001 bin/apiserver /code
+ADD --chown=1001 bin/filecheck /code
+
+WORKDIR /code
+
+USER 1001
+ENTRYPOINT ["./apiserver"]

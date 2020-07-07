@@ -266,6 +266,19 @@ endif
 	        grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 		( echo "Error: $(BINDIR)/apiserver was not statically linked"; false ) )'
 
+$(BINDIR)/filecheck: $(K8SAPISERVER_GO_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
+	@echo Building filecheck...
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/filecheck" && \
+		( ldd $(BINDIR)/filecheck 2>&1 | \
+	        grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
+		( echo "Error: $(BINDIR)/filecheck was not statically linked"; false ) )'
+
 # Build cnx-apiserver docker image.
 # Recursive make tigera/cnx-apiserver forces make to rebuild dependencies again
 image:
@@ -273,10 +286,11 @@ image:
 
 # Build the tigera/cnx-apiserver docker image.
 .PHONY: tigera/cnx-apiserver
-tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/apiserver
+tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/apiserver $(BINDIR)/filecheck
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/apiserver docker-image/bin/
+	cp $(BINDIR)/filecheck docker-image/bin/
 	docker build --pull -t tigera/cnx-apiserver --file ./docker-image/Dockerfile.$(ARCH) docker-image
 
 .PHONY: lint-cache-dir
