@@ -45,7 +45,7 @@ spec:
 
 **Advanced ingress controllers, with modifications**
 
-If you need to annotate or modify the service, you must create your own service and rename it: `serviceName: <your own name>`. For example:
+If you need to annotate or modify the service, you must create your own service (`serviceName: <your own name>`) in the tigera-manager namespace, and use it in the Ingress resource. For example:
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
@@ -55,7 +55,7 @@ metadata:
   namespace: tigera-manager
 spec:
   backend:
-    serviceName: annotated-tigera-manager
+    serviceName: annotated-service
     servicePort: 9443
 ```
 
