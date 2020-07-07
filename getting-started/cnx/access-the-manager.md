@@ -15,10 +15,6 @@ By default, the manager UI is not exposed outside of the cluster. This article e
 
 Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/).
 
-{: .alert .alert-info}
-
-These instructions only apply to the operator-based installation of {{site.prodname}}.
-
 ### How to
 
 Choose one of the following methods for accessing the manager UI:
@@ -29,9 +25,11 @@ Choose one of the following methods for accessing the manager UI:
 
 #### Access using Kubernetes ingress
 
-Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/). This approach requires that your cluster be configured with an ingress controller to implement the `Ingress` resource.
+Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/). This approach requires that your cluster is configured with an ingress controller to implement the `Ingress` resource.
 
-To expose the manager using a Kubernetes ingress, you can create an `Ingress` resource like the one below.
+**Basic ingress controller, no modification**
+
+ The following example uses `tigera-manager` as the backend service without modification. Use the `tigera-manager` service only when edits to the service are not required. (Note if you try to make changes to `tigera-manager`, changes may appear to take effect, but the service always resets to the default and is not overwritten.)
 
 ```yaml
 apiVersion: networking.k8s.io/v1beta1
@@ -45,7 +43,23 @@ spec:
     servicePort: 9443
 ```
 
-> Note: You must ensure the {{site.prodname}} manager receives a HTTPS (TLS) connection, not unencrypted HTTP. If you require TLS termination at your ingress, you will need to either use a proxy that supports transparent HTTP/2 proxying, for example, Envoy, or re-originate a TLS connection from your proxy to the {{site.prodname}} manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} manager.
+**Advanced ingress controllers, with modifications**
+
+If you need to annotate or modify the service, you must create your own service (`serviceName: <your own name>`) in the tigera-manager namespace, and use it in the Ingress resource. For example:
+
+```yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: tigera-manager
+  namespace: tigera-manager
+spec:
+  backend:
+    serviceName: annotated-service
+    servicePort: 9443
+```
+
+>**Note**: You must ensure the {{site.prodname}} manager receives a HTTPS (TLS) connection, not unencrypted HTTP. If you require TLS termination at your ingress, you will need to either use a proxy that supports transparent HTTP/2 proxying, for example, Envoy, or re-originate a TLS connection from your proxy to the {{site.prodname}} manager. If you do not require TLS termination, configure your proxy to “pass thru” the TLS to {{site.prodname}} manager.
 
 #### Access using a LoadBalancer service
 
