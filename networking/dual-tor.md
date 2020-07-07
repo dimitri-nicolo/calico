@@ -5,7 +5,10 @@ description: Configure a dual plane cluster for redundant connectivity between w
 
 ### Big picture
 
-Deploy a dual plane cluster to provide redundant connectivity between your workloads.
+Deploy a dual plane cluster to provide redundant connectivity between your workloads for on-premises deployments.
+
+>**Note**: Dual ToR is not supported if you are using BGP with encapsulation (VXLAN or IP-in-IP). 
+{: .alert .alert-info}
 
 ### Value
 
@@ -80,7 +83,7 @@ somewhere, or some software component along the path.
 In a dual ToR setup, rapid failure detection is important so that traffic flows within the
 cluster can quickly adjust to using the other available connectivity plane.
 
-#### Long Lived Graceful Restart
+#### Long lived graceful restart
 
 Long Lived Graceful Restart (LLGR) is [an extension for
 BGP](https://tools.ietf.org/html/draft-uttaro-idr-bgp-persistence-05) that handles link
@@ -102,17 +105,17 @@ blog](https://vincent.bernat.ch/en/blog/2018-bgp-llgr), because:
 
 Here are the steps you will need to successfully deploy a Kubernetes cluster with
 {{site.prodname}} across multiple racks with dual plane connectivity:
-
-1.  [Decide your IP addressing scheme](#decide-your-ip-addressing-scheme)
-1.  [Decide your ECMP usage policy](#decide-your-ecmp-usage-policy)
-1.  [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
-1.  [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
-1.  [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-calico-enterprise)
-1.  [Configure {{site.prodname}} to peer with ToR routers](#configure-calico-enterprise-to-peer-with-tor-routers)
-1.  [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
-1.  [Complete {{site.prodname}} installation](#complete-calico-enterprise-installation)
-1.  [Configure {{site.prodname}} to advertise loopback addresses](#configure-calico-enterprise-to-advertise-loopback-addresses)
-1.  [Verify the deployment](#verify-the-deployment)
+  
+1. [Decide your IP addressing scheme](#decide-your-ip-addressing-scheme)
+1. [Decide your ECMP usage policy](#decide-your-ecmp-usage-policy)
+1. [Boot cluster nodes with those addresses](#boot-cluster-nodes-with-those-addresses)
+1. [Define bootstrap routes for reaching other loopback addresses](#define-bootstrap-routes-for-reaching-other-loopback-addresses)
+1. [Install Kubernetes and {{site.prodname}}](#install-kubernetes-and-calico-enterprise)
+1. [Configure {{site.prodname}} to peer with ToR routers](#configure-calico-enterprise-to-peer-with-tor-routers)
+1. [Configure your ToR routers and infrastructure](#configure-your-tor-routers-and-infrastructure)
+1. [Complete {{site.prodname}} installation](#complete-calico-enterprise-installation)
+1. [Configure {{site.prodname}} to advertise loopback addresses](#configure-calico-enterprise-to-advertise-loopback-addresses)
+1. [Verify the deployment](#verify-the-deployment)
 
 The precise details will likely differ for any specific deployment.  For example, you may
 use a Kubernetes installer that insists on booting and provisioning all the nodes as part
@@ -207,23 +210,13 @@ other plane.
 
 #### Install Kubernetes and {{site.prodname}}
 
-Now you can follow your preferred method for deploying Kubernetes, and [our documentation
-for installing {{site.prodname}}]({{site.baseurl}}/getting-started).
+1. Follow your preferred method for deploying Kubernetes, and [installing {{site.prodname}} on-premises]({{site.baseurl}}/getting-started).
 
-> **Note**: {{site.prodname}} installs by default with
-> [IP-in-IP]({{site.baseurl}}/networking/vxlan-ipip) enabled, but for
-> on-prem deployments as imagined here IP-in-IP is not needed and should be disabled.
-> With our [operator-based
-> install]({{site.baseurl}}/getting-started/kubernetes), you can do that
-> by setting `encapsulation: None`; see the [install
-> reference]({{site.baseurl}}/reference/installation/api) for details.
-{: .alert .alert-info}
+1. During {{site.prodname}} installation, disable the default encapsulation setting, IP-in-IP.
 
-When you reach the point of configuring a Tigera-specific resource - typically, the
-license key - you may see that fail.  If that happens, the explanation is that the various
-components of {{site.prodname}} have been scheduled to nodes that are split across
-different racks, and we don't yet have a working data path between pods running in
-different racks.
+   Encapsulation is not supported and must be disabled. Set `encapsulation: None`. For help, see the [Installation reference]({{site.baseurl}}/reference/installation/api).
+
+When you reach the point of configuring a Tigera-specific resource - typically, the license key - you may see that fail.  If that happens, the explanation is that the various components of {{site.prodname}} have been scheduled to nodes that are split across different racks, and we don't yet have a working data path between pods running in different racks.
 
 > **Note**: To be more precise: at this point, we have a working data path between any
 > components that are running on the nodes with host networking - i.e. using the nodes'
