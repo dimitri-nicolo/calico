@@ -1,9 +1,14 @@
-FROM alpine:3
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.2-301.1592810506 AS base
 
+RUN mkdir /code
 ADD bin/server-amd64 /code/server
 
 RUN chgrp -R 0 /code && \
     chmod -R g=u /code
+
+FROM scratch
+
+COPY --from=base /code/ /code/
 
 USER 999
 

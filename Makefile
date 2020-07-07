@@ -278,8 +278,10 @@ $(BUILD_IMAGE_SCALELOADER): bin/scaleloader-$(ARCH) register
 	rm -rf docker-image/scaleloader/bin
 	rm -rf docker-image/scaleloader/playbooks
 	rm -rf docker-image/scaleloader/scenarios
+	rm -rf docker-image/scaleloader/clean.sh
 	mkdir -p docker-image/scaleloader/bin
 	cp bin/scaleloader-$(ARCH) docker-image/scaleloader/bin/
+	cp docker-image/clean.sh docker-image/scaleloader/clean.sh
 	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
 	cp -r mockdata/scaleloader/scenarios docker-image/scaleloader
 	docker build --pull -t $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader
@@ -291,7 +293,9 @@ endif
 $(BUILD_IMAGE_BENCHMARKER): bin/benchmarker-$(ARCH) register
 	rm -rf docker-image/benchmarker/bin
 	rm -rf tmp/kube-bench
+	rm -rf docker-image/benchmarker/clean.sh
 	mkdir -p docker-image/benchmarker/bin
+	cp docker-image/clean.sh docker-image/benchmarker/clean.sh
 	cp bin/benchmarker-$(ARCH) docker-image/benchmarker/bin/
 	git clone https://github.com/aquasecurity/kube-bench tmp/kube-bench/
 	cd tmp/kube-bench/ && git checkout $(KUBE_BENCH_VERSION)
