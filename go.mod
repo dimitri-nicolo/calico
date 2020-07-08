@@ -20,6 +20,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.5.1
 	github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0
 	github.com/tigera/licensing v1.0.1-0.20200618213636-f5bf5cf12edb
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200401174654-e694b7bb0875

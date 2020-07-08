@@ -3,10 +3,11 @@
 package managedcluster
 
 import (
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
+	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 )
 
 func NewManagementClusterChangeReconciler(

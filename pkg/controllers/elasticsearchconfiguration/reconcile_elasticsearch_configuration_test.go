@@ -16,13 +16,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
-	relasticsearchfake "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
+	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	relasticsearchfake "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch/fake"
 )
 
 var cert = `-----BEGIN CERTIFICATE-----

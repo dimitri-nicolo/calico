@@ -4,6 +4,7 @@ package elasticsearchconfiguration
 
 import (
 	"fmt"
+
 	"github.com/projectcalico/kube-controllers/pkg/config"
 
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
@@ -12,14 +13,15 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 )
@@ -68,7 +70,7 @@ type esConfigController struct {
 	clusterName string
 	r           *reconciler
 	worker      worker.Worker
-	cfg config.ElasticsearchCfgControllerCfg
+	cfg         config.ElasticsearchCfgControllerCfg
 }
 
 func New(
@@ -145,7 +147,7 @@ func New(
 		clusterName: clusterName,
 		r:           r,
 		worker:      w,
-		cfg: cfg,
+		cfg:         cfg,
 	}
 }
 

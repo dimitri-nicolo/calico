@@ -4,20 +4,23 @@ package managedcluster
 
 import (
 	"fmt"
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	"sync"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
 
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 )
 
 type managedClusterESControllerReconciler struct {
@@ -32,6 +35,7 @@ type managedClusterESControllerReconciler struct {
 	// want to take on one is to stop it
 	managedClustersStopChans map[string]chan struct{}
 	cfg                      config.ElasticsearchCfgControllerCfg
+	esClient                 elasticsearch.Client
 }
 
 // Reconcile finds the ManagedCluster resource specified by the name and either adds, removes, or recreates the elasticsearch
@@ -49,6 +53,8 @@ func (c *managedClusterESControllerReconciler) Reconcile(name types.NamespacedNa
 			reqLogger.Info("ManagedCluster not found")
 			// In case the ManagedCluster resource was delete remove the controller for that ManagedCluster
 			c.removeManagedClusterWatch(name.Name)
+			cleaner := users.NewEsCleaner(c.esClient)
+			cleaner.DeleteResidueUsers(name.Name)
 			return nil
 		}
 		return err

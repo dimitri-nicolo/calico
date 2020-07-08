@@ -62,7 +62,7 @@ func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, 
 	sc := &serviceController{
 		calicoClient: c,
 		ctx:          ctx,
-		cfg: cfg,
+		cfg:          cfg,
 	}
 
 	// set up service informer

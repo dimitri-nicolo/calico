@@ -6,6 +6,7 @@ package users
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 )
@@ -185,6 +186,17 @@ func ElasticsearchUsers(clusterName string, management bool) map[ElasticsearchUs
 
 	return users
 }
+
+func buildManagedUserPattern() []*regexp.Regexp {
+	var usersPattern []*regexp.Regexp
+	users := ElasticsearchUsers("(.*)", false)
+	for _, user := range users {
+		usersPattern = append(usersPattern, regexp.MustCompile(user.Username))
+	}
+
+	return usersPattern
+}
+
 
 func managementOnlyElasticsearchUsers(clusterName string) map[ElasticsearchUserName]elasticsearch.User {
 	return map[ElasticsearchUserName]elasticsearch.User{

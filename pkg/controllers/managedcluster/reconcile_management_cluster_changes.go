@@ -7,12 +7,13 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 	log "github.com/sirupsen/logrus"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+
+	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 )
 
 // managementClusterChangeReconciler watches for changes in the management cluster that should trigger a recreation of

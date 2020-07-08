@@ -3,9 +3,10 @@
 package elasticsearchconfiguration
 
 import (
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
-	"k8s.io/client-go/kubernetes"
 )
 
 func NewReconciler(
