@@ -11,15 +11,14 @@ The Kubernetes resources below configure {{site.prodname}} installation. Each re
 <li>
 <a href="#operator.tigera.io%2fv1">operator.tigera.io/v1</a>
 </li>
-<li>
-<a href="#operator.tigera.io%2fv1beta1">operator.tigera.io/v1beta1</a>
-</li>
 </ul>
 <h2 id="operator.tigera.io/v1">operator.tigera.io/v1</h2>
 <p>API Schema definitions for configuring the installation of Calico and Calico Enterprise</p>
 Resource Types:
 <ul><li>
 <a href="#operator.tigera.io/v1.APIServer">APIServer</a>
+</li><li>
+<a href="#operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration</a>
 </li><li>
 <a href="#operator.tigera.io/v1.Compliance">Compliance</a>
 </li><li>
@@ -108,6 +107,175 @@ APIServerStatus
 </td>
 <td>
 <p>Most recently observed status for the Tigera API server.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration
+</h3>
+<p>AmazonCloudIntegration is the Schema for the amazoncloudintegrations API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br>
+string</td>
+<td>
+<code>
+operator.tigera.io/v1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br>
+string
+</td>
+<td><code>AmazonCloudIntegration</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br>
+<em>
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AmazonCloudIntegrationSpec">
+AmazonCloudIntegrationSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>defaultPodMetadataAccess</code><br>
+<em>
+<a href="#operator.tigera.io/v1.MetadataAccessAllowedType">
+MetadataAccessAllowedType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultPodMetadataAccess defines what the default behavior will be for accessing
+the AWS metadata service from a pod.
+Default: Denied</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeSecurityGroupIDs</code><br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>NodeSecurityGroupIDs is a list of Security Group IDs that all nodes and masters
+will be in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>podSecurityGroupID</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PodSecurityGroupID is the ID of the Security Group which all pods should be placed
+in by default.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>vpcs</code><br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>VPCS is a list of VPC IDs to monitor for ENIs and Security Groups, only one is supported.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sqsURL</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SQSURL is the SQS URL needed to access the Simple Queue Service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>awsRegion</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>AWSRegion is the region in which your cluster is located.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enforcedSecurityGroupID</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>EnforcedSecurityGroupID is the ID of the Security Group which will be applied to all
+ENIs that are on a host that is also part of the Kubernetes cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trustEnforcedSecurityGroupID,omitemtpy</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>TrustEnforcedSecurityGroupID is the ID of the Security Group which will be applied
+to all ENIs in the VPC.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AmazonCloudIntegrationStatus">
+AmazonCloudIntegrationStatus
+</a>
+</em>
+</td>
+<td>
 </td>
 </tr>
 </tbody>
@@ -412,6 +580,20 @@ Kubernetes apps/v1.DaemonSetUpdateStrategy
 <em>(Optional)</em>
 <p>NodeUpdateStrategy can be used to customize the desired update strategy, such as the MaxUnavailable
 field.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>componentResources</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ComponentResource">
+operator.tigera.io/v1.ComponentResource
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ComponentResources can be used to customize the resource requirements for each component.</p>
 </td>
 </tr>
 </table>
@@ -1117,6 +1299,148 @@ SplunkStoreSpec
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.AmazonCloudIntegrationSpec">AmazonCloudIntegrationSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration</a>)
+</p>
+<p>AmazonCloudIntegrationSpec defines the desired state of AmazonCloudIntegration</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>defaultPodMetadataAccess</code><br>
+<em>
+<a href="#operator.tigera.io/v1.MetadataAccessAllowedType">
+MetadataAccessAllowedType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DefaultPodMetadataAccess defines what the default behavior will be for accessing
+the AWS metadata service from a pod.
+Default: Denied</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeSecurityGroupIDs</code><br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>NodeSecurityGroupIDs is a list of Security Group IDs that all nodes and masters
+will be in.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>podSecurityGroupID</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>PodSecurityGroupID is the ID of the Security Group which all pods should be placed
+in by default.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>vpcs</code><br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>VPCS is a list of VPC IDs to monitor for ENIs and Security Groups, only one is supported.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sqsURL</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SQSURL is the SQS URL needed to access the Simple Queue Service.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>awsRegion</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>AWSRegion is the region in which your cluster is located.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enforcedSecurityGroupID</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>EnforcedSecurityGroupID is the ID of the Security Group which will be applied to all
+ENIs that are on a host that is also part of the Kubernetes cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>trustEnforcedSecurityGroupID,omitemtpy</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>TrustEnforcedSecurityGroupID is the ID of the Security Group which will be applied
+to all ENIs in the VPC.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.AmazonCloudIntegrationStatus">AmazonCloudIntegrationStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration</a>)
+</p>
+<p>AmazonCloudIntegrationStatus defines the observed state of AmazonCloudIntegration</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>state</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>State provides user-readable status.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.Auth">Auth
 </h3>
 <p>
@@ -1250,7 +1574,7 @@ NodeAddressAutodetection
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeAddressAutodetectionV6 specifies an approach to automatically detect node IPv4 addresses. If not specified,
+<p>NodeAddressAutodetectionV6 specifies an approach to automatically detect node IPv6 addresses. If not specified,
 IPv6 addresses will not be auto-detected.</p>
 </td>
 </tr>
@@ -1325,6 +1649,52 @@ string
 </td>
 <td>
 <p>State provides user-readable status.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.ComponentName">ComponentName
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.ComponentResource">ComponentResource</a>)
+</p>
+<p>ComponentName CRD enum</p>
+<h3 id="operator.tigera.io/v1.ComponentResource">ComponentResource
+</h3>
+<p>The ComponentResource struct associates a ResourceRequirements with a component by name</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>componentName</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ComponentName">
+ComponentName
+</a>
+</em>
+</td>
+<td>
+<p>ComponentName is an enum which identifies the component</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceRequirements</code><br>
+<em>
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<p>ResourceRequirements allows customization of limits and requests for compute resources such as cpu and memory.</p>
 </td>
 </tr>
 </tbody>
@@ -1714,6 +2084,20 @@ Kubernetes apps/v1.DaemonSetUpdateStrategy
 field.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>componentResources</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ComponentResource">
+operator.tigera.io/v1.ComponentResource
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ComponentResources can be used to customize the resource requirements for each component.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.InstallationStatus">InstallationStatus
@@ -2086,6 +2470,13 @@ Auth
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.MetadataAccessAllowedType">MetadataAccessAllowedType
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AmazonCloudIntegrationSpec">AmazonCloudIntegrationSpec</a>)
+</p>
+<p>MetadataAccessAllowedType</p>
 <h3 id="operator.tigera.io/v1.MultiInterfaceMode">MultiInterfaceMode
 (<code>string</code> alias)</h3>
 <p>
@@ -2362,7 +2753,7 @@ int32
 <em>(Optional)</em>
 <p>AuditReports configures the retention period for audit logs, in days.  Logs written on a day that started at least this long ago are
 removed.  To keep logs for at least x days, use a retention period of x+1.
-Default: 367</p>
+Default: 91</p>
 </td>
 </tr>
 <tr>
@@ -2379,7 +2770,7 @@ of resources which along with audit events are used to generate reports.
 Consult the Compliance Reporting documentation for more details on snapshots.
 Logs written on a day that started at least this long ago are
 removed.  To keep logs for at least x days, use a retention period of x+1.
-Default: 367</p>
+Default: 91</p>
 </td>
 </tr>
 <tr>
@@ -2396,7 +2787,7 @@ from the analysis of the system state and audit events for compliance reporting.
 Consult the Compliance Reporting documentation for more details on reports.
 Logs written on a day that started at least this long ago are
 removed.  To keep logs for at least x days, use a retention period of x+1.
-Default: 367</p>
+Default: 91</p>
 </td>
 </tr>
 </tbody>
@@ -2474,7 +2865,7 @@ string
 </em>
 </td>
 <td>
-<p>Location for splunk&rsquo;s http event collector end point. example https://1.2.3.4:8088</p>
+<p>Location for splunk&rsquo;s http event collector end point.</p>
 </td>
 </tr>
 </tbody>
@@ -2643,329 +3034,4 @@ Available, Progressing, or Degraded.</p>
 </tr>
 </tbody>
 </table>
-<hr/>
-<h2 id="operator.tigera.io/v1beta1">operator.tigera.io/v1beta1</h2>
-<p>Package v1beta1 contains API Schema definitions for the operator v1beta1 API group</p>
-Resource Types:
-<ul><li>
-<a href="#operator.tigera.io/v1beta1.AmazonCloudIntegration">AmazonCloudIntegration</a>
-</li></ul>
-<h3 id="operator.tigera.io/v1beta1.AmazonCloudIntegration">AmazonCloudIntegration
-</h3>
-<p>AmazonCloudIntegration is the Schema for the amazoncloudintegrations API</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>apiVersion</code><br>
-string</td>
-<td>
-<code>
-operator.tigera.io/v1beta1
-</code>
-</td>
-</tr>
-<tr>
-<td>
-<code>kind</code><br>
-string
-</td>
-<td><code>AmazonCloudIntegration</code></td>
-</tr>
-<tr>
-<td>
-<code>metadata</code><br>
-<em>
-<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code><br>
-<em>
-<a href="#operator.tigera.io/v1beta1.AmazonCloudIntegrationSpec">
-AmazonCloudIntegrationSpec
-</a>
-</em>
-</td>
-<td>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>defaultPodMetadataAccess</code><br>
-<em>
-<a href="#operator.tigera.io/v1beta1.MetadataAccessAllowedType">
-MetadataAccessAllowedType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DefaultPodMetadataAccess defines what the default behavior will be for accessing
-the AWS metadata service from a pod.
-Default: Denied</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>nodeSecurityGroupIDs</code><br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<p>NodeSecurityGroupIDs is a list of Security Group IDs that all nodes and masters
-will be in.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>podSecurityGroupID</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>PodSecurityGroupID is the ID of the Security Group which all pods should be placed
-in by default.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>vpcs</code><br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<p>VPCS is a list of VPC IDs to monitor for ENIs and Security Groups, only one is supported.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>sqsURL</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>SQSURL is the SQS URL needed to access the Simple Queue Service.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>awsRegion</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>AWSRegion is the region in which your cluster is located.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>enforcedSecurityGroupID</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>EnforcedSecurityGroupID is the ID of the Security Group which will be applied to all
-ENIs that are on a host that is also part of the Kubernetes cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>trustEnforcedSecurityGroupID,omitemtpy</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>TrustEnforcedSecurityGroupID is the ID of the Security Group which will be applied
-to all ENIs in the VPC.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<code>status</code><br>
-<em>
-<a href="#operator.tigera.io/v1beta1.AmazonCloudIntegrationStatus">
-AmazonCloudIntegrationStatus
-</a>
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1beta1.AmazonCloudIntegrationSpec">AmazonCloudIntegrationSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1beta1.AmazonCloudIntegration">AmazonCloudIntegration</a>)
-</p>
-<p>AmazonCloudIntegrationSpec defines the desired state of AmazonCloudIntegration</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>defaultPodMetadataAccess</code><br>
-<em>
-<a href="#operator.tigera.io/v1beta1.MetadataAccessAllowedType">
-MetadataAccessAllowedType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DefaultPodMetadataAccess defines what the default behavior will be for accessing
-the AWS metadata service from a pod.
-Default: Denied</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>nodeSecurityGroupIDs</code><br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<p>NodeSecurityGroupIDs is a list of Security Group IDs that all nodes and masters
-will be in.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>podSecurityGroupID</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>PodSecurityGroupID is the ID of the Security Group which all pods should be placed
-in by default.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>vpcs</code><br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<p>VPCS is a list of VPC IDs to monitor for ENIs and Security Groups, only one is supported.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>sqsURL</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>SQSURL is the SQS URL needed to access the Simple Queue Service.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>awsRegion</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>AWSRegion is the region in which your cluster is located.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>enforcedSecurityGroupID</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>EnforcedSecurityGroupID is the ID of the Security Group which will be applied to all
-ENIs that are on a host that is also part of the Kubernetes cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>trustEnforcedSecurityGroupID,omitemtpy</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>TrustEnforcedSecurityGroupID is the ID of the Security Group which will be applied
-to all ENIs in the VPC.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1beta1.AmazonCloudIntegrationStatus">AmazonCloudIntegrationStatus
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1beta1.AmazonCloudIntegration">AmazonCloudIntegration</a>)
-</p>
-<p>AmazonCloudIntegrationStatus defines the observed state of AmazonCloudIntegration</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>state</code><br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>State provides user-readable status.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="operator.tigera.io/v1beta1.MetadataAccessAllowedType">MetadataAccessAllowedType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1beta1.AmazonCloudIntegrationSpec">AmazonCloudIntegrationSpec</a>)
-</p>
-<p>MetadataAccessAllowedType</p>
 <hr/>
