@@ -5,6 +5,7 @@ show_read_time: false
 show_toc: false
 show_title: false
 calico_enterprise: true
+sitemap: false
 ---
 <br>
 <h3 style="font-style: italic;">If you like Calico, you'll love Calico Enterprise!</h3>
