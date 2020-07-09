@@ -26,7 +26,11 @@ type Client interface {
 	UpdateUser(user User) error
 	DeleteUser(user User) error
 	CreateUser(user User) error
+	CreateRoles(roles ...Role) error
 	DeleteRole(role Role) error
+	CreateRoleMapping(roleMapping RoleMapping) error
+	GetRoleMappings() ([]RoleMapping, error)
+	DeleteRoleMapping(name string) (bool, error)
 }
 
 // User represents an Elasticsearch user, which may or may not have roles attached to it
@@ -74,6 +78,19 @@ type Application struct {
 	Resources   []string `json:"resources"`
 }
 
+// Rule represent an Elasticsearch RoleMapping Rule.
+type Rule struct {
+	Field map[string]string `json:"field"`
+}
+
+// RoleMapping represents an Elasticsearch RoleMapping.
+type RoleMapping struct {
+	Name    string            `json:"-"`
+	Roles   []string          `json:"roles"`
+	Rules   map[string][]Rule `json:"rules"`
+	Enabled bool              `json:"enabled"`
+}
+
 func NewClient(url, username, password string, roots *x509.CertPool) (Client, error) {
 	config := es7.Config{
 		Addresses: []string{
@@ -96,8 +113,8 @@ func NewClient(url, username, password string, roots *x509.CertPool) (Client, er
 	return &client{esClient}, nil
 }
 
-// createRoles wraps createRoles to make creating multiple rows slightly more convenient
-func (cli *client) createRoles(roles ...Role) error {
+// CreateRoles wraps createRoles to make creating multiple rows slightly more convenient
+func (cli *client) CreateRoles(roles ...Role) error {
 	for _, role := range roles {
 		if err := cli.createRole(role); err != nil {
 			return err
@@ -180,7 +197,7 @@ func (cli *client) CreateUser(user User) error {
 	}
 
 	if len(rolesToCreate) > 0 {
-		if err := cli.createRoles(rolesToCreate...); err != nil {
+		if err := cli.CreateRoles(rolesToCreate...); err != nil {
 			return err
 		}
 	}
@@ -251,7 +268,7 @@ func (cli *client) UpdateUser(user User) error {
 	}
 
 	if len(rolesToCreate) > 0 {
-		if err := cli.createRoles(rolesToCreate...); err != nil {
+		if err := cli.CreateRoles(rolesToCreate...); err != nil {
 			return err
 		}
 	}
@@ -305,7 +322,7 @@ func (cli *client) UserExists(username string) (bool, error) {
 
 type esUsers map[string]esUser
 type esUser struct {
-	Roles    []string
+	Roles []string
 }
 
 // GetUsers returns all users stored in ES
@@ -349,4 +366,103 @@ func (cli *client) GetUsers() ([]User, error) {
 	}
 
 	return users, nil
+}
+
+// CreateRoleMapping creates the given RoleMapping in Elasticsearch. The Name field in the RoleMapping is used as the role
+// mapping name in the request.
+func (cli *client) CreateRoleMapping(roleMapping RoleMapping) error {
+	j, err := json.Marshal(roleMapping)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("/_xpack/security/role_mapping/%s", roleMapping.Name), bytes.NewBuffer(j))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	response, err := cli.Perform(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf(string(body))
+	}
+
+	return nil
+}
+
+// GetRoleMappings retrieves all RoleMappings in Elasticsearch
+func (cli *client) GetRoleMappings() ([]RoleMapping, error) {
+	req, err := http.NewRequest("GET", "/_xpack/security/role_mapping", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	response, err := cli.Perform(req)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf(string(body))
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var mapp map[string]RoleMapping
+
+	if err := json.Unmarshal(body, &mapp); err != nil {
+		return nil, err
+	}
+
+	var roleMappings []RoleMapping
+	for name, roleMapping := range mapp {
+		roleMapping.Name = name
+		roleMappings = append(roleMappings, roleMapping)
+	}
+
+	return roleMappings, nil
+}
+
+// DeleteRoleMapping attempts to delete the RoleMapping with the given name. If there is no RoleMapping that exists with
+// the given name, no error is return.
+func (cli *client) DeleteRoleMapping(name string) (bool, error) {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("/_xpack/security/role_mapping/%s", name), nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	response, err := cli.Perform(req)
+	if err != nil {
+		return false, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 && response.StatusCode != 404 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return false, err
+		}
+		return false, fmt.Errorf(string(body))
+	}
+
+	return response.StatusCode == 200, nil
 }

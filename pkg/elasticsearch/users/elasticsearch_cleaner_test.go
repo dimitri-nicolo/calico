@@ -3,9 +3,10 @@
 package users_test
 
 import (
+	"sort"
+
 	es "github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
-	"sort"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -18,6 +19,26 @@ type MockClient struct {
 	userToDelete  []es.User
 	rolesToDelete []es.Role
 	mock.Mock
+}
+
+func (o *MockClient) CreateRoles(roles ...es.Role) error {
+	args := o.Called(roles)
+	return args.Error(0)
+}
+
+func (o *MockClient) CreateRoleMapping(roleMapping es.RoleMapping) error {
+	args := o.Called(roleMapping)
+	return args.Error(0)
+}
+
+func (o *MockClient) GetRoleMappings() ([]es.RoleMapping, error) {
+	args := o.Called()
+	return args.Get(0).([]es.RoleMapping), args.Error(1)
+}
+
+func (o *MockClient) DeleteRoleMapping(name string) (bool, error) {
+	args := o.Called(name)
+	return args.Bool(0), args.Error(1)
 }
 
 func (o *MockClient) GetUsers() ([]es.User, error) {
@@ -185,7 +206,7 @@ var _ = Describe("ElasticSearchCleanUp", func() {
 			},
 			expectedValuesOldCluster,
 			expectedValuesOldCluster),
-		)
+	)
 })
 
 func roles(name string) []es.Role {
