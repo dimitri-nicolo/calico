@@ -2511,6 +2511,7 @@ func TestManagedClusterClient(t *testing.T) {
 				enableManagedClusterCreateAPI: true,
 				managedClustersCACertPath:     "../ca.crt",
 				managedClustersCAKeyPath:      "../ca.key",
+				managementClusterAddr:         "example.org:1234",
 			}
 
 			client, shutdownServer := customizeFreshApiserverAndClient(t, serverConfig)
@@ -2588,7 +2589,7 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	if name != managedClusterServer.Name {
 		return fmt.Errorf("didn't get the same managedCluster back from the server \n%+v\n%+v", managedCluster, managedClusterServer)
 	}
-	endpoint := regexp.MustCompile("managementClusterAddr:\\s\"\\$\\{HOST\\}:\\$\\{PORT\\}\"")
+	endpoint := regexp.MustCompile("managementClusterAddr:\\s\"example.org:1234\"")
 	ca := regexp.MustCompile("management-cluster\\.crt:\\s\\w+")
 	cert := regexp.MustCompile("managed-cluster\\.crt:\\s\\w+")
 	key := regexp.MustCompile("managed-cluster\\.key:\\s\\w+")

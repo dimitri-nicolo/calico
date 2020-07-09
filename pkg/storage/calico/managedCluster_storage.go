@@ -76,7 +76,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		}
 
 		// Populate the installation manifest in the response
-		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey)
+		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey, resources.ManagementClusterAddr)
 		return out, nil
 	}
 

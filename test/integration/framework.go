@@ -50,6 +50,7 @@ type TestServerConfig struct {
 	enableManagedClusterCreateAPI bool
 	managedClustersCACertPath     string
 	managedClustersCAKeyPath      string
+	managementClusterAddr         string
 }
 
 // NewTestServerConfig is a default constructor for the standard test-apiserver setup
@@ -93,6 +94,7 @@ func withConfigGetFreshApiserverAndClient(
 		options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
 		options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
 		options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
+		options.ManagementClusterAddr = serverConfig.managementClusterAddr
 
 		//options.RecommendedOptions.SecureServing.BindAddress=
 		if err := server.RunServer(options); err != nil {

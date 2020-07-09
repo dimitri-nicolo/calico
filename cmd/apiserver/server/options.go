@@ -55,6 +55,9 @@ type CalicoServerOptions struct {
 	ManagedClustersCAKeyPath       string
 	EnableManagedClustersCreateAPI bool
 
+	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
+	ManagementClusterAddr string
+
 	StopCh <-chan struct{}
 }
 
@@ -70,6 +73,9 @@ func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&s.ManagedClustersCAKeyPath, "set-managed-clusters-ca-key",
 		"/code/apiserver.local.config/multicluster/certificates/key",
 		"If set, the path to the CA key will be used to generate managed clusters")
+	flags.StringVar(&s.ManagementClusterAddr, "managementClusterAddr",
+		"<your-management-cluster-address>",
+		"If set, manifests created for new managed clusters will use this value.")
 }
 
 func (o CalicoServerOptions) Validate(args []string) error {
@@ -158,6 +164,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 			ManagedClustersCACert:          o.ManagedClustersCACertPath,
 			ManagedClustersCAKey:           o.ManagedClustersCAKeyPath,
 			EnableManagedClustersCreateAPI: o.EnableManagedClustersCreateAPI,
+			ManagementClusterAddr:          o.ManagementClusterAddr,
 		},
 	}
 

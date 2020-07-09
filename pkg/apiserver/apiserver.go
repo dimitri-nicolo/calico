@@ -45,6 +45,7 @@ type ExtraConfig struct {
 	ManagedClustersCACert          string
 	ManagedClustersCAKey           string
 	EnableManagedClustersCreateAPI bool
+	ManagementClusterAddr          string
 }
 
 type Config struct {
@@ -110,8 +111,9 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 			return nil, err
 		}
 		res = &calico.ManagedClusterResources{
-			CACert: x509Cert,
-			CAKey:  rsaKey,
+			CACert:                x509Cert,
+			CAKey:                 rsaKey,
+			ManagementClusterAddr: c.ExtraConfig.ManagementClusterAddr,
 		}
 	}
 

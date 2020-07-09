@@ -32,7 +32,7 @@ metadata:
 spec:
   # ManagementClusterAddr should be the externally reachable address to which your managed cluster
   # will connect. Valid examples are: "0.0.0.0:31000", "example.com:32000", "[::1]:32500"
-  managementClusterAddr: "${HOST}:${PORT}"
+  managementClusterAddr: "{{.ManagementClusterAddr}}"
 
 ---
 
@@ -52,9 +52,10 @@ data:
 
 // manifestConfig renders manifest based on a predefined template
 type manifestConfig struct {
-	CACert     string
-	Cert       string
-	PrivateKey string
+	CACert                string
+	Cert                  string
+	PrivateKey            string
+	ManagementClusterAddr string
 }
 
 // keyPEMEncode encodes a crypto.Signer as a PEM block
@@ -79,7 +80,7 @@ func certPEMEncode(cert *x509.Certificate) []byte {
 
 // InstallationManifest generates an installation manifests that will populate the field
 // for a managed cluster upon creation
-func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer) string {
+func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, managementClusterAddr string) string {
 	var manifest bytes.Buffer
 	var tmpl *template.Template
 
@@ -88,13 +89,15 @@ func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer) str
 			return base64.StdEncoding.EncodeToString([]byte(text))
 		},
 	}
+	var text = installationManifestTemplate
 
-	tmpl, _ = template.New("ClusterManifest").Funcs(funcMap).Parse(installationManifestTemplate)
+	tmpl, _ = template.New("ClusterManifest").Funcs(funcMap).Parse(text)
 
 	manifestConfig := &manifestConfig{
-		CACert:     string(certPEMEncode(certCA)),
-		Cert:       string(certPEMEncode(cert)),
-		PrivateKey: string(keyPEMEncode(key)),
+		CACert:                string(certPEMEncode(certCA)),
+		Cert:                  string(certPEMEncode(cert)),
+		PrivateKey:            string(keyPEMEncode(key)),
+		ManagementClusterAddr: managementClusterAddr,
 	}
 	_ = tmpl.Execute(&manifest, manifestConfig)
 	return manifest.String()
