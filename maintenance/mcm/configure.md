@@ -1,7 +1,7 @@
 ---
-title: Install Calico Enterprise for multi-cluster management, Kubernetes
-description: Install Calico Enterprise to manage clusters from a single management plane for Kubernetes.
-canonical_url: '/getting-started/mcm/install'
+title: Configure Calico Enterprise for multi-cluster management, Kubernetes
+description: Configure Calico Enterprise to manage clusters from a single management plane for Kubernetes.
+canonical_url: '/maintenance/mcm/configure'
 ---
 
 ### Big picture
@@ -16,6 +16,7 @@ Managing standalone clusters and multiple instances of Elasticsearch is not oner
 
 This how-to guide uses the following {{site.prodname}} features:
 
+- **Installation API** with `ManagementCluster` field
 - **Installation API** with `ManagementClusterConnection` field
 - {{site.prodname}} Manager user interface
 
@@ -56,16 +57,18 @@ Multi-cluster management provides a single source for authorization across manag
 
 ### How to
 
-The following steps install multi-cluster management on two new Kubernetes clusters (a management cluster and a managed cluster). This is the simplest way to get started using multi-cluster management for non-production. As you move to production, you can exchange existing standalone {{site.prodname}} clusters to be the management cluster or the managed cluster, using [Change cluster types]({{site.baseurl}}/getting-started/mcm/change-cluster-type). 
+The following steps install multi-cluster management on two new Kubernetes clusters (a management cluster and a managed cluster). This is the simplest way to get started using multi-cluster management for non-production. As you move to production, you can exchange existing standalone {{site.prodname}} clusters to be the management cluster or the managed cluster, using [Change cluster types]({{site.baseurl}}/maintenance/mcm/change-cluster-type). 
 
-- [Install Calico Enterprise on the management cluster](#install-calico-enterprise-on-the-management-cluster)
-- [Configure a service for the management cluster](#configure-a-service-for-the-management-cluster)
+- [Install Calico Enterprise](#install-calico-enterprise)
+- [Turn a cluster into a management cluster](#turn-the-cluster-into-a-management-cluster)
 - [Create an admin user and verify management cluster connection](#create-an-admin-user-and-verify-management-cluster-connection)
 - [Add a managed cluster to the management cluster](#add-a-managed-cluster-to-the-management-cluster)
-- [Install Calico Enterprise on the managed cluster](#install-calico-enterprise-on-the-managed-cluster)
+- [Install Calico Enterprise](#install-calico-enterprise-1)
+- [Turn a cluster into a managed cluster](#turn-the-cluster-into-a-managed-cluster)
 - [Provide permissions to view the managed cluster](#provide-permissions-to-view-the-managed-cluster)
 
-#### Install Calico Enterprise on the management cluster
+#### Install Calico Enterprise
+Follow these steps in the cluster you intend to use as the management cluster.
 
 1. [Configure storage for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 1. Install the Tigera operator and custom resource definitions.
@@ -73,35 +76,28 @@ The following steps install multi-cluster management on two new Kubernetes clust
    ```bash
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
+
 1. Install your pull secret.
 
    ```bash
    kubectl create secret generic tigera-pull-secret \
-       --type=kubernetes.io/dockerconfigjson -n tigera-operator \
-       --from-file=.dockerconfigjson=<path/to/pull/secret>
+       --from-file=.dockerconfigjson=<path/to/pull/secret> \
+       --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
-1. Install the Tigera custom resources. For more information, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
-   Download the custom resources YAML to your local directory and set the `clusterManagementType` to `Management`.
+1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```bash
-   curl -O -L {{ "/manifests/custom-resources.yaml" | absolute_url }}
-   sed -i 's/clusterManagementType: Standalone/clusterManagementType: Management/' custom-resources.yaml
+   kubectl create -f {{ "/manifests/custom-resources.yaml" | absolute_url }}
    ```
 
-1. Install the modified manifest.
-
-   ```bash
-   kubectl create -f ./custom-resources.yaml
-   ```
-
-   Monitor progress with the following command:
+   You can now monitor progress with the following command:
 
    ```bash
    watch kubectl get tigerastatus
    ```
 
-   Wait until the `apiserver` and `management-cluster-connection` show a status of `Available`, then proceed to the next section.
+   Wait until the `apiserver` shows a status of `Available`, then proceed to the next section.
 
 1. Install the Tigera license.
 
@@ -123,32 +119,49 @@ The following steps install multi-cluster management on two new Kubernetes clust
    kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```
 
-#### Configure a service for the management cluster
+#### Turn the cluster into a management cluster
 
 To control managed clusters from your central management plane, you must ensure it is reachable for connections. The simplest way to get started (but not for production scenarios), is to configure a `NodePort` service to expose the management cluster. Note that the service must live within the `tigera-manager` namespace.
 
-1. Configure a `NodePort` service to expose the management cluster and set the namespace to `tigera-manager`.
-  
+1.  Create a service to expose the management cluster. 
+    The following example of a NodePort service may not be suitable for production and high availability. For options, see [Fine-tune multi-cluster management for production]({{site.baseurl}}/maintenance/mcm/fine-tune-deployment).
+    Apply the following service manifest.
+ 
+    ```bash
+    kubectl create -f - <<EOF
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: tigera-manager-mcm
+      namespace: tigera-manager
+    spec:
+      ports:
+      - nodePort: 30449
+        port: 9449
+        protocol: TCP
+        targetPort: 9449
+      selector:
+        k8s-app: tigera-manager
+      type: NodePort
+    EOF
+    ```
+ 
+1. Export the service port number, and the public IP or host of the management cluster. (Ex. "example.com:1234" or "10.0.0.10:1234".)
    ```bash
-     kubectl create -f - <<EOF
-     apiVersion: v1
-     kind: Service
-     metadata:
-       name: tigera-manager-mcm
-       namespace: tigera-manager
-     spec:
-       ports:
-       - nodePort: 30449
-         port: 9449
-         protocol: TCP
-         targetPort: 9449
-       selector:
-         k8s-app: tigera-manager
-       type: NodePort
-     EOF
+   export MANAGEMENT_CLUSTER_ADDR=<your-management-cluster-addr>
    ```
-1. Apply the manifest.
-1. Make a note of the service **port number**, and have the **public IP address** of the management cluster for a later step.
+1. Apply the [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster) CR.
+
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: ManagementCluster
+   metadata:
+     name: tigera-secure
+   spec:
+     address: $MANAGEMENT_CLUSTER_ADDR
+   EOF
+   ```
 
 #### Create an admin user and verify management cluster connection
 
@@ -172,29 +185,26 @@ You have successfully installed a management cluster.
 
 #### Add a managed cluster to the management cluster
 
-In the {{site.prodname}} Manager UI:
+Choose a name for your managed cluster and then add it to your **management cluster**. The following command will
+create a manifest with the name of your managed cluster in your current directory.
 
-1. In the left navigation, select **Managed Clusters**.
-1. Click **Add Cluster**.
-1. Name the managed cluster.
-   >**Important!** Choose a unique name that you can easily recognize. This name identifies your managed cluster within the management plane and is represented by a Kubernetes custom resource. As a result, you cannot rename the managed cluster after it is created.
-   {: .alert .alert-danger}
+```bash
+export MANAGED_CLUSTER=my-managed-cluster
+kubectl -o jsonpath="{.spec.installationManifest}" > $MANAGED_CLUSTER.yaml create -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: ManagedCluster
+metadata:
+  name: $MANAGED_CLUSTER
+EOF
+```
 
-1. Click **Create Cluster** and download the associated manifest (<your-cluster-name>.yaml).  
-   This manifest contains configuration for your managed cluster that is used to establish a secure tunnel connection with the management cluster. After you click Close, you will see your new cluster. Note that the managed cluster is not selectable because it is not yet connected.
-1. Open the manifest and navigate to the `ManagementClusterConnection` resource definition. In the `managementClusterAddr` field, add the management cluster **public IP address** and the **service port number** that you created when you installed the management cluster. (Do not apply the manifest yet, but keep it handy to use in the next section). For example:
-   ```
-   apiVersion: operator.tigera.io/v1
-   kind: ManagementClusterConnection
-   metadata:
-     name: tigera-secure
-   spec:
-     managementClusterAddr: 10.0.128.10:30449
-   ```
-   > **Tip**: As you add new managed clusters, use the drop-down menu in the top right banner to access them.
-   {: .alert .alert-info}
+Verify that the `managementClusterAddr` in the manifest is correct.
 
-#### Install Calico Enterprise on the managed cluster
+> **Tip**: Managed clusters can also be added from {{site.prodname}} Manager. From here you can see the connection status and switch to see data from other clusters by using the drop-down menu in the top right banner.
+{: .alert .alert-info}
+
+#### Install Calico Enterprise
+Follow these steps in the cluster you intend to use as the managed cluster.
 
 1. Install the Tigera operator and custom resource definitions.
 
@@ -210,14 +220,10 @@ In the {{site.prodname}} Manager UI:
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
 
-1. Install the Tigera custom resources.  
-   For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
-
-   Download the custom resources YAML to your local directory and set the `clusterManagementType` to `Managed`.
+1. Download the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 
    ```bash
    curl -O -L {{ "/manifests/custom-resources.yaml" | absolute_url }}
-   sed -i 's/clusterManagementType: Standalone/clusterManagementType: Managed/' custom-resources.yaml
    ```
 
    Remove the `Manager` custom resource from the manifest file.
@@ -250,39 +256,37 @@ In the {{site.prodname}} Manager UI:
    ```bash
    kubectl create -f ./custom-resources.yaml
    ```
-
-1. Apply the manifest that you modified in the step, [Add a managed cluster to the management cluster](#add-a-managed-cluster-to-the-management-cluster).
-
-   ```bash
-   kubectl create -f ./<your-chosen-cluster-name>.yaml
-   ```
-   Monitor progress with the following command:
-
+1. Monitor progress with the following command:
    ```bash
    watch kubectl get tigerastatus
    ```
-
-   Wait until the `apiserver` and `management-cluster-connection` show a status of `Available`, then go to the next step.
+   Wait until the `apiserver` shows a status of `Available`, then go to the next step.
 
 1. Install the Tigera license.
 
-   ```
+   ```bash
    kubectl create -f </path/to/license.yaml>
    ```
-   Monitor the progress with the following command:
 
+#### Turn the cluster into a managed cluster
+1. Apply the manifest that you modified in the step, [Add a managed cluster to the management cluster](#add-a-managed-cluster-to-the-management-cluster).
+   ```bash
+   kubectl apply -f $MANAGED_CLUSTER.yaml
    ```
-   watch kubectl get pods --all-namespaces -o wide
+1. Monitor progress with the following command:
+   ```bash
+   watch kubectl get tigerastatus
    ```
-
-   After you see the `tigera-compliance` namespace is created, go to the next section.
+   Wait until the `management-cluster-connection` and `tigera-compliance` show a status of `Available`.
 
 1. Secure {{site.prodname}} on the managed cluster with network policy.
 
-   ```
+   ```bash
    kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
    ```
-You have successfully installed a managed cluster.
+
+You have now successfully installed a managed cluster!
+
 
 #### Provide permissions to view the managed cluster
 
@@ -301,5 +305,5 @@ You have now successfully completed the setup for multi-cluster management.
 ### Next steps
 
 - To create federated tiers and policies, see [Federate tiers and policies]({{site.baseurl}}/reference/alpha/federation/installation)
-- When you are ready to fine-tune your multi-cluster management deployment for production, see [Fine-tune multi-cluster management]({{site.baseurl}}/getting-started/mcm/fine-tune-deployment)
-- To change an existing {{site.prodname}} standalone cluster to a management or managed cluster, see [Change cluster types]({{site.baseurl}}/getting-started/mcm/change-cluster-type)
+- When you are ready to fine-tune your multi-cluster management deployment for production, see [Fine-tune multi-cluster management]({{site.baseurl}}/maintenance/mcm/fine-tune-deployment)
+- To change an existing {{site.prodname}} standalone cluster to a management or managed cluster, see [Change cluster types]({{site.baseurl}}/maintenance/mcm/change-cluster-type)

@@ -1,7 +1,7 @@
 ---
 title: Fine-tune multi-cluster management 
 description: Review your multi-cluster management deployment to ensure it is ready for production.
-canonical_url: '/getting-started/mcm/fine-tune-deployment'
+canonical_url: '/maintenance/mcm/fine-tune-deployment'
 ---
 
 ### Big picture
@@ -22,7 +22,7 @@ Because the management cluster stores all log data across your managed clusters,
 
 #### Review service type for the management cluster
 
-In the [Install multi-cluster management guide]({{site.baseurl}}/getting-started/mcm/install), we used a `NodePort` service because it was the quickest way to expose the management cluster. But, there are drawbacks to using `NodePort` services, described in {% include open-new-window.html text='Defining a Service in Kubernetes' url='https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service' %}. For production and high availability, choose a type of service that is scalable. We have tested both `NodePort` and `LoadBalancer` services. For both, a security rule/firewall rule is needed to allow connections to the management cluster.  
+In the [Install multi-cluster management guide]({{site.baseurl}}/maintenance/mcm/configure), we used a `NodePort` service because it was the quickest way to expose the management cluster. But, there are drawbacks to using `NodePort` services, described in {% include open-new-window.html text='Defining a Service in Kubernetes' url='https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service' %}. For production and high availability, choose a type of service that is scalable. We have tested both `NodePort` and `LoadBalancer` services. For both, a security rule/firewall rule is needed to allow connections to the management cluster.  
 
 The configuration for your service (regardless of type) should obey the following requirements:
 
@@ -51,12 +51,12 @@ spec:
 > **Note**: Using a LoadBalancer may require additional steps, depending on how you provisioned your Kubernetes cluster.
 {: .alert .alert-info}
 
-> **Important!**: If you previously set up a management cluster with a service, don’t forget to update the IP address in each managed clusters, by editing the `ManagementClusterConnection` [manifest that you downloaded]({{site.baseurl}}/getting-started/mcm/install#add-a-managed-cluster-to-the-management-cluster) and apply it, or use `kubectl edit managementclusterconnection tigera-secure`.
+> **Important!**: If you previously set up a management cluster with a service, don’t forget to update the IP address in each managed clusters, by editing the `ManagementClusterConnection` [manifest that you downloaded]({{site.baseurl}}/maintenance/mcm/configure#add-a-managed-cluster-to-the-management-cluster) and apply it, or use `kubectl edit managementclusterconnection tigera-secure`.
 {: .alert .alert-warning}
 
 #### Review user permissions
 
-In the [Install multi-cluster management guide]({{site.baseurl}}/getting-started/mcm/install), we created a user with full admin-level permissions in both the management and managed cluster. In a production environment you will want to define narrow permissions for your users. 
+In the [Install multi-cluster management guide]({{site.baseurl}}/maintenance/mcm/configure), we created a user with full admin-level permissions in both the management and managed cluster. In a production environment you will want to define narrow permissions for your users. 
 
 When defining roles and permissions across your clusters, make note of the following:
 

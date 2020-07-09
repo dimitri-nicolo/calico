@@ -32,15 +32,6 @@ section:
       path: /getting-started/openshift/requirements
     - title: Installation
       path: /getting-started/openshift/installation/
-  - title: Single management plane for all clusters
-    path: /getting-started/mcm/
-    section:
-      - title: Install multi-cluster management
-        path: /getting-started/mcm/install
-      - title: Fine-tune multi-cluster management for production
-        path: /getting-started/mcm/fine-tune-deployment
-      - title: Change a cluster type
-        path: /getting-started/mcm/change-cluster-type
   - title: Install from a private registry
     path: /getting-started/private-registry/
     section:

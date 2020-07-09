@@ -103,7 +103,7 @@ mkdir manifests manifests_cr
 
 1. Patch installation.
    ```bash
-   oc patch installations.operator.tigera.io default --type merge -p '{"spec":{"variant":"TigeraSecureEnterprise","clusterManagementType":"Standalone","imagePullSecrets":[{"name":"tigera-pull-secret"}]}}'
+   oc patch installations.operator.tigera.io default --type merge -p '{"spec":{"variant":"TigeraSecureEnterprise","imagePullSecrets":[{"name":"tigera-pull-secret"}]}}'
    ```
 
 1. Apply the CRs for PrometheusRule.

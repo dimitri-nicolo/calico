@@ -2,6 +2,15 @@ title: "Operations"
 path: /maintenance/
 order: 4
 section:
+- title: Multi-cluster management
+  path: /maintenance/mcm/
+  section:
+    - title: Configure multi-cluster management
+      path: /maintenance/mcm/configure
+    - title: Fine-tune multi-cluster management for production
+      path: /maintenance/mcm/fine-tune-deployment
+    - title: Change a cluster type
+      path: /maintenance/mcm/change-cluster-type
 - title: Configure log storage
   path: /maintenance/logstorage/
   section:

@@ -19,6 +19,7 @@ curl {{ "/manifests/ocp/crds/01-crd-prometheus.yaml" | absolute_url }} -o manife
 curl {{ "/manifests/ocp/crds/01-crd-servicemonitor.yaml" | absolute_url }} -o manifests/01-crd-servicemonitor.yaml
 curl {{ "/manifests/ocp/crds/01-crd-tigerastatus.yaml" | absolute_url }} -o manifests/01-crd-tigerastatus.yaml
 curl {{ "/manifests/ocp/crds/01-crd-managementclusterconnection.yaml" | absolute_url }} -o manifests/01-crd-managementclusterconnection.yaml
+curl {{ "/manifests/ocp/crds/01-crd-managementcluster.yaml" | absolute_url }} -o manifests/01-crd-managementcluster.yaml
 {%- for data in site.static_files %}
 {%- if data.path contains '/manifests/ocp/crds/calico' %}
 curl {{ data.path | absolute_url }} -o manifests/{{data.name}}

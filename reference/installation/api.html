@@ -30,6 +30,8 @@ Resource Types:
 </li><li>
 <a href="#operator.tigera.io/v1.LogStorage">LogStorage</a>
 </li><li>
+<a href="#operator.tigera.io/v1.ManagementCluster">ManagementCluster</a>
+</li><li>
 <a href="#operator.tigera.io/v1.ManagementClusterConnection">ManagementClusterConnection</a>
 </li><li>
 <a href="#operator.tigera.io/v1.Manager">Manager</a>
@@ -510,24 +512,6 @@ CalicoNetworkSpec
 </tr>
 <tr>
 <td>
-<code>clusterManagementType</code><br>
-<em>
-<a href="#operator.tigera.io/v1.ClusterManagementType">
-ClusterManagementType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>How the cluster is managed. Valid values for this field are: Standalone, Management, Managed.
-Standalone clusters are fully self-contained installations of Calico Enterprise. Management clusters provide
-a single view to manage any number of Managed clusters, which are a lighter weight installation.
-This option is applicable only when variant is TigeraSecureEnterprise.
-Default: Standalone</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>controlPlaneNodeSelector</code><br>
 <em>
 map[string]string
@@ -936,6 +920,81 @@ LogStorageStatus
 </td>
 <td>
 <p>Most recently observed state for Tigera log storage.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.ManagementCluster">ManagementCluster
+</h3>
+<p>The presence of ManagementCluster in your cluster, will configure it to be the management plane to which managed
+clusters can connect. At most one instance of this resource is supported. It must be named &ldquo;tigera-secure&rdquo;.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br>
+string</td>
+<td>
+<code>
+operator.tigera.io/v1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br>
+string
+</td>
+<td><code>ManagementCluster</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br>
+<em>
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ManagementClusterSpec">
+ManagementClusterSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>address</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>This field specifies the externally reachable address to which your managed cluster will connect. When a managed
+cluster is added, this field is used to populate an easy-to-apply manifest that will connect both clusters.
+Valid examples are: &ldquo;0.0.0.0:31000&rdquo;, &ldquo;example.com:32000&rdquo;, &ldquo;[::1]:32500&rdquo;</p>
+</td>
+</tr>
+</table>
 </td>
 </tr>
 </tbody>
@@ -1445,7 +1504,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -1610,14 +1669,6 @@ Default: None</p>
 </tr>
 </tbody>
 </table>
-<h3 id="operator.tigera.io/v1.ClusterManagementType">ClusterManagementType
-(<code>string</code> alias)</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
-</p>
-<p>ClusterManagementType represents the type of multicluster management to use. Valid options for this field are: &ldquo;Standalone&rdquo;,
-&ldquo;Management&rdquo;, &ldquo;Managed&rdquo;.</p>
 <h3 id="operator.tigera.io/v1.ComplianceSpec">ComplianceSpec
 </h3>
 <p>
@@ -2012,24 +2063,6 @@ CalicoNetworkSpec
 </tr>
 <tr>
 <td>
-<code>clusterManagementType</code><br>
-<em>
-<a href="#operator.tigera.io/v1.ClusterManagementType">
-ClusterManagementType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>How the cluster is managed. Valid values for this field are: Standalone, Management, Managed.
-Standalone clusters are fully self-contained installations of Calico Enterprise. Management clusters provide
-a single view to manage any number of Managed clusters, which are a lighter weight installation.
-This option is applicable only when variant is TigeraSecureEnterprise.
-Default: Standalone</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>controlPlaneNodeSelector</code><br>
 <em>
 map[string]string
@@ -2408,6 +2441,37 @@ should be able to access this address. This field is used by managed clusters on
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.ManagementClusterSpec">ManagementClusterSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.ManagementCluster">ManagementCluster</a>)
+</p>
+<p>ManagementClusterSpec defines the desired state of a ManagementCluster</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>address</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>This field specifies the externally reachable address to which your managed cluster will connect. When a managed
+cluster is added, this field is used to populate an easy-to-apply manifest that will connect both clusters.
+Valid examples are: &ldquo;0.0.0.0:31000&rdquo;, &ldquo;example.com:32000&rdquo;, &ldquo;[::1]:32500&rdquo;</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.ManagerSpec">ManagerSpec
 </h3>
 <p>
@@ -2701,7 +2765,7 @@ Kubernetes core/v1.ResourceRequirements
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
