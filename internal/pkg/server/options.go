@@ -122,15 +122,6 @@ func WithTunnelTargetWhitelist(tgts []regexp.Regexp) Option {
 	}
 }
 
-// WithWatchAdded lets server to watch k8s for added clusters and register them
-// this way. This is useful for testing.
-func WithWatchAdded() Option {
-	return func(s *Server) error {
-		s.clusters.watchAdded = true
-		return nil
-	}
-}
-
 // WithForwardingEnabled sets if we should allow forwarding to another server
 func WithForwardingEnabled(forwardingEnabled bool) Option {
 	return func(s *Server) error {

@@ -95,7 +95,6 @@ var _ = Describe("Server", func() {
 			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
-			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
@@ -227,7 +226,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 			server.WithDefaultProxy(defaultProxy),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			server.WithWatchAdded(),
 		)
 
 		srv, err = server.New(
@@ -630,7 +628,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 				server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 				server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
-				server.WithWatchAdded(),
 			)
 		} else {
 			opts = append(opts,
@@ -639,7 +636,6 @@ var _ = Describe("Using the generated guardian certs as tunnel certs", func() {
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 				server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 				server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
-				server.WithWatchAdded(),
 			)
 		}
 
@@ -779,7 +775,6 @@ var _ = Describe("Server authenticates requests", func() {
 			server.WithExternalCredsFiles("testdata/localhost.pem", "testdata/localhost.key"),
 			server.WithInternalCredFiles("testdata/tigera-manager-svc.pem", "testdata/tigera-manager-svc.key"),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 

@@ -19,7 +19,6 @@ var _ = Describe("Clusters", func() {
 
 	clusters := &clusters{
 		clusters:   make(map[string]*cluster),
-		watchAdded: true,
 		k8sCLI:     k8sAPI,
 	}
 

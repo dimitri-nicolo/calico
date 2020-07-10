@@ -55,9 +55,6 @@ type clusters struct {
 	sync.RWMutex
 	clusters map[string]*cluster
 
-	// adding/deleting a cluster will be done by watching the API, only for testing and debugging
-	watchAdded bool
-
 	k8sCLI K8sInterface
 
 	// parameters for forwarding guardian requests to a default server
@@ -301,14 +298,11 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			var err error
 
 			switch r.Type {
-			case watch.Added:
-				if !cs.watchAdded {
-					break
-				}
-				fallthrough
-			case watch.Modified:
+			case watch.Added, watch.Modified:
+				log.Infof("Adding/Updating %s", mc.ID)
 				err = cs.update(mc)
 			case watch.Deleted:
+				log.Infof("Deleting %s", mc.ID)
 				err = cs.remove(mc)
 			default:
 				err = errors.Errorf("Watch event %s unsupported", r.Type)

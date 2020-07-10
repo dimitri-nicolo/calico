@@ -192,7 +192,6 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
 			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 
