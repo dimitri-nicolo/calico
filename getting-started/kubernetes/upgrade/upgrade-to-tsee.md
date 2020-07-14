@@ -22,7 +22,7 @@ instead.
 
 ### Upgrade a Kubernetes cluster
 
-{% include content/upgrade-operator-simple.md %}
+{% include content/upgrade-operator-simple.md upgradeFrom="OpenSource" %}
 
 ### Upgrade managed cloud clusters (EKS)
 
@@ -36,8 +36,8 @@ For example, in order to upgrade an [EKS cluster]({{site.baseurl}}/getting-start
    kubectl apply -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}  # replace "create" with "apply"
    ```
 
-> **Note**: GKE and AKS upgrades from open source Calico are not currently supported. EKS is not production
-> ready due to limited testing.
+> **Note**: EKS upgrades from open source Calico are not production ready due to limited testing.
+> GKE and AKS upgrades from open source Calico are not currently supported.
 {: .alert .alert-info}
 
 ### Upgrade OpenShift clusters

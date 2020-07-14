@@ -28,7 +28,7 @@ the upgrade.
 
 ## Upgrade from 3.0 or later
 
-{% include content/upgrade-operator-simple.md %}
+{% include content/upgrade-operator-simple.md upgradeFrom="Enterprise" %}
 
 ## Upgrade from 2.8
 
