@@ -52,15 +52,12 @@
       version: 7.6.2
     kibana:
       image: tigera/kibana
+      version: master
+    eck-elasticsearch:
       version: 7.6.2
-    elasticsearch-operator:
-      registry: docker.elastic.co
-      image: eck/eck-operator
-      version: 1.0.1
     elasticsearch:
-      registry: docker.elastic.co
-      image: elasticsearch/elasticsearch
-      version: 7.6.2
+      image: tigera/elasticsearch
+      version: master
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -102,6 +99,10 @@
       version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.
+    elasticsearch-operator:
+      registry: docker.elastic.co
+      image: eck/eck-operator
+      version: 1.0.1
     prometheus-operator:
       image: coreos/prometheus-operator
       version: v0.38.1

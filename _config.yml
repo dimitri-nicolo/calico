@@ -59,6 +59,7 @@ imageNames:
   compliance-benchmarker: tigera/compliance-benchmarker
   ingress-collector: tigera/ingress-collector
   kibana: tigera/kibana
+  elasticsearch: tigera/elasticsearch
   license-agent: tigera/license-agent
   firewall-integration: tigera/firewall-integration
   prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
@@ -66,7 +67,6 @@ imageNames:
   alertManager: quay.io/prometheus/alertmanager
   prometheus: quay.io/prometheus/prometheus
   elasticsearchOperator: upmcenterprises/elasticsearch-operator
-  elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
   prometheusOperator: quay.io/coreos/prometheus-operator
   cpHorizontalAutoscaler: k8s.gcr.io/cluster-proportional-autoscaler-amd64
   cpVerticalAutoscaler: k8s.gcr.io/cpvpa-amd64
@@ -142,6 +142,7 @@ defaults:
         compliance-benchmarker: tigera/compliance-benchmarker
         ingress-collector: tigera/ingress-collector
         kibana: tigera/kibana
+        elasticsearch: tigera/elasticsearch
         license-agent: tigera/license-agent
         firewall-integration: tigera/firewall-integration
         prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
@@ -149,7 +150,6 @@ defaults:
         alertManager: quay.io/prometheus/alertmanager
         prometheus: quay.io/prometheus/prometheus
         elasticsearchOperator: upmcenterprises/elasticsearch-operator
-        elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
         prometheusOperator: quay.io/coreos/prometheus-operator
         cpHorizontalAutoscaler: k8s.gcr.io/cluster-proportional-autoscaler-amd64
         cpVerticalAutoscaler: k8s.gcr.io/cpvpa-amd64
