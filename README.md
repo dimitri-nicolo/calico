@@ -1,6 +1,6 @@
 # Tigera elasticsearch
 
-Upstream Kibana for Tigera
+Upstream elasticsearch for Tigera
 
 ## Customization
 
