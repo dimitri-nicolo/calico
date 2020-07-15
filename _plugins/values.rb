@@ -295,8 +295,9 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
         clusterIP:
 
     elasticsearch:
-      image: #{versions["elasticsearch"].registry}/#{versions["elasticsearch"].image}
+      image: #{imageRegistry}#{versions["elasticsearch"].image}
       tag: #{versions["elasticsearch"].version}
+      version: #{versions["eck-elasticsearch"]}
       # Information for configuring connections to a BYO elasticsearch cluster.
       # Leave all fields blank to deploy a self-hosted elasticsearch instance.
     
