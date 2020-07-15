@@ -36,6 +36,12 @@ For example, in order to upgrade an [EKS cluster]({{site.baseurl}}/getting-start
    kubectl apply -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}  # replace "create" with "apply"
    ```
 
+> **Note**: When upgrading from older versions of open source Calico, delete the unused
+> deployment `calico-typha-horizontal-autoscaler` with the following command:
+>  ```
+>  kubectl -n kube-system delete deployments.apps calico-typha-horizontal-autoscaler
+>  ```
+> 
 > **Note**: EKS upgrades from open source Calico are not production ready due to limited testing.
 > GKE and AKS upgrades from open source Calico are not currently supported.
 {: .alert .alert-info}
