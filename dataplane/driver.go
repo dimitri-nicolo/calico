@@ -26,8 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
-
+	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
@@ -41,6 +40,8 @@ import (
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/wireguard"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -340,6 +341,20 @@ func StartDataplaneDriver(configParams *config.Config,
 		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)
 		intDP.Start()
+
+		const healthName = "aws-source-destination-check"
+		// Set source-destination-check on AWS EC2 instance.
+		if configParams.AWSSrcDstCheck != string(apiv3.AWSSrcDstCheckOptionDoNothing) {
+			go func(check, healthName string, healthAgg *health.HealthAggregator) {
+				log.Infof("Setting AWS EC2 source-destination-check to %s", check)
+				err := aws.UpdateSrcDstCheck(check)
+				if err != nil {
+					log.WithField("src-dst-check", check).Errorf("Failed to set source-destination-check: %v", err)
+					// set not-ready.
+					healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: false})
+				}
+			}(configParams.AWSSrcDstCheck, healthName, healthAggregator)
+		}
 
 		return intDP, nil, stopChan
 	} else {

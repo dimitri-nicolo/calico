@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.1 // indirect
 	github.com/Microsoft/hcsshim v0.8.6
-	github.com/aws/aws-sdk-go v1.30.10
+	github.com/aws/aws-sdk-go v1.31.15
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/containernetworking/plugins v0.8.5
 	github.com/davecgh/go-spew v1.1.1
@@ -29,8 +29,8 @@ require (
 	github.com/libp2p/go-reuseport v0.0.1
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/onsi/ginkgo v1.10.1
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.12.0
+	github.com/onsi/gomega v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v0.0.0-20191223184832-a0e1c4693271
@@ -64,8 +64,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200703170817-cdba3b3994d9
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200704030611-217991484a22
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200715200940-967f2c6d1fd7
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200715220132-e39d468d61f3
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
