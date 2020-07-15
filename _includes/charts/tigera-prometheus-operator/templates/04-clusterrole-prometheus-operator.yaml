@@ -1,4 +1,3 @@
-{{ if .Values.prometheusOperator.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -57,4 +56,3 @@ rules:
     - podmonitors/finalizers
   verbs:
     - "*"
-{{ end }}

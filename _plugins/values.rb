@@ -481,24 +481,12 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       tag: #{versions["calicoctl"].version}
       binPath: /bin
 
-    prometheusOperator:
-      enabled: true
-      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
-      tag: #{versions["prometheus-operator"].version}
-
-    prometheusConfigReloader:
-      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
-      tag: #{versions["prometheus-config-reloader"].version}
-
     alertmanager:
       image: #{versions["alertmanager"].registry}/#{versions["alertmanager"].image}
       tag: #{versions["alertmanager"].version}
 
-    configmapReload:
-      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
-      tag: #{versions["configmap-reload"].version}
-
     includeCoreChart: false
+    includePrometheusOperator: true
 
     # Set to true to use v1beta1 CRDs. This is necessary to work around
     # a bug currently in upstream Helm v2.x where it fails to install v1 CRDs
@@ -509,6 +497,23 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       # set to name of desired apparmor policy for the calico-node container and
       # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
       nodeApparmorPolicyName: ""
+    EOF
+  elsif chart == "tigera-prometheus-operator"
+    versionsYml = <<~EOF
+    imagePullSecrets: {}
+
+    prometheusOperator:
+      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
+      tag: #{versions["prometheus-operator"].version}
+
+    prometheusConfigReloader:
+      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
+      tag: #{versions["prometheus-config-reloader"].version}
+
+    configmapReload:
+      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
+      tag: #{versions["configmap-reload"].version}
+
     EOF
   else 
     versionsYml = <<~EOF

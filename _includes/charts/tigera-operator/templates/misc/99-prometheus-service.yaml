@@ -1,4 +1,3 @@
-{{ if .Values.prometheusOperator.enabled }}
 # Service for access to Prometheus.
 apiVersion: v1
 kind: Service
@@ -14,4 +13,3 @@ spec:
     targetPort: web
   selector:
     prometheus: calico-node-prometheus
-{{ end }}

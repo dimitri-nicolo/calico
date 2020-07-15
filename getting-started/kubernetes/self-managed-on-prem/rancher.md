@@ -40,11 +40,20 @@ Install {{side.prodname}} as the required CNI for networking and/or network poli
 
 1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage).
 
-1. Install the Tigera operators and custom resource definitions.
+1. Install the Tigera operator and custom resource definitions.
 
    ```
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
+
+1. (Optional) If you have an existing Prometheus operator in your cluster that you want to use, continue to the next step. Otherwise, install the Prometheus operator and related custom resource definitions with the command below. The Prometheus operator will be used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
+
+   ```
+   kubectl create -f {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
+   ```
+
+   > **Note**: If you plan to use your own Prometheus operator with {{site.prodname}}, please ensure it is v0.30.0 or higher.
+   {: .alert .alert-info}
 
 1. Install your pull secret.
 

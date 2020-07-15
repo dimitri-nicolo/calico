@@ -1,4 +1,3 @@
-{{ if .Values.prometheusOperator.enabled }}
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -12,4 +11,3 @@ metadata:
 {{- if eq .Values.installation.kubernetesProvider "openshift" }}
     openshift.io/run-level: "0"
 {{- end }}
-{{ end }}

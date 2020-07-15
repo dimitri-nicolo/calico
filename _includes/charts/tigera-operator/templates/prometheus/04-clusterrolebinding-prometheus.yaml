@@ -1,14 +1,12 @@
-{{ if .Values.prometheusOperator.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: calico-prometheus-operator
+  name: prometheus
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: calico-prometheus-operator
+  name: prometheus
 subjects:
 - kind: ServiceAccount
-  name: calico-prometheus-operator
+  name: prometheus
   namespace: tigera-prometheus
-{{ end }}

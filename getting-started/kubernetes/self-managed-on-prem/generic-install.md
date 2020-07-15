@@ -44,11 +44,20 @@ When you install {{site.prodname}} on your cluster for the first time, you get t
 
 1. [Configure storage for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
-1. Install the Tigera operators and custom resource definitions.
+1. Install the Tigera operator and custom resource definitions.
 
    ```
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
+
+1. (Optional) If you have an existing Prometheus operator in your cluster that you want to use, continue to the next step. Otherwise, install the Prometheus operator and related custom resource definitions with the command below. The Prometheus operator will be used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
+
+   ```
+   kubectl create -f {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
+   ```
+
+   > **Note**: If you plan to use your own Prometheus operator with {{site.prodname}}, please ensure it is v0.30.0 or higher.
+   {: .alert .alert-info}
 
 1. Install your pull secret.
 
@@ -59,7 +68,7 @@ When you install {{site.prodname}} on your cluster for the first time, you get t
        --from-file=.dockerconfigjson=<path/to/pull/secret> \
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
-1. [Optional] If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+1. (Optional) If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 1. Install the Tigera custom resources. For more information on configuration options available, see [the installation reference]({{site.baseurl}}/reference/installation/api).
 

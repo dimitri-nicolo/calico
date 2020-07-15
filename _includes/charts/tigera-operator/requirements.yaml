@@ -1,3 +1,5 @@
 dependencies:
 - name: tigera-secure-ee-core
   condition: includeCoreChart
+- name: tigera-prometheus-operator
+  condition: includePrometheusOperator

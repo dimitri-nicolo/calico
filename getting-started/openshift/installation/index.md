@@ -73,6 +73,8 @@ openshift-install create manifests
 
 {% include content/openshift-manifests.md %}
 
+{% include content/openshift-prometheus-operator.md %}
+
 {% include content/openshift-resources.md %}
 
 #### Add an image pull secret

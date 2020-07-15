@@ -20,4 +20,5 @@ compliance:
   enabled: false
 prometheus:
   enabled: false
+includePrometheusOperator: false
 {% endhelm %}

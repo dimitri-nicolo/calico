@@ -1,7 +1,6 @@
 ---
 layout: null
 ---
-{% helm tigera-operator --execute templates/prometheus-operator/04-clusterrole-prometheus-operator.yaml %}
-installation:
-  kubernetesProvider: openshift
+{% helm tigera-prometheus-operator --execute templates/04-clusterrole-prometheus-operator.yaml %}
+# todo: fix bug where empty values doesn't render
 {% endhelm %}

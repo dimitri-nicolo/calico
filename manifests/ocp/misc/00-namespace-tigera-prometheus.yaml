@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm tigera-operator --execute templates/prometheus-operator/00-namespace-tigera-prometheus.yaml %}
+{% helm tigera-operator --execute templates/prometheus/00-namespace-tigera-prometheus.yaml %}
 installation:
   kubernetesProvider: openshift
 {% endhelm %}
