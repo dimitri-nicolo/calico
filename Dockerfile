@@ -6,7 +6,11 @@ RUN zip -r /tigera_customization.zip kibana
 FROM docker.elastic.co/kibana/kibana:7.6.2
 
 USER root
-RUN yum -y update && yum -y upgrade
+RUN yum -y update && yum -y upgrade && yum clean all
+
+COPY cleanup.sh /
+RUN /cleanup.sh
+
 # The base "kibana" user has a uid of 1000
 USER 1000
 
