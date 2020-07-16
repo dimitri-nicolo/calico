@@ -940,6 +940,7 @@ func (c *client) updateBGPConfigCache(resName string, v3res *apiv3.BGPConfigurat
 		c.getServiceClusterIPsKVPair(v3res, model.GlobalBGPConfigKey{}, svcAdvertisement)
 		c.getNodeToNodeMeshKVPair(v3res, model.GlobalBGPConfigKey{})
 		c.getLogSeverityKVPair(v3res, model.GlobalBGPConfigKey{})
+		c.getExtensionsKVPair(v3res, model.GlobalBGPConfigKey{})
 	} else if strings.HasPrefix(resName, perNodeConfigNamePrefix) {
 		// The name of a configuration resource has a strict format.  It is either "default"
 		// for the global default values, or "node.<nodename>" for the node specific vales.
@@ -947,6 +948,7 @@ func (c *client) updateBGPConfigCache(resName string, v3res *apiv3.BGPConfigurat
 		c.getPrefixAdvertisementsKVPair(v3res, model.NodeBGPConfigKey{Nodename: nodeName})
 		c.getListenPortKVPair(v3res, model.NodeBGPConfigKey{Nodename: nodeName})
 		c.getLogSeverityKVPair(v3res, model.NodeBGPConfigKey{Nodename: nodeName})
+		c.getExtensionsKVPair(v3res, model.NodeBGPConfigKey{Nodename: nodeName})
 	} else {
 		log.Warningf("Bad value for BGPConfiguration resource name: %s.", resName)
 	}
@@ -1139,6 +1141,24 @@ func (c *client) getLogSeverityKVPair(v3res *apiv3.BGPConfiguration, key interfa
 		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(logLevelKey, l))
 	} else {
 		c.updateCache(api.UpdateTypeKVDeleted, getKVPair(logLevelKey))
+	}
+}
+
+func (c *client) getExtensionsKVPair(v3res *apiv3.BGPConfiguration, key interface{}) {
+	extensions := getBGPConfigKey("extensions", key)
+
+	if v3res != nil {
+		var ext string
+		if v3res.Spec.Extensions == nil {
+			ext = "{}"
+		} else {
+			vb, err := json.Marshal(v3res.Spec.Extensions)
+			log.Infof("Error processing extensions: %#v", err)
+			ext = string(vb)
+		}
+		c.updateCache(api.UpdateTypeKVUpdated, getKVPair(extensions, ext))
+	} else {
+		c.updateCache(api.UpdateTypeKVDeleted, getKVPair(extensions))
 	}
 }
 
