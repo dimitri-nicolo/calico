@@ -72,7 +72,7 @@ type resourceStore struct {
 	converter         resourceConverter
 }
 
-func createClientFromConfig() clientv3.Interface {
+func CreateClientFromConfig() clientv3.Interface {
 	// TODO(doublek): nicer errors returned
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {

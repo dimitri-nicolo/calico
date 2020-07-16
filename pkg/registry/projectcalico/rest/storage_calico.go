@@ -25,7 +25,9 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	calico "github.com/tigera/apiserver/pkg/apis/projectcalico"
+	"github.com/tigera/apiserver/pkg/rbac"
 	calicoauthenticationreview "github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
+	calicoauthorizationreview "github.com/tigera/apiserver/pkg/registry/projectcalico/authorizationreview"
 	calicobgpconfiguration "github.com/tigera/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgppeer "github.com/tigera/apiserver/pkg/registry/projectcalico/bgppeer"
 	calicoclusterinformation "github.com/tigera/apiserver/pkg/registry/projectcalico/clusterinformation"
@@ -67,6 +69,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
 	resources *calicostorage.ManagedClusterResources,
+	calculator rbac.Calculator,
 ) (map[string]rest.Storage, error) {
 	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"))
 	if err != nil {
@@ -644,6 +647,7 @@ func (p RESTStorageProvider) NewV3Storage(
 
 	storage["clusterinformations"] = rESTInPeace(calicoclusterinformation.NewREST(scheme, *clusterInformationOpts))
 	storage["authenticationreviews"] = calicoauthenticationreview.NewREST()
+	storage["authorizationreviews"] = calicoauthorizationreview.NewREST(calculator)
 	return storage, nil
 }
 

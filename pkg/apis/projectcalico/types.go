@@ -561,3 +561,27 @@ type AuthenticationReview struct {
 
 	Status calico.AuthenticationReviewStatus
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AuthorizationReviewList is a list of AuthorizationReview objects.
+type AuthorizationReviewList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []AuthorizationReview
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
+
+type AuthorizationReview struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec   calico.AuthorizationReviewSpec
+	Status calico.AuthorizationReviewStatus
+}

@@ -8,6 +8,10 @@ package internalversion
 // AuthenticationReviewLister.
 type AuthenticationReviewListerExpansion interface{}
 
+// AuthorizationReviewListerExpansion allows custom methods to be added to
+// AuthorizationReviewLister.
+type AuthorizationReviewListerExpansion interface{}
+
 // BGPConfigurationListerExpansion allows custom methods to be added to
 // BGPConfigurationLister.
 type BGPConfigurationListerExpansion interface{}

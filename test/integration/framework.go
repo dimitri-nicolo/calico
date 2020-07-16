@@ -60,10 +60,11 @@ func NewTestServerConfig() *TestServerConfig {
 	}
 }
 
-func withConfigGetFreshApiserverAndClient(
+func withConfigGetFreshApiserverServerAndClient(
 	t *testing.T,
 	serverConfig *TestServerConfig,
-) (calicoclient.Interface,
+) (*apiserver.ProjectCalicoServer,
+	calicoclient.Interface,
 	*restclient.Config,
 	func(),
 ) {
@@ -77,44 +78,67 @@ func withConfigGetFreshApiserverAndClient(
 	}
 
 	t.Logf("Starting server on port: %d", securePort)
-	// start the server in the background
-	go func() {
-		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion),
-			genericoptions.NewProcessInfo("tigera-apiserver", "tigera-system"))
-		ro.Etcd.StorageConfig.Transport.ServerList = serverConfig.etcdServerList
-		options := &server.CalicoServerOptions{
-			RecommendedOptions: ro,
-			DisableAuth:        true,
-			StopCh:             stopCh,
-		}
-		options.RecommendedOptions.SecureServing.BindPort = securePort
-		// Set this so that we avoid RecommendedOptions.CoreAPI's initialization from calling InClusterConfig()
-		// and uses our fv kubeconfig instead.
-		options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../test-apiserver-kubeconfig.conf"
-		options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
-		options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
-		options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
-		options.ManagementClusterAddr = serverConfig.managementClusterAddr
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion),
+		genericoptions.NewProcessInfo("tigera-apiserver", "tigera-system"))
+	ro.Etcd.StorageConfig.Transport.ServerList = serverConfig.etcdServerList
+	options := &server.CalicoServerOptions{
+		RecommendedOptions: ro,
+		DisableAuth:        true,
+		StopCh:             stopCh,
+	}
+	options.RecommendedOptions.SecureServing.BindPort = securePort
+	// Set this so that we avoid RecommendedOptions.CoreAPI's initialization from calling InClusterConfig()
+	// and uses our fv kubeconfig instead.
+	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../test-apiserver-kubeconfig.conf"
+	options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
+	options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
+	options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
+	options.ManagementClusterAddr = serverConfig.managementClusterAddr
+	//options.RecommendedOptions.SecureServing.BindAddress=
 
-		//options.RecommendedOptions.SecureServing.BindAddress=
-		if err := server.RunServer(options); err != nil {
+	var err error
+	pcs, err := server.PrepareServer(options)
+	if err != nil {
+		close(serverFailed)
+		t.Fatalf("Error preparing the server: %v", err)
+	}
+
+	// Run the server in the background
+	go func() {
+		err := server.RunServer(options, pcs)
+		if err != nil {
 			close(serverFailed)
-			t.Fatalf("Error in bringing up the server: %v", err)
+			t.Fatalf("Error running the server: %v", err)
 		}
 	}()
 
 	if err := waitForApiserverUp(secureAddr, serverFailed); err != nil {
 		t.Fatalf("%v", err)
 	}
+	if pcs == nil {
+		t.Fatal("Calico server is nil")
+	}
 
-	config := &restclient.Config{}
-	config.Host = secureAddr
-	config.Insecure = true
-	clientset, err := calicoclient.NewForConfig(config)
+	cfg := &restclient.Config{}
+	cfg.Host = secureAddr
+	cfg.Insecure = true
+	clientset, err := calicoclient.NewForConfig(cfg)
 	if nil != err {
 		t.Fatal("can't make the client from the config", err)
 	}
-	return clientset, config, shutdownServer
+	return pcs, clientset, cfg, shutdownServer
+}
+
+func getFreshApiserverServerAndClient(
+	t *testing.T,
+	newEmptyObj func() runtime.Object,
+) (*apiserver.ProjectCalicoServer, calicoclient.Interface, func()) {
+	serverConfig := &TestServerConfig{
+		etcdServerList: []string{"http://localhost:2379"},
+		emptyObjFunc:   newEmptyObj,
+	}
+	pcs, client, _, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
+	return pcs, client, shutdownFunc
 }
 
 func getFreshApiserverAndClient(
@@ -125,7 +149,7 @@ func getFreshApiserverAndClient(
 		etcdServerList: []string{"http://localhost:2379"},
 		emptyObjFunc:   newEmptyObj,
 	}
-	client, _, shutdownFunc := withConfigGetFreshApiserverAndClient(t, serverConfig)
+	_, client, _, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
 	return client, shutdownFunc
 }
 
@@ -133,7 +157,7 @@ func customizeFreshApiserverAndClient(
 	t *testing.T,
 	serverConfig *TestServerConfig,
 ) (calicoclient.Interface, func()) {
-	client, _, shutdownFunc := withConfigGetFreshApiserverAndClient(t, serverConfig)
+	_, client, _, shutdownFunc := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
 	return client, shutdownFunc
 }
 

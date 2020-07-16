@@ -21,12 +21,12 @@ import (
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/klog"
+
+	"github.com/tigera/apiserver/pkg/apiserver"
 )
 
-func RunServer(opts *CalicoServerOptions) error {
-	path := "/tmp/ready"
-	_ = os.Remove(path)
-
+// PrepareServer prepares the server for execution. After invoking the caller should run RunServer.
+func PrepareServer(opts *CalicoServerOptions) (*apiserver.ProjectCalicoServer, error) {
 	if opts.StopCh == nil {
 		/* the caller of RunServer should generate the stop channel
 		if there is a need to stop the API server */
@@ -35,19 +35,22 @@ func RunServer(opts *CalicoServerOptions) error {
 
 	config, err := opts.Config()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	klog.V(4).Infoln("Completing API server configuration")
-	server, err := config.Complete().New()
-	if err != nil {
-		return err
-	}
+	return config.Complete().New()
+}
+
+// RunServer runs the Calico API server.  This blocks until stopped channel (passed in through options) is closed.
+func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer) error {
+	path := "/tmp/ready"
+	_ = os.Remove(path)
 
 	allStop := make(chan struct{})
 	go func() {
 		klog.Infoln("Starting watch extension")
-		changed, err := WatchExtensionAuth(server.GenericAPIServer.LoopbackClientConfig, allStop)
+		changed, err := WatchExtensionAuth(allStop)
 		if err != nil {
 			klog.Errorln("Unable to watch the extension auth ConfigMap: ", err)
 		}
@@ -70,7 +73,9 @@ func RunServer(opts *CalicoServerOptions) error {
 				f.Close()
 				return nil
 			})
-		err = server.GenericAPIServer.PrepareRun().Run(allStop)
+		if err := server.GenericAPIServer.PrepareRun().Run(allStop); err != nil {
+			klog.Errorln("Error running API server: ", err)
+		}
 	}()
 
 	select {
@@ -79,5 +84,5 @@ func RunServer(opts *CalicoServerOptions) error {
 		close(allStop)
 	}
 
-	return err
+	return nil
 }

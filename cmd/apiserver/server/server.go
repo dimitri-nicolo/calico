@@ -60,7 +60,13 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 		h := interrupt.New(nil, func() {
 			close(stopCh)
 		})
-		if err := h.Run(func() error { return RunServer(opts) }); err != nil {
+		if err := h.Run(func() error {
+			server, err := PrepareServer(opts)
+			if err != nil {
+				return err
+			}
+			return RunServer(opts, server)
+		}); err != nil {
 			klog.Fatalf("error running server (%s)", err)
 			return
 		}

@@ -33,7 +33,7 @@ ifdef LIBCALICOGO_PATH
 EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):$(LOCAL_LIBCALICO):ro
 endif
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/* 
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
 				 -v $(CURDIR)/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 

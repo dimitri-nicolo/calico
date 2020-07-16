@@ -6,6 +6,8 @@ package internalversion
 
 type AuthenticationReviewExpansion interface{}
 
+type AuthorizationReviewExpansion interface{}
+
 type BGPConfigurationExpansion interface{}
 
 type BGPPeerExpansion interface{}

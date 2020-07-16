@@ -13,6 +13,7 @@ import (
 type ProjectcalicoV3Interface interface {
 	RESTClient() rest.Interface
 	AuthenticationReviewsGetter
+	AuthorizationReviewsGetter
 	BGPConfigurationsGetter
 	BGPPeersGetter
 	ClusterInformationsGetter
@@ -46,6 +47,10 @@ type ProjectcalicoV3Client struct {
 
 func (c *ProjectcalicoV3Client) AuthenticationReviews() AuthenticationReviewInterface {
 	return newAuthenticationReviews(c)
+}
+
+func (c *ProjectcalicoV3Client) AuthorizationReviews() AuthorizationReviewInterface {
+	return newAuthorizationReviews(c)
 }
 
 func (c *ProjectcalicoV3Client) BGPConfigurations() BGPConfigurationInterface {

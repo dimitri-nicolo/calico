@@ -25,7 +25,7 @@ import (
 
 // NewLicenseKeyStorage creates a new libcalico-based storage.Interface implementation for LicenseKeys
 func NewLicenseKeyStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc) {
-	c := createClientFromConfig()
+	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.LicenseKey)
