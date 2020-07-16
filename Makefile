@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/license-agent
-GO_BUILD_VER    ?= v0.34
+GO_BUILD_VER    ?= v0.40
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 LOCAL_CHECKS     = mod-download
@@ -299,8 +299,14 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+LICENSING_BRANCH?=$(PIN_BRANCH)
+LICENSING_REPO?=github.com/tigera/licensing
+
+update-licensing-pin:
+	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
+
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+update-pins: guard-ssh-forwarding-bug update-licensing-pin replace-libcalico-pin
 
 ###############################################################################
 # Utilities
