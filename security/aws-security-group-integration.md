@@ -33,8 +33,10 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
   kubectl get pod -n kube-system -l k8s-app=aws-node -o wide
   ```
 
-- You have installed [{{site.prodname}} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
-  on your cluster. Note that the EKS install guide also works on Kops clusters configured with `--networking amazon-vpc-routed-eni`.
+- You have installed {{site.prodname}} configured to work with the AWS CNI Plugin. This is done by following
+  [the installation guide for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
+  on your cluster or configuring the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation) during installation
+  and setting the [CNI.Type]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.CNIPluginType) to `AmazonVPC`.
 
   Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
 

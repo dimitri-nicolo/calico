@@ -498,6 +498,20 @@ will additionally compare the auto-detected value to the specified value to conf
 </tr>
 <tr>
 <td>
+<code>cni</code><br>
+<em>
+<a href="#operator.tigera.io/v1.CNISpec">
+CNISpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CNI specifies the CNI that will be used by this installation.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>calicoNetwork</code><br>
 <em>
 <a href="#operator.tigera.io/v1.CalicoNetworkSpec">
@@ -571,7 +585,7 @@ field.</p>
 <code>componentResources</code><br>
 <em>
 <a href="#operator.tigera.io/v1.ComponentResource">
-operator.tigera.io/v1.ComponentResource
+[]ComponentResource
 </a>
 </em>
 </td>
@@ -1504,7 +1518,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -1564,6 +1578,49 @@ string
 </p>
 <p>AuthType represents the type of authentication to use. Valid
 options are: Token, Basic, OIDC, OAuth</p>
+<h3 id="operator.tigera.io/v1.CNIPluginType">CNIPluginType
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.CNISpec">CNISpec</a>)
+</p>
+<p>CNIPluginType describe the type of CNI plugin used.</p>
+<h3 id="operator.tigera.io/v1.CNISpec">CNISpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code><br>
+<em>
+<a href="#operator.tigera.io/v1.CNIPluginType">
+CNIPluginType
+</a>
+</em>
+</td>
+<td>
+<p>Specifies the CNI plugin that will be used in the Calico or Calico Enterprise installation.
+For KubernetesProvider GKE, this field defaults to GKE. For KubernetesProvider AKE, this field
+defaults to AzureVNET. For KubernetesProvider EKS, this field defaults to AmazonVPC. For all other
+KubernetesProviders this field defaults to Calico.
+For the value Calico, the CNI plugin binaries and CNI config will be installed as part of deployment,
+for all other values the CNI plugin binaries and CNI config is a dependency that is expected
+to be installed separately.</p>
+<p>Default: Calico</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec
 </h3>
 <p>
@@ -1667,6 +1724,21 @@ MultiInterfaceMode
 Default: None</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>containerIPForwarding</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ContainerIPForwardingType">
+ContainerIPForwardingType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ContainerIPForwarding configures whether ip forwarding will be enabled for containers in the CNI configuration.
+Default: Disabled</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.ComplianceSpec">ComplianceSpec
@@ -1757,6 +1829,13 @@ Kubernetes core/v1.ResourceRequirements
 <a href="#operator.tigera.io/v1.TigeraStatusCondition">TigeraStatusCondition</a>)
 </p>
 <p>ConditionStatus represents the status of a particular condition. A condition may be one of: True, False, Unknown.</p>
+<h3 id="operator.tigera.io/v1.ContainerIPForwardingType">ContainerIPForwardingType
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.CalicoNetworkSpec">CalicoNetworkSpec</a>)
+</p>
+<p>ContainerIPForwardingType specifies whether the CNI config for container ip forwarding is enabled.</p>
 <h3 id="operator.tigera.io/v1.EksCloudwatchLogsSpec">EksCloudwatchLogsSpec
 </h3>
 <p>
@@ -2049,6 +2128,20 @@ will additionally compare the auto-detected value to the specified value to conf
 </tr>
 <tr>
 <td>
+<code>cni</code><br>
+<em>
+<a href="#operator.tigera.io/v1.CNISpec">
+CNISpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CNI specifies the CNI that will be used by this installation.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>calicoNetwork</code><br>
 <em>
 <a href="#operator.tigera.io/v1.CalicoNetworkSpec">
@@ -2122,7 +2215,7 @@ field.</p>
 <code>componentResources</code><br>
 <em>
 <a href="#operator.tigera.io/v1.ComponentResource">
-operator.tigera.io/v1.ComponentResource
+[]ComponentResource
 </a>
 </em>
 </td>
@@ -2765,7 +2858,7 @@ Kubernetes core/v1.ResourceRequirements
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>
@@ -2929,7 +3022,7 @@ string
 </em>
 </td>
 <td>
-<p>Location for splunk&rsquo;s http event collector end point.</p>
+<p>Location for splunk&rsquo;s http event collector end point. example <code>https://1.2.3.4:8088</code></p>
 </td>
 </tr>
 </tbody>
