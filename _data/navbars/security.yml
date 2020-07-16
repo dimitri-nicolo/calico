@@ -6,10 +6,6 @@ section:
   path: /security/adopt-zero-trust
 - title: Get started with Calico Enterprise Manager
   path: /security/get-started-cem
-- title: Restrict access to Calico Enterprise components within the cluster
-  path: /security/pod-security-policy
-- title: Enable AWS security group integration
-  path: /security/aws-security-group-integration  
 - title: Calico Enterprise network policy
   path: /security/calico-enterprise-policy
   section:
@@ -29,6 +25,19 @@ section:
     path: /security/simple-policy-cnx
   - title: Extend FortiGate Firewalls to Kubernetes with Calico Enterprise
     path: /security/firewall-integration
+- title: Restrict access to Calico Enterprise components within the cluster
+  path: /security/pod-security-policy
+- title: Configure Calico Enterprise AWS security groups integration
+  path: /security/aws-integration/
+  section:
+  - title: Get started 
+    path: /security/aws-integration/get-started
+  - title: Configure Calico Enterprise AWS security groups integration
+    path: /security/aws-integration/aws-security-group-integration
+  - title: Configure fine-grained access control between VPC endpoints and pods 
+    path: /security/aws-integration/tiers-and-policy  
+  - title: Enable pod access to AWS metadata
+    path: /security/aws-integration/metadata-access  
 - title: Threat detection and prevention
   path: /security/threat-detection-and-prevention/
   section:

@@ -1,11 +1,12 @@
 ---
-title: Enable AWS security groups integration
+title: Configure Calico Enterprise AWS security groups integration
 description: Calico Enterprise lets you combine AWS security groups with network policy to enforce access control between Kubernetes pods and AWS VPC resources. 
+canonical_url: /security/aws-integration/
 ---
 
 ### Big picture
 
-Enable {{site.prodname}} integration with AWS Security Groups.
+Configure {{site.prodname}} AWS security groups integration.
 
 ### Value
 
@@ -13,9 +14,23 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
 
 ### Before you begin
 
+**Supported**
+
+- Kubernetes and EKS clusters deployed with the Amazon VPC CNI plugin 
+
+**Not supported**
+
+- OpenShift, Rancher, other managed cloud providers
+- Helm and Docker install
+- {{site.prodname}} non-cluster hosts, and auto-hostendpoint features. Alternatives to secure host endpoints:
+  - Configure the security groups that are applied to the instances to police traffic to nodes
+  - For AWS resources: apply labels to host endpoints for selecting by AWS security group
+  - Use {{site.prodname}} [GlobalNetworkSets]({{site.baseurl}}/reference/resources/globalnetworkset) and use custom labels for selection in policy.
+
 **Kubernetes cluster requirements**
 
 - Exists within a single VPC.
+
 - The Kubernetes AWS cloud provider is enabled.
 
   Verify the Kubernetes AWS cloud provider is enabled by confirming each node has a ProviderId:
@@ -34,27 +49,29 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
   ```
 
 - You have installed [{{site.prodname}} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
-  on your cluster. Note that the EKS install guide also works on Kops clusters configured with `--networking amazon-vpc-routed-eni`.
-
-- You have installed {{site.prodname}} configured to work with the AWS CNI Plugin. This is done by following
-  [the installation guide for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
-  on your cluster or configuring the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation) during installation
-  and setting the [CNI.Type]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.CNIPluginType) to `AmazonVPC`.
+  on your cluster. 
 
   Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
 
   ```bash
   kubectl get tigerastatus
   ```
+- You have installed {{site.prodname}} configured to work with the AWS CNI Plugin. This is done by following the installation guide for EKS on your cluster or configuring the Installation resource during installation and setting the CNI.Type to `AmazonVPC`.
 
-- You are not using the [auto hostendpoints feature]({{site.baseurl}}/security/kubernetes-nodes), and have not created any
-  [host endpoints]({{site.baseurl}}/reference/resources/hostendpoint) that have a `spec.node` value that matches any of your Kubernetes nodes.
+  Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
 
-  Verify that no Host Endpoints have been created by verifying that no entries are returned by:
+  ```bash
+   kubectl get tigerastatus
+  ``` 
+
+- You are not using the {{site.prodname}} [auto hostendpoints feature]({{site.baseurl}}/security/kubernetes-nodes), and have not created any [host endpoints]({{site.baseurl}}/reference/resources/hostendpoint) that have a `spec.node` value that matches any of your Kubernetes nodes.
+
+  Verify that there are no entries for {{site.prodname}} host endpoints using this command:
 
   ```bash
   kubectl get hostendpoints
   ```
+
 **Host requirements**
 
 - `kubectl` configured to access the cluster
@@ -63,11 +80,11 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
 
 ### How to
 
-- [Gather cluster information](#gather-cluster-information)
+- [Gather required cluster information](#gather-required-cluster-information)
 - [Install AWS resources](#install-aws-resources)
 - [Create operator custom resource](#create-operator-custom-resource)
 
-#### Gather cluster information
+#### Gather required cluster information
 
 Gather the following information about your cluster and export it as environment variables:
 
@@ -79,28 +96,25 @@ Gather the following information about your cluster and export it as environment
 | `K8S_NODE_SGS` | Group ID(s) of the security group(s) that each node should belong to. If more than one, use commas to separate them. |
 | `CLUSTER_NAME` | A name that uniquely identifies this cluster within the VPC. This is used as a prefix when naming per-cluster resources. It must satisfy the pattern `[a-zA-Z][-a-zA-Z0-9]*`. |
 
-Most Kubernetes provisioners will set a different security group for masters and nodes. If your cluster uses the same security group
-across both, it is OK to set `$CONTROL_PLANE_SG` and `$K8S_NODE_SGS` to the same value.
+Most Kubernetes provisioners set a different security group for masters and nodes. If your cluster uses the same security group across both, it is fine to set `$CONTROL_PLANE_SG` and `$K8S_NODE_SGS` to the same value.
 
-We've provided info below on how to gather the above info in common Kubernetes environments on AWS.
+Here are examples of how to gather the above information in common Kubernetes environments on AWS.
 
-- **EKS cluster created with eksctl**
+**EKS cluster created with eksctl**
 
-   The following commands gather the necessary information of a particular EKS
-   cluster with name `$CLUSTER_NAME` that was created with [`eksctl`](https://github.com/weaveworks/eksctl){:target="_blank"}:
+The following commands gather the required information of a particular EKS cluster with name `$CLUSTER_NAME` that was created with {% include open-new-window.html text='`eksctl`' url='https://github.com/weaveworks/eksctl' %}:
 
    ```
    VPC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --query 'cluster.resourcesVpcConfig.vpcId' --output text)
    K8S_NODE_SGS=$(aws ec2 describe-security-groups --filters Name=tag:aws:cloudformation:logical-id,Values=SG Name=vpc-id,Values=${VPC_ID} --query "SecurityGroups[0].GroupId" --output text)
    CONTROL_PLANE_SG=$(aws ec2 describe-security-groups --filters Name=tag:aws:cloudformation:logical-id,Values=ControlPlaneSecurityGroup Name=vpc-id,Values=${VPC_ID} --query "SecurityGroups[0].GroupId" --output text)
    ```
-
-  > Note: Commands above only applies to EKS cluster with unmanaged nodegroups i.e. [eksctl without --managed](https://eksctl.io/usage/eks-managed-nodes/) option.
+  >**Note**: Commands above apply only to EKS clusters with unmanaged nodegroups i.e. {% include open-new-window.html text='eksctl without --managed' url='https://eksctl.io/usage/eks-managed-nodes/' %} option.
   {: .alert .alert-info}
 
-- **kops cluster**
+**kops cluster**
 
-   The following commands gather the necessary information of a particular kops cluster with name `$KOPS_CLUSTER_NAME`:
+The following commands gather the required information of a particular kops cluster with name `$KOPS_CLUSTER_NAME`:
 
    ```
    VPC_ID=$(aws ec2 describe-instances \
@@ -122,22 +136,20 @@ We've provided info below on how to gather the above info in common Kubernetes e
        | head -1)
    ```
 
-   >**Note**: Since `KOPS_CLUSTER_NAMES` are FQDNs, you will need to pick a `CLUSTER_NAME` which does not contain any dot separators for use in the remainder of this guide. See [before you begin](#before-you-begin) for more information.
+   >**Note**: Because `KOPS_CLUSTER_NAMES` are FQDNs, you must to choose a `CLUSTER_NAME` that does not contain any dot separators for use in the remainder of this guide. See [before you begin](#before-you-begin) for more information.
 {: .alert .alert-warn}
 
 #### Install AWS resources
 
 1.  Install AWS per-account resources.
 
-    The per-account resources must be applied once per AWS account. Use the
-    following command to see if `tigera-cloudtrail` has already been applied:
+    The per-account resources must be applied once per AWS account. Use the following command to see if `tigera-cloudtrail` has already been applied:
 
     ```bash
     aws cloudformation describe-stacks --stack-name tigera-cloudtrail
     ```
 
-    If the command output does not output a stack run the following command
-    to create the per-account stack:
+    If the command output does not output a stack run the following command to create the per-account stack:
 
     ```bash
     aws cloudformation create-stack \
@@ -150,8 +162,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
 1.  Install AWS per-VPC resources.
 
-    The per-VPC CloudFormation must be created once on a VPC that contains (or will contain) clusters.
-    Run the following command to see if this VPC has had the per-VPC stack applied:
+    The per-VPC CloudFormation must be created once on a VPC that contains (or will contain) clusters. Run the following command to see if this VPC has had the per-VPC stack applied:
 
     ```bash
     aws cloudformation describe-stacks --stack-name tigera-vpc-$VPC_ID
@@ -240,9 +251,10 @@ We've provided info below on how to gather the above info in common Kubernetes e
     
 #### Create operator custom resource
 
-Create the operator custom resource.
+Create the operator custom resource using inputs from the previous step.
 
-```yaml
+```bash
+kubectl create -f - <<EOF
 apiVersion: operator.tigera.io/v1beta1
 kind: AmazonCloudIntegration
 metadata:
@@ -257,7 +269,11 @@ spec:
   awsRegion: $AWS_REGION
   enforcedSecurityGroupID: $ENFORCED_SG
   trustEnforcedSecurityGroupID: $TRUST_SG
- ```
+EOF
+```
+
+Congratulations! You can now use fine-grain access controls to secure communications between VPC endpoints and pods, and between pods and VPC endpoints.
+
 ### Next steps
 
-- [Configure {{site.prodname}} tiered network policy]({{site.baseurl}}/security/aws-integration/tiers-and-policy)
+- [Configure fine-grained access control between VPC endpoints and pods]({{site.baseurl}}/security/aws-integration/tiers-and-policy)
