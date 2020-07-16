@@ -12,8 +12,11 @@ require (
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
+	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pquerna/ffjson v0.0.0-20190813045741-dac163c6c0a9 // indirect
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/typha v0.7.3-0.20200601160722-b55a2f1ba49b
+
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v1.0.1-0.20200618213636-f5bf5cf12edb // indirect
 	k8s.io/api v0.17.3
@@ -22,7 +25,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200715200940-967f2c6d1fd7
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200715220132-e39d468d61f3
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200716214228-f89097db6eb1
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
