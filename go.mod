@@ -6,6 +6,7 @@ require (
 	github.com/docopt/docopt-go v0.0.0-20160216232012-784ddc588536
 	github.com/envoyproxy/data-plane-api v0.0.0-20190513203724-4a93c6d2d917 // indirect
 	github.com/gogo/googleapis v1.0.0
+	github.com/gogo/protobuf v1.3.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lyft/protoc-gen-validate v0.0.6 // indirect
 	github.com/onsi/gomega v1.7.0
@@ -23,6 +24,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
