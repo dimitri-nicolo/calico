@@ -9,9 +9,13 @@ Install {{site.prodname}} in EKS managed Kubernetes service.
 
 ### Before you begin
 
-- Ensure that you have an EKS cluster without {{site.prodname}} installed and with {% include open-new-window.html text='Kubernetes version' url='https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html' %} []() at least v1.15.
+**Required**
 
-- Ensure that you have the [credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
+- An EKS cluster **without {{site.prodname}} installed** and:
+  - {% include open-new-window.html text='A supported EKS Kubernetes version' url='https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html' %} 
+  - [A supported {{site.prodname}} managed Kubernetes version]({{site.baseurl}}/getting-started/kubernetes/requirements#supported-managed-kubernetes-versions).
+
+- [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry)
 

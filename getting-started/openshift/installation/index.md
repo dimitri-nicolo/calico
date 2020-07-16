@@ -10,29 +10,42 @@ Install an OpenShift 4 cluster with {{site.prodname}}.
 
 ### Value
 
-Augments the applicable steps in the {% include open-new-window.html text='OpenShift documentation' url='https://cloud.redhat.com/openshift/install' %}
-to install {{site.prodname}}.
+Augments the applicable steps in the {% include open-new-window.html text='OpenShift documentation' url='https://cloud.redhat.com/openshift/install' %} to install {{site.prodname}}.
+
+### Before you begin
+
+**Required**
+
+- Your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements)
+
+- [Private registry credentials and license key]({{site.baseurl}}/getting-started/calico-enterprise)
+
+- **If installing on AWS**, a {% include open-new-window.html text='configured an AWS account' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html' %} appropriate for OpenShift 4,
+  and have {% include open-new-window.html text='set up your AWS credentials' url='https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html' %}. Note that the OpenShift installer supports a subset of {% include open-new-window.html text='AWS regions' url='https://docs.openshift.com/container-platform/4.3/installing/installing_aws/installing-aws-account.html#installation-aws-regions_installing-aws-account' %}.
+
+- A {% include open-new-window.html text='RedHat account' url='https://cloud.redhat.com/' %} for the pull secret to provision an OpenShift cluster.
+
+- OpenShift installer **v4.3 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}
+
+  > **Note**: OpenShift v4.2 installation supports only {{site.prodname}} images pulled from quay.io
+  {: .alert .alert-info}
+
+- A {% include open-new-window.html text='generated a local SSH private key' url='https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-default.html#ssh-agent-using_installing-aws-default' %} that is added to your ssh-agent
 
 ### How to
 
-#### Before you begin
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
 
-- Ensure that your environment meets the {{site.prodname}} [system requirements]({{site.baseurl}}/getting-started/openshift/requirements)
-
-- Ensure that you have the [private registry credentials and license key]({{site.baseurl}}/getting-started/calico-enterprise)
-
-- **If installing on AWS**, ensure that you have {% include open-new-window.html text='configured an AWS account' url='https://docs.openshift.com/container-platform/4.2/installing/installing_aws/installing-aws-account.html' %} appropriate for OpenShift 4,
-  and have {% include open-new-window.html text='set up your AWS credentials' url='https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html' %}.
-  Note that the OpenShift installer supports a subset of {% include open-new-window.html text='AWS regions' url='https://docs.openshift.com/container-platform/4.3/installing/installing_aws/installing-aws-account.html#installation-aws-regions_installing-aws-account' %}.
-
-- Ensure that you have a {% include open-new-window.html text='RedHat account' url='https://cloud.redhat.com/' %}. A RedHat account is required to obtain the pull secret necessary to provision an OpenShift cluster.
-
-- Ensure that you have installed the OpenShift installer **v4.3 or later** and OpenShift command line interface from {% include open-new-window.html text='cloud.redhat.com' url='https://cloud.redhat.com/openshift/install/aws/installer-provisioned' %}
-
-- Ensure that you have {% include open-new-window.html text='generated a local SSH private key' url='https://docs.openshift.com/container-platform/4.1/installing/installing_aws/installing-aws-default.html#ssh-agent-using_installing-aws-default' %} and have added it to your ssh-agent
-
-> **Note**: OpenShift v4.2 installation currently only supports {{site.prodname}} images pulled from quay.io
-{: .alert .alert-info}
+1. [Create a configuration file for the OpenShift installer](#create-a-configuration-file-for-the-openshift-installer)
+1. [Update the configuration file to use {{site.prodname}}](#update-the-configuration-file-to-use-calico-enterprise)
+1. [Generate the install manifests](#generate-the-install-manifests)
+1. [Add an image pull secret](#add-an-image-pull-secret)
+1. [Provide additional configuration](#provide-additional-configuration)
+1. [Create the cluster](#create-the-cluster)
+1. [Create a storage class](#create-a-storage-class)
+1. [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
+1. [Secure {{site.prodname}} components with network policy](#secure-calico-enterprise-components-with-network-policy)
 
 #### Create a configuration file for the OpenShift installer
 
@@ -48,11 +61,11 @@ Now run OpenShift installer to create a default configuration file:
 openshift-install create install-config
 ```
 
-> **Note**: Refer to the {% include open-new-window.html text='OpenShift installer documentation' url='https://cloud.redhat.com/openshift/install' %} for more information
+> **Note**: See the {% include open-new-window.html text='OpenShift installer documentation' url='https://cloud.redhat.com/openshift/install' %} for more information
 > about the installer and any configuration changes required for your platform.
 {: .alert .alert-info}
 
-Once the installer has finished, your staging directory will contain the configuration file `install-config.yaml`.
+After the installer finishes, your staging directory will contain the configuration file `install-config.yaml`.
 
 #### Update the configuration file to use {{site.prodname}}
 
@@ -93,13 +106,13 @@ openshift-install create manifests
    SECRET=$(cat ~/.docker/config.json | tr -d '\n\r\t ' | base64 -w 0)
    sed -i "s/SECRET/${SECRET}/" manifests/02-pull-secret.yaml
    ```
-#### Optionally provide additional configuration
+#### Provide additional configuration
 
 You may want to provide {{site.prodname}} with additional configuration at install-time. For example, BGP configuration or peers. You can use a Kubernetes ConfigMap with your desired {{site.prodname}} resources in order to set configuration as part of the installation. If you do not need to provide additional configuration, you can skip this section.
 
 To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) during installation, edit `manifests/02-configmap-calico-resources.yaml` in order to add your own configuration.
 
-> **Note**: If you have a directory with the {{site.prodname}} resources, you can create the file with the command:
+> **Notes**: If you have a directory with the {{site.prodname}} resources, you can create the file with the command:
 > ```
 > kubectl create configmap -n tigera-operator calico-resources \
 >   --from-file=<resource-directory> --dry-run -o yaml \
@@ -108,7 +121,7 @@ To include [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) d
 > With recent versions of kubectl it is necessary to have a kubeconfig configured or add `--server='127.0.0.1:443'`
 > even though it is not used.
 
-> **Note**: If you have provided a `calico-resources` configmap and the tigera-operator pod fails to come up with `Init:CrashLoopBackOff`,
+> If you have provided a `calico-resources` configmap and the tigera-operator pod fails to come up with `Init:CrashLoopBackOff`,
 > check the output of the init-container with `kubectl logs -n tigera-operator -l k8s-app=tigera-operator -c create-initial-resources`.
 {: .alert .alert-info}
 
@@ -120,7 +133,7 @@ Start the cluster creation with the following command and wait for it to complet
 openshift-install create cluster
 ```
 
-#### Create storage class
+#### Create a storage class
 
 {{site.prodname}} requires storage for logs and reports. Before finishing the installation, you must [create a StorageClass for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
 
@@ -149,7 +162,7 @@ watch oc get tigerastatus
 
 When it shows all components with status `Available`, proceed to the next section.
 
-#### Secure {{site.prodname}} with network policy
+#### Secure {{site.prodname}} components with network policy
 
 To secure the components which make up {{site.prodname}}, install the following set of network policies.
 
@@ -166,8 +179,7 @@ oc create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 **Recommended - Networking**
 
-- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
-- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+- The default networking uses IP in IP encapsulation with BGP routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 
 **Recommended - Security**
 

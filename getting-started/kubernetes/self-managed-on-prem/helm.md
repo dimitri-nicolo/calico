@@ -7,7 +7,7 @@ description: Install Calico Enterprise using Helm application package manager.
 
 Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
 
-### Before you begin...
+### Before you begin
 
 **Required**
 
@@ -15,6 +15,9 @@ Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
 - [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
 ### How to
+
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
 
 1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 
@@ -47,10 +50,6 @@ Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
 
 ### Next steps
 
-**Required**
-
-- [Install and configure CLIs]({{site.baseurl}}/getting-started/clis/)
-
 **Recommended**
 
 - [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
@@ -58,8 +57,7 @@ Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
 
 **Recommended - Networking**
 
-- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
-- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+- The default networking is IP in IP encapsulation using BPG routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 
 **Recommended - Security**
 

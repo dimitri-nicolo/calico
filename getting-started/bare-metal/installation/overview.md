@@ -1,10 +1,10 @@
 ---
-title: Installing Calico Enterprise on host endpoints
+title: Install Calico Enterprise on host endpoints
 description: Choose a method to install Calico Enterprise on hosts.
 canonical_url: '/getting-started/bare-metal/installation/index'
 ---
 
-You will need to install calicoctl and configure it to connect to your etcd datastore.
+You will need to install `calicoctl` and configure it to connect to your etcd datastore.
 
 -  [Install calicoctl as a binary](../../clis/calicoctl/install#installing-calicoctl-as-a-binary-on-a-single-host).
 

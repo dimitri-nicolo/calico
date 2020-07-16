@@ -36,6 +36,9 @@ When you install {{site.prodname}} on your cluster for the first time, you get t
 
 ### How to
 
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
+
 - [Install {{site.prodname}}](#install-calico-enterprise)
 - [Install {{site.prodname}} license](#install-calico-enterprise-license)
 - [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
@@ -118,8 +121,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 **Recommended - Networking**
 
-- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
-- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+- The default networking uses IP in IP encapsulation with BGP routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 
 **Recommended - Security**
 

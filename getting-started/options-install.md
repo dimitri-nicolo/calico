@@ -9,7 +9,7 @@ Understand the options for installing {{site.prodname}}.
 
 ### Value
 
-Helps understand how to choose the right install method for your deployment, how to customize your installation configuration, and explains concepts important for integrating {{site.prodname}} into your configuration management.
+Determine the right install method for your deployment, how to customize your installation configuration, and explains concepts important for integrating {{site.prodname}} into your configuration management.
 
 ### Features
 
@@ -90,7 +90,7 @@ spec:
 
 #### Installation steps
 
-The following table explains the conceptual stages of a {{site.prodname}} install. 
+The following table shows the conceptual stages of a {{site.prodname}} install. 
 
 >**Note**: Details in the following steps will vary for platforms; for example, OpenShift automatically orchestrates the execution of the steps through tooling. 
 {: .alert .alert-info}
@@ -103,16 +103,6 @@ The following table explains the conceptual stages of a {{site.prodname}} instal
 
 ### Frequently asked questions
 
-**How do I know if I’m using the Tigera operator for installation?**
-
-  Prior to v3.0, {{site.prodname}} supported other install methods like Helm charts, Calico the hard way (manual or “manifest-based install”). Starting with v3.0, only Tigera operator install is supported so previous methods are considered “legacy install methods”.
-
-  To see if you are using Tigera operator, run the following command; a successful return means you are already using Tigera operator. If you are not, see [Upgrade]({{site.baseurl}}/maintenance/upgrading).
-
-  ```
-  kubectl get tigerastatus
-  ```
-
 **Are new {{site.prodname}} features always delivered in major or minor release of the Tigera operator?** 
   
   Usually, but not always. Sometimes new features are delivered in a patch version of the Tigera operator. 
@@ -122,10 +112,6 @@ The following table explains the conceptual stages of a {{site.prodname}} instal
   ```bash
   kubectl exec -n tigera-operator -l name=tigera-operator -- operator --version
   ```
-
-**Does open-source Calico and {{site.prodname}} use the same Tigera operator?**
-  
-  Yes, by design -- to make migrating from open-source Calico to {{site.prodname}} easy. 
 
 **Which CLI do I use to customize and configure {{site.prodname}}?**
   

@@ -12,7 +12,6 @@ Secure hosts not in a cluster by installing {{site.prodname}} with networking an
 
 Not all hosts in your environment run virtualized workloads (i.e. containers managed by Kubernetes or OpenShift). There may be physical machines or legacy applications that you cannot move into an orchestrated cluster that need to communicate securely with workloads in your cluster. Whether you have a thousand machines or ten, {{site.prodname}} lets you enforce policy on them using the same robust {{site.prodname}} network policy that is used for workloads.
 
-
 ### Concepts
 
 #### Workloads and Hosts
@@ -42,7 +41,7 @@ This means that if you are using {{site.prodname}} networking in your cluster, a
 Using {{site.prodname}}, you can secure network interfaces of the host; these interfaces are called **host endpoints** (to distinguish them from **workload endpoints**). Host endpoints can have labels, which work the same as labels on workload endpoints. This allows you to create {{site.prodname}} network policy for either host or workload endpoints, where each selector can refer to the either type (or be a mix of the two) using labels.
 
 
-### Before you begin...
+### Before you begin
 
 1. Check that your hosts meet the [system requirements](./requirements) for {{site.prodname}}
 1. Set up a datastore (if you have installed {{site.prodname}} on a cluster you will already have this)

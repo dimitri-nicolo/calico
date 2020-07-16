@@ -6,33 +6,33 @@ canonical_url: /getting-started/kubernetes/self-managed-on-prem/docker-enterpris
 
 ### Big picture
 
-Install Calico Enterprise in a Docker Enterprise deployed Kubernetes cluster.
+Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 ### Before you begin
 
-- [Create a compatible Docker EE cluster](#create-a-compatible-docker-ee-cluster)
-- [Gather the necessary resources](#gather-required-resources)
+**Docker requirements**
+
+- A compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux. See [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
+  - During the installation of UCP, you must set the flag `--unmanaged-cni` so UCP does not install the default Calico networking plugin.
+
+- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.
+
+**{{site.prodname}} requirements**
+
+- Your Docker Enterprise cluster meets the {{site.prodname}} [system requirements](../requirements).
+
 - If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
 
-#### Create a compatible Docker EE cluster
+- [Credentials for the Tigera private registry and a license key](../../../getting-started/calico-enterprise)
 
-- Ensure that you have a compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux, and refer to [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
-  - During the installation of UCP, the installation will require the following flag `--unmanaged-cni`. This tells UCP to not install the default Calico networking plugin.
+- Install the UCP client bundle for accessing the cluster. See [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).
 
-- Refer to [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.
-
-- Ensure that your Docker Enterprise cluster also meets the {{site.prodname}} [system requirements](../requirements).
-
-#### Gather required resources
-
-- Ensure that you have the [credentials for the Tigera private registry and a license key](../../../getting-started/calico-enterprise)
-
-- Download and install the UCP client bundle for accessing the cluster, instructions can be
-  found at [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).
-
-- Install the Kubectl CLI tool. For more information please refer to [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+- Install `kubectl` CLI tool. See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
 ### How to
+
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}
 
 - [Install {{site.prodname}}](#install-calico-enterprise)
 - [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
@@ -122,8 +122,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 **Recommended - Networking**
 
-- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
-- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+- The default networking uses IP in IP with BPG routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 
 **Recommended - Security**
 

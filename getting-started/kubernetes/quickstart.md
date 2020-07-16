@@ -12,25 +12,36 @@ This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
 
 Use this quickstart to quickly and easily try {{side.prodname}} features. To deploy a cluster suitable for production, refer to [{{site.prodname}} on Kubernetes]({{ site.baseurl }}/getting-started/kubernetes/).
 
-### How to
+### Concepts
 
-- [Host requirements](#host-requirements)
-- [Install Kubernetes](#install-kubernetes)
-- [Install {{site.prodname}}](#install-calico-enterprise)
-- [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
-- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
+#### Operator based installation
 
-#### Host requirements
+This quickstart guide uses the Tigera operator to install {{site.prodname}}. The operator provides lifecycle management for {{site.prodname}} exposed via the Kubernetes API defined as a custom resource definition.
 
-This article requires a Linux host that meets the following requirements.
+### Before you begin
 
-- AMD64 processor
+**Required**
+
+A Linux host that meets the following requirements.
+
+- x86-64
 - 2CPU
 - 12GB RAM
 - 50GB free disk space
 - Ubuntu Server 16.04
 - Internet access
-- [Sufficient virtual memory](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html){:target="_blank"}
+- {% include open-new-window.html text='Sufficient virtual memory' url='https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html' %}
+
+### How to
+
+The geeky details of what you get:
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:kubernetes' %}
+
+- [Install Kubernetes](#install-kubernetes)
+- [Install {{site.prodname}}](#install-calico-enterprise)
+- [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
+- [Log in to {{site.prodname}} Manager](#log-in-to-calico-enterprise-manager)
+- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
 
 #### Install Kubernetes
 
@@ -124,7 +135,7 @@ watch kubectl get tigerastatus
 
 When all components show a status of `Available`, proceed to the next section.
 
-#### Log in to {{site.prodname}} UI
+#### Log in to {{site.prodname}} Manager
 
 1. Create network admin user "Jane".
 
@@ -150,7 +161,7 @@ When all components show a status of `Available`, proceed to the next section.
    kubectl port-forward -n tigera-manager svc/tigera-manager 9443
    ```
 
-   Visit https://localhost:9443/ to login to the {{site.prodname}} UI. Use the `token` from the previous step to authenticate.
+   Visit https://localhost:9443/ to log in to the {{site.prodname}} UI. Use the `token` from the previous step to authenticate.
 
 #### Secure {{site.prodname}} with network policy
 
@@ -159,19 +170,10 @@ To secure {{site.prodname}} component communications, install the following set 
 ```
 kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 ```
+Congratulations! You now have a single-host Kubernetes cluster with {{site.prodname}}.
 
 ### Next steps
 
-**Recommended**
-
-- [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- [Configure user authentication and log in]({{site.baseurl}}/getting-started/cnx/create-user-login)
-
-**Recommended - Networking**
-
-- If you are using the default BGP networking with full-mesh node-to-node peering with no encapsulation, go to [Configure BGP peering]({{site.baseurl}}/networking/bgp) to get traffic flowing between pods.
-- If you are unsure about networking options, or want to implement encapsulation (overlay networking), see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
-
-**Recommended - Security**
-
+- By default, your cluster networking uses IP in IP encapsulation with BGP routing. To review other networking options,
+ see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 - [Get started with {{site.prodname}} tiered network policy]({{site.baseurl}}/security/tiered-policy)

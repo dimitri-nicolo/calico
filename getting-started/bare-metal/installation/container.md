@@ -10,7 +10,7 @@ Install {{site.prodname}} on non-cluster hosts using a Docker container.
 ### Value
 Installing {{site.prodname}} with a Docker container includes everything you need for both networking and policy. It also automatically adds the appropriate per-node configuration to the datastore.
 
-### Before you begin...
+### Before you begin
 
 1. Ensure Docker is installed
 1. Ensure the {{site.prodname}} datastore is up and accessible from the host

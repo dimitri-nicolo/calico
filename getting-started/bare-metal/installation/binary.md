@@ -10,7 +10,7 @@ Install {{site.prodname}} binary on non-cluster hosts without a package manager.
 ### Value
 Install {{site.prodname}} directly when a package manager isn't available, or your provisioning system can easily handle copying binaries to hosts.
 
-### Before you begin... 
+### Before you begin
 
 1. Ensure the {{site.prodname}} datastore is up and accessible from the host
 1. Ensure the host meets the minimum [system requirements](../requirements)

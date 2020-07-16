@@ -10,7 +10,7 @@ Install {{site.prodname}} on non-cluster hosts using a package manager.
 ### Value
 Packaged binaries of {{site.prodname}} are easy to consume and upgrade. This method automatically configures the init system to keep Felix running.
 
-### Before you begin...
+### Before you begin
 
 1. Ensure the {{site.prodname}} datastore is up and accessible from the host
 1. Ensure the host meets the minimum [system requirements](../requirements)
