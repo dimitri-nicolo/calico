@@ -5649,6 +5649,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"awsSrcDstCheck": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Set source-destination-check on AWS EC2 instances. Accepted value must be one of \"DoNothing\", \"Enabled\" or \"Disabled\". [Default: DoNothing]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
