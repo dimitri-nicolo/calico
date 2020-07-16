@@ -103,6 +103,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation":                 schema_libcalico_go_lib_apis_v3_ClusterInformation(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationList":             schema_libcalico_go_lib_apis_v3_ClusterInformationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec":             schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Community":                          schema_libcalico_go_lib_apis_v3_Community(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob":                 schema_libcalico_go_lib_apis_v3_CompletedReportJob(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ControllersConfig":                  schema_libcalico_go_lib_apis_v3_ControllersConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EgressSpec":                         schema_libcalico_go_lib_apis_v3_EgressSpec(ref),
@@ -195,6 +196,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec":                  schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                            schema_libcalico_go_lib_apis_v3_OrchRef(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig":             schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.PrefixAdvertisement":                schema_libcalico_go_lib_apis_v3_PrefixAdvertisement(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile":                            schema_libcalico_go_lib_apis_v3_Profile(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileList":                        schema_libcalico_go_lib_apis_v3_ProfileList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec":                        schema_libcalico_go_lib_apis_v3_ProfileSpec(ref),
@@ -2564,11 +2566,44 @@ func schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref common.ReferenceCa
 							},
 						},
 					},
+					"communities": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Communities is a list of BGP community values and their arbitrary names for tagging routes.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Community"),
+									},
+								},
+							},
+						},
+					},
+					"prefixAdvertisements": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PrefixAdvertisements contains per-prefix advertisement configuration.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PrefixAdvertisement"),
+									},
+								},
+							},
+						},
+					},
+					"listenPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ListenPort is the port where BGP protocol should listen. Defaults to 179",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.Community", "github.com/projectcalico/libcalico-go/lib/apis/v3.PrefixAdvertisement", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceClusterIPBlock", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceExternalIPBlock"},
 	}
 }
 
@@ -2697,7 +2732,7 @@ func schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref common.ReferenceCallback) c
 					},
 					"peerIP": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The IP address of the peer.",
+							Description: "The IP address of the peer followed by an optional port number to peer with. If port number is given, format should be `[<IPv6>]:port` or `<IPv4>:<port>` for IPv4. If optional port number is not set, and this peer IP and ASNumber belongs to a calico/node with ListenPort set in BGPConfiguration, then we use that port to peer.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -3444,6 +3479,33 @@ func schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref common.Reference
 					"variant": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Variant declares which variant of Calico should be active.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_Community(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Community contains standard or large community value and its name.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name given to community value.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"value": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Value must be of format `aa:nn` or `aa:nn:mm`. For standard community use `aa:nn` format, where `aa` and `nn` are 16 bit number. For large community use `aa:nn:mm` format, where `aa`, `nn` and `mm` are 32 bit number. Where, `aa` is an AS Number, `nn` and `mm` are per-AS identifier.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8609,6 +8671,40 @@ func schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref common.Reference
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_PrefixAdvertisement(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PrefixAdvertisement configures advertisement properties for the specified CIDR.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cidr": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CIDR for which properties should be advertised.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"communities": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Communities can be list of either community names already defined in `Specs.Communities` or community value of format `aa:nn` or `aa:nn:mm`. For standard community use `aa:nn` format, where `aa` and `nn` are 16 bit number. For large community use `aa:nn:mm` format, where `aa`, `nn` and `mm` are 32 bit number. Where,`aa` is an AS Number, `nn` and `mm` are per-AS identifier.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -93,26 +93,13 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				},
 				options.SetOptions{},
 			)
+
 			Expect(err).NotTo(HaveOccurred())
-			expectedCacheSize += 3
+			expectedCacheSize += 1
 
 			// We should have entries for each config option that was set (i.e. 2) and the default extensions field
 			syncTester.ExpectCacheSize(expectedCacheSize)
-			syncTester.ExpectData(model.KVPair{
-				Key:      model.GlobalBGPConfigKey{"as_num"},
-				Value:    "12345",
-				Revision: bgpCfg.ResourceVersion,
-			})
-			syncTester.ExpectData(model.KVPair{
-				Key:      model.GlobalBGPConfigKey{"node_mesh"},
-				Value:    "{\"enabled\":false}",
-				Revision: bgpCfg.ResourceVersion,
-			})
-			syncTester.ExpectData(model.KVPair{
-				Key:      model.GlobalBGPConfigKey{"extensions"},
-				Value:    "{}",
-				Revision: bgpCfg.ResourceVersion,
-			})
+			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/bgpconfigurations/default")
 
 			var node *apiv3.Node
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -126,7 +113,6 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				}
 				node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
-
 				// The existing Node resource is updated; no change in cache size.
 			} else {
 				// For non-Kubernetes, add a new node with valid BGP configuration.
@@ -155,8 +141,7 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			bgpCfg.Spec.ASNumber = nil
 			_, err = c.BGPConfigurations().Update(ctx, bgpCfg, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			// Removing one config option ( -1 )
-			expectedCacheSize -= 1
+
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectNoData(model.GlobalBGPConfigKey{"as_num"})
 
