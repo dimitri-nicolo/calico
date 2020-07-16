@@ -8,6 +8,8 @@ section:
   path: /security/get-started-cem
 - title: Restrict access to Calico Enterprise components within the cluster
   path: /security/pod-security-policy
+- title: Enable AWS security group integration
+  path: /security/aws-security-group-integration  
 - title: Calico Enterprise network policy
   path: /security/calico-enterprise-policy
   section:

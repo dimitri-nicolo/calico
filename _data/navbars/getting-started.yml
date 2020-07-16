@@ -41,8 +41,6 @@ section:
         path: /getting-started/private-registry/private-registry-image-path
   - title: Configure storage for logs and reports
     path: /getting-started/create-storage
-  - title: AWS Security Group integration
-    path: /getting-started/kubernetes/aws-security-group-integration
   - title: Upgrade from Calico to Calico Enterprise
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
   - title: Get a license

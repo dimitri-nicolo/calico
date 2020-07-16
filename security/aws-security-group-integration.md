@@ -1,10 +1,7 @@
 ---
-title: Enabling integration with AWS security groups (optional)
+title: Enable AWS security groups integration
 description: Calico Enterprise lets you combine AWS security groups with network policy to enforce access control between Kubernetes pods and AWS VPC resources. 
 ---
-
-> **Warning!** AWS security group integration is a tech preview feature.
-{: .alert .alert-danger }
 
 ### Big picture
 
@@ -14,9 +11,9 @@ Enable {{ site.prodname }} integration with AWS Security Groups.
 
 AWS security group integration for {{site.prodname}} allows you to combine AWS security groups with network policy to enforce granular access control between Kubernetes pods and AWS VPC resources.
 
-### Before you begin...
+### Before you begin
 
-Your Kubernetes cluster must meet the following specifications:
+**Kubernetes cluster requirements**
 
 - Exists within a single VPC.
 - The Kubernetes AWS cloud provider is enabled.
@@ -27,9 +24,8 @@ Your Kubernetes cluster must meet the following specifications:
   kubectl get node -o=jsonpath='{range .items[*]}{.metadata.name}{"\tProviderId: "}{.spec.providerID}{"\n"}{end}'
   ```
 
-- Networking provider is
-  [Amazon VPC Networking]({{site.baseurl}}/reference/public-cloud/aws#using-aws-networking).
-  (You must be using the [AWS CNI Plugin](https://github.com/aws/amazon-vpc-cni-k8s).)
+- Networking provider is [Amazon VPC Networking]({{site.baseurl}}/reference/public-cloud/aws#using-aws-networking).
+  (You must be using the {% include open-new-window.html text='AWS CNI Plugin' url='https://github.com/aws/amazon-vpc-cni-k8s' %}).
 
   Verify the Amazon VPC Networking and CNI plugin is being used by confirming that an `aws-node` pod exists on each node:
 
@@ -37,8 +33,7 @@ Your Kubernetes cluster must meet the following specifications:
   kubectl get pod -n kube-system -l k8s-app=aws-node -o wide
   ```
 
-- You have already installed
-  [{{ site.prodname }} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
+- You have installed [{{site.prodname}} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
   on your cluster. Note that the EKS install guide also works on Kops clusters configured with `--networking amazon-vpc-routed-eni`.
 
   Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
@@ -47,25 +42,29 @@ Your Kubernetes cluster must meet the following specifications:
   kubectl get tigerastatus
   ```
 
-- You are not using the [auto hostendpoints feature]({{ site.baseurl }}/security/kubernetes-nodes#enable-automatic-host-endpoints), nor have you created any
-  [host endpoints]({{site.baseurl}}/reference/resources/hostendpoint)
-  that have a `spec.node` value that matches any of your Kubernetes nodes.
+- You are not using the [auto hostendpoints feature]({{site.baseurl}}/security/kubernetes-nodes), and have not created any
+  [host endpoints]({{site.baseurl}}/reference/resources/hostendpoint) that have a `spec.node` value that matches any of your Kubernetes nodes.
 
-  You can verify that no Host Endpoints have been created by verifying that no entries are returned by:
+  Verify that no Host Endpoints have been created by verifying that no entries are returned by:
 
   ```bash
   kubectl get hostendpoints
   ```
+**Host requirements**
 
-You will need a host equipped with the following:
+- `kubectl` configured to access the cluster
+- AWS Command Line Interface (CLI). The following commands are tested/work well with AWS CLI 1.15.40.
+- {% include open-new-window.html text='jq commands' url='https://stedolan.github.io/jq/' %}
 
- - `kubectl`: configured to access the cluster.
- - AWS Command Line Interface (CLI): The following commands are known to work well with AWS CLI 1.15.40
- - [jq](https://stedolan.github.io/jq/)
+### How to
 
-### Before you begin
+- [Gather cluster information](#gather-cluster-information)
+- [Install AWS resources](#install-aws-resources)
+- [Create operator custom resource](#create-operator-custom-resource)
 
-Collect the following information about your cluster and export it as environment variables:
+#### Gather cluster information
+
+Gather the following information about your cluster and export it as environment variables:
 
 | Variable | Description |
 |---|---|
@@ -118,9 +117,10 @@ We've provided info below on how to gather the above info in common Kubernetes e
        | head -1)
    ```
 
-   >Note: Since `KOPS_CLUSTER_NAMES` are FQDNs, you will need to pick a `CLUSTER_NAME` which does not contain any dot separators for use in the remainder of this guide. See [before you begin](#before-you-begin) for more information.{: .alert .alert-warn}
+   >**Note**: Since `KOPS_CLUSTER_NAMES` are FQDNs, you will need to pick a `CLUSTER_NAME` which does not contain any dot separators for use in the remainder of this guide. See [before you begin](#before-you-begin) for more information.
+{: .alert .alert-warn}
 
-### Procedure
+#### Install AWS resources
 
 1.  Install AWS per-account resources.
 
@@ -232,8 +232,10 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --output text \
     --query "Stacks[0].Outputs[?OutputKey=='TigeraTrustEnforcedSG'][OutputValue]")
     ```
+    
+#### Create operator custom resource
 
-1. Create the operator custom resource
+Create the operator custom resource as follows:
 
     ```yaml
     apiVersion: operator.tigera.io/v1beta1
