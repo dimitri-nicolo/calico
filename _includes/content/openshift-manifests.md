@@ -2,6 +2,7 @@ Download the {{site.prodname}} manifests for OpenShift and add them to the gener
 
 ```bash
 curl {{ "/manifests/ocp/crds/01-crd-apiserver.yaml" | absolute_url }} -o manifests/01-crd-apiserver.yaml
+curl {{ "/manifests/ocp/crds/01-crd-authentication.yaml" | absolute_url }} -o manifests/01-crd-authentication.yaml
 curl {{ "/manifests/ocp/crds/01-crd-compliance.yaml" | absolute_url }} -o manifests/01-crd-compliance.yaml
 curl {{ "/manifests/ocp/crds/01-crd-manager.yaml" | absolute_url }} -o manifests/01-crd-manager.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-apmserver.yaml" | absolute_url }} -o manifests/01-crd-eck-apmserver.yaml
