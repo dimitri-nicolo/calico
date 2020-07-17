@@ -65,7 +65,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindClusterInformation,
 		Name: "node.mynode",
 	}
-	numFelixConfigs := 156
+	numFelixConfigs := 157
 	numClusterConfigs := 6
 	numNodeClusterConfigs := 5
 	felixMappedNames := map[string]interface{}{
