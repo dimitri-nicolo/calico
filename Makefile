@@ -21,7 +21,7 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
-EXTRA_DOCKER_ARGS = -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 # Allow local libcalico-go to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
 EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
@@ -102,7 +102,8 @@ endif
 	$(DOCKER_GO_BUILD) \
 		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
 			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-				( ldd $(BINDIR)/license-agent-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+				( ldd $(BINDIR)/license-agent-$(ARCH) 2>&1 | \
+				grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 				( echo "Error: $(BINDIR)/license-agent-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
