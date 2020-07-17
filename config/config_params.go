@@ -121,7 +121,7 @@ type Config struct {
 	BPFEnabled                         bool           `config:"bool;false"`
 	BPFDisableUnprivileged             bool           `config:"bool;true"`
 	BPFLogLevel                        string         `config:"oneof(off,info,debug);off;non-zero"`
-	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^(en.*|eth.*|tunl0$)"`
+	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^(en.*|eth.*|tunl0$|wireguard.cali$)"`
 	BPFConnectTimeLoadBalancingEnabled bool           `config:"bool;true"`
 	BPFExternalServiceMode             string         `config:"oneof(tunnel,dsr);tunnel;non-zero"`
 	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
@@ -167,19 +167,20 @@ type Config struct {
 
 	Ipv6Support bool `config:"bool;true"`
 
-	IptablesBackend                    string        `config:"oneof(legacy,nft,auto);legacy"`
-	RouteRefreshInterval               time.Duration `config:"seconds;90"`
-	DeviceRouteSourceAddress           net.IP        `config:"ipv4;"`
-	DeviceRouteProtocol                int           `config:"int;3"`
-	RemoveExternalRoutes               bool          `config:"bool;true"`
-	IptablesRefreshInterval            time.Duration `config:"seconds;90"`
-	IptablesPostWriteCheckIntervalSecs time.Duration `config:"seconds;1"`
-	IptablesLockFilePath               string        `config:"file;/run/xtables.lock"`
-	IptablesLockTimeoutSecs            time.Duration `config:"seconds;0"`
-	IptablesLockProbeIntervalMillis    time.Duration `config:"millis;50"`
-	IpsetsRefreshInterval              time.Duration `config:"seconds;10"`
-	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
-	XDPRefreshInterval                 time.Duration `config:"seconds;90"`
+	IptablesBackend                    string            `config:"oneof(legacy,nft,auto);legacy"`
+	RouteRefreshInterval               time.Duration     `config:"seconds;90"`
+	DeviceRouteSourceAddress           net.IP            `config:"ipv4;"`
+	DeviceRouteProtocol                int               `config:"int;3"`
+	RemoveExternalRoutes               bool              `config:"bool;true"`
+	IptablesRefreshInterval            time.Duration     `config:"seconds;90"`
+	IptablesPostWriteCheckIntervalSecs time.Duration     `config:"seconds;1"`
+	IptablesLockFilePath               string            `config:"file;/run/xtables.lock"`
+	IptablesLockTimeoutSecs            time.Duration     `config:"seconds;0"`
+	IptablesLockProbeIntervalMillis    time.Duration     `config:"millis;50"`
+	FeatureDetectOverride              map[string]string `config:"keyvaluelist;;"`
+	IpsetsRefreshInterval              time.Duration     `config:"seconds;10"`
+	MaxIpsetSize                       int               `config:"int;1048576;non-zero"`
+	XDPRefreshInterval                 time.Duration     `config:"seconds;90"`
 
 	WindowsNetworkName *regexp.Regexp `config:"regexp;(?i)calico.*"`
 
@@ -932,6 +933,8 @@ func loadParams() {
 			param = &ServerListParam{}
 		case "route-table-range":
 			param = &RouteTableRangeParam{}
+		case "keyvaluelist":
+			param = &KeyValueListParam{}
 		default:
 			log.Panicf("Unknown type of parameter: %v", kind)
 		}

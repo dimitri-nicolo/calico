@@ -22,13 +22,15 @@ import (
 	"os/exec"
 	"runtime/debug"
 	"sync"
-
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/collector"
+	"k8s.io/client-go/kubernetes"
+	log "github.com/sirupsen/logrus"
+	"runtime/debug"
+	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/config"
 	extdataplane "github.com/projectcalico/felix/dataplane/external"
 	"github.com/projectcalico/felix/dataplane/inactive"
@@ -40,6 +42,7 @@ import (
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/wireguard"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
@@ -328,6 +331,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			RouteTableManager:                  routeTableIndexAllocator,
 
 			KubeClientSet: k8sClientSet,
+
+			FeatureDetectOverrides: configParams.FeatureDetectOverride,
 
 			Collector:            collector,
 			DNSCacheFile:         configParams.DNSCacheFile,
