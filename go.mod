@@ -43,7 +43,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.5.1
-	github.com/tigera/licensing v1.0.1-0.20200716232216-0e6c3105de92
+	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5
 	github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
@@ -64,8 +64,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200716214228-f89097db6eb1
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717030229-bb429d57546a
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200717030336-13b6440460f0
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
