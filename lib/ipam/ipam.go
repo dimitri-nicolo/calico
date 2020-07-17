@@ -403,6 +403,9 @@ type blockAssignState struct {
 	remainingAffineBlocks []net.IPNet
 	hostReservedAttr      *HostReservedAttr
 	allowNewClaim         bool
+
+	// For UT purpose, how many times datastore retry has been triggered.
+	datastoreRetryCount   int
 }
 
 // Given a list of host-affine blocks, findOrClaimBlock returns one block with minimum free ips.
@@ -446,7 +449,12 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 			if block.NumFreeAddresses() >= minFreeIps {
 				logCtx.Debugf("Block '%s' has %d free ips which is more than %d ips required.", cidr.String(), block.NumFreeAddresses(), minFreeIps)
 				return b, false, nil
+			} else {
+				logCtx.Debugf("Block '%s' has %d free ips which is less than %d ips required.", cidr.String(), block.NumFreeAddresses(), minFreeIps)
+				break
 			}
+
+			s.datastoreRetryCount ++
 		}
 	}
 
@@ -521,7 +529,9 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 					logCtx.Errorf(errString)
 					return nil, false, errors.New(errString)
 				}
+				s.datastoreRetryCount ++
 			}
+			s.datastoreRetryCount ++
 		}
 		return nil, false, errors.New("Max retries hit - excessive concurrent IPAM requests")
 	}
