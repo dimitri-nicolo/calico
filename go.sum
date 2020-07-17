@@ -272,6 +272,7 @@ github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGV
 github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.0 h1:XPnZz8VVBHjVsy1vzJmRwIcSwiUO+JFfrv/xGiigmME=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/onsi/gomega v1.7.1 h1:K0jcRCwNQM3vFGh1ppMtDh/+7ApJrjldlX8fA0jDTLQ=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
 github.com/op/go-logging v0.0.0-20160315200505-970db520ece7/go.mod h1:HzydrMdWErDVzsI23lYNej1Htcns9BCg93Dk0bBINWk=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
@@ -341,8 +342,16 @@ github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2 h1:Bn3
 github.com/tigera/libcalico-go-private v0.0.0-20200617214044-dd9aed324aa2/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v0.0.0-20200618213614-8621ac10a305 h1:xEntwfH6Zqqg7j9KVKWzzx41x5sGX6tyMEVuhpZ4q60=
 github.com/tigera/libcalico-go-private v0.0.0-20200618213614-8621ac10a305/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6 h1:nFEfO4n3JA+QRPPzDhsFCwvfMcUhW0XjiNBEXpZzbEw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057 h1:OLV+AMJuIKv4I2nuU3QS52sHKcaLkWz4b4ZK/N8MAds=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 h1:d3s/0EKVB1BsRoQ12TWHbO7xWmplpU1bXJPSYu9qupI=
 github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
+github.com/tigera/licensing v1.0.1-0.20200716232216-0e6c3105de92 h1:DNwE2nkO8cvF2fwR6nD1kwKHQWOEEqK1Bq/qYMpyDfQ=
+github.com/tigera/licensing v1.0.1-0.20200716232216-0e6c3105de92/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
+github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 h1:WeS+3sfbfEm4Off/sl2NwlYPNKlAxN7QScopiB5I29A=
+github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
 github.com/tigera/licensing v2.5.1+incompatible h1:wWwFjfXCXd+5HDQcrZluQ8xO6uUCMVEefc5KeMlTXes=
 github.com/tigera/licensing v2.5.1+incompatible/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/ts-queryserver v2.6.2+incompatible h1:48kCGSe+n70FKRcGErVBbUX7R8r6xQv9gO4ugMBUCms=
