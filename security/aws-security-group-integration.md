@@ -33,6 +33,9 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
   kubectl get pod -n kube-system -l k8s-app=aws-node -o wide
   ```
 
+- You have installed [{{site.prodname}} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
+  on your cluster. Note that the EKS install guide also works on Kops clusters configured with `--networking amazon-vpc-routed-eni`.
+
 - You have installed {{site.prodname}} configured to work with the AWS CNI Plugin. This is done by following
   [the installation guide for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
   on your cluster or configuring the [Installation resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Installation) during installation
@@ -239,19 +242,19 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
 Create the operator custom resource as follows:
 
-    ```yaml
-    apiVersion: operator.tigera.io/v1beta1
-    kind: AmazonCloudIntegration
-    metadata:
-      name: tigera-secure
-    spec:
-      nodeSecurityGroupIDs:
-      - $K8S_NODE_SGS
-      podSecurityGroupID: $POD_SG
-      vpcs:
-        - $VPC_ID
-      sqsURL: $SQS_URL
-      awsRegion: $AWS_REGION
-      enforcedSecurityGroupID: $ENFORCED_SG
-      trustEnforcedSecurityGroupID: $TRUST_SG
-    ```
+  ```yaml
+  apiVersion: operator.tigera.io/v1beta1
+  kind: AmazonCloudIntegration
+  metadata:
+    name: tigera-secure
+  spec:
+    nodeSecurityGroupIDs:
+    - $K8S_NODE_SGS
+    podSecurityGroupID: $POD_SG
+    vpcs:
+      - $VPC_ID
+    sqsURL: $SQS_URL
+    awsRegion: $AWS_REGION
+    enforcedSecurityGroupID: $ENFORCED_SG
+    trustEnforcedSecurityGroupID: $TRUST_SG
+  ```
