@@ -18,14 +18,14 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20200601160722-b55a2f1ba49b
 
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v1.0.1-0.20200618213636-f5bf5cf12edb // indirect
+	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 // indirect
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200716214228-f89097db6eb1
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717030229-bb429d57546a
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200717030336-13b6440460f0
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
