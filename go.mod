@@ -21,14 +21,14 @@ require (
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v1.0.1-0.20200716232216-0e6c3105de92
+	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200717005332-4f96b3980f33
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200716205919-ddcc11d84eb6
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200717040527-81393e89abcc
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200716214228-f89097db6eb1
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200717030336-13b6440460f0
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.17.2
