@@ -157,7 +157,7 @@ func (r *esRoleMappingSynchronizer) removeStaleMappings() error {
 	}
 
 	for _, esRoleMapping := range esRoleMappings {
-		if esRoleMapping.Name[:len(roleMappingPrefix)] == roleMappingPrefix {
+		if strings.HasPrefix(esRoleMapping.Name, roleMappingPrefix) {
 			if _, exists := existingMappings[esRoleMapping.Name]; !exists {
 				if deleted, err := r.esCLI.DeleteRoleMapping(esRoleMapping.Name); err != nil {
 					if deleted {
@@ -201,6 +201,7 @@ func (r *esRoleMappingSynchronizer) synchronizeElasticsearchMapping(clusterRoleN
 		return err
 	}
 
+	log.Infof("Creating role mapping %#v for users - %#v groups - %#v esRoles - %#v", roleMappingName, users, groups, esRoles)
 	mapping := createRoleMapping(roleMappingName, users, groups, esRoles)
 	if err := r.esCLI.CreateRoleMapping(mapping); err != nil {
 		return err
@@ -253,20 +254,20 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 func createRoleMapping(name string, users, groups, roles []string) elasticsearch.RoleMapping {
 	var rules []elasticsearch.Rule
 
-	if len(users) > 0 {
+	for _, user := range users {
 		rules = append(rules,
 			elasticsearch.Rule{
 				Field: map[string]string{
-					"username": strings.Join(users, ","),
+					"username": user,
 				},
 			})
 	}
 
-	if len(groups) > 0 {
+	for _, group := range groups {
 		rules = append(rules,
 			elasticsearch.Rule{
 				Field: map[string]string{
-					"groups": strings.Join(groups, ","),
+					"groups": group,
 				},
 			})
 	}
