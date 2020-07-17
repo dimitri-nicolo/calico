@@ -1629,6 +1629,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			Expect(b.Key.(model.BlockKey).CIDR.String()).To(Equal("10.0.0.4/30"))
 			// uncheckedAffBlocks has no elements.
 			Expect(len(s.remainingAffineBlocks)).To(Equal(0))
+			Expect(s.datastoreRetryCount).To(Equal(0))
 
 			// Assign an IP from second block
 			args = AssignIPArgs{
@@ -1643,6 +1644,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			// Should claim new block.
 			Expect(newlyClaimed).To(BeTrue())
 			Expect(len(s.remainingAffineBlocks)).To(Equal(0))
+			Expect(s.datastoreRetryCount).To(Equal(0))
 
 			// Should return error if allowNewClaim is false.
 			s.allowNewClaim = false
