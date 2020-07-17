@@ -6,6 +6,7 @@ spec:
   nodeToNodeMeshEnabled: false
   logSeverityScreen: Debug
   asNumber: 64567
+  listenPort: 150
 
 ---
 
@@ -14,7 +15,7 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: bgppeer-1
 spec:
-  peerIP: 10.192.0.3
+  peerIP: 10.192.0.3:166
   asNumber: 64567
   sourceAddress: None
   failureDetectionMode: BFDIfDirectlyConnected
