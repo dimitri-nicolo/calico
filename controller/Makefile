@@ -330,7 +330,7 @@ APIMACHINERY_REPO=github.com/tigera/apimachinery-private
 APIMACHINERY_BRANCH=$(PIN_BRANCH)
 
 replace-apiserver-pin:
-		$(call update_replace_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
+	$(call update_replace_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
 
 replace-apimachinery-pin:
 	$(call update_replace_pin,$(APIMACHINERY_REPO_ORIG),$(APIMACHINERY_REPO),$(APIMACHINERY_BRANCH))
