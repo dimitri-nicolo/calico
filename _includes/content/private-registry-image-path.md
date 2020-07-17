@@ -55,6 +55,16 @@ sed -ie "s?quay.io.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-operator.yaml
 ```
 {% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
 
+If you are installing Prometheus operator as part of {{ site.prodname }}, then before applying `tigera-prometheus-operator.yaml`, modify registry references to use your custom registry:
+
+```
+{% if page.registry != "quay.io/" -%}
+sed -ie "s?{{ page.registry }}.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-prometheus-operator.yaml
+{% endif -%}
+sed -ie "s?quay.io.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-prometheus-operator.yaml
+```
+{% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
+
 Before applying `custom-resources.yaml`, modify registry references to use your custom registry:
 
 ```

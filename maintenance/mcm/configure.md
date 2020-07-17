@@ -71,10 +71,20 @@ The following steps install multi-cluster management on two new Kubernetes clust
 Follow these steps in the cluster you intend to use as the management cluster.
 
 1. [Configure storage for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage).
+
 1. Install the Tigera operator and custom resource definitions.
 
    ```bash
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. Install the Prometheus operator and related custom resource definitions. The Prometheus operator will be used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
+
+   > **Note**: If you have an existing Prometheus operator in your cluster that you want to use, skip this step. To work with {{site.prodname}}, your Prometheus operator must be v0.30.0 or higher.
+   {: .alert .alert-info}
+
+   ```
+   kubectl create -f {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
 
 1. Install your pull secret.
@@ -210,6 +220,15 @@ Follow these steps in the cluster you intend to use as the managed cluster.
 
    ```bash
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. Install the Prometheus operator and related custom resource definitions. The Prometheus operator will be used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
+
+   > **Note**: If you have an existing Prometheus operator in your cluster that you want to use, skip this step. To work with {{site.prodname}}, your Prometheus operator must be v0.30.0 or higher.
+   {: .alert .alert-info}
+
+   ```
+   kubectl create -f {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
 
 1. Install your pull secret.

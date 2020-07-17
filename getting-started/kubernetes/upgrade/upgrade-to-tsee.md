@@ -32,8 +32,9 @@ for your EKS cluster: substitute `kubectl apply` in place of `kubectl create`.
 For example, in order to upgrade an [EKS cluster]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks):
 
    ```
-   kubectl apply -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}       # replace "create" with "apply"
-   kubectl apply -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}  # replace "create" with "apply"
+   kubectl apply -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}              # replace "create" with "apply"
+   kubectl apply -f {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}   # replace "create" with "apply"
+   kubectl apply -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}         # replace "create" with "apply"
    ```
 
 > **Note**: When upgrading from older versions of open source Calico, delete the unused
@@ -61,6 +62,8 @@ mkdir manifests manifests_cr
 ```
 
 {% include content/openshift-manifests.md %}
+
+{% include content/openshift-prometheus-operator.md %}
 
 {% include content/openshift-resources.md %}
 
@@ -100,7 +103,7 @@ mkdir manifests manifests_cr
    oc apply -f manifests/
    ```
 
-1. [Optional] If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
+1. (Optional) If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 1. Apply the Tigera custom resources. For more information on configuration options available, see [the installation reference]({{site.baseurl}}/reference/installation/api).
    ```bash

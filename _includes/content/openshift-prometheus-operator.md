@@ -1,4 +1,4 @@
-(Optional) Download the {{site.prodname}} manifests for OpenShift specific to Prometheus operator and add them to the generated manifests directory:
+Download the {{site.prodname}} manifests for OpenShift specific to Prometheus operator and add them to the generated manifests directory:
 ```bash
 curl {{ "/manifests/ocp/crds/01-crd-alertmanager.yaml" | absolute_url }} -o manifests/01-crd-alertmanager.yaml
 curl {{ "/manifests/ocp/crds/01-crd-prometheusrule.yaml" | absolute_url }} -o manifests/01-crd-prometheusrule.yaml
@@ -10,3 +10,7 @@ curl {{ "/manifests/ocp/prometheus-operator/04-clusterrole-prometheus-operator.y
 curl {{ "/manifests/ocp/prometheus-operator/04-deployment-prometheus-operator.yaml" | absolute_url }} -o manifests/04-deployment-prometheus-operator.yaml
 curl {{ "/manifests/ocp/prometheus-operator/04-serviceaccount-prometheus-operator.yaml" | absolute_url }} -o manifests/04-serviceaccount-prometheus-operator.yaml
 ```
+
+> **Note**: If you have a different Prometheus operator separate from {{site.prodname}} in your cluster that you want to use, skip this section. To work with {{site.prodname}}, your Prometheus operator must be v0.30.0 or higher.
+{: .alert .alert-info}
+

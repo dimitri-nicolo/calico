@@ -42,9 +42,14 @@ the upgrade.
    kubectl delete crd prometheusrules.monitoring.coreos.com 
    ```
 
-1. Download the new operator manifest.
+1. Download the new manifests for Tigera operator.
    ```bash
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. Download the new manifests for Prometheus operator. This step is required if you previously installed Prometheus operator as part of {{site.prodname}}.
+   ```bash
+   curl -L -O {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
 
 1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
@@ -65,7 +70,12 @@ the upgrade.
    ```bash
    kubectl apply -f tigera-operator.yaml
    ```
-   
+
+1. If you downloaded the manifests for Prometheus operator from the earlier step, then apply them now.
+   ```bash
+   kubectl apply -f tigera-prometheus-operator.yaml
+   ```
+
 1. Apply the CRs for PrometheusRule.
    ```bash
    kubectl apply -f prometheusrules.yaml  
@@ -144,9 +154,14 @@ the upgrade.
    kubectl delete crd prometheusrules.monitoring.coreos.com 
    ```
    
-1. Download the new operator manifest.
+1. Download the new manifests for Tigera operator.
    ```bash
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. Download the new manifests for Prometheus operator. This step is required if you previously installed Prometheus operator as part of {{site.prodname}}.
+   ```bash
+   curl -L -O {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
 
 1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry/private-registry-regular), you will need to
@@ -166,6 +181,11 @@ the upgrade.
 1. Apply the Tigera operator.
    ```bash
    kubectl apply -f tigera-operator.yaml
+   ```
+
+1. If you downloaded the manifests for Prometheus operator from the earlier step, then apply them now.
+   ```bash
+   kubectl apply -f tigera-prometheus-operator.yaml
    ```
 
 1. Apply the LogStorage CR.

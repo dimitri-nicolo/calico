@@ -38,6 +38,8 @@ mkdir manifests
 
 {% include content/openshift-manifests.md %}
 
+{% include content/openshift-prometheus-operator.md %}
+
 ## Upgrade from 2.6 or 2.7
 
 1. Export your current LogStorage CR to a file.

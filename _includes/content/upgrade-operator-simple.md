@@ -2,9 +2,14 @@
 1.  [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
 {%- endif %}
 
-1. Download the new operator manifest.
+1. Download the new manifests for Tigera operator.
    ```bash
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
+   ```
+
+1. Download the new manifests for Prometheus operator. This step is required if you previously installed Prometheus operator as part of {{site.prodname}}.
+   ```bash
+   curl -L -O {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
 
 1. If you previously [installed using a private registry]({{site.baseurl}}/getting-started/private-registry), you will need to
@@ -12,9 +17,14 @@
    and then [update the manifest]({{site.baseurl}}/getting-started/private-registry/private-registry-regular#run-the-operator-using-images-from-your-private-registry)
    downloaded in the previous step.
 
-1. Apply the Tigera operator.
+1. Apply the manifests for Tigera operator.
    ```bash
    kubectl apply -f tigera-operator.yaml
+   ```
+
+1. If you downloaded the manifests for Prometheus operator from the earlier step, then apply them now.
+   ```bash
+   kubectl apply -f tigera-prometheus-operator.yaml
    ```
 
 {%- if include.upgradeFrom == "OpenSource" %}

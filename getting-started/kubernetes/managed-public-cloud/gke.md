@@ -52,14 +52,14 @@ Ensure that your GKE cluster that meets the following requirements:
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
 
-1. (Optional) If you have an existing Prometheus operator in your cluster that you want to use, continue to the next step. Otherwise, install the Prometheus operator and related custom resource definitions with the command below. The Prometheus operator will be used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
+1. Install the Prometheus operator and related custom resource definitions. The Prometheus operator will be used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
+
+   > **Note**: If you have an existing Prometheus operator in your cluster that you want to use, skip this step. To work with {{site.prodname}}, your Prometheus operator must be v0.30.0 or higher.
+   {: .alert .alert-info}
 
    ```
    kubectl create -f {{ "/manifests/tigera-prometheus-operator.yaml" | absolute_url }}
    ```
-
-   > **Note**: If you plan to use your own Prometheus operator with {{site.prodname}}, please ensure it is v0.30.0 or higher.
-   {: .alert .alert-info}
 
 1. Install your pull secret.
 
