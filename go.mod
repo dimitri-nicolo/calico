@@ -5,10 +5,10 @@ go 1.13
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200717040527-81393e89abcc
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717030229-bb429d57546a
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200718040416-cca1d4267bc0
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200717030336-13b6440460f0
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200718030506-4492b62258ca
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32
 
 	k8s.io/api => k8s.io/api v0.17.2
@@ -59,7 +59,7 @@ require (
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/cobra v0.0.6
 	github.com/tigera/apiserver v2.7.0-0.dev.0.20200106212250-74a03f23227a+incompatible
-	github.com/tigera/lma v0.0.0-20200717030257-cba2b06b8959
+	github.com/tigera/lma v0.0.0-20200717190519-c4582ed88630
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gopkg.in/ini.v1 v1.48.0 // indirect
