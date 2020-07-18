@@ -161,7 +161,7 @@ It has significant limitations—notably the Kubernetes API server must be resta
 1. Enable Kubernetes basic authentication by passing a static password file to the Kubernetes API server as discussed in the Kubernetes documentation.
 1. Go to the {{site.prodname}} Manager UI and enter the username/password.
 
-#### Kibana authentication	
+#### Kibana basic authentication	
 
 Connect to Kibana with the `elastic` username. Use the following command to decode the password:	
 
@@ -170,6 +170,68 @@ Connect to Kibana with the `elastic` username. Use the following command to deco
 kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
 ```
 {% endraw %}
+Once logged in, you can configure users and their privileges from the settings page.
+
+#### Kibana OIDC authentication
+
+Kibana can be configured to use your OIDC Identity Provider (IdP). {{site.prodname}} is able to automatically translate your [Tigera RBAC permissions]({{site.baseurl}}/security/rbac-tiered-policies)
+to Elasticsearch User Role Mappings.
+
+1. Configure your [kube-apiserver to use OIDC](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuring-the-api-server) for OIDC authentication..
+
+1. Apply the Authentication CR to your cluster to let the operator configure your login. This example demonstrates the email claim.
+   This means that from the JWT that your IdP creates, the email field is used as the username to bind privileges to. Make sure 
+   that the `issuerURL` and `usernameClaim` match the configuration of your kube-apiserver.
+   ```bash
+   apiVersion: operator.tigera.io/v1
+   kind: Authentication
+   metadata:
+     name: tigera-secure
+   spec:
+     managerDomain: <domain-of-manager-ui>
+     method: OIDC
+     oidc:
+       issuerURL: <your-IdP-issuer>
+       usernameClaim: email
+   ```
+
+1. Apply the secret to your cluster with your OIDC credentials
+   ```bash
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: tigera-oidc-credentials
+     namespace: tigera-operator
+   data:
+     clientID: <your-base64-clientid>
+     clientSecret: <clientid-secret>
+   ```
+
+1. Give a user permissions to login to kibana and to view the data
+   ```bash
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: kibana
+   rules:
+   - apiGroups:
+     - lma.tigera.io
+     resourceNames:
+     - kibana_login
+     - audit*
+     - audit_ee
+     - audit_kube
+     - events
+     - dns
+     resources:
+     - '*'
+     verbs:
+     - '*'
+   ```
+   ```bash
+   kubectl  create clusterrolebinding alina-kibana-access --user=alina@tigera.io --clusterrole=kibana
+   ```
+
 
 ### Above and beyond
 
