@@ -262,8 +262,8 @@ Similarly, most IdP's require authorizing browser (JavaScript) origins, since th
 - Add the domain and port for your {{site.prodname}} Manager and Kibana
 
 **Authorized redirect URIs**
-- https://<host>:<port>/login/oidc/callback
-- https://<host>:<port>/tigera-kibana/api/security/oidc/callback
+- `https://<host>:<port>/login/oidc/callback`
+- `https://<host>:<port>/tigera-kibana/api/security/oidc/callback`
 
 ### Above and beyond
 
