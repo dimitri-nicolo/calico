@@ -9,7 +9,7 @@ Configure an authentication method, create a user with access to the manager UI,
 
 ### Before you begin...
 
-Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/) and have set up [access to the Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+Make sure you have installed {{site.prodname}} using one of the [installation guides]({{site.baseurl}}/getting-started/) and have set up [access to the Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager).
 
 ### Concepts
 
@@ -21,6 +21,17 @@ The {{site.prodname}} Manager supports the following user authentication methods
 - **OIDC authentication**: The user is managed outside of the cluster (typically, by the identity provider used by the OIDC authorization server.)
 - **OAuth authentication**: The user is managed outside of the cluster (typically, by the identity provider used by the OAuth authorization server.) For OpenShift clusters, we recommend using OAuth authentication against OpenShift's internal OAuth server.
 - **Basic authentication**: (for testing only) The user is a username. Note that basic authentication is not suitable for production environments.
+
+#### Identity Providers, OIDC and OAuth Concepts
+
+When configuring your cluster, you may be asked to provide information on the following concepts:
+
+- **Identity Provider (IdP)**: A third party system to which user identity and authentication can be delegated.
+- **Client Id**: The id that is shared between the IdP and an application for exchanging data.
+- **Client Secret**: The secret associated with the `client id` can be used by server applications for the purpose of exchanging tokens.
+- **Issuer URL**: The url where the IdP can be reached. The OIDC framework relies on conventions of which this URL is the basis.
+- **Well known configuration**: The OIDC framework is designed to be flexible. The specifics of your IdP are then reflected in `well known configuration`, which is read by OIDC consumers.
+- **Claims**: When you configure your IdP, you can configure claims. Every time your IdP issues a token for a valid user, these claims add some metadata as part of the token that the server can then use to tailor requests to the needs of a user. The most common example is to determine the username.
 
 #### Cluster roles
 
@@ -123,7 +134,7 @@ Now that we have the token, we can proceed to login! Go to the {{site.prodname}}
 
 #### Create a user and login using OIDC authentication with prepopulated configuration
 
-In cases where OIDC Identity Provider (IdP) doesn't allow cross-origin HTTP requests, OIDC configuration can be prepopulated to support OIDC authentication flow.
+In cases where the IdP doesn't allow cross-origin HTTP requests, OIDC configuration can be prepopulated to support OIDC authentication flow.
 
 1. Consult your OIDC identity provider's documentation to manage users.
 1. Make sure OIDC authority is set to empty value.
@@ -145,7 +156,7 @@ In cases where OIDC Identity Provider (IdP) doesn't allow cross-origin HTTP requ
        <jwks-uri-configuration>
    ```
 
-   In above example, `<well-known-openid-configuration>` is the JSON response from IdP for request to _/.well-known/openid-configuration_. Notice however that the `jwks_uri` value in `<well-known-openid-configuration>` should be set to `"/discovery/keys"`. For `<jwks-uri-configuration>`, use the JSON response from IdP for JWKS URI.
+   In above example, `<well-known-openid-configuration>` is the JSON response from the IdP for request to _/.well-known/openid-configuration_. Notice however that the `jwks_uri` value in `<well-known-openid-configuration>` should be set to `"/discovery/keys"`. For `<jwks-uri-configuration>`, use the JSON response from IdP for JWKS URI.
 1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
 
 #### Create a user and login using OAuth2 authentication
@@ -174,15 +185,18 @@ Once logged in, you can configure users and their privileges from the settings p
 
 #### Kibana OIDC authentication
 
-Kibana can be configured to use your OIDC Identity Provider (IdP). {{site.prodname}} is able to automatically translate your [Tigera RBAC permissions]({{site.baseurl}}/security/rbac-tiered-policies)
-to Elasticsearch User Role Mappings.
+Kibana can be configured to use your IdP. When you open the manager and click on the Kibana button, the user will be prompted by the IdP to login. Upon success, they will be redirected back to Kibana
+and the username for Kibana will be extracted from the `usernameClaim` provided by the IdP. {{site.prodname}} is able to automatically translate {{site.prodname}} [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch)
+ for the apiGroup `lma.tigera.io` to Elasticsearch User Role Mappings. 
 
-1. Configure your [kube-apiserver to use OIDC](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuring-the-api-server) for OIDC authentication..
+1. Configure your [kube-apiserver to use OIDC](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuring-the-api-server) for OIDC authentication.
 
-1. Apply the Authentication CR to your cluster to let the operator configure your login. This example demonstrates the email claim.
+1. Apply the Authentication CR to your cluster to let the operator configure your login. This example demonstrates the email claim. 
    This means that from the JWT that your IdP creates, the email field is used as the username to bind privileges to. Make sure 
-   that the `issuerURL` and `usernameClaim` match the configuration of your kube-apiserver.
-   ```bash
+   that the `issuerURL` and `usernameClaim` match the configuration of your kube-apiserver. For more configuration options, 
+   see the [Authentication resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Authentication).
+
+   ```
    apiVersion: operator.tigera.io/v1
    kind: Authentication
    metadata:
@@ -195,8 +209,9 @@ to Elasticsearch User Role Mappings.
        usernameClaim: email
    ```
 
-1. Apply the secret to your cluster with your OIDC credentials
-   ```bash
+1. Apply the secret to your cluster with your OIDC credentials.
+
+   ```
    apiVersion: v1
    kind: Secret
    metadata:
@@ -207,12 +222,13 @@ to Elasticsearch User Role Mappings.
      clientSecret: <clientid-secret>
    ```
 
-1. Give a user permissions to login to kibana and to view the data
-   ```bash
+1. Give a user permissions to login to Kibana and to view the data. The following example gives full access to a user logged in using OIDC.
+
+   ```
    apiVersion: rbac.authorization.k8s.io/v1
    kind: ClusterRole
    metadata:
-     name: kibana
+     name: tigera-kibana-admin
    rules:
    - apiGroups:
      - lma.tigera.io
@@ -228,9 +244,11 @@ to Elasticsearch User Role Mappings.
      verbs:
      - '*'
    ```
-   ```bash
-   kubectl  create clusterrolebinding alina-kibana-access --user=alina@tigera.io --clusterrole=kibana
+
    ```
+   kubectl  create clusterrolebinding alina-kibana-access --user=alina@tigera.io --clusterrole=tigera-kibana-admin
+   ```
+   For more configuration options, see {{site.prodname}} [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch).
 
 
 ### Above and beyond
