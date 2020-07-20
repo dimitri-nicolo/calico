@@ -146,11 +146,11 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 
 		It("should fail health check if apiserver is not running", func() {
 			By("Waiting for an initial readiness report")
-			Eventually(func() []byte {
+			Eventually(func() string {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 
-				return stdoutStderr
+				return string(stdoutStderr)
 			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
 
 			By("Stopping the apiserver")
