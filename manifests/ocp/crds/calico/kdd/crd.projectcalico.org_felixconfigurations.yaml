@@ -26,6 +26,12 @@ spec:
               type: object
             spec:
               properties:
+                awsSrcDstCheck:
+                  enum:
+                    - DoNothing
+                    - Enable
+                    - Disable
+                  type: string
                 bpfConnectTimeLoadBalancingEnabled:
                   type: boolean
                 bpfDataIfacePattern:
@@ -164,6 +170,8 @@ spec:
                       - protocol
                     type: object
                   type: array
+                featureDetectOverride:
+                  type: string
                 flowLogsAggregationThresholdBytes:
                   type: integer
                 flowLogsDynamicAggregationEnabled:

@@ -29,14 +29,39 @@ spec:
                 asNumber:
                   format: int32
                   type: integer
+                communities:
+                  items:
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        pattern: ^(\d+):(\d+)$|^(\d+):(\d+):(\d+)$
+                        type: string
+                    type: object
+                  type: array
                 extensions:
                   additionalProperties:
                     type: string
                   type: object
+                listenPort:
+                  maximum: 65535
+                  minimum: 1
+                  type: integer
                 logSeverityScreen:
                   type: string
                 nodeToNodeMeshEnabled:
                   type: boolean
+                prefixAdvertisements:
+                  items:
+                    properties:
+                      cidr:
+                        type: string
+                      communities:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  type: array
                 serviceClusterIPs:
                   items:
                     properties:
