@@ -4,9 +4,9 @@ go 1.13
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200718040416-cca1d4267bc0
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200718030506-4492b62258ca
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200720085012-1e335030cd65
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200717181002-1d3f1bb96b2a
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200718081209-a2c65479bd58
 	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200717190519-c4582ed88630

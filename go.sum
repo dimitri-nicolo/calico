@@ -867,6 +867,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20200717030229-bb429d57546a h1:a
 github.com/tigera/libcalico-go-private v1.7.2-0.20200717030229-bb429d57546a/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057 h1:OLV+AMJuIKv4I2nuU3QS52sHKcaLkWz4b4ZK/N8MAds=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f h1:vJAQnPj7eClGyzximZ8Zt0Ogg9M6n04ynmqB5RBbbtA=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v2.5.1+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/licensing v0.0.0-20191114203016-3c126d3f9ffe/go.mod h1:M0P7vk08eM7bIjfMzqIk8w6gh+lsM6fvhrO4WlJFpik=
 github.com/tigera/licensing v1.0.1-0.20200508070150-c531b3ea4a9a h1:maYOHHjIuWEyMZyvPbKaDjcpDaoHyaXPQB9pb6gMRaU=
@@ -914,6 +916,7 @@ github.com/tigera/typha-private v0.6.0-beta1.0.20200715220132-e39d468d61f3/go.mo
 github.com/tigera/typha-private v0.6.0-beta1.0.20200716214228-f89097db6eb1/go.mod h1:DJIO7EPxZKkF97JjKTcZXhBP/3G+gxM+FdBrgjtpK2U=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200717030336-13b6440460f0/go.mod h1:DJIO7EPxZKkF97JjKTcZXhBP/3G+gxM+FdBrgjtpK2U=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200718030506-4492b62258ca/go.mod h1:f/WqmuVkJnc/GxkJLyV3CbqeWbvbK0Cy5aSwUtF3W90=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200720085012-1e335030cd65/go.mod h1:8fDosHFhcMsW9eCGa1zhmXJKllMVgPDGIPahnrWc9YI=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
