@@ -1,4 +1,4 @@
-FROM fluent/fluentd:v1.9.3-1.0
+FROM fluent/fluentd:v1.11.1-1.0
 MAINTAINER spike@tigera.io
 
 USER root
