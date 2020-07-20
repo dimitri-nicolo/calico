@@ -31,6 +31,7 @@ When configuring your cluster, you may be asked to provide information on the fo
 - **Client Secret**: The secret associated with the `client id` can be used by server applications for the purpose of exchanging tokens.
 - **Issuer URL**: The url where the IdP can be reached. The OIDC framework relies on conventions of which this URL is the basis.
 - **Well known configuration**: The OIDC framework is designed to be flexible. The specifics of your IdP are then reflected in `well known configuration`, which is read by OIDC consumers.
+- **Scopes**: When authenticating the IdP sometimes lists a number of scopes that the user consents to sharing with the application. Adding more scopes, can lead to sharing more metadata with the application.
 - **Claims**: When you configure your IdP, you can configure claims. Every time your IdP issues a token for a valid user, these claims add some metadata as part of the token that the server can then use to tailor requests to the needs of a user. The most common example is to determine the username.
 
 #### Cluster roles
@@ -44,13 +45,15 @@ Users must have appropriate RBAC to access resources in the UI. We provide the f
 If you would like additional roles, see this [document]({{site.baseurl}}/security/rbac-tiered-policies).
 
 ### How to
-
-- [Configure the Calico Enterprise authentication method](#configure-the-calico-enterprise-authentication-method)
-- [Create a user and login using token-based authentication](#create-a-user-and-login-using-token-based-authentication)
-- [Create a user and login using OIDC authentication](#create-a-user-and-login-using-oidc-authentication)
-- [Create a user and login using OIDC authentication with prepopulated configuration](#create-a-user-and-login-using-oidc-authentication-with-prepopulated-configuration)
-- [Create a user and login using OAuth2 authentication](#create-a-user-and-login-using-oauth2-authentication)
-- [Create a user and login using basic authentication](#create-a-user-and-login-using-basic-authentication)
+The page describes how to configure the following options:
+- Configure the Calico Enterprise [authentication method](#configure-the-calico-enterprise-authentication-method)
+- [Token-based authentication](#token-based-authentication)
+- [OIDC authentication](#oidc-authentication)
+- [OIDC authentication with prepopulated configuration](#oidc-authentication-with-prepopulated-configuration)
+- [OAuth2 authentication](#oauth2-authentication)
+- [basic authentication](#basic-authentication)
+- [Kibana basic authentication](#kibana-basic-authentication)
+- [Kibana OIDC authentication](#kibana-OIDC-authentication)
 
 > Note: For OpenShift, replace `kubectl` in the commands below with `oc`.
 
@@ -91,7 +94,7 @@ kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": 
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
 ```
 
-#### Create a user and login using token-based authentication
+#### Token-based authentication
 
 First, create a service account in the desired namespace:
 
@@ -126,13 +129,13 @@ Using the running example of a service account named jane in the default namespa
 
 Now that we have the token, we can proceed to login! Go to the {{site.prodname}} UI and submit the token.
 
-#### Create a user and login using OIDC authentication
+#### OIDC authentication
 
 1. Ensure that you have configured the required [kube-apiserver flags](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuring-the-api-server) for OIDC authentication.
 1. Consult your OIDC identity provider's documentation to manage users.
 1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
 
-#### Create a user and login using OIDC authentication with prepopulated configuration
+#### OIDC authentication with prepopulated configuration
 
 In cases where the IdP doesn't allow cross-origin HTTP requests, OIDC configuration can be prepopulated to support OIDC authentication flow.
 
@@ -159,12 +162,12 @@ In cases where the IdP doesn't allow cross-origin HTTP requests, OIDC configurat
    In above example, `<well-known-openid-configuration>` is the JSON response from the IdP for request to _/.well-known/openid-configuration_. Notice however that the `jwks_uri` value in `<well-known-openid-configuration>` should be set to `"/discovery/keys"`. For `<jwks-uri-configuration>`, use the JSON response from IdP for JWKS URI.
 1. Go to the {{site.prodname}} Manager UI. The OIDC authorization flow starts automatically.
 
-#### Create a user and login using OAuth2 authentication
+#### OAuth2 authentication
 
 1. Consult your OAuth2 identity provider's documentation to manage users.
 1. Go to the {{site.prodname}} Manager UI. The OAuth2 authorization flow starts automatically.
 
-#### Create a user and login using basic authentication
+#### Login using basic authentication
 
 Basic authentication is intended for testing purposes and is not suitable for production.
 It has significant limitations—notably the Kubernetes API server must be restarted after making any changes.
@@ -209,7 +212,7 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
        usernameClaim: email
    ```
 
-1. Apply the secret to your cluster with your OIDC credentials.
+1. Apply the secret to your cluster with your OIDC credentials. By default, all scopes that are defined in the `well-known-configuration` are added by {{site.prodname}}.
 
    ```
    apiVersion: v1
@@ -220,6 +223,7 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
    data:
      clientID: <your-base64-clientid>
      clientSecret: <clientid-secret>
+     requiredScopes: []
    ```
 
 1. Give a user permissions to login to Kibana and to view the data. The following example gives full access to a user logged in using OIDC.
@@ -246,10 +250,20 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
    ```
 
    ```
-   kubectl  create clusterrolebinding alina-kibana-access --user=alina@tigera.io --clusterrole=tigera-kibana-admin
+   kubectl create clusterrolebinding alina-kibana-access --user=<username> --clusterrole=tigera-kibana-admin
    ```
    For more configuration options, see {{site.prodname}} [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch).
+   
+### Whitelisting {{site.prodname}} in your IdP
+Most IdP's require Authorized Redirect URI's to be whitelisted, before the IdP will redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
+Similarly, most IdP's require authorizing browser (JavaScript) origins, since they are not able to provide a client secret. Please consult your IdP's documentation for authorizing your domain for the respective origins and destinations.
 
+**Authorized JavaScript origins**
+- Add the domain and port for your {{site.prodname}} Manager and Kibana
+
+**Authorized redirect URIs**
+- https://<host>:<port>/login/oidc/callback
+- https://<host>:<port>/tigera-kibana/api/security/oidc/callback
 
 ### Above and beyond
 
