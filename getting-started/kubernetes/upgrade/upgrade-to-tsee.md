@@ -7,10 +7,17 @@ cr_directory: manifests_cr
 ---
 
 {% assign calico_minor_version = site.data.versions.first["calico"].minor_version %}
+{% assign archive_path = site.data.versions.first["calico"].archive_path %}
+
+{% if archive_path and archive_path != "" %}
+{% capture calico_minor_version_with_path %}{{ archive_path }}/{{ calico_minor_version }}{% endcapture %}
+{% else %}
+{% assign calico_minor_version_with_path = {{ calico_minor_version }} %}
+{% endif %}
 
 ## Prerequisite
 Ensure that your Kubernetes cluster is running with open source Calico on the latest {{ calico_minor_version | append: '.x' }}
-release. If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/{{calico_minor_version}}/maintenance/kubernetes-upgrade) before continuing.
+release. If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/{{calico_minor_version_with_path}}/maintenance/kubernetes-upgrade) before continuing.
 
 {{site.prodname}} only supports clusters with a Kubernetes datastore. Please contact Tigera Support for assistance upgrading a
 cluster with an `etcdv3` datastore.
