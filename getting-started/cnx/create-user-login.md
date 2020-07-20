@@ -250,7 +250,7 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
    ```
 
    ```
-   kubectl create clusterrolebinding alina-kibana-access --user=<username> --clusterrole=tigera-kibana-admin
+   kubectl create clusterrolebinding my-username-kibana-access --user=<username> --clusterrole=tigera-kibana-admin
    ```
    For more configuration options, see {{site.prodname}} [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch).
    
