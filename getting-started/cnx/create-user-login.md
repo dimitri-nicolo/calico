@@ -22,7 +22,7 @@ The {{site.prodname}} Manager supports the following user authentication methods
 - **OAuth authentication**: The user is managed outside of the cluster (typically, by the identity provider used by the OAuth authorization server.) For OpenShift clusters, we recommend using OAuth authentication against OpenShift's internal OAuth server.
 - **Basic authentication**: (for testing only) The user is a username. Note that basic authentication is not suitable for production environments.
 
-#### Identity Providers, OIDC and OAuth Concepts
+#### Identity Providers, OIDC and OAuth
 
 When configuring your cluster, you may be asked to provide information on the following concepts:
 
