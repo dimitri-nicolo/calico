@@ -307,6 +307,7 @@ func tryConnect(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol str
 	tc, err := NewTestConn(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol,
 		time.Duration(seconds)*time.Second, sendLen, recvLen)
 	if err != nil {
+		tc.sendErrorResp(err)
 		log.WithError(err).Fatal("Failed to create TestConn")
 	}
 	defer func() {
@@ -393,6 +394,19 @@ func (tc *testConn) tryLoopFile(loopFile string) error {
 	return nil
 }
 
+func (tc *testConn) sendErrorResp(err error) {
+	var resp connectivity.Response
+	resp.ErrorStr = err.Error()
+	res := connectivity.Result{
+		LastResponse: resp,
+		Stats: connectivity.Stats{
+			RequestsSent:      1,
+			ResponsesReceived: 0,
+		},
+	}
+	res.PrintToStdout()
+}
+
 func (tc *testConn) tryConnectOnceOff() error {
 	log.Info("Doing single-shot test...")
 
@@ -422,6 +436,7 @@ func (tc *testConn) tryConnectOnceOff() error {
 
 	respRaw, err := tc.protocol.Receive()
 	if err != nil {
+		tc.sendErrorResp(err)
 		log.WithError(err).Fatal("Failed to receive")
 	}
 

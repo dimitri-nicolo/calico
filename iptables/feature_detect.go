@@ -19,10 +19,10 @@ import (
 	"io"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
-	version "github.com/hashicorp/go-version"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/versionparse"
@@ -57,8 +57,9 @@ type Features struct {
 }
 
 type FeatureDetector struct {
-	lock         sync.Mutex
-	featureCache *Features
+	lock            sync.Mutex
+	featureCache    *Features
+	featureOverride map[string]string
 
 	// Path to file with kernel version
 	GetKernelVersionReader func() (io.Reader, error)
@@ -66,10 +67,11 @@ type FeatureDetector struct {
 	NewCmd cmdFactory
 }
 
-func NewFeatureDetector() *FeatureDetector {
+func NewFeatureDetector(overrides map[string]string) *FeatureDetector {
 	return &FeatureDetector{
 		GetKernelVersionReader: versionparse.GetKernelVersionReader,
 		NewCmd:                 NewRealCmd,
+		featureOverride:        overrides,
 	}
 }
 
@@ -94,6 +96,7 @@ func (d *FeatureDetector) RefreshFeatures() {
 func (d *FeatureDetector) refreshFeaturesLockHeld() {
 	// Get the versions.  If we fail to detect a version for some reason, we use a safe default.
 	log.Debug("Refreshing detected iptables features")
+
 	iptV := d.getIptablesVersion()
 	kerV := d.getKernelVersion()
 
@@ -102,6 +105,28 @@ func (d *FeatureDetector) refreshFeaturesLockHeld() {
 		SNATFullyRandom:     iptV.Compare(v1Dot6Dot0) >= 0 && kerV.Compare(v3Dot14Dot0) >= 0,
 		MASQFullyRandom:     iptV.Compare(v1Dot6Dot2) >= 0 && kerV.Compare(v3Dot14Dot0) >= 0,
 		RestoreSupportsLock: iptV.Compare(v1Dot6Dot2) >= 0,
+	}
+
+	if value, ok := (d.featureOverride)["SNATFullyRandom"]; ok {
+		ovr, err := strconv.ParseBool(value)
+		if err == nil {
+			log.WithField("override", ovr).Info("Override feature SNATFullyRandom")
+			features.SNATFullyRandom = ovr
+		}
+	}
+	if value, ok := (d.featureOverride)["MASQFullyRandom"]; ok {
+		ovr, err := strconv.ParseBool(value)
+		if err == nil {
+			log.WithField("override", ovr).Info("Override feature MASQFullyRandom")
+			features.MASQFullyRandom = ovr
+		}
+	}
+	if value, ok := (d.featureOverride)["RestoreSupportsLock"]; ok {
+		ovr, err := strconv.ParseBool(value)
+		if err == nil {
+			log.WithField("override", ovr).Info("Override feature RestoreSupportsLock")
+			features.RestoreSupportsLock = ovr
+		}
 	}
 
 	if d.featureCache == nil || *d.featureCache != features {
@@ -114,7 +139,7 @@ func (d *FeatureDetector) refreshFeaturesLockHeld() {
 	}
 }
 
-func (d *FeatureDetector) getIptablesVersion() *version.Version {
+func (d *FeatureDetector) getIptablesVersion() *versionparse.Version {
 	cmd := d.NewCmd("iptables", "--version")
 	out, err := cmd.Output()
 	if err != nil {
@@ -129,7 +154,7 @@ func (d *FeatureDetector) getIptablesVersion() *version.Version {
 			"Failed to parse iptables version, assuming old version with no optional features")
 		return v1Dot4Dot7
 	}
-	parsedVersion, err := version.NewVersion(matches[1])
+	parsedVersion, err := versionparse.NewVersion(matches[1])
 	if err != nil {
 		log.WithField("rawVersion", s).WithError(err).Warn(
 			"Failed to parse iptables version, assuming old version with no optional features")
@@ -139,7 +164,7 @@ func (d *FeatureDetector) getIptablesVersion() *version.Version {
 	return parsedVersion
 }
 
-func (d *FeatureDetector) getKernelVersion() *version.Version {
+func (d *FeatureDetector) getKernelVersion() *versionparse.Version {
 	reader, err := d.GetKernelVersionReader()
 	if err != nil {
 		log.WithError(err).Warn("Failed to get the kernel version reader, assuming old version with no optional features")

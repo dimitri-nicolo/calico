@@ -205,6 +205,8 @@ type Config struct {
 	LookPathOverride func(file string) (string, error)
 
 	KubeClientSet *kubernetes.Clientset
+
+	FeatureDetectOverrides map[string]string
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -370,7 +372,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		iptablesNATOptions.ExtraCleanupRegexPattern += "|" + rules.HistoricInsertedNATRuleRegex
 	}
 
-	featureDetector := iptables.NewFeatureDetector()
+	featureDetector := iptables.NewFeatureDetector(config.FeatureDetectOverrides)
 	iptablesFeatures := featureDetector.GetFeatures()
 
 	var iptablesLock sync.Locker
@@ -569,8 +571,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newBPFIPSetManager(ipSetIDAllocator, ipSetsMap))
 		bpfRTMgr := newBPFRouteManager(config.Hostname, bpfMapContext)
 		dp.RegisterManager(bpfRTMgr)
-		dp.RegisterManager(newBPFConntrackManager(
-			config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled, bpfMapContext))
 
 		// Forwarding into a tunnel seems to fail silently, disable FIB lookup if tunnel is enabled for now.
 		fibLookupEnabled := !config.RulesConfig.IPIPEnabled && !config.RulesConfig.VXLANEnabled
@@ -615,12 +615,23 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Panic("Failed to create routes BPF map.")
 		}
 
+		ctMap := conntrack.Map(bpfMapContext)
+		err = ctMap.EnsureExists()
+		if err != nil {
+			log.WithError(err).Panic("Failed to create conntrack BPF map.")
+		}
+
 		bpfproxyOpts := []bpfproxy.Option{
 			bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
+			bpfproxy.WithConntrackTimeouts(config.BPFConntrackTimeouts),
 		}
 
 		if config.KubeProxyEndpointSlicesEnabled {
 			bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithEndpointsSlices())
+		}
+
+		if config.BPFNodePortDSREnabled {
+			bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithDSREnabled())
 		}
 
 		if config.KubeClientSet != nil {
@@ -631,6 +642,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				frontendMap,
 				backendMap,
 				backendAffinityMap,
+				ctMap,
 				bpfproxyOpts...,
 			)
 			if err != nil {

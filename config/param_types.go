@@ -38,6 +38,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/idalloc"
+	"github.com/projectcalico/felix/stringutils"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
@@ -664,5 +665,14 @@ func (p *RouteTableRangeParam) Parse(raw string) (result interface{}, err error)
 		result = idalloc.IndexRange{Min: min, Max: max}
 		err = nil
 	}
+	return
+}
+
+type KeyValueListParam struct {
+	Metadata
+}
+
+func (p *KeyValueListParam) Parse(raw string) (result interface{}, err error) {
+	result, err = stringutils.ParseKeyValueList(raw)
 	return
 }

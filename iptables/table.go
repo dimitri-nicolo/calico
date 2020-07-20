@@ -40,10 +40,10 @@ const (
 var (
 	// List of all the top-level kernel-created chains by iptables table.
 	tableToKernelChains = map[string][]string{
-		"filter": []string{"INPUT", "FORWARD", "OUTPUT"},
-		"nat":    []string{"PREROUTING", "INPUT", "OUTPUT", "POSTROUTING"},
-		"mangle": []string{"PREROUTING", "INPUT", "FORWARD", "OUTPUT", "POSTROUTING"},
-		"raw":    []string{"PREROUTING", "OUTPUT"},
+		"filter": {"INPUT", "FORWARD", "OUTPUT"},
+		"nat":    {"PREROUTING", "INPUT", "OUTPUT", "POSTROUTING"},
+		"mangle": {"PREROUTING", "INPUT", "FORWARD", "OUTPUT", "POSTROUTING"},
+		"raw":    {"PREROUTING", "OUTPUT"},
 	}
 
 	// chainCreateRegexp matches iptables-save output lines for chain forward reference lines.
@@ -445,7 +445,6 @@ func NewTable(
 }
 
 // Insert or Append rules based on insert mode configuration.
-// It is expected to be called only once for a chain.
 func (t *Table) InsertOrAppendRules(chainName string, rules []Rule) {
 	t.logCxt.WithField("chainName", chainName).Debug("Updating rule insertions")
 	oldRules := t.chainToInsertedRules[chainName]
@@ -467,7 +466,6 @@ func (t *Table) InsertOrAppendRules(chainName string, rules []Rule) {
 }
 
 // Append rules.
-// It is expected to be called only once for a chain.
 func (t *Table) AppendRules(chainName string, rules []Rule) {
 	t.logCxt.WithField("chainName", chainName).Debug("Updating rule appends")
 	oldRules := t.chainToAppendedRules[chainName]

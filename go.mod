@@ -20,7 +20,6 @@ require (
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/gophercloud/gophercloud v0.4.0 // indirect
-	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
@@ -64,8 +63,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200717125734-4a9c1577e057
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200718030506-4492b62258ca
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200720083758-88f9012f6f43
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

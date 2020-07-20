@@ -329,6 +329,8 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			KubeClientSet: k8sClientSet,
 
+			FeatureDetectOverrides: configParams.FeatureDetectOverride,
+
 			Collector:            collector,
 			DNSCacheFile:         configParams.DNSCacheFile,
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,

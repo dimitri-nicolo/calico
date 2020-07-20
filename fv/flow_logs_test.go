@@ -65,9 +65,9 @@ import (
 type aggregation int
 
 const (
-	None         aggregation = 0
-	BySourcePort aggregation = 1
-	ByPodPrefix  aggregation = 2
+	AggrNone         aggregation = 0
+	AggrBySourcePort aggregation = 1
+	AggrByPodPrefix  aggregation = 2
 )
 
 type expectation struct {
@@ -446,7 +446,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			// Now we tick off each FlowMeta that we expect, and check that
 			// the log(s) for each one are present and as expected.
 			switch expectation.aggregationForAllowed {
-			case None:
+			case AggrNone:
 				for _, source := range wlHost1 {
 					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 3, 1,
 						[]metrics.ExpectedPolicy{
@@ -489,7 +489,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					return err
 				}
-			case BySourcePort:
+			case AggrBySourcePort:
 				for _, source := range wlHost1 {
 					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 1, 3,
 						[]metrics.ExpectedPolicy{
@@ -532,7 +532,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					return err
 				}
-			case ByPodPrefix:
+			case AggrByPodPrefix:
 				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 24,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -576,7 +576,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			}
 
 			switch expectation.aggregationForDenied {
-			case None:
+			case AggrNone:
 				for _, source := range wlHost1 {
 					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
 						[]metrics.ExpectedPolicy{
@@ -587,7 +587,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						return err
 					}
 				}
-			case BySourcePort:
+			case AggrBySourcePort:
 				for _, source := range wlHost1 {
 					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
 						[]metrics.ExpectedPolicy{
@@ -598,7 +598,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						return err
 					}
 				}
-			case ByPodPrefix:
+			case AggrByPodPrefix:
 				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
 					[]metrics.ExpectedPolicy{
 						{}, // ""
@@ -623,8 +623,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
-			expectation.aggregationForAllowed = ByPodPrefix
-			expectation.aggregationForDenied = BySourcePort
+			expectation.aggregationForAllowed = AggrByPodPrefix
+			expectation.aggregationForDenied = AggrBySourcePort
 			expectation.policies = false
 		})
 
@@ -684,8 +684,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
 			expectation.policies = false
-			expectation.aggregationForAllowed = ByPodPrefix
-			expectation.aggregationForDenied = BySourcePort
+			expectation.aggregationForAllowed = AggrByPodPrefix
+			expectation.aggregationForDenied = AggrBySourcePort
 
 			opts.EnableFlowLogsFile()
 		})
@@ -707,9 +707,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Context("with allowed aggregation none", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(None))
-				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(None))
-				expectation.aggregationForAllowed = None
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
+				expectation.aggregationForAllowed = AggrNone
 			})
 
 			It("should get expected flow logs", func() {
@@ -721,9 +721,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Context("with allowed aggregation by source port", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(BySourcePort))
-				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(BySourcePort))
-				expectation.aggregationForAllowed = BySourcePort
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrBySourcePort))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrBySourcePort))
+				expectation.aggregationForAllowed = AggrBySourcePort
 			})
 
 			It("should get expected flow logs", func() {
@@ -735,9 +735,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Context("with allowed aggregation by pod prefix", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(ByPodPrefix))
-				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(ByPodPrefix))
-				expectation.aggregationForAllowed = ByPodPrefix
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
+				expectation.aggregationForAllowed = AggrByPodPrefix
 			})
 
 			It("should get expected flow logs", func() {
@@ -749,9 +749,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Context("with denied aggregation none", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(None))
-				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(None))
-				expectation.aggregationForDenied = None
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
+				expectation.aggregationForDenied = AggrNone
 			})
 
 			It("should get expected flow logs", func() {
@@ -763,9 +763,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Context("with denied aggregation by source port", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(BySourcePort))
-				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(BySourcePort))
-				expectation.aggregationForDenied = BySourcePort
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrBySourcePort))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrBySourcePort))
+				expectation.aggregationForDenied = AggrBySourcePort
 			})
 
 			It("should get expected flow logs", func() {
@@ -777,9 +777,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Context("with denied aggregation by pod prefix", func() {
 
 			BeforeEach(func() {
-				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(ByPodPrefix))
-				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(ByPodPrefix))
-				expectation.aggregationForDenied = ByPodPrefix
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
+				expectation.aggregationForDenied = AggrByPodPrefix
 			})
 
 			It("should get expected flow logs", func() {
@@ -810,8 +810,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
 			expectation.policies = false
-			expectation.aggregationForAllowed = ByPodPrefix
-			expectation.aggregationForDenied = BySourcePort
+			expectation.aggregationForAllowed = AggrByPodPrefix
+			expectation.aggregationForDenied = AggrBySourcePort
 			opts.EnableFlowLogsFile()
 
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"

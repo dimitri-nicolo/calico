@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mock
+package mocknetlink
 
 import (
 	"sort"
@@ -24,7 +24,7 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/projectcalico/felix/ip"
-	netlinkshim "github.com/projectcalico/felix/netlink"
+	"github.com/projectcalico/felix/netlinkshim"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
