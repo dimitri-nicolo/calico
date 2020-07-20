@@ -213,6 +213,7 @@ func init() {
 	registerFieldValidator("cloudWatchRetentionDays", validateCloudWatchRetentionDays)
 	registerFieldValidator("mac", validateMAC)
 	registerFieldValidator("iptablesBackend", validateIptablesBackend)
+	registerFieldValidator("keyValueList", validateKeyValueList)
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
 
 	registerFieldValidator("sourceAddress", RegexValidator("SourceAddress", SourceAddressRegex))
@@ -744,6 +745,30 @@ func validateCIDR(fl validator.FieldLevel) bool {
 	log.Debugf("Validate IP network: %s", n)
 	_, _, err := cnet.ParseCIDROrIP(n)
 	return err == nil
+}
+
+// validateKeyValueList validates the field is a comma separated list of key=value pairs.
+func validateKeyValueList(fl validator.FieldLevel) bool {
+	n := fl.Field().String()
+	log.Debugf("Validate KeyValueList: %s", n)
+
+	if len(strings.TrimSpace(n)) == 0 {
+		return true
+	}
+
+	var rex = regexp.MustCompile("\\s*(\\w+)=(.*)")
+	for _, item := range strings.Split(n, ",") {
+		if item == "" {
+			// Accept empty items (e.g tailing ",")
+			continue
+		}
+		kv := rex.FindStringSubmatch(item)
+		if kv == nil {
+			return false
+		}
+	}
+
+	return true
 }
 
 // validateIPPort validates the IP and Port given in either <IPv4>:<port> or [<IPv6>]:<port> or <IP> format
