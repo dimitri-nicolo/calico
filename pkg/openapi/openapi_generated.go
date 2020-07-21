@@ -4707,6 +4707,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"featureDetectOverride": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FeatureDetectOverride is used to override the feature detection. Values are specified in a comma separated list with no spaces, example; \"SNATFullyRandom=true,MASQFullyRandom=false,RestoreSupportsLock=\". \"true\" or \"false\" will force the feature, empty or omitted values are auto-detected.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"ipsetsRefreshInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "IpsetsRefreshInterval is the period at which Felix re-checks all iptables state to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable iptables refresh. [Default: 90s]",
