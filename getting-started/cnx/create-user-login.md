@@ -30,9 +30,9 @@ When configuring your cluster, you may be asked to provide information on the fo
 - **Client Id**: The id that is shared between the IdP and an application for exchanging data.
 - **Client Secret**: The secret associated with the `client id` can be used by server applications for the purpose of exchanging tokens.
 - **Issuer URL**: The url where the IdP can be reached. The OIDC framework relies on conventions of which this URL is the basis.
-- **Well known configuration**: The OIDC framework is designed to be flexible. The specifics of your IdP are then reflected in `well known configuration`, which is read by OIDC consumers.
-- **Scopes**: When authenticating the IdP sometimes lists a number of scopes that the user consents to sharing with the application. Adding more scopes, can lead to sharing more metadata with the application.
-- **Claims**: When you configure your IdP, you can configure claims. Every time your IdP issues a token for a valid user, these claims add some metadata as part of the token that the server can then use to tailor requests to the needs of a user. The most common example is to determine the username.
+- **Well known configuration**: The OIDC framework is designed to be extensible. The parameters of your IdP are reflected in `well-known-openid-configuration`, which is read by OIDC consumers.
+- **Scopes**: When authenticating the IdP sometimes lists a number of scopes that the user consents to sharing with the application. Adding more scopes can lead to sharing more metadata with the application.
+- **Claims**: When you configure your IdP, you can configure claims. Every time your IdP issues a token for a valid user, these claims add metadata as part of the token that the server can then use to tailor requests to the needs of a user. {{site.prodname}} uses this to determine the username.
 
 #### Cluster roles
 
