@@ -78,13 +78,13 @@ var _ = Describe("synchronizeRoleMappings", func() {
 				Parameters: []interface{}{
 					[]rbacv1.PolicyRule{{
 						APIGroups:     []string{"lma.tigera.io"},
-						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "superuser"},
+						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
 						Resources:     []string{"*"},
 					}},
 					elasticsearch.RoleMapping{
 						Name: "tigera-k8s-test-resource",
 						Roles: []string{"flows_viewer", "audit_viewer", "audit_ee_viewer",
-							"audit_kube_viewer", "events_viewer", "dns_viewer", "kibana_admin", "superuser",
+							"audit_kube_viewer", "events_viewer", "dns_viewer", "kibana_viewer", "kibana_admin", "superuser",
 						},
 						Rules: map[string][]elasticsearch.Rule{
 							"any": {
@@ -109,7 +109,7 @@ var _ = Describe("synchronizeRoleMappings", func() {
 				Parameters: []interface{}{
 					[]rbacv1.PolicyRule{{
 						APIGroups:     []string{"lma.tigera.io"},
-						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "superuser"},
+						ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "kibana_admin", "elasticsearch_superuser"},
 						Resources:     []string{"cluster_1", "cluster_2"},
 					}},
 					elasticsearch.RoleMapping{
@@ -118,7 +118,7 @@ var _ = Describe("synchronizeRoleMappings", func() {
 							"flows_viewer_cluster_1", "audit_viewer_cluster_1", "audit_ee_viewer_cluster_1", "audit_kube_viewer_cluster_1",
 							"events_viewer_cluster_1", "dns_viewer_cluster_1", "flows_viewer_cluster_2", "audit_viewer_cluster_2",
 							"audit_ee_viewer_cluster_2", "audit_kube_viewer_cluster_2", "events_viewer_cluster_2", "dns_viewer_cluster_2",
-							"kibana_admin", "superuser",
+							"kibana_viewer", "kibana_admin", "superuser",
 						},
 						Rules: map[string][]elasticsearch.Rule{
 							"any": {
@@ -196,7 +196,7 @@ var _ = Describe("synchronizeRoleMappings", func() {
 			// Return all the valid resource names so we can test the conversion or resource names to elasticsearch role names
 			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
 				APIGroups:     []string{"lma.tigera.io"},
-				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "superuser"},
+				ResourceNames: []string{"flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "kibana_login", "elasticsearch_superuser"},
 				Resources:     []string{"*"},
 			}})
 

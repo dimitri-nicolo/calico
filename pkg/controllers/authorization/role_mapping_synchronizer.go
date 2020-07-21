@@ -34,8 +34,9 @@ var resourceNameToElasticsearchRole = map[string]string{
 }
 
 var resourceNameToGlobalElasticsearchRoles = map[string]string{
-	"kibana_login": esusers.ElasticsearchRoleNameKibanaAdmin,
-	"superuser":    esusers.ElasticsearchRoleNameSuperUser,
+	"kibana_login":            esusers.ElasticsearchRoleNameKibanaViewer,
+	"elasticsearch_superuser": esusers.ElasticsearchRoleNameSuperUser,
+	"kibana_admin":            esusers.ElasticsearchRoleNameKibanaAdmin,
 }
 
 type resourceUpdate struct {
