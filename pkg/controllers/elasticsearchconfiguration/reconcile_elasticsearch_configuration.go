@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
@@ -26,6 +27,8 @@ type reconciler struct {
 	managementK8sCLI kubernetes.Interface
 	managedK8sCLI    kubernetes.Interface
 	esK8sCLI         relasticsearch.RESTClient
+	esHash           string
+	esCLI            elasticsearch.Client
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -34,6 +37,21 @@ type reconciler struct {
 func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	reqLogger := log.WithField("cluster", c.clusterName)
 	reqLogger.Info("Reconciling Elasticsearch credentials")
+
+	currentESHash, err := c.esK8sCLI.CalculateTigeraElasticsearchHash()
+	if err != nil {
+		return err
+	}
+
+	if c.esHash != currentESHash {
+		// Only reconcile the roles Elasticsearch has been changes in a way that may have wiped out the roles, or if
+		// this is the first time Reconcile has run
+		if err := c.reconcileRoles(); err != nil {
+			return err
+		}
+
+		c.esHash = currentESHash
+	}
 
 	if err := c.reconcileUsers(reqLogger); err != nil {
 		return err
@@ -50,6 +68,16 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	}
 
 	return nil
+}
+
+func (c *reconciler) reconcileRoles() error {
+	esCLI, err := c.getOrInitializeESClient()
+	if err != nil {
+		return err
+	}
+
+	roles := users.GetAuthorizationRoles(c.clusterName)
+	return esCLI.CreateRoles(roles...)
 }
 
 // reconcileConfigMap copies the tigera-secure-elasticsearch ConfigMap in the management cluster to the managed cluster,
@@ -111,12 +139,7 @@ func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 // createUser creates the given elasticsearch user in elasticsearch and creates a secret in the managed cluster containing
 // that users credentials
 func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User, esHash string) error {
-	user, password, roots, err := relasticsearch.ClientCredentialsFromK8sCLI(c.managementK8sCLI)
-	if err != nil {
-		return err
-	}
-
-	esCli, err := elasticsearch.NewClient(c.esServiceURL, user, password, roots)
+	esCLI, err := c.getOrInitializeESClient()
 	if err != nil {
 		return err
 	}
@@ -126,7 +149,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 		return err
 	}
 	esUser.Password = userPassword
-	if err := esCli.CreateUser(esUser); err != nil {
+	if err := esCLI.CreateUser(esUser); err != nil {
 		return err
 	}
 
@@ -178,6 +201,22 @@ func (c *reconciler) missingOrStaleUsers(esHash string) (map[esusers.Elasticsear
 
 func calculateUserChangeHash(elasticsearchHash string, user elasticsearch.User) (string, error) {
 	return resource.CreateHashFromObject([]interface{}{elasticsearchHash, user.Roles})
+}
+
+func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {
+	if c.esCLI == nil {
+		user, password, roots, err := relasticsearch.ClientCredentialsFromK8sCLI(c.managementK8sCLI)
+		if err != nil {
+			return nil, err
+		}
+
+		c.esCLI, err = elasticsearch.NewClient(c.esServiceURL, user, password, roots)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return c.esCLI, nil
 }
 
 func randomPassword(length int) (string, error) {

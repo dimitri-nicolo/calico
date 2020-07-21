@@ -25,12 +25,15 @@ const (
 )
 
 var resourceNameToElasticsearchRole = map[string]string{
-	"flows":        esusers.ElasticsearchRoleNameFlowsViewer,
-	"audit*":       esusers.ElasticsearchRoleNameAuditViewer,
-	"audit_ee":     esusers.ElasticsearchRoleNameAuditEEViewer,
-	"audit_kube":   esusers.ElasticsearchRoleNameAuditKubeViewer,
-	"events":       esusers.ElasticsearchRoleNameEventsViewer,
-	"dns":          esusers.ElasticsearchRoleNameDNSViewer,
+	"flows":      esusers.ElasticsearchRoleNameFlowsViewer,
+	"audit*":     esusers.ElasticsearchRoleNameAuditViewer,
+	"audit_ee":   esusers.ElasticsearchRoleNameAuditEEViewer,
+	"audit_kube": esusers.ElasticsearchRoleNameAuditKubeViewer,
+	"events":     esusers.ElasticsearchRoleNameEventsViewer,
+	"dns":        esusers.ElasticsearchRoleNameDNSViewer,
+}
+
+var resourceNameToGlobalElasticsearchRoles = map[string]string{
 	"kibana_login": esusers.ElasticsearchRoleNameKibanaAdmin,
 	"superuser":    esusers.ElasticsearchRoleNameSuperUser,
 }
@@ -231,9 +234,12 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 			}
 		}
 
+		var globalRoles []string
 		for _, resourceName := range rule.ResourceNames {
 			if esRole, exists := resourceNameToElasticsearchRole[resourceName]; exists {
 				baseESRoles = append(baseESRoles, esRole)
+			} else if esRole, exists := resourceNameToGlobalElasticsearchRoles[resourceName]; exists {
+				globalRoles = append(globalRoles, esRole)
 			}
 		}
 
@@ -241,11 +247,14 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 			esRoles = baseESRoles
 		} else {
 			for _, clusterName := range rule.Resources {
+				// Don't add cluster name suffix for the global roles
 				for _, baseESRole := range baseESRoles {
 					esRoles = append(esRoles, fmt.Sprintf("%s_%s", baseESRole, clusterName))
 				}
 			}
 		}
+
+		esRoles = append(esRoles, globalRoles...)
 	}
 
 	return esRoles
