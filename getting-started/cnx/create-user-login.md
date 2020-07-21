@@ -51,7 +51,7 @@ The page describes how to configure the following options:
 - [OIDC authentication](#oidc-authentication)
 - [OIDC authentication with prepopulated configuration](#oidc-authentication-with-prepopulated-configuration)
 - [OAuth2 authentication](#oauth2-authentication)
-- [basic authentication](#basic-authentication)
+- [basic authentication](#login-using-basic-authentication)
 - [Kibana basic authentication](#kibana-basic-authentication)
 - [Kibana OIDC authentication](#kibana-OIDC-authentication)
 
@@ -88,7 +88,7 @@ Provide your own values for `<oauth2_auth_server>` and `<client_id>` and run:
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
-**Basic authentication (for testing only)**
+**Basic authent ication (for testing only)**
 
 ```bash
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
