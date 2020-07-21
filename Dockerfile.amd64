@@ -80,10 +80,13 @@ RUN sed -i '/%files$/a \
 # Finally rebuild iptables.
 RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1-407
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.2 as ubi
 ARG ARCH
 ARG GIT_VERSION
 ARG IPTABLES_VER
+
+# Update base packages to pick up security updates.
+RUN microdnf update
 
 # Required labels for certification
 LABEL name="Calico egress gateway" \
@@ -103,7 +106,10 @@ COPY --from=centos  /root/rpmbuild/RPMS/${ARCH}/* /tmp/rpms/
 # it less likely we'll run into package dependency version mismatches.
 COPY centos.repo /etc/yum.repos.d/
 RUN rm /etc/yum.repos.d/ubi.repo && \
+    touch /in-the-container && \
     microdnf install \
+    # Don't install copious docs.
+    --setopt=tsflags=nodocs \
     # Needed for iptables
     libpcap libmnl libnfnetlink libnftnl libnetfilter_conntrack \
     ipset \
@@ -119,8 +125,11 @@ RUN rm /etc/yum.repos.d/ubi.repo && \
     # Needed for conntrack
     libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
     conntrack-tools \
-    # Needed for runit startup script
-    which && \
+    # Needed for startup script
+    which  \
+    gawk  \
+    # Needed for the cleanup script
+    findutils && \
     microdnf clean all && \
     # Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
     # version '9.el8_0.1' while the existing iptables-libs (pulled in by the iputils package) has version '9.el8.1'.
@@ -130,10 +139,6 @@ RUN rm /etc/yum.repos.d/ubi.repo && \
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-# Add mitigation for https://access.redhat.com/security/cve/CVE-2019-15718
-# This can be removed once we update to ubi:8.1
-RUN systemctl disable systemd-resolved
-
 # Copy in the filesystem - this contains licenses, etc...
 COPY filesystem/ /
 
@@ -141,8 +146,15 @@ COPY filesystem/ /
 # This has to come after copying over filesystem/, since that may overwrite /sbin depending on the base image.
 RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
-# Add in top-level license file
-COPY LICENSE /licenses
+# Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
+# or any of its dependencies.
+ADD clean-up-filesystem.sh /
+RUN /clean-up-filesystem.sh
+
+# Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
+# that have been removed in our later layers.
+FROM scratch
+COPY --from=ubi / /
 
 ADD install-gateway.sh /install-gateway.sh
 CMD ["/install-gateway.sh"]
