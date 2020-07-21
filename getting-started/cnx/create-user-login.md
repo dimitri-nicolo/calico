@@ -1,6 +1,6 @@
 ---
 title: Configure user authentication and log in
-description: Create a user login using an authentication method, and log in to Calico Enterprise Manager with default roles. 
+description: Create a user log in using an authentication method, and log in to Calico Enterprise Manager with default roles. 
 ---
 
 ### Big picture
@@ -24,14 +24,14 @@ The {{site.prodname}} Manager supports the following user authentication methods
 
 #### Identity Providers, OIDC and OAuth
 
-When configuring your cluster, you may be asked to provide information on the following concepts:
+When configuring your cluster, you may be asked to provide information on the following inputs:
 
-- **Identity Provider (IdP)**: A third party system to which user identity and authentication can be delegated.
-- **Client Id**: The id that is shared between the IdP and an application for exchanging data.
-- **Client Secret**: The secret associated with the `client id` can be used by server applications for the purpose of exchanging tokens.
-- **Issuer URL**: The url where the IdP can be reached. The OIDC framework relies on conventions of which this URL is the basis.
-- **Well known configuration**: The OIDC framework is designed to be extensible. The parameters of your IdP are reflected in `well-known-openid-configuration`, which is read by OIDC consumers.
-- **Scopes**: When authenticating the IdP sometimes lists a number of scopes that the user consents to sharing with the application. Adding more scopes can lead to sharing more metadata with the application.
+- **Identity Provider (IdP)**: A third-party system for delegating user identity and authentication.
+- **Client Id**: Id for exchanging data that is shared between the IdP and an application.
+- **Client Secret**: Secret associated with the `client id` used by server applications for exchanging tokens.
+- **Issuer URL**: URL where the IdP can be reached, based on OIDC framework conventions.
+- **Well-known-configuration**: Parameters of your IdP that are read by OIDC, as part of the extensible OIDC framework.
+- **Scopes**: List of scopes that user consents to share with the application.
 - **Claims**: When you configure your IdP, you can configure claims. Every time your IdP issues a token for a valid user, these claims add metadata as part of the token that the server can then use to tailor requests to the needs of a user. {{site.prodname}} uses this to determine the username.
 
 #### Cluster roles
@@ -45,13 +45,19 @@ Users must have appropriate RBAC to access resources in the UI. We provide the f
 If you would like additional roles, see this [document]({{site.baseurl}}/security/rbac-tiered-policies).
 
 ### How to
-The page describes how to configure the following options:
-- Configure the Calico Enterprise [authentication method](#configure-the-calico-enterprise-authentication-method)
+**{{site.prodname}} Manager UI authentication**
+
+The Manager can be configured to match the authentication flags of the Kubernetes apiserver.
+- Configure the {{site.prodname}} [authentication method](#configure-the-calico-enterprise-authentication-method)
 - [Token-based authentication](#token-based-authentication)
 - [OIDC authentication](#oidc-authentication)
 - [OIDC authentication with prepopulated configuration](#oidc-authentication-with-prepopulated-configuration)
 - [OAuth2 authentication](#oauth2-authentication)
-- [basic authentication](#login-using-basic-authentication)
+- [Basic authentication](#log-in-using-basic-authentication)
+
+**{{site.prodname}} Kibana authentication**
+
+Users can log into Kibana using basic authentication or an OIDC identity provider of choice.
 - [Kibana basic authentication](#kibana-basic-authentication)
 - [Kibana OIDC authentication](#kibana-OIDC-authentication)
 
@@ -88,7 +94,7 @@ Provide your own values for `<oauth2_auth_server>` and `<client_id>` and run:
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "OAuth", "authority": "<oauth2_auth_server>", "clientID": "<client_id>"}}}'
 ```
 
-**Basic authent ication (for testing only)**
+**Basic authentication (for testing only)**
 
 ```bash
 kubectl patch manager tigera-secure --type merge -p '{"spec": {"auth": {"type": "Basic"}}}'
@@ -167,7 +173,7 @@ In cases where the IdP doesn't allow cross-origin HTTP requests, OIDC configurat
 1. Consult your OAuth2 identity provider's documentation to manage users.
 1. Go to the {{site.prodname}} Manager UI. The OAuth2 authorization flow starts automatically.
 
-#### Login using basic authentication
+#### Log in using basic authentication
 
 Basic authentication is intended for testing purposes and is not suitable for production.
 It has significant limitations—notably the Kubernetes API server must be restarted after making any changes.
@@ -188,15 +194,11 @@ Once logged in, you can configure users and their privileges from the settings p
 
 #### Kibana OIDC authentication
 
-Kibana can be configured to use your IdP. When you open the manager and click on the Kibana button, the user will be prompted by the IdP to login. Upon success, they will be redirected back to Kibana
-and the username for Kibana will be extracted from the `usernameClaim` provided by the IdP. {{site.prodname}} is able to automatically translate {{site.prodname}} [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch)
- for the apiGroup `lma.tigera.io` to Elasticsearch User Role Mappings. 
-
-1. Configure your [kube-apiserver to use OIDC](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#configuring-the-api-server) for OIDC authentication.
+Kibana can be configured to use your IdP. When users open the Manager and click on the Kibana button, they are prompted by the IdP to login. Upon success, they are redirected to Kibana.
 
 1. Apply the Authentication CR to your cluster to let the operator configure your login. This example demonstrates the email claim. 
-   This means that from the JWT that your IdP creates, the email field is used as the username to bind privileges to. Make sure 
-   that the `issuerURL` and `usernameClaim` match the configuration of your kube-apiserver. For more configuration options, 
+   This means that from the JWT that your IdP creates, the email field is used as the username to bind privileges to. We recommend 
+   to match the `issuerURL` and `usernameClaim` with the configuration of your kube-apiserver. For more configuration options, 
    see the [Authentication resource]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.Authentication).
 
    ```
@@ -210,6 +212,7 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
      oidc:
        issuerURL: <your-IdP-issuer>
        usernameClaim: email
+       requiredScopes: []
    ```
 
 1. Apply the secret to your cluster with your OIDC credentials. By default, all scopes that are defined in the `well-known-configuration` are added by {{site.prodname}}.
@@ -223,7 +226,6 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
    data:
      clientID: <your-base64-clientid>
      clientSecret: <clientid-secret>
-     requiredScopes: []
    ```
 
 1. Give a user permissions to login to Kibana and to view the data. The following example gives full access to a user logged in using OIDC.
@@ -239,8 +241,7 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
      resourceNames:
      - kibana_login
      - audit*
-     - audit_ee
-     - audit_kube
+     - flows
      - events
      - dns
      resources:
@@ -252,11 +253,13 @@ and the username for Kibana will be extracted from the `usernameClaim` provided 
    ```
    kubectl create clusterrolebinding my-username-kibana-access --user=<username> --clusterrole=tigera-kibana-admin
    ```
-   For more configuration options, see {{site.prodname}} [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch).
+   **Note**: {{site.prodname}} automatically translates [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch). Alternatively, an admin is able to configure user access using [Kibana privileges](https://www.elastic.co/guide/en/kibana/current/kibana-privileges.html).
+   {: .alert .alert-info}
    
-### Whitelisting {{site.prodname}} in your IdP
-Most IdP's require Authorized Redirect URI's to be whitelisted, before the IdP will redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
-Similarly, most IdP's require authorizing browser (JavaScript) origins, since they are not able to provide a client secret. Please consult your IdP's documentation for authorizing your domain for the respective origins and destinations.
+### Whitelisting {{site.prodname}} for your IdP
+Most IdPs require redirect URIs to be whitelisted in order to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
+Similarly, most IdPs require authorizing browser (JavaScript) origins, since they are not able to provide a client secret to the IdP. 
+Please consult your IdPs documentation for authorizing your domain for the respective origins and destinations.
 
 **Authorized JavaScript origins**
 - Add the domain and port for your {{site.prodname}} Manager and Kibana
