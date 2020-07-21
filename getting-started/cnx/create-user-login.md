@@ -1,6 +1,6 @@
 ---
 title: Configure user authentication and log in
-description: Create a user log in using an authentication method, and log in to Calico Enterprise Manager with default roles. 
+description: Create a user login using an authentication method, and log in to Calico Enterprise Manager with default roles. 
 ---
 
 ### Big picture
