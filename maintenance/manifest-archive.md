@@ -31,8 +31,7 @@ This feature is:
 
 **OpenShift users**
 
-1. In the patch release, find the script, `collect-ocp-manifests.sh`.
-1. Run the script to collect all required OpenShift manifests in a single directory, `ocp-manifests`. 
+1. In the patch release archive, find the `ocp-manifests` folder. This contains all required OpenShift manifests. 
 1. Apply patches.
 
    ```
