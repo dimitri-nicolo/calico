@@ -10,6 +10,7 @@ require (
 
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1 // indirect
+	github.com/howeyc/fsnotify v0.9.0
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/juju/clock v0.0.0-20180808021310-bab88fc67299
 	github.com/juju/errors v0.0.0-20180806074554-22422dad46e1
@@ -18,18 +19,22 @@ require (
 	github.com/juju/testing v0.0.0-20190723135506-ce30eb24acd2 // indirect
 	github.com/juju/utils v0.0.0-20180820210520-bf9cc5bdd62d // indirect
 	github.com/juju/version v0.0.0-20180108022336-b64dbd566305 // indirect
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mcuadros/go-version v0.0.0-20190308113854-92cdf37c5b75
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
+	github.com/nmrshll/go-cp v0.0.0-20180115193924-61436d3b7cfa
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/prometheus/client_golang v1.1.0 // indirect
+	github.com/prometheus/common v0.6.0
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
+	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package install_test
 
 import (
-	"github.com/projectcalico/cni-plugin/pkg/ipamplugin"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
+
+	"github.com/onsi/ginkgo/reporters"
 )
 
-// VERSION is filled out during the build process (using git describe output)
-var VERSION string
-
-func main() {
-	ipamplugin.Main(VERSION)
+func TestInstall(t *testing.T) {
+	RegisterFailHandler(Fail)
+	junitReporter := reporters.NewJUnitReporter("../../report/install_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Install Suite", []Reporter{junitReporter})
 }
