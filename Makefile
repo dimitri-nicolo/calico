@@ -423,6 +423,7 @@ OUTPUT_DIR?=_output
 RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
 RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
+RELEASE_DIR_OCP_MANIFESTS?=$(RELEASE_DIR)/ocp-manifests
 
 # Determine where the manifests live. For older versions we used
 # a different location, but we still need to package them up for patch
@@ -438,7 +439,9 @@ MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
 release-archive: release-prereqs $(RELEASE_DIR).tgz
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
-	cp collect-ocp-manifests.sh $(RELEASE_DIR)
+	# collecting all ocp manifests to ocp-manifests folder
+	mkdir -p $(RELEASE_DIR_OCP_MANIFESTS)
+	find $(RELEASE_DIR_K8S_MANIFESTS)/ocp/ -name "*.yaml" | xargs -I{} cp {} $(RELEASE_DIR_OCP_MANIFESTS)
 	# converting the generated html file to markdown format for manifest archive.
 	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
 	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
