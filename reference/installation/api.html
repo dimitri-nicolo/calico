@@ -521,7 +521,7 @@ CalicoNetworkSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>CalicoNetwork specifies configuration options for Calico provided pod networking.</p>
+<p>CalicoNetwork specifies networking configuration options for Calico.</p>
 </td>
 </tr>
 <tr>
@@ -1518,7 +1518,7 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>, 
+<a href="#operator.tigera.io/v1.ManagerSpec">ManagerSpec</a>,
 <a href="#operator.tigera.io/v1.ManagerStatus">ManagerStatus</a>)
 </p>
 <p>Auth defines authentication configuration.</p>
@@ -1570,6 +1570,12 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.AuthMethod">AuthMethod
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AuthenticationSpec">AuthenticationSpec</a>)
+</p>
 <h3 id="operator.tigera.io/v1.AuthType">AuthType
 (<code>string</code> alias)</h3>
 <p>
@@ -1578,6 +1584,277 @@ string
 </p>
 <p>AuthType represents the type of authentication to use. Valid
 options are: Token, Basic, OIDC, OAuth</p>
+<h3 id="operator.tigera.io/v1.Authentication">Authentication
+</h3>
+<p>Authentication is the Schema for the authentications API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code><br>
+<em>
+<a href="https://v1-15.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationSpec">
+AuthenticationSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>method</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthMethod">
+AuthMethod
+</a>
+</em>
+</td>
+<td>
+<p>Method configures the method of authentication used by Kibana.
+Default: Basic</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>managerDomain</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ManagerDomain is the domain name of the Manager</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oidc</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationOIDC">
+AuthenticationOIDC
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OIDC contains the configuration needed to setup OIDC authentication. If the method is OIDC then this is required, if
+the method is not OIDC then this must not be specified.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationStatus">
+AuthenticationStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.AuthenticationOIDC">AuthenticationOIDC
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.AuthenticationSpec">AuthenticationSpec</a>)
+</p>
+<p>AuthenticationOIDC is the configuration needed to setup OIDC.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>issuerURL</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>IssuerURL is the URL to the OIDC provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>usernameClaim</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>UsernameClaim specifies which claim to use from the OIDC provider as the username.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>requestedScopes</code><br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>RequestedScopes is a list of scopes to request from the OIDC provider. If not provided, all the available scopes
+are requested.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>usernamePrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, UsernamePrefix is prepended to each user obtained from the claims specified by UsernameClaim. Note that
+Kibana does not support a user prefix, so this prefix is removed from Kubernetes User when translating log access
+ClusterRoleBindings into Elastic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>groupsClaim</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GroupsClaim specifies which claim to use from the OIDC provider as the group.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>groupsPrefix</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>If specified, GroupsPrefix is prepended to each group obtained from the claims specified by GroupsClaim. Note that
+Kibana does not support a groups prefix, so this prefix is removed from Kubernetes Groups when translating log access
+ClusterRoleBindings into Elastic.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.AuthenticationSpec">AuthenticationSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.Authentication">Authentication</a>)
+</p>
+<p>AuthenticationSpec defines the desired state of Authentication</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>method</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthMethod">
+AuthMethod
+</a>
+</em>
+</td>
+<td>
+<p>Method configures the method of authentication used by Kibana.
+Default: Basic</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>managerDomain</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>ManagerDomain is the domain name of the Manager</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>oidc</code><br>
+<em>
+<a href="#operator.tigera.io/v1.AuthenticationOIDC">
+AuthenticationOIDC
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OIDC contains the configuration needed to setup OIDC authentication. If the method is OIDC then this is required, if
+the method is not OIDC then this must not be specified.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.AuthenticationStatus">AuthenticationStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.Authentication">Authentication</a>)
+</p>
+<p>AuthenticationStatus defines the observed state of Authentication</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>state</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>State provides user-readable status.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.tigera.io/v1.CNIPluginType">CNIPluginType
 (<code>string</code> alias)</h3>
 <p>
@@ -1647,8 +1924,8 @@ to be installed separately.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPPools contains a list of IP pools to use for allocating pod IP addresses. At most one IP pool
-may be specified. If omitted, a single pool will be configured when needed.</p>
+<p>IPPools contains a list of IP pools to create if none exist. At most one IP pool of each
+address family may be specified. If omitted, a single pool will be configured if needed.</p>
 </td>
 </tr>
 <tr>
@@ -1660,7 +1937,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>MTU specifies the maximum transmission unit to use for pods on the Calico network.
+<p>MTU specifies the maximum transmission unit to use on the pod network.
 Default: 1410</p>
 </td>
 </tr>
@@ -1705,7 +1982,7 @@ HostPortsType
 </td>
 <td>
 <em>(Optional)</em>
-<p>HostPorts configures whether or not Calico will support Kubernetes HostPorts.
+<p>HostPorts configures whether or not Calico will support Kubernetes HostPorts. Valid only when using the Calico CNI plugin.
 Default: Enabled</p>
 </td>
 </tr>
@@ -1720,7 +1997,8 @@ MultiInterfaceMode
 </td>
 <td>
 <em>(Optional)</em>
-<p>MultiInterfaceMode configures what will configure multiple interface per pod. Only valid for Calico Enterprise installations.
+<p>MultiInterfaceMode configures what will configure multiple interface per pod. Only valid for Calico Enterprise installations
+using the Calico CNI plugin.
 Default: None</p>
 </td>
 </tr>
@@ -2151,7 +2429,7 @@ CalicoNetworkSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>CalicoNetwork specifies configuration options for Calico provided pod networking.</p>
+<p>CalicoNetwork specifies networking configuration options for Calico.</p>
 </td>
 </tr>
 <tr>
@@ -2858,7 +3136,7 @@ Kubernetes core/v1.ResourceRequirements
 (<code>string</code> alias)</h3>
 <p>
 (<em>Appears on:</em>
-<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>, 
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>,
 <a href="#operator.tigera.io/v1.InstallationStatus">InstallationStatus</a>)
 </p>
 <p>ProductVariant represents the variant of the product. Valid options are: Calico, TigeraSecureEnterprise.</p>

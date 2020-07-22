@@ -23,13 +23,14 @@ This how-to guide uses the following {{site.prodname}} features:
 
 Elasticsearch resources are associated with the **Kubernetes API group**, `lma.tigera.io`. You can grant access to resources per cluster. The default cluster name for {{site.prodname}} is, `cluster`. As shown in the following table, each Elasticsearch resource is mapped to a specific RBAC resource name within the `lma.tigera.io` API group. In {{site.prodname}} Manager, Elasticsearch resources are called, **indexes or indices**.
 
-| Elasticsearch index         | Kubernetes RBAC resource name | Logs or events                                                 |
+| Elasticsearch access        | Kubernetes RBAC resource name | Description                                                  |
 | --------------------------- | ----------------------------- | ------------------------------------------------------------ |
-| tigera_secure_ee_flows      | flows                         | Flow logs.                                                   |
-| tigera_secure_ee_audit*     | audit*                        | Both {{site.prodname}} and Kubernetes audit logs. The UI currently uses this query for searching both Kubernetes and {{site.prodname}} audit logs. |
-| tigera_secure_ee_audit_ee   | audit_ee                      | {{site.prodname}} audit logs.                                |
-| tigera_secure_ee_audit_kube | audit_kube                    | Kubernetes audit logs                                        |
-| tigera_secure_ee_events     | events                        | {{site.prodname}} intrusion detection events.                |
+| tigera_secure_ee_flows      | flows                         | Access to indices with data for Flow logs.                             |
+| tigera_secure_ee_audit*     | audit*                        | Access to indices with data for both {{site.prodname}} and Kubernetes audit logs. The UI currently uses this query for searching both Kubernetes and {{site.prodname}} audit logs. |
+| tigera_secure_ee_audit_ee   | audit_ee                      | Access to indices with data for {{site.prodname}} audit logs.                                |
+| tigera_secure_ee_audit_kube | audit_kube                    | Access to indices with data for Kubernetes audit logs                                        |
+| tigera_secure_ee_events     | events                        | Access to indices with data for {{site.prodname}} intrusion detection events.                |
+| kibana                      | kibana_login                  | Grants the [kibana_admin](https://www.elastic.co/guide/en/kibana/current/xpack-security-authorization.html) privilege              |
 
 > **Note**: Because the `lma.tigera.io` API group is used only for RBAC, and is not backed by an actual API, it does not provide access to any other Kubernetes resources. 
 {: .alert .alert-info}
