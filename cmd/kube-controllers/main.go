@@ -539,13 +539,13 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				*cfg.Controllers.ManagedCluster),
 		}
 	}
+
 	if cfg.Controllers.AuthorizationConfiguration != nil {
 		cc.controllerStates["Authorization"] = &controllerState{
 			controller: authorization.New(
 				k8sClientset,
 				resource.ElasticsearchServiceURL,
-				cfg.Controllers.AuthorizationConfiguration.NumberOfWorkers,
-				cfg.Controllers.AuthorizationConfiguration.ReconcilerPeriod,
+				cfg.Controllers.AuthorizationConfiguration,
 			),
 		}
 	}
