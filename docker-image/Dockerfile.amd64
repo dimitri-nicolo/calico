@@ -17,5 +17,4 @@ ADD --chown=1001 bin/filecheck /code
 
 WORKDIR /code
 
-USER 1001
 ENTRYPOINT ["./apiserver"]
