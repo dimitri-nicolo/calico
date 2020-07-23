@@ -13,7 +13,8 @@
   make bin/helm
   export PATH=$PATH:$(pwd)/bin
 
-  jekyll build --config _config.yml,$(pwd)/netlify/_config_latest.yml
+  jekyll build --config _config.yml,$(pwd)/netlify/_config_latest.yml --destination _site
+  jekyll build --config _config.yml,$(pwd)/netlify/_config_noindex.yml --baseurl /$RELEASE_VERSION --destination _site/$RELEASE_VERSION
 
   mv _site/sitemap.xml _site/release-legacy-sitemap.xml
   mv _site/sitemap.xml _site/latest-sitemap.xml
