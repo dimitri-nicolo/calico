@@ -793,6 +793,8 @@ github.com/tigera/apiserver v0.0.0-20200717181002-1d3f1bb96b2a h1:7ocs2qMWhWLald
 github.com/tigera/apiserver v0.0.0-20200717181002-1d3f1bb96b2a/go.mod h1:yUPdeUcwVHwZqrJ3KGhu6/XaWVOc9vA2SkEDdUgfViI=
 github.com/tigera/apiserver v0.0.0-20200721162321-07e9b6f4f49f h1:UIrb9oBA5cRbZAGMZTAD3WlCuyCm3wOz7R0PAGvHJOI=
 github.com/tigera/apiserver v0.0.0-20200721162321-07e9b6f4f49f/go.mod h1:dILpnOoo+7CZTO6MFi3CgG5XdEAWackeUavzCOwthpE=
+github.com/tigera/apiserver v0.0.0-20200722232249-ca4f29b7a9ff h1:ElER/IMcAEF6bNN7IF7PUwSt/m++iadNQJt9lhWHuaU=
+github.com/tigera/apiserver v0.0.0-20200722232249-ca4f29b7a9ff/go.mod h1:dILpnOoo+7CZTO6MFi3CgG5XdEAWackeUavzCOwthpE=
 github.com/tigera/compliance v0.0.0-20200602235354-fc15a384de5e h1:u4mbPDTzfGl9geEpgg3LivHydU4mkp1GWHd1rtcxjuE=
 github.com/tigera/compliance v0.0.0-20200602235354-fc15a384de5e/go.mod h1:gIDeugSYI/B//r/LeA1y1bYsyIzclXjCR5K4H39sFzk=
 github.com/tigera/compliance v0.0.0-20200604081253-46bc922bb280 h1:lj42VcyLx0MJYzVrRdrBIasHxtOr8Tf+C0qSqtKc75A=
