@@ -26,8 +26,6 @@ have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/
 Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated
 during upgrade).
 
-{% include content/hostendpoints-upgrade.md orch="OpenShift" %}
-
 ### Download the new manifests
 
 Make a manifests directory.
@@ -40,76 +38,11 @@ mkdir manifests
 
 {% include content/openshift-prometheus-operator.md %}
 
-## Upgrade from 2.6 or 2.7
+## Upgrade from 3.0 or later
 
-1. Export your current LogStorage CR to a file.
-   ```bash
-   oc get logstorage tigera-secure -o yaml --export=true > log-storage.yaml
-   ```
-
-1. Delete the LogStorage CR.
-   ```bash
-   oc delete -f log-storage.yaml
-   ```
-
-1. Verify that Elasticsearch and Kibana are completely removed and that your persistent volumes are no longer bound.
-   ```bash
-   oc get kibana -n tigera-kibana
-   oc get elasticsearch -n tigera-elasticsearch
-   oc get pv | grep tigera
-   ```
-   The outputs should look similar to the following:
-   ```
-   No resources found.
-   No resources found.
-   pvc-bd2eef7d   10Gi       RWO            Retain           Released   tigera-elasticsearch/tigera-secure-es-gqmh-elasticsearch-data   tigera-elasticsearch            7m24s
-   ```
-
-1. (Optional) If you choose to retain data, make your persistent volumes ready for reuse. For each volume in the storage
-   class that you specified in `log-storage.yaml`, make sure it is available again. By default the storage class name is
-   `tigera-elasticsearch`.
-   ```bash
-   PV_NAME=<name-of-your-pv>
-   oc patch pv $PV_NAME -p '{"spec":{"claimRef":null}}'
-   ```
-
-1. Delete outdated CRDs.
-   ```bash
-   oc delete crd trustrelationships.elasticsearch.k8s.elastic.co  \
-   	apmservers.apm.k8s.elastic.co \
-   	elasticsearches.elasticsearch.k8s.elastic.co \
-   	kibanas.kibana.k8s.elastic.co
-   ```
-
-1. Cleanup Elasticsearch operator webhook.
-   ```bash
-   oc delete validatingwebhookconfigurations validating-webhook-configuration
-   oc delete service -n tigera-eck-operator elastic-webhook-service
-   ```
-
-1. Export your current CRs for PrometheusRule to a file.
-   ```bash
-   oc get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
-   ```
-
-1. Delete the PrometheusRule CRD.
-   ```bash
-   oc delete crd prometheusrules.monitoring.coreos.com 
-   ```
-   
 1. Apply the updated manifests.
    ```bash
    oc apply -f manifests/
-   ```
-
-1. Apply the LogStorage CR.
-   ```bash
-   oc apply -f log-storage.yaml
-   ```
-
-1. Apply the CRs for PrometheusRule.
-    ```bash
-   oc apply -f prometheusrules.yaml  
    ```
 
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
@@ -121,41 +54,3 @@ mkdir manifests
    ```bash
    watch oc get tigerastatus
    ```
-
-1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
-add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
-
-## Upgrade from 2.8
-
-1. Export your current CRs for PrometheusRule to a file.
-   ```bash
-   oc get prometheusrules.monitoring.coreos.com -n tigera-prometheus -o yaml > prometheusrules.yaml
-   ```
-
-1. Delete the PrometheusRule CRD.
-    ```bash
-   oc delete crd prometheusrules.monitoring.coreos.com 
-   ```
-   
-1. Apply the updated manifests.
-   ```bash
-   oc apply -f manifests/
-   ```
-
-1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
-   ```bash
-   oc apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-   ```
-
-1. Apply the CRs for PrometheusRule.
-   ```bash
-   oc apply -f prometheusrules.yaml  
-   ```   
-
-1. You can now monitor the upgrade progress with the following command:
-   ```bash
-   watch oc get tigerastatus
-   ```
-
-1. If you were upgrading from a version of Calico Enterprise prior to v3.0 and followed the pre-upgrade steps for host endpoints above, review traffic logs from the temporary policy,
-add any global network policies needed to whitelist traffic, and delete the temporary network policy **allow-all-upgrade**.
