@@ -164,43 +164,43 @@ func Run() {
 		}
 	}
 
-	// Configure and verify the node IP addresses and subnets.
-	checkConflicts, err := configureIPsAndSubnets(node)
-	if err != nil {
-		clearv4 := os.Getenv("IP") == "autodetect"
-		clearv6 := os.Getenv("IP6") == "autodetect"
-		if node.ResourceVersion != "" {
-			// If we're auto-detecting an IP on an existing node and hit an error, clear the previous
-			// IP addresses from the node since they are no longer valid.
-			clearNodeIPs(ctx, cli, node, clearv4, clearv6)
-		}
-		terminate()
-	}
-
-	// If we report an IP change (v4 or v6) we should verify there are no
-	// conflicts between Nodes.
-	if checkConflicts && os.Getenv("DISABLE_NODE_IP_CHECK") != "true" {
-		v4conflict, v6conflict, err := checkConflictingNodes(ctx, cli, node)
+	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
+	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
+		// Configure and verify the node IP addresses and subnets.
+		checkConflicts, err := configureIPsAndSubnets(node)
 		if err != nil {
-			// If we've auto-detected a new IP address for an existing node that now conflicts, clear the old IP address(es)
-			// from the node in the datastore. This frees the address in case it needs to be used for another node.
-			clearv4 := (os.Getenv("IP") == "autodetect") && v4conflict
-			clearv6 := (os.Getenv("IP6") == "autodetect") && v6conflict
+			clearv4 := os.Getenv("IP") == "autodetect"
+			clearv6 := os.Getenv("IP6") == "autodetect"
 			if node.ResourceVersion != "" {
+				// If we're auto-detecting an IP on an existing node and hit an error, clear the previous
+				// IP addresses from the node since they are no longer valid.
 				clearNodeIPs(ctx, cli, node, clearv4, clearv6)
 			}
-
 			terminate()
 		}
-	}
 
-	// Configure the node AS number if BGP is enabled.
-	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
-		configureASNumber(node)
-	}
+		// If we report an IP change (v4 or v6) we should verify there are no
+		// conflicts between Nodes.
+		if checkConflicts && os.Getenv("DISABLE_NODE_IP_CHECK") != "true" {
+			v4conflict, v6conflict, err := checkConflictingNodes(ctx, cli, node)
+			if err != nil {
+				// If we've auto-detected a new IP address for an existing node that now conflicts, clear the old IP address(es)
+				// from the node in the datastore. This frees the address in case it needs to be used for another node.
+				clearv4 := (os.Getenv("IP") == "autodetect") && v4conflict
+				clearv6 := (os.Getenv("IP6") == "autodetect") && v6conflict
+				if node.ResourceVersion != "" {
+					clearNodeIPs(ctx, cli, node, clearv4, clearv6)
+				}
 
-	// If Calico is used for networking or environment variable IP is used (for ipsec support), set the network status.
-	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
+				terminate()
+			}
+		}
+
+		// Configure the node AS number if BGP is enabled.
+		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
+			configureASNumber(node)
+		}
+
 		if clientset != nil {
 			log.Info("Setting NetworkUnavailable to False")
 			err = setNodeNetworkUnavailableFalse(*clientset, nodeName)
