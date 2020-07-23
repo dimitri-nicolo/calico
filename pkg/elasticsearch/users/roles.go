@@ -16,7 +16,9 @@ const (
 	ElasticsearchRoleNameEventsViewer    = "events_viewer"
 	ElasticsearchRoleNameDNSViewer       = "dns_viewer"
 	ElasticsearchRoleNameKibanaAdmin     = "kibana_admin"
-	ElasticsearchRoleNameSuperUser       = "superuser"
+	ElasticsearchRoleNameKibanaViewer    = "kibana_viewer"
+
+	ElasticsearchRoleNameSuperUser = "superuser"
 )
 
 func GetAuthorizationRoles(clusterName string) []elasticsearch.Role {
@@ -76,6 +78,24 @@ func GetAuthorizationRoles(clusterName string) []elasticsearch.Role {
 			},
 		},
 	}
+}
+
+func GetGlobalAuthorizationRoles() []elasticsearch.Role {
+	return []elasticsearch.Role{{
+		Name: ElasticsearchRoleNameKibanaViewer,
+		Definition: &elasticsearch.RoleDefinition{
+			Indices: []elasticsearch.RoleIndex{},
+			Applications: []elasticsearch.Application{{
+				Application: "kibana-.kibana",
+				Privileges: []string{
+					"feature_discover.read",
+					"feature_visualize.read",
+					"feature_dashboard.read",
+				},
+				Resources: []string{"space:default"},
+			}},
+		},
+	}}
 }
 
 func formatRoleName(name, cluster string) string {

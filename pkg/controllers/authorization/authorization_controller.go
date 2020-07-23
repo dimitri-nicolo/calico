@@ -76,6 +76,7 @@ func (c *authorizationController) Run(stop chan struct{}) {
 
 	stopped = retry(stop, 5*time.Second, "Failed to create the authorizations roles", func() error {
 		roles := users.GetAuthorizationRoles(rbacv1.ResourceAll)
+		roles = append(roles, users.GetGlobalAuthorizationRoles()...)
 		return esCLI.CreateRoles(roles...)
 	})
 	if stopped {
