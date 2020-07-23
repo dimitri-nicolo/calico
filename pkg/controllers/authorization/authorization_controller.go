@@ -5,6 +5,8 @@ package authorization
 import (
 	"time"
 
+	"github.com/projectcalico/kube-controllers/pkg/config"
+
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
@@ -13,7 +15,6 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/rbaccache"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
-
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -28,23 +29,28 @@ import (
 // creates the appropriate role mappings in Elasticsearch so that an authenticated Elasticsearch user will have the permissions
 // designated to them through kubernetes RBAC.
 type authorizationController struct {
-	k8sCLI       kubernetes.Interface
-	esServiceURL string
-	numWorkers   int
-	resyncPeriod time.Duration
+	k8sCLI         kubernetes.Interface
+	esServiceURL   string
+	numWorkers     int
+	resyncPeriod   time.Duration
+	usernamePrefix string
+	groupPrefix    string
 }
 
-func New(k8sCLI kubernetes.Interface, esServiceURL string, numWorkers int, resyncPeriod time.Duration) controller.Controller {
+func New(k8sCLI kubernetes.Interface, esServiceURL string, config *config.AuthorizationControllerCfg) controller.Controller {
 	// TODO remove this default when this is properly hooked up to using KubeControllerConfiguration
-	if resyncPeriod == 0 {
+	resyncPeriod := config.ReconcilerPeriod
+	if config.ReconcilerPeriod == 0 {
 		resyncPeriod = 5 * time.Minute
 	}
 
 	return &authorizationController{
-		k8sCLI:       k8sCLI,
-		esServiceURL: esServiceURL,
-		numWorkers:   numWorkers,
-		resyncPeriod: resyncPeriod,
+		k8sCLI:         k8sCLI,
+		esServiceURL:   esServiceURL,
+		numWorkers:     config.NumberOfWorkers,
+		resyncPeriod:   resyncPeriod,
+		usernamePrefix: config.OIDCAuthUsernamePrefix,
+		groupPrefix:    config.OIDCAuthGroupPrefix,
 	}
 }
 
@@ -146,6 +152,8 @@ func (c *authorizationController) initializeRoleMappingSynchronizer(stop chan st
 		roleCache:       clusterRoleCache,
 		esCLI:           esCLI,
 		resourceUpdates: resourceUpdatesChan,
+		usernamePrefix:  c.usernamePrefix,
+		groupPrefix:     c.groupPrefix,
 	}
 
 	// Clean up any Elasticsearch mappings that don't have an appropriate ClusterRole with ClusterRoleBinding

@@ -20,57 +20,59 @@ import (
 
 var _ = Describe("synchronizeRoleMappings", func() {
 	Context("Update ClusterRole", func() {
-		DescribeTable("ClusterRole rule conversion to elasticsearch role mapping", func(rules []rbacv1.PolicyRule, expectedRoleMapping elasticsearch.RoleMapping) {
-			clusterRole := &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-resource",
-				},
-			}
+		DescribeTable(
+			"ClusterRole rule conversion to elasticsearch role mapping",
+			func(rules []rbacv1.PolicyRule, expectedRoleMapping elasticsearch.RoleMapping) {
+				clusterRole := &rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-resource",
+					},
+				}
 
-			mockESCLI := elasticsearch.NewMockClient()
-			// Verify that the correct role mapping is created given whats returned from the cache
-			mockESCLI.On("CreateRoleMapping", expectedRoleMapping).Return(nil)
+				mockESCLI := elasticsearch.NewMockClient()
+				// Verify that the correct role mapping is created given whats returned from the cache
+				mockESCLI.On("CreateRoleMapping", expectedRoleMapping).Return(nil)
 
-			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
-			mockClusterRoleCache.On("AddClusterRole", clusterRole).Return(true)
-			mockClusterRoleCache.On("ClusterRoleSubjects", clusterRole.Name, rbacv1.UserKind).Return([]rbacv1.Subject{{
-				Kind: rbacv1.UserKind,
-				Name: "user@test.com",
-			}})
-			mockClusterRoleCache.On("ClusterRoleSubjects", clusterRole.Name, rbacv1.GroupKind).Return([]rbacv1.Subject{{
-				Kind: rbacv1.GroupKind,
-				Name: "testgroup",
-			}})
-			// Return all the valid resource names so we can test the conversion or resource names to elasticsearch role names
-			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return(rules)
+				mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+				mockClusterRoleCache.On("AddClusterRole", clusterRole).Return(true)
+				mockClusterRoleCache.On("ClusterRoleSubjects", clusterRole.Name, rbacv1.UserKind).Return([]rbacv1.Subject{{
+					Kind: rbacv1.UserKind,
+					Name: "user@test.com",
+				}})
+				mockClusterRoleCache.On("ClusterRoleSubjects", clusterRole.Name, rbacv1.GroupKind).Return([]rbacv1.Subject{{
+					Kind: rbacv1.GroupKind,
+					Name: "testgroup",
+				}})
+				// Return all the valid resource names so we can test the conversion or resource names to elasticsearch role names
+				mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return(rules)
 
-			resourceUpdates := make(chan resourceUpdate)
+				resourceUpdates := make(chan resourceUpdate)
 
-			synchronizer := esRoleMappingSynchronizer{
-				esCLI:           mockESCLI,
-				roleCache:       mockClusterRoleCache,
-				resourceUpdates: resourceUpdates,
-			}
+				synchronizer := esRoleMappingSynchronizer{
+					esCLI:           mockESCLI,
+					roleCache:       mockClusterRoleCache,
+					resourceUpdates: resourceUpdates,
+				}
 
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				synchronizer.synchronizeRoleMappings()
-			}()
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					synchronizer.synchronizeRoleMappings()
+				}()
 
-			resourceUpdates <- resourceUpdate{
-				typ:      resourceUpdated,
-				name:     clusterRole.Name,
-				resource: clusterRole,
-			}
+				resourceUpdates <- resourceUpdate{
+					typ:      resourceUpdated,
+					name:     clusterRole.Name,
+					resource: clusterRole,
+				}
 
-			close(resourceUpdates)
+				close(resourceUpdates)
 
-			wg.Wait()
+				wg.Wait()
 
-			mockESCLI.AssertExpectations(GinkgoT())
-		},
+				mockESCLI.AssertExpectations(GinkgoT())
+			},
 			TableEntry{
 				Description: "The ClusterRole resource is *",
 				Parameters: []interface{}{
@@ -168,7 +170,7 @@ var _ = Describe("synchronizeRoleMappings", func() {
 	})
 
 	Context("Update ClusterRoleBinding", func() {
-		It("Triggers a role synchronziation when the ClusterRoleBinding is added", func() {
+		It("Triggers a role synchronization when the ClusterRoleBinding is added", func() {
 			clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-binding",
@@ -314,6 +316,83 @@ var _ = Describe("synchronizeRoleMappings", func() {
 		wg.Wait()
 
 		mockESCLI.AssertExpectations(GinkgoT())
+	})
+
+	Context("claim prefixes", func() {
+		It("usernamePrefix and groupPrefix are stripped from user and group names before mappings are created for them", func() {
+			clusterRole := &rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-resource",
+				},
+			}
+
+			mockESCLI := elasticsearch.NewMockClient()
+			// Verify that the correct role mapping is created given whats returned from the cache
+			mockESCLI.On("CreateRoleMapping", elasticsearch.RoleMapping{
+				Name:  "tigera-k8s-test-resource",
+				Roles: []string{"flows_viewer", "audit_viewer", "events_viewer", "dns_viewer"},
+				Rules: map[string][]elasticsearch.Rule{
+					"any": {
+						{
+							Field: map[string]string{
+								"username": "user@test.com",
+							},
+						},
+						{
+							Field: map[string]string{
+								"groups": "testgroup",
+							},
+						},
+					},
+				},
+				Enabled: true,
+			}).Return(nil)
+
+			mockClusterRoleCache := rbaccache.NewMockClusterRoleCache()
+			mockClusterRoleCache.On("AddClusterRole", clusterRole).Return(true)
+			mockClusterRoleCache.On("ClusterRoleSubjects", clusterRole.Name, rbacv1.UserKind).Return([]rbacv1.Subject{{
+				Kind: rbacv1.UserKind,
+				Name: "oidc:user@test.com",
+			}})
+			mockClusterRoleCache.On("ClusterRoleSubjects", clusterRole.Name, rbacv1.GroupKind).Return([]rbacv1.Subject{{
+				Kind: rbacv1.GroupKind,
+				Name: "oidc:testgroup",
+			}})
+			// Return all the valid resource names so we can test the conversion or resource names to elasticsearch role names
+			mockClusterRoleCache.On("ClusterRoleRules", mock.Anything).Return([]rbacv1.PolicyRule{{
+				APIGroups: []string{"lma.tigera.io"},
+				Resources: []string{"*"},
+			}})
+
+			resourceUpdates := make(chan resourceUpdate)
+
+			synchronizer := esRoleMappingSynchronizer{
+				esCLI:           mockESCLI,
+				roleCache:       mockClusterRoleCache,
+				resourceUpdates: resourceUpdates,
+				usernamePrefix:  "oidc:",
+				groupPrefix:     "oidc:",
+			}
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				synchronizer.synchronizeRoleMappings()
+			}()
+
+			resourceUpdates <- resourceUpdate{
+				typ:      resourceUpdated,
+				name:     clusterRole.Name,
+				resource: clusterRole,
+			}
+
+			close(resourceUpdates)
+
+			wg.Wait()
+
+			mockESCLI.AssertExpectations(GinkgoT())
+		})
 	})
 
 	Context("removeStaleMappings", func() {

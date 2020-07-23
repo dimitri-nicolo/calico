@@ -85,6 +85,9 @@ type Config struct {
 
 	MultiClusterForwardingEndpoint string `default:"https://tigera-manager.tigera-manager.svc:9443" split_words:"true"`
 	MultiClusterForwardingCA       string `default:"/manager-tls/cert" split_words:"true"`
+
+	OIDCAuthUsernamePrefix string `default:"" split_words:"true"`
+	OIDCAuthGroupPrefix    string `default:"" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct

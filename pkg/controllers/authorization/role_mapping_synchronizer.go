@@ -49,6 +49,8 @@ type esRoleMappingSynchronizer struct {
 	roleCache       rbaccache.ClusterRoleCache
 	esCLI           elasticsearch.Client
 	resourceUpdates chan resourceUpdate
+	usernamePrefix  string
+	groupPrefix     string
 }
 
 // synchronizeRoleMappings watches for updates over the resourceUpdates channel, attempts to update the ClusterRoleCache
@@ -205,7 +207,7 @@ func (r *esRoleMappingSynchronizer) synchronizeElasticsearchMapping(clusterRoleN
 	}
 
 	log.Infof("Creating role mapping %#v for users - %#v groups - %#v esRoles - %#v", roleMappingName, users, groups, esRoles)
-	mapping := createRoleMapping(roleMappingName, users, groups, esRoles)
+	mapping := r.createRoleMapping(roleMappingName, users, groups, esRoles)
 	if err := r.esCLI.CreateRoleMapping(mapping); err != nil {
 		return err
 	}
@@ -260,10 +262,10 @@ func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {
 	return esRoles
 }
 
-func createRoleMapping(name string, users, groups, roles []string) elasticsearch.RoleMapping {
+func (r *esRoleMappingSynchronizer) createRoleMapping(name string, users, groups, roles []string) elasticsearch.RoleMapping {
 	var rules []elasticsearch.Rule
-
 	for _, user := range users {
+		user := strings.TrimPrefix(user, r.usernamePrefix)
 		rules = append(rules,
 			elasticsearch.Rule{
 				Field: map[string]string{
@@ -273,6 +275,7 @@ func createRoleMapping(name string, users, groups, roles []string) elasticsearch
 	}
 
 	for _, group := range groups {
+		group := strings.TrimPrefix(group, r.groupPrefix)
 		rules = append(rules,
 			elasticsearch.Rule{
 				Field: map[string]string{
