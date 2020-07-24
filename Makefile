@@ -215,6 +215,18 @@ bin/benchmarker-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/benchmarker was not statically linked"; false ) )'
 
 ###############################################################################
+# Building the report files
+###############################################################################
+
+.PHONY: gen-files
+## Force rebuild of the report generator tool and the default report manifests
+gen-files: bin/report-type-gen
+	rm -rf ./output/default
+	mkdir -p ./output/default/manifests
+	mkdir -p ./output/default/json
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c './bin/report-type-gen generate'
+
+###############################################################################
 # Building the images
 ###############################################################################
 .PHONY: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_SERVER)-$(ARCH)

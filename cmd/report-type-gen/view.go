@@ -32,48 +32,44 @@ func runViewCmd(args []string) {
 	reportType, templateName := args[0], args[1]
 
 	// Get list of yaml files inside the 1st level of given directories.
-	for _, dir := range inDirs {
-		if err := traverseDir(dir, true, ".yaml", func(f string) error {
-			clog := log.WithField("file", f)
-			if strings.Split(path.Base(f), ".yaml")[0] != reportType {
-				clog.Debug("No match, passing")
-				return nil
-			}
-			clog.Debug("Found file, opening")
+	if err := traverseDir(viewDir, true, ".yaml", func(f string) error {
+		clog := log.WithField("file", f)
+		if strings.Split(path.Base(f), ".yaml")[0] != reportType {
+			clog.Debug("No match, passing")
+			return nil
+		}
+		clog.Debug("Found file, opening")
 
-			contents, err := ioutil.ReadFile(f)
+		contents, err := ioutil.ReadFile(f)
+		if err != nil {
+			return err
+		}
+
+		reportType := api.GlobalReportType{}
+		if err := yaml.UnmarshalStrict(contents, &reportType); err != nil {
+			return err
+		}
+
+		for _, tmpl := range append(reportType.Spec.DownloadTemplates, reportType.Spec.UISummaryTemplate) {
+			clog2 := clog.WithField("tmpl", tmpl.Name)
+			if strings.Split(tmpl.Name, ".")[0] != templateName {
+				clog2.Debug("No match, passing")
+				continue
+			}
+
+			clog2.Debug("Template found, rendering")
+			rendered, err := compliance.RenderTemplate(tmpl.Template, &compliance.ReportDataSample)
 			if err != nil {
 				return err
 			}
 
-			reportType := api.GlobalReportType{}
-			if err := yaml.UnmarshalStrict(contents, &reportType); err != nil {
-				return err
-			}
-
-			for _, tmpl := range append(reportType.Spec.DownloadTemplates, reportType.Spec.UISummaryTemplate) {
-				clog2 := clog.WithField("tmpl", tmpl.Name)
-				if strings.Split(tmpl.Name, ".")[0] != templateName {
-					clog2.Debug("No match, passing")
-					continue
-				}
-
-				clog2.Debug("Template found, rendering")
-				rendered, err := compliance.RenderTemplate(tmpl.Template, &compliance.ReportDataSample)
-				if err != nil {
-					return err
-				}
-
-				fmt.Println(rendered)
-				os.Exit(0)
-			}
-
-			log.Fatal("Requested template does not exist")
-			return nil
-		}); err != nil {
-			log.WithError(err).Fatal("Fatal error occurred while attempting to view rendered manifest")
+			fmt.Println(rendered)
+			os.Exit(0)
 		}
-	}
 
-	log.Fatal("Requested report type does not exist")
+		log.Fatal("Requested template does not exist")
+		return nil
+	}); err != nil {
+		log.WithError(err).Fatal("Fatal error occurred while attempting to view rendered manifest")
+	}
 }

@@ -30,17 +30,18 @@ A simple utilty that reads basic report-type structure and components in the spe
 Generated manifests are stored in the 'manifest/' directory in the current location.`,
 	}
 
-	inDirs []string
-	outDir string
+	inDir   string
+	outDir  string
+	viewDir string
 )
 
 func init() {
 	rootCmd.AddCommand(genCmd)
-	genCmd.Flags().StringArrayVarP(&inDirs, "input", "i", []string{"default"}, "input directories containing basic report-type structure. (default: default/)")
-	genCmd.Flags().StringVarP(&outDir, "output", "o", "manifests", "output directory containing generated manifests. (default: manifests/)")
+	genCmd.Flags().StringVarP(&inDir, "input", "i", "./report-types/default", "input directory containing basic report-type structure.")
+	genCmd.Flags().StringVarP(&outDir, "output", "o", "./output/default", "output directory containing generated manifests and code snippets.")
 
 	rootCmd.AddCommand(viewCmd)
-	viewCmd.Flags().StringArrayVarP(&inDirs, "input", "i", []string{"default/manifests"}, "input directories containing usable report-type manifests. (default: default/manifests)")
+	viewCmd.Flags().StringVarP(&viewDir, "input", "i", "./manifests/default", "input directory containing usable report-type manifests.")
 }
 
 func Execute() {
