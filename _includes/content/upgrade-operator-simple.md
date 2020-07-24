@@ -53,7 +53,7 @@
 
 1. In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
 
-   ```
+   ```bash
    kubectl create -f </path/to/license.yaml>
    ```
 
@@ -64,6 +64,17 @@
 
    When all components show a status of `Available`, proceed to the next section.
 {%- endif %}
+
+1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
+   CR to your cluster.
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: ManagementCluster
+   metadata:
+     name: tigera-secure
+   EOF
+   ```
 
 1. Install the new network policies to secure {{site.prodname}} component communications.
    ```bash

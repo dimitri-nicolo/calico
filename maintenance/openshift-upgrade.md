@@ -39,6 +39,8 @@ mkdir manifests
 {% include content/openshift-prometheus-operator.md %}
 
 ## Upgrade from 3.0 or later
+**Note**: There is an additional step if your cluster is a management cluster. If you are unsure if your cluster is a management cluster look at the field `clusterManagementType` when you run `oc get installation -o yaml` before you proceed.
+{: .alert .alert-info}
 
 1. Apply the updated manifests.
    ```bash
@@ -48,6 +50,16 @@ mkdir manifests
 1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
    ```bash
    oc apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
+   CR to your cluster.
+   ```bash
+   oc apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: ManagementCluster
+   metadata:
+     name: tigera-secure
+   EOF
    ```
 
 1. You can now monitor the upgrade progress with the following command:
