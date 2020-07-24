@@ -71,7 +71,7 @@ apiVersion: operator.tigera.io/v1
 kind: LogStorage
 metadata:
   name: tigera-secure
-Spec:
+spec:
   nodes:
     count: 3
   indices:
