@@ -376,7 +376,7 @@ func (cli *client) CreateRoleMapping(roleMapping RoleMapping) error {
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("/_xpack/security/role_mapping/%s", roleMapping.Name), bytes.NewBuffer(j))
+	req, err := http.NewRequest("PUT", fmt.Sprintf("/_security/role_mapping/%s", roleMapping.Name), bytes.NewBuffer(j))
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (cli *client) CreateRoleMapping(roleMapping RoleMapping) error {
 
 // GetRoleMappings retrieves all RoleMappings in Elasticsearch
 func (cli *client) GetRoleMappings() ([]RoleMapping, error) {
-	req, err := http.NewRequest("GET", "/_xpack/security/role_mapping", nil)
+	req, err := http.NewRequest("GET", "/_security/role_mapping", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func (cli *client) GetRoleMappings() ([]RoleMapping, error) {
 // DeleteRoleMapping attempts to delete the RoleMapping with the given name. If there is no RoleMapping that exists with
 // the given name, no error is return.
 func (cli *client) DeleteRoleMapping(name string) (bool, error) {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("/_xpack/security/role_mapping/%s", name), nil)
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("/_security/role_mapping/%s", name), nil)
 	if err != nil {
 		return false, err
 	}
