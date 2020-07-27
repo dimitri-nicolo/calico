@@ -30,6 +30,16 @@ We test {{site.prodname}} {{page.version}} against the following managed Kuberne
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
 
+#### Supported Docker Enterprise versions
+
+We test {{site.prodname}} {{page.version}} against the following Docker Enterprise versions.
+
+- Docker Enterprise v19.03.8
+- Docker Universal Control Plane (UCP) v3.3.0
+
+Other versions may work, but we do not actively test {{site.prodname}}
+{{page.version}} against them.
+
 #### CNI plug-in enabled
 
 {{site.prodname}} is installed as a CNI plugin. The kubelet must be configured
