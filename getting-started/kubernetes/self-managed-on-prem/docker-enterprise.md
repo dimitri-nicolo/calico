@@ -27,6 +27,9 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 - Install the UCP client bundle for accessing the cluster. See [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).
 
+- After installing the "Universal Control Plane (UCP)", enable the option "Allow all authenticated users,
+  including service accounts, to schedule on all nodes, including UCP managers and DTR nodes."
+
 - Install `kubectl` CLI tool. See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
 ### How to
