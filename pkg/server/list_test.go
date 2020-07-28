@@ -253,7 +253,7 @@ var _ = Describe("List query parameters", func() {
 			ToTime:   "now-4d",
 			Page:     2,
 			MaxItems: &maxItems,
-			SortBy:   []api.ReportSortBy{{Field:"endTime", Ascending: false}, {Field:"reportName", Ascending: true}, {Field: "reportTypeName", Ascending: false}, {Field: "startTime", Ascending: false}},
+			SortBy:   []api.ReportSortBy{{Field: "endTime", Ascending: false}, {Field: "reportName", Ascending: true}, {Field: "reportTypeName", Ascending: false}, {Field: "startTime", Ascending: false}},
 		}))
 
 		By("parsing maxItems=all with page=0")

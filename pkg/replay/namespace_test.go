@@ -10,11 +10,12 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 

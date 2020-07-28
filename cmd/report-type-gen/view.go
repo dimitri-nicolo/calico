@@ -7,9 +7,10 @@ import (
 	"path"
 	"strings"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
