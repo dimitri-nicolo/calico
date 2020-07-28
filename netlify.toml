@@ -1,83 +1,12 @@
 # Settings in the [build] context are global and are applied to all contexts unless otherwise overridden by more specific contexts.
 [build]
-  command = 'jekyll build'
-  publish = "_site/"
+  command = './netlify/build.sh'
 
 [build.environment]
   RUBY_VERSION = "2.6.2"
-  RELEASE_VERSION = "master"
-
-[context.production]
-  command = '''
-  bundle install
-  make bin/helm
-  export PATH=$PATH:$(pwd)/bin
-
-  jekyll build --config _config.yml,$(pwd)/netlify/_config_latest.yml --destination _site
-  jekyll build --config _config.yml,$(pwd)/netlify/_config_noindex.yml --baseurl /$RELEASE_VERSION --destination _site/$RELEASE_VERSION
-
-  mv _site/sitemap.xml _site/release-legacy-sitemap.xml
-  mv _site/sitemap.xml _site/latest-sitemap.xml
-  mv netlify/sitemap-index.xml _site/sitemap.xml
-  mv netlify/_redirects _site/_redirects
-  '''
-
-# Deploys branches specified in netlify UI as seperate individual sites (all release branches)
-
-[context.branch-deploy]
-  command = '''
-  bundle install
-  make bin/helm
-  export PATH=$PATH:$(pwd)/bin
-  jekyll build --config _config.yml,$(pwd)/netlify/_config_noindex.yml --baseurl /$RELEASE_VERSION --destination _site/$RELEASE_VERSION
-  mv _site/$RELEASE_VERSION/404.html _site/404.html
-  '''
-
-[context.deploy-preview]
-  command = '''
-  bundle install
-  make bin/helm
-  export PATH=$PATH:$(pwd)/bin
-  echo "url: $DEPLOY_PRIME_URL" > _config_url.yml
-  jekyll build --config _config.yml,_config_url.yml
-  '''
-
-[[redirects]]
-  from = "/v3.0/*"
-  to = "https://release-calient-v3-0--tigera.netlify.app/v3.0/:splat"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-  from = "/v2.8/*"
-  to = "https://release-v2-8--tigera.netlify.app/v2.8/:splat"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-[[redirects]]
-  from = "/v2.7/*"
-  to = "https://release-v2-7--tigera.netlify.app/v2.7/:splat"
-  status = 200
-  force = true
-  headers = {X-From = "Netlify"}
-
-#master site should not have redirect for /master
-#[[redirects]]
-#  from = "/master/*"
-#  to = "https://master--tigera.netlify.app/master/:splat"
-#  status = 200
-#  force = true
-#  headers = {X-From = "Netlify"}
-
-# force would be false here so that latest docs are server in place
-[[redirects]]
-  from = "/*"
-  to = "https://release-legacy--tigera.netlify.app/:splat"
-  status = 200
-  force = false
-  headers = {X-From = "Netlify"}
+  CANDIDATE_RELEASE = "v3.2"
+  CURRENT_RELEASE = "v3.1"
+  CUSTOM_ARCHIVE_PATH = ""
 
 [[headers]]
   for = "/*.yaml"
