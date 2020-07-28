@@ -20,18 +20,18 @@ type PolicyImpactRbacHelperFactory interface {
 }
 
 type standardPolicyImpactRbacHelperFactor struct {
-	auth lmaauth.K8sAuthInterface
+	mcmAuth MCMAuth
 }
 
 func (s *standardPolicyImpactRbacHelperFactor) NewPolicyImpactRbacHelper(req *http.Request) PolicyImpactRbacHelper {
 	return &policyImpactRbacHelper{
 		Request: req,
-		k8sAuth: s.auth,
+		mcmAuth: s.mcmAuth,
 	}
 }
 
-func NewStandardPolicyImpactRbacHelperFactory(auth lmaauth.K8sAuthInterface) PolicyImpactRbacHelperFactory {
-	return &standardPolicyImpactRbacHelperFactor{auth: auth}
+func NewStandardPolicyImpactRbacHelperFactory(mcmAuth MCMAuth) PolicyImpactRbacHelperFactory {
+	return &standardPolicyImpactRbacHelperFactor{mcmAuth: mcmAuth}
 }
 
 type PolicyImpactRbacHelper interface {
@@ -42,7 +42,7 @@ type PolicyImpactRbacHelper interface {
 // view and modify a policy
 type policyImpactRbacHelper struct {
 	Request *http.Request
-	k8sAuth lmaauth.K8sAuthInterface
+	mcmAuth MCMAuth
 }
 
 // CheckCanPreviewPolicyAction returns true if the user can perform the preview action on the requested
@@ -164,8 +164,8 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 func (h *policyImpactRbacHelper) isAuthorized(atr authzv1.ResourceAttributes) (int, error) {
 	ctx := lmaauth.NewContextWithReviewResource(h.Request.Context(), &atr)
 	req := h.Request.WithContext(ctx)
-
-	return h.k8sAuth.Authorize(req)
+	cluster := ctx.Value(clusterKey)
+	return h.mcmAuth.K8sAuth(fmt.Sprintf("%v", cluster)).Authorize(req)
 }
 
 // getTier extracts the tier from a Calico tiered policy. If the resource is not a Calico tiered policy an empty string

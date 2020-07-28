@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -152,7 +152,7 @@ func FlowLogsHandler(mcmAuth MCMAuth, esClient lmaelastic.Client, pip pippkg.PIP
 		if params.PolicyPreview == nil {
 			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
 		} else {
-			factory := NewStandardPolicyImpactRbacHelperFactory(mcmAuth.DefaultK8sAuth())
+			factory := NewStandardPolicyImpactRbacHelperFactory(mcmAuth)
 			rbacHelper := factory.NewPolicyImpactRbacHelper(req)
 			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
 		}
