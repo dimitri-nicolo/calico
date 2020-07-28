@@ -28,7 +28,7 @@ the upgrade.
 
 ## Upgrade from 3.0 or later
 
-**Note**: There is an additional step if your cluster is a management cluster. If you are unsure if your cluster is a management cluster look at the field `clusterManagementType` when you run `kubectl get installation -o yaml` before you proceed.
+**Note**: These steps differ based on your cluster type. If you are unsure of your cluster type, look at the field `clusterManagementType` when you run `kubectl get installation -o yaml` before you proceed.
 {: .alert .alert-info}
 
 {% include content/upgrade-operator-simple.md upgradeFrom="Enterprise" %}

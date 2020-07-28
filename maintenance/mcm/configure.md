@@ -16,8 +16,8 @@ Managing standalone clusters and multiple instances of Elasticsearch is not oner
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- **Installation API** with `ManagementCluster` field
-- **Installation API** with `ManagementClusterConnection` field
+- **Installation API** with `ManagementCluster` resource
+- **Installation API** with `ManagementClusterConnection` resource
 - {{site.prodname}} Manager user interface
 
 ### Concepts
@@ -180,6 +180,7 @@ To access resources in a managed cluster from the {{site.prodname}} Manager with
 1. Create an admin user called, `mcm-user` in the default namespace with full permissions, by applying the following commands.
 
    ```bash
+   kubectl create sa mcm-user
    kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-network-admin
    ```
 1. Get the login token for your new admin user, and log in to {{site.prodname}} Manager.
@@ -195,18 +196,23 @@ You have successfully installed a management cluster.
 
 #### Add a managed cluster to the management cluster
 
-Choose a name for your managed cluster and then add it to your **management cluster**. The following command will
+Choose a name for your managed cluster and then add it to your **management cluster**. The following commands will
 create a manifest with the name of your managed cluster in your current directory.
 
-```bash
-export MANAGED_CLUSTER=my-managed-cluster
-kubectl -o jsonpath="{.spec.installationManifest}" > $MANAGED_CLUSTER.yaml create -f - <<EOF
-apiVersion: projectcalico.org/v3
-kind: ManagedCluster
-metadata:
-  name: $MANAGED_CLUSTER
-EOF
-```
+1. First decide on the name for your managed cluster. We will re-use this value a few times throughout this page.
+   ```bash
+   export MANAGED_CLUSTER=my-managed-cluster
+   ```
+
+1. Add a managed cluster and save the manifest containing a [ManagementClusterConnection]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementClusterConnection) and a Secret.
+   ```bash
+   kubectl -o jsonpath="{.spec.installationManifest}" > $MANAGED_CLUSTER.yaml create -f - <<EOF
+   apiVersion: projectcalico.org/v3
+   kind: ManagedCluster
+   metadata:
+     name: $MANAGED_CLUSTER
+   EOF
+   ```
 
 Verify that the `managementClusterAddr` in the manifest is correct.
 
@@ -314,7 +320,7 @@ To access resources belonging to a managed cluster from the {{site.prodname}} Ma
 Let's define admin-level permissions for the service account (`mcm-user`) we created to log into the Manager UI. Run the following command against your managed cluster.
 
 ```bash
-kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-ui-user
+kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-network-admin
 ```
 
 If you now access the Manager UI, you should see your managed cluster as an option in the cluster selection drop-down (top right banner). It will have the same name you inputted when adding the managed cluster in the UI. Once you select your managed cluster, you will be able to access all of the Manager UI features while connected to that cluster (e.g. Policies, Flow Visualizations, etc).

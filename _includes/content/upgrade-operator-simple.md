@@ -43,6 +43,31 @@
    ```
 {%- endif %}
 
+1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
+   CR to your cluster.
+   ```bash
+   kubectl apply -f - <<EOF
+   apiVersion: operator.tigera.io/v1
+   kind: ManagementCluster
+   metadata:
+     name: tigera-secure
+   EOF
+   ```
+
+1. Install the new network policies to secure {{site.prodname}} component communications.
+
+   If your cluster is a **managed** cluster, apply this manifest.
+   
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
+   ```
+   
+   For other clusters, use this manifest.
+   
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
+   ```
+   
 1. You can monitor progress with the following command:
    ```bash
    watch kubectl get tigerastatus
@@ -64,22 +89,6 @@
 
    When all components show a status of `Available`, proceed to the next section.
 {%- endif %}
-
-1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
-   CR to your cluster.
-   ```bash
-   kubectl apply -f - <<EOF
-   apiVersion: operator.tigera.io/v1
-   kind: ManagementCluster
-   metadata:
-     name: tigera-secure
-   EOF
-   ```
-
-1. Install the new network policies to secure {{site.prodname}} component communications.
-   ```bash
-   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
-   ```
 
    **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
    {: .alert .alert-info}

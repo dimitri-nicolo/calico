@@ -39,8 +39,16 @@ When configuring your cluster, you may be asked to provide information on the fo
 In Kubernetes, **cluster roles** specify cluster scoped permissions and are bound to users via **cluster role bindings**.
 Users must have appropriate RBAC to access resources in the UI. We provide the following roles by default to get started:
 
-- **tigera-ui-user**: Allows basic UI access.
-- **tigera-network-admin**: Allows UI access, plus the ability to create and modify resources, view compliance reports, and more.
+**tigera-ui-user**
+- Allows basic UI access to {{site.prodname}} Manager.
+- View various resources in the `projectcalico.org` and `networking.k8s.io` API groups.
+- Grants viewer access to Kibana.
+
+**tigera-network-admin**
+- Allows full access to {{site.prodname}} Manager.
+- Create and modify various resources in the `projectcalico.org` and `networking.k8s.io` API groups.
+- Grants superuser access for Kibana (including Elastic user and license management). 
+- And more.
 
 If you would like additional roles, see this [document]({{site.baseurl}}/security/rbac-tiered-policies).
 
@@ -225,39 +233,23 @@ Kibana can be configured to use your IdP. When users open the Manager and click 
      namespace: tigera-operator
    data:
      clientID: <your-base64-clientid>
-     clientSecret: <clientid-secret>
+     clientSecret: <your-base64-clientid-secret>
    ```
 
-1. Give a user permissions to login to Kibana and to view the data. The following example gives full access to a user logged in using OIDC.
+1. Give a user permissions to login to Kibana. 
 
-   ```
-   apiVersion: rbac.authorization.k8s.io/v1
-   kind: ClusterRole
-   metadata:
-     name: tigera-kibana-admin
-   rules:
-   - apiGroups:
-     - lma.tigera.io
-     resourceNames:
-     - kibana_login
-     - audit*
-     - flows
-     - events
-     - dns
-     resources:
-     - '*'
-     verbs:
-     - '*'
-   ```
-
-   ```
-   kubectl create clusterrolebinding my-username-kibana-access --user=<username> --clusterrole=tigera-kibana-admin
-   ```
-   **Note**: {{site.prodname}} automatically translates [RBAC permissions]({{site.baseurl}}/security/logs/rbac-elasticsearch). Alternatively, an admin is able to configure user access using [Kibana privileges](https://www.elastic.co/guide/en/kibana/current/kibana-privileges.html).
-   {: .alert .alert-info}
+   For admin users apply this cluster role.
+      ```bash
+      kubectl create clusterrolebinding <user>-tigera-network-admin --user=<user> --clusterrole=tigera-network-admin
+      ```
    
-### Whitelisting {{site.prodname}} for your IdP
-Most IdPs require redirect URIs to be whitelisted in order to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
+   For regular users with view-only permissions apply this role.
+      ```bash
+      kubectl create clusterrolebinding <user>-tigera-ui-user --user=<user> --clusterrole=tigera-ui-user
+      ```
+
+### Allow {{site.prodname}} URIs in your IdP
+Most IdPs require redirect URIs to be allowed in order to redirect users at the end of the OAuth flow to the {{site.prodname}} Manager or to Kibana. 
 Similarly, most IdPs require authorizing browser (JavaScript) origins, since they are not able to provide a client secret to the IdP. 
 Please consult your IdPs documentation for authorizing your domain for the respective origins and destinations.
 
