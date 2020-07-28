@@ -10,7 +10,7 @@ It requires a Kubernetes cluster configured with Calico networking and {{site.pr
 
 You can quickly and easily obtain such a cluster by following one of the
 [installation guides]({{site.baseurl}}/getting-started/kubernetes/),
-or by [upgrading an existing cluster]({{site.baseurl}}/getting-started/kubernetes/upgrade/upgrade-to-tsee).
+or by [upgrading an existing cluster]({{site.baseurl}}/maintenance/upgrade-to-tsee).
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 

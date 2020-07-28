@@ -34,6 +34,8 @@ section:
     path: /maintenance/helm-upgrade-tsee
 - title: Options to manage Calico Enterprise license expiration
   path: /maintenance/license-options
+- title: Upgrade from Calico to Calico Enterprise
+  path: /maintenance/upgrade-to-tsee
 - title: Monitor
   path: /maintenance/monitor/
   section: 
