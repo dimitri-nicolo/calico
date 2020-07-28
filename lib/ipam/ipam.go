@@ -405,7 +405,7 @@ type blockAssignState struct {
 	allowNewClaim         bool
 
 	// For UT purpose, how many times datastore retry has been triggered.
-	datastoreRetryCount   int
+	datastoreRetryCount int
 }
 
 // Given a list of host-affine blocks, findOrClaimBlock returns one block with minimum free ips.
@@ -454,7 +454,7 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 				break
 			}
 
-			s.datastoreRetryCount ++
+			s.datastoreRetryCount++
 		}
 	}
 
@@ -529,9 +529,9 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 					logCtx.Errorf(errString)
 					return nil, false, errors.New(errString)
 				}
-				s.datastoreRetryCount ++
+				s.datastoreRetryCount++
 			}
-			s.datastoreRetryCount ++
+			s.datastoreRetryCount++
 		}
 		return nil, false, errors.New("Max retries hit - excessive concurrent IPAM requests")
 	}

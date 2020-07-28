@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -185,7 +185,7 @@ var _ = DescribeTable(
 		false,
 	),
 	Entry(
-		"poorly formated IP pool",
+		"poorly formatted IP pool",
 		"/calico/v1/ipam/v4/pool/577559",
 		nil,
 		true,
