@@ -574,7 +574,7 @@ func (s sortedCache) Less(i, j int) bool {
 	// Action index is equal, check source action.
 	si = s[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
 	sj = s[j].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
-	if si < sj {	//nolint:golint,gosimple
+	if si < sj { //nolint:golint,gosimple
 		return true
 	}
 

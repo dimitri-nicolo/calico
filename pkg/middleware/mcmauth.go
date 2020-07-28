@@ -18,7 +18,7 @@ import (
 const (
 	// Default cluster name for standalone and management cluster.
 	DefaultCluster    = "cluster"
-	voltronServiceURL = "https://localhost:9443"
+	VoltronServiceURL = "https://localhost:9443"
 	XClusterIDHeader  = "x-cluster-id"
 )
 
@@ -34,7 +34,7 @@ const (
 // - es-proxy then makes a rbac calls to see what jane can see in the managed cluster.
 //
 // This is how the RBAC calls are made to the other cluster:
-// - We replace the host of the k8s-api server to the voltronServiceURL and add the XClusterIDHeader
+// - We replace the host of the k8s-api server to the VoltronServiceURL and add the XClusterIDHeader
 // - Voltron will read this header and send it through a tunnel to Guardian in the managed cluster
 // - On the other side of the tunnel Guardian impersonates es-proxy-server (sa=tigera-manager) to do
 //     subject access reviews for Jane
@@ -112,7 +112,7 @@ func mustCreateClusterConfig(clusterID, voltronCAPath string) *rest.Config {
 		log.WithError(err).Panic("failed to build kubernetes client config")
 	}
 	if clusterID != DefaultCluster {
-		config.Host = voltronServiceURL
+		config.Host = VoltronServiceURL
 		config.CAFile = voltronCAPath
 		config.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 			return &addHeaderRoundTripper{

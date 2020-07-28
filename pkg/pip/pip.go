@@ -8,14 +8,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/pkg/list"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/tigera/lma/pkg/list"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 // New returns a new PIP instance.
-func New(cfg *pipcfg.Config, listSrc list.Source, es pelastic.Client) PIP {
+func New(cfg *pipcfg.Config, listSrc ClusterAwareLister, es pelastic.Client) PIP {
 	p := &pip{
 		listSrc:  listSrc,
 		esClient: es,
@@ -24,9 +26,13 @@ func New(cfg *pipcfg.Config, listSrc list.Source, es pelastic.Client) PIP {
 	return p
 }
 
+type ClusterAwareLister interface {
+	RetrieveList(clusterID string, kind metav1.TypeMeta) (*list.TimestampedResourceList, error)
+}
+
 // pip implements the PIP interface.
 type pip struct {
-	listSrc  list.Source
+	listSrc  ClusterAwareLister
 	esClient pelastic.Client
 	cfg      *pipcfg.Config
 }

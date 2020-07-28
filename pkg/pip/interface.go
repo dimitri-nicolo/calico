@@ -34,6 +34,7 @@ type PolicyImpactParams struct {
 	FromTime        *time.Time       `json:"-"`
 	ToTime          *time.Time       `json:"-"`
 	Query           elastic.Query    `json:"-"`
+	ClusterName     string           `json:"-"`
 	DocumentIndex   string           `json:"-"`
 	Limit           int32            `json:"-"`
 	ImpactedOnly    bool             `json:"-"`

@@ -9,10 +9,15 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/tigera/compliance/pkg/config"
+
 	log "github.com/sirupsen/logrus"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	celastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/list"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
@@ -84,7 +89,17 @@ func Start(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	p := pip.New(policyCalcConfig, k8sClientSet, esClient)
+
+	// Create the cluster aware client factory and use that to create a cluster aware lister.
+	cc := &config.Config{
+		MultiClusterForwardingCA: cfg.VoltronCAPath,
+		MultiClusterForwardingEndpoint: middleware.VoltronServiceURL,
+	}
+	factory := datastore.MustGetRESTClient(cc)
+	lister := &clusterAwareLister{factory}
+
+	// Create a PIP backend.
+	p := pip.New(policyCalcConfig, lister, esClient)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
@@ -187,4 +202,15 @@ func addCertToCertPool(caPath string) *x509.CertPool {
 		log.WithError(err).Fatal("Could not add CA to pool")
 	}
 	return systemCertPool
+}
+
+// clusterAwareLister implements the PIP ClusterAwareLister interface. It is simply a wrapper around the
+// RESTClientFactory to instantiate the appropriate client and invoke the List method on that client.
+type clusterAwareLister struct {
+	factory datastore.RESTClientFactory
+}
+
+func (c *clusterAwareLister) RetrieveList(clusterID string, kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
+	clientset := c.factory.ClientSet(clusterID)
+	return clientset.RetrieveList(kind)
 }

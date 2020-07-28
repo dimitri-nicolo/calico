@@ -412,6 +412,7 @@ func getPIPParams(params *FlowLogsParams) *pippkg.PolicyImpactParams {
 	return &pippkg.PolicyImpactParams{
 		Query:           query,
 		DocumentIndex:   index,
+		ClusterName:     params.ClusterName,
 		ResourceActions: []pippkg.ResourceChange{policyChange},
 		Limit:           params.Limit,
 		ImpactedOnly:    params.PolicyPreview.ImpactedOnly,
