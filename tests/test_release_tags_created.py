@@ -25,6 +25,7 @@ MAPPED_COMPONENTS = {
     'fluentd': 'fluentd-docker',
     'es-proxy': 'es-proxy-image',
     'kibana': 'kibana-docker',
+    'elasticsearch': 'elasticsearch-docker',
     'cloud-controllers': 'cloud-controllers',
     'elastic-tsee-installer': 'intrusion-detection',
     'es-curator': 'curator',
