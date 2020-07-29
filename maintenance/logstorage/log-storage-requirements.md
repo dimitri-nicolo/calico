@@ -19,6 +19,9 @@ We recommend using local disks for storage when possible (this offers the best p
 but high performance remote storage can also be used.  Examples of suitable remote storage include
 AWS SSD type EBS disks, or GCP PD-SSDs.
 
+> **Important**: Do not use Amazon EFS, it is not compatible with Elasticsearch. 
+  {: .alert .alert-danger}
+
 For information on how to configure storage, please consult the [Kubernetes](https://kubernetes.io/docs/concepts/storage/storage-classes/)
 or [OpenShift](https://docs.openshift.com/container-platform/4.2/storage/understanding-persistent-storage.html) documentation.
 - If you're going to use local disks, you may find the [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)
