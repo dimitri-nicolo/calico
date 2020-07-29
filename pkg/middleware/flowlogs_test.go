@@ -7,7 +7,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/tigera/lma/pkg/list"
+
+	"github.com/projectcalico/libcalico-go/lib/errors"
+
 	"github.com/tigera/lma/pkg/rbac"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +22,6 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
-	listMock "github.com/tigera/compliance/pkg/list/mock"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
@@ -372,8 +377,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			preview, err := getPolicyPreview(string(validPreview))
 			Expect(err).To(Not(HaveOccurred()))
 
-			listSrc := listMock.NewSource()
-			listSrc.Initialize(time.Now())
+			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
@@ -403,8 +407,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			preview, err := getPolicyPreview(string(validPreview))
 			Expect(err).To(Not(HaveOccurred()))
 
-			listSrc := listMock.NewSource()
-			listSrc.Initialize(time.Now())
+			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
@@ -434,8 +437,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			preview.ImpactedOnly = true
 
-			listSrc := listMock.NewSource()
-			listSrc.Initialize(time.Now())
+			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
@@ -454,8 +456,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		})
 
 		It("should fail to retrieve a FlowLogResults object and return an error", func() {
-			listSrc := listMock.NewSource()
-			listSrc.Initialize(time.Now())
+			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{""})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
@@ -476,8 +477,6 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			aggResponse, err := ioutil.ReadFile("testdata/flow_logs_1_aggregation_rbac.json")
 			Expect(err).To(Not(HaveOccurred()))
 
-			listSrc := listMock.NewSource()
-			listSrc.Initialize(time.Now())
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			params := &FlowLogsParams{
 				Limit: 1,
@@ -512,8 +511,7 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			preview, err := getPolicyPreview(string(validPreview))
 			Expect(err).To(Not(HaveOccurred()))
 
-			listSrc := listMock.NewSource()
-			listSrc.Initialize(time.Now())
+			listSrc := newMockLister()
 			esClient = lmaelastic.NewMockSearchClient([]interface{}{string(esResponse)})
 			pipClient := pip.New(pipcfg.MustLoadConfig(), listSrc, esClient)
 			params := &FlowLogsParams{
@@ -574,4 +572,42 @@ func (t *testHelper) CheckCanPreviewPolicyAction(action string, policy resources
 	Expect(t.action).To(Equal(action))
 	Expect(t.name).To(Equal(policy.GetObjectMeta().GetName()))
 	return 200, nil
+}
+
+// mockList is used by both mockSource and mockDestination.
+type mockLister struct {
+	data          []*list.TimestampedResourceList
+	RetrieveCalls int
+}
+
+// Initialize is used by the test to fill the lister with a list for each resource type
+//   Useful for replayer.
+func newMockLister() *mockLister {
+	m := &mockLister{}
+	for _, rh := range resources.GetAllResourceHelpers() {
+		resList := rh.NewResourceList()
+		tm := rh.TypeMeta()
+		resList.GetObjectKind().SetGroupVersionKind((&tm).GroupVersionKind())
+		m.data = append(m.data, &list.TimestampedResourceList{
+			ResourceList:              resList,
+			RequestStartedTimestamp:   metav1.Time{Time: time.Now()},
+			RequestCompletedTimestamp: metav1.Time{Time: time.Now()}})
+	}
+	return m
+}
+
+// mockLister implements the ClusterAwareLister interface.
+func (m *mockLister) RetrieveList(cluster string, tm metav1.TypeMeta) (*list.TimestampedResourceList, error) {
+	listToReturn := (*list.TimestampedResourceList)(nil)
+	for i := 0; i < len(m.data); i++ {
+		resList := m.data[i]
+		typeMetaMatches := resList.GetObjectKind().GroupVersionKind() == tm.GroupVersionKind()
+		if typeMetaMatches {
+			listToReturn = resList
+		}
+	}
+	if listToReturn == nil {
+		return nil, errors.ErrorResourceDoesNotExist{}
+	}
+	return listToReturn, nil
 }

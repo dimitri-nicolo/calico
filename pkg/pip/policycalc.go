@@ -75,12 +75,12 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 		}
 		if s.cfg.AugmentFlowLogDataWithCurrentConfiguration {
 			log.Debug("Augmenting flow log data with current datastore configuration")
-			_ = s.syncFromDatastore(ctx, requiredEndpointTypes, ec)
+			_ = s.syncFromDatastore(ctx, params.ClusterName, requiredEndpointTypes, ec)
 		}
 	}()
 
 	// Load the initial set of policy. If this errors we cannot continue.
-	if err := s.syncFromDatastore(ctx, requiredPolicyTypes, xc); err != nil {
+	if err := s.syncFromDatastore(ctx, params.ClusterName, requiredPolicyTypes, xc); err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, c
 // syncFromDatastore will load the current set of configuration from the datastore and invoke the syncer callbacks.
 // This is used to populate both the xrefcache and the EndpointCache which both implement the syncer callbacks
 // interface.
-func (s *pip) syncFromDatastore(ctx context.Context, types []metav1.TypeMeta, cb syncer.SyncerCallbacks) error {
+func (s *pip) syncFromDatastore(ctx context.Context, clusterName string, types []metav1.TypeMeta, cb syncer.SyncerCallbacks) error {
 	wg := sync.WaitGroup{}
 	lock := sync.Mutex{}
 	errs := make(chan error, len(types))
@@ -141,7 +141,7 @@ func (s *pip) syncFromDatastore(ctx context.Context, types []metav1.TypeMeta, cb
 			defer wg.Done()
 
 			// List current resource configuration for this type.
-			l, err := s.listSrc.RetrieveList(t)
+			l, err := s.listSrc.RetrieveList(clusterName, t)
 			if err != nil {
 				errs <- err
 				return
