@@ -473,8 +473,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 
 	# Find all the hosted manifests and copy them into the release dir. Use xargs to mkdir the destination directory structure before copying them.
 	# -printf "%P\n" prints the file name and directory structure with the search dir stripped off
-	find $(MANIFEST_SRC) -name  '*.yaml' | \
-		sed -n 's|$(MANIFEST_SRC)||p' | \
+	find $(MANIFEST_SRC) -name  '*.yaml' -printf "%P\n" | \
 	  xargs -I FILE sh -c \
 	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
 	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'
