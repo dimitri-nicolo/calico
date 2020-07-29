@@ -8,13 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/snapshot"
 	"github.com/tigera/compliance/pkg/version"
 	"github.com/tigera/lma/pkg/elastic"
+
+	"github.com/projectcalico/libcalico-go/lib/health"
 
 	"k8s.io/klog"
 )

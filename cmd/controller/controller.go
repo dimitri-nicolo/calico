@@ -5,8 +5,9 @@ import (
 	"context"
 	"flag"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/health"
 
 	"os"
 	"os/signal"

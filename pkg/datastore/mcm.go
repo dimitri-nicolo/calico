@@ -27,6 +27,8 @@ const (
 
 // Bundles clientMap behind convenience methods for multi cluster setups.
 type RESTClientFactory interface {
+	ClientSet(clusterID string) ClientSet
+	K8sClient(clusterID string) kubernetes.Interface
 	CalicoClient(clusterID string) v3.ProjectcalicoV3Interface
 	ESClient(clusterID string) elastic.Client
 	K8sAuth(clusterID string) auth.K8sAuthInterface
@@ -42,9 +44,10 @@ type RESTClientHolder struct {
 
 // Groups clients per cluster
 type clusterClients struct {
-	calico v3.ProjectcalicoV3Interface
-	es     elastic.Client
-	k8s    auth.K8sAuthInterface
+	calico  v3.ProjectcalicoV3Interface
+	k8s     kubernetes.Interface
+	es      elastic.Client
+	k8sAuth auth.K8sAuthInterface
 }
 
 // Creates an instance of RESTClientFactory, which holds various clients.
@@ -57,14 +60,31 @@ func MustGetRESTClient(config *config.Config) RESTClientFactory {
 	if err != nil {
 		log.WithError(err).Panic("Unable to create auth configuration")
 	}
+	k8sClient := MustGetKubernetesClient()
 	client.clientMap = map[string]clusterClients{
 		DefaultCluster: {
 			MustGetCalicoClient(),
+			k8sClient,
 			elastic.MustGetElasticClient(),
-			auth.NewK8sAuth(MustGetKubernetesClient(), authenticator),
+			auth.NewK8sAuth(k8sClient, authenticator),
 		},
 	}
 	return &client
+}
+
+// Return a ClientSet that lets you fetch Calico and Kubernetes resources from the datastore for a given cluster.
+func (c *RESTClientHolder) ClientSet(clusterID string) ClientSet {
+	c.Lock()
+	defer c.Unlock()
+	if clusterID == "" {
+		clusterID = DefaultCluster
+	} else if _, ok := c.clientMap[clusterID]; !ok {
+		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
+	}
+	return &clientSet{
+		k8sInterface:    c.clientMap[clusterID].k8s,
+		calicoInterface: c.clientMap[clusterID].calico,
+	}
 }
 
 // Return a client that lets you fetch calico objects from the datastore for a given cluster.
@@ -78,6 +98,19 @@ func (c *RESTClientHolder) CalicoClient(clusterID string) v3.ProjectcalicoV3Inte
 		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
 	}
 	return c.clientMap[clusterID].calico
+}
+
+// Return a client that lets you fetch kubernetes objects from the datastore for a given cluster.
+func (c *RESTClientHolder) K8sClient(clusterID string) kubernetes.Interface {
+	c.Lock()
+	defer c.Unlock()
+	if clusterID == "" {
+		return c.clientMap[DefaultCluster].k8s
+	}
+	if _, ok := c.clientMap[clusterID]; !ok {
+		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
+	}
+	return c.clientMap[clusterID].k8s
 }
 
 // Return a client that lets you fetch reports from elasticsearch for a given cluster.
@@ -98,12 +131,12 @@ func (c *RESTClientHolder) K8sAuth(clusterID string) auth.K8sAuthInterface {
 	c.Lock()
 	defer c.Unlock()
 	if clusterID == "" {
-		return c.clientMap[DefaultCluster].k8s
+		return c.clientMap[DefaultCluster].k8sAuth
 	}
 	if _, ok := c.clientMap[clusterID]; !ok {
 		c.mustAddCluster(clusterID, c.multiClusterForwardingCA, c.multiClusterForwardingEndpoint)
 	}
-	return c.clientMap[clusterID].k8s
+	return c.clientMap[clusterID].k8sAuth
 }
 
 // Lazily add clients for a new cluster.
@@ -129,6 +162,7 @@ func (c *RESTClientHolder) mustAddCluster(clusterID, caPath, host string) {
 
 	c.clientMap[clusterID] = clusterClients{
 		client.ProjectcalicoV3(),
+		k8sClient,
 		mustCreateESClientForCluster(clusterID),
 		auth.NewK8sAuth(k8sClient, authenticator),
 	}

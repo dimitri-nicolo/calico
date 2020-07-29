@@ -18,12 +18,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
+	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
@@ -354,6 +356,14 @@ func (t *tester) CanGetReportType(x string) (bool, error) {
 type fakeRESTFactory struct {
 	k8sauth *mock
 	t       *tester
+}
+
+func (c *fakeRESTFactory) K8sClient(clusterID string) kubernetes.Interface {
+	return nil
+}
+
+func (c *fakeRESTFactory) ClientSet(clusterID string) datastore.ClientSet {
+	return nil
 }
 
 func (c *fakeRESTFactory) CalicoClient(clusterID string) clientv3.ProjectcalicoV3Interface {

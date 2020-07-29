@@ -59,11 +59,11 @@ var _ = Describe("Benchmark", func() {
 
 		By("tests")
 		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{Section: "section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}}).Equal(
-			api.Benchmarks{Tests: []api.BenchmarkTest{{Section:"section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}},
+			api.Benchmarks{Tests: []api.BenchmarkTest{{Section: "section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}},
 		)).To(BeTrue())
 
 		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{Section: "section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: true}}}).Equal(
-			api.Benchmarks{Tests: []api.BenchmarkTest{{Section:"section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: false}}},
+			api.Benchmarks{Tests: []api.BenchmarkTest{{Section: "section", SectionDesc: "sectionDesc", TestNumber: "testNum", TestDesc: "testDesc", TestInfo: "testInfo", Status: "status", Scored: false}}},
 		)).To(BeFalse())
 	})
 })
