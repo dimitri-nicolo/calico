@@ -114,13 +114,21 @@ def test_chart_values_updated(name, chart):
     # load the values.yaml file
     tar = tarfile.open(TGZ_FILE)
     values = tar.extractfile('{0}/{1}'.format(chart.get('name'), VALUES_FILE_NAME)).read()
+    print '[INFO] extracting values from path ' + '{0}/{1}'.format(chart.get('name'), VALUES_FILE_NAME)
+    sub_values = tar.extractfile('{0}/charts/tigera-prometheus-operator/{1}'.format(chart.get('name'), VALUES_FILE_NAME)).read()
+    print '[INFO] extracting subchart values from path ' + '{0}/charts/tigera-prometheus-operator/{1}'.format(chart.get('name'), VALUES_FILE_NAME)
+
     chart_values = yaml.safe_load(values)
+    subchart_values = yaml.safe_load(sub_values)
 
     print '[INFO] compare expected/actual images & tags in the {} chart values.yaml'.format(name)
     mapped_images = chart.get('images')
     for k, v in release.get('components').items():
       if k in mapped_images.keys():
+        # Search for a match in both main chart and subchart
         config = chart_values.get(mapped_images[k])
+        if config is None:
+            config = subchart_values.get(mapped_images[k])
         assert config != None
         expected_image = '{0}{1}'.format('' if k in REGISTRY_EXCEPTION else v.get('registry', REGISTRY) + '/', v.get('image'))
         expected_version = v.get('version')
@@ -137,5 +145,6 @@ def test_chart_values_updated(name, chart):
             actual_tag = config.get('tag')
         elif 'version' in config:
             actual_tag = config.get('version')
+
         assert actual_image == expected_image
         assert actual_tag == expected_version
