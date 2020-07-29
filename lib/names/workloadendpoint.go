@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -236,7 +236,7 @@ var (
 // instance with fields populated according to the WorkloadEndpoint name format.
 func ParseWorkloadEndpointName(wepName string) (WorkloadEndpointIdentifiers, error) {
 	if len(wepName) == 0 {
-		return WorkloadEndpointIdentifiers{}, errors.New("Cannot parse emty string")
+		return WorkloadEndpointIdentifiers{}, errors.New("Cannot parse empty string")
 	}
 	parts := extractParts(wepName)
 	if parts == nil || len(parts) == 0 {

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -122,6 +122,10 @@ const (
 type BGPPassword struct {
 	// Selects a key of a secret in the node pod's namespace.
 	SecretKeyRef *k8sv1.SecretKeySelector `json:"secretKeyRef,omitempty"`
+	// Option to keep the original nexthop field when routes are sent to a BGP Peer.
+	// Setting "true" configures the selected BGP Peers node to use the "next hop keep;"
+	// instead of "next hop self;"(default) in the specific branch of the Node on "bird.cfg".
+	KeepOriginalNextHop bool `json:"keepOriginalNextHop,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

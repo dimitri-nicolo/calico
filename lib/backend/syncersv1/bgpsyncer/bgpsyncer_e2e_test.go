@@ -1,4 +1,4 @@
-// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package bgpsyncer_test
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +38,7 @@ import (
 
 // These tests validate that the various resources that the BGP watches are
 // handled correctly by the syncer.  We don't validate in detail the behavior of
-// each of udpate handlers that are invoked, since these are tested more thoroughly
+// each of update handlers that are invoked, since these are tested more thoroughly
 // elsewhere.
 var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 

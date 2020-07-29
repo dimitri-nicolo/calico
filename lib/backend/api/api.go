@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ const (
 	// concurrently.
 	ResyncInProgress
 	// InSync means the Syncer has now sent all the existing keys in the
-	// datastore and the user of hte API has the full picture.
+	// datastore and the user of the API has the full picture.
 	InSync
 )
 
@@ -188,7 +188,6 @@ type WatchInterface interface {
 
 	// Returns a chan which will receive all the events.  This channel is closed when:
 	// -  Stop() is called, or
-	// -  An error of type errors.ErrorWatchTerminated is received.
 	// In both cases the watcher will be cleaned up, and the client should stop receiving
 	// from this channel.
 	ResultChan() <-chan WatchEvent

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -803,7 +803,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 			}, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Attempting to change te CIDR")
+			By("Attempting to change the CIDR")
 			pool.Spec.CIDR = "1.2.4.0/24"
 			_, err = c.IPPools().Update(ctx, pool, options.SetOptions{})
 			Expect(err).To(HaveOccurred())

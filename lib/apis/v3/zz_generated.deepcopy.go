@@ -1216,6 +1216,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.InterfaceRefreshInterval != nil {
+		in, out := &in.InterfaceRefreshInterval, &out.InterfaceRefreshInterval
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.IptablesRefreshInterval != nil {
 		in, out := &in.IptablesRefreshInterval, &out.IptablesRefreshInterval
 		*out = new(metav1.Duration)
