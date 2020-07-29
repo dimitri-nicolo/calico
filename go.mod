@@ -1,6 +1,6 @@
 module github.com/tigera/apiserver
 
-go 1.13
+go 1.14
 
 require (
 	github.com/go-openapi/spec v0.19.4
@@ -11,7 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
-	github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814
+	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
