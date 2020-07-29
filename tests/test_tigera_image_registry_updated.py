@@ -31,6 +31,8 @@ def test_tigera_image_registry_updated():
         expected_ver = RELEASE_VERSION
         if ver_image[0] == 'operator':
           expected_ver = release.get('tigera-operator').get('version')
+        if ver_image[0] == 'operator-init':
+          expected_ver = release.get('tigera-operator-init').get('version')
         if ver_image[0] == 'kibana':
           expected_ver = str(release['components'].get('kibana').get('version'))
         print '[INFO] checking registry image %s references %s' % (ver_image[0], expected_ver)
@@ -44,7 +46,7 @@ def test_non_tigera_image_registry_updated():
 
     page = BeautifulSoup(req.content, features="html.parser").find("p", text="Use the following commands to pull the required Calico Enterprise images.").find_next('code')
     images = [x.replace('docker pull ', '') for x in page.text.split('\n') if not re.search('tigera', x) and not x == '']
-    
+
     assert len(images) == len(expected_images)
     for image in images:
         print '[INFO] checking registry image %s' % (image)
