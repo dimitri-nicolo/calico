@@ -1,6 +1,6 @@
 module github.com/tigera/lma
 
-go 1.13
+go 1.14
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d // indirect
@@ -36,7 +36,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32
+	github.com/tigera/apiserver v0.0.0-20200730204338-ab34dfe6eeda
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
