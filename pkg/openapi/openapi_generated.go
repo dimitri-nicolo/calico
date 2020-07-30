@@ -2923,6 +2923,13 @@ func schema_libcalico_go_lib_apis_v3_BGPPassword(ref common.ReferenceCallback) c
 							Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
 						},
 					},
+					"keepOriginalNextHop": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Option to keep the original nexthop field when routes are sent to a BGP Peer. Setting \"true\" configures the selected BGP Peers node to use the \"next hop keep;\" instead of \"next hop self;\"(default) in the specific branch of the Node on \"bird.cfg\".",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -4673,6 +4680,12 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					"routeRefreshInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RouterefreshInterval is the period at which Felix re-checks the routes in the dataplane to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable route refresh. [Default: 90s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"interfaceRefreshInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InterfaceRefreshInterval is the period at which Felix rescans local interfaces to verify their state. The rescan can be disabled by setting the interval to 0.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -7683,14 +7696,14 @@ func schema_libcalico_go_lib_apis_v3_IPPoolSpec(ref common.ReferenceCallback) co
 					},
 					"vxlanMode": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Contains configuration for VXLAN tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. VXLAN tunelling is disabled).",
+							Description: "Contains configuration for VXLAN tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. VXLAN tunneling is disabled).",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"ipipMode": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Contains configuration for IPIP tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. IPIP tunelling is disabled).",
+							Description: "Contains configuration for IPIP tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. IPIP tunneling is disabled).",
 							Type:        []string{"string"},
 							Format:      "",
 						},
