@@ -37,10 +37,12 @@ import (
 	"github.com/mcuadros/go-version"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
-	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
-	"github.com/projectcalico/libcalico-go/lib/names"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 func min(a, b int) int {
@@ -451,7 +453,7 @@ func CheckSysctlValue(sysctlPath, value string) error {
 
 	f := bufio.NewReader(fh)
 
-	// Ignoring second output (isPrefix) since it's not necessory
+	// Ignoring second output (isPrefix) since it's not necessary
 	buf, _, err := f.ReadLine()
 	if err != nil {
 		// EOF without a match

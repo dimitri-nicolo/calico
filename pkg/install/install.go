@@ -27,11 +27,12 @@ import (
 	"github.com/howeyc/fsnotify"
 	"github.com/kelseyhightower/envconfig"
 	cp "github.com/nmrshll/go-cp"
-	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/prometheus/common/log"
 	"github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/pkg/fileutil"
 	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 type config struct {
@@ -339,6 +340,8 @@ func writeCNIConfig(c config) {
 		netconf = string(netconfBytes)
 	}
 
+	kubeconfigPath := c.CNINetDir + "/calico-kubeconfig"
+
 	// Perform replacements of variables.
 	nodename, err := names.Hostname()
 	if err != nil {
@@ -347,7 +350,7 @@ func writeCNIConfig(c config) {
 	netconf = strings.Replace(netconf, "__LOG_LEVEL__", getEnv("LOG_LEVEL", "warn"), -1)
 	netconf = strings.Replace(netconf, "__DATASTORE_TYPE__", getEnv("DATASTORE_TYPE", "kubernetes"), -1)
 	netconf = strings.Replace(netconf, "__KUBERNETES_NODE_NAME__", getEnv("NODENAME", nodename), -1)
-	netconf = strings.Replace(netconf, "__KUBECONFIG_FILEPATH__", "/etc/cni/net.d/calico-kubeconfig", -1)
+	netconf = strings.Replace(netconf, "__KUBECONFIG_FILEPATH__", kubeconfigPath, -1)
 	netconf = strings.Replace(netconf, "__CNI_MTU__", getEnv("CNI_MTU", "1500"), -1)
 
 	netconf = strings.Replace(netconf, "__KUBERNETES_SERVICE_HOST__", getEnv("KUBERNETES_SERVICE_HOST", ""), -1)

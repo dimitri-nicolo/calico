@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER=v0.40
+GO_BUILD_VER=v0.45
 
 GIT_USE_SSH = true
 
@@ -77,6 +77,9 @@ clean:
 	rm -f *.created
 	rm -f crds.yaml
 	rm -rf config/
+	# If the vendor directory exists then the build fails with golang 1.14, and this folder exists in semaphore v1 but it's
+	# empty
+	rm -rf vendor/
 
 ###############################################################################
 # Updating pins

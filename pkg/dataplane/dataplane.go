@@ -22,11 +22,12 @@ import (
 
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types/current"
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/cni-plugin/pkg/dataplane/grpc"
 	"github.com/projectcalico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/sirupsen/logrus"
 )
 
 type Dataplane interface {

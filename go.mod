@@ -1,13 +1,14 @@
 module github.com/projectcalico/cni-plugin
 
-go 1.12
+go 1.14
 
 require (
 	github.com/Microsoft/hcsshim v0.8.6
 	github.com/buger/jsonparser v0.0.0-20180808090653-f4dd9f5a6b44
 	github.com/containernetworking/cni v0.7.1
 	github.com/containernetworking/plugins v0.8.5
-
+	github.com/emicklei/go-restful v2.11.1+incompatible // indirect
+	github.com/go-openapi/spec v0.19.4 // indirect
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.3.1 // indirect
 	github.com/howeyc/fsnotify v0.9.0
@@ -29,15 +30,13 @@ require (
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/common v0.6.0
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
-
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 // indirect
 	github.com/vishvananda/netlink v0.0.0-20181108222139-023a6dafdcdf
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
-
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
+	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	k8s.io/api v0.17.3
