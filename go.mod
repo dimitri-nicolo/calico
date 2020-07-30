@@ -1,6 +1,6 @@
 module github.com/projectcalico/calicoctl
 
-go 1.12
+go 1.14
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
@@ -35,6 +35,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
