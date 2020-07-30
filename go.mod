@@ -2,7 +2,7 @@ module github.com/tigera/license-agent
 
 go 1.13
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d
 
 require (
 	github.com/kelseyhightower/envconfig v1.4.0
