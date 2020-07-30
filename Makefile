@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.40
+GO_BUILD_VER    ?= v0.45
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
@@ -119,7 +119,7 @@ update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-licensing-pin
 # This section contains the code generation stuff
 ###############################################################################
 .PHONY: gen-execs
-gen-execs .generate_execs: $(BINDIR)/defaulter-gen \
+gen-execs .generate_execs: lint-cache-dir $(BINDIR)/defaulter-gen \
             $(BINDIR)/deepcopy-gen \
             $(BINDIR)/conversion-gen \
             $(BINDIR)/client-gen \
@@ -158,7 +158,7 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .PHONY: gen-files
-gen-files .generate_files: .generate_execs
+gen-files .generate_files: lint-cache-dir .generate_execs clean-generated
 	# Generate defaults
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(GIT_CONFIG_SSH) $(BINDIR)/defaulter-gen \
@@ -197,6 +197,7 @@ gen-files .generate_files: .generate_execs
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3,k8s.io/api/core/v1,k8s.io/api/networking/v1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/version,k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/util/intstr,github.com/projectcalico/libcalico-go/lib/apis/v3,github.com/projectcalico/libcalico-go/lib/apis/v1,github.com/projectcalico/libcalico-go/lib/numorstring" \
 		--output-package "$(PACKAGE_NAME)/pkg/openapi"'
 	touch .generate_files
+	$(MAKE) fix
 
 ###############################################################################
 # ensure we have a real imagetag
@@ -216,6 +217,7 @@ push-image: imagetag tag-image
 # Static checks
 ###############################################################################
 .PHONY: static-checks
+
 ## Perform static checks on the code.
 # TODO: re-enable these linters !
 LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck --timeout 5m
@@ -225,7 +227,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks tigera/cnx-apiserver fv ut check-generated-files
+ci: clean check-generated-files static-checks tigera/cnx-apiserver fv ut
 
 ## Deploys images to registry
 cd:
@@ -240,7 +242,7 @@ endif
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
-check-generated-files: clean-generated .generate_files
+check-generated-files: .generate_files
 	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
 	  echo "Generated files are out of date."; \
 	  false; \
@@ -415,8 +417,9 @@ fv-kdd: vendor/.up-to-date run-kubernetes-server hack-lib
 		sh -c 'K8S_API_ENDPOINT="http://127.0.0.1:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
-clean: clean-bin clean-build-image clean-generated clean-hack-lib
+clean: clean-bin clean-build-image clean-hack-lib
 	rm -rf vendor/
+	rm -rf .lint-cache
 clean-build-image:
 	docker rmi -f tigera/cnx-apiserver > /dev/null 2>&1 || true
 
@@ -425,6 +428,7 @@ clean-generated:
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
 	# rollback changes to the generated clientset directories
 	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
+	rm -rf pkg/client/clientset_generated pkg/client/informers_generated pkg/client/listers_generated
 
 clean-bin:
 	rm -rf $(BINDIR) \
