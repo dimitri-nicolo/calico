@@ -283,14 +283,14 @@ func (cbs *describeCmd) print(output OutputList) {
 		}
 
 		if len(ep.Profiles) > 0 {
-			buf.WriteString(fmt.Sprintf("  Profiles:\n"))
+			buf.WriteString("  Profiles:\n")
 			for _, prof := range ep.Profiles {
 				buf.WriteString(fmt.Sprintf("    Profile \"%v\"\n", prof.Name))
 			}
 		}
 
 		if len(ep.Rules) > 0 {
-			buf.WriteString(fmt.Sprintf("  Rule matches:\n"))
+			buf.WriteString("  Rule matches:\n")
 			for _, rule := range ep.Rules {
 				ruleString := fmt.Sprintf("    Policy \"%v\" %v rule %v %v match\n", rule.PolicyName, rule.Direction, rule.Order, rule.SelectorType)
 				if rule.Selector != "" {
