@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -100,7 +100,7 @@ var _ = infrastructure.DatastoreDescribe("host-port tests", []apiconfig.Datastor
 
 	It("with a local workload, port should be reachable", func() {
 		w := workload.Run(felix, "w", "default", "10.65.0.2", "8055", "tcp")
-		w.ConfigureInDatastore(infra)
+		w.ConfigureInInfra(infra)
 		Eventually(metricsPortReachable, "10s", "1s").Should(BeTrue(), "Not reachable with workload running")
 		w.Stop()
 		Eventually(metricsPortReachable, "10s", "1s").Should(BeTrue(), "With workload stopped, not reachable")

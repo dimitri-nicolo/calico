@@ -34,7 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-GO_BUILD_VER?=v0.40
+GO_BUILD_VER?=v0.45
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins
@@ -170,7 +170,13 @@ TYPHA_REPO=github.com/tigera/typha-private
 update-licensing-pin:
 	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: update-licensing-pin replace-libcalico-pin replace-typha-pin
+update-pins: update-licensing-pin update-pod2daemon-pin replace-libcalico-pin replace-typha-pin
+
+POD2DAEMON_BRANCH?=$(PIN_BRANCH)
+POD2DAEMON_REPO?=github.com/projectcalico/pod2daemon
+
+update-pod2daemon-pin:
+	$(call update_pin,github.com/projectcalico/pod2daemon,$(POD2DAEMON_REPO),$(POD2DAEMON_BRANCH))
 
 ###############################################################################
 # Building the binary

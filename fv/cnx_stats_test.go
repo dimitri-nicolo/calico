@@ -920,10 +920,10 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 		infra.AddDefaultAllow()
 
 		ep1 = workload.Run(felix, "ep1", "default", "10.65.0.0", "8055", "tcp")
-		ep1.ConfigureInDatastore(infra)
+		ep1.ConfigureInInfra(infra)
 
 		ep2 = workload.Run(felix, "ep2", "default", "10.65.1.0", "8055", "tcp")
-		ep2.ConfigureInDatastore(infra)
+		ep2.ConfigureInInfra(infra)
 	})
 
 	AfterEach(func() {

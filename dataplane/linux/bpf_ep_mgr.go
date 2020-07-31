@@ -18,6 +18,7 @@ package intdataplane
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -29,57 +30,80 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/polprog"
-
 	"github.com/projectcalico/felix/bpf/tc"
-
 	"github.com/projectcalico/felix/idalloc"
-
 	"github.com/projectcalico/felix/ifacemonitor"
-
-	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/libcalico-go/lib/set"
-
+	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/ratelimited"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-type epIface struct {
-	ifacemonitor.State
-	jumpMapFDs map[PolDirection]bpf.MapFD
+const jumpMapCleanupInterval = 10 * time.Second
+
+type bpfInterface struct {
+	// info contains the information about the interface sent to us from external sources. For example,
+	// the ID of the controlling workload interface and our current expectation of its "oper state".
+	// When the info changes, we mark the interface dirty and refresh its dataplane state.
+	info bpfInterfaceInfo
+	// dpState contains the dataplane state that we've derived locally.  It caches the result of updating
+	// the interface (so changes to dpState don't cause the interface to be marked dirty).
+	dpState bpfInterfaceState
+}
+
+type bpfInterfaceInfo struct {
+	operState  ifacemonitor.State
+	endpointID *proto.WorkloadEndpointID
+}
+
+type bpfInterfaceState struct {
+	jumpMapFDs [2]bpf.MapFD
 }
 
 type bpfEndpointManager struct {
-	// Caches.  Updated immediately for now.
-	wlEps    map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	policies map[proto.PolicyID]*proto.Policy
-	profiles map[proto.ProfileID]*proto.Profile
+	// Main store of information about interfaces; indexed on interface name.
+	ifacesLock  sync.Mutex
+	nameToIface map[string]bpfInterface
 
-	ifacesLock sync.Mutex
-	ifaces     map[string]epIface
+	allWEPs        map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	happyWEPs      map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	happyWEPsDirty bool
+	policies       map[proto.PolicyID]*proto.Policy
+	profiles       map[proto.ProfileID]*proto.Profile
 
 	// Indexes
 	policiesToWorkloads map[proto.PolicyID]set.Set  /*proto.WorkloadEndpointID*/
 	profilesToWorkloads map[proto.ProfileID]set.Set /*proto.WorkloadEndpointID*/
 
-	dirtyWorkloads set.Set
-	dirtyIfaces    set.Set
+	dirtyIfaceNames set.Set
 
-	bpfLogLevel      string
-	hostname         string
-	hostIP           net.IP
-	fibLookupEnabled bool
-	dataIfaceRegex   *regexp.Regexp
-	ipSetIDAlloc     *idalloc.IDAllocator
-	epToHostDrop     bool
-	vxlanMTU         int
-	dsrEnabled       bool
+	bpfLogLevel        string
+	hostname           string
+	hostIP             net.IP
+	fibLookupEnabled   bool
+	dataIfaceRegex     *regexp.Regexp
+	workloadIfaceRegex *regexp.Regexp
+	ipSetIDAlloc       *idalloc.IDAllocator
+	epToHostDrop       bool
+	vxlanMTU           int
+	dsrEnabled         bool
 
-	ipSetMap bpf.Map
-	stateMap bpf.Map
+	ipSetMap            bpf.Map
+	stateMap            bpf.Map
+	ruleRenderer        bpfAllowChainRenderer
+	iptablesFilterTable *iptables.Table
+
+	startupOnce      sync.Once
+	mapCleanupRunner *ratelimited.Runner
+}
+
+type bpfAllowChainRenderer interface {
+	WorkloadInterfaceAllowChains(endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 }
 
 func newBPFEndpointManager(
@@ -88,32 +112,71 @@ func newBPFEndpointManager(
 	fibLookupEnabled bool,
 	epToHostDrop bool,
 	dataIfaceRegex *regexp.Regexp,
+	workloadIfaceRegex *regexp.Regexp,
 	ipSetIDAlloc *idalloc.IDAllocator,
 	vxlanMTU int,
 	dsrEnabled bool,
 	ipSetMap bpf.Map,
 	stateMap bpf.Map,
+	iptablesRuleRenderer bpfAllowChainRenderer,
+	iptablesFilterTable *iptables.Table,
 ) *bpfEndpointManager {
 	return &bpfEndpointManager{
-		wlEps:               map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		allWEPs:             map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		happyWEPs:           map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		happyWEPsDirty:      true,
 		policies:            map[proto.PolicyID]*proto.Policy{},
 		profiles:            map[proto.ProfileID]*proto.Profile{},
-		ifaces:              map[string]epIface{},
+		nameToIface:         map[string]bpfInterface{},
 		policiesToWorkloads: map[proto.PolicyID]set.Set{},
 		profilesToWorkloads: map[proto.ProfileID]set.Set{},
-		dirtyWorkloads:      set.New(),
-		dirtyIfaces:         set.New(),
+		dirtyIfaceNames:     set.New(),
 		bpfLogLevel:         bpfLogLevel,
 		hostname:            hostname,
 		fibLookupEnabled:    fibLookupEnabled,
 		dataIfaceRegex:      dataIfaceRegex,
+		workloadIfaceRegex:  workloadIfaceRegex,
 		ipSetIDAlloc:        ipSetIDAlloc,
 		epToHostDrop:        epToHostDrop,
 		vxlanMTU:            vxlanMTU,
 		dsrEnabled:          dsrEnabled,
 		ipSetMap:            ipSetMap,
 		stateMap:            stateMap,
+		ruleRenderer:        iptablesRuleRenderer,
+		iptablesFilterTable: iptablesFilterTable,
+		mapCleanupRunner: ratelimited.NewRunner(jumpMapCleanupInterval, func(ctx context.Context) {
+			log.Debug("Jump map cleanup triggered.")
+			tc.CleanUpJumpMaps()
+		}),
 	}
+}
+
+// withIface handles the bookkeeping for working with a particular bpfInterface value.  It
+// * creates the value if needed
+// * calls the giving callback with the value so it can be edited
+// * if the bpfInterface's info field changes, it marks it as dirty
+// * if the bpfInterface is now empty (no info or state), it cleans it up.
+func (m *bpfEndpointManager) withIface(ifaceName string, fn func(iface *bpfInterface) (forceDirty bool)) {
+	iface := m.nameToIface[ifaceName]
+	ifaceCopy := iface
+	dirty := fn(&iface)
+	logCtx := log.WithField("name", ifaceName)
+
+	var zeroIface bpfInterface
+	if iface == zeroIface {
+		logCtx.Debug("Interface info is now empty.")
+		delete(m.nameToIface, ifaceName)
+	}
+
+	dirty = dirty || iface.info != ifaceCopy.info
+
+	if !dirty {
+		return
+	}
+
+	logCtx.Debug("Marking iface dirty.")
+	m.dirtyIfaceNames.Add(ifaceName)
+	m.nameToIface[ifaceName] = iface
 }
 
 func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
@@ -151,8 +214,8 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 				// Should be safe without the lock since there shouldn't be any active background threads
 				// but taking it now makes us robust to refactoring.
 				m.ifacesLock.Lock()
-				for iface := range m.ifaces {
-					m.dirtyIfaces.Add(iface)
+				for ifaceName := range m.nameToIface {
+					m.dirtyIfaceNames.Add(ifaceName)
 				}
 				m.ifacesLock.Unlock()
 			} else {
@@ -168,27 +231,15 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 	m.ifacesLock.Lock()
 	defer m.ifacesLock.Unlock()
 
-	if update.State == ifacemonitor.StateUnknown {
-		log.WithField("iface", update.Name).Debug("Interface no longer present.")
-		if iface, ok := m.ifaces[update.Name]; ok {
-			for _, fd := range iface.jumpMapFDs {
-				_ = fd.Close()
-			}
-			delete(m.ifaces, update.Name)
-			m.dirtyIfaces.Add(update.Name)
-		}
-	} else {
-		log.WithFields(log.Fields{
-			"name":  update.Name,
-			"state": update.State,
-		}).Debug("Interface state updated.")
-		iface := m.ifaces[update.Name]
-		if iface.State != update.State {
-			iface.State = update.State
-			m.ifaces[update.Name] = iface
-			m.dirtyIfaces.Add(update.Name)
-		}
+	if !m.isDataIface(update.Name) && !m.isWorkloadIface(update.Name) {
+		log.WithField("update", update).Debug("Ignoring interface that's neither data nor workload.")
+		return
 	}
+
+	m.withIface(update.Name, func(iface *bpfInterface) bool {
+		iface.info.operState = update.State
+		return false
+	})
 }
 
 // onWorkloadEndpointUpdate adds/updates the workload in the cache along with the index from active policy to
@@ -196,10 +247,10 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceUpdate) {
 func (m *bpfEndpointManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
 	log.WithField("wep", msg.Endpoint).Debug("Workload endpoint update")
 	wlID := *msg.Id
-	oldWL := m.wlEps[wlID]
+	oldWEP := m.allWEPs[wlID]
 	wl := msg.Endpoint
-	if oldWL != nil {
-		for _, t := range oldWL.Tiers {
+	if oldWEP != nil {
+		for _, t := range oldWEP.Tiers {
 			for _, pol := range t.IngressPolicies {
 				polSet := m.policiesToWorkloads[proto.PolicyID{
 					Tier: t.Name,
@@ -222,7 +273,7 @@ func (m *bpfEndpointManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpoin
 			}
 		}
 
-		for _, profName := range oldWL.ProfileIds {
+		for _, profName := range oldWEP.ProfileIds {
 			profID := proto.ProfileID{Name: profName}
 			profSet := m.profilesToWorkloads[profID]
 			if profSet == nil {
@@ -230,8 +281,13 @@ func (m *bpfEndpointManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpoin
 			}
 			profSet.Discard(wlID)
 		}
+
+		m.withIface(oldWEP.Name, func(iface *bpfInterface) bool {
+			iface.info.endpointID = nil
+			return false
+		})
 	}
-	m.wlEps[wlID] = msg.Endpoint
+	m.allWEPs[wlID] = msg.Endpoint
 	for _, t := range wl.Tiers {
 		for _, pol := range t.IngressPolicies {
 			polID := proto.PolicyID{
@@ -263,15 +319,18 @@ func (m *bpfEndpointManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpoin
 			profSet.Add(wlID)
 		}
 	}
-	m.dirtyWorkloads.Add(wlID)
+	m.withIface(wl.Name, func(iface *bpfInterface) bool {
+		iface.info.endpointID = &wlID
+		return true // Force interface to be marked dirty in case policies changed.
+	})
 }
 
 // onWorkloadEndpointRemove removes the workload from the cache and the index, which maps from policy to workload.
 func (m *bpfEndpointManager) onWorkloadEnpdointRemove(msg *proto.WorkloadEndpointRemove) {
 	wlID := *msg.Id
 	log.WithField("id", wlID).Debug("Workload endpoint removed")
-	wl := m.wlEps[wlID]
-	for _, t := range wl.Tiers {
+	oldWEP := m.allWEPs[wlID]
+	for _, t := range oldWEP.Tiers {
 		for _, pol := range t.IngressPolicies {
 			polSet := m.policiesToWorkloads[proto.PolicyID{
 				Tier: t.Name,
@@ -293,8 +352,16 @@ func (m *bpfEndpointManager) onWorkloadEnpdointRemove(msg *proto.WorkloadEndpoin
 			polSet.Discard(wlID)
 		}
 	}
-	delete(m.wlEps, wlID)
-	m.dirtyWorkloads.Add(wlID)
+	delete(m.allWEPs, wlID)
+	if m.happyWEPs[wlID] != nil {
+		delete(m.happyWEPs, wlID)
+		m.happyWEPsDirty = true
+	}
+
+	m.withIface(oldWEP.Name, func(iface *bpfInterface) bool {
+		iface.info.endpointID = nil
+		return false
+	})
 }
 
 // onPolicyUpdate stores the policy in the cache and marks any endpoints using it dirty.
@@ -340,7 +407,8 @@ func (m *bpfEndpointManager) markPolicyUsersDirty(id proto.PolicyID) {
 		return
 	}
 	wls.Iter(func(item interface{}) error {
-		m.dirtyWorkloads.Add(item)
+		wlID := item.(proto.WorkloadEndpointID)
+		m.markExistingWEPDirty(wlID)
 		return nil
 	})
 }
@@ -352,16 +420,35 @@ func (m *bpfEndpointManager) markProfileUsersDirty(id proto.ProfileID) {
 		return
 	}
 	wls.Iter(func(item interface{}) error {
-		m.dirtyWorkloads.Add(item)
+		wlID := item.(proto.WorkloadEndpointID)
+		m.markExistingWEPDirty(wlID)
 		return nil
 	})
 }
 
-func (m *bpfEndpointManager) CompleteDeferredWork() error {
-	m.applyProgramsToDirtyDataInterfaces()
-	m.applyProgramsToDirtyWorkloadEndpoints()
+func (m *bpfEndpointManager) markExistingWEPDirty(wlID proto.WorkloadEndpointID) {
+	wep := m.allWEPs[wlID]
+	if wep == nil {
+		log.WithField("wlID", wlID).Panic(
+			"BUG: policiesToWorkloads mapping points to unknown workload.")
+	} else {
+		m.dirtyIfaceNames.Add(wep.Name)
+	}
+}
 
-	// TODO: handle cali interfaces with no WEP
+func (m *bpfEndpointManager) CompleteDeferredWork() error {
+	// Do one-off initialisation.
+	m.ensureStarted()
+
+	m.applyProgramsToDirtyDataInterfaces()
+	m.updateWEPsInDataplane()
+
+	if m.happyWEPsDirty {
+		chains := m.ruleRenderer.WorkloadInterfaceAllowChains(m.happyWEPs)
+		m.iptablesFilterTable.UpdateChains(chains)
+		m.happyWEPsDirty = false
+	}
+
 	return nil
 }
 
@@ -382,16 +469,23 @@ func (m *bpfEndpointManager) setAcceptLocal(iface string, val bool) error {
 	return nil
 }
 
+func (m *bpfEndpointManager) ensureStarted() {
+	m.startupOnce.Do(func() {
+		log.Info("Starting map cleanup runner.")
+		m.mapCleanupRunner.Start(context.Background())
+	})
+}
+
 func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 	var mutex sync.Mutex
 	errs := map[string]error{}
 	var wg sync.WaitGroup
-	m.dirtyIfaces.Iter(func(item interface{}) error {
+	m.dirtyIfaceNames.Iter(func(item interface{}) error {
 		iface := item.(string)
-		if !m.dataIfaceRegex.MatchString(iface) {
+		if !m.isDataIface(iface) {
 			log.WithField("iface", iface).Debug(
 				"Ignoring interface that doesn't match the host data interface regex")
-			return set.RemoveItem
+			return nil
 		}
 		if m.getIfaceState(iface) != ifacemonitor.StateUp {
 			log.WithField("iface", iface).Debug("Ignoring interface that is down")
@@ -426,8 +520,13 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 		return nil
 	})
 	wg.Wait()
-	m.dirtyIfaces.Iter(func(item interface{}) error {
+	m.dirtyIfaceNames.Iter(func(item interface{}) error {
 		iface := item.(string)
+		if !m.isDataIface(iface) {
+			log.WithField("iface", iface).Debug(
+				"Ignoring interface that doesn't match the host data interface regex")
+			return nil
+		}
 		err := errs[iface]
 		if err == nil {
 			log.WithField("id", iface).Info("Applied program to host interface")
@@ -443,54 +542,102 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 	})
 }
 
-func (m *bpfEndpointManager) applyProgramsToDirtyWorkloadEndpoints() {
+func (m *bpfEndpointManager) updateWEPsInDataplane() {
 	var mutex sync.Mutex
-	errs := map[proto.WorkloadEndpointID]error{}
+	errs := map[string]error{}
 	var wg sync.WaitGroup
-	m.dirtyWorkloads.Iter(func(item interface{}) error {
+
+	m.dirtyIfaceNames.Iter(func(item interface{}) error {
+		ifaceName := item.(string)
+
+		if !m.isWorkloadIface(ifaceName) {
+			return nil
+		}
+
 		wg.Add(1)
-		go func() {
+		go func(ifaceName string) {
 			defer wg.Done()
-			wlID := item.(proto.WorkloadEndpointID)
-			err := m.applyPolicy(wlID)
+			err := m.applyPolicy(ifaceName)
 			mutex.Lock()
-			errs[wlID] = err
+			errs[ifaceName] = err
 			mutex.Unlock()
-		}()
+		}(ifaceName)
 		return nil
 	})
 	wg.Wait()
 
-	if m.dirtyWorkloads.Len() > 0 {
+	if m.dirtyIfaceNames.Len() > 0 {
 		// Clean up any left-over jump maps in the background...
-		go tc.CleanUpJumpMaps()
+		m.mapCleanupRunner.Trigger()
 	}
 
-	m.dirtyWorkloads.Iter(func(item interface{}) error {
-		wlID := item.(proto.WorkloadEndpointID)
-		err := errs[wlID]
+	m.dirtyIfaceNames.Iter(func(item interface{}) error {
+		ifaceName := item.(string)
+
+		if !m.isWorkloadIface(ifaceName) {
+			return nil
+		}
+
+		err := errs[ifaceName]
+		wlID := m.nameToIface[ifaceName].info.endpointID
 		if err == nil {
-			log.WithField("id", wlID).Info("Applied policy to workload")
+			log.WithField("iface", ifaceName).Info("Updated workload interface.")
+			if wlID != nil && m.allWEPs[*wlID] != nil {
+				if m.happyWEPs[*wlID] == nil {
+					log.WithField("id", wlID).Info("Adding workload interface to iptables allow list.")
+					m.happyWEPsDirty = true
+				}
+				m.happyWEPs[*wlID] = m.allWEPs[*wlID]
+			}
 			return set.RemoveItem
+		} else {
+			if wlID != nil && m.happyWEPs[*wlID] != nil {
+				log.WithField("id", *wlID).WithError(err).Error(
+					"Failed to add policy to workload, removing from iptables allow list")
+				delete(m.happyWEPs, *wlID)
+				m.happyWEPsDirty = true
+			}
 		}
 		if err == tc.ErrDeviceNotFound {
 			log.WithField("wep", wlID).Debug(
 				"Tried to apply BPF program to interface but the interface wasn't present.  " +
 					"Will retry if it shows up.")
 		}
-		log.WithError(err).Warn("Failed to apply policy to endpoint")
+		log.WithError(err).WithField("id", wlID).Warn("Failed to apply policy to endpoint")
 		return nil
 	})
 }
 
 // applyPolicy actually applies the policy to the given workload.
-func (m *bpfEndpointManager) applyPolicy(wlID proto.WorkloadEndpointID) error {
+func (m *bpfEndpointManager) applyPolicy(ifaceName string) error {
 	startTime := time.Now()
-	wep := m.wlEps[wlID]
-	if wep == nil {
-		// TODO clean up old workloads
-		return nil
+
+	// Other threads might be filling in jump map FDs in the map so take the lock.
+	m.ifacesLock.Lock()
+	var endpointID *proto.WorkloadEndpointID
+	m.withIface(ifaceName, func(iface *bpfInterface) (forceDirty bool) {
+		endpointID = iface.info.endpointID
+		if endpointID == nil {
+			for i := range iface.dpState.jumpMapFDs {
+				if iface.dpState.jumpMapFDs[i] > 0 {
+					err := iface.dpState.jumpMapFDs[i].Close()
+					if err != nil {
+						log.WithError(err).Error("Failed to close jump map.")
+					}
+					iface.dpState.jumpMapFDs[i] = 0
+				}
+			}
+		}
+		return false
+	})
+	m.ifacesLock.Unlock()
+
+	if endpointID == nil {
+		err := tc.RemoveQdisc(ifaceName)
+		return err
 	}
+
+	wep := m.allWEPs[*endpointID]
 
 	var ingressErr, egressErr error
 	var wg sync.WaitGroup
@@ -538,6 +685,23 @@ func (m *bpfEndpointManager) attachWorkloadProgram(endpoint *proto.WorkloadEndpo
 	rules := m.extractRules(tier, endpoint.ProfileIds, polDirection)
 
 	jumpMapFD := m.getJumpMapFD(endpoint.Name, polDirection)
+	if jumpMapFD != 0 {
+		if attached, err := ap.IsAttached(); err != nil {
+			return fmt.Errorf("failed to check if interface %s had BPF program; %w", endpoint.Name, err)
+		} else if !attached {
+			// BPF program is missing; maybe we missed a notification of the interface being recreated?
+			// Close the now-defunct jump map.
+			log.WithField("iface", endpoint.Name).Warn(
+				"Detected that BPF program no longer attached to interface.")
+			err := jumpMapFD.Close()
+			if err != nil {
+				log.WithError(err).Warn("Failed to close jump map FD. Ignoring.")
+			}
+			m.setJumpMapFD(endpoint.Name, polDirection, 0)
+			jumpMapFD = 0 // Trigger program to be re-added below.
+		}
+	}
+
 	if jumpMapFD == 0 {
 		// We don't have a program attached to this interface yet, attach one now.
 		err := ap.AttachProgram()
@@ -555,27 +719,34 @@ func (m *bpfEndpointManager) attachWorkloadProgram(endpoint *proto.WorkloadEndpo
 	return m.updatePolicyProgram(jumpMapFD, rules)
 }
 
-func (m *bpfEndpointManager) getJumpMapFD(ifaceName string, direction PolDirection) bpf.MapFD {
+func (m *bpfEndpointManager) getJumpMapFD(ifaceName string, direction PolDirection) (fd bpf.MapFD) {
 	m.ifacesLock.Lock()
 	defer m.ifacesLock.Unlock()
-	return m.ifaces[ifaceName].jumpMapFDs[direction]
+	m.withIface(ifaceName, func(iface *bpfInterface) bool {
+		fd = iface.dpState.jumpMapFDs[direction]
+		return false
+	})
+	return
 }
 
 func (m *bpfEndpointManager) setJumpMapFD(name string, direction PolDirection, fd bpf.MapFD) {
 	m.ifacesLock.Lock()
 	defer m.ifacesLock.Unlock()
-	iface := m.ifaces[name]
-	if iface.jumpMapFDs == nil {
-		iface.jumpMapFDs = map[PolDirection]bpf.MapFD{}
-	}
-	iface.jumpMapFDs[direction] = fd
-	m.ifaces[name] = iface
+
+	m.withIface(name, func(iface *bpfInterface) bool {
+		iface.dpState.jumpMapFDs[direction] = fd
+		return false
+	})
 }
 
-func (m *bpfEndpointManager) getIfaceState(iface string) ifacemonitor.State {
+func (m *bpfEndpointManager) getIfaceState(ifaceName string) (state ifacemonitor.State) {
 	m.ifacesLock.Lock()
 	defer m.ifacesLock.Unlock()
-	return m.ifaces[iface].State
+	m.withIface(ifaceName, func(iface *bpfInterface) bool {
+		state = iface.info.operState
+		return false
+	})
+	return
 }
 
 func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules [][][]*proto.Rule) error {
@@ -666,11 +837,11 @@ func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, polDirecti
 
 // PolDirection is the Calico datamodel direction of policy.  On a host endpoint, ingress is towards the host.
 // On a workload endpoint, ingress is towards the workload.
-type PolDirection string
+type PolDirection int
 
 const (
-	PolDirnIngress PolDirection = "ingress"
-	PolDirnEgress  PolDirection = "egress"
+	PolDirnIngress PolDirection = iota
+	PolDirnEgress
 )
 
 func (m *bpfEndpointManager) calculateTCAttachPoint(endpointType tc.EndpointType, policyDirection PolDirection, ifaceName string) tc.AttachPoint {
@@ -743,4 +914,12 @@ func (m *bpfEndpointManager) extractRules(tier *proto.TierInfo, profileNames []s
 	}
 	allRules = append(allRules, profs)
 	return allRules
+}
+
+func (m *bpfEndpointManager) isWorkloadIface(iface string) bool {
+	return m.workloadIfaceRegex.MatchString(iface)
+}
+
+func (m *bpfEndpointManager) isDataIface(iface string) bool {
+	return m.dataIfaceRegex.MatchString(iface)
 }

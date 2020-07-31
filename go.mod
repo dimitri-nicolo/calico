@@ -1,6 +1,6 @@
 module github.com/projectcalico/felix
 
-go 1.13
+go 1.14
 
 require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
@@ -32,8 +32,8 @@ require (
 	github.com/onsi/gomega v1.9.0
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20191223184832-a0e1c4693271
-	github.com/projectcalico/typha v0.0.0
+	github.com/projectcalico/pod2daemon v0.0.0-20200729161441-0e9320f4f3b4
+	github.com/projectcalico/typha v0.7.3-0.20200728223621-45dbca780350
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/satori/go.uuid v1.2.0
@@ -47,6 +47,7 @@ require (
 	github.com/vishvananda/netlink v1.0.0
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
+	golang.org/x/tools v0.0.0-20200502202811-ed308ab3e770 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/grpc v1.26.0
 	gopkg.in/ini.v1 v1.46.0 // indirect
@@ -63,8 +64,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200720085012-1e335030cd65
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200730194746-ed8931d0c497
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 

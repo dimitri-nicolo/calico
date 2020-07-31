@@ -78,6 +78,7 @@ var _ = describeBPFTests(withProto("udp"), withDSR())
 var _ = describeBPFTests(withTunnel("ipip"), withProto("tcp"), withDSR())
 var _ = describeBPFTests(withTunnel("ipip"), withProto("udp"), withDSR())
 var _ = describeBPFTests(withTunnel("wireguard"), withProto("tcp"))
+var _ = describeBPFTests(withTunnel("wireguard"), withProto("tcp"), withConnTimeLoadBalancingEnabled())
 
 // Run a stripe of tests with BPF logging disabled since the compiler tends to optimise the code differently
 // with debug disabled and that can lead to verifier issues.
@@ -238,10 +239,12 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			options.FelixLogSeverity = "debug"
 			options.NATOutgoingEnabled = true
 			options.AutoHEPsEnabled = true
+			// override IPIP being enabled by default
+			options.IPIPEnabled = false
+			options.IPIPRoutesEnabled = false
 			switch testOpts.tunnel {
 			case "none":
-				options.IPIPEnabled = false
-				options.IPIPRoutesEnabled = false
+				// nothing
 			case "ipip":
 				options.IPIPEnabled = true
 				options.IPIPRoutesEnabled = true
@@ -314,12 +317,18 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 		Describe("with a single node and an allow-all policy", func() {
 			var (
-				hostW *workload.Workload
-				w     [2]*workload.Workload
+				hostW   *workload.Workload
+				w       [2]*workload.Workload
+				wepCopy [2]*api.WorkloadEndpoint
 			)
 
 			if !testOpts.connTimeEnabled {
 				// These tests don't depend on NAT.
+				return
+			}
+
+			if testOpts.tunnel != "none" {
+				// Single node so tunnel doesn't matter.
 				return
 			}
 
@@ -339,7 +348,9 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					wIP := fmt.Sprintf("10.65.0.%d", i+2)
 					w[i] = workload.Run(felixes[0], fmt.Sprintf("w%d", i), "default", wIP, "8055", testOpts.protocol)
 					w[i].WorkloadEndpoint.Labels = map[string]string{"name": w[i].Name}
-					w[i].ConfigureInDatastore(infra)
+					// WEP gets clobbered when we add it to the datastore, take a copy so we can re-create the WEP.
+					wepCopy[i] = w[i].WorkloadEndpoint
+					w[i].ConfigureInInfra(infra)
 				}
 
 				err := infra.AddDefaultDeny()
@@ -449,6 +460,132 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Expect(mapID).NotTo(BeNumerically("==", secondMapID))
 					})
 				})
+
+				It("should clean up jump maps", func() {
+					numJumpMaps := func() int {
+						output, err := felixes[0].ExecOutput("sh", "-c", "find /sys/fs/bpf/tc -name cali_jump")
+						Expect(err).NotTo(HaveOccurred())
+						return strings.Count(output, "cali_jump")
+					}
+
+					expJumpMaps := func(numWorkloads int) int {
+						numHostIfaces := 1
+						expectedNumMaps := 2 * (numWorkloads + numHostIfaces)
+						return expectedNumMaps
+					}
+
+					// Check start-of-day number of interfaces.
+					Eventually(numJumpMaps, "15s", "200ms").Should(
+						BeNumerically("==", expJumpMaps(len(w))),
+						"Unexpected number of jump maps at start of day")
+
+					// Remove a workload.
+					w[0].RemoveFromInfra(infra)
+					w[0].Stop()
+
+					// Need a long timeout here because felix throttles cleanups.
+					Eventually(numJumpMaps, "15s", "200ms").Should(
+						BeNumerically("==", expJumpMaps(len(w)-1)),
+						"Unexpected number of jump maps after removing workload")
+				})
+
+				It("should recover if the BPF programs are removed", func() {
+					flapInterface := func() {
+						By("Flapping interface")
+						felixes[0].Exec("ip", "link", "set", "down", w[0].InterfaceName)
+						felixes[0].Exec("ip", "link", "set", "up", w[0].InterfaceName)
+					}
+
+					recreateWEP := func() {
+						By("Recreating WEP.")
+						w[0].RemoveFromInfra(infra)
+						w[0].WorkloadEndpoint = wepCopy[0]
+						w[0].ConfigureInInfra(infra)
+					}
+
+					for _, trigger := range []func(){flapInterface, recreateWEP} {
+						// Wait for initial programming to complete.
+						cc.Expect(Some, w[0], w[1])
+						cc.CheckConnectivity()
+						cc.ResetExpectations()
+
+						By("handling ingress program removal")
+						felixes[0].Exec("tc", "filter", "del", "ingress", "dev", w[0].InterfaceName)
+
+						// Removing the ingress program should break connectivity due to the lack of "seen" mark.
+						cc.Expect(None, w[0], w[1])
+						cc.CheckConnectivity()
+						cc.ResetExpectations()
+
+						// Trigger felix to recover.
+						trigger()
+						cc.Expect(Some, w[0], w[1])
+						cc.CheckConnectivity()
+
+						// Check the program is put back.
+						Eventually(func() string {
+							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "ingress", "dev", w[0].InterfaceName)
+							return out
+						}, "5s", "200ms").Should(ContainSubstring("calico_from_workload_ep"))
+
+						By("handling egress program removal")
+						felixes[0].Exec("tc", "filter", "del", "egress", "dev", w[0].InterfaceName)
+						// Removing the egress program doesn't stop traffic.
+
+						// Trigger felix to recover.
+						trigger()
+
+						// Check the program is put back.
+						Eventually(func() string {
+							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "egress", "dev", w[0].InterfaceName)
+							return out
+						}, "5s", "200ms").Should(ContainSubstring("calico_to_workload_ep"))
+						cc.CheckConnectivity()
+
+						By("Handling qdisc removal")
+						felixes[0].Exec("tc", "qdisc", "delete", "dev", w[0].InterfaceName, "clsact")
+
+						// Trigger felix to recover.
+						trigger()
+
+						// Check programs are put back.
+						Eventually(func() string {
+							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "ingress", "dev", w[0].InterfaceName)
+							return out
+						}, "5s", "200ms").Should(ContainSubstring("calico_from_workload_ep"))
+						Eventually(func() string {
+							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "egress", "dev", w[0].InterfaceName)
+							return out
+						}, "5s", "200ms").Should(ContainSubstring("calico_to_workload_ep"))
+						cc.CheckConnectivity()
+						cc.ResetExpectations()
+
+						// Add a policy to block traffic.
+						By("Adding deny policy")
+						denyPol := api.NewGlobalNetworkPolicy()
+						denyPol.Name = "policy-2"
+						var one float64 = 1
+						denyPol.Spec.Order = &one
+						denyPol.Spec.Ingress = []api.Rule{{Action: "Deny"}}
+						denyPol.Spec.Egress = []api.Rule{{Action: "Deny"}}
+						denyPol.Spec.Selector = "all()"
+						denyPol = createPolicy(denyPol)
+
+						cc.Expect(None, w[0], w[1])
+						cc.Expect(None, w[1], w[0])
+						cc.CheckConnectivity()
+						cc.ResetExpectations()
+
+						By("Removing deny policy")
+						_, err := calicoClient.GlobalNetworkPolicies().Delete(context.Background(), "policy-2", options2.DeleteOptions{})
+						Expect(err).NotTo(HaveOccurred())
+
+						cc.Expect(Some, w[0], w[1])
+						cc.Expect(Some, w[1], w[0])
+						cc.CheckConnectivity()
+						cc.ResetExpectations()
+					}
+				})
 			}
 
 			if testOpts.nonProtoTests {
@@ -494,7 +631,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					labels["workload"] = "regular"
 
 					w.WorkloadEndpoint.Labels = labels
-					w.ConfigureInDatastore(infra)
+					w.ConfigureInInfra(infra)
 					// Assign the workload's IP in IPAM, this will trigger calculation of routes.
 					err := calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
 						IP:       cnet.MustParseIP(wIP),
@@ -527,7 +664,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						testOpts.protocol)
 
 					hostW[ii].WorkloadEndpoint.Labels = map[string]string{"name": hostW[ii].Name}
-					hostW[ii].ConfigureInDatastore(infra)
+					hostW[ii].ConfigureInInfra(infra)
 
 					// Two workloads on each host so we can check the same host and other host cases.
 					w[ii][0] = addWorkload(true, ii, 0, 8055, map[string]string{"port": "8055"})
@@ -550,6 +687,70 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				err := infra.AddDefaultDeny()
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			if testOpts.protocol == "udp" && testOpts.udpUnConnected {
+				It("should have no connectivity to a pod before it is added to the datamodel", func() {
+					// Above BeforeEach adds a default-deny but for this test we want policy to be open
+					// so that it's only the lack of datastore configuration that blocks traffic.
+					policy := api.NewNetworkPolicy()
+					policy.Name = "allow-all"
+					policy.Namespace = "default"
+					one := float64(1)
+					policy.Spec.Order = &one
+					policy.Spec.Ingress = []api.Rule{{Action: api.Allow}}
+					policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
+					policy.Spec.Selector = "all()"
+					_, err := calicoClient.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+
+					// The hardest path to secure with BPF is packets to the newly-added workload.  We can't block
+					// the traffic with BPF until we have a BPF program in place so we rely on iptables catch-alls.
+
+					// Set up a workload but do not add it to the datastore.
+					dpOnlyWorkload := workload.New(felixes[1], "w-dp", "default", "10.65.1.5", "8057", testOpts.protocol)
+					err = dpOnlyWorkload.Start()
+					Expect(err).NotTo(HaveOccurred())
+					felixes[1].Exec("ip", "route", "add", dpOnlyWorkload.IP, "dev", dpOnlyWorkload.InterfaceName, "scope", "link")
+
+					// Attach tcpdump to the workload so we can verify that we don't see any packets at all.  We need
+					// to verify ingress and egress separately since a round-trip test would be blocked by either.
+					tcpdump := dpOnlyWorkload.AttachTCPDump()
+					tcpdump.SetLogEnabled(true)
+					pattern := fmt.Sprintf(`IP .* %s\.8057: UDP`, dpOnlyWorkload.IP)
+					tcpdump.AddMatcher("UDP-8057", regexp.MustCompile(pattern))
+					tcpdump.Start()
+					defer tcpdump.Stop()
+
+					// Send packets in the background.
+					var wg sync.WaitGroup
+					wg.Add(1)
+					ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancelFn()
+					go func() {
+						defer wg.Done()
+						defer GinkgoRecover()
+						for {
+							if ctx.Err() != nil {
+								return
+							}
+							_, err = w[1][0].RunCmd("/pktgen", w[1][0].IP, dpOnlyWorkload.IP, "udp",
+								"--port-src", "30444", "--port-dst", "8057")
+							Expect(err).NotTo(HaveOccurred())
+							time.Sleep(100 * (time.Millisecond))
+						}
+					}()
+					defer wg.Wait()
+
+					Consistently(tcpdump.MatchCountFn("UDP-8057"), "5s", "200ms").Should(
+						BeNumerically("==", 0),
+						"Traffic to the workload should be blocked before datastore is configured")
+
+					dpOnlyWorkload.ConfigureInInfra(infra)
+
+					Eventually(tcpdump.MatchCountFn("UDP-8057"), "20s", "200ms").Should(
+						BeNumerically(">", 0),
+						"Traffic to the workload should be allowed after datastore is configured")
+				})
+			}
 
 			It("should have correct routes", func() {
 				expectedRoutes := expectedRouteDump
@@ -1737,9 +1938,13 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									hostW0SrcIP := ExpectWithSrcIPs(node0IP)
 									hostW1SrcIP := ExpectWithSrcIPs(node1IP)
 
-									if testOpts.tunnel == "ipip" {
+									switch testOpts.tunnel {
+									case "ipip":
 										hostW0SrcIP = ExpectWithSrcIPs(felixes[0].ExpectedIPIPTunnelAddr)
 										hostW1SrcIP = ExpectWithSrcIPs(felixes[1].ExpectedIPIPTunnelAddr)
+									case "wireguard":
+										hostW1SrcIP = ExpectWithSrcIPs(felixes[0].ExpectedWireguardTunnelAddr)
+										hostW1SrcIP = ExpectWithSrcIPs(felixes[1].ExpectedWireguardTunnelAddr)
 									}
 
 									ports := ExpectWithPorts(npPort)
@@ -2190,6 +2395,7 @@ func dumpNATmaps(felixes []*infrastructure.Felix) ([]nat.MapMem, []nat.BackendMa
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
+			defer GinkgoRecover()
 			bpfsvcs[i], bpfeps[i] = dumpNATMaps(felixes[i])
 		}(i)
 	}
