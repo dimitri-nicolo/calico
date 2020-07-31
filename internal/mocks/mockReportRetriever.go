@@ -16,7 +16,7 @@ type MockReportRetriever struct {
 func (c *MockReportRetriever) RetrieveArchivedReport(id string) (*api.ArchivedReportData, error) {
 
 	rd := apiv3.ReportData{}
-	rd.ReportName = fmt.Sprintf("Report0")
+	rd.ReportName = "Report0"
 	rd.ReportSpec = apiv3.ReportSpec{ReportType: "inventory"}
 	rd.StartTime = metav1.Now()
 	rd.EndTime = metav1.Now()
