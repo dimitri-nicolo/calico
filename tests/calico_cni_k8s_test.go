@@ -25,6 +25,15 @@ import (
 	cnitestutils "github.com/containernetworking/plugins/pkg/testutils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/types"
@@ -38,14 +47,6 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func ensureNamespace(clientset *kubernetes.Clientset, name string) {
@@ -874,12 +875,19 @@ var _ = Describe("Kubernetes CNI tests", func() {
 							Expect(string(out)).To(MatchRegexp(r))
 						}
 
+						if c.numIPv6IPs > 0 {
+							err := testutils.CheckSysctlValue("/proc/sys/net/ipv6/conf/eth0/accept_dad", "0")
+							Expect(err).NotTo(HaveOccurred())
+						}
+
 						out, err = exec.Command("ip", "addr", "show").Output()
 						Expect(err).NotTo(HaveOccurred())
 						inet := regexp.MustCompile(` {4}inet .*scope global`)
 						Expect(inet.FindAll(out, -1)).To(HaveLen(c.numIPv4IPs))
 						inetv6 := regexp.MustCompile(` {4}inet6 .*scope global`)
 						Expect(inetv6.FindAll(out, -1)).To(HaveLen(c.numIPv6IPs))
+						Expect(out).NotTo(ContainSubstring("scope global tentative"),
+							"Some IPv6 addresses marked as tentative; disabling DAD must have failed.")
 
 						return nil
 					})
