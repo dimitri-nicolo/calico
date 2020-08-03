@@ -22,6 +22,13 @@ spec:
   kubernetesProvider: {{include.kubernetesProvider}}
 {%- endif %}
 
+{%- if include.cniPlugin %}
+
+  # Configure the CNI plugin.
+  cni:
+    type: {{include.cniPlugin}}
+{%- endif %}
+
 ---
 
 # This section configures the Tigera web manager.
