@@ -3,6 +3,9 @@
 set -e
 set -x
 
+# Temporarily disable winfv from master branch. Will enable it again once OS windows code merged in private.
+exit 0
+
 FV_DIR="/home/semaphore/process/testing/winfv"
 
 pushd ${FV_DIR}
