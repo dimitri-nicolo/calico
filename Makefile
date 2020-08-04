@@ -2,7 +2,7 @@
 
 APP_NAME        = voltron
 PACKAGE_NAME   ?= github.com/tigera/$(APP_NAME)
-GO_BUILD_VER   ?= v0.38
+GO_BUILD_VER   ?= v0.45
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 # Used by Makefile.common
@@ -200,7 +200,7 @@ endif
 .PHONY: clean
 ## Remove binary files.
 clean: clean-build-image
-	rm -rf $(BINDIR) docker-image/bin
+	rm -rf $(BINDIR) docker-image/bin vendor
 	find . -name "*.coverprofile" -type f -delete
 
 clean-build-image:
@@ -269,23 +269,6 @@ tag-images: imagetag
 
 push-images: imagetag
 	ARCHES="$(ARCHES)" BUILD_IMAGES="$(BUILD_IMAGES)" PUSH_REPO="$(PUSH_REPO)" IMAGETAG="$(IMAGETAG)" make-helpers/push-images
-
-##########################################################################################
-# GO MODULES SURVIVAL
-##########################################################################################
-
-mod-graph:
-	@if ! command -v dot >/dev/null; then echo "*** please install graphviz first"; exit 1; fi
-	go mod why -m all | bash make-helpers/why2dot | sed -e 's/github.com\//@/g' | sort -u | bash make-helpers/dotify | dot -Tpng -o go.mod.png
-	@echo "=> file://$$PWD/go.mod.png"
-
-mod-tidy:
-	go mod tidy
-	go mod verify
-
-mod-regen-sum:
-	rm go.sum
-	$(MAKE) -s mod-tidy
 
 ##########################################################################################
 # LOCAL RUN
