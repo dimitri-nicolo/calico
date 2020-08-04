@@ -135,8 +135,8 @@ func (eds *EtcdDatastoreInfra) AddWorkload(wep *api.WorkloadEndpoint) (*api.Work
 	return eds.GetCalicoClient().WorkloadEndpoints().Create(utils.Ctx, wep, utils.NoOptions)
 }
 
-func (eds *EtcdDatastoreInfra) RemoveWorkload(wep *api.WorkloadEndpoint) error {
-	_, err := eds.GetCalicoClient().WorkloadEndpoints().Delete(utils.Ctx, wep.Namespace, wep.Name, options.DeleteOptions{})
+func (eds *EtcdDatastoreInfra) RemoveWorkload(ns string, name string) error {
+	_, err := eds.GetCalicoClient().WorkloadEndpoints().Delete(utils.Ctx, ns, name, options.DeleteOptions{})
 	return err
 }
 

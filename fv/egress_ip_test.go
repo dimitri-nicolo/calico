@@ -57,7 +57,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		Expect(err).NotTo(HaveOccurred())
 		gw := workload.Run(felix, wName, "default", wIP, "8055", "tcp")
 		gw.WorkloadEndpoint.Labels["egress-code"] = "red"
-		gw.ConfigureInDatastore(infra)
+		gw.ConfigureInInfra(infra)
 		return gw
 	}
 
@@ -75,7 +75,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 		app.WorkloadEndpoint.Spec.EgressGateway = &api.EgressSpec{
 			Selector: "egress-code == 'red'",
 		}
-		app.ConfigureInDatastore(infra)
+		app.ConfigureInInfra(infra)
 		return app
 	}
 
@@ -281,7 +281,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			}))
 
 			By("Remove 3rd gateway again.")
-			gw3.RemoveFromDatastore(infra)
+			gw3.RemoveFromInfra(infra)
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
@@ -300,7 +300,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			}))
 
 			By("Remove the first gateway.")
-			gw.RemoveFromDatastore(infra)
+			gw.RemoveFromInfra(infra)
 
 			By("Check ip rules and routes.")
 			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
@@ -317,7 +317,7 @@ var _ = infrastructure.DatastoreDescribe("Egress IP", []apiconfig.DatastoreType{
 			}))
 
 			By("Remove the second gateway.")
-			gw2.RemoveFromDatastore(infra)
+			gw2.RemoveFromInfra(infra)
 
 			By("Check ip rules and routes.")
 			Consistently(getIPRules, "5s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))

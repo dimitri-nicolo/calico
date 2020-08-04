@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -144,7 +144,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			wName := fmt.Sprintf("wl-host1-%d", ii)
 			wlHost1[ii] = workload.Run(felixes[0], wName, "default", wIP, "8055", "tcp")
 			wlHost1[ii].WorkloadEndpoint.GenerateName = "wl-host1-"
-			wlHost1[ii].ConfigureInDatastore(infra)
+			wlHost1[ii].ConfigureInInfra(infra)
 		}
 
 		// Create workloads on host 2.
@@ -153,7 +153,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			wName := fmt.Sprintf("wl-host2-%d", ii)
 			wlHost2[ii] = workload.Run(felixes[1], wName, "default", wIP, "8055", "tcp")
 			wlHost2[ii].WorkloadEndpoint.GenerateName = "wl-host2-"
-			wlHost2[ii].ConfigureInDatastore(infra)
+			wlHost2[ii].ConfigureInInfra(infra)
 		}
 
 		// Create a non-workload server on each host.

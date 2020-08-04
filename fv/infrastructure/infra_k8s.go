@@ -513,11 +513,13 @@ func (kds *K8sDatastoreInfra) SetExpectedIPIPTunnelAddr(felix *Felix, idx int, n
 
 func (kds *K8sDatastoreInfra) SetExpectedVXLANTunnelAddr(felix *Felix, idx int, needBGP bool) {
 	felix.ExpectedVXLANTunnelAddr = fmt.Sprintf("10.65.%d.0", idx)
+	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedVXLANTunnelAddr)
 }
 
 func (kds *K8sDatastoreInfra) SetExpectedWireguardTunnelAddr(felix *Felix, idx int, needWg bool) {
 	// Set to be the same as IPIP tunnel address.
 	felix.ExpectedWireguardTunnelAddr = fmt.Sprintf("10.65.%d.1", idx)
+	felix.ExtraSourceIPs = append(felix.ExtraSourceIPs, felix.ExpectedWireguardTunnelAddr)
 }
 
 func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
@@ -565,6 +567,15 @@ func (kds *K8sDatastoreInfra) ensureNamespace(name string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (kds *K8sDatastoreInfra) RemoveWorkload(ns, name string) error {
+	wepIDs, err := names.ParseWorkloadEndpointName(name)
+	if err != nil {
+		return err
+	}
+	err = kds.K8sClient.CoreV1().Pods(ns).Delete(wepIDs.Pod, DeleteImmediately)
+	return err
 }
 
 func (kds *K8sDatastoreInfra) AddWorkload(wep *api.WorkloadEndpoint) (*api.WorkloadEndpoint, error) {
@@ -633,10 +644,6 @@ func (kds *K8sDatastoreInfra) AddWorkload(wep *api.WorkloadEndpoint) (*api.Workl
 	}
 	log.WithField("name", name).Debug("Getting WorkloadEndpoint")
 	return kds.calicoClient.WorkloadEndpoints().Get(context.Background(), wep.Namespace, name, options.GetOptions{})
-}
-
-func (kds *K8sDatastoreInfra) RemoveWorkload(wep *api.WorkloadEndpoint) error {
-	return kds.K8sClient.CoreV1().Pods(wep.Namespace).Delete(wep.Spec.Pod, DeleteImmediately)
 }
 
 func (kds *K8sDatastoreInfra) AddAllowToDatastore(selector string) error {

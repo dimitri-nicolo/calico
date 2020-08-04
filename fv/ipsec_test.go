@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -783,7 +783,7 @@ func createWorkloads(infra infrastructure.DatastoreInfra, felixes []*infrastruct
 		wIP := fmt.Sprintf("10.65.%d.2", ii)
 		wName := fmt.Sprintf("w%d", ii)
 		w[ii] = workload.Run(felixes[ii], wName, "default", wIP, "8055", protocol)
-		w[ii].ConfigureInDatastore(infra)
+		w[ii].ConfigureInInfra(infra)
 	}
 	for ii := range hostW {
 		hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", protocol)

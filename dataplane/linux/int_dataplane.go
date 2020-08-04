@@ -20,6 +20,7 @@ import (
 	"net"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -272,8 +273,6 @@ type InternalDataplane struct {
 
 	lookupCache *calc.LookupsCache
 
-	interfacePrefixes []string
-
 	// dataplaneNeedsSync is set if the dataplane is dirty in some way, i.e. we need to
 	// call apply().
 	dataplaneNeedsSync bool
@@ -328,7 +327,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		toDataplane:       make(chan interface{}, msgPeekLimit),
 		fromDataplane:     make(chan interface{}, 100),
 		ruleRenderer:      ruleRenderer,
-		interfacePrefixes: config.RulesConfig.WorkloadIfacePrefixes,
 		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
@@ -558,6 +556,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		tc.CleanUpProgramsAndPins()
 	}
 
+	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
+	for i, r := range config.RulesConfig.WorkloadIfacePrefixes {
+		interfaceRegexes[i] = "^" + r + ".*"
+	}
+
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 		bpfMapContext := &bpf.MapContext{
@@ -579,17 +582,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if err != nil {
 			log.WithError(err).Panic("Failed to create state BPF map.")
 		}
+		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		dp.RegisterManager(newBPFEndpointManager(
 			config.BPFLogLevel,
 			config.Hostname,
 			fibLookupEnabled,
 			config.RulesConfig.EndpointToHostAction == "DROP",
 			config.BPFDataIfacePattern,
+			workloadIfaceRegex,
 			ipSetIDAllocator,
 			config.VXLANMTU,
 			config.BPFNodePortDSREnabled,
 			ipSetsMap,
 			stateMap,
+			ruleRenderer,
+			filterTableV4,
 		))
 
 		// Pre-create the NAT maps so that later operations can assume access.
@@ -669,10 +676,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
-	for i, r := range config.RulesConfig.WorkloadIfacePrefixes {
-		interfaceRegexes[i] = "^" + r + ".*"
-	}
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
 		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC)
 
@@ -1029,48 +1032,84 @@ func (d *InternalDataplane) doStaticDataplaneConfig() {
 }
 
 func (d *InternalDataplane) setUpIptablesBPF() {
-	// TODO have raw table mark for notrack
-	// TODO Any BPF SNAT we need to do
+	// TODO Make make bits configurable.
 
 	for _, t := range d.iptablesFilterTables {
 		fwdRules := []iptables.Rule{
 			{
-				// TODO Make "from workload" mark configurable
-				Match:  iptables.Match().MarkMatchesWithMask(0xca100000, 0xfff00000),
-				Action: iptables.AcceptAction{},
+				// Bypass is a strong signal from the BPF program, it means that the flow is approved
+				// by the program at both ingress and egress.
+				Comment: []string{"Pre-approved by BPF programs."},
+				Match:   iptables.Match().MarkMatchesWithMask(tc.MarkSeenBypass, tc.MarkSeenBypassMask),
+				Action:  iptables.AcceptAction{},
 			},
 		}
+
 		var inputRules []iptables.Rule
 		for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
 			fwdRules = append(fwdRules,
+				// Drop packets that have come from a workload but have not been through our BPF program.
 				iptables.Rule{
-					Match:   iptables.Match().InInterface(prefix + "+"),
+					Match:   iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(tc.MarkSeen, tc.MarkSeenMask),
 					Action:  iptables.DropAction{},
-					Comment: []string{"From workload without BPF ACCEPT mark"},
-				})
+					Comment: []string{"From workload without BPF seen mark"},
+				},
+			)
 
 			if d.config.RulesConfig.EndpointToHostAction == "ACCEPT" {
 				// Only need to worry about ACCEPT here.  Drop gets compiled into the BPF program and
 				// RETURN would be a no-op since there's nothing to RETURN from.
 				inputRules = append(inputRules, iptables.Rule{
-					Match:  iptables.Match().InInterface(prefix+"+").MarkMatchesWithMask(0xca100000, 0xfffe0000),
+					Match:  iptables.Match().InInterface(prefix+"+").MarkMatchesWithMask(tc.MarkSeen, tc.MarkSeenMask),
 					Action: iptables.AcceptAction{},
 				})
 			}
 			// Catch any workload to host packets that haven't been through the BPF program.
 			inputRules = append(inputRules, iptables.Rule{
-				Match:  iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(0xca100000, 0xfff00000),
+				Match:  iptables.Match().InInterface(prefix+"+").NotMarkMatchesWithMask(tc.MarkSeen, tc.MarkSeenMask),
 				Action: iptables.DropAction{},
 			})
 		}
-		for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
-			// Make sure iptables rules don't drop packets that we're about to process through BPF.
-			fwdRules = append(fwdRules, iptables.Rule{
-				Match:   iptables.Match().OutInterface(prefix + "+"),
-				Action:  iptables.AcceptAction{},
-				Comment: []string{"To workload, BPF will handle."},
-			})
+
+		if t.IPVersion == 6 {
+			for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+				// In BPF mode, we don't support IPv6 yet.  Drop it.
+				fwdRules = append(fwdRules, iptables.Rule{
+					Match:   iptables.Match().OutInterface(prefix + "+"),
+					Action:  iptables.DropAction{},
+					Comment: []string{"To workload, drop IPv6."},
+				})
+			}
+		} else {
+			// The packet may be about to go to a local workload.  However, the local workload may not have a BPF
+			// program attached (yet).  To catch that case, we send the packet through a dispatch chain.  We only
+			// add interfaces to the dispatch chain if the BPF program is in place.
+			for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+				// Make sure iptables rules don't drop packets that we're about to process through BPF.
+				fwdRules = append(fwdRules,
+					iptables.Rule{
+						Match:   iptables.Match().OutInterface(prefix + "+"),
+						Action:  iptables.JumpAction{Target: rules.ChainToWorkloadDispatch},
+						Comment: []string{"To workload, check workload is known."},
+					},
+				)
+			}
+			// Need a final rule to accept traffic that is from a workload and going somewhere else.
+			// Otherwise, if iptables has a DROP policy on the forward chain, the packet will get dropped.
+			// This rule must come after the to-workload jump rules above to ensure that we don't accept too
+			// early before the destination is checked.
+			for _, prefix := range d.config.RulesConfig.WorkloadIfacePrefixes {
+				// Make sure iptables rules don't drop packets that we're about to process through BPF.
+				fwdRules = append(fwdRules,
+					iptables.Rule{
+						Match:   iptables.Match().InInterface(prefix + "+"),
+						Action:  iptables.AcceptAction{},
+						Comment: []string{"To workload, mark has already been verified."},
+					},
+				)
+			}
 		}
+
 		t.InsertOrAppendRules("INPUT", inputRules)
 		t.InsertOrAppendRules("FORWARD", fwdRules)
 	}
@@ -1084,11 +1123,11 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 
 	for _, t := range d.iptablesRawTables {
 		rpfRules := []iptables.Rule{{
-			Match:  iptables.Match().MarkMatchesWithMask(0xca140000, 0xffff0000),
+			Match:  iptables.Match().MarkMatchesWithMask(tc.MarkSeenBypassSkipRPF, tc.MarkSeenBypassSkipRPFMask),
 			Action: iptables.ReturnAction{},
 		}}
 
-		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, 0xca100000, 0xfff00000,
+		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, tc.MarkSeen, tc.MarkSeenMask,
 			d.config.RulesConfig.OpenStackSpecialCasesEnabled, true)...)
 
 		rpfChain := []*iptables.Chain{{
@@ -1134,6 +1173,9 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainFilterOutput},
 		}})
+
+		// Include rules which should be appended to the filter table forward chain.
+		t.AppendRules("FORWARD", d.ruleRenderer.StaticFilterForwardAppendRules())
 	}
 	for _, t := range d.iptablesNATTables {
 		t.UpdateChains(d.ruleRenderer.StaticNATTableChains(t.IPVersion))

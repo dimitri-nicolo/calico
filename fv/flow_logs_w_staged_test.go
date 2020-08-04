@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -91,16 +91,16 @@ var _ = infrastructure.DatastoreDescribe("flow log with staged policy tests", []
 
 		// Create workload on host 1.
 		ep1_1 = workload.Run(felixes[0], "ep1-1", "default", "10.65.0.0", "8055", "tcp")
-		ep1_1.ConfigureInDatastore(infra)
+		ep1_1.ConfigureInInfra(infra)
 
 		ep2_1 = workload.Run(felixes[1], "ep2-1", "default", "10.65.1.0", "8055", "tcp")
-		ep2_1.ConfigureInDatastore(infra)
+		ep2_1.ConfigureInInfra(infra)
 
 		ep2_2 = workload.Run(felixes[1], "ep2-2", "default", "10.65.1.1", "8055", "tcp")
-		ep2_2.ConfigureInDatastore(infra)
+		ep2_2.ConfigureInInfra(infra)
 
 		ep2_3 = workload.Run(felixes[1], "ep2-3", "default", "10.65.1.2", "8055", "tcp")
-		ep2_3.ConfigureInDatastore(infra)
+		ep2_3.ConfigureInInfra(infra)
 
 		// Create tiers tier1 and tier2
 		tier := api.NewTier()
