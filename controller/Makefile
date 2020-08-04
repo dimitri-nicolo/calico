@@ -2,7 +2,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 ##############################################################################
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
-GO_BUILD_VER   ?= v0.38
+GO_BUILD_VER   ?= v0.45
 GIT_USE_SSH     = true
 LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
 BUILD_IMAGE    ?= tigera/intrusion-detection-controller
@@ -30,7 +30,7 @@ Makefile.common.$(MAKE_BRANCH):
 # docker socket, allows the UTs to start docker containers.
 MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/* -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) -v /var/run/docker.sock:/var/run/docker.sock:rw -e FOSSA_API_KEY=$(FOSSA_API_KEY)
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/* -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) -v /var/run/docker.sock:/var/run/docker.sock:rw
 
 include Makefile.common
 
@@ -240,6 +240,7 @@ st:
 
 .PHONY: clean
 clean: clean-bin clean-build-image
+	rm -rf vendor
 clean-build-image:
 	docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1 || true
 
@@ -336,12 +337,3 @@ replace-apimachinery-pin:
 	$(call update_replace_pin,$(APIMACHINERY_REPO_ORIG),$(APIMACHINERY_REPO),$(APIMACHINERY_BRANCH))
 
 update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-apimachinery-pin replace-apiserver-pin
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' go modules.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
