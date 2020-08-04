@@ -1,5 +1,5 @@
 PACKAGE_NAME            ?= github.com/tigera/compliance
-GO_BUILD_VER            ?= v0.38
+GO_BUILD_VER            ?= v0.45
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
@@ -115,7 +115,8 @@ clean:
 	       docker-image/benchmarker/cfg \
 	       tmp/kube-bench \
 	       release-notes-* \
-	       .go-pkg-cache
+	       .go-pkg-cache \
+	       vendor
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
