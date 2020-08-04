@@ -291,6 +291,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 				rep.Status.LastScheduledReportJob = &apiv3.ReportJob{
 					Start: *start,
 					End:   *end,
+					Job:   &v1.ObjectReference{},
 				}
 			}
 		}
