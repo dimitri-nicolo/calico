@@ -1,6 +1,6 @@
 module github.com/projectcalico/kube-controllers
 
-go 1.13
+go 1.14
 
 require (
 	github.com/apparentlymart/go-cidr v1.0.1
@@ -8,15 +8,14 @@ require (
 	// Elastic repo for ECK v1.0.1
 	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
-
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
-	github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627
-	github.com/projectcalico/felix v0.0.0-20200530082554-d7efcf1ff34b
-	github.com/projectcalico/libcalico-go v1.7.3
-	github.com/projectcalico/typha v0.0.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/projectcalico/felix v0.0.0-00010101000000-000000000000
+	github.com/projectcalico/libcalico-go v1.7.2
+	github.com/projectcalico/typha v0.7.3-0.20200728223621-45dbca780350
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
@@ -34,13 +33,12 @@ require (
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
 	k8s.io/client-go v8.0.0+incompatible
-
 	k8s.io/klog v1.0.0
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200731042810-e345c5dfa5b1
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200721040547-44cd9d3984ff
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200803110507-6a92590cc74f
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200804201814-cd4a12ed25a1
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200730194746-ed8931d0c497
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a

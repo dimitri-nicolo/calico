@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/kube-controllers
-GO_BUILD_VER=v0.40
+GO_BUILD_VER=v0.45
 
 GIT_USE_SSH = true
 
@@ -66,6 +66,7 @@ clean:
 	rm -f report/*.xml
 	rm -f tests/crds.yaml
 	rm -rf tests/crds
+	rm -rf vendor
 
 ###############################################################################
 # Updating pins
