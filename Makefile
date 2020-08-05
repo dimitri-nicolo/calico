@@ -148,7 +148,8 @@ clean:
 	       release-notes-* \
 	       fv/infrastructure/crds/ \
 	       docs/*.pdf \
-	       .go-pkg-cache
+	       .go-pkg-cache \
+	       vendor
 	find . -name "junit.xml" -type f -delete
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
