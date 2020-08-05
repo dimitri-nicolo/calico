@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.40
+GO_BUILD_VER?=v0.45
 
 GIT_USE_SSH = true
 
@@ -91,21 +91,17 @@ WINDOWS_ARCHIVE_TAG?=$(GIT_VERSION)
 WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
 WINDOWS_NSSM_VERSION=2.24
-# Explicit list of files that we copy in from the vendor directory.  This is required because
-# the copying rules we use are pattern-based and they only work with an explicit rule of the
-# form "$(WINDOWS_VENDORED_FILES): vendor" (otherwise, make has no way to know that the vendor
-# target produces the files we need).
-WINDOWS_VENDORED_FILES := \
-    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.ps1 \
-    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.psm1 \
-    vendor/github.com/tigera/confd-private/windows-packaging/conf.d/blocks.toml \
-    vendor/github.com/tigera/confd-private/windows-packaging/conf.d/peerings.toml \
-    vendor/github.com/tigera/confd-private/windows-packaging/templates/blocks.ps1.template \
-    vendor/github.com/tigera/confd-private/windows-packaging/templates/peerings.ps1.template \
-    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.ps1 \
-    vendor/github.com/tigera/confd-private/windows-packaging/config-bgp.psm1 \
-    vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1 \
-    vendor/github.com/Microsoft/SDN/License.txt
+# Explicit list of files that we copy in from the mod cache.  This is required because the copying rules we use are pattern-based
+# and they only work with an explicit rule of the form "$(WINDOWS_MOD_CACHED_FILES): <file path from project root>" (otherwise,
+# make has no way to know that the mod cache target produces the files we need).
+WINDOWS_MOD_CACHED_FILES := \
+    windows-packaging/config-bgp.ps1 \
+    windows-packaging/config-bgp.psm1 \
+    windows-packaging/conf.d/blocks.toml \
+    windows-packaging/conf.d/peerings.toml \
+    windows-packaging/templates/blocks.ps1.template \
+    windows-packaging/templates/peerings.ps1.template \
+
 # Files to include in the Windows ZIP archive.  We need to list some of these explicitly
 # because we need to force them to be built/copied into place.
 WINDOWS_ARCHIVE_FILES := \
@@ -126,6 +122,9 @@ WINDOWS_ARCHIVE_FILES := \
     $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1 \
     $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt \
     $(WINDOWS_ARCHIVE_ROOT)/libs/calico/calico.psm1
+
+MICROSOFT_SDN_VERSION := 0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44
+MICROSOFT_SDN_GITHUB_RAW_URL := https://raw.githubusercontent.com/microsoft/SDN/$(MICROSOFT_SDN_VERSION)
 
 # Variables used by the tests
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
@@ -196,8 +195,6 @@ build: $(NODE_CONTAINER_BINARY)
 .PHONY: remote-deps
 remote-deps: mod-download
 	# Recreate the directory so that we are sure to clean up any old files.
-	rm -rf vendor/github.com/tigera vendor/github.com/Microsoft
-	mkdir -p vendor/github.com/tigera vendor/github.com/Microsoft
 	rm -rf filesystem/etc/calico/confd
 	mkdir -p filesystem/etc/calico/confd
 	rm -rf bin/bpf
@@ -210,8 +207,6 @@ remote-deps: mod-download
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/conf.d; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/config filesystem/etc/calico/confd/config; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd` vendor/github.com/tigera/confd-private; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/Microsoft/SDN` vendor/github.com/Microsoft/SDN; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
 		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-apache bin/bpf; \
 		chmod -R +w bin/bpf; \
@@ -220,7 +215,7 @@ remote-deps: mod-download
 		make -j 16 -C ./bin/bpf/bpf-gpl/ all; \
 		cp bin/bpf/bpf-gpl/bin/* filesystem/usr/lib/calico/bpf/; \
 		cp bin/bpf/bpf-apache/bin/* filesystem/usr/lib/calico/bpf/; \
-		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/ vendor'
+		chmod -R +w filesystem/etc/calico/confd/ config/ filesystem/usr/lib/calico/bpf/'
 
 # We need CGO when compiling in Felix for BPF support.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), amd64)
@@ -765,22 +760,31 @@ sub-base-tag-images-%:
 # Windows packaging
 ###############################################################################
 # Pull the BGP configuration scripts and templates from the confd repo.
-$(WINDOWS_VENDORED_FILES): remote-deps
+$(WINDOWS_MOD_CACHED_FILES): mod-download
 
-$(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: ./vendor/github.com/tigera/confd-private/windows-packaging/config-bgp%
-	cp $< $@
+$(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: windows-packaging/config-bgp%
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+        $(GIT_CONFIG_SSH) \
+        cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
+        chmod +w $@
 
-$(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: ./vendor/github.com/tigera/confd-private/windows-packaging/conf.d/%
-	cp $< $@
+$(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: windows-packaging/conf.d/%
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+        $(GIT_CONFIG_SSH) \
+        cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
+        chmod +w $@
 
-$(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: ./vendor/github.com/tigera/confd-private/windows-packaging/templates/%
-	cp $< $@
+$(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: windows-packaging/templates/%
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
+        $(GIT_CONFIG_SSH) \
+        cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
+        chmod +w $@
 
-$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1: ./vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1
-	cp $< $@
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1:
+	wget -P $(WINDOWS_ARCHIVE_ROOT)/libs/hns/ $(MICROSOFT_SDN_GITHUB_RAW_URL)/Kubernetes/windows/hns.psm1
 
-$(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt: ./vendor/github.com/Microsoft/SDN/License.txt
-	cp $< $@
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt:
+	wget -P $(WINDOWS_ARCHIVE_ROOT)/libs/hns/ $(MICROSOFT_SDN_GITHUB_RAW_URL)/License.txt
 
 ## Download NSSM.
 windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
