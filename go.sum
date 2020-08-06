@@ -777,6 +777,8 @@ github.com/tigera/compliance v0.0.0-20200731081122-1b55e5084176 h1:Ng+akUM5C+Xo0
 github.com/tigera/compliance v0.0.0-20200731081122-1b55e5084176/go.mod h1:WNdVc+ne5V9ISbYMsr2t0kJyO+IcycrbhmfE3EpPXAw=
 github.com/tigera/compliance v0.0.0-20200805081153-ecea79286b39 h1:NH2C0MzrIJd/E9pTuOqszQndYzYsW7HmfyPNkQdG9sY=
 github.com/tigera/compliance v0.0.0-20200805081153-ecea79286b39/go.mod h1:PwHHrkdulpdKBB56l5VI+KYJ7/j+/h4YLalal0UHNAs=
+github.com/tigera/compliance v0.0.0-20200805202559-0f5ab80253b2 h1:YKhCrHOYcVWWVSkdg0feQ06TectiAupu98cWrgSHF9A=
+github.com/tigera/compliance v0.0.0-20200805202559-0f5ab80253b2/go.mod h1:PwHHrkdulpdKBB56l5VI+KYJ7/j+/h4YLalal0UHNAs=
 github.com/tigera/felix-private v0.0.0-20200721040547-44cd9d3984ff h1:qZypQNae5teDODSZulRLDMUleTtI5KwDd2Ng+bx1QJc=
 github.com/tigera/felix-private v0.0.0-20200721040547-44cd9d3984ff/go.mod h1:C3GXuzlM6jDCzocVCyq//UISBBNajeFepllzpO304XY=
 github.com/tigera/felix-private v0.0.0-20200805013406-8ae997b9572a h1:uazQV2txsQvDHiHa8/4gbimyq9nrGKuGMLyNwNF/P1o=
