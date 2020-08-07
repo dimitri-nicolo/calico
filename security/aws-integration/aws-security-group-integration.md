@@ -255,7 +255,7 @@ Create the operator custom resource using inputs from the previous step.
 
 ```bash
 kubectl create -f - <<EOF
-apiVersion: operator.tigera.io/v1beta1
+apiVersion: operator.tigera.io/v1
 kind: AmazonCloudIntegration
 metadata:
   name: tigera-secure
