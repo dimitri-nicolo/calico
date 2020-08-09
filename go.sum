@@ -717,8 +717,6 @@ github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0 h1:5e1IKIwg4qsysYzJu7QL
 github.com/tigera/api v0.0.0-20200115221514-2e8e59c327b0/go.mod h1:KUMEj07RfIJYBqycnQRi2a67yrmA7QzqNn6K524+GFs=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZGmS0R0G2V6lLTawuNLmYXOhgBn8K7qClxJjj7A9A=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
-github.com/tigera/felix-private v0.0.0-20200804201814-cd4a12ed25a1 h1:wqRtpoYbIu82ihR4SuFtVfGk3Yg77V2rRA6kZQVpIc8=
-github.com/tigera/felix-private v0.0.0-20200804201814-cd4a12ed25a1/go.mod h1:u+4Ghx0Y0naEYbKc8FDB0G6lj8cn13JsQj/XV5s9Onw=
 github.com/tigera/felix-private v0.0.0-20200805013406-8ae997b9572a h1:uazQV2txsQvDHiHa8/4gbimyq9nrGKuGMLyNwNF/P1o=
 github.com/tigera/felix-private v0.0.0-20200805013406-8ae997b9572a/go.mod h1:wTfi+vW9xhmviDjzi92z/427q/qc1bD1h/jE1Y4t/dI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d h1:fqI9JyEo5Ts1obQ8pUp9lABe5XNb99xhxhn/lR+VAII=
@@ -729,8 +727,6 @@ github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320 h1:hE/mZsFKPYsl8ccR
 github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320/go.mod h1:erKr0bew1q/9lZOLYs49JrRBaUBIj/zAfJylAmcrGD0=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be h1:hNMFGLnP0DCUPSNnPSQwEkPQwuGn5y2QrQzx2+ue7lY=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20200730194746-ed8931d0c497 h1:M0xwAmpxoqYxFYRpphkCAoAcmlMO+PyOxWdG1a5YsWQ=
-github.com/tigera/typha-private v0.6.0-beta1.0.20200730194746-ed8931d0c497/go.mod h1:+0bdH5RCqyRFj5SuxGQ6jwzQg2Y/oiaWBsV3AY0L4/s=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200804231518-fe8cada78a0b h1:L7JVM2zO9Lgl4sHa9siUFcQl+Z7eQL9gYs/10hlS5gM=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200804231518-fe8cada78a0b/go.mod h1:+0bdH5RCqyRFj5SuxGQ6jwzQg2Y/oiaWBsV3AY0L4/s=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
