@@ -8,20 +8,9 @@
   After submitting a sales purchase order to Tigera, 1-2 days.
 
 
-**What happens to nodes during the license grace period?**
+**Is there a grace period?**
 
-  All {{site.prodname}} features work without interruption.
-
-
-**How long is the grace period?**
-  
-  Grace period terms are fixed and are communicated to you when you get your commercial license. 
-
-
-**What happens to nodes after the grace period?**
-
-- Initially, users can access the {{site.prodname}} Manager, and a message is displayed to change the license. But after two days, users will not be able to access {{site.prodname}} Manager.
-- Although components appear to function in {{site.prodname}} Manager when the grace period expires, functionality falls back to open source Calico behavior; policy enforcement using tiers will not work except for the default Kubernetes tier.  
+  No.
 
 
 **What happens if I add nodes beyond what I'm licensed for?**
@@ -30,6 +19,6 @@
 - All {{site.prodname}} features still work
 
 
-**How do I access information about my license?**
+**How do I get information about my license? Monitor the expiry date?**
 
   [Prometheus!]({{site.baseurl}}/maintenance/monitor/license-agent). Monitor days till expiration, nodes available, and nodes used.
