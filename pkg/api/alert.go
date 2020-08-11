@@ -9,6 +9,7 @@ import (
 const (
 	AlertLogType            = "type"
 	AlertLogSourceNamespace = "source_namespace"
+	AlertLogTime            = "time"
 )
 
 // Container type to hold the alert events and/or an error.

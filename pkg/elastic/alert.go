@@ -96,7 +96,7 @@ func constructAlertLogsQuery(filter *api.AlertLogsSelection, start, end *time.Ti
 
 	// Query by from/to if specified.
 	if start != nil || end != nil {
-		rangeQuery := elastic.NewRangeQuery("time")
+		rangeQuery := elastic.NewRangeQuery(api.AlertLogTime)
 		if start != nil {
 			rangeQuery = rangeQuery.From(*start)
 		}
@@ -123,10 +123,10 @@ func alertLogQueryFromAlertLogsSelection(filter *api.AlertLogsSelection) elastic
 func alertLogQueryFromAlertResource(res api.AlertResource) elastic.Query {
 	queries := []elastic.Query{}
 	if res.Type != "" {
-		queries = append(queries, elastic.NewMatchQuery("type", res.Type))
+		queries = append(queries, elastic.NewMatchQuery(api.AlertLogType, res.Type))
 	}
 	if res.SourceNamespace != "" {
-		queries = append(queries, elastic.NewMatchQuery("source_namespace", res.SourceNamespace))
+		queries = append(queries, elastic.NewMatchQuery(api.AlertLogSourceNamespace, res.SourceNamespace))
 	}
 	return elastic.NewBoolQuery().Must(queries...)
 }
