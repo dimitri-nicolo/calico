@@ -49,7 +49,7 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
   ```
 
 - You have installed [{{site.prodname}} for EKS]({{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks)
-  on your cluster. 
+  on your cluster, or kubeadm/kops. 
 
   Verify {{ site.prodname }} has been installed by confirming that all tigerastatuses are available:
 
