@@ -19,11 +19,13 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
+	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 )
 
 func Patch(args []string) error {
