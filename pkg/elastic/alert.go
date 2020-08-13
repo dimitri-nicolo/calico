@@ -37,7 +37,7 @@ func (c *client) SearchAlertLogs(ctx context.Context, filter *api.AlertLogsSelec
 		scroll := c.Scroll(alertSearchIndex).
 			Size(DefaultAlertPageSize).
 			Query(queries).
-			Sort("time", true)
+			Sort(api.AlertLogTime, true)
 
 		// Issue the query to Elasticsearch and send results out through the resultsChan.
 		// We only terminate the search if when there are no more results to scroll through.
