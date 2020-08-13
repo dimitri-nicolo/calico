@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	AlertIndex           = "tigera_secure_ee_events*"
+	AlertIndex           = "tigera_secure_ee_events"
 	DefaultAlertPageSize = 100
 )
 
@@ -61,7 +61,7 @@ func (c *client) SearchAlertLogs(ctx context.Context, filter *api.AlertLogsSelec
 				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
-				log.WithError(err).Warn("Unexpected results from audit events search")
+				log.WithError(err).Warn("Unexpected results from alert logs search")
 				resultChan <- &api.AlertResult{Err: err}
 				return
 			}
