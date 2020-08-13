@@ -15,8 +15,8 @@ require (
 	github.com/leodido/go-urn v1.1.1-0.20181204092800-a67a23e1c1af // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
-	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/typha v0.7.3-0.20200808040656-32dfe0e092a8
+	github.com/projectcalico/libcalico-go v1.7.2-0.20200812215244-14898969c27c
+	github.com/projectcalico/typha v0.7.3-0.20200813041938-ebd7ec100f42
 	github.com/sirupsen/logrus v1.4.2
 	google.golang.org/appengine v1.6.5 // indirect
 	k8s.io/api v0.17.3

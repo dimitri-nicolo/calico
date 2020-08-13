@@ -768,6 +768,7 @@ execute_tests_daemon() {
         run_edited_individual_test 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_individual_test 'explicit_peering/selectors'
         run_individual_test 'explicit_peering/route_reflector'
+        run_individual_test 'explicit_peering/keepnexthop'
     done
 
     # Turn the node-mesh back on.
@@ -802,6 +803,7 @@ execute_tests_oneshot() {
         run_individual_test_oneshot 'explicit_peering/route_reflector'
         run_individual_test_oneshot 'mesh/static-routes'
         run_individual_test_oneshot 'mesh/communities'
+        run_individual_test_oneshot 'explicit_peering/keepnexthop'
         export CALICO_ROUTER_ID=10.10.10.10
         run_individual_test_oneshot 'mesh/static-routes-no-ipv4-address'
         export -n CALICO_ROUTER_ID

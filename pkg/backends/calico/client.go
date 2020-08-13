@@ -398,7 +398,8 @@ type bgpPeer struct {
 	RestartTime       string               `json:"restart_time"`
 	GatewayMode       string               `json:"gateway_mode"`
 	EnableBFD         bool                 `json:"enable_bfd"`
-	Port        uint16               `json:"port"`
+	Port              uint16               `json:"port"`
+	KeepNextHop       bool                 `json:"keep_next_hop"`
 }
 
 type bgpPrefix struct {
@@ -449,7 +450,7 @@ func (c *client) updatePeersV1() {
 		// already have a global peering to that IP, skip emitting the node-specific
 		// one.
 		if nodeKey, ok := key.(model.NodeBGPPeerKey); ok {
-			globalKey := model.GlobalBGPPeerKey{PeerIP: nodeKey.PeerIP, Port:nodeKey.Port}
+			globalKey := model.GlobalBGPPeerKey{PeerIP: nodeKey.PeerIP, Port: nodeKey.Port}
 			globalPath, _ := model.KeyToDefaultPath(globalKey)
 			if _, ok = peersV1[globalPath]; ok {
 				log.Debug("Global peering already exists")
@@ -521,10 +522,11 @@ func (c *client) updatePeersV1() {
 				}
 
 				peers = append(peers, &bgpPeer{
-					PeerIP:     *ip,
-					ASNum:      v3res.Spec.ASNumber,
-					SourceAddr: string(v3res.Spec.SourceAddress),
-					Port:       port,
+					PeerIP:      *ip,
+					ASNum:       v3res.Spec.ASNumber,
+					SourceAddr:  string(v3res.Spec.SourceAddress),
+					Port:        port,
+					KeepNextHop: v3res.Spec.KeepOriginalNextHop,
 				})
 			}
 			log.Debugf("Peers %#v", peers)
@@ -599,7 +601,7 @@ func (c *client) updatePeersV1() {
 
 		for _, peer := range peers {
 			for _, localNodeName := range localNodeNames {
-				key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP, Port:peer.Port}
+				key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP, Port: peer.Port}
 				emit(key, peer)
 			}
 		}
@@ -997,7 +999,7 @@ func (c *client) getPrefixAdvertisementsKVPair(v3res *apiv3.BGPConfiguration, ke
 		for _, prefixAdvertisement := range v3res.Spec.PrefixAdvertisements {
 			cidr := prefixAdvertisement.CIDR
 
-			communitiesSet:= set.New()
+			communitiesSet := set.New()
 			for _, c := range prefixAdvertisement.Communities {
 				isCommunity := isValidCommunity(c)
 				// if c is a community value, use it directly, else get the community value from defined definedCommunities.
