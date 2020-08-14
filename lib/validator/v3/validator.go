@@ -775,20 +775,34 @@ func validateKeyValueList(fl validator.FieldLevel) bool {
 func validateIPPort(fl validator.FieldLevel) bool {
 	ipPort := fl.Field().String()
 	if ipPort != "" {
+		var ipStr, portStr string
+		var err error
+		ipStr = ipPort
 		// If PeerIP has both IP and port, validate both
 		if IPv4PortFormat.MatchString(ipPort) || IPv6PortFormat.MatchString(ipPort) {
-			_, _, err := net.SplitHostPort(ipPort)
+			ipStr, portStr, err = net.SplitHostPort(ipPort)
 			if err != nil {
 				log.Debugf("PeerIP value is invalid, it should either be \"<IP>\" or \"<IPv4>:<port>\" or \"[<IPv6>]:<port>\".")
 				return false
 			}
-		} else {
-			parsedIP := net.ParseIP(ipPort)
-			if parsedIP == nil {
-				log.Debugf("PeerIP value is invalid.")
+			var port uint64
+			port, err = strconv.ParseUint(portStr, 10, 16)
+			if err != nil {
+				log.Debugf("PeerIP value has invalid port.")
+				return false
+			}
+			if port < 1 {
+				log.Debugf("PeerIP value has invalid port.")
 				return false
 			}
 		}
+
+		parsedIP := net.ParseIP(ipStr)
+		if parsedIP == nil {
+			log.Debugf("PeerIP value is invalid.")
+			return false
+		}
+
 		return true
 	}
 	return false
@@ -2022,9 +2036,13 @@ func validateBGPConfigurationSpec(structLevel validator.StructLevel) {
 		}
 	}
 
+	if (len(spec.PrefixAdvertisements) == 0) && (len(communities) != 0) {
+		structLevel.ReportError(reflect.ValueOf(communities), "Spec.Communities[]", "",
+			reason("communities are defined but not used in Spec.PrefixAdvertisement[]."), "")
+	}
+
 	// check if Spec.PrefixAdvertisement.Communities are valid
-	pas := spec.PrefixAdvertisements
-	for _, pa := range pas {
+	for _, pa := range spec.PrefixAdvertisements {
 		_, _, err := cnet.ParseCIDROrIP(pa.CIDR)
 		if err != nil {
 			log.Warningf("CIDR value is invalid: %v", pa.CIDR)
