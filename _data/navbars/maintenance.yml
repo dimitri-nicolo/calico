@@ -18,6 +18,8 @@ section:
     path: /maintenance/logstorage/log-storage-requirements
   - title: Adjust log storage size
     path: /maintenance/logstorage/adjust-log-storage-size
+  - title: Advanced node scheduling
+    path: /maintenance/logstorage/advanced-node-scheduling
 - title: Install a patch release
   path: /maintenance/manifest-archive
 - title: Upgrade
