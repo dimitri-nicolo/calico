@@ -37,6 +37,7 @@ type Client interface {
 	api.AuditLogReportHandler
 	api.FlowLogReportHandler
 	api.AlertLogReportHandler
+	api.DNSLogReportHandler
 	api.ReportRetriever
 	api.ReportStorer
 	api.ListDestination
