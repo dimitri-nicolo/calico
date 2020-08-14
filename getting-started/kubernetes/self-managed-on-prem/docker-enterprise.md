@@ -15,7 +15,7 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 - A compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux. See [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
   - During the installation of UCP, you must set the flag `--unmanaged-cni` so UCP does not install the default Calico networking plugin.
 
-- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://success.docker.com/article/docker-ee-best-practices) for details.
+- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html) for details.
 
 **{{site.prodname}} requirements**
 
