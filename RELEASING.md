@@ -41,6 +41,8 @@ To release Calico, you need **the following permissions**:
 
 - You must be able to access binaries.projectcalico.org.
 
+- You must have admin access to docs.tigera.io site on netlify.
+
 You'll also need **several GB of disk space** (~7GB for v3.4.0, for example).
 
 Some of the release scripts also require **tools to be installed** in your dev environment:
@@ -167,6 +169,13 @@ at the same time that subcomponent release branches are cut, often well before t
        sitemap: true
    ```
 
+1. In [netlify.toml](netlify.toml) 
+    1. set the `RELEASE_VERSION` environment variable to `vX.Y`.
+
+1. In [netlify/_redirects](netlify/_redirects) add a line for the new release following the other examples
+(Note: This page may vary with release, also just non-slash to slash redirects doesn't work. It needs to point to a page).
+This makes sure that requests coming to `/vX.Y` (without a slash) don't fail with 404.
+
 1. If appropriate, update the list of tested versions for different platforms in the appropriate documents.
 
    - Kubernetes `getting-started/kubernetes/requirements.md`
@@ -183,26 +192,32 @@ at the same time that subcomponent release branches are cut, often well before t
 
 ### Publishing the candidate release branch
 
-1. Create a new branch off of the latest master.
+1. Check out to the candidate release branch that is created as per the instructions [here](#creating-a-candidate-release-branch). 
 
    ```
-   git checkout -b release-candidate-vX.Y
+   git checkout release-vX.Y
    ```
 
-1. In [netlify.toml](netlify.toml), set the `CANDIDATE_RELEASE` environment variable:
+1. On netlify create a new site using the `release-vX.Y` branch (You should at least have write access to this repo for site creation) 
+
+1. Rename the randomly generated site name to follow the same naming convention as other releases (Ex: `tigera-vX-Y`).
+
+1. Ensure that the site is generated properly by visiting site URL (Ex. https://tigera-vX-Y.netlify.app/vX.Y/).  
+
+1. After ensuring that the site deployment is successful, in current production branch's [netlify.toml](netlify.toml), add below proxy rules for the release candidate at the top of `redirects` rules.
 
    ```toml
-   [build.environment]
-     CANDIDATE_RELEASE = "vX.Y"
+    [[redirects]]
+      from = "/vX.Y/*"
+      to = "https://tigera-vX-Y.netlify.app/vX.Y/:splat"
+      status = 200
    ```
 
-1. Commit your changes. For example:
+1. Ensure that these proxy rules are cherry-picked to `master` branch so that future releases, which would be cut from master, will have references to this releases.
 
-   ```
-   git commit -m "build vX.Y candidate"
-   ```
+1. Ensure that proxy rules are cherry picked to `candidate` branch too (unlike for OS, OS has an extra build to handle this case without redirect rules) so that when this branch is promoted to production, we still have access to `docs.tigera.io/vX.Y/`. 
 
-1. Push your branch and open a pull request to the upstream master branch. Get it reviewed and wait for it to pass CI.
+1. Open a pull request to upstream production branch, get it reviewed and merged. This would make the candidate site docs available at `docs.tigera.io/vX.Y/` (Note: the trailing slash)
 
 ### Promoting to be the latest release in the docs
 
@@ -252,37 +267,17 @@ as described in the section above.
    make release-publish
    ```
 
-1. Merge the PR. This will cause candidate.docs.projectcalico.org to be updated (after a few minutes). Validate that everything looks correct before proceeding to the next step.
+1. Merge the PR. 
 
-1. Checkout the master branch
+1. On netlify locate `docs.tigera.io` site and the update `Production branch` in `Settings -> Build & deploy -> Deploy contexts` to `release-vX.Y` in  site settings and trigger the deployment. 
+(Note: This site contains `LATEST_RELEASE` environment variable in netlify UI, using which `netlify.toml` picks up the correct build for latest release.)
+This will cause `docs.tigera.io` to be updated (after a few minutes). Validate that everything looks correct.
 
-1. In [netlify.toml](netlify.toml):
+## Adding the previous release to docs.tigera.io/version
 
-   1. Set the `CANDIDATE_RELEASE` environment variable back to an empty string.
+1. Archive site should already be accessible if the candidate release process is followed as per this guide while cutting the respective release. 
 
-   1. Update the `CURRENT_RELEASE` environment variable.
-
-1. In [netlify/_redirects](netlify/_redirects), add a new line for the new release.
-
-1. Commit your changes. For example:
-
-   ```
-   git commit -m "Promote vX.Y.Z to latest"
-   ```
-
-1. Push your branch and open a pull request to the upstream master branch. Get it reviewed and wait for it to pass CI.
-
-## Adding the previous release to archive.docs.projectcalico.org
-
-1. Checkout latest master.
-
-   ```
-   git checkout master
-   ```
-
-1. Add the previous release to the top of `_data/archive.yml`
-
-1. Commit your changes and open a PR against upstream master.
+1. Ensure that the site is accessible by visiting `docs.tigera.io/<version>/`.
 
 ## <a name="patch"></a> Performing a "patch" release
 
@@ -359,8 +354,3 @@ release notes for a given version, perform the following steps.
 
    - [Example release notes for a major/minor release](https://github.com/projectcalico/calico/blob/v3.1.0/_includes/v3.1/release-notes/v3.1.0-release-notes.md)
    - [Example release notes for a patch release](https://github.com/projectcalico/calico/blob/7d5594dbca14cb1b765b65eb11bdd8239d23dfb3/_includes/v3.0/release-notes/v3.0.5-release-notes.md)
-
-### Updating CNX Documentation
-Currently, updating the CNX documentation requires two manual steps:
-* `make publish-cnx-docs`
-* `gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml`
