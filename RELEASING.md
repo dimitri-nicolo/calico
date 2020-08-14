@@ -1,7 +1,7 @@
 # How to release Calico
 
 > **NOTE:** These instructions apply only to Calico versions v3.2.0 or greater.
-> For older releases, refer to the instructions in the corresponding `release-vX.Y` branch.
+> For older releases, refer to the instructions in the corresponding `release-calient-vX.Y` branch.
 
 ## Overview
 
@@ -142,7 +142,7 @@ at the same time that subcomponent release branches are cut, often well before t
 1. Create a new branch off of the latest master.
 
    ```
-   git checkout -b release-vX.Y
+   git checkout -b release-calient-vX.Y
    ```
 
 1. Update versioning information in `_data/versions.yml`.
@@ -187,7 +187,7 @@ This makes sure that requests coming to `/vX.Y` (without a slash) don't fail wit
 
    ```
    git commit -a -m "Update docs for vX.Y"
-   git push origin release-vX.Y
+   git push origin release-calient-vX.Y
    ```
 
 ### Publishing the candidate release branch
@@ -195,16 +195,17 @@ This makes sure that requests coming to `/vX.Y` (without a slash) don't fail wit
 1. Check out to the candidate release branch that is created as per the instructions [here](#creating-a-candidate-release-branch). 
 
    ```
-   git checkout release-vX.Y
+   git checkout release-calient-vX.Y
    ```
 
-1. On netlify create a new site using the `release-vX.Y` branch (You should at least have write access to this repo for site creation) 
+1. On netlify create a new site using the `release-calient-vX.Y` branch (You should at least have write access to this repo for site creation) 
 
 1. Rename the randomly generated site name to follow the same naming convention as other releases (Ex: `tigera-vX-Y`).
 
 1. Ensure that the site is generated properly by visiting site URL (Ex. https://tigera-vX-Y.netlify.app/vX.Y/).  
 
-1. After ensuring that the site deployment is successful, in current production branch's [netlify.toml](netlify.toml), add below proxy rules for the release candidate at the top of `redirects` rules.
+1. After ensuring that the site deployment is successful, in current production branch's [netlify.toml](netlify.toml) (this is the branch from which `docs.tigera.io` site gets deployed on Netlify), 
+add below proxy rules for the release candidate site at the top of `redirects` rules.
 
    ```toml
     [[redirects]]
@@ -227,7 +228,7 @@ as described in the section above.
 1. Checkout the previously created release branch.
 
    ```
-   git checkout release-vX.Y
+   git checkout release-calient-vX.Y
    ```
 
 1. Add the new version to the correct release section in `_data/versions.yml`.
@@ -252,7 +253,7 @@ as described in the section above.
    git commit -m "Updates for release vX.Y.Z"
    ```
 
-1. Push your branch and open a pull request to the upstream release-vX.Y branch. Get it reviewed and wait for it to pass CI.
+1. Push your branch and open a pull request to the upstream release-calient-vX.Y branch. Get it reviewed and wait for it to pass CI.
 
 1. Run the following on your local branch in order to build the release
    at the newly created commit.
@@ -269,7 +270,7 @@ as described in the section above.
 
 1. Merge the PR. 
 
-1. On netlify locate `docs.tigera.io` site and the update `Production branch` in `Settings -> Build & deploy -> Deploy contexts` to `release-vX.Y` in  site settings and trigger the deployment. 
+1. On netlify locate `docs.tigera.io` site and the update `Production branch` in `Settings -> Build & deploy -> Deploy contexts` to `release-calient-vX.Y` in  site settings and trigger the deployment. 
 (Note: This site contains `LATEST_RELEASE` environment variable in netlify UI, using which `netlify.toml` picks up the correct build for latest release.)
 This will cause `docs.tigera.io` to be updated (after a few minutes). Validate that everything looks correct.
 
