@@ -92,20 +92,8 @@ openshift-install create manifests
 
 #### Add an image pull secret
 
-1. Download the pull secret manifest template into the manifests directory.
+{% include content/openshift-pull-secret.md %}
 
-   ```
-   curl {{ "/manifests/ocp/02-pull-secret.yaml" | absolute_url }} -o manifests/02-pull-secret.yaml
-   ```
-
-1. Update the contents of the secret with the image pull secret provided to you by Tigera.
-
-   For example, if the secret is located at `~/.docker/config.json`, run the following commands.
-
-   ```bash
-   SECRET=$(cat ~/.docker/config.json | tr -d '\n\r\t ' | base64 -w 0)
-   sed -i "s/SECRET/${SECRET}/" manifests/02-pull-secret.yaml
-   ```
 #### Provide additional configuration
 
 You may want to provide {{site.prodname}} with additional configuration at install-time. For example, BGP configuration or peers. You can use a Kubernetes ConfigMap with your desired {{site.prodname}} resources in order to set configuration as part of the installation. If you do not need to provide additional configuration, you can skip this section.

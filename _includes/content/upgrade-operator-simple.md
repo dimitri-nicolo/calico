@@ -1,7 +1,3 @@
-{%- if include.upgradeFrom == "OpenSource" %}
-1.  [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
-{%- endif %}
-
 1. Download the new manifests for Tigera operator.
    ```bash
    curl -L -O {{ "/manifests/tigera-operator.yaml" | absolute_url }}
@@ -28,20 +24,28 @@
    ```
 
 {%- if include.upgradeFrom == "OpenSource" %}
+
 1. Install your pull secret.
    ```bash
    kubectl create secret generic tigera-pull-secret \
        --from-file=.dockerconfigjson=<path/to/pull/secret> \
        --type=kubernetes.io/dockerconfigjson -n tigera-operator
    ```
-{%- endif %}
 
+{%- endif %}
 {%- if include.upgradeFrom == "OpenSource" %}
+
 1. Install the Tigera custom resources. For more information on configuration options available in this manifest, see [the installation reference]({{site.baseurl}}/reference/installation/api).
    ```bash
+   {%- if include.provider == "EKS" %}
+   kubectl apply -f {{ "/manifests/eks/custom-resources.yaml" | absolute_url }}
+   {%- else %}
    kubectl apply -f {{ "/manifests/custom-resources.yaml" | absolute_url }}
+   {%- endif %}
    ```
+
 {%- endif %}
+{%- if include.upgradeFrom != "OpenSource" %}
 
 1. If your cluster is a management cluster, apply a [ManagementCluster]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementCluster)
    CR to your cluster.
@@ -73,22 +77,6 @@
    watch kubectl get tigerastatus
    ```
 
-{%- if include.upgradeFrom == "OpenSource" %}
-   Wait until the `apiserver` shows a status of `Available`, then proceed to the next section.
-
-1. In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
-
-   ```bash
-   kubectl create -f </path/to/license.yaml>
-   ```
-
-   You can now monitor progress with the following command:
-   ```bash
-   watch kubectl get tigerastatus
-   ```
-
-   When all components show a status of `Available`, proceed to the next section.
-{%- endif %}
-
    **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
-   {: .alert .alert-info}
+  {: .alert .alert-info}
+{% endif %}
