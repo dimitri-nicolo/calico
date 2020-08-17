@@ -1549,15 +1549,33 @@ func init() {
 		}, true),
 		Entry("should reject BGPPeerSpec with invalid port in PeerIP (IPv4)", api.BGPPeerSpec{
 			PeerIP: "[192.168.0.0]:98956",
-		}, true),
+		}, false),
+		Entry("should reject BGPPeerSpec with invalid port in PeerIP (IPv4)", api.BGPPeerSpec{
+			PeerIP: "192.168.0.0:65536",
+		}, false),
+		Entry("should reject BGPPeerSpec with invalid port in PeerIP (IPv4)", api.BGPPeerSpec{
+			PeerIP: "192.168.0.0:0",
+		}, false),
+		Entry("should reject BGPPeerSpec with invalid IP in PeerIP (IPv4)", api.BGPPeerSpec{
+			PeerIP: "192.168.0.330:170",
+		}, false),
 		Entry("should reject BGPPeerSpec with invalid port in PeerIP (IPv6)", api.BGPPeerSpec{
 			PeerIP: "[9000::]:98956",
-		}, true),
+		}, false),
 		Entry("should reject invalid BGPPeerSpec without port set in PeerIP (IPv4)", api.BGPPeerSpec{
 			PeerIP: "192.168.0.0:",
 		}, false),
 		Entry("should reject invalid BGPPeerSpec without port set in PeerIP (IPv6)", api.BGPPeerSpec{
 			PeerIP: "[9000::]:",
+		}, false),
+		Entry("should reject BGPPeerSpec with invalid port in PeerIP (IPv6)", api.BGPPeerSpec{
+			PeerIP: "[9000::]:65536",
+		}, false),
+		Entry("should reject BGPPeerSpec with invalid port in PeerIP (IPv6)", api.BGPPeerSpec{
+			PeerIP: "[9000::]:0",
+		}, false),
+		Entry("should reject BGPPeerSpec with invalid IP in PeerIP (IPv6)", api.BGPPeerSpec{
+			PeerIP: "[9000::FFFFF]:170",
 		}, false),
 		Entry("should reject invalid BGPPeerSpec when port is set with empty IP in PeerIP (IPv4)", api.BGPPeerSpec{
 			PeerIP: ":8552",
@@ -2976,29 +2994,40 @@ func init() {
 		),
 
 		// BGP Communities validation in BGPConfigurationSpec
+		Entry("should not accept community when PrefixAdvertisement is empty", api.BGPConfigurationSpec{
+			Communities: []api.Community{{Name: "community-test", Value: "101:5695"}},
+		}, false),
 		Entry("should not accept communities with value and without name", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Value: "536:785"}},
+			Communities:          []api.Community{{Value: "536:785"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, false),
 		Entry("should not accept communities with name and without value", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test"}},
+			Communities:          []api.Community{{Name: "community-test"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, false),
 		Entry("should accept communities with name and standard BGP community value", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test", Value: "100:520"}},
+			Communities:          []api.Community{{Name: "community-test", Value: "100:520"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, true),
 		Entry("should accept communities with name and large BGP community value", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test", Value: "100:520:56"}},
+			Communities:          []api.Community{{Name: "community-test", Value: "100:520:56"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, true),
 		Entry("should not accept communities with name and invalid community value/format", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test", Value: "100"}},
+			Communities:          []api.Community{{Name: "community-test", Value: "100"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, false),
 		Entry("should not accept communities with name and invalid community value/format", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test", Value: "ab-n"}},
+			Communities:          []api.Community{{Name: "community-test", Value: "ab-n"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, false),
 		Entry("should not accept communities with name and invalid standard community value(> 16 bit)", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test", Value: "65536:999999"}},
+			Communities:          []api.Community{{Name: "community-test", Value: "65536:999999"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, false),
 		Entry("should not accept communities with name and invalid large community value(> 32 bit)", api.BGPConfigurationSpec{
-			Communities: []api.Community{{Name: "community-test", Value: "4147483647:999999"}},
+			Communities:          []api.Community{{Name: "community-test", Value: "4147483647:999999"}},
+			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "192.168.10.0/28", Communities: []string{"100:100"}}},
 		}, false),
 		Entry("should not accept communities without CIDR in PrefixAdvertisement", api.BGPConfigurationSpec{
 			PrefixAdvertisements: []api.PrefixAdvertisement{{Communities: []string{"100:5964"}}},

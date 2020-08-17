@@ -9808,7 +9808,7 @@ func schema_libcalico_go_lib_apis_v3_ServiceClusterIPBlock(ref common.ReferenceC
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ServiceClusterIPBlock represents a single whitelisted CIDR block for ClusterIPs.",
+				Description: "ServiceClusterIPBlock represents a single allowed ClusterIP CIDR block.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cidr": {
@@ -9827,7 +9827,7 @@ func schema_libcalico_go_lib_apis_v3_ServiceExternalIPBlock(ref common.Reference
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ServiceExternalIPBlock represents a single whitelisted CIDR External IP block.",
+				Description: "ServiceExternalIPBlock represents a single allowed External IP CIDR block.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cidr": {
