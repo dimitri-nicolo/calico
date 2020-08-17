@@ -16,7 +16,6 @@ package common
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -29,8 +28,9 @@ import (
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calicoctl/calicoctl/commands/file"
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/libcalico-go/lib/errors"
@@ -113,6 +113,10 @@ type CommandResults struct {
 	Client client.Interface
 }
 
+type fileError struct {
+	error
+}
+
 // ExecuteConfigCommand is main function called by all of the resource management commands
 // in calicoctl (apply, create, replace, get, delete and patch).  This provides common function
 // for all these commands:
@@ -128,17 +132,50 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 
 	log.Info("Executing config command")
 
+	errorOnEmpty := !argutils.ArgBoolOrFalse(args, "--skip-empty")
+
 	if filename := args["--filename"]; filename != nil {
-		// Filename is specified, load the resource from file and convert to a slice
-		// of resources for easier handling.
-		r, err := resourcemgr.CreateResourcesFromFile(filename.(string))
+		// Filename is specified.  Use the file iterator to handle the fact that this may be a directory rather than a
+		// single file. For each file load the resources from the file and convert to a single slice of resources for
+		// easier handling.
+		err := file.Iter(args, func(modifiedArgs map[string]interface{}) error {
+			modifiedFilename := modifiedArgs["--filename"].(string)
+
+			r, err := resourcemgr.CreateResourcesFromFile(modifiedFilename)
+			if err != nil {
+				return fileError{err}
+			}
+
+			converted, err := convertToSliceOfResources(r)
+			if err != nil {
+				return fileError{err}
+			}
+
+			if len(converted) == 0 && errorOnEmpty {
+				// We should fail on empty files.
+				return fmt.Errorf("No resources specified in file %s", modifiedFilename)
+			}
+
+			resources = append(resources, converted...)
+			return nil
+		})
+
 		if err != nil {
-			return CommandResults{Err: err, FileInvalid: true}
+			_, ok := err.(fileError)
+			return CommandResults{Err: err, FileInvalid: ok}
 		}
 
-		resources, err = convertToSliceOfResources(r)
-		if err != nil {
-			return CommandResults{Err: err}
+		if len(resources) == 0 {
+			if errorOnEmpty {
+				// Empty files are handled above, so the only way to get here is if --filename pointed to a directory.
+				// We can therefore tweak the error message slightly to be more specific.
+				return CommandResults{
+					Err: fmt.Errorf("No resources specified in directory %s", filename),
+				}
+			} else {
+				// No data, but not an error case. Return an empty set of results.
+				return CommandResults{}
+			}
 		}
 	} else {
 		// Filename is not specific so extract the resource from the arguments. This
@@ -151,10 +188,13 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 		if err != nil {
 			return CommandResults{Err: err}
 		}
-	}
 
-	if len(resources) == 0 {
-		return CommandResults{Err: errors.New("no resources specified")}
+		if len(resources) == 0 {
+			// No resources specified on non-file input is always an error.
+			return CommandResults{
+				Err: fmt.Errorf("No resources specified"),
+			}
+		}
 	}
 
 	if log.GetLevel() >= log.DebugLevel {
@@ -171,16 +211,16 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 
 	// Load the client config and connect.
 	cf := args["--config"].(string)
-	client, err := clientmgr.NewClient(cf)
+	cclient, err := clientmgr.NewClient(cf)
 	if err != nil {
 		fmt.Printf("Failed to create Calico API client: %s\n", err)
 		os.Exit(1)
 	}
-	log.Infof("Client: %v", client)
+	log.Infof("Client: %v", cclient)
 
 	// Initialise the command results with the number of resources and the name of the
 	// kind of resource (if only dealing with a single resource).
-	results := CommandResults{Client: client}
+	results := CommandResults{Client: cclient}
 	var kind string
 	count := make(map[string]int)
 	for _, r := range resources {
@@ -195,7 +235,7 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 	// For commands that modify config, first attempt to initialize the datastore.
 	switch action {
 	case ActionApply, ActionCreate, ActionUpdate:
-		tryEnsureInitialized(context.Background(), client)
+		tryEnsureInitialized(context.Background(), cclient)
 	}
 
 	// Now execute the command on each resource in order, exiting as soon as we hit an
@@ -222,7 +262,7 @@ func ExecuteConfigCommand(args map[string]interface{}, action action) CommandRes
 	}
 
 	for _, r := range resources {
-		res, err := ExecuteResourceAction(args, client, r, action)
+		res, err := ExecuteResourceAction(args, cclient, r, action)
 		if err != nil {
 			switch action {
 			case ActionApply, ActionCreate, ActionDelete, ActionGetOrList:
