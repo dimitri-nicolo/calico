@@ -2924,13 +2924,6 @@ func schema_libcalico_go_lib_apis_v3_BGPPassword(ref common.ReferenceCallback) c
 							Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
 						},
 					},
-					"keepOriginalNextHop": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Option to keep the original nexthop field when routes are sent to a BGP Peer. Setting \"true\" configures the selected BGP Peers node to use the \"next hop keep;\" instead of \"next hop self;\"(default) in the specific branch of the Node on \"bird.cfg\".",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 				},
 			},
 		},
@@ -3081,6 +3074,13 @@ func schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref common.ReferenceCallback) c
 						SchemaProps: spec.SchemaProps{
 							Description: "Selector for the remote nodes to peer with.  When this is set, the PeerIP and ASNumber fields must be empty.  For each peering between the local node and selected remote nodes, we configure an IPv4 peering if both ends have NodeBGPSpec.IPv4Address specified, and an IPv6 peering if both ends have NodeBGPSpec.IPv6Address specified.  The remote AS number comes from the remote node’s NodeBGPSpec.ASNumber, or the global default if that is not set.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"keepOriginalNextHop": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Option to keep the original nexthop field when routes are sent to a BGP Peer. Setting \"true\" configures the selected BGP Peers node to use the \"next hop keep;\" instead of \"next hop self;\"(default) in the specific branch of the Node on \"bird.cfg\".",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
@@ -10112,7 +10112,7 @@ func schema_libcalico_go_lib_apis_v3_ServiceClusterIPBlock(ref common.ReferenceC
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ServiceClusterIPBlock represents a single whitelisted CIDR block for ClusterIPs.",
+				Description: "ServiceClusterIPBlock represents a single allowed ClusterIP CIDR block.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cidr": {
@@ -10131,7 +10131,7 @@ func schema_libcalico_go_lib_apis_v3_ServiceExternalIPBlock(ref common.Reference
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ServiceExternalIPBlock represents a single whitelisted CIDR External IP block.",
+				Description: "ServiceExternalIPBlock represents a single allowed External IP CIDR block.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"cidr": {
