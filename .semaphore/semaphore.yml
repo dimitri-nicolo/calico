@@ -1,0 +1,102 @@
+version: v1.0
+name: Typha
+
+execution_time_limit:
+  hours: 2
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+global_job_config:
+  secrets:
+    # Mount the github SSH secret for pulling private repositories.
+    - name: private-repo
+    # Mount a secret for pulling images from GCR.
+    - name: tigera-dev-ci-pull-credentials
+  prologue:
+    commands:
+      # Correct permissions since they are too open by default:
+      - chmod 0600 ~/.keys/*
+      # Add the key to the ssh agent:
+      - ssh-add ~/.keys/*
+      # Login to docker in order to pull images.
+      - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+      - checkout
+      # Semaphore is doing shallow clone on a commit without tags.
+      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+      - git fetch --unshallow
+      # Note that the 'cache restore' commands require that the "Build" block has been run. The "Build" block is what populates
+      # the cache, therefore every block that requires the use of these cached items must make the "Build" block one of
+      # it's dependencies.
+      - 'cache restore go-pkg-cache-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore go-mod-cache-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+
+blocks:
+  - name: 'Build'
+    dependencies: []
+    task:
+      jobs:
+        - name: Build
+          commands:
+            - make build
+            - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
+            - 'cache store go-pkg-cache-${SEMAPHORE_GIT_SHA} .go-pkg-cache'
+            - 'cache store go-mod-cache-${SEMAPHORE_GIT_SHA} ${HOME}/go/pkg/mod/cache'
+
+  - name: 'UTs'
+    dependencies: ["Build"]
+    task:
+      jobs:
+        - name: Run UT
+          commands:
+            - make ci EXCEPT=k8sfv-test
+
+  - name: 'FVs'
+    dependencies: ["Build"]
+    task:
+      jobs:
+        - name: Run FV
+          commands:
+            - make image
+            - cd .. && git clone git@github.com:tigera/felix-private.git && cd felix-private
+            - JUST_A_MINUTE=true USE_TYPHA=true FV_TYPHAIMAGE=tigera/typha:latest TYPHA_VERSION=latest make k8sfv-test
+
+  - name: 'Foss Checks'
+    dependencies: ["Build"]
+    task:
+      secrets:
+        - name: foss-api-key
+      jobs:
+        - name: Foss Checks
+          commands:
+            - if [ -z "${PULL_REQUEST_NUMBER}" ]; then make foss-checks; fi
+
+  - name: 'Push Images (non-PR builds only)'
+    dependencies: ["UTs", "FVs", "Foss Checks"]
+    skip:
+      # Only run on branches, not PRs.
+      when: "branch !~ '.+'"
+    task:
+      secrets:
+        - name: google-service-account-for-gcr
+      prologue:
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      jobs:
+        - name: Run CD
+          commands:
+            - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
+
+promotions:
+  # Run this manually via the semaphore UI if the cache is full
+  - name: Clear Cache
+    pipeline_file: clear_cache.yml
