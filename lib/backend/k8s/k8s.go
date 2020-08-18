@@ -111,6 +111,8 @@ func init() {
 				&apiv3.GlobalReportTypeList{},
 				&apiv3.ManagedCluster{},
 				&apiv3.ManagedClusterList{},
+				&apiv3.PacketCapture{},
+				&apiv3.PacketCaptureList{},
 			)
 			metav1.AddToGroupVersion(scheme, ver)
 			return nil
@@ -319,6 +321,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		apiv3.KindManagedCluster,
 		resources.NewManagedClusterClient(cs, crdClientV1),
 	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindPacketCapture,
+		resources.NewPacketCaptureClient(cs, crdClientV1),
+	)
 
 	if !ca.K8sUsePodCIDR {
 		// Using Calico IPAM - use CRDs to back IPAM resources.
@@ -347,6 +355,7 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 			apiv3.KindIPAMConfig,
 			resources.NewIPAMConfigClient(cs, crdClientV1),
 		)
+
 	}
 
 	return kubeClient, nil
@@ -525,6 +534,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindGlobalReport,
 		apiv3.KindGlobalReportType,
 		apiv3.KindManagedCluster,
+		apiv3.KindPacketCapture,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {

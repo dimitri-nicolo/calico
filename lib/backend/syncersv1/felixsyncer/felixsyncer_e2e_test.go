@@ -617,6 +617,27 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Revision: tier.ResourceVersion,
 			})
 
+			By("Creating a PacketCapture")
+			captureName := "my-capture"
+			_, err = c.PacketCaptures().Create(
+				ctx,
+				&apiv3.PacketCapture{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: captureName,
+						Namespace :"namespace-1",
+					},
+					Spec: apiv3.PacketCaptureSpec{
+						Selector: "all()",
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			expectedCacheSize += 1
+			syncTester.ExpectCacheSize(expectedCacheSize)
+			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/packetcaptures/namespace-1/my-capture")
+
+
 			By("Starting a new syncer and verifying that all current entries are returned before sync status")
 			// We need to create a new syncTester and syncer.
 			current := syncTester.GetCacheEntries()

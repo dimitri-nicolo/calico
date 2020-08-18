@@ -104,6 +104,10 @@ func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.Syn
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindRemoteClusterConfiguration},
 				UpdateProcessor: nil, // No need to process the updates so pass nil
 			},
+			{
+				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindPacketCapture},
+				UpdateProcessor: nil, // No need to process the updates so pass nil
+			},
 		}
 
 		// If using Calico IPAM, include IPAM resources the felix cares about.

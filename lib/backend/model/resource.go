@@ -196,6 +196,11 @@ func init() {
 		"managedclusters",
 		reflect.TypeOf(apiv3.ManagedCluster{}),
 	)
+	registerResourceInfo(
+		apiv3.KindPacketCapture,
+		"packetcaptures",
+		reflect.TypeOf(apiv3.PacketCapture{}),
+	)
 }
 
 type ResourceKey struct {

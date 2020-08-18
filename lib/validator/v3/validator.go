@@ -284,6 +284,8 @@ func init() {
 	registerStructValidator(validate, validateRuleMetadata, api.RuleMetadata{})
 	registerStructValidator(validate, validateRouteTableRange, api.RouteTableRange{})
 	registerStructValidator(validate, validateBGPConfigurationSpec, api.BGPConfigurationSpec{})
+	registerStructValidator(validate, validatePacketCapture, api.PacketCapture{})
+
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -1629,6 +1631,23 @@ func validateNetworkSet(structLevel validator.StructLevel) {
 			structLevel.ReportError(
 				reflect.ValueOf(k),
 				"Metadata.Labels (label)",
+				"",
+				reason("projectcalico.org/namespace is not a valid label name"),
+				"",
+			)
+		}
+	}
+}
+
+func validatePacketCapture(structLevel validator.StructLevel) {
+	pc := structLevel.Current().Interface().(api.PacketCapture)
+	for k := range pc.GetLabels() {
+		if k == "projectcalico.org/namespace" {
+			// The namespace label should only be used when mapping the real namespace through
+			// to the v1 datamodel.  It shouldn't appear in the v3 datamodel.
+			structLevel.ReportError(
+				reflect.ValueOf(k),
+				"Metadata.LabelPacketCaptures (label)",
 				"",
 				reason("projectcalico.org/namespace is not a valid label name"),
 				"",

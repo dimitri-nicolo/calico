@@ -3063,6 +3063,60 @@ func init() {
 			Communities:          []api.Community{{Name: "community-test", Value: "101:5695"}},
 			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "2001:4860::/128", Communities: []string{"community-test", "8988:202"}}},
 		}, true),
+		// PacketCapture validation
+		Entry("should reject a packet capture with an invalid selector", api.PacketCapture{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-capture",
+			},
+			Spec: api.PacketCaptureSpec{
+				Selector: "malformed$&/?!",
+			},
+		}, false),
+		Entry("should reject a packet capture with an invalid name", api.PacketCapture{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-malformed-name$/&",
+			},
+			Spec: api.PacketCaptureSpec{
+				Selector: "",
+			},
+		}, false),
+		Entry("should reject a packet capture with reserved labels", api.PacketCapture{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-capture",
+				Labels: map[string]string{
+					"projectcalico.org/namespace": "default",
+				},
+			},
+			Spec: api.PacketCaptureSpec{
+				Selector: "",
+			},
+		}, false),
+		Entry("should accept a packet capture with labels", api.PacketCapture{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test-capture",
+				Labels: map[string]string{
+					"key": "value",
+				},
+			},
+			Spec: api.PacketCaptureSpec{
+				Selector: "",
+			},
+		}, true),
+		Entry("should reject a packet capture spec with a malformed selector", api.PacketCaptureSpec{
+			Selector: "malformed&",
+		}, false),
+		Entry("should accept a packet capture spec with logical boolean selector", api.PacketCaptureSpec{
+			Selector: "app == \"client\" && capture == \"true\"",
+		}, true),
+		Entry("should accept a packet capture spec with empty selector", api.PacketCaptureSpec{
+			Selector: "",
+		}, true),
+		Entry("should accept a packet capture spec with equality selector", api.PacketCaptureSpec{
+			Selector: "capture == \"true\"",
+		}, true),
+		Entry("should accept a packet capture spec with all() selector", api.PacketCaptureSpec{
+			Selector: "all()",
+		}, true),
 	)
 
 	Describe("particular error string checking", func() {

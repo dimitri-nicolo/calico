@@ -206,6 +206,11 @@ func (c client) ManagedClusters() ManagedClusterInterface {
 	return managedClusters{client: c}
 }
 
+// PacketCaptures returns an interface for managing packet cluster resources.
+func (c client) PacketCaptures() PacketCaptureInterface {
+	return packetCaptures{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }
