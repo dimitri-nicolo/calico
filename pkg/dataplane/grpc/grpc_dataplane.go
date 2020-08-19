@@ -65,6 +65,7 @@ func (d *grpcDataplane) DoNetworking(
 	routes []*net.IPNet,
 	endpoint *api.WorkloadEndpoint,
 	annotations map[string]string,
+	ipv4GW net.IP,
 ) (ifName, contTapMAC string, err error) {
 	d.logger.Infof("Connecting to GRPC backend server at %s", d.socket)
 	conn, err := grpc.Dial(d.socket, grpc.WithInsecure())
@@ -148,26 +149,5 @@ func (d *grpcDataplane) CleanUpNamespace(args *skel.CmdArgs) error {
 	if !reply.Successful {
 		return fmt.Errorf("grpc dataplane error: %s", reply.ErrorMessage)
 	}
-	return nil
-}
-
-// This is a dummy function required for Windows
-func (d *grpcDataplane) NetworkApplicationContainer(args *skel.CmdArgs) error {
-	return nil
-}
-
-func (d *grpcDataplane) EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet) error {
-	return nil // No-op on Linux.
-}
-
-func (d *grpcDataplane) MaintainWepDeletionTimestamps(timeout int) error {
-	return nil
-}
-
-func (d *grpcDataplane) CheckWepJustDeleted(containerID string, timeout int) (bool, error) {
-	return false, nil
-}
-
-func (d *grpcDataplane) RegisterDeletedWep(containerID string) error {
 	return nil
 }

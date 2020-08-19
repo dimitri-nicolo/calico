@@ -15,8 +15,6 @@ import (
 var VERSION string
 
 func main() {
-	// Accomodate Windows pathname
-	name := strings.Replace(os.Args[0], "\\", "/", -1)
 	// Use the name of the binary to determine which routine to run.
 	_, filename := filepath.Split(os.Args[0])
 	switch filename {

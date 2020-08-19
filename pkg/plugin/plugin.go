@@ -143,11 +143,6 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 		nodeNameFile = conf.NodenameFile
 	}
 
-	nodeNameFile := "/var/lib/calico/nodename"
-	if conf.NodenameFile != "" {
-		nodeNameFile = conf.NodenameFile
-	}
-
 	if !conf.NodenameFileOptional {
 		// Configured to wait for the nodename file - don't start until it exists.
 		if _, err := os.Stat(nodeNameFile); err != nil {
@@ -555,11 +550,6 @@ func cmdDel(args *skel.CmdArgs) (err error) {
 	}
 
 	utils.ConfigureLogging(conf)
-
-	nodeNameFile := "/var/lib/calico/nodename"
-	if conf.NodenameFile != "" {
-		nodeNameFile = conf.NodenameFile
-	}
 
 	nodeNameFile := "/var/lib/calico/nodename"
 	if conf.NodenameFile != "" {

@@ -74,7 +74,10 @@ var _ = Describe("CalicoCni Private", func() {
 	})
 
 	Describe("Run Calico CNI plugin in K8s mode", func() {
-		utils.ConfigureLogging("info")
+		logConf := types.NetConf{
+			LogLevel: "info",
+		}
+		utils.ConfigureLogging(logConf)
 		cniVersion := os.Getenv("CNI_SPEC_VERSION")
 
 		Context("using host-local IPAM", func() {
@@ -189,7 +192,10 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	utils.ConfigureLogging("info")
+	logConf := types.NetConf{
+		LogLevel: "info",
+	}
+	utils.ConfigureLogging(logConf)
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
 
 	Context("with WindowsUseSingleNetwork: true", func() {
