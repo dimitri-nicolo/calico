@@ -244,6 +244,10 @@ type mockDatastore struct {
 	failInit                     bool
 }
 
+func (b *mockDatastore) PacketCaptures() clientv3.PacketCaptureInterface {
+	panic("implement me")
+}
+
 func (b *mockDatastore) FelixSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
