@@ -27,34 +27,25 @@ import (
 	"github.com/Microsoft/hcsshim/hcn"
 	"github.com/buger/jsonparser"
 	"github.com/containernetworking/cni/pkg/skel"
+	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/hns"
 	"github.com/juju/clock"
 	"github.com/juju/errors"
 	"github.com/juju/mutex"
-	"github.com/rakelkar/gonetsh/netsh"
-	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
-	utilexec "k8s.io/utils/exec"
-
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils/winpol"
 	"github.com/projectcalico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
-
-	"golang.org/x/sys/windows/registry"
+	"github.com/rakelkar/gonetsh/netsh"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
+	utilexec "k8s.io/utils/exec"
 )
 
 const (
-	DefaultVNI          = 4096
-	CalicoRegistryKey   = `Software\tigera\calico`
-	PodDeletedKeyString = `PodDeleted`
-	PodDeletedKey       = CalicoRegistryKey + `\` + PodDeletedKeyString
-
-	// Wait for 10 minutes for pod deletion timestamp timeout.
-	// Sandbox operations timeout is 4 minutes.
-	defaultPodDeletionTimestampTimeout = 600
+	DefaultVNI = 4096
 )
 
 type windowsDataplane struct {
@@ -94,146 +85,49 @@ func acquireLock() (mutex.Releaser, error) {
 	return m, nil
 }
 
-// Create calico key if not exists.
-func ensureCalicoKey() error {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, "software", registry.CREATE_SUB_KEY)
+func SetupL2bridgeNetwork(networkName string, subNet *net.IPNet, dns cnitypes.DNS, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+	hnsNetwork, err := EnsureNetworkExists(networkName, subNet, dns, logger)
 	if err != nil {
-		return err
+		logger.Errorf("Unable to create hns network %s", networkName)
+		return nil, err
 	}
-	defer k.Close()
 
-	// CreateKey creates a key named path under open key k.
-	// CreateKey returns the new key and a boolean flag that reports whether the key already existed.
-	tigeraK, _, err := registry.CreateKey(k, "tigera", registry.CREATE_SUB_KEY)
+	// Create host hns endpoint
+	epName := networkName + "_ep"
+	hnsEndpoint, err := CreateAndAttachHostEP(epName, hnsNetwork, subNet, logger)
 	if err != nil {
-		return err
+		logger.Errorf("Unable to create host hns endpoint %s", epName)
+		return nil, err
 	}
-	defer tigeraK.Close()
 
-	calicoK, _, err := registry.CreateKey(tigeraK, "calico", registry.CREATE_SUB_KEY)
+	// Check for management ip getting assigned to the network, interface with the management ip
+	// and then enable forwarding on management interface as well as endpoint.
+	// Update the hnsNetwork variable with management ip
+	hnsNetwork, err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
 	if err != nil {
-		return err
+		logger.Errorf("Failed to enable forwarding : %v", err)
+		return nil, err
 	}
-	defer calicoK.Close()
 
-	return nil
+	return hnsNetwork, err
 }
 
-// Create key for deletion timestamps if not exists.
-// Remove obsolete  entries.
-func (d *windowsDataplane) MaintainWepDeletionTimestamps(timeout int) error {
-	if timeout == 0 {
-		timeout = defaultPodDeletionTimestampTimeout
-	}
-	// Open or Create subkey if not exists.
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, PodDeletedKey, registry.QUERY_VALUE|registry.SET_VALUE)
-	if err == registry.ErrNotExist {
-		// Create calico key if not exists.
-		err := ensureCalicoKey()
-		if err != nil {
-			logrus.Errorf("Failed to ensure Calico registry key. err: %v", err)
-			return err
-		}
-		calicoK, err := registry.OpenKey(registry.LOCAL_MACHINE, CalicoRegistryKey, registry.CREATE_SUB_KEY)
-		if err != nil {
-			return err
-		}
-		defer calicoK.Close()
-
-		k, _, err = registry.CreateKey(calicoK, PodDeletedKeyString, registry.QUERY_VALUE|registry.SET_VALUE)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return nil
-	}
-	defer k.Close()
-
-	// Delete obsolete timestamps.
-	containerIDs, err := k.ReadValueNames(-1)
+func SetupVxlanNetwork(networkName string, subNet *net.IPNet, vni uint64, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+	hnsNetwork, err := ensureVxlanNetworkExists(networkName, subNet, vni, logger)
 	if err != nil {
-		return err
+		logger.Errorf("Unable to create hns network %s", networkName)
+		return nil, err
 	}
 
-	for _, id := range containerIDs {
-		val, _, err := k.GetStringValue(id)
-		if err != nil {
-			return err
-		}
-
-		t, err := time.Parse(time.RFC3339, val)
-		if err != nil {
-			return err
-		}
-
-		logrus.WithField("id", id).Debugf("Maintainer get timestamp for pod deletion [%s]", val)
-		if time.Since(t) > (time.Second * time.Duration(timeout)) {
-			logrus.WithField("id", id).Debugf("Found old pod deletion timestamp [%s] with timeout %d seconds, cleaning it up.", val, timeout)
-			err := k.DeleteValue(id)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (d *windowsDataplane) CheckWepJustDeleted(containerID string, timeout int) (bool, error) {
-	if timeout == 0 {
-		timeout = defaultPodDeletionTimestampTimeout
-	}
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, PodDeletedKey, registry.QUERY_VALUE)
+	// Create host hns endpoint
+	epName := networkName + "_ep"
+	_, err = createAndAttachVxlanHostEP(epName, hnsNetwork, subNet, logger)
 	if err != nil {
-		return false, err
-	}
-	defer k.Close()
-
-	val, _, err := k.GetStringValue(containerID)
-	if err == registry.ErrNotExist {
-		logrus.WithField("id", containerID).Infof("No timestamp for pod deletion")
-		return false, nil
+		logger.Errorf("Unable to create host hns endpoint %s", epName)
+		return nil, err
 	}
 
-	t, err := time.Parse(time.RFC3339, val)
-	if err != nil {
-		// Time format is wrong, return true anyway.
-		return true, err
-	}
-
-	logrus.WithField("id", containerID).Infof("Get timestamp for pod deletion [%s]", val)
-	if time.Since(t) < (time.Second * time.Duration(timeout)) {
-		logrus.WithField("id", containerID).Infof("timestamp for pod deletion [%s] within %d seconds", val, timeout)
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (d *windowsDataplane) RegisterDeletedWep(containerID string) error {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, PodDeletedKey, registry.QUERY_VALUE|registry.SET_VALUE)
-	if err != nil {
-		return err
-	}
-	defer k.Close()
-
-	if err := k.SetStringValue(containerID, time.Now().Format(time.RFC3339)); err != nil {
-		return err
-	}
-
-	// loop 3 seconds until successfully read back
-	retry := 0
-	for retry < 30 {
-		val, _, err := k.GetStringValue(containerID)
-		if err == nil {
-			logrus.WithField("id", containerID).Infof("Saved timestamp for pod deletion [%s]", val)
-			return nil
-		}
-		time.Sleep(100 * time.Millisecond)
-		retry++
-	}
-
-	return fmt.Errorf("timeout waiting registry update for %s", containerID)
+	return hnsNetwork, err
 }
 
 // DoNetworking performs the networking for the given config and IPAM result
@@ -248,12 +142,10 @@ func (d *windowsDataplane) DoNetworking(
 	annotations map[string]string,
 	ipv4GW net.IP,
 ) (hostVethName, contVethMAC string, err error) {
-	// Not used on Windows.
-	_ = desiredVethName
+	hostVethName = desiredVethName
 	if len(routes) > 0 {
 		logrus.WithField("routes", routes).Debug("Ignoring in-container routes; not supported on Windows.")
 	}
-
 	podIP, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 
 	n, _, err := loadNetConf(args.StdinData)
@@ -301,42 +193,19 @@ func (d *windowsDataplane) DoNetworking(
 
 	var hnsNetwork *hcsshim.HNSNetwork
 	if d.conf.Mode == "vxlan" {
-		hnsNetwork, err = d.ensureVxlanNetworkExists(networkName, subNet, result)
+		hnsNetwork, err = SetupVxlanNetwork(networkName, subNet, d.conf.VXLANVNI, d.logger)
 	} else {
-		hnsNetwork, err = EnsureNetworkExists(networkName, subNet, result, d.logger)
+		hnsNetwork, err = SetupL2bridgeNetwork(networkName, subNet, result.DNS, d.logger)
 	}
 	if err != nil {
 		d.logger.Errorf("Unable to create hns network %s", networkName)
 		return "", "", err
 	}
 
-	// Create host hns endpoint
-	epName := networkName + "_ep"
-	var hnsEndpoint *hcsshim.HNSEndpoint
-	if d.conf.Mode == "vxlan" {
-		hnsEndpoint, err = d.createAndAttachVxlanHostEP(epName, hnsNetwork, subNet, result)
-	} else {
-		hnsEndpoint, err = CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, d.logger)
-	}
-	if err != nil {
-		d.logger.Errorf("Unable to create host hns endpoint %s", epName)
-		return "", "", err
-	}
-
-	// Check for management ip getting assigned to the network, interface with the management ip
-	// and then enable forwarding on management interface as well as endpoint.
-	// Update the hnsNetwork variable with management ip
-	if d.conf.Mode != "vxlan" {
-		hnsNetwork, err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, d.logger)
-		if err != nil {
-			d.logger.Errorf("Failed to enable forwarding : %v", err)
-			return "", "", err
-		}
-	}
-
 	// Create endpoint for container
 	hnsEndpointCont, err := d.createAndAttachContainerEP(args, hnsNetwork, subNet, allIPAMPools, natOutgoing, result, n)
 	if err != nil {
+		epName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 		d.logger.Errorf("Unable to create container hns endpoint %s", epName)
 		return "", "", err
 	}
@@ -396,7 +265,7 @@ func lookupIPAMPools(
 	return
 }
 
-func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, result *current.Result) (*hcsshim.HNSNetwork, error) {
+func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, vni uint64, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
 	var err error
 	createNetwork := true
 	expectedAddressPrefix := subNet.String()
@@ -409,12 +278,12 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 		Subnets: make([]hcsshim.Subnet, 0, 1),
 	}
 
-	if d.conf.VXLANVNI == 0 {
+	if vni == 0 {
 		expectedVNI = DefaultVNI
-	} else if d.conf.VXLANVNI < DefaultVNI {
+	} else if vni < DefaultVNI {
 		return nil, fmt.Errorf("Windows does not support VXLANVNI < 4096")
 	} else {
-		expectedVNI = d.conf.VXLANVNI
+		expectedVNI = vni
 	}
 
 	// Checking if HNS network exists
@@ -424,7 +293,7 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 			for _, subnet := range existingNetwork.Subnets {
 				if subnet.AddressPrefix == expectedAddressPrefix && subnet.GatewayAddress == expectedGW.String() {
 					createNetwork = false
-					d.logger.Infof("Found existing HNS network [%+v]", existingNetwork)
+					logger.Infof("Found existing HNS network [%+v]", existingNetwork)
 					break
 				}
 			}
@@ -435,10 +304,10 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 		// Delete stale network
 		if existingNetwork != nil {
 			if _, err := existingNetwork.Delete(); err != nil {
-				d.logger.Errorf("Unable to delete existing network [%v], error: %v", existingNetwork.Name, err)
+				logger.Errorf("Unable to delete existing network [%v], error: %v", existingNetwork.Name, err)
 				return nil, err
 			}
-			d.logger.Infof("Deleted stale HNS network [%v]")
+			logger.Infof("Deleted stale HNS network [%v]")
 		}
 
 		// Add a VxLan subnet
@@ -456,7 +325,7 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 			return nil, errors.Annotatef(err, "failed to marshal %+v", expectedNetwork)
 		}
 
-		d.logger.Infof("Attempting to create HNSNetwork %s", string(jsonRequest))
+		logger.Infof("Attempting to create HNSNetwork %s", string(jsonRequest))
 		newNetwork, err := hcsshim.HNSNetworkRequest("POST", "", string(jsonRequest))
 		if err != nil {
 			return nil, errors.Annotatef(err, "failed to create HNSNetwork %s", networkName)
@@ -464,7 +333,7 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 
 		var waitErr, lastErr error
 		// Wait for the network to populate Management IP
-		d.logger.Infof("Waiting to get ManagementIP from HNSNetwork %s", networkName)
+		logger.Infof("Waiting to get ManagementIP from HNSNetwork %s", networkName)
 		waitErr = wait.Poll(500*time.Millisecond, 5*time.Second, func() (done bool, err error) {
 			newNetwork, lastErr = hcsshim.HNSNetworkRequest("GET", newNetwork.Id, "")
 			return newNetwork != nil && len(newNetwork.ManagementIP) != 0, nil
@@ -475,7 +344,7 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 
 		// Wait for the interface with the management IP
 		netshHelper := netsh.New(utilexec.New())
-		d.logger.Infof("Waiting to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
+		logger.Infof("Waiting to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
 		waitErr = wait.Poll(500*time.Millisecond, 5*time.Second, func() (done bool, err error) {
 			_, lastErr = netshHelper.GetInterfaceByIP(newNetwork.ManagementIP)
 			return lastErr == nil, nil
@@ -484,7 +353,7 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 			return nil, errors.Annotatef(lastErr, "timeout, failed to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
 		}
 
-		d.logger.Infof("Created HNSNetwork %s", networkName)
+		logger.Infof("Created HNSNetwork %s", networkName)
 		existingNetwork = newNetwork
 	}
 
@@ -510,14 +379,14 @@ func (d *windowsDataplane) ensureVxlanNetworkExists(networkName string, subNet *
 		}
 		err := existingNetworkV2.AddPolicy(networkRequest)
 		if err != nil {
-			d.logger.Warnf("Error adding policy to network : %v", err)
+			logger.Warnf("Error adding policy to network : %v", err)
 		}
 	}
 
 	return existingNetwork, nil
 }
 
-func EnsureNetworkExists(networkName string, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+func EnsureNetworkExists(networkName string, subNet *net.IPNet, dns cnitypes.DNS, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
 	var err error
 	createNetwork := true
 	addressPrefix := subNet.String()
@@ -555,8 +424,8 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, result *current.
 					"GatewayAddress": gatewayAddress,
 				},
 			},
-			"DNSServerList": strings.Join(result.DNS.Nameservers, ","),
-			"DNSSuffix":     strings.Join(result.DNS.Search, ","),
+			"DNSServerList": strings.Join(dns.Nameservers, ","),
+			"DNSSuffix":     strings.Join(dns.Search, ","),
 		}
 
 		reqStr, err := json.Marshal(req)
@@ -575,7 +444,7 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, result *current.
 	return hnsNetwork, err
 }
 
-func (d *windowsDataplane) EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet) error {
+func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet, conf types.NetConf) error {
 	logrus.Debug("Checking the node's VXLAN tunnel address")
 	var updateRequired bool
 	node, err := calicoClient.Nodes().Get(ctx, nodeName, options.GetOptions{})
@@ -590,10 +459,10 @@ func (d *windowsDataplane) EnsureVXLANTunnelAddr(ctx context.Context, calicoClie
 	}
 
 	var networkName string
-	if d.conf.WindowsUseSingleNetwork {
-		networkName = d.conf.Name
+	if conf.WindowsUseSingleNetwork {
+		networkName = conf.Name
 	} else {
-		networkName = CreateNetworkName(d.conf.Name, ipNet)
+		networkName = CreateNetworkName(conf.Name, ipNet)
 	}
 
 	mac, err := GetDRMACAddr(networkName, ipNet)
@@ -616,7 +485,7 @@ func (d *windowsDataplane) EnsureVXLANTunnelAddr(ctx context.Context, calicoClie
 	return err
 }
 
-func (d *windowsDataplane) createAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, result *current.Result) (*hcsshim.HNSEndpoint, error) {
+func createAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 	var err error
 	endpointAddress := getNthIP(subNet, 2)
 
@@ -630,7 +499,7 @@ func (d *windowsDataplane) createAndAttachVxlanHostEP(epName string, hnsNetwork 
 			if policyType == targetType {
 				actualPaIP, _ := jsonparser.GetUnsafeString(policy, targetType)
 				if actualPaIP == hnsNetwork.ManagementIP {
-					d.logger.Infof("Found existing remote HNSEndpoint %s", epName)
+					logger.Infof("Found existing remote HNSEndpoint %s", epName)
 					return existingEndpoint, nil
 				}
 			}
@@ -642,7 +511,7 @@ func (d *windowsDataplane) createAndAttachVxlanHostEP(epName string, hnsNetwork 
 		if _, err := existingEndpoint.Delete(); err != nil {
 			return nil, errors.Annotatef(err, "failed to delete existing remote HNSEndpoint %s", epName)
 		}
-		d.logger.Infof("Deleted stale HNSEndpoint %s", epName)
+		logger.Infof("Deleted stale HNSEndpoint %s", epName)
 	}
 
 	macAddr := GetMacAddr(hnsNetwork.ManagementIP)
@@ -660,12 +529,12 @@ func (d *windowsDataplane) createAndAttachVxlanHostEP(epName string, hnsNetwork 
 	if _, err := newEndpoint.Create(); err != nil {
 		return nil, errors.Annotatef(err, "failed to create remote HNSEndpoint %s", epName)
 	}
-	d.logger.Infof("Created HNSEndpoint %s", epName)
+	logger.Infof("Created HNSEndpoint %s", epName)
 
 	return newEndpoint, nil
 }
 
-func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 	var err error
 	endpointAddress := getNthIP(subNet, 2)
 	attachEndpoint := true
@@ -805,19 +674,6 @@ func (d *windowsDataplane) createAndAttachContainerEP(args *skel.CmdArgs,
 	if len(mgmtIP) == 0 {
 		// We just checked the management IP so we shouldn't lose it again.
 		return nil, fmt.Errorf("HNS network lost its management IP")
-	}
-
-	if natOutgoing {
-		d.logger.Debug("Looking up management subnet to add outgoing NAT exclusion.")
-		mgmtNet, err := lookupManagementAddr(mgmtIP, d.logger)
-		if err != nil {
-			return nil, err
-		}
-		if !d.conf.WindowsDisableHostSubnetNATExclusion {
-			natExclusions = make([]*net.IPNet, len(allIPAMPools)+1)
-			copy(natExclusions, allIPAMPools)
-			natExclusions[len(natExclusions)-1] = mgmtNet
-		}
 	}
 
 	pols, err := winpol.CalculateEndpointPolicies(n, natExclusions, natOutgoing, mgmtIP, d.logger)
@@ -1027,7 +883,7 @@ func (d *windowsDataplane) CleanUpNamespace(args *skel.CmdArgs) error {
 // NetworkApplicationContainer tries to attach the application container to the endpoint that is attached to its pause container.
 // On failure, it returns the error.
 // This is done so that the DNS details are reflected in the container.
-func (d *windowsDataplane) NetworkApplicationContainer(args *skel.CmdArgs) error {
+func NetworkApplicationContainer(args *skel.CmdArgs) error {
 	n, _, err := loadNetConf(args.StdinData)
 	hnsEndpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 

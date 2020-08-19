@@ -3,16 +3,13 @@
 set -e
 set -x
 
-# Temporarily disable winfv from master branch. Will enable it again once OS windows code merged in private.
-exit 0
-
 FV_DIR="/home/semaphore/process/testing/winfv"
 
 pushd ${FV_DIR}
 # Prepare local files
 cp ~/.docker/config.json docker_auth.json
 cp ~/$SEMAPHORE_GIT_DIR/internal/pkg/testutils/private.key private.key
-cp ~/$SEMAPHORE_GIT_DIR/bin/amd64/*.exe .
+cp ~/$SEMAPHORE_GIT_DIR/bin/windows/*.exe .
 
 # Prepare key for windows fv.
 ssh-keygen -f master_ssh_key -N ''

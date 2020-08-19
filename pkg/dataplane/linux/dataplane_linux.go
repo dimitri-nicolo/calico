@@ -1,4 +1,8 @@
+<<<<<<< HEAD:pkg/dataplane/linux/dataplane_linux.go
 // Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+=======
+// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+>>>>>>> a8ef39ddee9917a87d27d74f1d47079158f595c9:pkg/dataplane/linux/dataplane_linux.go
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,8 +120,10 @@ func (d *linuxDataplane) DoNetworking(
 		for _, addr := range result.IPs {
 			if addr.Version == "4" {
 				hasIPv4 = true
+				addr.Address.Mask = net.CIDRMask(32, 32)
 			} else if addr.Version == "6" {
 				hasIPv6 = true
+				addr.Address.Mask = net.CIDRMask(128, 128)
 			}
 		}
 

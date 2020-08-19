@@ -65,7 +65,6 @@ func (d *grpcDataplane) DoNetworking(
 	routes []*net.IPNet,
 	endpoint *api.WorkloadEndpoint,
 	annotations map[string]string,
-	ipv4GW net.IP,
 ) (ifName, contTapMAC string, err error) {
 	d.logger.Infof("Connecting to GRPC backend server at %s", d.socket)
 	conn, err := grpc.Dial(d.socket, grpc.WithInsecure())

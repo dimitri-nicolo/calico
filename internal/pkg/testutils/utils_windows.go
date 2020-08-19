@@ -314,7 +314,7 @@ func NetworkPod(
 		"Namespace":   netns,
 	})
 	d := windows.NewWindowsDataplane(conf, logger)
-	_, _, err = d.DoNetworking(ctx, calicoClient, args, result, "", nil, nil, nil, nil)
+	_, _, err = d.DoNetworking(ctx, calicoClient, args, result, "", nil, nil, nil)
 	return err
 }
 
@@ -342,7 +342,7 @@ func CreateNetwork(netconf string) (*hcsshim.HNSNetwork, error) {
 		networkName = windows.CreateNetworkName(conf.Name, subNet)
 	}
 
-	hnsNetwork, err := windows.EnsureNetworkExists(networkName, subNet, result, logger)
+	hnsNetwork, err := windows.EnsureNetworkExists(networkName, subNet, result.DNS, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
 		return nil, err
@@ -358,8 +358,6 @@ func CreateEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HN
 		panic(err)
 	}
 
-	var result *current.Result
-
 	_, subNet, _ := net.ParseCIDR(conf.IPAM.Subnet)
 
 	var logger *log.Entry
@@ -368,7 +366,7 @@ func CreateEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HN
 	})
 
 	epName := hnsNetwork.Name + "_ep"
-	hnsEndpoint, err := windows.CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
+	hnsEndpoint, err := windows.CreateAndAttachHostEP(epName, hnsNetwork, subNet, logger)
 	if err != nil {
 		logger.Errorf("Unable to create host hns endpoint %s", epName)
 		return nil, err

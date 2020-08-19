@@ -16,11 +16,12 @@ import (
 
 var expectedDefaultConfig string = `{
   "name": "k8s-pod-network",
-  "cniVersion": "0.3.1", 
+  "cniVersion": "0.3.1",
   "plugins": [
     {
       "type": "calico",
-      "log_level": "warn",
+      "log_level": "info",
+      "log_file_path": "/var/log/calico/cni/cni.log",
       "datastore_type": "kubernetes",
       "nodename": "my-node",
       "mtu": 1500,
@@ -33,7 +34,7 @@ var expectedDefaultConfig string = `{
       "snat": true,
       "capabilities": {"portMappings": true}
     }
-  ],
+  ]
 }`
 
 var expectedAlternateConfig string = `{
@@ -44,7 +45,7 @@ var expectedAlternateConfig string = `{
     "etcd_key_file": "",
     "etcd_cert_file": "",
     "etcd_ca_cert_file": "",
-    "log_level": "warn",
+    "log_level": "info",
     "ipam": {
         "type": "calico-ipam"
     },
@@ -194,11 +195,16 @@ PuB/TL+u2y+iQUyXxLy3
 	})
 
 	It("should support a custom CNI_NETWORK_CONFIG", func() {
-		err := runCniContainer(tempDir, "-e", "CNI_NETWORK_CONFIG=filecontents")
+		err := runCniContainer(tempDir, "-e", "CNI_NETWORK_CONFIG={}")
 		Expect(err).NotTo(HaveOccurred())
 		actual, err := ioutil.ReadFile(tempDir + "/net.d/10-calico.conflist")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(actual)).To(Equal("filecontents"))
+		Expect(string(actual)).To(Equal("{}"))
+	})
+
+	It("should check if the custom CNI_NETWORK_CONFIG is valid json", func() {
+		err := runCniContainer(tempDir, "-e", "CNI_NETWORK_CONFIG={\"missing quote}")
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("should write the value of MULTI_INTERFACE_MODE to disk", func(done Done) {

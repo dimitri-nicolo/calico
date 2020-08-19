@@ -136,7 +136,12 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 		return fmt.Errorf("failed to load netconf: %v", err)
 	}
 
-	utils.ConfigureLogging(conf.LogLevel)
+	utils.ConfigureLogging(conf)
+
+	nodeNameFile := "/var/lib/calico/nodename"
+	if conf.NodenameFile != "" {
+		nodeNameFile = conf.NodenameFile
+	}
 
 	nodeNameFile := "/var/lib/calico/nodename"
 	if conf.NodenameFile != "" {
@@ -161,7 +166,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 		return
 	}
 
-	logrus.WithField("EndpointIDs", wepIDs).Info("Extracted identifiers")
+	logrus.WithField("EndpointIDs", wepIDs).Debug("Extracted identifiers")
 
 	calicoClient, err := utils.CreateClient(conf)
 	if err != nil {
@@ -343,7 +348,6 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 			desiredVethName := "cali" + args.ContainerID[:utils.Min(11, len(args.ContainerID))]
 			hostVethName, contVethMac, err = d.DoNetworking(
 				ctx, calicoClient, args, result, desiredVethName, utils.DefaultRoutes, endpoint, map[string]string{}, nil)
-
 			if err != nil {
 				// Cleanup IP allocation and return the error.
 				utils.ReleaseIPAllocation(logger, conf, args)
@@ -550,7 +554,12 @@ func cmdDel(args *skel.CmdArgs) (err error) {
 		return
 	}
 
-	utils.ConfigureLogging(conf.LogLevel)
+	utils.ConfigureLogging(conf)
+
+	nodeNameFile := "/var/lib/calico/nodename"
+	if conf.NodenameFile != "" {
+		nodeNameFile = conf.NodenameFile
+	}
 
 	nodeNameFile := "/var/lib/calico/nodename"
 	if conf.NodenameFile != "" {
@@ -608,7 +617,7 @@ func cmdDel(args *skel.CmdArgs) (err error) {
 		"Node":             epIDs.Node,
 		"WorkloadEndpoint": epIDs.WEPName,
 		"ContainerID":      epIDs.ContainerID,
-	}).Info("Extracted identifiers")
+	}).Debug("Extracted identifiers")
 
 	// Handle k8s specific bits of handling the DEL.
 	if epIDs.Orchestrator == api.OrchestratorKubernetes {
