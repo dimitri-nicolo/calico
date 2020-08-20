@@ -682,10 +682,10 @@ github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 h1:d3s/0EKVB1Bs
 github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
 github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 h1:WeS+3sfbfEm4Off/sl2NwlYPNKlAxN7QScopiB5I29A=
 github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
-github.com/tigera/lma v0.0.0-20200818190431-b86836eee62d h1:HvBck1RN0bShHVKvmLDdl/X3vNftZqY+0KqvPLVNFCI=
-github.com/tigera/lma v0.0.0-20200818190431-b86836eee62d/go.mod h1:PW8Hdx67Kd9hrufiWqTQ26dgEDwSJHaOgxGxon2csYk=
+github.com/tigera/lma v0.0.0-20200819190452-96a806c53fee h1:zvvT3XQOaNYX8d50b0UnZE+ChCiyal6byPgIVYrJRTY=
+github.com/tigera/lma v0.0.0-20200819190452-96a806c53fee/go.mod h1:AFfHodtppTxH/AhlOM98A89u6zAYm+KHMvtABLFkfNA=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20200818222454-4b93bc32bb5d/go.mod h1:CvWTNfRvxVbXnIOrsCxcdBoNz0oqaGeec0E4e4OH1Uk=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200819172331-d0a598db45ea/go.mod h1:Jr85oOFYKTYhjv1d6HOKxqD0NKA396U2idxDQsXmesI=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
