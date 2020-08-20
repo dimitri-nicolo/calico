@@ -79,3 +79,13 @@ mkdir manifests
 
    **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
    {: .alert .alert-info}
+
+## Upgrade from 3.2 or below to 3.3 or later
+
+Remove unused policies in your cluster
+
+   In your cluster, Apply this manifest.
+
+   ```bash
+   kubectl delete -f {{ "/manifests/default-tier-policies.yaml" | absolute_url }}
+   ```
