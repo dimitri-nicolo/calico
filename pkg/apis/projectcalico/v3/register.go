@@ -83,6 +83,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&NetworkSetList{},
 		&AuthenticationReview{},
 		&AuthenticationReviewList{},
+		&AuthorizationReview{},
+		&AuthorizationReviewList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

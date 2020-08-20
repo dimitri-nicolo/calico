@@ -24,7 +24,8 @@ const (
 // and returns true if its resource version changes or a watch event indicates
 // it changed. The cfg is used to get a k8s client for getting and watching the
 // ConfigMap. If stopChan is closed then the function will return no change.
-func WatchExtensionAuth(cfg *rest.Config, stopChan chan struct{}) (bool, error) {
+func WatchExtensionAuth(stopChan chan struct{}) (bool, error) {
+	//TODO: Use SharedInformerFactory rather than creating new client.
 
 	// set up k8s client
 	// attempt 1: KUBECONFIG env var

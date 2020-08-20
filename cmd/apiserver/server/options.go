@@ -165,6 +165,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 			ManagedClustersCAKey:           o.ManagedClustersCAKeyPath,
 			EnableManagedClustersCreateAPI: o.EnableManagedClustersCreateAPI,
 			ManagementClusterAddr:          o.ManagementClusterAddr,
+			KubernetesAPIServerConfig:      serverConfig.ClientConfig,
 		},
 	}
 

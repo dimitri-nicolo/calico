@@ -71,6 +71,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReview":                  schema_libcalico_go_lib_apis_v3_AuthenticationReview(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReviewList":              schema_libcalico_go_lib_apis_v3_AuthenticationReviewList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthenticationReviewStatus":            schema_libcalico_go_lib_apis_v3_AuthenticationReviewStatus(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReview":                   schema_libcalico_go_lib_apis_v3_AuthorizationReview(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewList":               schema_libcalico_go_lib_apis_v3_AuthorizationReviewList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewResourceAttributes": schema_libcalico_go_lib_apis_v3_AuthorizationReviewResourceAttributes(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec":               schema_libcalico_go_lib_apis_v3_AuthorizationReviewSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus":             schema_libcalico_go_lib_apis_v3_AuthorizationReviewStatus(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup":               schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerb":                schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerb(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerbs":               schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerbs(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AutoHostEndpointConfig":                schema_libcalico_go_lib_apis_v3_AutoHostEndpointConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration":                      schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationList":                  schema_libcalico_go_lib_apis_v3_BGPConfigurationList(ref),
@@ -186,6 +194,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeStatus":                            schema_libcalico_go_lib_apis_v3_NodeStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec":                     schema_libcalico_go_lib_apis_v3_NodeWireguardSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                               schema_libcalico_go_lib_apis_v3_OrchRef(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCapture":                         schema_libcalico_go_lib_apis_v3_PacketCapture(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureList":                     schema_libcalico_go_lib_apis_v3_PacketCaptureList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec":                     schema_libcalico_go_lib_apis_v3_PacketCaptureSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PolicyControllerConfig":                schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.PrefixAdvertisement":                   schema_libcalico_go_lib_apis_v3_PrefixAdvertisement(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile":                               schema_libcalico_go_lib_apis_v3_Profile(ref),
@@ -235,6 +246,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/numorstring.Uint8OrString":                     numorstring.Uint8OrString{}.OpenAPIDefinition(),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthenticationReview":              schema_pkg_apis_projectcalico_v3_AuthenticationReview(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthenticationReviewList":          schema_pkg_apis_projectcalico_v3_AuthenticationReviewList(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthorizationReview":               schema_pkg_apis_projectcalico_v3_AuthorizationReview(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthorizationReviewList":           schema_pkg_apis_projectcalico_v3_AuthorizationReviewList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.BGPConfiguration":                  schema_pkg_apis_projectcalico_v3_BGPConfiguration(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.BGPConfigurationList":              schema_pkg_apis_projectcalico_v3_BGPConfigurationList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.BGPPeer":                           schema_pkg_apis_projectcalico_v3_BGPPeer(ref),
@@ -2691,6 +2704,300 @@ func schema_libcalico_go_lib_apis_v3_AuthenticationReviewStatus(ref common.Refer
 				},
 			},
 		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizationReview(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizationReviewList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuthorizationReviewList is a list of AuthorizationReview objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReview"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReview", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizationReviewResourceAttributes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The API Group to check.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The set of resources to check within the same API Group.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"verbs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The set of verbs to check. This is expanded for each resource and within the same API Group.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizationReviewSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"resourceAttributes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The set of resource attributes that are being checked. Each resource attribute is expanded into individual kind/resource and verbs.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewResourceAttributes"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewResourceAttributes"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizationReviewStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"authorizedResourceVerbs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The set of authorized resource actions. A given API Group and resource combination will appear at most once in this slice.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerbs"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerbs"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"tier": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The tier.  This is only valid for tiered policies, and tiers.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The namespace. If this is empty then the user is authorized cluster-wide (i.e. across all namespaces). This will always be empty for cluster-scoped resources when the user is authorized.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"namespace"},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerb(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"verb": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The verb.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resourceGroups": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The group of resource instances that are authorized for this verb.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"verb", "resourceGroups"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizedResourceVerbs(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The API group.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The resource.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"verbs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The set of authorized actions for this resource. For a specific verb, this contains the set of resources for which the user is authorized to perform that action. This is calculated to avoid duplication such that a single resource instance can only be associated with a single entry in this slice. This allows a consumer of this API to issue a minimal set of queries (e.g. watches) that cover, uniquely, the authorized set of resources.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerb"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceVerb"},
 	}
 }
 
@@ -8977,6 +9284,114 @@ func schema_libcalico_go_lib_apis_v3_OrchRef(ref common.ReferenceCallback) commo
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_PacketCapture(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketCapture contains the configuration for any packet capture.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the PacketCapture.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_PacketCaptureList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketCaptureList contains a list of PacketCapture resources.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCapture"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCapture", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_PacketCaptureSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketCaptureSpec contains the values of the packet capture.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_PolicyControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11238,6 +11653,96 @@ func schema_pkg_apis_projectcalico_v3_AuthenticationReviewList(ref common.Refere
 		},
 		Dependencies: []string{
 			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthenticationReview", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_AuthorizationReview(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizationReviewStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_AuthorizationReviewList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuthorizationReviewList is a list of AuthorizationReview objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthorizationReview"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.AuthorizationReview", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 

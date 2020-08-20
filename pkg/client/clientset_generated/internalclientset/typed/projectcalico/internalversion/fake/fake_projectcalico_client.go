@@ -18,6 +18,10 @@ func (c *FakeProjectcalico) AuthenticationReviews() internalversion.Authenticati
 	return &FakeAuthenticationReviews{c}
 }
 
+func (c *FakeProjectcalico) AuthorizationReviews() internalversion.AuthorizationReviewInterface {
+	return &FakeAuthorizationReviews{c}
+}
+
 func (c *FakeProjectcalico) BGPConfigurations() internalversion.BGPConfigurationInterface {
 	return &FakeBGPConfigurations{c}
 }

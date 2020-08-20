@@ -18,6 +18,7 @@ package integration
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -43,8 +44,10 @@ import (
 	"github.com/tigera/apiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/apiserver/pkg/apis/projectcalico/install"
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/apiserver/pkg/apiserver"
 	calicoclient "github.com/tigera/apiserver/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/apiserver/pkg/registry/projectcalico/authenticationreview"
+	"github.com/tigera/apiserver/pkg/registry/projectcalico/authorizationreview"
 )
 
 // TestGroupVersion is trivial.
@@ -76,7 +79,7 @@ func testGroupVersion(client calicoclient.Interface) error {
 
 func TestEtcdHealthCheckerSuccess(t *testing.T) {
 	serverConfig := NewTestServerConfig()
-	_, clientconfig, shutdownServer := withConfigGetFreshApiserverAndClient(t, serverConfig)
+	_, _, clientconfig, shutdownServer := withConfigGetFreshApiserverServerAndClient(t, serverConfig)
 	t.Log(clientconfig.Host)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -2817,4 +2820,126 @@ func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 		return errors.New("unexpected user info from authentication review")
 	}
 	return nil
+}
+
+// TestAuthorizationReviewsClient exercises the AuthorizationReviews client.
+func TestAuthorizationReviewsClient(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			pcs, client, shutdownServer := getFreshApiserverServerAndClient(t, func() runtime.Object {
+				return &projectcalico.AuthorizationReview{}
+			})
+			defer shutdownServer()
+			if err := testAuthorizationReviewsClient(pcs, client); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("test-authorization-reviews", rootTestFunc()) {
+		t.Errorf("test-authorization-reviews failed")
+	}
+}
+
+func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client calicoclient.Interface) error {
+	// Check we are able to create the authorization review.
+	ar := v3.AuthorizationReview{}
+	_, err := client.ProjectcalicoV3().AuthorizationReviews().Create(&ar)
+	if err != nil {
+		return err
+	}
+
+	// Create a user context.
+	var name = "name"
+	var groups = []string{name}
+	var extra = map[string][]string{name: groups}
+	var uid = "uid"
+
+	ctx := request.NewContext()
+	ctx = request.WithUser(ctx, &user.DefaultInfo{
+		Name:   name,
+		Groups: groups,
+		Extra:  extra,
+		UID:    uid,
+	})
+
+	// Create the authorization review REST backend using the instantiated RBAC helper.
+	if pcs.RBACCalculator == nil {
+		return fmt.Errorf("No RBAC calc")
+	}
+	auth := authorizationreview.NewREST(pcs.RBACCalculator)
+
+	// For testing tier permissions.
+	tierClient := client.ProjectcalicoV3().Tiers()
+	tier := &v3.Tier{
+		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+	}
+
+	_, err = tierClient.Create(tier)
+	if err != nil {
+		return fmt.Errorf("Failed to create tier: %v", err)
+	}
+	defer func() {
+		_ = tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+	}()
+
+	// Get the users permissions.
+	req := &projectcalico.AuthorizationReview{
+		Spec: calico.AuthorizationReviewSpec{
+			ResourceAttributes: []calico.AuthorizationReviewResourceAttributes{
+				{
+					APIGroup:  "",
+					Resources: []string{"namespaces"},
+					Verbs:     []string{"create", "get"},
+				},
+				{
+					APIGroup:  "",
+					Resources: []string{"pods"},
+					// Try some duplicates to make sure they are contracted.
+					Verbs: []string{"patch", "create", "delete", "patch", "delete"},
+				},
+			},
+		},
+	}
+
+	// The user will currently have no permissions, so the returned status should contain an entry for each resource
+	// type and verb combination, but contain no match entries for each.
+	obj, err := auth.Create(ctx, req, nil, nil)
+
+	if err != nil {
+		return fmt.Errorf("Failed to create AuthorizationReview: %v", err)
+	}
+
+	if obj == nil {
+		return errors.New("expected an AuthorizationReview")
+	}
+
+	status := obj.(*projectcalico.AuthorizationReview).Status
+
+	if err := checkAuthorizationReviewStatus(status, calico.AuthorizationReviewStatus{
+		AuthorizedResourceVerbs: []calico.AuthorizedResourceVerbs{{
+			APIGroup: "",
+			Resource: "namespaces",
+			Verbs:    []calico.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+		}, {
+			APIGroup: "",
+			Resource: "pods",
+			Verbs:    []calico.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+		},
+		}}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkAuthorizationReviewStatus(actual, expected calico.AuthorizationReviewStatus) error {
+	if reflect.DeepEqual(actual, expected) {
+		return nil
+	}
+
+	actualBytes, _ := json.Marshal(actual)
+	expectedBytes, _ := json.Marshal(expected)
+
+	return fmt.Errorf("Expected status: %s\nActual Status: %s", string(expectedBytes), string(actualBytes))
 }
