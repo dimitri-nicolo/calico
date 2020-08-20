@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/cni-plugin/pkg/dataplane/windows"
+
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/types/current"
 	log "github.com/sirupsen/logrus"
