@@ -1,0 +1,47 @@
+---
+title: Flow log data types
+description: Data that Calico Enterprise sends to Elasticsearch. 
+canonical_url: /security/logs/elastic/datatypes
+---
+
+### Big picture
+
+{{site.prodname}} sends the following data to Elasticsearch. 
+
+The following table details the key/value pairs in the JSON blob, including their {% include open-new-window.html text='Elasticsearch datatype' url='https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html' %}.
+
+| Name                  | Datatype          | Description |
+| --------------------- | ----------------- | ----------- |
+| `host`                | keyword           | Name of the node that collected the flow log entry. |
+| `start_time`          | date              | Start time of log collection in UNIX timestamp format. |
+| `end_time`            | date              | End time of log collection in UNIX timestamp format. |
+| `action`              | keyword           | - `allow`: {{site.prodname}} accepted the flow.<br />- `deny`: {{site.prodname}} denied the flow. |
+| `bytes_in`            | long              | Number of incoming bytes since the last export. |
+| `bytes_out`           | long              | Number of outgoing bytes since the last export. |
+| `dest_ip`             | ip                | IP address of the destination pod. A null value indicates aggregation. |
+| `dest_name`           | keyword           | Contains one of the following values:<br />- Name of the destination pod.<br />- Name of the pod that was aggregated or the endpoint is not a pod. Check <code>dest_name_aggr</code> for more information, such as the name of the pod if it was aggregated. |
+| `dest_name_aggr`      | keyword           | Contains one of the following values:<br />- Aggregated name of the destination pod. <br />- `pvt`: endpoint is not a pod. Its IP address belongs to a private subnet. <br />- `pub`: endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
+| `dest_namespace`      | keyword           | Namespace of the destination endpoint. A `-` means the endpoint is not namespaced.|
+| `dest_port`           | long              | Destination port. Not applicable for ICMP packets. |
+| `dest_type`           | keyword           | Destination endpoint type. Possible values:<br />- `wep`: A workload endpoint, a pod in Kubernetes.<br />- `ns`: A Networkset. If multiple Networksets match, then the one with the longest prefix match is chosen.<br />- `net`: A Network. The IP address did not fall into a known endpoint type.|
+| `dest_labels`         | array of keywords | Labels applied to the destination pod. A hyphen indicates aggregation. |
+| `reporter`            | keyword           | - `src`: flow came from the pod that initiated the connection.<br />- `dst`: flow came from the pod that received the initial connection. |
+| `num_flows`           | long              | Number of flows aggregated into this entry during this export interval. |
+| `num_flows_completed` | long              | Number of flows that were completed during the export interval. |
+| `num_flows_started`   | long              | Number of flows that were started during the export interval. |
+| `http_requests_allowed_in` | long         | Number of allowed incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
+| `http_requests_denied_in` | long         | Number of denied incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
+| `packets_in`          | long              | Number of incoming packets since the last export. |
+| `packets_out`         | long              | Number of outgoing packets since the last export. |
+| `proto`               | keyword           | Protocol. |
+| `policies`            | array of keywords | Policy or policies that allowed or denied this flow. Staged policy names are prefixed with "staged:". |
+| `source_ip`           | ip                | IP address of the source pod. A null value indicates aggregation. |
+| `source_name`         | keyword           | Contains one of the following values: <br />- Name of the source pod.<br />- Name of the pod that was aggregated or the endpoint is not a pod. Check <code>source_name_aggr</code> for more information, such as the name of the pod if it was aggregated. |
+| `source_name_aggr`    | keyword           | Contains one of the following values: <br />- Aggregated name of the source pod. <br />- `pvt`: Endpoint is not a pod. Its IP address belongs to a private subnet.<br />- `pub`: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
+| `source_namespace`    | keyword           | Namespace of the source endpoint. A `-` means the endpoint is not namespaced.|
+| `source_port`         | long              | Source port. A null value indicates aggregation. |
+| `source_type`         | keyword           | The type of source endpoint. Possible values:<br />- `wep`: A workload endpoint, a pod in Kubernetes.<br />- `ns`: A Networkset. If multiple Networksets match, then the one with the longest prefix match is chosen.<br />- `net`: A Network. The IP address did not fall into a known endpoint type.|
+| `source_labels`       | array of keywords | Labels applied to the source pod. A hyphen indicates aggregation. |
+| `original_source_ips` | array of ips      | List of external IP addresses collected from requests made to the cluster through an ingress resource. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
+| `num_original_source_ips` | long          | Number of unique external IP addresses collected from requests made to the cluster through an ingress resource. This count includes the IP addresses included in the `original_source_ips` field. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.baseurl}}/security/ingress) for more details. |
+

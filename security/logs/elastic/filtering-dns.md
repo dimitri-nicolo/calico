@@ -1,11 +1,11 @@
 ---
-title: Filter out DNS logs
+title: Filter DNS logs
 description: Suppress DNS logs of low significance using filters. 
 canonical_url: /security/logs/elastic/filtering-dns
 ---
 
 {{site.prodname}} supports filtering out DNS logs based on user provided
-configuration.  Use filtering to suppress logs of low significance.
+configuration. Use filtering to suppress logs of low significance.
 
 ## Configure DNS filtering
 

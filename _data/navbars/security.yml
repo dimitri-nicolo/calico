@@ -85,8 +85,15 @@ section:
       path: /security/logs/rbac-elasticsearch
     - title: Access Elasticsearch logs
       path: /security/logs/elastic/view
-    - title: Flow logs
-      path: /security/logs/elastic/flow
+    - title: Configure flow logs
+      path: /security/logs/elastic/
+      section: 
+      - title: Flow log data types
+        path: /security/logs/elastic/datatypes
+      - title: Filter flow logs
+        path: /security/logs/elastic/filtering
+      - title: Flow log aggregation
+        path: /security/logs/elastic/aggregation  
     - title: Audit logs
       path: /security/logs/elastic/ee-audit
     - title: DNS logs
@@ -97,9 +104,7 @@ section:
       path: /security/logs/retention
     - title: Archive logs to storage
       path: /security/logs/elastic/archive-storage
-    - title: Filter flow logs
-      path: /security/logs/elastic/filtering
-    - title: Filter out DNS logs
+    - title: Filter DNS logs
       path: /security/logs/elastic/filtering-dns
   - title: iptables logs
     path: /security/logs/iptables

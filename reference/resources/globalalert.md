@@ -385,5 +385,5 @@ See [Flow logs] for description of fields.
 [Audit logs]: ../../security/logs/elastic/ee-audit
 [audit.k8s.io group v1]: https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/pkg/apis/audit/v1/types.go
 [DNS logs]: ../../security/logs/elastic/dns
-[Flow logs]: ../../security/logs/elastic/flow
+[Flow logs]: ../../security/logs/elastic/datatypes
 [duration]: https://golang.org/pkg/time/#ParseDuration

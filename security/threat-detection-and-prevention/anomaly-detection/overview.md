@@ -12,4 +12,4 @@ logs. You can configure the jobs to continuously analyze your logs as they are
 added to the Elasticsearch cluster, or you can manually control the exact time
 range you wish to analyze.
 
-[flow logs]: ../../logs/elastic/flow
+[flow logs]: ../../logs/elastic/datatypes
