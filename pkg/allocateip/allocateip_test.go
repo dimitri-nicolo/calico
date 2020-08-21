@@ -974,6 +974,10 @@ type shimClient struct {
 	ic     ipam.Interface   // new ipam client
 }
 
+func (c shimClient) PacketCaptures() client.PacketCaptureInterface {
+	return c.client.PacketCaptures()
+}
+
 func newShimClientWithPoolAccessor(c client.Interface, be bapi.Client, pool ipam.PoolAccessorInterface) shimClient {
 	return shimClient{client: c, ic: ipam.NewIPAMClient(be, pool)}
 }
