@@ -73,6 +73,7 @@ Description:
     * node
     * profile
     * workloadEndpoint
+    * packetCapture
 
   The resource type is case insensitive and may be pluralized.
 

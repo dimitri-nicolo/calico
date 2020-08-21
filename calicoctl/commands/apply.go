@@ -79,6 +79,7 @@ Description:
     * workloadEndpoint
     * remoteClusterConfiguration
     * licenseKey
+    * packetCapture
 
   When applying a resource:
   -  if the resource does not already exist (as determined by it's primary

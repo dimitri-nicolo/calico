@@ -51,6 +51,7 @@ NOT_LOCKED = "Datastore is not locked. Run the `calicoctl datastore migrate lock
 NOT_KUBERNETES = "Invalid datastore type: etcdv3 to import to for datastore migration. Datastore type must be kubernetes"
 NO_IPAM = "No IPAM resources specified in file"
 
+
 class CalicoctlOutput:
     """
     CalicoctlOutput contains the output from running a calicoctl command using
@@ -59,6 +60,7 @@ class CalicoctlOutput:
     This class contains the command, output and error code (if it failed)
     along with YAML/JSON decoded output if the output could be decoded.
     """
+
     def __init__(self, command, output, error=None):
         self.command = command
         self.output = output
@@ -84,11 +86,12 @@ class CalicoctlOutput:
 
         if format is not None:
             assert format == self.decoded_format, "Decoded format is different. " \
-                "expect %s; got %s" % (format, self.decoded_format)
+                                                  "expect %s; got %s" % (format, self.decoded_format)
 
         # Copy and clean the decoded data to allow it to be comparable.
         cleaned = clean_calico_data(self.decoded)
 
+        print(self.decoded)
         assert cmp(cleaned, data) == 0, \
             "Items are not the same.  Difference is:\n %s" % \
             pformat(DeepDiff(cleaned, data), indent=2)
@@ -130,10 +133,13 @@ class CalicoctlOutput:
         """
         Assert the calicoctl command exited with an error and did not panic
         Args:
-            text:   (optional) Expected text in the command output.
+            text:   (optional) Expected text in the comma, another_resource)
+        rc.assert_no_error()
+
+        rc = calicoctl("get %s -nd output.
         """
         assert self.error, "Expected error running command; \n" \
-            "command=" + self.command + "\noutput=" + self.output
+                           "command=" + self.command + "\noutput=" + self.output
         assert not "panic" in self.output, "Exited with an error due to a panic"
         self.assert_output_contains(text)
 
@@ -144,7 +150,7 @@ class CalicoctlOutput:
             text:   (optional) Expected text in the command output.
         """
         assert not self.error, "Expected no error running command; \n" \
-            "command=" + self.command + "\noutput=" + self.output
+                               "command=" + self.command + "\noutput=" + self.output
 
         # If text is supplied, assert it appears in the output
         if text:
@@ -171,8 +177,8 @@ class CalicoctlOutput:
         if not text:
             return
         assert text in self.output, "Expected text in output; \n" + \
-            "command=" + self.command + "\noutput=\n" + self.output + \
-            "\nexpected=\n" + text
+                                    "command=" + self.command + "\noutput=\n" + self.output + \
+                                    "\nexpected=\n" + text
 
     def assert_output_not_contains(self, text):
         """
@@ -183,8 +189,8 @@ class CalicoctlOutput:
         if not text:
             return
         assert not text in self.output, "Unexpected text in output; \n" + \
-            "command=" + self.command + "\noutput=\n" + self.output + \
-            "\nunexpected=\n" + text
+                                        "command=" + self.command + "\noutput=\n" + self.output + \
+                                        "\nunexpected=\n" + text
 
 
 def calicoctl(command, data=None, load_as_stdin=False, format="yaml", only_stdout=False, no_config=False, kdd=False):
@@ -233,17 +239,17 @@ def calicoctl(command, data=None, load_as_stdin=False, format="yaml", only_stdou
     #
     # Pass in all etcd params, the values will be empty if not set anyway
     calicoctl_env_cmd = "export ETCD_ENDPOINTS=%s; " \
-                "export ETCD_CA_CERT_FILE=%s; " \
-                "export ETCD_CERT_FILE=%s; " \
-                "export ETCD_KEY_FILE=%s; " \
-                "export DATASTORE_TYPE=%s; %s %s" % \
-                (ETCD_SCHEME+"://"+etcd_auth, ETCD_CA, ETCD_CERT, ETCD_KEY,
-                 "etcdv3", stdin, calicoctl_bin)
+                        "export ETCD_CA_CERT_FILE=%s; " \
+                        "export ETCD_CERT_FILE=%s; " \
+                        "export ETCD_KEY_FILE=%s; " \
+                        "export DATASTORE_TYPE=%s; %s %s" % \
+                        (ETCD_SCHEME + "://" + etcd_auth, ETCD_CA, ETCD_CERT, ETCD_KEY,
+                         "etcdv3", stdin, calicoctl_bin)
     if kdd:
         calicoctl_env_cmd = "export DATASTORE_TYPE=kubernetes; " \
-                "export K8S_API_ENDPOINT=%s; %s %s" % \
-                (K8S_API_ENDPOINT, stdin, calicoctl_bin)
-    if no_config :
+                            "export K8S_API_ENDPOINT=%s; %s %s" % \
+                            (K8S_API_ENDPOINT, stdin, calicoctl_bin)
+    if no_config:
         calicoctl_env_cmd = calicoctl_bin
     full_cmd = calicoctl_env_cmd + " " + command + option_file
 
@@ -290,7 +296,8 @@ def clean_calico_data(data, extra_keys_to_remove=None):
                     del_keys.append(k)
             for k in del_keys:
                 if k in elem:
-                    del(elem[k])
+                    del (elem[k])
+
     clean_elem(new, extra_keys_to_remove)
     return new
 
@@ -300,12 +307,14 @@ def add_tier_label(data):
     Convenience method for auto-adding the `projectcalico.org/tier`.
     """
     new = copy.deepcopy(data)
+
     def add_label(elem):
         if isinstance(elem, list):
             for i in elem:
                 add_label(i)
         if isinstance(elem, dict):
-            if elem['kind'] not in ['NetworkPolicy', 'GlobalNetworkPolicy', 'StagedNetworkPolicy', 'StagedGlobalNetworkPolicy']:
+            if elem['kind'] not in ['NetworkPolicy', 'GlobalNetworkPolicy', 'StagedNetworkPolicy',
+                                    'StagedGlobalNetworkPolicy']:
                 return
             tier = 'default'
             if 'tier' in elem['spec']:
@@ -313,6 +322,7 @@ def add_tier_label(data):
             if 'labels' not in elem['metadata']:
                 elem['metadata']['labels'] = {}
             elem['metadata']['labels']['projectcalico.org/tier'] = tier
+
     add_label(new)
     return new
 
@@ -334,6 +344,7 @@ def decode_json_yaml(value):
         pass
     return None, None
 
+
 def find_and_format_creation_timestamp(decoded):
     if decoded:
         if 'items' in decoded:
@@ -343,12 +354,14 @@ def find_and_format_creation_timestamp(decoded):
             decoded = format_creation_timestamp(decoded)
     return decoded
 
+
 def format_creation_timestamp(decoded):
     if isinstance(decoded, dict) and 'metadata' in decoded and 'creationTimestamp' in decoded['metadata']:
         if isinstance(decoded['metadata']['creationTimestamp'], datetime):
             decoded['metadata']['creationTimestamp'] = decoded.get('metadata', {}). \
-                    get('creationTimestamp', datetime.utcnow()).isoformat() + 'Z'
+                                                           get('creationTimestamp', datetime.utcnow()).isoformat() + 'Z'
     return decoded
+
 
 def writeyaml(filename, data):
     """
@@ -378,7 +391,7 @@ def writejson(filename, data):
 
 
 def truncate_for_log(text, length):
-    if len(text) <=length:
+    if len(text) <= length:
         return text
     return text[:length] + "... <truncated>"
 
@@ -468,6 +481,7 @@ def curl_etcd(path, options=None, recursive=True, ip=None):
 
     return json.loads(rc.strip())
 
+
 def wipe_etcd(ip):
     # Delete /calico if it exists. This ensures each test has an empty data
     # store at start of day.
@@ -476,7 +490,7 @@ def wipe_etcd(ip):
     # Disable Usage Reporting to usage.projectcalico.org
     # We want to avoid polluting analytics data with unit test noise
     curl_etcd("calico/v1/config/UsageReportingEnabled",
-                   options=["-XPUT -d value=False"], ip=ip)
+              options=["-XPUT -d value=False"], ip=ip)
 
     etcd_container_name = "calico-etcd"
     tls_vars = ""
@@ -490,6 +504,7 @@ def wipe_etcd(ip):
     check_output("docker exec " + etcd_container_name + " sh -c '" + tls_vars +
                  "ETCDCTL_API=3 etcdctl del --prefix /calico" +
                  "'", shell=True)
+
 
 def make_list(kind, items):
     """
@@ -509,6 +524,7 @@ def make_list(kind, items):
         'items': items,
     }
 
+
 def name(data):
     """
     Returns the name of the resource in the supplied data
@@ -518,3 +534,25 @@ def name(data):
     Returns: The resource name.
     """
     return data['metadata']['name']
+
+
+def kind(data):
+    """
+    Returns the kind of the resource in the supplied data
+    Args:
+        data: A dictionary containing the resource.
+
+    Returns: The resource kind.
+    """
+    return data['kind']
+
+
+def namespace(data):
+    """
+    Returns the namespace of the resource in the supplied data
+    Args:
+        data: A dictionary containing the resource.
+
+    Returns: The resource namespace.
+    """
+    return data['metadata']['namespace']

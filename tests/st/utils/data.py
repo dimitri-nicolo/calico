@@ -1333,6 +1333,41 @@ workloadendpoint_name1_rev1 = {
     }
 }
 
+packetcapture_name1_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'PacketCapture',
+    'metadata': {
+        'name': 'packet-capture-1',
+        'namespace': 'namespace1',
+    },
+    'spec': {
+        'selector': 'all()',
+    }
+}
+
+packetcapture_name1_rev2 = {
+    'apiVersion': API_VERSION,
+    'kind': 'PacketCapture',
+    'metadata': {
+        'name': 'packet-capture-1',
+        'namespace': 'namespace1',
+    },
+    'spec': {
+        'selector': 'capture == \"true\"',
+    }
+}
+
+packetcapture_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'PacketCapture',
+    'metadata': {
+        'name': 'packet-capture-2',
+        'namespace': 'namespace1',
+    },
+    'spec': {
+        'selector': 'all()',
+    }
+}
 workloadendpoint_name2_rev1 = {
     'apiVersion': API_VERSION,
     'kind': 'WorkloadEndpoint',

@@ -68,9 +68,12 @@ func TestIPAM(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Create a Node resource for this host.
-	node := v3.NewNode()
-	node.Name, err = os.Hostname()
+	var nodeName string
+	hostname, err := os.Hostname()
 	Expect(err).NotTo(HaveOccurred())
+	nodeName = strings.ToLower(hostname)
+	node := v3.NewNode()
+	node.Name = nodeName
 	_, err = client.Nodes().Create(ctx, node, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -170,11 +173,10 @@ func TestIPAM(t *testing.T) {
 	cidrs := append(v4, v4More...)
 	cidrs = append(cidrs, v6...)
 	cidrs = append(cidrs, v6More...)
-	nodename, err := os.Hostname()
 	Expect(err).NotTo(HaveOccurred())
 	var ips []cnet.IP
 	for _, cidr := range cidrs {
-		err = client.IPAM().ReleaseAffinity(ctx, cidr, nodename, false)
+		err = client.IPAM().ReleaseAffinity(ctx, cidr, nodeName, false)
 		Expect(err).NotTo(HaveOccurred())
 		ip := cnet.ParseIP(cidr.IP.String())
 		ips = append(ips, *ip)
@@ -187,7 +189,7 @@ func TestIPAM(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	_, err = client.IPPools().Delete(ctx, "ipam-test-v6", options.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
-	_, err = client.Nodes().Delete(ctx, nodename, options.DeleteOptions{})
+	_, err = client.Nodes().Delete(ctx, nodeName, options.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	_, err = client.IPPools().Delete(ctx, "ipam-test-v4-b29", options.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())

@@ -86,6 +86,7 @@ Description:
     * profile
     * workloadEndpoint
     * remoteClusterConfiguration
+    * packetCapture
 
   The resource type is case insensitive and may be pluralized.
 

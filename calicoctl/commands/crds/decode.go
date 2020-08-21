@@ -129,5 +129,12 @@ func CalicoCRDs() ([]*v1.CustomResourceDefinition, error) {
 	}
 	crds = append(crds, &netset)
 
+	packetCaptures := v1.CustomResourceDefinition{}
+	err = yaml.Unmarshal([]byte(packetcaptures), &packetCaptures)
+	if err != nil {
+		return crds, err
+	}
+	crds = append(crds, &packetCaptures)
+
 	return crds, nil
 }

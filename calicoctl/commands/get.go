@@ -91,6 +91,7 @@ Description:
     * workloadEndpoint
     * remoteClusterConfiguration
     * licenseKey
+    * packetCapture
 
   The resource type is case insensitive and may be pluralized.
 

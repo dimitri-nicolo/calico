@@ -20,7 +20,7 @@ from nose_parameterized import parameterized
 from tests.st.test_base import TestBase
 from tests.st.utils.utils import log_and_run, calicoctl, \
     API_VERSION, name, ERROR_CONFLICT, NOT_FOUND, NOT_NAMESPACED, \
-    SET_DEFAULT, NOT_SUPPORTED, KUBERNETES_NP, writeyaml, add_tier_label
+    SET_DEFAULT, NOT_SUPPORTED, KUBERNETES_NP, writeyaml, add_tier_label, kind, namespace
 from tests.st.utils.data import *
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
@@ -747,6 +747,7 @@ class TestCalicoctlCommands(TestBase):
         (stagednetworkpolicy_name1_rev1,),
         (networkset_name1_rev1,),
         (workloadendpoint_name1_rev1,),
+        (packetcapture_name1_rev1,),
     ])
     def test_namespaced(self, data):
         """
@@ -827,7 +828,7 @@ class TestCalicoctlCommands(TestBase):
         # Get the resource with name1 and default namespace.  For a namespaced
         # resource this should match the modified data to default the
         # namespace.
-        rc = calicoctl("get %s %s --namespace default -o yaml" % (kind, data1['metadata']['name']))
+        rc = calicoctl("get %s %s --namespace default -o yaml" % ((str(kind)).lower(), data1['metadata']['name']))
         rc.assert_data(data1)
 
         if kind == "WorkloadEndpoint":
@@ -1563,6 +1564,67 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl(
                 "patch stagednetworkpolicy %s -p '{\"http\": {\"exact\": \"path/to/match\"}}'" % name(stagednetworkpolicy_name2_rev1))
         rc.assert_error()
+
+    @parameterized.expand([
+        (packetcapture_name1_rev1, packetcapture_name2_rev1),
+    ])
+    def test_basic_crud(self, any_resource, another_resource):
+        """
+        Test create, get, list, delete flow for generic resource commands works.
+        """
+
+        rc = calicoctl("create", any_resource)
+        rc.assert_no_error()
+        rc = calicoctl("get %s %s --namespace %s -o yaml" % (kind(any_resource), name(any_resource), namespace(any_resource)))
+        rc.assert_data(any_resource)
+        rc = calicoctl("get %s --all-namespaces -o yaml" % kind(any_resource))
+        rc.assert_list(kind(any_resource), [any_resource])
+
+        rc = calicoctl("create", another_resource)
+        rc.assert_no_error()
+        rc = calicoctl("get %s %s --namespace %s -o yaml" % (kind(another_resource), name(another_resource), namespace(another_resource)))
+        rc.assert_data(another_resource)
+        rc = calicoctl("get %s --all-namespaces -o yaml" % kind(another_resource))
+        rc.assert_list(kind(another_resource), [any_resource, another_resource])
+
+        rc = calicoctl("delete %s %s --namespace %s" % (kind(any_resource), name(any_resource), namespace(any_resource)))
+        rc.assert_no_error()
+        rc = calicoctl("delete", another_resource)
+        rc.assert_no_error()
+
+        rc = calicoctl("get %s --all-namespaces -o yaml" % kind(any_resource))
+        rc.assert_empty_list(kind(any_resource))
+
+        # Assert that deleting the pool again fails.
+        rc = calicoctl("delete %s %s --namespace %s" % (kind(any_resource), name(any_resource), namespace(any_resource)))
+        rc.assert_error(text=NOT_FOUND)
+
+    @parameterized.expand([
+        (packetcapture_name1_rev1, 'replace', packetcapture_name1_rev2),
+        (packetcapture_name1_rev1, 'apply', packetcapture_name1_rev2),
+        (packetcapture_name1_rev1,
+         'patch %s %s --namespace %s -p %s' % (kind(packetcapture_name1_rev1), name(packetcapture_name1_rev1), namespace(packetcapture_name1_rev1), "'{\"spec\":{\"selector\": \"\"}}'"),None)
+    ])
+    def test_update(self, resource, update_cmd, revision):
+        """
+        Test that we allow updates on resources on resource.
+        """
+        rc = calicoctl("create", resource)
+        rc.assert_no_error()
+
+        rc = calicoctl(
+            "get %s %s --namespace %s -o yaml" % (kind(resource), name(resource), namespace(resource)))
+        rc.assert_no_error()
+        rev1 = rc.decoded
+
+        rc = calicoctl(update_cmd, revision)
+        rc.assert_no_error()
+
+        rc = calicoctl(
+            "get %s %s --namespace %s -o yaml" % (kind(resource), name(resource), namespace(resource)))
+        rc.assert_no_error()
+        rev2 = rc.decoded
+        self.assertNotEqual(rev1['metadata']['resourceVersion'], rev2['metadata']['resourceVersion'])
 
 #
 # class TestCreateFromFile(TestBase):
