@@ -41,58 +41,69 @@ var genCmd = &cobra.Command{
 
 func runGenCmd(args []string) {
 	// Get list of yaml files inside the 1st level of given directories.
-	for _, dir := range inDirs {
-		if err := traverseDir(dir, true, ".yaml", func(f string) error {
-			clog := log.WithField("file", f)
-			clog.Info("Processing file")
+	if err := traverseDir(inDir, true, ".yaml", func(f string) error {
+		clog := log.WithField("file", f)
+		clog.Info("Processing file")
 
-			contents, err := ioutil.ReadFile(f)
-			if err != nil {
-				return err
-			}
-
-			reportType := api.GlobalReportType{}
-			if err := yaml.UnmarshalStrict(contents, &reportType); err != nil {
-				return err
-			}
-
-			// get the directory for template files.
-			inDirName := path.Join(path.Dir(f), reportType.Name)
-
-			if templ, err := getTemplate(inDirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
-				reportType.Spec.UISummaryTemplate.Template = string(templ)
-				maybeCompressJSON(&reportType.Spec.UISummaryTemplate)
-			}
-
-			for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
-				if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
-					reportType.Spec.DownloadTemplates[i].Template = string(templ)
-					maybeCompressJSON(&reportType.Spec.DownloadTemplates[i])
-				}
-			}
-
-			// Validate the report type contents.
-			if err := validator.Validate(reportType); err != nil {
-				clog.WithError(err).Error("Failed to validate manifest: skipping...")
-				return nil
-			}
-
-			// Generate manifest.
-			manifestContent, err := yaml.Marshal(reportType)
-			if err != nil {
-				clog.WithError(err).Error("Failed to marshal resulting report type: skipping...")
-				return nil
-			}
-			manifestFullPath := path.Join(path.Dir(f), outDir, path.Base(f))
-			if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
-				log.WithError(err).Error("Failed to write report type to file: skipping...")
-			}
-
-			log.WithField("file", manifestFullPath).Info("Successfully generated manifest")
-			return nil
-		}); err != nil {
-			log.WithError(err).Fatal("Fatal error occurred while attempting to generate manifests")
+		contents, err := ioutil.ReadFile(f)
+		if err != nil {
+			return err
 		}
+
+		reportType := api.GlobalReportType{}
+		if err := yaml.UnmarshalStrict(contents, &reportType); err != nil {
+			return err
+		}
+
+		// get the directory for template files.
+		inDirName := path.Join(path.Dir(f), reportType.Name)
+
+		if templ, err := getTemplate(inDirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
+			reportType.Spec.UISummaryTemplate.Template = string(templ)
+			maybeCompressJSON(&reportType.Spec.UISummaryTemplate)
+		}
+
+		for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
+			if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
+				reportType.Spec.DownloadTemplates[i].Template = string(templ)
+				maybeCompressJSON(&reportType.Spec.DownloadTemplates[i])
+			}
+		}
+
+		// Validate the report type contents.
+		if err := validator.Validate(reportType); err != nil {
+			clog.WithError(err).Error("Failed to validate manifest: skipping...")
+			return nil
+		}
+
+		// Generate manifest.
+		manifestContent, err := yaml.Marshal(reportType)
+		if err != nil {
+			clog.WithError(err).Error("Failed to marshal resulting report type: skipping...")
+			return nil
+		}
+		manifestFullPath := path.Join(outDir, "manifests", path.Base(f))
+		if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
+			log.WithError(err).Error("Failed to write report type to file: skipping...")
+		}
+
+		log.WithField("file", manifestFullPath).Info("Successfully generated manifest")
+
+		// Generate manifest.
+		jsonContent, err := json.MarshalIndent(reportType, "", " ")
+		if err != nil {
+			clog.WithError(err).Error("Failed to marshal resulting report type: skipping...")
+			return nil
+		}
+		jsonFullPath := path.Join(outDir, "json", path.Base(f) + ".json")
+		if err := ioutil.WriteFile(jsonFullPath, jsonContent, 0644); err != nil {
+			log.WithError(err).Error("Failed to write report type to file: skipping...")
+		}
+
+		log.WithField("file", jsonFullPath).Info("Successfully generated json")
+		return nil
+	}); err != nil {
+		log.WithError(err).Fatal("Fatal error occurred while attempting to generate manifests")
 	}
 }
 
@@ -115,6 +126,10 @@ func maybeCompressJSON(template *api.ReportTemplate) {
 		clog.Debug("Refusing to compress non-json file")
 		return
 	}
+
+	// Start by removing tabs and newlines from the json.
+	template.Template = strings.Replace(template.Template, "\n", "", -1)
+	template.Template = strings.Replace(template.Template, "\t", "", -1)
 
 	// The JSON should be convertable, if it isn't then print a warning and return the original JSON.
 	v := new(interface{})

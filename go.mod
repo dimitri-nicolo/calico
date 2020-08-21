@@ -42,6 +42,7 @@ require (
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
 	github.com/coreos/go-semver v0.3.0
 	github.com/go-ini/ini v1.48.0 // indirect
+	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20190915194858-d3ddacdb130f // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
