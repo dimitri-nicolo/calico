@@ -16,7 +16,7 @@ Beyond using filtering to suppress flow logs, {{site.prodname}} provides control
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- **FelixConfiguration** in the `tigera-operator` namespace
+- **FelixConfiguration**.
 
 ### Concepts
 
