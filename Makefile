@@ -97,10 +97,11 @@ update-pins: update-licensing-pin replace-libcalico-pin
 # Building the binary
 ###############################################################################
 BIN=bin/$(ARCH)
-build: $(BIN)/install
+build: $(BIN)/install $(BIN)/calico $(BIN)/calico-ipam
 ifeq ($(ARCH),amd64)
 # Go only supports amd64 for Windows builds.
-build: $(BIN)/calico.exe $(BIN)/calico-ipam.exe
+BIN_WIN=bin/windows
+build: $(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe
 endif
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
@@ -123,12 +124,13 @@ $(BIN)/install binary: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 		go build -v -o $(BIN)/install -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico'
 
 ## Build the Calico network plugin and ipam plugins for Windows
-$(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(LOCAL_BUILD_DEP) $(SRC_FILES)
+$(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	-e GOOS=windows \
 	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $(BIN)/calico.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
-		go build -v -o $(BIN)/calico-ipam.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico'
+		go build -v -o $(BIN_WIN)/calico.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
+		go build -v -o $(BIN_WIN)/calico-ipam.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico'
+
 
 ###############################################################################
 # Building the image
@@ -237,11 +239,12 @@ hooks_installed:=$(shell ./install-git-hooks)
 # Unit Tests
 ###############################################################################
 ## Run the unit tests.
-ut: run-k8s-controller build $(BIN)/host-local
-	cp $(BIN)/install $(BIN)/calico-ipam
-	cp $(BIN)/install $(BIN)/calico
+ut: run-k8s-controller $(BIN)/install $(BIN)/host-local $(BIN)/calico-ipam $(BIN)/calico
 	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
 	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes
+
+$(BIN)/calico-ipam $(BIN)/calico: $(BIN)/install
+	cp "$<" "$@"
 
 ut-datastore: $(LOCAL_BUILD_DEP)
 	# The tests need to run as root
@@ -258,7 +261,7 @@ ut-datastore: $(LOCAL_BUILD_DEP)
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	-e K8S_API_ENDPOINT=http://127.0.0.1:8080 \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	$(CALICO_BUILD) sh -c '\
+	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 			cd  /go/src/$(PACKAGE_NAME) && \
 			ginkgo -cover -r -skipPackage pkg/install $(GINKGO_ARGS)'
 
@@ -386,8 +389,8 @@ endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests  IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ## Build fv binary for Windows
-$(BIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
-	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(BIN)/win-fv.exe'
+$(BIN_WIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
+	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(BIN_WIN)/win-fv.exe'
 
 ###############################################################################
 # Release

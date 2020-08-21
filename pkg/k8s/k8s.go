@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
@@ -30,21 +29,21 @@ import (
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
-	"github.com/projectcalico/cni-plugin/pkg/dataplane"
-	"github.com/projectcalico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
+
+	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/dataplane"
+	"github.com/projectcalico/cni-plugin/pkg/types"
 )
 
 func podToInterface(pod *corev1.Pod, ifaceName string) (*k8sconversion.PodInterface, error) {
@@ -78,7 +77,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	var err error
 	var result *current.Result
 
-	utils.ConfigureLogging(conf.LogLevel)
+	utils.ConfigureLogging(conf)
 
 	logger := logrus.WithFields(logrus.Fields{
 		"WorkloadEndpoint": epIDs.WEPName,
@@ -93,67 +92,10 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	}
 
 	logger.Info("Extracted identifiers for CmdAddK8s")
-	if runtime.GOOS == "windows" {
-		// Windows special case: Kubelet has a hacky implementation of GetPodNetworkStatus() that uses a
-		// CNI ADD to check the status of the pod.  Detect such spurious adds and return early, avoiding trying to
-		// network the pod multiple times.
 
-		err := d.MaintainWepDeletionTimestamps(conf.WindowsPodDeletionTimestampTimeout)
-		if err != nil {
-			logger.WithError(err).Warn("Failed to do maintenance on pod deletion timestamps.")
-		}
-
-		lookupRequest := false
-		const pauseContainerNetNS = "none"
-		if args.Netns == "" {
-			// Defensive: this case should be blocked by CNI validation.
-			logger.Info("No network namespace supplied, assuming a lookup-only request.")
-			lookupRequest = true
-		} else if args.Netns != pauseContainerNetNS {
-			// When kubelet really wants to network the pod, it passes us the netns of the "pause" container, which
-			// is a static value. The other requests come from checks on the other containers.
-			// Application containers should be networked with the pause container endpoint to reflect DNS details.
-			logger.Info("Non-pause container specified, doing a lookup-only request.")
-			err = d.NetworkApplicationContainer(args)
-			if err != nil {
-				logger.WithError(err).Warn("Failed to network container with pause container endpoint.")
-				return result, err
-			}
-			lookupRequest = true
-		} else if endpoint != nil && len(endpoint.Spec.IPNetworks) > 0 {
-			// Defensive: datastore says the pod is already networked.  This check isn't sufficient on its own because
-			// GetPodNetworkStatus() can race with a CNI DEL operation, making it look like the pod has no network.
-			logger.Info("Endpoint already networked, doing a lookup-only request.")
-			lookupRequest = true
-		}
-
-		if lookupRequest {
-			result, err = utils.CreateResultFromEndpoint(endpoint)
-			if err == nil {
-				logger.WithField("result", result).Info("Status lookup result")
-			} else {
-				// For example, endpoint not found (which is expected if we're racing with a CNI DEL).
-				logger.WithError(err).Warn("Failed to look up pod status")
-			}
-			return result, err
-		}
-
-		// After checking wep not exists, next step is to check wep deletion timestamp.
-		// The order is important because with DEL command running in parallel registering timestamp before deleting wep,
-		// ADD command should run the process in reverse order to avoid race condition.
-
-		// No WEP and no network, check deletion timestamp to skip recent deleted wep.
-		// If WEP just been deleted, report back error.
-		justDeleted, err := d.CheckWepJustDeleted(epIDs.ContainerID, conf.WindowsPodDeletionTimestampTimeout)
-		if err != nil {
-			logger.Warnf("Failed to check pod deletion timestamp. %v", err)
-			return nil, err
-		}
-		if justDeleted {
-			logger.Info("Pod just been deleted. Report error for pod status")
-			return nil, fmt.Errorf("endpoint with same ID was recently deleted")
-		}
-
+	result, err = utils.CheckForSpuriousAdd(args, conf, epIDs, endpoint, logger)
+	if result != nil || err != nil {
+		return result, err
 	}
 
 	// Allocate the IP and update/create the endpoint. Do this even if the endpoint already exists and has an IP
@@ -494,7 +436,8 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	}
 
 	// Whether the endpoint existed or not, the veth needs (re)creating.
-	_, contVethMac, err := d.DoNetworking(ctx, calicoClient, args, result, podInterface.HostSideIfaceName, routes, endpoint, annot, podInterface.InsidePodGW)
+	_, contVethMac, err := d.DoNetworking(
+		ctx, calicoClient, args, result, podInterface.HostSideIfaceName, routes, endpoint, annot, podInterface.InsidePodGW)
 	if err != nil {
 		logger.WithError(err).Error("Error setting up networking")
 		releaseIPAM()
@@ -516,7 +459,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 		var err error
 		for attempts := 3; attempts > 0; attempts-- {
-			err = d.EnsureVXLANTunnelAddr(ctx, calicoClient, epIDs.Node, subNet)
+			err = utils.EnsureVXLANTunnelAddr(ctx, calicoClient, epIDs.Node, subNet, conf)
 			if err != nil {
 				logger.WithError(err).Warn("Failed to set node's VXLAN tunnel IP, node may not receive traffic.  May retry...")
 				time.Sleep(1 * time.Second)
@@ -593,7 +536,7 @@ func CmdDelK8s(ctx context.Context, c calicoclient.Interface, epIDs utils.WEPIde
 	// Register timestamp before deleting wep. This is important.
 	// Because with ADD command running in parallel checking wep before checking timestamp,
 	// DEL command should run the process in reverse order to avoid race condition.
-	err = d.RegisterDeletedWep(args.ContainerID)
+	err = utils.RegisterDeletedWep(args.ContainerID)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to register pod deletion timestamp.")
 		return err
@@ -607,7 +550,6 @@ func CmdDelK8s(ctx context.Context, c calicoclient.Interface, epIDs utils.WEPIde
 			// from false DEL, we return the error without deleting/cleaning up.
 			return err
 		}
-
 		// The WorkloadEndpoint doesn't exist for some reason. We should still try to clean up any IPAM allocations
 		// if they exist, so continue DEL processing.
 		logger.WithField("WorkloadEndpoint", epIDs.WEPName).Warning("WorkloadEndpoint does not exist in the datastore, moving forward with the clean up")
@@ -940,7 +882,7 @@ func NewK8sClient(conf types.NetConf, logger *logrus.Entry) (*kubernetes.Clients
 
 func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotations map[string]string, err error) {
 	ns, err := client.CoreV1().Namespaces().Get(podNamespace, metav1.GetOptions{})
-	logrus.Infof("namespace info %+v", ns)
+	logrus.Debugf("namespace info %+v", ns)
 	if err != nil {
 		return nil, err
 	}
@@ -948,6 +890,8 @@ func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotation
 }
 
 func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []api.EndpointPort, profiles []string, generateName string, err error) {
+	logrus.Debugf("pod info %+v", pod)
+
 	c := k8sconversion.NewConverter()
 	kvps, err := c.PodToWorkloadEndpoints(pod)
 	if err != nil {

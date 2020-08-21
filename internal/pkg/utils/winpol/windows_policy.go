@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 // This package contains algorithmic support code for Windows.  I.e. code that is used on
 // Windows but can be UTed on any platform.
@@ -65,7 +65,7 @@ func CalculateEndpointPolicies(
 		}
 		outputPols = append(outputPols, outPol)
 	}
-	if !found && natOutgoing {
+	if !found && natOutgoing && len(extraNATExceptions) > 0 {
 		exceptions := appendCIDRs(nil, extraNATExceptions)
 		dict := map[string]interface{}{
 			"Type":          "OutBoundNAT",
