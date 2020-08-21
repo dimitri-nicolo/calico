@@ -472,20 +472,6 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 	}
 
-	// List of DNAT ipaddrs to map to this workload endpoint
-	floatingIPs := annot["cni.projectcalico.org/floatingIPs"]
-
-	if floatingIPs != "" {
-		// If floating IPs are defined, but the feature is not enabled, return an error.
-		if !conf.FeatureControl.FloatingIPs {
-			releaseIPAM()
-			return nil, fmt.Errorf("requested feature is not enabled: floating_ips")
-		}
-		if err != nil {
-			logger.WithError(err).Error("Failed to set node's VXLAN tunnel IP after retries, node may not receive traffic.")
-		}
-	}
-
 	// floatingIPs are allowed for the default interface only
 	if podInterface.IsDefault {
 		// List of DNAT ipaddrs to map to this workload endpoint
