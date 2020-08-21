@@ -46,6 +46,7 @@ import (
 	calicomanagedcluster "github.com/tigera/apiserver/pkg/registry/projectcalico/managedcluster"
 	calicopolicy "github.com/tigera/apiserver/pkg/registry/projectcalico/networkpolicy"
 	caliconetworkset "github.com/tigera/apiserver/pkg/registry/projectcalico/networkset"
+	calicopacketcapture "github.com/tigera/apiserver/pkg/registry/projectcalico/packetcapture"
 	calicoprofile "github.com/tigera/apiserver/pkg/registry/projectcalico/profile"
 	calicoremoteclusterconfig "github.com/tigera/apiserver/pkg/registry/projectcalico/remoteclusterconfig"
 	"github.com/tigera/apiserver/pkg/registry/projectcalico/server"
@@ -576,6 +577,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	packetCaptureRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("packetcaptures"))
+	if err != nil {
+		return nil, err
+	}
+	packetCaptureOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   packetCaptureRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicopacketcapture.EmptyObject(),
+			ScopeStrategy: calicopacketcapture.NewStrategy(scheme),
+			NewListFunc:   calicopacketcapture.NewList,
+			GetAttrsFunc:  calicopacketcapture.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: packetCaptureRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -648,6 +670,14 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["clusterinformations"] = rESTInPeace(calicoclusterinformation.NewREST(scheme, *clusterInformationOpts))
 	storage["authenticationreviews"] = calicoauthenticationreview.NewREST()
 	storage["authorizationreviews"] = calicoauthorizationreview.NewREST(calculator)
+
+	packetCaptureStorage, err := calicopacketcapture.NewREST(scheme, *packetCaptureOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	storage["packetcaptures"] = packetCaptureStorage
+
 	return storage, nil
 }
 

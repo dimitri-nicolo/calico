@@ -44,6 +44,8 @@ type NetworkPolicyExpansion interface{}
 
 type NetworkSetExpansion interface{}
 
+type PacketCaptureExpansion interface{}
+
 type ProfileExpansion interface{}
 
 type RemoteClusterConfigurationExpansion interface{}

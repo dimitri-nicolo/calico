@@ -31,6 +31,7 @@ type ProjectcalicoInterface interface {
 	ManagedClustersGetter
 	NetworkPoliciesGetter
 	NetworkSetsGetter
+	PacketCapturesGetter
 	ProfilesGetter
 	RemoteClusterConfigurationsGetter
 	StagedGlobalNetworkPoliciesGetter
@@ -122,6 +123,10 @@ func (c *ProjectcalicoClient) NetworkPolicies(namespace string) NetworkPolicyInt
 
 func (c *ProjectcalicoClient) NetworkSets() NetworkSetInterface {
 	return newNetworkSets(c)
+}
+
+func (c *ProjectcalicoClient) PacketCaptures(namespace string) PacketCaptureInterface {
+	return newPacketCaptures(c, namespace)
 }
 
 func (c *ProjectcalicoClient) Profiles() ProfileInterface {

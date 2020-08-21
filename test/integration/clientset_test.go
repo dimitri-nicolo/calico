@@ -2835,7 +2835,6 @@ func TestAuthorizationReviewsClient(t *testing.T) {
 			}
 		}
 	}
-
 	if !t.Run("test-authorization-reviews", rootTestFunc()) {
 		t.Errorf("test-authorization-reviews failed")
 	}
@@ -2942,4 +2941,96 @@ func checkAuthorizationReviewStatus(actual, expected calico.AuthorizationReviewS
 	expectedBytes, _ := json.Marshal(expected)
 
 	return fmt.Errorf("Expected status: %s\nActual Status: %s", string(expectedBytes), string(actualBytes))
+}
+
+// TestPacketCaptureClient exercises the PacketCaptures client.
+func TestPacketCaptureClient(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		const name = "test-packetcapture"
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.PacketCapture{}
+			})
+			defer shutdownServer()
+			if err := testPacketCapturesClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("test-packet-captures", rootTestFunc()) {
+		t.Errorf("test-packet-captures failed")
+	}
+}
+
+func testPacketCapturesClient(client calicoclient.Interface, name string) error {
+	ns := "default"
+	packetCaptureClient := client.ProjectcalicoV3().PacketCaptures(ns)
+	packetCapture := &v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	// start from scratch
+	packetCaptures, err := packetCaptureClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing packetCaptures (%s)", err)
+	}
+	if packetCaptures.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(packetCaptures.Items) > 0 {
+		return fmt.Errorf("packetCaptures should not exist on start, had %v packetCaptures", len(packetCaptures.Items))
+	}
+
+	packetCaptureServer, err := packetCaptureClient.Create(packetCapture)
+	if nil != err {
+		return fmt.Errorf("error creating the packetCapture '%v' (%v)", packetCapture, err)
+	}
+
+	updatedPacketCapture := packetCaptureServer
+	updatedPacketCapture.Labels = map[string]string{"foo": "bar"}
+	packetCaptureServer, err = packetCaptureClient.Update(updatedPacketCapture)
+	if nil != err {
+		return fmt.Errorf("error updating the packetCapture '%v' (%v)", packetCapture, err)
+	}
+
+	// Should be listing the packetCapture.
+	packetCaptures, err = packetCaptureClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing networkSets (%s)", err)
+	}
+	if 1 != len(packetCaptures.Items) {
+		return fmt.Errorf("should have exactly one networkSet, had %v networkSets", len(packetCaptures.Items))
+	}
+
+	packetCaptureServer, err = packetCaptureClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting packetCapture %s (%s)", name, err)
+	}
+	if name != packetCaptureServer.Name &&
+		packetCapture.ResourceVersion == packetCaptureServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same packetCapture back from the server \n%+v\n%+v", packetCapture, packetCaptureServer)
+	}
+
+	// Watch Test:
+	opts := v1.ListOptions{Watch: true}
+	wIface, err := packetCaptureClient.Watch(opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	err = packetCaptureClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("packetCapture should be deleted (%s)", err)
+	}
+
+	wg.Wait()
+	return nil
 }

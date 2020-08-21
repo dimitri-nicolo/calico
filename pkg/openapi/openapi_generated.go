@@ -284,6 +284,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.NetworkPolicyList":                 schema_pkg_apis_projectcalico_v3_NetworkPolicyList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.NetworkSet":                        schema_pkg_apis_projectcalico_v3_NetworkSet(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.NetworkSetList":                    schema_pkg_apis_projectcalico_v3_NetworkSetList(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.PacketCapture":                     schema_pkg_apis_projectcalico_v3_PacketCapture(ref),
+		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.PacketCaptureList":                 schema_pkg_apis_projectcalico_v3_PacketCaptureList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.Profile":                           schema_pkg_apis_projectcalico_v3_Profile(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.ProfileList":                       schema_pkg_apis_projectcalico_v3_ProfileList(ref),
 		"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.RemoteClusterConfiguration":        schema_pkg_apis_projectcalico_v3_RemoteClusterConfiguration(ref),
@@ -13303,6 +13305,91 @@ func schema_pkg_apis_projectcalico_v3_NetworkSetList(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.NetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PacketCapture(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.PacketCaptureSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PacketCaptureList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketCaptureList is a list of PacketCapture objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/tigera/apiserver/pkg/apis/projectcalico/v3.PacketCapture"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/apiserver/pkg/apis/projectcalico/v3.PacketCapture", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 

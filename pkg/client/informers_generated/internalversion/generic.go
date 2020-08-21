@@ -79,6 +79,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().NetworkPolicies().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("networksets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().NetworkSets().Informer()}, nil
+	case projectcalico.SchemeGroupVersion.WithResource("packetcaptures"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().PacketCaptures().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("profiles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().Profiles().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("remoteclusterconfigurations"):

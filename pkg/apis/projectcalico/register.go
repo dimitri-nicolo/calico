@@ -86,6 +86,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&AuthenticationReviewList{},
 		&AuthorizationReview{},
 		&AuthorizationReviewList{},
+		&PacketCaptureList{},
+		&PacketCapture{},
 	)
 	return nil
 }

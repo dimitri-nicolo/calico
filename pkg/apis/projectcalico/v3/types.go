@@ -3,9 +3,9 @@
 package v3
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -578,4 +578,25 @@ type AuthorizationReview struct {
 
 	Spec   calico.AuthorizationReviewSpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	Status calico.AuthorizationReviewStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// PacketCaptureList is a list of PacketCapture objects.
+type PacketCaptureList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []PacketCapture `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type PacketCapture struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.PacketCaptureSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }

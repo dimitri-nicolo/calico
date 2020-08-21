@@ -585,3 +585,24 @@ type AuthorizationReview struct {
 	Spec   calico.AuthorizationReviewSpec
 	Status calico.AuthorizationReviewStatus
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// PacketCaptureList is a list of PacketCapture objects.
+type PacketCaptureList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []PacketCapture
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type PacketCapture struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.PacketCaptureSpec
+}

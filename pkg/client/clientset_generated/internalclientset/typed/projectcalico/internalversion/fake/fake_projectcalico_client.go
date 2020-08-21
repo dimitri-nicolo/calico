@@ -94,6 +94,10 @@ func (c *FakeProjectcalico) NetworkSets() internalversion.NetworkSetInterface {
 	return &FakeNetworkSets{c}
 }
 
+func (c *FakeProjectcalico) PacketCaptures(namespace string) internalversion.PacketCaptureInterface {
+	return &FakePacketCaptures{c, namespace}
+}
+
 func (c *FakeProjectcalico) Profiles() internalversion.ProfileInterface {
 	return &FakeProfiles{c}
 }

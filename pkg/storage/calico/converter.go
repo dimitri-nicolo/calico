@@ -152,6 +152,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.ClusterInformation{}
 		ClusterInformationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *libcalicoapi.PacketCapture:
+		lcg := libcalicoObject.(*libcalicoapi.PacketCapture)
+		aapi := &aapi.PacketCapture{}
+		PacketCaptureConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil
