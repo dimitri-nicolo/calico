@@ -25,12 +25,12 @@ type DNSLog struct {
 }
 
 type DNSLogsSelection struct {
-	// Resources lists the resources that will be included in the alert logs retrieved.
+	// Resources lists the resources that will be included in the DNS logs retrieved.
 	// Blank fields in the listed ResourceID structs are treated as wildcards.
 	Resources []DNSResource `json:"resources,omitempty" validate:"omitempty"`
 }
 
-// Used to filter alert logs.
+// Used to filter DNS logs.
 // An empty field value indicates a wildcard.
 type DNSResource struct {
 	ClientNamespace string `json:"client_namespace,omitempty" validate:"omitempty"`
