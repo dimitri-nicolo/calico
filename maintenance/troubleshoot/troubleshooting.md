@@ -6,29 +6,18 @@ canonical_url: '/maintenance/troubleshoot/troubleshooting'
 
 ### Logs and diagnostics
 
-To collect diagnostics, download and install the `kubectl-calico` plugin somewhere in your `$PATH`. For example:
+To collect diagnostics, download and install `{{include.cli}}` somewhere in your `$PATH`. We recommend installing it as a kubectl plugin by [following these directions]({{site.baseurl}}/getting-started/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host).
+
+Then, create a diagnostics bundle by running the following command:
 
 ```
-sudo curl -o /usr/local/bin/kubectl-calico {{site.url}}/{{page.version}}/maintenance/kubectl-calico
+kubectl calico cluster diags
 ```
 
-Make it executable:
+By default the command collects all logs. Optionally, you can select only those logs that are newer than a relative duration (specified in seconds, minutes or hours). For example:
 
 ```
-sudo chmod +x /usr/local/bin/kubectl-calico
-```
-
-Then, create a diagnostics bundle.
-
-```
-kubectl calico diags
-```
-
-Optionally only collect logs that are newer than a relative duration. The relative duration
-may be specified in seconds, minutes or hours. Default is to collect all logs. For example:
-
-```
-kubectl calico diags --since=1h
+kubectl calico cluster diags --since=1h
 ```
 
 To report a problem, contact Tigera Support.

@@ -11,16 +11,10 @@ You can run `calicoq` on any host with network access to the
 For step-by-step instructions, refer to the section that
 corresponds to your desired deployment.
 
-- [As a binary on a single host](#installing-calicoq-as-a-binary-on-a-single-host)
+- [As a binary on a single host](#install-calicoq-as-a-binary-on-a-single-host)
 
-- [As a container on a single host](#installing-calicoq-as-a-container-on-a-single-host)
-
-## Installing calicoq as a binary on a single host
+- [As a container on a single host](#install-calicoq-as-a-container-on-a-single-host)
 
 {% include content/ctl-binary-install.md cli="calicoq" codepath="/calicoq" %}
 
-**Next step**:
-
-[Configure `calicoq` to connect to your datastore]({{site.baseurl}}/getting-started/clis/calicoq/configure/).
-
-{% include content/ctl-container-install.md cli="calicoq" %}
+{% include content/ctl-container-install.md cli="calicoq" codepath="/calicoq" %}

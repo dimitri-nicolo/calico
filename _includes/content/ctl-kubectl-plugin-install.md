@@ -1,11 +1,11 @@
-## Install {{include.cli}} as a binary on a single host
+## Install {{include.cli}} as a kubectl plugin on a single host
 
 1. Log into the host, open a terminal prompt, and navigate to the location where
 you want to install the binary.
 
-   > **Tip**: Consider navigating to a location that's in your `PATH`. For example,
+   > **Note**: In order to install `{{include.cli}}` as a kubectl plugin, the binary must be located in your `PATH`. For example,
    > `/usr/local/bin/`.
-   {: .alert .alert-success}
+   {: .alert .alert-info}
 
 1. Ensure that you have the [`config.json` file with the private Tigera registry credentials]({{site.baseurl}}/getting-started/calico-enterprise#get-private-registry-credentials-and-license-key).
 
@@ -60,10 +60,10 @@ you want to install the binary.
    docker create --name {{include.cli}}-copy {{page.registry}}{% include component_image component=include.cli %}
    ```
 
-1. Copy the {{include.cli}} file from the container to the local file system. The following command copies it to a common `$PATH` location.
+1. Copy the {{include.cli}} file from the container to the local file system, while naming it `kubectl-calico`. The name follows kubectl plugin naming convention and is required.
 
    ```bash
-   docker cp {{include.cli}}-copy:{{include.codepath}} {{include.cli}}
+   docker cp {{include.cli}}-copy:{{include.codepath}} kubectl-calico
    ```
 
 1. Use the following command to delete the copy of the {{include.cli}} container.
@@ -75,14 +75,26 @@ you want to install the binary.
 1. Set the file to be executable.
 
    ```
-   chmod +x {{include.cli}}
+   chmod +x kubectl-calico
    ```
 
-   > **Note**: If the location of `calicoctl` is not already in your `PATH`, move the file
-   > to one that is or add its location to your `PATH`. This will allow you to invoke it
-   > without having to prepend its location.
+   > **Note**: If the location of `kubectl-calico` is not already in your `PATH`, move the file
+   > to one that is or add its location to your `PATH`. This is required in order for
+   > kubectl to detect the plugin and allow you to use it. 
    {: .alert .alert-info}
+
+1. Verify the plugin works.
+
+   ```
+   kubectl calico -h
+   ```
+
+You can now run any `{{include.cli}}` subcommands through `kubectl calico`.
+
+> **Note**: If you run these commands from your local machine (instead of a host node), some of
+> the node related subcommands will not work (like node status).
+{: .alert .alert-info}
 
 **Next step**:
 
-[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/getting-started/clis/{{include.cli}}/configure/).
+[Configure `calicoctl` to connect to your datastore](configure).
