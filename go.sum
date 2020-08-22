@@ -676,8 +676,8 @@ github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32 h1:viKxUQ8CxDitCz
 github.com/tigera/apiserver v0.0.0-20200618163438-db102b945e32/go.mod h1:qX4LqrxahAYcQhNg3hu3yNpuJtSORp3DwBt21yVLvUU=
 github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223 h1:FDyLVsL36KW1Ik+9cYGMo54WX2kwj5E2ujaoAGozrFs=
 github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223/go.mod h1:bhxrvPjcQaD8dTJdBlwVnPWH0FUh5T/EvVnp4i+wzvE=
-github.com/tigera/libcalico-go-private v1.7.2-0.20200820223007-9d2762af4e17 h1:hlhqavMo9E8U3WvtUncRfc2z4PmBBC2T7083Zyqf+nA=
-github.com/tigera/libcalico-go-private v1.7.2-0.20200820223007-9d2762af4e17/go.mod h1:XY6QJ8t0s/48gYiY1PxLdLVvWjbzH/fyKMWoIZZSrWA=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200821192134-40a1646d6e9e h1:tabn8wdG1PVvZ3m9rbjKttVHdtsltMVsdW86elcKVjo=
+github.com/tigera/libcalico-go-private v1.7.2-0.20200821192134-40a1646d6e9e/go.mod h1:XY6QJ8t0s/48gYiY1PxLdLVvWjbzH/fyKMWoIZZSrWA=
 github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 h1:d3s/0EKVB1BsRoQ12TWHbO7xWmplpU1bXJPSYu9qupI=
 github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
 github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 h1:WeS+3sfbfEm4Off/sl2NwlYPNKlAxN7QScopiB5I29A=
@@ -685,7 +685,7 @@ github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5/go.mod h1:/QGxx
 github.com/tigera/lma v0.0.0-20200821020454-77a93c6e45f0 h1:DpIfMLdC9CCL9jNc1EqpZYECtKNja1+xo44jWw/R/U8=
 github.com/tigera/lma v0.0.0-20200821020454-77a93c6e45f0/go.mod h1:Fd3Yj6PQH65qEPhKkl8mPtgS43m1N7+uWKvoWTmR5hU=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20200821030436-4a64f9bfa34e/go.mod h1:MWMMUM+K5ECGzV1vvDKBEv6HW9Q7fuAwu+0WosZzV9c=
+github.com/tigera/typha-private v0.6.0-beta1.0.20200822030404-c4aa0af36fe8/go.mod h1:0zpJTE5/jXw42tHB4jMxiiBvNUL4VCMDrdKUo1LiOI8=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
