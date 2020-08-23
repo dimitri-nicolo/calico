@@ -27,6 +27,14 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	kapiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -38,13 +46,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator/clients"
-	log "github.com/sirupsen/logrus"
-	kapiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/node/pkg/calicoclient"
 	"github.com/projectcalico/node/pkg/startup/autodetection"
@@ -62,6 +63,8 @@ const (
 	AUTODETECTION_METHOD_INTERFACE      = "interface="
 	AUTODETECTION_METHOD_SKIP_INTERFACE = "skip-interface="
 	AUTODETECTION_METHOD_CIDR           = "cidr="
+
+	DEFAULT_MONITOR_IP_POLL_INTERVAL = 60 * time.Second
 
 	// KubeadmConfigConfigMap is defined in k8s.io/kubernetes, which we can't import due to versioning issues.
 	KubeadmConfigConfigMap = "kubeadm-config"
@@ -143,60 +146,29 @@ func Run() {
 		kubeadmConfig, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(KubeadmConfigConfigMap,
 			metav1.GetOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if kerrors.IsNotFound(err) {
 				kubeadmConfig = nil
 			} else {
 				log.WithError(err).Error("failed to query kubeadm's config map")
 				terminate()
-				return
 			}
 		}
 
 		rancherState, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(RancherStateConfigMap,
 			metav1.GetOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if kerrors.IsNotFound(err) {
 				rancherState = nil
 			} else {
 				log.WithError(err).Error("failed to query Rancher's cluster state config map")
 				terminate()
-				return
 			}
 		}
 	}
 
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
-		// Configure and verify the node IP addresses and subnets.
-		checkConflicts, err := configureIPsAndSubnets(node)
-
-		if err != nil {
-			clearv4 := os.Getenv("IP") == "autodetect"
-			clearv6 := os.Getenv("IP6") == "autodetect"
-			if node.ResourceVersion != "" {
-				// If we're auto-detecting an IP on an existing node and hit an error, clear the previous
-				// IP addresses from the node since they are no longer valid.
-				clearNodeIPs(ctx, cli, node, clearv4, clearv6)
-			}
-			terminate()
-		}
-
-		// If we report an IP change (v4 or v6) we should verify there are no
-		// conflicts between Nodes.
-		if checkConflicts && os.Getenv("DISABLE_NODE_IP_CHECK") != "true" {
-			v4conflict, v6conflict, err := checkConflictingNodes(ctx, cli, node)
-			if err != nil {
-				// If we've auto-detected a new IP address for an existing node that now conflicts, clear the old IP address(es)
-				// from the node in the datastore. This frees the address in case it needs to be used for another node.
-				clearv4 := (os.Getenv("IP") == "autodetect") && v4conflict
-				clearv6 := (os.Getenv("IP6") == "autodetect") && v6conflict
-				if node.ResourceVersion != "" {
-					clearNodeIPs(ctx, cli, node, clearv4, clearv6)
-				}
-
-				terminate()
-			}
-		}
+		configureAndCheckIPAddressSubnets(ctx, cli, node)
 
 		// Configure the node AS number if BGP is enabled.
 		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
@@ -205,7 +177,7 @@ func Run() {
 
 		if clientset != nil {
 			log.Info("Setting NetworkUnavailable to False")
-			err = setNodeNetworkUnavailableFalse(*clientset, nodeName)
+			err := setNodeNetworkUnavailableFalse(*clientset, nodeName)
 			if err != nil {
 				log.WithError(err).Error("Unable to set NetworkUnavailable to False")
 			}
@@ -239,6 +211,83 @@ func Run() {
 
 	// Tell the user what the name of the node is.
 	log.Infof("Using node name: %s", nodeName)
+}
+
+func getMonitorPollInterval() time.Duration {
+	interval := DEFAULT_MONITOR_IP_POLL_INTERVAL
+
+	if intervalEnv := os.Getenv("AUTODETECT_POLL_INTERVAL"); intervalEnv != "" {
+		var err error
+		interval, err = time.ParseDuration(intervalEnv)
+		if err != nil {
+			log.WithError(err).Errorf("error parsing node IP auto-detect polling interval %s", intervalEnv)
+			interval = DEFAULT_MONITOR_IP_POLL_INTERVAL
+		}
+	}
+
+	return interval
+}
+
+func configureAndCheckIPAddressSubnets(ctx context.Context, cli client.Interface, node *api.Node) bool {
+	// Configure and verify the node IP addresses and subnets.
+	checkConflicts, err := configureIPsAndSubnets(node)
+	if err != nil {
+		// If this is auto-detection error, do a cleanup before returning
+		clearv4 := os.Getenv("IP") == "autodetect"
+		clearv6 := os.Getenv("IP6") == "autodetect"
+		if node.ResourceVersion != "" {
+			// If we're auto-detecting an IP on an existing node and hit an error, clear the previous
+			// IP addresses from the node since they are no longer valid.
+			clearNodeIPs(ctx, cli, node, clearv4, clearv6)
+		}
+
+		terminate()
+	}
+
+	// If we report an IP change (v4 or v6) we should verify there are no
+	// conflicts between Nodes.
+	if checkConflicts && os.Getenv("DISABLE_NODE_IP_CHECK") != "true" {
+		v4conflict, v6conflict, err := checkConflictingNodes(ctx, cli, node)
+		if err != nil {
+			// If we've auto-detected a new IP address for an existing node that now conflicts, clear the old IP address(es)
+			// from the node in the datastore. This frees the address in case it needs to be used for another node.
+			clearv4 := (os.Getenv("IP") == "autodetect") && v4conflict
+			clearv6 := (os.Getenv("IP6") == "autodetect") && v6conflict
+			if node.ResourceVersion != "" {
+				clearNodeIPs(ctx, cli, node, clearv4, clearv6)
+			}
+			terminate()
+		}
+	}
+
+	return checkConflicts
+}
+
+func MonitorIPAddressSubnets() {
+	ctx := context.Background()
+	_, cli := calicoclient.CreateClient()
+	nodeName := determineNodeName()
+	node := getNode(ctx, cli, nodeName)
+
+	pollInterval := getMonitorPollInterval()
+
+	for {
+		<-time.After(pollInterval)
+		log.Debugf("Checking node IP address every %v", pollInterval)
+		updated := configureAndCheckIPAddressSubnets(ctx, cli, node)
+		if updated {
+			// Apply the updated node resource.
+			// we try updating the resource up to 3 times, in case of transient issues.
+			for i := 0; i < 3; i++ {
+				_, err := CreateOrUpdate(ctx, cli, node)
+				if err == nil {
+					log.Info("Updated node IP addresses")
+					break
+				}
+				log.WithError(err).Error("Unable to set node resource configuration, retrying...")
+			}
+		}
+	}
 }
 
 // configureNodeRef will attempt to discover the cluster type it is running on, check to ensure we
@@ -488,9 +537,9 @@ func configureIPsAndSubnets(node *api.Node) (bool, error) {
 			log.Warnf("Autodetection of IPv6 address failed, keeping existing value: %s", node.Spec.BGP.IPv6Address)
 			validateIP(node.Spec.BGP.IPv6Address)
 		}
-	} else if ipv6Env == "none" && node.Spec.BGP.IPv6Address!="" {
+	} else if ipv6Env == "none" && node.Spec.BGP.IPv6Address != "" {
 		log.Infof("Autodetection for IPv6 disabled, keeping existing value: %s", node.Spec.BGP.IPv6Address)
-		validateIP(node.Spec.BGP.IPv6Address)	
+		validateIP(node.Spec.BGP.IPv6Address)
 	} else if ipv6Env != "none" {
 		if ipv6Env != "" {
 			node.Spec.BGP.IPv6Address = parseIPEnvironment("IP6", ipv6Env, 6)

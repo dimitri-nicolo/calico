@@ -1127,3 +1127,14 @@ var _ = DescribeTable("UT for extractKubeadmCIDRs",
     apiVersion: kubeadm.k8s.io/v1alpha3
     kind: ClusterStatus`}}, "192.168.0.0/16", "", false),
 )
+
+var _ = Describe("UTs for monitor-addresses option", func() {
+	It("poll-interval handles invalid values", func() {
+		os.Setenv("AUTODETECT_POLL_INTERVAL", "foobar")
+		Expect(getMonitorPollInterval()).To(Equal(DEFAULT_MONITOR_IP_POLL_INTERVAL))
+	})
+	It("poll-interval handles valid values", func() {
+		os.Setenv("AUTODETECT_POLL_INTERVAL", "30m")
+		Expect(getMonitorPollInterval()).To(Equal(30 * time.Minute))
+	})
+})
