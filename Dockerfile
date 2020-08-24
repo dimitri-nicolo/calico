@@ -28,4 +28,5 @@ RUN sed -i 's/reverse()/reverse(),`${regularBundlePath}\/tigera_customization.st
 RUN sed -i 's@evenodd"}.*)))},@evenodd"}))},@g' /usr/share/kibana/node_modules/@kbn/ui-shared-deps/target/icon.logo_kibana-js.js
 
 RUN bin/kibana-plugin install file:///tigera_customization.zip
+COPY ./kibana.yml /usr/share/kibana/config/kibana.yml
 RUN bin/kibana --env.name=production --logging.json=false --optimize
