@@ -97,15 +97,29 @@ var (
 
 func TearDownK8sInfra(kds *K8sDatastoreInfra) {
 	log.Info("TearDownK8sInfra starting")
+	var wg sync.WaitGroup
 	if kds.etcdContainer != nil {
-		kds.etcdContainer.Stop()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			kds.etcdContainer.Stop()
+		}()
 	}
 	if kds.k8sApiContainer != nil {
-		kds.k8sApiContainer.Stop()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			kds.k8sApiContainer.Stop()
+		}()
 	}
 	if kds.k8sControllerManager != nil {
-		kds.k8sControllerManager.Stop()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			kds.k8sControllerManager.Stop()
+		}()
 	}
+	wg.Wait()
 	log.Info("TearDownK8sInfra done")
 }
 
@@ -136,7 +150,10 @@ func GetK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 
 func runK8sApiserver(etcdIp string) *containers.Container {
 	return containers.Run("apiserver",
-		containers.RunOpts{AutoRemove: true},
+		containers.RunOpts{
+			AutoRemove: true,
+			StopSignal: "SIGKILL",
+		},
 		"-v", os.Getenv("PRIVATE_KEY")+":/private.key",
 		utils.Config.K8sImage,
 		"kube-apiserver",
@@ -153,7 +170,10 @@ func runK8sApiserver(etcdIp string) *containers.Container {
 
 func runK8sControllerManager(apiserverIp string) *containers.Container {
 	c := containers.Run("controller-manager",
-		containers.RunOpts{AutoRemove: true},
+		containers.RunOpts{
+			AutoRemove: true,
+			StopSignal: "SIGKILL",
+		},
 		"-v", os.Getenv("PRIVATE_KEY")+":/private.key",
 		utils.Config.K8sImage,
 		"kube-controller-manager",

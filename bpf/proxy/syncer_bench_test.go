@@ -15,8 +15,6 @@
 // We keep the benchmarks in the proxy package to be able to bench unexported
 // partial functionality.
 
-// +build benchmark
-
 package proxy
 
 import (
@@ -24,38 +22,52 @@ import (
 	"net"
 	"testing"
 
+	. "github.com/onsi/gomega"
+
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8sp "k8s.io/kubernetes/pkg/proxy"
 
+	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/bpf/mock"
 	"github.com/projectcalico/felix/bpf/nat"
 )
 
-func makeState(svcCnt, epCnt int) DPSyncerState {
+func makeSvcEpsPair(svcIdx, epCnt, port int, opts ...K8sServicePortOption) (k8sp.ServicePort, []k8sp.Endpoint) {
+	svc := NewK8sServicePort(
+		net.IPv4(10, byte((svcIdx&0xff0000)>>16), byte((svcIdx&0xff00)>>8), byte(svcIdx&0xff)),
+		port,
+		v1.ProtocolTCP,
+		opts...,
+	)
+
+	eps := make([]k8sp.Endpoint, epCnt)
+	for j := 0; j < epCnt; j++ {
+		eps[j] = &k8sp.BaseEndpointInfo{Endpoint: fmt.Sprintf("11.1.1.1:%d", j+1)}
+	}
+
+	return svc, eps
+}
+
+func makeSvcKey(svcIdx int) k8sp.ServicePortName {
+	return k8sp.ServicePortName{
+		NamespacedName: types.NamespacedName{
+			Namespace: "default",
+			Name:      fmt.Sprintf("bench-svc-%d", svcIdx),
+		},
+	}
+}
+
+func makeState(svcCnt, epCnt int, opts ...K8sServicePortOption) DPSyncerState {
 	state := DPSyncerState{
 		SvcMap: make(k8sp.ServiceMap, svcCnt),
 		EpsMap: make(k8sp.EndpointsMap, epCnt),
 	}
 
 	for i := 0; i < svcCnt; i++ {
-		sk := k8sp.ServicePortName{
-			NamespacedName: types.NamespacedName{
-				Namespace: "default",
-				Name:      fmt.Sprintf("bench-svc-%d", i),
-			},
-		}
-		state.SvcMap[sk] = NewK8sServicePort(
-			net.IPv4(10, byte((i&0xff0000)>>16), byte((i&0xff00)>>8), byte(i&0xff)),
-			1234,
-			v1.ProtocolTCP,
-		)
-
-		eps := make([]k8sp.Endpoint, epCnt)
-		for j := 0; j < epCnt; j++ {
-			eps[j] = &k8sp.BaseEndpointInfo{Endpoint: fmt.Sprintf("11.1.1.1:%d", j+1)}
-		}
-		state.EpsMap[sk] = eps
+		sk := makeSvcKey(i)
+		state.SvcMap[sk], state.EpsMap[sk] = makeSvcEpsPair(i, epCnt, 1234, opts...)
 	}
 
 	return state
@@ -85,11 +97,11 @@ func stateToBPFMaps(state DPSyncerState) (nat.MapMem, nat.BackendMapMem) {
 }
 
 func benchmarkStartupSync(b *testing.B, svcCnt, epCnt int) {
+	b.StopTimer()
 	state := makeState(svcCnt, epCnt)
 
 	b.Run(fmt.Sprintf("Services %d Endpoints %d", svcCnt, epCnt), func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
-			b.StopTimer()
 			origSvcs, origEps := stateToBPFMaps(state)
 			s := &Syncer{
 				prevSvcMap: make(map[svcKey]svcInfo),
@@ -99,13 +111,18 @@ func benchmarkStartupSync(b *testing.B, svcCnt, epCnt int) {
 			}
 
 			b.StartTimer()
-			s.startupBuildPrev(state)
+			err := s.startupBuildPrev(state)
+			Expect(err).ShouldNot(HaveOccurred())
+			b.StopTimer()
 		}
 	})
 }
 
 func BenchmarkStartupSync(b *testing.B) {
-	logrus.SetLevel(logrus.InfoLevel)
+	RegisterTestingT(b)
+	loglevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.WarnLevel)
+	defer logrus.SetLevel(loglevel)
 
 	benchmarkStartupSync(b, 10, 1)
 	benchmarkStartupSync(b, 10, 10)
@@ -116,4 +133,93 @@ func BenchmarkStartupSync(b *testing.B) {
 	benchmarkStartupSync(b, 10000, 1)
 	benchmarkStartupSync(b, 10000, 10)
 	benchmarkStartupSync(b, 10000, 100)
+}
+
+func runBenchmarkServiceUpdate(b *testing.B, svcCnt, epCnt int, mockMaps bool, opts ...K8sServicePortOption) {
+	var (
+		syncer DPSyncer
+		err    error
+	)
+
+	b.StopTimer()
+	state := makeState(svcCnt, epCnt, opts...)
+
+	if mockMaps {
+		syncer, err = NewSyncer(
+			[]net.IP{net.IPv4(1, 1, 1, 1)},
+			&mock.DummyMap{},
+			&mock.DummyMap{},
+			&mock.DummyMap{},
+			NewRTCache(),
+		)
+		Expect(err).ShouldNot(HaveOccurred())
+	} else {
+		feMap := nat.FrontendMap(new(bpf.MapContext))
+		err = feMap.EnsureExists()
+		Expect(err).ShouldNot(HaveOccurred())
+		beMap := nat.BackendMap(new(bpf.MapContext))
+		err = beMap.EnsureExists()
+		Expect(err).ShouldNot(HaveOccurred())
+		syncer, err = NewSyncer(
+			[]net.IP{net.IPv4(1, 1, 1, 1)},
+			feMap,
+			beMap,
+			&mock.DummyMap{},
+			NewRTCache(),
+		)
+		Expect(err).ShouldNot(HaveOccurred())
+	}
+
+	err = syncer.Apply(state)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	title := fmt.Sprintf("Services %d Endpoints %d mockMaps %t", svcCnt, epCnt, mockMaps)
+	if len(opts) > 0 {
+		title += " + derived"
+	}
+
+	b.Run(title, func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			delKey := makeSvcKey(n)
+			newIdx := svcCnt + n
+			newKey := makeSvcKey(newIdx)
+
+			delete(state.SvcMap, delKey)
+			delete(state.EpsMap, delKey)
+
+			state.SvcMap[newKey], state.EpsMap[newKey] = makeSvcEpsPair(newIdx, epCnt, 1234, opts...)
+
+			b.StartTimer()
+
+			err := syncer.Apply(state)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			b.StopTimer()
+		}
+	})
+}
+
+func BenchmarkServiceUpdate(b *testing.B) {
+	RegisterTestingT(b)
+	loglevel := logrus.GetLevel()
+	logrus.SetLevel(logrus.WarnLevel)
+	defer logrus.SetLevel(loglevel)
+
+	dynaNodePort := func() K8sServicePortOption {
+		np := 0
+		return func(s interface{}) {
+			np = (np + 1) % 30000
+			K8sSvcWithNodePort(30000 + np)(s)
+		}
+	}
+
+	for _, svcs := range []int{1, 10, 100, 1000, 10000} {
+		for _, eps := range []int{1, 10} {
+			for _, opts := range [][]K8sServicePortOption{nil, {dynaNodePort()}} {
+				for _, mock := range []bool{true, false} {
+					runBenchmarkServiceUpdate(b, svcs, eps, mock, opts...)
+				}
+			}
+		}
+	}
 }

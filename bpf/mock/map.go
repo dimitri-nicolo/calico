@@ -52,9 +52,12 @@ func (m *Map) Path() string {
 	return m.Filename
 }
 
-func (m Map) Iter(f bpf.MapIter) error {
+func (m Map) Iter(f bpf.IterCallback) error {
 	for kstr, vstr := range m.Contents {
-		f([]byte(kstr), []byte(vstr))
+		action := f([]byte(kstr), []byte(vstr))
+		if action == bpf.IterDelete {
+			delete(m.Contents, kstr)
+		}
 	}
 	return nil
 }
@@ -107,3 +110,41 @@ func NewMockMap(params bpf.MapParameters) *Map {
 }
 
 var _ bpf.Map = (*Map)(nil)
+
+type DummyMap struct{}
+
+func (*DummyMap) GetName() string {
+	return "DummyMap"
+}
+
+func (*DummyMap) Open() error {
+	return nil
+}
+
+func (*DummyMap) EnsureExists() error {
+	return nil
+}
+
+func (*DummyMap) MapFD() bpf.MapFD {
+	return 0
+}
+
+func (*DummyMap) Path() string {
+	return "DummyMap"
+}
+
+func (*DummyMap) Iter(_ bpf.IterCallback) error {
+	return nil
+}
+
+func (*DummyMap) Update(k, v []byte) error {
+	return nil
+}
+
+func (*DummyMap) Get(k []byte) ([]byte, error) {
+	return nil, unix.ENOENT
+}
+
+func (*DummyMap) Delete(k []byte) error {
+	return nil
+}

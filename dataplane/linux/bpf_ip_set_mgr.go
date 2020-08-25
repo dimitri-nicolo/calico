@@ -17,6 +17,8 @@ package intdataplane
 import (
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/projectcalico/felix/bpf/ipsets"
 
 	"github.com/projectcalico/felix/idalloc"
@@ -27,6 +29,17 @@ import (
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
+
+var (
+	bpfIPSetsGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "felix_bpf_num_ip_sets",
+		Help: "Number of BPF IP sets managed in the dataplane.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(bpfIPSetsGauge)
+}
 
 type bpfIPSetManager struct {
 	// ipSets contains an entry for each IP set containing the state of that IP set.
@@ -185,7 +198,7 @@ func (m *bpfIPSetManager) CompleteDeferredWork() error {
 		}
 
 		var unknownEntries []ipsets.IPSetEntry
-		err := m.bpfMap.Iter(func(k, v []byte) {
+		err := m.bpfMap.Iter(func(k, v []byte) bpf.IteratorAction {
 			var entry ipsets.IPSetEntry
 			copy(entry[:], k)
 			setID := entry.SetID()
@@ -206,6 +219,7 @@ func (m *bpfIPSetManager) CompleteDeferredWork() error {
 					ipSet.PendingRemoves.Add(entry)
 				}
 			}
+			return bpf.IterNone
 		})
 		if err != nil {
 			log.WithError(err).Error("Failed to iterate over BPF map; IP sets may be out of sync")
@@ -215,8 +229,10 @@ func (m *bpfIPSetManager) CompleteDeferredWork() error {
 
 		for _, entry := range unknownEntries {
 			err := m.bpfMap.Delete(entry[:])
-			log.WithError(err).Error("Failed to remove unexpected IP set entry")
-			m.resyncScheduled = true
+			if err != nil {
+				log.WithError(err).WithField("key", entry).Error("Failed to remove unexpected IP set entry")
+				m.resyncScheduled = true
+			}
 		}
 
 		for _, ipSet := range m.ipSets {
@@ -289,6 +305,8 @@ func (m *bpfIPSetManager) CompleteDeferredWork() error {
 			"numDels":   numDels,
 		}).Info("Completed updates to BPF IP sets.")
 	}
+
+	bpfIPSetsGauge.Set(float64(len(m.ipSets)))
 
 	return nil
 }

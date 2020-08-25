@@ -33,10 +33,11 @@ import (
 //   __be32 addr_a, addr_b; // NBO
 //   uint16_t port_a, port_b; // HBO
 // };
-const conntrackKeySize = 16
-const conntrackValueSize = 64
+const KeySize = 16
+const ValueSize = 64
+const MaxEntries = 512000
 
-type Key [conntrackKeySize]byte
+type Key [KeySize]byte
 
 func (k Key) AsBytes() []byte {
 	return k[:]
@@ -109,7 +110,7 @@ func NewKey(proto uint8, ipA net.IP, portA uint16, ipB net.IP, portB uint16) Key
 //    };
 //  };
 // };
-type Value [conntrackValueSize]byte
+type Value [ValueSize]byte
 
 func (e Value) Created() int64 {
 	return int64(binary.LittleEndian.Uint64(e[:8]))
@@ -187,7 +188,7 @@ func NewValueNATForward(created, lastSeen time.Duration, flags uint8, revKey Key
 
 	initValue(&v, created, lastSeen, TypeNATForward, flags)
 
-	copy(v[24:24+conntrackKeySize], revKey.AsBytes())
+	copy(v[24:24+KeySize], revKey.AsBytes())
 
 	return v
 }
@@ -319,9 +320,9 @@ func (e Value) Data() EntryData {
 	return EntryData{
 		A2B:      readConntrackLeg(e[24:36]),
 		B2A:      readConntrackLeg(e[36:48]),
-		OrigDst:  net.IPv4(ip[0], ip[1], ip[2], ip[3]),
+		OrigDst:  ip,
 		OrigPort: binary.LittleEndian.Uint16(e[52:54]),
-		TunIP:    net.IPv4(tip[0], tip[1], tip[2], tip[3]),
+		TunIP:    tip,
 	}
 }
 
@@ -363,9 +364,9 @@ func (e Value) IsForwardDSR() bool {
 var MapParams = bpf.MapParameters{
 	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_ct",
 	Type:       "hash",
-	KeySize:    conntrackKeySize,
-	ValueSize:  conntrackValueSize,
-	MaxEntries: 512000,
+	KeySize:    KeySize,
+	ValueSize:  ValueSize,
+	MaxEntries: MaxEntries,
 	Name:       "cali_v4_ct",
 	Flags:      unix.BPF_F_NO_PREALLOC,
 	Version:    2,
@@ -405,7 +406,7 @@ type MapMem map[Key]Value
 func LoadMapMem(m bpf.Map) (MapMem, error) {
 	ret := make(MapMem)
 
-	err := m.Iter(func(k, v []byte) {
+	err := m.Iter(func(k, v []byte) bpf.IteratorAction {
 		ks := len(Key{})
 		vs := len(Value{})
 
@@ -416,17 +417,18 @@ func LoadMapMem(m bpf.Map) (MapMem, error) {
 		copy(val[:vs], v[:vs])
 
 		ret[key] = val
+		return bpf.IterNone
 	})
 
 	return ret, err
 }
 
 // MapMemIter returns bpf.MapIter that loads the provided MapMem
-func MapMemIter(m MapMem) bpf.MapIter {
+func MapMemIter(m MapMem) bpf.IterCallback {
 	ks := len(Key{})
 	vs := len(Value{})
 
-	return func(k, v []byte) {
+	return func(k, v []byte) bpf.IteratorAction {
 		var key Key
 		copy(key[:ks], k[:ks])
 
@@ -434,6 +436,7 @@ func MapMemIter(m MapMem) bpf.MapIter {
 		copy(val[:vs], v[:vs])
 
 		m[key] = val
+		return bpf.IterNone
 	}
 }
 

@@ -121,7 +121,7 @@ type Config struct {
 	BPFEnabled                         bool           `config:"bool;false"`
 	BPFDisableUnprivileged             bool           `config:"bool;true"`
 	BPFLogLevel                        string         `config:"oneof(off,info,debug);off;non-zero"`
-	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^(en.*|eth.*|tunl0$|wireguard.cali$)"`
+	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^(en[opsx].*|eth.*|tunl0$|wireguard.cali$)"`
 	BPFConnectTimeLoadBalancingEnabled bool           `config:"bool;true"`
 	BPFExternalServiceMode             string         `config:"oneof(tunnel,dsr);tunnel;non-zero"`
 	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
@@ -167,7 +167,7 @@ type Config struct {
 
 	Ipv6Support bool `config:"bool;true"`
 
-	IptablesBackend                    string            `config:"oneof(legacy,nft,auto);legacy"`
+	IptablesBackend                    string            `config:"oneof(legacy,nft,auto);auto"`
 	RouteRefreshInterval               time.Duration     `config:"seconds;90"`
 	InterfaceRefreshInterval           time.Duration     `config:"seconds;90"`
 	DeviceRouteSourceAddress           net.IP            `config:"ipv4;"`

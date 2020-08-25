@@ -337,7 +337,10 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	)
 
 	c := containers.RunWithFixedName(containerName,
-		containers.RunOpts{AutoRemove: true},
+		containers.RunOpts{
+			AutoRemove: true,
+			StopSignal: "SIGKILL",
+		},
 		args...,
 	)
 

@@ -125,6 +125,15 @@ func TestCompileTemplateRun(t *testing.T) {
 	})
 }
 
+func TestLoadZeroProgram(t *testing.T) {
+	RegisterTestingT(t)
+	fd, err := bpf.LoadBPFProgramFromInsns(nil, "Apache-2.0")
+	if err == nil {
+		_ = fd.Close()
+	}
+	Expect(err).To(Equal(unix.E2BIG))
+}
+
 // runBpfTest runs a specific section of the entire bpf program in isolation
 func runBpfTest(t *testing.T, section string, rules [][][]*proto.Rule, testFn func(bpfProgRunFn)) {
 	RegisterTestingT(t)
@@ -192,6 +201,7 @@ func runBpfTest(t *testing.T, section string, rules [][][]*proto.Rule, testFn fu
 	Expect(err).NotTo(HaveOccurred())
 	polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0")
 	Expect(err).NotTo(HaveOccurred())
+	defer func() { _ = polProgFD.Close() }()
 	progFDBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(progFDBytes, uint32(polProgFD))
 	err = jumpMap.Update([]byte{0, 0, 0, 0}, progFDBytes)
@@ -266,20 +276,21 @@ func initMapsOnce() {
 
 func cleanUpMaps() {
 	log.Info("Cleaning up all maps")
+
+	logLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel)
+	defer log.SetLevel(logLevel)
+
 	for _, m := range allMaps {
 		if m == stateMap || m == testStateMap || m == jumpMap {
 			continue // Can't clean up array maps
 		}
-		log.WithField("map", m.GetName()).Debug("Cleaning")
-		var allKeys [][]byte
-		err := m.Iter(func(k, v []byte) {
-			allKeys = append(allKeys, k)
+		log.WithField("map", m.GetName()).Info("Cleaning")
+		err := m.Iter(func(_, _ []byte) bpf.IteratorAction {
+			return bpf.IterDelete
 		})
 		if err != nil {
 			log.WithError(err).Panic("Failed to walk map")
-		}
-		for _, k := range allKeys {
-			_ = m.Delete(k)
 		}
 	}
 	log.Info("Cleaned up all maps")
@@ -465,6 +476,13 @@ func dumpNATMap(natMap bpf.Map) {
 	}
 }
 
+func resetMap(m bpf.Map) {
+	err := m.Iter(func(_, _ []byte) bpf.IteratorAction {
+		return bpf.IterDelete
+	})
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func dumpCTMap(ctMap bpf.Map) {
 	ct, err := conntrack.LoadMapMem(ctMap)
 	Expect(err).NotTo(HaveOccurred())
@@ -476,12 +494,7 @@ func dumpCTMap(ctMap bpf.Map) {
 }
 
 func resetCTMap(ctMap bpf.Map) {
-	ct, err := conntrack.LoadMapMem(ctMap)
-	Expect(err).NotTo(HaveOccurred())
-	for k := range ct {
-		err := ctMap.Delete(k[:])
-		Expect(err).NotTo(HaveOccurred())
-	}
+	resetMap(ctMap)
 }
 
 func saveCTMap(ctMap bpf.Map) conntrack.MapMem {
@@ -505,13 +518,8 @@ func dumpRTMap(rtMap bpf.Map) {
 	}
 }
 
-func resetRTMap(ctMap bpf.Map) {
-	rt, err := routes.LoadMap(ctMap)
-	Expect(err).NotTo(HaveOccurred())
-	for k := range rt {
-		err := rtMap.Delete(k[:])
-		Expect(err).NotTo(HaveOccurred())
-	}
+func resetRTMap(rtMap bpf.Map) {
+	resetMap(rtMap)
 }
 
 func saveRTMap(rtMap bpf.Map) routes.MapMem {
@@ -575,17 +583,23 @@ func testPacket(ethAlt *layers.Ethernet, ipv4Alt *layers.IPv4, l4Alt gopacket.La
 	if ipv4Alt != nil {
 		ipv4 = ipv4Alt
 	} else {
-		ipv4 = ipv4Default
+		// Make a copy so that we do not mangle the default if we set the
+		// protocol below.
+		ipv4 = new(layers.IPv4)
+		*ipv4 = *ipv4Default
 	}
 
 	if l4Alt != nil {
 		switch v := l4Alt.(type) {
 		case *layers.UDP:
 			udp = v
+			ipv4.Protocol = layers.IPProtocolUDP
 		case *layers.TCP:
 			tcp = v
+			ipv4.Protocol = layers.IPProtocolTCP
 		case *layers.ICMPv4:
 			icmp = v
+			ipv4.Protocol = layers.IPProtocolICMPv4
 		default:
 			return nil, nil, nil, nil, nil, errors.Errorf("unrecognized l4 layer type %t", l4Alt)
 		}
@@ -611,7 +625,17 @@ func testPacket(ethAlt *layers.Ethernet, ipv4Alt *layers.IPv4, l4Alt gopacket.La
 
 		return eth, ipv4, udp, payload, pkt.Bytes(), err
 	case tcp != nil:
-		return nil, nil, nil, nil, nil, errors.Errorf("tcp not implemented yet")
+		if tcp == nil {
+			return nil, nil, nil, nil, nil, errors.Errorf("tcp default not implemented yet")
+		}
+		ipv4.Length = uint16(5*4 + 8 + len(payload))
+		_ = tcp.SetNetworkLayerForChecksum(ipv4)
+
+		pkt := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(pkt, gopacket.SerializeOptions{ComputeChecksums: true},
+			eth, ipv4, tcp, gopacket.Payload(payload))
+
+		return eth, ipv4, tcp, payload, pkt.Bytes(), err
 	case icmp != nil:
 		ipv4.Length = uint16(5*4 + 8 + len(payload))
 
@@ -674,21 +698,73 @@ func TestMapIterWithDelete(t *testing.T) {
 	out := make(map[uint64]uint64)
 
 	cnt := 0
-	err = m.Iter(func(K, V []byte) {
+	err = m.Iter(func(K, V []byte) bpf.IteratorAction {
 		k := binary.LittleEndian.Uint64(K)
 		v := binary.LittleEndian.Uint64(V)
 
 		out[k] = v
-
-		err := m.Delete(K)
-		Expect(err).NotTo(HaveOccurred())
 		cnt++
+
+		return bpf.IterDelete
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(cnt).To(Equal(10))
 
 	for i := 0; i < 10; i++ {
+		Expect(out).To(HaveKey(uint64(i)))
+		Expect(out[uint64(i)]).To(Equal(uint64(i * 7)))
+	}
+}
+
+func TestMapIterWithDeleteLastOfBatch(t *testing.T) {
+	RegisterTestingT(t)
+
+	m := (&bpf.MapContext{}).NewPinnedMap(bpf.MapParameters{
+		Filename:   "/sys/fs/bpf/tc/globals/cali_tmap",
+		Type:       "hash",
+		KeySize:    8,
+		ValueSize:  8,
+		MaxEntries: 1000,
+		Name:       "cali_tmap",
+		Flags:      unix.BPF_F_NO_PREALLOC,
+	})
+
+	err := m.EnsureExists()
+	Expect(err).NotTo(HaveOccurred())
+
+	for i := 0; i < 40; i++ {
+		var k, v [8]byte
+
+		binary.LittleEndian.PutUint64(k[:], uint64(i))
+		binary.LittleEndian.PutUint64(v[:], uint64(i*7))
+
+		err := m.Update(k[:], v[:])
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	out := make(map[uint64]uint64)
+
+	cnt := 0
+	err = m.Iter(func(K, V []byte) bpf.IteratorAction {
+		k := binary.LittleEndian.Uint64(K)
+		v := binary.LittleEndian.Uint64(V)
+
+		out[k] = v
+
+		cnt++
+		// Delete the last of the first batch. Must not make the iteration to
+		// restart from the begining.
+		if cnt == bpf.MapIteratorNumKeys {
+			return bpf.IterDelete
+		}
+		return bpf.IterNone
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(cnt).To(Equal(40))
+
+	for i := 0; i < 40; i++ {
 		Expect(out).To(HaveKey(uint64(i)))
 		Expect(out[uint64(i)]).To(Equal(uint64(i * 7)))
 	}

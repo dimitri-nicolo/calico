@@ -597,6 +597,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			stateMap,
 			ruleRenderer,
 			filterTableV4,
+			dp.reportHealth,
 		))
 
 		// Pre-create the NAT maps so that later operations can assume access.

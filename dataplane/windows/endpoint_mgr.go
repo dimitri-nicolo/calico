@@ -1,4 +1,16 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package windataplane
 
@@ -68,6 +80,7 @@ type endpointManager struct {
 type hnsInterface interface {
 	GetHNSSupportedFeatures() hns.HNSSupportedFeatures
 	HNSListEndpointRequest() ([]hns.HNSEndpoint, error)
+	GetAttachedContainerIDs(endpoint *hns.HNSEndpoint) ([]string, error)
 }
 
 func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDataplane) *endpointManager {
@@ -166,6 +179,25 @@ func (m *endpointManager) RefreshHnsEndpointCache(forceRefresh bool) error {
 			}
 			continue
 		}
+
+		// Some CNI plugins do not clear endpoint properly when a pod has been torn down.
+		// In that case, it is possible Felix sees multiple endpoints with the same IP.
+		// We need to filter out inactive endpoints that do not attach to any container.
+		containers, err := m.hns.GetAttachedContainerIDs(&endpoint)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"id":   endpoint.Id,
+				"name": endpoint.Name,
+			}).Warn("Failed to get attached containers")
+			continue
+		}
+		if len(containers) == 0 {
+			log.WithFields(log.Fields{
+				"id":   endpoint.Id,
+				"name": endpoint.Name,
+			}).Warn("This is a stale endpoint with no container attached")
+			continue
+		}
 		ip := endpoint.IPAddress.String() + ipv4AddrSuffix
 		logCxt := log.WithFields(log.Fields{"IPAddress": ip, "EndpointId": endpoint.Id})
 		logCxt.Debug("Adding HNS Endpoint Id entry to cache")
@@ -259,7 +291,10 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	}
 
 	if len(m.pendingWlEpUpdates) > 0 {
-		m.RefreshHnsEndpointCache(false)
+		// HnsEndpointCache needs to be refreshed before endpoint manager processes any
+		// WEP updates. This is because an IP address can be recycled and assigned to a
+		// different endpoint since last time HnsEndpointCache been updated.
+		_ = m.RefreshHnsEndpointCache(true)
 	}
 
 	// Loop through each pending update
@@ -443,7 +478,7 @@ func (m *endpointManager) getHnsEndpointId(ip string) (string, error) {
 			// No cached entry was found, force refresh the cache and check again
 			log.WithField("ip", ip).Debug("Cache miss, requesting a cache refresh")
 			allowRefresh = false
-			m.RefreshHnsEndpointCache(true)
+			_ = m.RefreshHnsEndpointCache(true)
 			continue
 		}
 		break
