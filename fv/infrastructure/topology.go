@@ -54,6 +54,7 @@ type TopologyOptions struct {
 	DelayFelixStart           bool
 	AutoHEPsEnabled           bool
 	TriggerDelayedFelixStart  bool
+	FelixStopGraceful         bool
 }
 
 func DefaultTopologyOptions() TopologyOptions {
