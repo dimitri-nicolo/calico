@@ -332,14 +332,18 @@ func (s *Syncer) startupBuildPrev(state DPSyncerState) error {
 
 func (s *Syncer) startupRemoveStale() error {
 	for k := range s.origSvcs {
-		log.Debugf("removing stale %s", k)
+		if log.GetLevel() >= log.DebugLevel {
+			log.Debugf("removing stale %s", k)
+		}
 		if err := s.bpfSvcs.Delete(k[:]); err != nil {
 			return errors.Errorf("bpfSvcs.Delete: %s", err)
 		}
 	}
 
 	for k := range s.origEps {
-		log.Debugf("removing stale %s", k)
+		if log.GetLevel() >= log.DebugLevel {
+			log.Debugf("removing stale %s", k)
+		}
 		if err := s.bpfEps.Delete(k[:]); err != nil {
 			return errors.Errorf("bpfEps.Delete: %s", err)
 		}
@@ -369,18 +373,30 @@ func (s *Syncer) cleanupDerived(id uint32) error {
 				return err
 			}
 
-			log.Debugf("bpf map deleting derived %s:%s", key, nat.NewNATValue(id, 0, 0, 0))
+			if log.GetLevel() >= log.DebugLevel {
+				log.Debugf("bpf map deleting derived %s:%s", key, nat.NewNATValue(id, 0, 0, 0))
+			}
 			if err := s.bpfSvcs.Delete(key[:]); err != nil {
-				return errors.Errorf("bpfSvcs.Delete: %s", err)
+				if bpf.IsNotExists(err) {
+					log.Debugf("frontend key %s does not exist", key)
+				} else {
+					return errors.Errorf("bpfSvcs.Delete: %s", err)
+				}
 			}
 			keys, err := getSvcNATKeyLBSrcRange(si.svc)
 			if err != nil {
 				return err
 			}
 			for _, key = range keys {
-				log.Debugf("bpf map deleting derived %s:%s", key, nat.NewNATValue(id, 0, 0, 0))
+				if log.GetLevel() >= log.DebugLevel {
+					log.Debugf("bpf map deleting derived %s:%s", key, nat.NewNATValue(id, 0, 0, 0))
+				}
 				if err := s.bpfSvcs.Delete(key[:]); err != nil {
-					return errors.Errorf("bpfSvcs.Delete: %s", err)
+					if bpf.IsNotExists(err) {
+						log.Debugf("frontend key %s does not exist", key)
+					} else {
+						return errors.Errorf("bpfSvcs.Delete: %s", err)
+					}
 				}
 			}
 		}
@@ -390,29 +406,35 @@ func (s *Syncer) cleanupDerived(id uint32) error {
 }
 
 func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoint,
-	cleanupDerived func(uint32) error) error {
+	cleanupDerived func(uint32) error) (bool, error) {
 
 	var (
-		err   error
-		id    uint32
-		count int
-		local int
+		err        error
+		id         uint32
+		count      int
+		local      int
+		svcChanged = true
 	)
 
 	old, exists := s.prevSvcMap[skey]
 	if exists {
 		if ServicePortEqual(old.svc, sinfo) {
 			id = old.id
-			count, local, err = s.updateExistingSvc(skey.sname, sinfo, id, old.count, eps)
+			if !s.synced || !serviceEpsEqual(s.prevEpsMap[skey.sname], eps) {
+				count, local, err = s.updateExistingSvc(skey.sname, sinfo, id, old.count, eps)
+			} else {
+				svcChanged = false
+				count = old.count
+			}
 		} else {
 			if err := s.deleteSvc(old.svc, old.id, old.count); err != nil {
-				return err
+				return false, err
 			}
 
 			delete(s.prevSvcMap, skey)
 			if cleanupDerived != nil {
 				if err := cleanupDerived(old.id); err != nil {
-					return errors.WithMessage(err, "cleanupDerived")
+					return false, errors.WithMessage(err, "cleanupDerived")
 				}
 			}
 
@@ -424,7 +446,7 @@ func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoi
 		count, local, err = s.newSvc(skey.sname, sinfo, id, eps)
 	}
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	s.newSvcMap[skey] = svcInfo{
@@ -436,9 +458,12 @@ func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoi
 
 	s.newEpsMap[skey.sname] = eps
 
-	log.Debugf("applied a service %s update: sinfo=%+v", skey, s.newSvcMap[skey])
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("applied a service %s update: sinfo=%+v changed: %t",
+			skey, s.newSvcMap[skey], svcChanged)
+	}
 
-	return nil
+	return svcChanged, nil
 }
 
 func (s *Syncer) addActiveEps(id uint32, svc k8sp.ServicePort, eps []k8sp.Endpoint) {
@@ -468,7 +493,7 @@ func (s *Syncer) applyExpandedNP(sname k8sp.ServicePortName, sinfo k8sp.ServiceP
 	si.clusterIP = node.AsNetIP()
 	si.port = nport
 
-	if err := s.applySvc(skey, si, eps, nil); err != nil {
+	if _, err := s.applySvc(skey, si, eps, nil); err != nil {
 		return errors.Errorf("apply NodePortRemote for %s node %s", sname, node)
 	}
 
@@ -507,7 +532,9 @@ func (s *Syncer) expandNodePorts(sname k8sp.ServicePortName, sinfo k8sp.ServiceP
 		}
 
 		nodeIP := rt.NextHop().(ip.V4Addr)
-		log.Debugf("found rt %s for dest %s", nodeIP, ipv4)
+		if log.GetLevel() >= log.DebugLevel {
+			log.Debugf("found rt %s for dest %s", nodeIP, ipv4)
+		}
 
 		m[nodeIP] = append(m[nodeIP], ep)
 	}
@@ -521,7 +548,12 @@ func (s *Syncer) expandNodePorts(sname k8sp.ServicePortName, sinfo k8sp.ServiceP
 	return miss
 }
 
-func (s *Syncer) applyDerived(sname k8sp.ServicePortName, t svcType, sinfo k8sp.ServicePort) error {
+func (s *Syncer) applyDerived(
+	sname k8sp.ServicePortName,
+	t svcType,
+	sinfo k8sp.ServicePort,
+	svcChanged bool,
+) error {
 
 	svc, ok := s.newSvcMap[getSvcKey(sname, "")]
 	if !ok {
@@ -548,33 +580,35 @@ func (s *Syncer) applyDerived(sname k8sp.ServicePortName, t svcType, sinfo k8sp.
 		svc:        sinfo,
 	}
 
-	if oldInfo, ok := s.prevSvcMap[skey]; !ok || oldInfo != newInfo {
+	if _, ok := s.prevSvcMap[skey]; !ok || !s.synced || svcChanged {
 		if err := s.writeSvc(sinfo, svc.id, count, local); err != nil {
 			return err
 		}
 		if svcTypeLoadBalancer == t || svcTypeExternalIP == t {
 			err := s.writeLBSrcRangeSvcNATKeys(sinfo, svc.id, count, local)
 			if err != nil {
-				log.Debugf("Failed to write LB source range NAT keys")
+				log.Debug("Failed to write LB source range NAT keys")
 			}
 		}
 	}
 
 	s.newSvcMap[skey] = newInfo
-	log.Debugf("applied a derived service %s update: sinfo=%+v", skey, s.newSvcMap[skey])
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("applied a derived service %s update: sinfo=%+v", skey, s.newSvcMap[skey])
+	}
 
 	return nil
 }
 
 func (s *Syncer) apply(state DPSyncerState) error {
-	log.Debugf("applying new state")
+	log.Debug("applying new state")
 
 	// we need to copy the maps from the new state to compute the diff in the
 	// next call. We cannot keep the provided maps as the generic k8s proxy code
 	// updates them. This function is called with a lock help so we are safe
 	// here and now.
-	s.newSvcMap = make(map[svcKey]svcInfo)
-	s.newEpsMap = make(k8sp.EndpointsMap)
+	s.newSvcMap = make(map[svcKey]svcInfo, len(state.SvcMap))
+	s.newEpsMap = make(k8sp.EndpointsMap, len(state.EpsMap))
 
 	var expNPMisses []*expandMiss
 
@@ -582,14 +616,17 @@ func (s *Syncer) apply(state DPSyncerState) error {
 	for sname, sinfo := range state.SvcMap {
 		skey := getSvcKey(sname, "")
 		eps := state.EpsMap[sname]
-		if err := s.applySvc(skey, sinfo, eps, s.cleanupDerived); err != nil {
+
+		svcChanged, err := s.applySvc(skey, sinfo, eps, s.cleanupDerived)
+		if err != nil {
 			return err
 		}
+
 		for _, lbIP := range sinfo.LoadBalancerIPStrings() {
 			if lbIP != "" {
 				extInfo := serviceInfoFromK8sServicePort(sinfo)
 				extInfo.clusterIP = net.ParseIP(lbIP)
-				err := s.applyDerived(sname, svcTypeLoadBalancer, extInfo)
+				err := s.applyDerived(sname, svcTypeLoadBalancer, extInfo, svcChanged)
 				if err != nil {
 					log.Errorf("failed to apply LoadBalancer IP %s for service %s : %s", lbIP, sname, err)
 					continue
@@ -601,7 +638,7 @@ func (s *Syncer) apply(state DPSyncerState) error {
 		for _, extIP := range sinfo.ExternalIPStrings() {
 			extInfo := serviceInfoFromK8sServicePort(sinfo)
 			extInfo.clusterIP = net.ParseIP(extIP)
-			err := s.applyDerived(sname, svcTypeExternalIP, extInfo)
+			err := s.applyDerived(sname, svcTypeExternalIP, extInfo, svcChanged)
 			if err != nil {
 				log.Errorf("failed to apply ExternalIP %s for service %s : %s", extIP, sname, err)
 				continue
@@ -618,7 +655,7 @@ func (s *Syncer) apply(state DPSyncerState) error {
 					// separately
 					continue
 				}
-				err := s.applyDerived(sname, svcTypeNodePort, npInfo)
+				err := s.applyDerived(sname, svcTypeNodePort, npInfo, svcChanged)
 				if err != nil {
 					log.Errorf("failed to apply NodePort %s for service %s : %s", npip, sname, err)
 					continue
@@ -644,7 +681,9 @@ func (s *Syncer) apply(state DPSyncerState) error {
 			// do not delete backends if only deleting a service derived from a
 			// ClusterIP, that is ExternalIP or NodePort
 			count = 0
-			log.Debugf("deleting derived svc %s", skey)
+			if log.GetLevel() >= log.DebugLevel {
+				log.Debugf("deleting derived svc %s", skey)
+			}
 		}
 
 		if err := s.deleteSvc(sinfo.svc, sinfo.id, count); err != nil {
@@ -658,7 +697,7 @@ func (s *Syncer) apply(state DPSyncerState) error {
 		log.Infof("removed stale service %q", skey)
 	}
 
-	log.Debugf("new state written")
+	log.Debug("new state written")
 
 	s.runExpandNPFixup(expNPMisses)
 
@@ -672,7 +711,6 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 		if err := s.startupSync(state); err != nil {
 			return errors.WithMessage(err, "startup sync")
 		}
-		s.synced = true
 		// deallocate, no further use
 		s.origSvcs = nil
 		s.origEps = nil
@@ -703,6 +741,11 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 		// dont bother to cleanup affinity since we do not know in what state we
 		// are anyway. Will get resolved once we get in a good state
 		return err
+	}
+
+	// we are fully synced now
+	if !s.synced {
+		s.synced = true
 	}
 
 	// We wrote all updates, noone will create new records in affinity table
@@ -785,7 +828,9 @@ func (s *Syncer) writeSvcBackend(svcID uint32, idx uint32, ep k8sp.Endpoint) err
 	}
 	val := nat.NewNATBackendValue(ip, uint16(tgtPort))
 
-	log.Debugf("bpf map writing %s:%s", key, val)
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("bpf map writing %s:%s", key, val)
+	}
 	if err := s.bpfEps.Update(key[:], val[:]); err != nil {
 		return errors.Errorf("bpfEps.Update: %s", err)
 	}
@@ -799,9 +844,15 @@ func (s *Syncer) writeSvcBackend(svcID uint32, idx uint32, ep k8sp.Endpoint) err
 
 func (s *Syncer) deleteSvcBackend(svcID uint32, idx uint32) error {
 	key := nat.NewNATBackendKey(svcID, uint32(idx))
-	log.Debugf("bpf map deleting %s", key)
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("bpf map deleting %s", key)
+	}
 	if err := s.bpfEps.Delete(key[:]); err != nil {
-		return errors.Errorf("bpfEps.Delete: %s", err)
+		if bpf.IsNotExists(err) {
+			log.Debugf("backend key %s does not exist", key)
+		} else {
+			return errors.Errorf("bpfEps.Delete: %s", err)
+		}
 	}
 	return nil
 }
@@ -819,15 +870,19 @@ func getSvcNATKey(svc k8sp.ServicePort) (nat.FrontendKey, error) {
 }
 
 func getSvcNATKeyLBSrcRange(svc k8sp.ServicePort) ([]nat.FrontendKey, error) {
-	var keys []nat.FrontendKey
 	ipaddr := svc.ClusterIP()
 	port := svc.Port()
 	loadBalancerSourceRanges := svc.LoadBalancerSourceRanges()
-	log.Debugf("loadbalancer %v", loadBalancerSourceRanges)
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("loadbalancer %v", loadBalancerSourceRanges)
+	}
 	proto, err := ProtoV1ToInt(svc.Protocol())
 	if err != nil {
-		return keys, err
+		return nil, err
 	}
+
+	keys := make([]nat.FrontendKey, 0, len(loadBalancerSourceRanges))
+
 	for _, src := range loadBalancerSourceRanges {
 		// Ignore IPv6 addresses
 		if strings.Contains(src, ":") {
@@ -855,7 +910,9 @@ func (s *Syncer) writeLBSrcRangeSvcNATKeys(svc k8sp.ServicePort, svcID uint32, c
 	}
 	val := nat.NewNATValue(svcID, uint32(count), uint32(local), affinityTimeo)
 	for _, key := range keys {
-		log.Debugf("bpf map writing %s:%s", key, val)
+		if log.GetLevel() >= log.DebugLevel {
+			log.Debugf("bpf map writing %s:%s", key, val)
+		}
 		if err = s.bpfSvcs.Update(key[:], val[:]); err != nil {
 			return errors.Errorf("bpfSvcs.Update: %s", err)
 		}
@@ -884,7 +941,9 @@ func (s *Syncer) writeSvc(svc k8sp.ServicePort, svcID uint32, count, local int) 
 
 	val := nat.NewNATValue(svcID, uint32(count), uint32(local), affinityTimeo)
 
-	log.Debugf("bpf map writing %s:%s", key, val)
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("bpf map writing %s:%s", key, val)
+	}
 	if err := s.bpfSvcs.Update(key[:], val[:]); err != nil {
 		return errors.Errorf("bpfSvcs.Update: %s", err)
 	}
@@ -914,9 +973,15 @@ func (s *Syncer) deleteSvc(svc k8sp.ServicePort, svcID uint32, count int) error 
 		return err
 	}
 
-	log.Debugf("bpf map deleting %s:%s", key, nat.NewNATValue(svcID, uint32(count), 0, 0))
+	if log.GetLevel() >= log.DebugLevel {
+		log.Debugf("bpf map deleting %s:%s", key, nat.NewNATValue(svcID, uint32(count), 0, 0))
+	}
 	if err := s.bpfSvcs.Delete(key[:]); err != nil {
-		return errors.WithMessage(err, "Delete svc")
+		if bpf.IsNotExists(err) {
+			log.Debugf("frontend key %s does not exist", key)
+		} else {
+			return errors.WithMessage(err, "Delete svc")
+		}
 	}
 
 	keys, err := getSvcNATKeyLBSrcRange(svc)
@@ -924,10 +989,15 @@ func (s *Syncer) deleteSvc(svc k8sp.ServicePort, svcID uint32, count int) error 
 		return err
 	}
 	for _, key := range keys {
-		log.Debugf("bpf map deleting %s:%s", key, nat.NewNATValue(svcID, uint32(count), 0, 0))
-		err := s.bpfSvcs.Delete(key[:])
-		if err != nil && !bpf.IsNotExists(err) {
-			return errors.WithMessage(err, "Delete svc")
+		if log.GetLevel() >= log.DebugLevel {
+			log.Debugf("bpf map deleting %s:%s", key, nat.NewNATValue(svcID, uint32(count), 0, 0))
+		}
+		if err := s.bpfSvcs.Delete(key[:]); err != nil {
+			if bpf.IsNotExists(err) {
+				log.Debugf("frontend key %s does not exist", key)
+			} else {
+				return errors.WithMessage(err, "Delete svc")
+			}
 		}
 	}
 
@@ -975,7 +1045,9 @@ func (s *Syncer) matchBpfSvc(bpfSvc nat.FrontendKey, k8sSvc k8sp.ServicePortName
 						sname: k8sSvc,
 						extra: getSvcKeyExtra(svcTypeNodePort, nip.String()),
 					}
-					log.Debugf("resolved %s as %s", bpfSvc, skey)
+					if log.GetLevel() >= log.DebugLevel {
+						log.Debugf("resolved %s as %s", bpfSvc, skey)
+					}
 					return skey
 				}
 			}
@@ -1019,7 +1091,9 @@ func (s *Syncer) matchBpfSvc(bpfSvc nat.FrontendKey, k8sSvc k8sp.ServicePortName
 			skey := &svcKey{
 				sname: k8sSvc,
 			}
-			log.Debugf("resolved %s as %s", bpfSvc, skey)
+			if log.GetLevel() >= log.DebugLevel {
+				log.Debugf("resolved %s as %s", bpfSvc, skey)
+			}
 			return skey
 		}
 	}
@@ -1031,7 +1105,9 @@ func (s *Syncer) matchBpfSvc(bpfSvc nat.FrontendKey, k8sSvc k8sp.ServicePortName
 					sname: k8sSvc,
 					extra: getSvcKeyExtra(svcTypeExternalIP, eip),
 				}
-				log.Debugf("resolved %s as %s", bpfSvc, skey)
+				if log.GetLevel() >= log.DebugLevel {
+					log.Debugf("resolved %s as %s", bpfSvc, skey)
+				}
 				return skey
 			}
 		}
@@ -1060,10 +1136,10 @@ func (s *Syncer) matchBpfSvc(bpfSvc nat.FrontendKey, k8sSvc k8sp.ServicePortName
 }
 
 func (s *Syncer) runExpandNPFixup(misses []*expandMiss) {
-	s.expFixupStop = make(chan struct{})
 	if len(misses) == 0 {
 		return
 	}
+	s.expFixupStop = make(chan struct{})
 	s.expFixupWg.Add(1)
 
 	// start the fixer routine and exit
@@ -1115,8 +1191,12 @@ func (s *Syncer) runExpandNPFixup(misses []*expandMiss) {
 }
 
 func (s *Syncer) stopExpandNPFixup() {
-	close(s.expFixupStop)
-	s.expFixupWg.Wait()
+	// If there was an error before we started ExpandNPFixup, there is nothing to stop
+	if s.expFixupStop != nil {
+		close(s.expFixupStop)
+		s.expFixupWg.Wait()
+		s.expFixupStop = nil
+	}
 }
 
 // Stop stops the syncer
@@ -1130,64 +1210,58 @@ func (s *Syncer) Stop() {
 }
 
 func (s *Syncer) cleanupSticky() error {
-
-	// no sticky service was updated, there cannot be any stale affinity entries
-	// to clean up
 	if len(s.stickySvcs) == 0 && !s.stickySvcDeleted {
+		// no sticky service was updated, there cannot be any stale affinity entries
+		// to clean up
 		return nil
 	}
+
+	debug := log.GetLevel() >= log.DebugLevel
+	_ = debug // Work around linter false-positive.
 
 	var (
 		key nat.AffinityKey
 		val nat.AffinityValue
 	)
 
-	dels := make([]nat.AffinityKey, 0, 64)
 	ks := len(nat.AffinityKey{})
 	vs := len(nat.AffinityValue{})
 
 	now := time.Duration(bpf.KTimeNanos())
 
-	err := s.bpfAff.Iter(func(k, v []byte) {
-
+	err := s.bpfAff.Iter(func(k, v []byte) bpf.IteratorAction {
 		copy(key[:], k[:ks])
 		copy(val[:], v[:vs])
 
 		fend, ok := s.stickySvcs[key.FrontendAffinityKey()]
 		if !ok {
-			log.Debugf("cleaning affinity %v:%v - no such a service", key, val)
-			dels = append(dels, key)
-			return
+			if debug {
+				log.Debugf("cleaning affinity %v:%v - no such a service", key, val)
+			}
+			return bpf.IterDelete
 		}
 
 		if _, ok := s.stickyEps[fend.id][val.Backend()]; !ok {
-			log.Debugf("cleaning affinity %v:%v - no such a backend", key, val)
-			dels = append(dels, key)
-			return
+			if debug {
+				log.Debugf("cleaning affinity %v:%v - no such a backend", key, val)
+			}
+			return bpf.IterDelete
 		}
 
 		if now-val.Timestamp() > fend.timeo {
-			log.Debugf("cleaning affinity %v:%v - expired", key, val)
-			dels = append(dels, key)
-			return
+			if debug {
+				log.Debugf("cleaning affinity %v:%v - expired", key, val)
+			}
+			return bpf.IterDelete
 		}
-		log.Debugf("cleaning affinity %v:%v - keeping", key, val)
+		if debug {
+			log.Debugf("cleaning affinity %v:%v - keeping", key, val)
+		}
+		return bpf.IterNone
 	})
 
 	if err != nil {
 		return errors.Errorf("NAT affinity map iterator failed: %s", err)
-	}
-
-	errs := 0
-
-	for _, k := range dels {
-		if err := s.bpfAff.Delete(k.AsBytes()); err != nil {
-			log.WithField("key", k).Errorf("Failed to delete stale NAT affinity record")
-		}
-	}
-
-	if errs > 0 {
-		return errors.Errorf("encountered  %d errors writing NAT affinity map", errs)
 	}
 	return nil
 }
@@ -1377,6 +1451,35 @@ func ServicePortEqual(a, b k8sp.ServicePort) bool {
 		stringsEqual(a.LoadBalancerIPStrings(), b.LoadBalancerIPStrings()) &&
 		stringsEqual(a.LoadBalancerSourceRanges(), b.LoadBalancerSourceRanges()) &&
 		stringsEqual(a.TopologyKeys(), b.TopologyKeys())
+}
+
+func serviceEpsEqual(a, b []k8sp.Endpoint) bool {
+	l := len(a)
+	if l != len(b) {
+		return false
+	}
+
+	for ia, aa := range a {
+		// We assume that most of the time (always?) the endpoints are in the
+		// same order since the slice is not updated unless there was a change
+		// in the service. And we compare in O(n). But if there is a mismatch,
+		// we fall back to O(n^2) in case the order changed.
+		if !aa.Equal(b[ia]) {
+			found := false
+			for i := 0; i < l-1; i++ {
+				ib := (ia + i + 1) % l
+				if aa.Equal(b[ib]) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func stringsEqual(a, b []string) bool {

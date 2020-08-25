@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/aws"
+	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
@@ -367,4 +368,8 @@ func StartDataplaneDriver(configParams *config.Config,
 		dpConn, cmd := extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
 		return dpConn, cmd, nil
 	}
+}
+
+func SupportsBPF() error {
+	return bpf.SupportsBPFDataplane()
 }

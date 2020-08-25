@@ -21,6 +21,8 @@ import (
 	"github.com/projectcalico/felix/bpf/asm"
 )
 
+const MapIteratorNumKeys = 16
+
 func SyscallSupport() bool {
 	return false
 }
@@ -63,4 +65,19 @@ func DeleteMapEntry(mapFD MapFD, k []byte, valueSize int) error {
 
 func GetMapNextKey(mapFD MapFD, k []byte, keySize int) ([]byte, error) {
 	panic("BPF syscall stub")
+}
+
+func NewMapIterator(mapFD MapFD, keySize, valueSize, maxEntries int) (*MapIterator, error) {
+	panic("BPF syscall stub")
+}
+
+type MapIterator struct {
+}
+
+func (m *MapIterator) Next() (k, v []byte, err error) {
+	return
+}
+
+func (m *MapIterator) Close() error {
+	return nil
 }

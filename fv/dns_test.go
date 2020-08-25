@@ -201,6 +201,9 @@ var _ = Describe("DNS Policy", func() {
 			// Default for this is false.  Set "true" to enable.
 			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
 		}
+		// This file tests that Felix writes out its DNS mappings file on shutdown, so we
+		// need to stop Felix gracefully.
+		opts.FelixStopGraceful = true
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 

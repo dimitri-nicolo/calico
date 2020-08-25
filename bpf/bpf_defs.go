@@ -19,20 +19,24 @@
 package bpf
 
 import (
+	"errors"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
 type MapFD uint32
 
 func (f MapFD) Close() error {
+	log.WithField("fd", int(f)).Debug("Closing MapFD")
 	return unix.Close(int(f))
 }
 
 type ProgFD uint32
 
 func (f ProgFD) Close() error {
+	log.WithField("fd", int(f)).Debug("Closing ProgFD")
 	return unix.Close(int(f))
 }
 
@@ -53,3 +57,10 @@ type MapInfo struct {
 }
 
 const ObjectDir = "/usr/lib/calico/bpf"
+
+// ErrIterationFinished is returned by the MapIterator's Next() method when there are no more keys.
+var ErrIterationFinished = errors.New("iteration finished")
+
+// ErrVisitedTooManyKeys is returned by the MapIterator's Next() method if it sees many more keys than there should
+// be in the map.
+var ErrVisitedTooManyKeys = errors.New("visited 10x the max size of the map keys")

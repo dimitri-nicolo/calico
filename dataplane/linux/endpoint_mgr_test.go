@@ -17,6 +17,7 @@ package intdataplane
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -780,7 +781,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				index:         0,
 				currentRoutes: map[string][]routetable.Target{},
 			}
-			mockProcSys = &testProcSys{state: map[string]string{}}
+			mockProcSys = &testProcSys{state: map[string]string{}, pathsThatExist: map[string]bool{}}
 			statusReportRec = &statusReportRecorder{currentState: map[interface{}]string{}}
 			nlDataplane = mocknetlink.New()
 			nlHandle, err := nlDataplane.NewMockNetlink()
@@ -797,6 +798,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				[]string{"cali"},
 				statusReportRec.endpointStatusUpdateCallback,
 				mockProcSys.write,
+				mockProcSys.stat,
 				false,
 				newCallbacks(),
 				nlHandle,
@@ -2037,6 +2039,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 				})
 			})
 		})
+
+		It("should check the correct path", func() {
+			mockProcSys.pathsThatExist[fmt.Sprintf("/proc/sys/net/ipv%d/conf/cali1234", ipVersion)] = true
+			Expect(epMgr.interfaceExistsInProcSys("cali1234")).To(BeTrue())
+			Expect(epMgr.interfaceExistsInProcSys("cali3456")).To(BeFalse())
+		})
 	}
 }
 
@@ -2045,8 +2053,9 @@ var _ = Describe("EndpointManager IPv4", endpointManagerTests(4))
 var _ = Describe("EndpointManager IPv6", endpointManagerTests(6))
 
 type testProcSys struct {
-	state map[string]string
-	Fail  bool
+	state          map[string]string
+	pathsThatExist map[string]bool
+	Fail           bool
 }
 
 var (
@@ -2063,6 +2072,15 @@ func (t *testProcSys) write(path, value string) error {
 	}
 	t.state[path] = value
 	return nil
+}
+
+func (t *testProcSys) stat(path string) (os.FileInfo, error) {
+	exists := t.pathsThatExist[path]
+	if exists {
+		return nil, nil
+	} else {
+		return os.Stat("/file/that/does/not/exist")
+	}
 }
 
 func (t *testProcSys) checkState(expected map[string]string) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ func init() {
 	logrus.SetFormatter(&logutils.Formatter{})
 }
 
-func TestCalculationGraph(t *testing.T) {
+func TestBPFConntrack(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../report/bpf_conntrack_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "BPF Conntrack Suite", []Reporter{junitReporter})
