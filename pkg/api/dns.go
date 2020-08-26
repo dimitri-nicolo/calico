@@ -19,9 +19,17 @@ type DNSResult struct {
 }
 
 type DNSLog struct {
-	StartTime       time.Time `json:"start_time"`
-	ClientNamespace string    `json:"client_namespace"`
-	Qtype           string    `json:"qtype"`
+	StartTime       time.Time        `json:"start_time"`
+	ClientNamespace string           `json:"client_namespace"`
+	Qtype           string           `json:"qtype"`
+	RRSets          []ResourceRecord `json:"rrsets"`
+}
+
+type ResourceRecord struct {
+	Name  string   `json:"name"`
+	Class string   `json:"class"`
+	Type  string   `json:"type"`
+	Rdata []string `json:"rdata"`
 }
 
 type DNSLogsSelection struct {
