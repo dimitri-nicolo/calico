@@ -46,13 +46,13 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 		// Issue the query to Elasticsearch and send results out through the resultsChan.
 		// We only terminate the search if when there are no more results to scroll through.
 		for {
-			log.Debug("Issuing AD search query")
+			log.Debug("Issuing anomaly detection search query")
 			res, err := scroll.Do(ctx)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				log.WithError(err).Error("Failed to search AD logs")
+				log.WithError(err).Error("Failed to search anomaly detection logs")
 				resultChan <- &api.ADResult{Err: err}
 				return
 			}
@@ -65,7 +65,7 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
-				log.WithError(err).Warn("Unexpected results from DNS logs search")
+				log.WithError(err).Warn("Unexpected results from anomaly detection logs search")
 				resultChan <- &api.ADResult{Err: err}
 				return
 			}
@@ -73,12 +73,32 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 
 			// define function that pushes the search results into the channel.
 			for _, hit := range res.Hits.Hits {
-				var d api.ADLog
-				if err := json.Unmarshal(hit.Source, &d); err != nil {
-					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
+				var m map[string]interface{}
+				if err := json.Unmarshal(hit.Source, &m); err != nil {
+					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("Failed to unmarshal event json")
+					resultChan <- &api.ADResult{Err: fmt.Errorf("Failed to unmarshal event json")}
 					continue
 				}
-				resultChan <- &api.ADResult{ADLog: &d}
+
+				resultType, ok := m[api.ADLogResultType].(string)
+				if !ok {
+					log.Warn("Error getting anomaly detection result type field")
+					resultChan <- &api.ADResult{Err: fmt.Errorf("Error getting anomaly detection result type field")}
+					continue
+				}
+
+				switch resultType {
+				case api.ADRecordResultType:
+					var d api.ADRecordLog
+					if err := json.Unmarshal(hit.Source, &d); err != nil {
+						log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("Failed to unmarshal anomaly detection record json")
+						resultChan <- &api.ADResult{Err: fmt.Errorf("Failed to unmarshal anomaly detection record json")}
+						continue
+					}
+					resultChan <- &api.ADResult{ADRecordLog: &d}
+				default:
+					log.WithField("result_type", resultType).Debug("Cannot unmarshal anomaly detection json, unsupported type")
+				}
 			}
 		}
 

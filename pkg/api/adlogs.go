@@ -18,13 +18,18 @@ const (
 	ADLogDestNamespace      = "dest_namespace"
 )
 
-// Container type to hold the alert events and/or an error.
+const (
+	ADRecordResultType = "record"
+)
+
+// Container type to hold the AD log and/or an error.
 type ADResult struct {
-	*ADLog
+	*ADRecordLog
 	Err error
 }
 
-type ADLog struct {
+// Anomaly detection "record" type logs (result_type=record).
+type ADRecordLog struct {
 	JobId              string   `json:"job_id"`
 	Timestamp          int64    `json:"timestamp"`
 	RecordScore        float64  `json:"record_score"`
