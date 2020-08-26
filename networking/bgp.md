@@ -50,7 +50,7 @@ For a deeper look at common on-premises deployment models, see [Calico over IP F
 
 ### Before you begin...
 
-[calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install) must be installed and configured.
+[calicoctl]({{ site.baseurl }}/maintenance/clis/calicoctl/install) must be installed and configured.
 
 ### How to
 
@@ -159,7 +159,7 @@ Run the following command from anywhere you have access to `kubectl`:
 calicoctl bgp peers <NODE_NAME>
 ```
 
->**Note**: The above command can be run from anywhere you have access to kubectl. We recommend running it as a kubectl plugin. [Follow these instructions]({{site.baseurl}}/getting-started/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host) for how to install `{{include.cli}}` as a kubectl plugin.
+>**Note**: The above command can be run from anywhere you have access to kubectl. We recommend running it as a kubectl plugin. [Follow these instructions]({{site.baseurl}}/maintenance/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host) for how to install `{{include.cli}}` as a kubectl plugin.
 {: .alert .alert-info}
 
 Where `<NODE_NAME>` is the resource name for one of the Calico node pods within your cluster.

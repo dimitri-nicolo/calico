@@ -70,7 +70,7 @@ It is easy to manage both **Kubernetes network policies** alongside your **{{sit
 
 **Required**
 
-- A Kubernetes cluster installed and configured with [Calico Enterprise]({{site.baseurl}}/getting-started/) and [CLIs are installed and configured]({{site.baseurl}}/getting-started/clis/calicoctl/)
+- A Kubernetes cluster installed and configured with [Calico Enterprise]({{site.baseurl}}/getting-started/) and [CLIs are installed and configured]({{site.baseurl}}/maintenance/clis/calicoctl/)
 - If you use {{site.prodname}} Manager, users require authentication to log in [Configure user authentication to Calico Enterprise Manager]({{site.baseurl}}/getting-started/cnx/create-user-login)
 
 ### How to

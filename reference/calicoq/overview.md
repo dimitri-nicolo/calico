@@ -6,7 +6,7 @@ canonical_url: /reference/calicoq/
 
 `calicoq` is the {{site.prodname}} policy query utility.  It is a command line tool that
 makes it easy to check your {{site.prodname}} security policies.
-See [Installing calicoq]({{site.baseurl}}/getting-started/clis/calicoq/) for
+See [Installing calicoq]({{site.baseurl}}/maintenance/clis/calicoq/) for
 how to download and install `calicoq`.
 
 ## Datastore configuration
@@ -24,7 +24,7 @@ setup as `calicoctl`, which means that:
   location: `DATASTORE_TYPE` and so on.
 
 For more detail, see
-[Configuring calicoq]({{site.baseurl}}/getting-started/clis/calicoq/configure/).
+[Configuring calicoq]({{site.baseurl}}/maintenance/clis/calicoq/configure/).
 
 ## Commands
 

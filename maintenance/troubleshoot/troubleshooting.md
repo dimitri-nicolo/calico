@@ -6,7 +6,7 @@ canonical_url: '/maintenance/troubleshoot/troubleshooting'
 
 ### Logs and diagnostics
 
-To collect diagnostics, download and install `{{include.cli}}` somewhere in your `$PATH`. We recommend installing it as a kubectl plugin by [following these directions]({{site.baseurl}}/getting-started/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host).
+To collect diagnostics, download and install `{{include.cli}}` somewhere in your `$PATH`. We recommend installing it as a kubectl plugin by [following these directions]({{site.baseurl}}/maintenance/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host).
 
 Then, create a diagnostics bundle by running the following command:
 
@@ -172,7 +172,7 @@ or you can set environment variables for `sudo` commands like this:
 sudo ETCD_ENDPOINTS=http://172.25.0.1:2379 calicoctl node run
 ```
 
-Also be aware that connection information can be specified as a config file rather than using environment variables.  See [Installing calicoctl]({{ site.baseurl }}/getting-started/clis/calicoctl/install)
+Also be aware that connection information can be specified as a config file rather than using environment variables.  See [Installing calicoctl]({{ site.baseurl }}/maintenance/clis/calicoctl/install)
 for details.
 
 ### Error: {{site.nodecontainer}} is not ready: BIRD is not ready: BGP not established with 10.0.0.1

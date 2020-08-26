@@ -85,4 +85,4 @@ you want to install the binary.
 
 **Next step**:
 
-[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/getting-started/clis/{{include.cli}}/configure/).
+[Configure `{{include.cli}}` to connect to your datastore]({{site.baseurl}}/maintenance/clis/{{include.cli}}/configure/).

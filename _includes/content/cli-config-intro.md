@@ -19,7 +19,7 @@ It must be valid and readable by `{{ include.cli }}`. A YAML example follows.
 1. **Environment variables**: If `{{ include.cli }}` cannot locate, read, or access a configuration
 file, it will check a specific set of environment variables.
 
-See the section that corresponds to your [datastore type]({{site.baseurl}}/getting-started/clis/) for a full set of options
+See the section that corresponds to your [datastore type]({{site.baseurl}}/maintenance/clis/) for a full set of options
 and examples.
 
 > **Note**: When running `{{ include.cli }}` inside a container, any environment variables and

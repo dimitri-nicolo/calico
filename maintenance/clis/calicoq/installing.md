@@ -1,7 +1,7 @@
 ---
 title: Install calicoq
 description: Install the CLI for Calico Enterprise.
-canonical_url: /getting-started/clis/calicoq/
+canonical_url: /maintenance/clis/calicoq/
 ---
 
 ## About installing calicoq

@@ -15,12 +15,12 @@ its connections as follows.
 
 - Configure each {{site.prodname}} component to verify the etcd server's identity and to present
   a certificate to the etcd server that is signed by the etcd certificate authority.
-  - [{{site.nodecontainer}}](../../reference/node/configuration)
-  - [`calicoctl`](../../getting-started/clis/calicoctl/configure/etcd)
-  - [CNI plugin](../../reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
-  - [Kubernetes controllers](../../reference/kube-controllers/configuration#configuring-datastore-access) (Kubernetes and OpenShift only)
-  - [Felix](../../reference/felix/configuration#etcd-datastore-configuration)
-  - [Typha](../../reference/typha/configuration#etcd-datastore-configuration) (often deployed in
+  - [{{site.nodecontainer}}]({{site.baseurl}}/reference/node/configuration)
+  - [`calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/configure/etcd)
+  - [CNI plugin]({{site.baseurl}}/reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
+  - [Kubernetes controllers]({{site.baseurl}}/reference/kube-controllers/configuration#configuring-datastore-access) (Kubernetes and OpenShift only)
+  - [Felix]({{site.baseurl}}/reference/felix/configuration#etcd-datastore-configuration)
+  - [Typha]({{site.baseurl}}/reference/typha/configuration#etcd-datastore-configuration) (often deployed in
     larger Kubernetes deployments)
 
 ### Connections from {{site.prodname}} components to kube-apiserver (Kubernetes and OpenShift)
@@ -114,9 +114,9 @@ follow the same procedure as above, except:
 
 For detailed reference information on these parameters, refer to:
 
-- **Typha**: [Node-Typha TLS configuration](../../reference/typha/configuration#felix-typha-tls-configuration)
+- **Typha**: [Node-Typha TLS configuration]({{site.baseurl}}/reference/typha/configuration#felix-typha-tls-configuration)
 
-- **Node**: [Node-Typha TLS configuration](../../reference/felix/configuration#felix-typha-tls-configuration)
+- **Node**: [Node-Typha TLS configuration]({{site.baseurl}}/reference/felix/configuration#felix-typha-tls-configuration)
 
 ## {{site.prodname}} Manager connections
 
@@ -138,7 +138,7 @@ between your web browser and the {{site.prodname}} Manager do not need to be sha
 to any other TLS certificates that may be used elsewhere in your cluster or when
 configuring {{site.prodname}}. The flow of traffic should look like the following:
 
-![{{site.prodname}} Manager traffic diagram]({{site.url}}/images/cnx-tls-mgr-comms.svg){: width="60%" }
+![{{site.prodname}} Manager traffic diagram]({{site.baseurl}}/images/cnx-tls-mgr-comms.svg){: width="60%" }
 
 > **Note** the `NodePort` service in the above diagram can be replaced with other
 > [Kubernetes services](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types){:target="_blank"}.

@@ -11,6 +11,33 @@ section:
       path: /maintenance/mcm/fine-tune-deployment
     - title: Change a cluster type
       path: /maintenance/mcm/change-cluster-type
+- title: Install and configure CLIs
+  path: /maintenance/clis/
+  section:
+  - title: calicoctl
+    path: /maintenance/clis/calicoctl/
+    section:
+    - title: Install calicoctl
+      path: /maintenance/clis/calicoctl/install
+    - title: Configure calicoctl
+      path: /maintenance/clis/calicoctl/configure/
+      section:
+      - title: Overview
+        path: /maintenance/clis/calicoctl/configure/overview
+      - title: Configure calicoctl to connect to the Kubernetes API datastore
+        path: /maintenance/clis/calicoctl/configure/kdd
+  - title: calicoq
+    path: /maintenance/clis/calicoq/
+    section:
+    - title: Install calicoq
+      path: /maintenance/clis/calicoq/installing
+    - title: Configure calicoq
+      path: /maintenance/clis/calicoq/configure/
+      section:
+      - title: Overview
+        path: /maintenance/clis/calicoq/configure/overview
+      - title: Kubernetes API datastore options
+        path: /maintenance/clis/calicoq/configure/kdd
 - title: Configure log storage
   path: /maintenance/logstorage/
   section:

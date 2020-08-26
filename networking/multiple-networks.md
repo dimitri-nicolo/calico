@@ -59,7 +59,7 @@ Although the following {{site.prodname}} features are supported for your default
 - [Install Multus 3.0+ on your Kubernetes cluster](https://github.com/intel/multus-cni/)
   >**Note**: Multus is installed on OpenShift 4.0+ clusters.
   {: .alert .alert-info}
-- [Install and configure calicoctl]({{site.baseurl}}/getting-started/clis/calicoctl/) or configure access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)
+- [Install and configure calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/) or configure access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)
 
 ### How to
 

@@ -1,7 +1,7 @@
 ---
 title: Configure calicoctl
 description: Configure calicoctl for datastore access.
-canonical_url: '/getting-started/clis/calicoctl/configure/index'
+canonical_url: '/maintenance/clis/calicoctl/configure/index'
 ---
 
 ### About configuring calicoctl
@@ -27,7 +27,7 @@ It must be valid and readable by `calicoctl`. A YAML example follows.
 1. **Environment variables**: If `calicoctl` cannot locate, read, or access a configuration
 file, it will check a specific set of environment variables.
 
-For a full set of options and examples, see [Kubernetes API datastore]({{site.baseurl}}/getting-started/clis/calicoctl/configure/kdd).
+For a full set of options and examples, see [Kubernetes API datastore]({{site.baseurl}}/maintenance/clis/calicoctl/configure/kdd).
 
 > **Note**: When running `calicoctl` inside a container, any environment variables and
 > configuration files must be passed to the container so they are available to
