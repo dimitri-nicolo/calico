@@ -1,3 +1,8 @@
+# !/bin/bash
+
+KIBANA_CONFIG=$1
+
+cat >${KIBANA_CONFIG} <<EOF
 # Default Kibana configuration
 server.name: kibana
 server.host: "0"
@@ -8,3 +13,9 @@ xpack.monitoring.ui.container.elasticsearch.enabled: true
 csp.rules:
     - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
     - "img-src www.googletagmanager.com 'self' data:"
+
+tigera_customization.gtm: ${GTM_INTEGRATION}
+EOF
+
+# remove this script from fs
+rm "$0"

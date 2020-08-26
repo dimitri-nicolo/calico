@@ -22,3 +22,6 @@ endif
 	docker tag $(PUSH_IMAGE):$(BRANCH_NAME) \
 	           $(PUSH_IMAGE):$(GIT_VERSION)
 	docker push $(PUSH_IMAGE):$(GIT_VERSION)
+
+dev:
+	docker-compose -f docker-compose.dev.yml up --build

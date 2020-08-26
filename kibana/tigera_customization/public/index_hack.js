@@ -1,3 +1,8 @@
+import chrome from 'ui/chrome';
 import { initGoogleTagManager } from 'plugins/tigera_customization/googleTagManager';
 
-initGoogleTagManager('GTM-TCNXTCJ');
+const gtm = chrome.getInjected('gtm');
+
+if (gtm === 'enable') {
+    initGoogleTagManager('GTM-TCNXTCJ');
+}

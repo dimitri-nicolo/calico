@@ -11,6 +11,10 @@ RUN yum -y update && yum -y upgrade && yum clean all
 COPY cleanup.sh /
 RUN /cleanup.sh
 
+ARG GTM_INTEGRATION=disable
+COPY createKibanaConfig.sh /
+RUN /createKibanaConfig.sh /usr/share/kibana/config/kibana.yml
+
 # The base "kibana" user has a uid of 1000
 USER 1000
 
@@ -28,5 +32,4 @@ RUN sed -i 's/reverse()/reverse(),`${regularBundlePath}\/tigera_customization.st
 RUN sed -i 's@evenodd"}.*)))},@evenodd"}))},@g' /usr/share/kibana/node_modules/@kbn/ui-shared-deps/target/icon.logo_kibana-js.js
 
 RUN bin/kibana-plugin install file:///tigera_customization.zip
-COPY ./kibana.yml /usr/share/kibana/config/kibana.yml
 RUN bin/kibana --env.name=production --logging.json=false --optimize
