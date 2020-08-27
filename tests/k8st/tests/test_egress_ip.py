@@ -287,7 +287,7 @@ spec:
 EOF
 """ % (server.ip + "/32"))
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress-to-server"))
-            retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            retry_until_success(client.cannot_connect, retries=3, wait_time=3, function_kwargs={"ip": server.ip, "port": server.port})
 
     def test_egress_ip_with_policy_to_gateway(self):
 
