@@ -826,6 +826,8 @@ github.com/tigera/compliance v0.0.0-20200823080859-8899aa1bdc6f h1:0caCSYLoPoxn2
 github.com/tigera/compliance v0.0.0-20200823080859-8899aa1bdc6f/go.mod h1:dAKoQrfbiYZJ2aAf+oMPycyxPyqAkYMhl7PQhfSKwF8=
 github.com/tigera/compliance v0.0.0-20200826080935-f7245595801a h1:h3SSik0fPWj+nzfn3llLj8oT7AI4Wzdo9Q07aeBLQ44=
 github.com/tigera/compliance v0.0.0-20200826080935-f7245595801a/go.mod h1:CTkwksGVj/WcYsXnDhL0kkCVX46z8wUHbK9ddizbdPU=
+github.com/tigera/compliance v0.0.0-20200827080856-718b3c9ccf53 h1:oiQKQdMOwmOfACS/JkEbBn6Tj7Miqe4Ga68PXlIQYvc=
+github.com/tigera/compliance v0.0.0-20200827080856-718b3c9ccf53/go.mod h1:T1b+Ht3sEPWyDrToOlkwEedrewaMKaOR8gRcZ+vrwTM=
 github.com/tigera/felix-private v0.0.0-20200721040547-44cd9d3984ff h1:qZypQNae5teDODSZulRLDMUleTtI5KwDd2Ng+bx1QJc=
 github.com/tigera/felix-private v0.0.0-20200721040547-44cd9d3984ff/go.mod h1:C3GXuzlM6jDCzocVCyq//UISBBNajeFepllzpO304XY=
 github.com/tigera/felix-private v0.0.0-20200805013406-8ae997b9572a h1:uazQV2txsQvDHiHa8/4gbimyq9nrGKuGMLyNwNF/P1o=
@@ -836,6 +838,8 @@ github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223 h1:FDyLVsL36K
 github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223/go.mod h1:bhxrvPjcQaD8dTJdBlwVnPWH0FUh5T/EvVnp4i+wzvE=
 github.com/tigera/felix-private v0.0.0-20200825170047-684c99c116ab h1:Y/8GYH31vTgYrk9C/BlW0Jj9n7PEwuYUY0myyqhWLgs=
 github.com/tigera/felix-private v0.0.0-20200825170047-684c99c116ab/go.mod h1:/okWLow6UH4xse5JLy10rK7Alh6eeCcp9y2VFpbIvtk=
+github.com/tigera/felix-private v0.0.0-20200826144315-ca50f2214114 h1:IAG4SGFpu1vowuPbeTUC8qejxN46/9exqscKjthYLeo=
+github.com/tigera/felix-private v0.0.0-20200826144315-ca50f2214114/go.mod h1:/okWLow6UH4xse5JLy10rK7Alh6eeCcp9y2VFpbIvtk=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f h1:vJAQnPj7eClGyzximZ8Zt0Ogg9M6n04ynmqB5RBbbtA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200720083544-096108e9d55f/go.mod h1:/nuZKB63ZD3ILy388o+3jzwKIRyKprFhReVyeFxZtnw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200729225526-48208888b35d h1:fqI9JyEo5Ts1obQ8pUp9lABe5XNb99xhxhn/lR+VAII=
