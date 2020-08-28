@@ -38,19 +38,14 @@ Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-st
 
 ### How to
 
-- [Adjust the number of nodes](#adjust-the-number-of-nodes)
-- [Adjust the number of replicas](#adjust-the-number-of-replicas)
-- [Adjust the volume size](#adjust-the-volume-size)
-- [Adjust the CPU and memory](#adjust-the-cpu-and-memory)
+- [Adjusting LogStorage](#adjusting-logstorage)
 
 > **Important**: If you are not using a dynamic provisioner, make sure there is an available persistent volume before updating the resource requirements (cpu, memory, storage) in this section. To check that a persistent volume has the status of `Available`, run this command: `kubectl get pv | grep tigera-elasticsearch` 
   {: .alert .alert-danger}
 
-In the following examples, you can set **LogStorage** resource values during {{site.prodname}} installation, or after by applying kubectl to the manifest.
+#### Adjusting LogStorage
 
-#### Adjust the number of nodes
-
-In the following example, {{site.prodname}} is configured to install two log storage nodes.
+In the following example, {{site.prodname}} is configured to install 3 nodes that have 200Gi of storage each with 1 replica. Whenever the storage size is modified, resourceRequirements must be revisited respectively to support these changes.
 
 ```
 apiVersion: operator.tigera.io/v1
@@ -58,58 +53,16 @@ kind: LogStorage
 metadata:
   name: tigera-secure
 spec:
-  nodes:
-    count: 2
-```
-
-#### Adjust the number of replicas
-
-In the following example, {{site.prodname}} is configured to install two replicas. We recommend creating at least one replica to protect against data loss in case a log storage node goes down. The number of replicas must be less than the number of nodes.
-
-```
-apiVersion: operator.tigera.io/v1
-kind: LogStorage
-metadata:
-  name: tigera-secure
-spec:
+  indices:
+    replicas: 1
   nodes:
     count: 3
-  indices:
-    replicas: 2
-```
-
-#### Adjust the volume size
-
-In the following example, {{site.prodname}} is configured to install nodes that have 30Gi for storage.
-
-```
-apiVersion: operator.tigera.io/v1
-kind: LogStorage
-metadata:
-  name: tigera-secure
-spec:
-  nodes:
-    resourceRequirements:
-      requests:
-        storage: 30Gi
-```
-
-#### Adjust the CPU and memory
-
-In the following example, {{site.prodname}} is configured to install nodes with 5Gi of memory and 500m (half a core) of CPU.
-
-```
-apiVersion: operator.tigera.io/v1
-kind: LogStorage
-metadata:
-  name: tigera-secure
-spec:
-  nodes:
     resourceRequirements:
       limits:
-        cpu: 500m
-        memory: 5Gi
+        cpu: 1000m
+        memory: 16Gi
       requests:
-        cpu: 500m
-        memory: 5Gi
+        cpu: 1000m
+        memory: 16Gi
+        storage: 200Gi
 ```
