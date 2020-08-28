@@ -41,6 +41,8 @@ func main() {
     label        Add or update labels of resources.
     convert      Convert config files between different API versions.
     ipam         IP address management.
+    cluster      Access cluster information.
+    bgp          Access BGP related information.
     node         Calico node management.
     version      Display the version of calicoctl.
 
@@ -106,6 +108,10 @@ Description:
 			err = commands.Node(args)
 		case "ipam":
 			err = commands.IPAM(args)
+		case "cluster":
+			err = commands.Cluster(args)
+		case "bgp":
+			err = commands.BGP(args)
 		case "validate":
 			err = commands.Validate(args)
 		default:

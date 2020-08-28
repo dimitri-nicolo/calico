@@ -18,9 +18,20 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+)
+
+var (
+	// Ensure a user-supplied resource name is valid according to Kubernetes convention for
+	// resource names
+	validResourceNameRegex = regexp.MustCompile(`^[0-9a-z\-.]{1,253}$`)
+
+	// Ensure user-supplied value is a valid time duration with one of the acceptable time
+	// units (smh).
+	validSinceRegex = regexp.MustCompile(`^[0-9]+[smh]$`)
 )
 
 // ValidateIP takes a string as an input and makes sure it's a valid IPv4 or IPv6 address.
@@ -45,4 +56,23 @@ func ValidateASNumber(str string) numorstring.ASNumber {
 		os.Exit(1)
 	}
 	return asn
+}
+
+// ValidateResourceName takes a string as an input and makes sure it has valid naming format.
+func ValidateResourceName(str string) string {
+	if !validResourceNameRegex.MatchString(str) {
+		fmt.Printf("Error executing command: resource name has invalid format: %s\n", str)
+		os.Exit(1)
+	}
+	return str
+}
+
+// ValidateSinceDuration takes a string as an input and makes sure it has a valid value and
+// time unit.
+func ValidateSinceDuration(str string) string {
+	if !validSinceRegex.MatchString(str) {
+		fmt.Printf("Error executing command: invalid duration for since flag (try 10s, 5m, or 1h): %s\n", str)
+		os.Exit(1)
+	}
+	return str
 }

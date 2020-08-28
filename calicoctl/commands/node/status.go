@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	gobgp "github.com/osrg/gobgp/client"
 	"github.com/osrg/gobgp/packet/bgp"
+	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
 	"github.com/shirou/gopsutil/process"
 	log "github.com/sirupsen/logrus"
 )
@@ -134,10 +134,6 @@ func psContains(proc []string, procList []*process.Process) bool {
 	return false
 }
 
-// Check for Word_<IP> where every octate is seperated by "_", regardless of IP protocols
-// Example match: "Mesh_192_168_56_101" or "Mesh_fd80_24e2_f998_72d7__2"
-var bgpPeerRegex = regexp.MustCompile(`^(Global|Node|Mesh)_(.+)$`)
-
 // Mapping the BIRD/GoBGP type extracted from the peer name to the display type.
 var bgpTypeMap = map[string]string{
 	"Global": "global",
@@ -169,7 +165,7 @@ func (b *bgpPeer) unmarshalBIRD(line, ipSep string) bool {
 	// The info column contains the BGP state plus possibly some additional
 	// info (which will be columns > 6).
 	//
-	// Peer names will be of the format described by bgpPeerRegex.
+	// Peer names will be of the format described by common.BGPPeerRegex.
 	log.Debugf("Parsing line: %s", line)
 	columns := strings.Fields(line)
 	if len(columns) < 6 {
@@ -185,7 +181,7 @@ func (b *bgpPeer) unmarshalBIRD(line, ipSep string) bool {
 	// returns two components:
 	// -  A type (Global|Node|Mesh) which we can map to a display type
 	// -  An IP address (with _ separating the octets)
-	sm := bgpPeerRegex.FindStringSubmatch(columns[0])
+	sm := common.BGPPeerRegex.FindStringSubmatch(columns[0])
 	if len(sm) != 3 {
 		log.Debugf("Not a valid line: peer name '%s' is not correct format", columns[0])
 		return false
@@ -394,7 +390,7 @@ func printGoBGPPeers(ipv string) error {
 			timeStr = formatTimedelta(int64(now.Sub(time.Unix(int64(t), 0)).Seconds()))
 		}
 
-		sm := bgpPeerRegex.FindStringSubmatch(description)
+		sm := common.BGPPeerRegex.FindStringSubmatch(description)
 		if len(sm) != 3 {
 			log.Debugf("Not a valid line: peer name '%s' is not recognized", description)
 			continue
