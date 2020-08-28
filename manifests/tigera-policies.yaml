@@ -88,69 +88,68 @@ spec:
 
 # This manifest creates a network policy to allow traffic to Alertmanager
 # (TCP port 9093).
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: calico-node-alertmanager
+  name: allow-tigera.calico-node-alertmanager
   namespace: tigera-prometheus
 spec:
+  order: 1
+  tier: allow-tigera
+  selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
+  types:
+    - Ingress
   ingress:
-  - ports:
-    - port: 9093
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      alertmanager: calico-node-alertmanager
-      app: alertmanager
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports: [9093]
 ---
 
 # This manifest creates a network policy to allow traffic between
 # Alertmanagers for HA configuration (TCP port 6783).
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: calico-node-alertmanager-mesh
+  name: allow-tigera.calico-node-alertmanager-mesh
   namespace: tigera-prometheus
 spec:
+  order: 1
+  tier: allow-tigera
+  selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
+  types:
+    - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchExpressions:
-        - key: app
-          operator: In
-          values:
-          - alertmanager
-        - key: alertmanager
-          operator: In
-          values:
-          - calico-node-alertmanager
-    ports:
-    - port: 9094
-      protocol: TCP
-    - port: 9094
-      protocol: UDP
-  podSelector:
-    matchLabels:
-      alertmanager: calico-node-alertmanager
-      app: alertmanager
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: app == "alertmanager" && alertmanager == "calico-node-alertmanager"
+      ports: [9094]
+  - action: Allow
+    protocol: UDP
+    destination:
+      selector: app == "alertmanager" && alertmanager == "calico-node-alertmanager"
+      ports: [9094]
 ---
 
 # This manifest creates a network policy to allow traffic to access the
 # Prometheus (TCP port 9090).
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: prometheus
+  name: allow-tigera.prometheus
   namespace: tigera-prometheus
 spec:
+  order: 1
+  tier: allow-tigera
+  selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+  types:
+    - Ingress
   ingress:
-  - ports:
-    - port: 9090
-      protocol: TCP
-  podSelector:
-    matchLabels:
-      app: prometheus
-      prometheus: calico-node-prometheus
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports: [9090]
 ---
 
 # Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
@@ -396,65 +395,76 @@ spec:
 
 ---
 kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 metadata:
-  name: default-deny
+  name: allow-tigera.default-deny
   namespace: tigera-elasticsearch
 spec:
-  podSelector:
-    matchLabels: {}
-
+  tier: allow-tigera
+  selector: all()
+  types:
+  - Ingress
 ---
 
 kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 metadata:
-  name: default-deny
+  name: allow-tigera.default-deny
   namespace: tigera-kibana
 spec:
-  podSelector:
-    matchLabels: {}
+  tier: allow-tigera
+  selector: all()
+  types:
+  - Ingress
 
 ---
 
 kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 metadata:
-  name: default-deny
+  name: allow-tigera.default-deny
   namespace: tigera-intrusion-detection
 spec:
-  podSelector:
-    matchLabels: {}
+  tier: allow-tigera
+  selector: all()
+  types:
+  - Ingress
 
 ---
 
 kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 metadata:
-  name: default-deny
+  name: allow-tigera.default-deny
   namespace: tigera-manager
 spec:
-  podSelector:
-    matchLabels: {}
+  tier: allow-tigera
+  selector: all()
+  types:
+  - Ingress
 
 ---
 
 kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 metadata:
-  name: default-deny
+  name: allow-tigera.default-deny
   namespace: tigera-compliance
 spec:
-  podSelector:
-    matchLabels: {}
+  tier: allow-tigera
+  selector: all()
+  types:
+  - Ingress
 
 ---
 
 kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
+apiVersion: projectcalico.org/v3
 metadata:
-  name: default-deny
+  name: allow-tigera.default-deny
   namespace: tigera-prometheus
 spec:
-  podSelector:
-    matchLabels: {}
+  tier: allow-tigera
+  selector: all()
+  types:
+  - Ingress
