@@ -40,8 +40,6 @@ $(LOCAL_BUILD_DEP):
 		-replace=github.com/projectcalico/cni-plugin=../cni-plugin
 endif
 
-EXTRA_DOCKER_ARGS+=-e GOPRIVATE='github.com/tigera/*'
-
 include Makefile.common
 
 # This gets embedded into node as the Calico version, the Enterprise release
@@ -56,7 +54,7 @@ PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
 RELEASE_IMAGES?=
 
 # Versions and location of dependencies used in the build.
-BIRD_VERSION=v0.3.3-151-g767b5389
+BIRD_VERSION=v0.3.3-167-g0a2f8d2d
 BIRD_IMAGE ?= calico/bird:$(BIRD_VERSION)-$(ARCH)
 BIRD_SOURCE=filesystem/included-source/bird-$(BIRD_VERSION).tar.gz
 FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.gz
@@ -81,12 +79,12 @@ TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_BIN_DIR=./dist/bin/
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
-WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/tigera-calico.exe
+WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node.exe
 
 # Variables for the Windows packaging.
 # Name of the Windows release ZIP archive.
-WINDOWS_ARCHIVE_ROOT := windows-packaging/TigeraCalico
-WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/tigera-calico.exe
+WINDOWS_ARCHIVE_ROOT := windows-packaging/CalicoWindows
+WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/calico-node.exe
 WINDOWS_ARCHIVE_TAG?=$(GIT_VERSION)
 WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
@@ -197,18 +195,19 @@ remote-deps: mod-download
 	# Recreate the directory so that we are sure to clean up any old files.
 	rm -rf filesystem/etc/calico/confd
 	mkdir -p filesystem/etc/calico/confd
+	rm -rf config
 	rm -rf bin/bpf
 	mkdir -p bin/bpf
 	rm -rf filesystem/usr/lib/calico/bpf/
 	mkdir -p filesystem/usr/lib/calico/bpf/
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
-		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config config; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/conf.d; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/config filesystem/etc/calico/confd/config; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
-		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-apache bin/bpf; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/conf.d filesystem/etc/calico/confd/conf.d; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/config filesystem/etc/calico/confd/config; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/etc/calico/confd/templates filesystem/etc/calico/confd/templates; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config config; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-gpl bin/bpf; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/felix`/bpf-apache bin/bpf; \
 		chmod -R +w bin/bpf; \
 		chmod +x bin/bpf/bpf-gpl/list-* bin/bpf/bpf-gpl/calculate-*; \
 		make -j 16 -C ./bin/bpf/bpf-apache/ all; \
@@ -619,6 +618,7 @@ endif
 	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
 	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
+	$(MAKE) release-windows-archive
 
 ## Produces the Windows ZIP archive for the release.
 release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs
@@ -638,11 +638,21 @@ release-notes: release-prereqs
 
 ## Pushes a github release and release artifacts produced by `make release-build`.
 release-publish: release-prereqs
+ifeq (, $(shell which ghr))
+	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
+endif
 	# Push the git tag.
 	git push origin $(VERSION)
 
 	# Push images.
 	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=$(VERSION)
+
+	# Push Windows artifacts to GitHub release.
+	# Requires ghr: https://github.com/tcnksm/ghr
+	# Requires GITHUB_TOKEN environment variable set.
+	ghr -u projectcalico -r node \
+		-n $(VERSION) \
+		$(VERSION) $(WINDOWS_ARCHIVE)
 
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
@@ -765,19 +775,19 @@ $(WINDOWS_MOD_CACHED_FILES): mod-download
 $(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: windows-packaging/config-bgp%
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
         $(GIT_CONFIG_SSH) \
-        cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
+        cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
         chmod +w $@
 
 $(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: windows-packaging/conf.d/%
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
         $(GIT_CONFIG_SSH) \
-        cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
+        cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
         chmod +w $@
 
 $(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: windows-packaging/templates/%
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
         $(GIT_CONFIG_SSH) \
-        cp -r `go list -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
+        cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/kelseyhightower/confd`/$< $@'; \
         chmod +w $@
 
 $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1:
@@ -796,6 +806,7 @@ build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS
 	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)
 	mkdir -p dist
 	cd windows-packaging && \
+	cp -r CalicoWindows TigeraCalico && \
 	sha256sum --check nssm.sha256sum && \
 	cd TigeraCalico && \
 	unzip  ../nssm-$(WINDOWS_NSSM_VERSION).zip \
@@ -807,6 +818,38 @@ build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
+
+###############################################################################
+# Windows packaging
+###############################################################################
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1:
+	wget -O windows-packaging/CalicoWindows/libs/hns/hns.psm1 https://raw.githubusercontent.com/microsoft/SDN/0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44/Kubernetes/windows/hns.psm1
+
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt:
+	wget -O windows-packaging/CalicoWindows/libs/hns/License.txt https://raw.githubusercontent.com/microsoft/SDN/0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44/License.txt
+
+## Download NSSM.
+windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
+	wget -O windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip https://nssm.cc/release/nssm-$(WINDOWS_NSSM_VERSION).zip
+
+build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip
+	# To be as atomic as possible, we re-do work like unpacking NSSM here.
+	-rm -f "$(WINDOWS_ARCHIVE)"
+	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)
+	mkdir -p dist
+	cd windows-packaging && \
+	sha256sum --check nssm.sha256sum && \
+	cd CalicoWindows && \
+	unzip  ../nssm-$(WINDOWS_NSSM_VERSION).zip \
+	       -x 'nssm-$(WINDOWS_NSSM_VERSION)/src/*' && \
+	cd .. && \
+	zip -r "../$(WINDOWS_ARCHIVE)" CalicoWindows -x '*.git*'
+	@echo
+	@echo "Windows archive built at $(WINDOWS_ARCHIVE)"
+
+$(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
+	cp $< $@
+
 
 ###############################################################################
 # Utilities

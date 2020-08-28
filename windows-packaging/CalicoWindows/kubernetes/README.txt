@@ -1,19 +1,27 @@
 This directory contains example scripts for starting kubelet and kube-proxy in a way
-that works with Tigera Calico.
+that works with Calico For Windows.
 
 The scripts assume that:
 
-- Tigera Calico is installed to c:\TigeraCalico.
+- Calico is installed to c:\CalicoWindows.
 - kube-proxy.exe and kubelet.exe are installed to c:\k\.
 - The HNS network name is "Calico".
 
-The start-kubelet script:
+The install-kube-services script:
+
+- Install kubelet and kube-proxy service.
+
+The uninstall-kube-services script:
+
+- Uninstall kubelet and kube-proxy service.
+
+The kubelet-service script:
 
 - Forces kubelet to use the node name configured in the Calico configuration file.
 - Explicitly sets the node IP (we have seen kubelet sometimes detect the IP of the
   NAT interface instead of the main ethernet interface).
 
-The start-kube-proxy script:
+The kube-proxy-service script:
 
 - Forces kube-proxy to use the node name configured in the Calico configuration file.
 - Enables the WinDSR and WinOverlay feature flags (for kube-proxy >=1.14).

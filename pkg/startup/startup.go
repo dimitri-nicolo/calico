@@ -143,11 +143,13 @@ func Run() {
 
 		// Check if we're running on a kubeadm and/or rancher cluster. Any error other than not finding the respective
 		// config map should be serious enough that we ought to stop here and return.
-		kubeadmConfig, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(KubeadmConfigConfigMap,
-			metav1.GetOptions{})
+		kubeadmConfig, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(KubeadmConfigConfigMap, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				kubeadmConfig = nil
+			} else if kerrors.IsUnauthorized(err) {
+				kubeadmConfig = nil
+				log.WithError(err).Info("Unauthorized to query kubeadm configmap, assuming not on kubeadm. CIDR detection will not occur.")
 			} else {
 				log.WithError(err).Error("failed to query kubeadm's config map")
 				terminate()
@@ -159,6 +161,9 @@ func Run() {
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				rancherState = nil
+			} else if kerrors.IsUnauthorized(err) {
+				kubeadmConfig = nil
+				log.WithError(err).Info("Unauthorized to query rancher configmap, assuming not on rancher. CIDR detection will not occur.")
 			} else {
 				log.WithError(err).Error("failed to query Rancher's cluster state config map")
 				terminate()
@@ -166,10 +171,10 @@ func Run() {
 		}
 	}
 
+	configureAndCheckIPAddressSubnets(ctx, cli, node)
+
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
-		configureAndCheckIPAddressSubnets(ctx, cli, node)
-
 		// Configure the node AS number if BGP is enabled.
 		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
 			configureASNumber(node)
@@ -211,6 +216,88 @@ func Run() {
 
 	// Tell the user what the name of the node is.
 	log.Infof("Using node name: %s", nodeName)
+
+	if err := ensureNetworkForOS(ctx, cli, nodeName); err != nil {
+		log.WithError(err).Errorf("Unable to ensure network for os")
+		terminate()
+	}
+}
+
+func getMonitorPollInterval() time.Duration {
+	interval := DEFAULT_MONITOR_IP_POLL_INTERVAL
+
+	if intervalEnv := os.Getenv("AUTODETECT_POLL_INTERVAL"); intervalEnv != "" {
+		var err error
+		interval, err = time.ParseDuration(intervalEnv)
+		if err != nil {
+			log.WithError(err).Errorf("error parsing node IP auto-detect polling interval %s", intervalEnv)
+			interval = DEFAULT_MONITOR_IP_POLL_INTERVAL
+		}
+	}
+
+	return interval
+}
+
+func configureAndCheckIPAddressSubnets(ctx context.Context, cli client.Interface, node *api.Node) bool {
+	// Configure and verify the node IP addresses and subnets.
+	checkConflicts, err := configureIPsAndSubnets(node)
+	if err != nil {
+		// If this is auto-detection error, do a cleanup before returning
+		clearv4 := os.Getenv("IP") == "autodetect"
+		clearv6 := os.Getenv("IP6") == "autodetect"
+		if node.ResourceVersion != "" {
+			// If we're auto-detecting an IP on an existing node and hit an error, clear the previous
+			// IP addresses from the node since they are no longer valid.
+			clearNodeIPs(ctx, cli, node, clearv4, clearv6)
+		}
+
+		terminate()
+	}
+
+	// If we report an IP change (v4 or v6) we should verify there are no
+	// conflicts between Nodes.
+	if checkConflicts && os.Getenv("DISABLE_NODE_IP_CHECK") != "true" {
+		v4conflict, v6conflict, err := checkConflictingNodes(ctx, cli, node)
+		if err != nil {
+			// If we've auto-detected a new IP address for an existing node that now conflicts, clear the old IP address(es)
+			// from the node in the datastore. This frees the address in case it needs to be used for another node.
+			clearv4 := (os.Getenv("IP") == "autodetect") && v4conflict
+			clearv6 := (os.Getenv("IP6") == "autodetect") && v6conflict
+			if node.ResourceVersion != "" {
+				clearNodeIPs(ctx, cli, node, clearv4, clearv6)
+			}
+			terminate()
+		}
+	}
+
+	return checkConflicts
+}
+
+func MonitorIPAddressSubnets() {
+	ctx := context.Background()
+	_, cli := calicoclient.CreateClient()
+	nodeName := determineNodeName()
+	node := getNode(ctx, cli, nodeName)
+
+	pollInterval := getMonitorPollInterval()
+
+	for {
+		<-time.After(pollInterval)
+		log.Debugf("Checking node IP address every %v", pollInterval)
+		updated := configureAndCheckIPAddressSubnets(ctx, cli, node)
+		if updated {
+			// Apply the updated node resource.
+			// we try updating the resource up to 3 times, in case of transient issues.
+			for i := 0; i < 3; i++ {
+				_, err := CreateOrUpdate(ctx, cli, node)
+				if err == nil {
+					log.Info("Updated node IP addresses")
+					break
+				}
+				log.WithError(err).Error("Unable to set node resource configuration, retrying...")
+			}
+		}
+	}
 }
 
 func getMonitorPollInterval() time.Duration {
