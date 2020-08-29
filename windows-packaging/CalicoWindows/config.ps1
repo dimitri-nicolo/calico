@@ -7,6 +7,7 @@ $env:KUBE_NETWORK = "Calico.*"
 
 # Set this to one of the following values:
 # - "vxlan" for Calico VXLAN networking
+# - "windows-bgp" for Calico BGP networking using the Windows BGP router.
 # - "none" to disable the Calico CNI plugin (so that you can use another plugin).
 $env:CALICO_NETWORKING_BACKEND="vxlan"
 
@@ -83,3 +84,6 @@ $env:CALICO_LOG_DIR = "$PSScriptRoot\logs"
 $env:FELIX_LOGSEVERITYFILE = "none"
 # Disable syslog logging, which is not supported on Windows.
 $env:FELIX_LOGSEVERITYSYS = "none"
+# confd logs to screen at info level by default.  Uncomment this line to override the log
+# level.
+#$env:BGP_LOGSEVERITYSCREEN = "debug"

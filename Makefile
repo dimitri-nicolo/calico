@@ -820,38 +820,6 @@ $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
 
 ###############################################################################
-# Windows packaging
-###############################################################################
-$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1:
-	wget -O windows-packaging/CalicoWindows/libs/hns/hns.psm1 https://raw.githubusercontent.com/microsoft/SDN/0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44/Kubernetes/windows/hns.psm1
-
-$(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt:
-	wget -O windows-packaging/CalicoWindows/libs/hns/License.txt https://raw.githubusercontent.com/microsoft/SDN/0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44/License.txt
-
-## Download NSSM.
-windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
-	wget -O windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip https://nssm.cc/release/nssm-$(WINDOWS_NSSM_VERSION).zip
-
-build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip
-	# To be as atomic as possible, we re-do work like unpacking NSSM here.
-	-rm -f "$(WINDOWS_ARCHIVE)"
-	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)
-	mkdir -p dist
-	cd windows-packaging && \
-	sha256sum --check nssm.sha256sum && \
-	cd CalicoWindows && \
-	unzip  ../nssm-$(WINDOWS_NSSM_VERSION).zip \
-	       -x 'nssm-$(WINDOWS_NSSM_VERSION)/src/*' && \
-	cd .. && \
-	zip -r "../$(WINDOWS_ARCHIVE)" CalicoWindows -x '*.git*'
-	@echo
-	@echo "Windows archive built at $(WINDOWS_ARCHIVE)"
-
-$(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
-	cp $< $@
-
-
-###############################################################################
 # Utilities
 ###############################################################################
 $(info "Build dependency versions")
