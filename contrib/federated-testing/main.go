@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 
-	syncer := felixsyncer.New(backendClient, datastoreConfig.Spec, new(SyncerCallbacksLogger), true)
+	syncer := felixsyncer.New(backendClient, datastoreConfig.Spec, new(SyncerCallbacksLogger), false, true)
 	syncer.Start()
 
 	log.Println(http.ListenAndServe("localhost:6060", nil))

@@ -286,7 +286,7 @@ func (options ResourceListOptions) KeyFromDefaultPath(path string) Key {
 			panic("Kind must be specified in List option but is not")
 		}
 		if kindPlural != ri.plural {
-			log.Debugf("Didn't match kind %s != %s", kindPlural, kindPlural)
+			log.Debugf("Didn't match kind %s != %s", kindPlural, ri.plural)
 			return nil
 		}
 		if len(options.Namespace) != 0 && namespace != options.Namespace {

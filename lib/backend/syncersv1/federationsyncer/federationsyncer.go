@@ -27,7 +27,7 @@ var (
 )
 
 // New creates a new federation syncer. This particular syncer requires both Calico datastore access and Kubernetes
-// datastore access (using the Kubernetes wrapped client). For the remote clusters, only Kubernetes access is required.
+
 func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks api.SyncerCallbacks) api.Syncer {
 	k8sServicesClient := k8s.NewK8sResourceWrapperClient(k8sClientset)
 	// The resources in this syncer are backed by two different clients, so we specify which client for each

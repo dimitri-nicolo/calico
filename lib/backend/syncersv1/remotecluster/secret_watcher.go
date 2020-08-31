@@ -17,7 +17,6 @@ package remotecluster
 
 import (
 	"fmt"
-	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -26,9 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type secretWatchData struct {
@@ -67,27 +64,9 @@ func NewSecretWatcher(sur SecretUpdateReceiver, k8sClient *kubernetes.Clientset)
 		sw.k8sClientset = k8sClient
 		return sw
 	}
-	log.Infof("No kubernetes client available, secrets will not be availabe for RemoteClusterConfiguration")
+	log.Infof("No kubernetes client available, secrets will not be available for RemoteClusterConfiguration")
 
-	// set up k8s client
-	// attempt 1: KUBECONFIG env var
-	cfgFile := os.Getenv("KUBECONFIG")
-	master := os.Getenv("KUBERNETES_MASTER")
-	cfg, err := clientcmd.BuildConfigFromFlags(master, cfgFile)
-	if err != nil {
-		log.WithError(err).Info("KUBECONFIG environment variable not found, attempting in-cluster")
-		// attempt 2: in cluster config
-		if cfg, err = rest.InClusterConfig(); err != nil {
-			return nil
-		}
-	}
-	clientset, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		return nil
-	}
-	sw.k8sClientset = clientset
-
-	return sw
+	return nil
 }
 
 func (sw *secretWatcher) MarkStale() {

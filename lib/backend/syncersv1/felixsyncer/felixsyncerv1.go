@@ -27,21 +27,36 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 )
 
+const (
+	calicoClientID = "calico"
+	k8sClientID    = "ks"
+)
+
 // New creates a new Felix v1 Syncer.
-func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.SyncerCallbacks, isLeader bool) api.Syncer {
+func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.SyncerCallbacks, includeServices bool, isLeader bool) api.Syncer {
+
+	// Always include the Calico client.
+	clients := map[string]api.Client{
+		calicoClientID: calicoClient,
+	}
+	k8sClientSet := k8s.BestEffortGetKubernetesClientSet(calicoClient, &cfg)
+
 	// Felix always needs ClusterInformation and FelixConfiguration resources.
 	resourceTypes := []watchersyncer.ResourceType{
 		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindClusterInformation},
 			UpdateProcessor: updateprocessors.NewClusterInfoUpdateProcessor(),
+			ClientID:        calicoClientID, // This is backed by the calico client
 		},
 		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindLicenseKey},
 			UpdateProcessor: updateprocessors.NewLicenseKeyUpdateProcessor(),
+			ClientID:        calicoClientID, // This is backed by the calico client
 		},
 		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindFelixConfiguration},
 			UpdateProcessor: updateprocessors.NewFelixConfigUpdateProcessor(),
+			ClientID:        calicoClientID, // This is backed by the calico client
 		},
 	}
 
@@ -51,80 +66,117 @@ func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.Syn
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindGlobalNetworkPolicy},
 				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindStagedGlobalNetworkPolicy},
 				UpdateProcessor: updateprocessors.NewStagedGlobalNetworkPolicyUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindGlobalNetworkSet},
 				UpdateProcessor: updateprocessors.NewGlobalNetworkSetUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindIPPool},
 				UpdateProcessor: updateprocessors.NewIPPoolUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNode},
 				UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(cfg.K8sUsePodCIDR),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindProfile},
 				UpdateProcessor: updateprocessors.NewProfileUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindWorkloadEndpoint},
 				UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNetworkPolicy},
 				UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindStagedNetworkPolicy},
 				UpdateProcessor: updateprocessors.NewStagedNetworkPolicyUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindStagedKubernetesNetworkPolicy},
 				UpdateProcessor: updateprocessors.NewStagedKubernetesNetworkPolicyUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNetworkSet},
 				UpdateProcessor: updateprocessors.NewNetworkSetUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindTier},
 				UpdateProcessor: updateprocessors.NewTierUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindHostEndpoint},
 				UpdateProcessor: updateprocessors.NewHostEndpointUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindRemoteClusterConfiguration},
-				UpdateProcessor: nil, // No need to process the updates so pass nil
+				UpdateProcessor: nil,            // No need to process the updates so pass nil
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 			{
 				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindPacketCapture},
-				UpdateProcessor: nil, // No need to process the updates so pass nil
+				UpdateProcessor: nil,            // No need to process the updates so pass nil
+				ClientID:        calicoClientID, // This is backed by the calico client
 			},
 		}
+		resourceTypes = append(resourceTypes, additionalTypes...)
 
 		// If using Calico IPAM, include IPAM resources the felix cares about.
 		if !cfg.K8sUsePodCIDR {
-			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{ListInterface: model.BlockListOptions{}})
+			additionalTypes := []watchersyncer.ResourceType{{
+				ListInterface:   model.BlockListOptions{},
+				UpdateProcessor: nil,
+				ClientID:        calicoClientID, // This is backed by the calico client
+			}}
+			resourceTypes = append(resourceTypes, additionalTypes...)
 		}
 
-		resourceTypes = append(resourceTypes, additionalTypes...)
+		if includeServices && k8sClientSet != nil {
+			// We have a k8s clientset so we can also include services and endpoints in our sync'd data.  We'll use a
+			// special k8s wrapped client for this (which is a calico API wrapped k8s API).
+			clients[k8sClientID] = k8s.NewK8sResourceWrapperClient(k8sClientSet)
+			additionalTypes = []watchersyncer.ResourceType{{
+				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindK8sService},
+				UpdateProcessor: nil,         // No need to process the updates so pass nil
+				ClientID:        k8sClientID, // This is backed by the kubernetes wrapped client
+			}}
+			/* Future: Include k8s endpoints for service categorization from LB IP direct to endpoint.
+			{
+				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindK8sEndpoints},
+				UpdateProcessor: nil,         // No need to process the updates so pass nil
+				ClientID:        k8sClientID, // This is backed by the kubernetes wrapped client
+			}
+			*/
+			resourceTypes = append(resourceTypes, additionalTypes...)
+		}
 	}
-	_, clientset, _ := k8s.CreateKubernetesClientset(&cfg)
 
 	// The "main" watchersyncer will spawn additional watchersyncers for any remote clusters that are found.
 	// The callbacks are wrapped to allow the messages to be intercepted so that the additional watchersyncers can be spawned.
-	return watchersyncer.New(
-		client,
+	return watchersyncer.NewMultiClient(
+		clients,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, clientset, felixRemoteClusterProcessor{}),
+		remotecluster.NewWrappedCallbacks(callbacks, k8sClientSet, felixRemoteClusterProcessor{}),
 	)
 }
 
