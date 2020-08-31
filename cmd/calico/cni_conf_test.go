@@ -25,11 +25,13 @@ import (
 
 var _ = Describe("CNI config template tests", func() {
 	It("should be valid JSON", func() {
-		f, err := ioutil.ReadFile("../../windows-packaging/TigeraCalico/cni.conf.template")
+		f, err := ioutil.ReadFile("../../windows-packaging/CalicoWindows/cni.conf.template")
 		Expect(err).NotTo(HaveOccurred())
 
 		// __VNI__ is a placeholder for a bare int so we need to swap it for something valid.
 		f = bytes.Replace(f, []byte("__VNI__"), []byte("0"), -1)
+		// __DNS_NAME_SERVERS__ is a placeholder for an array so we need to swap it for something valid.
+		f = bytes.Replace(f, []byte("__DNS_NAME_SERVERS__"), []byte("0"), -1)
 
 		var data map[string]interface{}
 		err = json.Unmarshal(f, &data)

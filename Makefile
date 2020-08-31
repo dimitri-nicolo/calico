@@ -485,6 +485,7 @@ k8s-test:
 
 .PHONY: kind-k8st-setup
 kind-k8st-setup: cnx-node.tar
+	cp cnx-node.tar calico-node.tar
 	curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl
 	chmod +x ./kubectl
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
@@ -650,7 +651,7 @@ endif
 	# Push Windows artifacts to GitHub release.
 	# Requires ghr: https://github.com/tcnksm/ghr
 	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u projectcalico -r node \
+	ghr -u tigera -r node \
 		-n $(VERSION) \
 		$(VERSION) $(WINDOWS_ARCHIVE)
 
