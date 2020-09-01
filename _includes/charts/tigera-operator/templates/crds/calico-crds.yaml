@@ -1,0 +1,9 @@
+{{- if not .Values.includeCoreChart -}}
+{{ range $path, $_ := .Files.Glob "crds/kdd/*" }}
+{{ $.Files.Get $path }}
+---
+{{- end -}}
+{{- else -}}
+# include kubecontrollersconfig because it is the only new CRD added in v3.x
+{{ $.Files.Get "crds/kdd/crd.projectcalico.org_kubecontrollersconfigurations.yaml" }}
+{{- end -}}
