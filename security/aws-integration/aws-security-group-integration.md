@@ -22,6 +22,7 @@ AWS security group integration for {{site.prodname}} allows you to combine AWS s
 
 - OpenShift, Rancher, other managed cloud providers
 - Helm and Docker install
+- Multiple VPCs
 - {{site.prodname}} non-cluster hosts, and auto-hostendpoint features. Alternatives to secure host endpoints:
   - Configure the security groups that are applied to the instances to police traffic to nodes
   - For AWS resources: apply labels to host endpoints for selecting by AWS security group
