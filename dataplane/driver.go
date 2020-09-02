@@ -227,6 +227,9 @@ func StartDataplaneDriver(configParams *config.Config,
 				EgressIPVXLANVNI:  configParams.EgressIPVXLANVNI,
 				EgressIPInterface: "egress.calico",
 
+				AllowVXLANPacketsFromWorkloads: configParams.AllowVXLANPacketsFromWorkloads,
+				AllowIPIPPacketsFromWorkloads:  configParams.AllowIPIPPacketsFromWorkloads,
+
 				WireguardEnabled:       configParams.WireguardEnabled,
 				WireguardInterfaceName: configParams.WireguardInterfaceName,
 

@@ -25,12 +25,14 @@ import (
 )
 
 const (
-	ingressPolicy      = "ingress"
-	egressPolicy       = "egress"
-	dropEncap          = true
-	dontDropEncap      = false
-	NotAnEgressGateway = false
-	IsAnEgressGateway  = true
+	ingressPolicy         = "ingress"
+	egressPolicy          = "egress"
+	dropEncap             = true
+	dontDropEncap         = false
+	NotAnEgressGateway    = false
+	IsAnEgressGateway     = true
+	alwaysAllowVXLANEncap = true
+	alwaysAllowIPIPEncap  = true
 )
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
@@ -41,6 +43,8 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	profileIDs []string,
 	isEgressGateway bool,
 ) []*Chain {
+	allowVXLANEncapFromWorkloads := r.Config.AllowVXLANPacketsFromWorkloads
+	allowIPIPEncapFromWorkloads := r.Config.AllowIPIPPacketsFromWorkloads
 	result := []*Chain{}
 	result = append(result,
 		// Chain for traffic _to_ the endpoint.
@@ -58,10 +62,13 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			isEgressGateway,
 		),
 		// Chain for traffic _from_ the endpoint.
+		// Encap traffic is blocked by default from workload endpoints
+		// unless explicitly overridden.
 		r.endpointIptablesChain(
 			tiers,
 			profileIDs,
@@ -76,7 +83,8 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
-			dropEncap,
+			allowVXLANEncapFromWorkloads,
+			allowIPIPEncapFromWorkloads,
 			isEgressGateway,
 		),
 	)
@@ -120,7 +128,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 		// Chain for input traffic _from_ the endpoint.
@@ -138,7 +147,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 		// Chain for forward traffic _to_ the endpoint.
@@ -156,7 +166,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 		// Chain for forward traffic _from_ the endpoint.
@@ -174,7 +185,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 	)
@@ -214,7 +226,8 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			RuleDirEgress,
 			egressPolicy,
 			AcceptAction{},
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 		// Chain for traffic _from_ the endpoint.
@@ -232,7 +245,8 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			RuleDirIngress,
 			ingressPolicy,
 			AcceptAction{},
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 	}
@@ -260,7 +274,8 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.mangleAllowAction,
-			dontDropEncap,
+			alwaysAllowVXLANEncap,
+			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
 		),
 	}
@@ -311,7 +326,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	dir RuleDir,
 	policyType string,
 	allowAction Action,
-	dropEncap bool,
+	allowVXLANEncap bool,
+	allowIPIPEncap bool,
 	isEgressGateway bool,
 ) *Chain {
 	rules := []Rule{}
@@ -357,19 +373,23 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		},
 	})
 
-	if dropEncap {
-		// VXLAN and IPinIP encapped packets that originated in a pod should be dropped, as the encapsulation can be used to
+	if !allowVXLANEncap {
+		// VXLAN encapped packets that originated in a pod should be dropped, as the encapsulation can be used to
 		// bypass restrictive egress policies.
 		rules = append(rules, Rule{
 			Match: Match().ProtocolNum(ProtoUDP).
 				DestPorts(uint16(r.Config.VXLANPort)),
 			Action:  DropAction{},
-			Comment: []string{"Drop VXLAN encapped packets originating in pods"},
+			Comment: []string{"Drop VXLAN encapped packets originating in workloads"},
 		})
+	}
+	if !allowIPIPEncap {
+		// IPinIP encapped packets that originated in a pod should be dropped, as the encapsulation can be used to
+		// bypass restrictive egress policies.
 		rules = append(rules, Rule{
 			Match:   Match().ProtocolNum(ProtoIPIP),
 			Action:  DropAction{},
-			Comment: []string{"Drop IPinIP encapped packets originating in pods"},
+			Comment: []string{"Drop IPinIP encapped packets originating in workloads"},
 		})
 	}
 
