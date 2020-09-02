@@ -217,7 +217,7 @@ spec:
                         code:
                           description: Match on a specific ICMP code.  If specified,
                             the Type value must also be specified. This is a technical
-                            limitation imposed by the kernel’s iptables firewall,
+                            limitation imposed by the kernel's iptables firewall,
                             which Calico uses to enforce the rule.
                           type: integer
                         type:
@@ -246,7 +246,7 @@ spec:
                         code:
                           description: Match on a specific ICMP code.  If specified,
                             the Type value must also be specified. This is a technical
-                            limitation imposed by the kernel’s iptables firewall,
+                            limitation imposed by the kernel's iptables firewall,
                             which Calico uses to enforce the rule.
                           type: integer
                         type:
@@ -566,7 +566,7 @@ spec:
                         code:
                           description: Match on a specific ICMP code.  If specified,
                             the Type value must also be specified. This is a technical
-                            limitation imposed by the kernel’s iptables firewall,
+                            limitation imposed by the kernel's iptables firewall,
                             which Calico uses to enforce the rule.
                           type: integer
                         type:
@@ -595,7 +595,7 @@ spec:
                         code:
                           description: Match on a specific ICMP code.  If specified,
                             the Type value must also be specified. This is a technical
-                            limitation imposed by the kernel’s iptables firewall,
+                            limitation imposed by the kernel's iptables firewall,
                             which Calico uses to enforce the rule.
                           type: integer
                         type:
