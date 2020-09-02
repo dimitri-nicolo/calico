@@ -143,11 +143,13 @@ func Run() {
 
 		// Check if we're running on a kubeadm and/or rancher cluster. Any error other than not finding the respective
 		// config map should be serious enough that we ought to stop here and return.
-		kubeadmConfig, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(KubeadmConfigConfigMap,
-			metav1.GetOptions{})
+		kubeadmConfig, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(KubeadmConfigConfigMap, metav1.GetOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				kubeadmConfig = nil
+			} else if kerrors.IsUnauthorized(err) {
+				kubeadmConfig = nil
+				log.WithError(err).Info("Unauthorized to query kubeadm configmap, assuming not on kubeadm. CIDR detection will not occur.")
 			} else {
 				log.WithError(err).Error("failed to query kubeadm's config map")
 				terminate()
@@ -159,6 +161,9 @@ func Run() {
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				rancherState = nil
+			} else if kerrors.IsUnauthorized(err) {
+				kubeadmConfig = nil
+				log.WithError(err).Info("Unauthorized to query rancher configmap, assuming not on rancher. CIDR detection will not occur.")
 			} else {
 				log.WithError(err).Error("failed to query Rancher's cluster state config map")
 				terminate()
@@ -166,10 +171,10 @@ func Run() {
 		}
 	}
 
+	configureAndCheckIPAddressSubnets(ctx, cli, node)
+
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
 	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
-		configureAndCheckIPAddressSubnets(ctx, cli, node)
-
 		// Configure the node AS number if BGP is enabled.
 		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
 			configureASNumber(node)
@@ -211,6 +216,11 @@ func Run() {
 
 	// Tell the user what the name of the node is.
 	log.Infof("Using node name: %s", nodeName)
+
+	if err := ensureNetworkForOS(ctx, cli, nodeName); err != nil {
+		log.WithError(err).Errorf("Unable to ensure network for os")
+		terminate()
+	}
 }
 
 func getMonitorPollInterval() time.Duration {

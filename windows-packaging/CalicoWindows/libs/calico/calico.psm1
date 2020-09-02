@@ -1,4 +1,16 @@
-# Copyright (c) 2018 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # We require the 64-bit version of Powershell, which should live at the following path.
 $powerShellPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -18,6 +30,18 @@ function Test-CalicoConfiguration()
         throw "Config not loaded?."
     }
     if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
+        if (fileIsMissing($env:CNI_BIN_DIR))
+        {
+            throw "CNI binary directory $env:CNI_BIN_DIR doesn't exist.  Please create it and ensure kubelet " +  `
+                    "is configured with matching --cni-bin-dir."
+        }
+        if (fileIsMissing($env:CNI_CONF_DIR))
+        {
+            throw "CNI config directory $env:CNI_CONF_DIR doesn't exist.  Please create it and ensure kubelet " +  `
+                    "is configured with matching --cni-conf-dir."
+        }
+    }
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
         if (fileIsMissing($env:CNI_BIN_DIR))
         {
             throw "CNI binary directory $env:CNI_BIN_DIR doesn't exist.  Please create it and ensure kubelet " +  `
@@ -85,10 +109,18 @@ function Install-CNIPlugin()
         $mode = "vxlan"
     }
 
+    $dnsIPs=$env:DNS_NAME_SERVERS.Split(",")
+    $ipList = @()
+    foreach ($ip in $dnsIPs) {
+        $ipList += "`"$ip`""
+    }
+    $dnsIPList=($ipList -join ",").TrimEnd(',')
+
     (Get-Content "$baseDir\cni.conf.template") | ForEach-Object {
         $_.replace('__NODENAME_FILE__', $nodeNameFile).
                 replace('__KUBECONFIG__', $kubeconfigFile).
                 replace('__K8S_SERVICE_CIDR__', $env:K8S_SERVICE_CIDR).
+                replace('__DNS_NAME_SERVERS__', $dnsIPList).
                 replace('__DATASTORE_TYPE__', $env:CALICO_DATASTORE_TYPE).
                 replace('__ETCD_ENDPOINTS__', $env:ETCD_ENDPOINTS).
                 replace('__ETCD_KEY_FILE__', $etcdKeyFile).
@@ -119,19 +151,19 @@ function Install-NodeService()
     # Ensure our service file can run.
     Unblock-File $baseDir\node\node-service.ps1
 
-    & $NSSMPath install TigeraNode $powerShellPath
-    & $NSSMPath set TigeraNode AppParameters $baseDir\node\node-service.ps1
-    & $NSSMPath set TigeraNode AppDirectory $baseDir
-    & $NSSMPath set TigeraNode DisplayName "Tigera Calico Startup"
-    & $NSSMPath set TigeraNode Description "Tigera Calico Startup, configures Calico datamodel resources for this node."
+    & $NSSMPath install CalicoNode $powerShellPath
+    & $NSSMPath set CalicoNode AppParameters $baseDir\node\node-service.ps1
+    & $NSSMPath set CalicoNode AppDirectory $baseDir
+    & $NSSMPath set CalicoNode DisplayName "Calico Windows Startup"
+    & $NSSMPath set CalicoNode Description "Calico Windows Startup, configures Calico datamodel resources for this node."
 
     # Configure it to auto-start by default.
-    & $NSSMPath set TigeraNode Start SERVICE_AUTO_START
-    & $NSSMPath set TigeraNode ObjectName LocalSystem
-    & $NSSMPath set TigeraNode Type SERVICE_WIN32_OWN_PROCESS
+    & $NSSMPath set CalicoNode Start SERVICE_AUTO_START
+    & $NSSMPath set CalicoNode ObjectName LocalSystem
+    & $NSSMPath set CalicoNode Type SERVICE_WIN32_OWN_PROCESS
 
     # Throttle process restarts if Felix restarts in under 1500ms.
-    & $NSSMPath set TigeraNode AppThrottle 1500
+    & $NSSMPath set CalicoNode AppThrottle 1500
 
     # Create the log directory if needed.
     if (-Not(Test-Path "$env:CALICO_LOG_DIR"))
@@ -139,23 +171,23 @@ function Install-NodeService()
         write "Creating log directory."
         md -Path "$env:CALICO_LOG_DIR"
     }
-    & $NSSMPath set TigeraNode AppStdout $env:CALICO_LOG_DIR\tigera-node.log
-    & $NSSMPath set TigeraNode AppStderr $env:CALICO_LOG_DIR\tigera-node.err.log
+    & $NSSMPath set CalicoNode AppStdout $env:CALICO_LOG_DIR\calico-node.log
+    & $NSSMPath set CalicoNode AppStderr $env:CALICO_LOG_DIR\calico-node.err.log
 
     # Configure online file rotation.
-    & $NSSMPath set TigeraNode AppRotateFiles 1
-    & $NSSMPath set TigeraNode AppRotateOnline 1
+    & $NSSMPath set CalicoNode AppRotateFiles 1
+    & $NSSMPath set CalicoNode AppRotateOnline 1
     # Rotate once per day.
-    & $NSSMPath set TigeraNode AppRotateSeconds 86400
+    & $NSSMPath set CalicoNode AppRotateSeconds 86400
     # Rotate after 10MB.
-    & $NSSMPath set TigeraNode AppRotateBytes 10485760
+    & $NSSMPath set CalicoNode AppRotateBytes 10485760
 
     Write-Host "Done installing startup service."
 }
 
 function Remove-NodeService()
 {
-    & $NSSMPath remove TigeraNode confirm
+    & $NSSMPath remove CalicoNode confirm
 }
 
 function Install-FelixService()
@@ -166,20 +198,20 @@ function Install-FelixService()
     Unblock-File $baseDir\felix\felix-service.ps1
 
     # We run Felix via a wrapper script to make it easier to update env vars.
-    & $NSSMPath install TigeraFelix $powerShellPath
-    & $NSSMPath set TigeraFelix AppParameters $baseDir\felix\felix-service.ps1
-    & $NSSMPath set TigeraFelix AppDirectory $baseDir
-    & $NSSMPath set TigeraFelix DependOnService "TigeraNode"
-    & $NSSMPath set TigeraFelix DisplayName "Tigera Calico Agent"
-    & $NSSMPath set TigeraFelix Description "Tigera Calico Per-host Agent, Felix, provides network policy enforcement for Kubernetes."
+    & $NSSMPath install CalicoFelix $powerShellPath
+    & $NSSMPath set CalicoFelix AppParameters $baseDir\felix\felix-service.ps1
+    & $NSSMPath set CalicoFelix AppDirectory $baseDir
+    & $NSSMPath set CalicoFelix DependOnService "CalicoNode"
+    & $NSSMPath set CalicoFelix DisplayName "Calico Windows Agent"
+    & $NSSMPath set CalicoFelix Description "Calico Windows Per-host Agent, Felix, provides network policy enforcement for Kubernetes."
 
     # Configure it to auto-start by default.
-    & $NSSMPath set TigeraFelix Start SERVICE_AUTO_START
-    & $NSSMPath set TigeraFelix ObjectName LocalSystem
-    & $NSSMPath set TigeraFelix Type SERVICE_WIN32_OWN_PROCESS
+    & $NSSMPath set CalicoFelix Start SERVICE_AUTO_START
+    & $NSSMPath set CalicoFelix ObjectName LocalSystem
+    & $NSSMPath set CalicoFelix Type SERVICE_WIN32_OWN_PROCESS
 
     # Throttle process restarts if Felix restarts in under 1500ms.
-    & $NSSMPath set TigeraFelix AppThrottle 1500
+    & $NSSMPath set CalicoFelix AppThrottle 1500
 
     # Create the log directory if needed.
     if (-Not(Test-Path "$env:CALICO_LOG_DIR"))
@@ -187,22 +219,22 @@ function Install-FelixService()
         write "Creating log directory."
         md -Path "$env:CALICO_LOG_DIR"
     }
-    & $NSSMPath set TigeraFelix AppStdout $env:CALICO_LOG_DIR\tigera-felix.log
-    & $NSSMPath set TigeraFelix AppStderr $env:CALICO_LOG_DIR\tigera-felix.err.log
+    & $NSSMPath set CalicoFelix AppStdout $env:CALICO_LOG_DIR\calico-felix.log
+    & $NSSMPath set CalicoFelix AppStderr $env:CALICO_LOG_DIR\calico-felix.err.log
 
     # Configure online file rotation.
-    & $NSSMPath set TigeraFelix AppRotateFiles 1
-    & $NSSMPath set TigeraFelix AppRotateOnline 1
+    & $NSSMPath set CalicoFelix AppRotateFiles 1
+    & $NSSMPath set CalicoFelix AppRotateOnline 1
     # Rotate once per day.
-    & $NSSMPath set TigeraFelix AppRotateSeconds 86400
+    & $NSSMPath set CalicoFelix AppRotateSeconds 86400
     # Rotate after 10MB.
-    & $NSSMPath set TigeraFelix AppRotateBytes 10485760
+    & $NSSMPath set CalicoFelix AppRotateBytes 10485760
 
     Write-Host "Done installing Felix service."
 }
 
 function Remove-FelixService() {
-    & $NSSMPath remove TigeraFelix confirm
+    & $NSSMPath remove CalicoFelix confirm
 }
 
 function Install-ConfdService()
@@ -213,20 +245,20 @@ function Install-ConfdService()
     Unblock-File $baseDir\confd\confd-service.ps1
 
     # We run confd via a wrapper script to make it easier to update env vars.
-    & $NSSMPath install TigeraConfd $powerShellPath
-    & $NSSMPath set TigeraConfd AppParameters $baseDir\confd\confd-service.ps1
-    & $NSSMPath set TigeraConfd AppDirectory $baseDir
-    & $NSSMPath set TigeraConfd DependOnService "TigeraNode"
-    & $NSSMPath set TigeraConfd DisplayName "Tigera Calico BGP Agent"
-    & $NSSMPath set TigeraConfd Description "Tigera Calico BGP Agent, confd, configures BGP routing."
+    & $NSSMPath install CalicoConfd $powerShellPath
+    & $NSSMPath set CalicoConfd AppParameters $baseDir\confd\confd-service.ps1
+    & $NSSMPath set CalicoConfd AppDirectory $baseDir
+    & $NSSMPath set CalicoConfd DependOnService "TigeraNode"
+    & $NSSMPath set CalicoConfd DisplayName "Tigera Calico BGP Agent"
+    & $NSSMPath set CalicoConfd Description "Tigera Calico BGP Agent, confd, configures BGP routing."
 
     # Configure it to auto-start by default.
-    & $NSSMPath set TigeraConfd Start SERVICE_AUTO_START
-    & $NSSMPath set TigeraConfd ObjectName LocalSystem
-    & $NSSMPath set TigeraConfd Type SERVICE_WIN32_OWN_PROCESS
+    & $NSSMPath set CalicoConfd Start SERVICE_AUTO_START
+    & $NSSMPath set CalicoConfd ObjectName LocalSystem
+    & $NSSMPath set CalicoConfd Type SERVICE_WIN32_OWN_PROCESS
 
     # Throttle process restarts if confd restarts in under 1500ms.
-    & $NSSMPath set TigeraConfd AppThrottle 1500
+    & $NSSMPath set CalicoConfd AppThrottle 1500
 
     # Create the log directory if needed.
     if (-Not(Test-Path "$env:CALICO_LOG_DIR"))
@@ -234,22 +266,22 @@ function Install-ConfdService()
         write "Creating log directory."
         md -Path "$env:CALICO_LOG_DIR"
     }
-    & $NSSMPath set TigeraConfd AppStdout $env:CALICO_LOG_DIR\tigera-confd.log
-    & $NSSMPath set TigeraConfd AppStderr $env:CALICO_LOG_DIR\tigera-confd.err.log
+    & $NSSMPath set CalicoConfd AppStdout $env:CALICO_LOG_DIR\calico-confd.log
+    & $NSSMPath set CalicoConfd AppStderr $env:CALICO_LOG_DIR\calico-confd.err.log
 
     # Configure online file rotation.
-    & $NSSMPath set TigeraConfd AppRotateFiles 1
-    & $NSSMPath set TigeraConfd AppRotateOnline 1
+    & $NSSMPath set CalicoConfd AppRotateFiles 1
+    & $NSSMPath set CalicoConfd AppRotateOnline 1
     # Rotate once per day.
-    & $NSSMPath set TigeraConfd AppRotateSeconds 86400
+    & $NSSMPath set CalicoConfd AppRotateSeconds 86400
     # Rotate after 10MB.
-    & $NSSMPath set TigeraConfd AppRotateBytes 10485760
+    & $NSSMPath set CalicoConfd AppRotateBytes 10485760
 
     Write-Host "Done installing confd service."
 }
 
 function Remove-ConfdService() {
-    & $NSSMPath remove TigeraConfd confirm
+    & $NSSMPath remove CalicoConfd confirm
 }
 
 function Wait-ForManagementIP($NetworkName)
@@ -272,14 +304,14 @@ function Get-LastBootTime()
     return $bootTime
 }
 
-$tigeraRegistryKey = "HKLM:\Software\Tigera"
-$calicoRegistryKey = $tigeraRegistryKey + "\Calico"
+$softwareRegistryKey = "HKLM:\Software\Tigera"
+$calicoRegistryKey = $softwareRegistryKey + "\Calico"
 
 function ensureRegistryKey()
 {
-    if (! (Test-Path $tigeraRegistryKey))
+    if (! (Test-Path $softwareRegistryKey))
     {
-        New-Item $tigeraRegistryKey
+        New-Item $softwareRegistryKey
     }
     if (! (Test-Path $calicoRegistryKey))
     {
@@ -295,7 +327,7 @@ function Get-StoredLastBootTime()
     }
     catch
     {
-        return ""
+        $PSItem.Exception.Message
     }
 }
 
@@ -309,9 +341,14 @@ function Set-StoredLastBootTime($lastBootTime)
 function Wait-ForCalicoInit()
 {
     Write-Host "Waiting for Calico initialisation to finish..."
-    while ((Get-StoredLastBootTime) -NE (Get-LastBootTime)) {
-        Write-Host "Waiting for Calico initialisation to finish..."
+    $Stored=Get-StoredLastBootTime
+    $Current=Get-LastBootTime
+    while ($Stored -NE $Current) {
+        Write-Host "Waiting for Calico initialisation to finish...StoredLastBootTime $Stored, CurrentLastBootTime $Current"
         Start-Sleep 1
+
+        $Stored=Get-StoredLastBootTime
+        $Current=Get-LastBootTime
     }
     Write-Host "Calico initialisation finished."
 }

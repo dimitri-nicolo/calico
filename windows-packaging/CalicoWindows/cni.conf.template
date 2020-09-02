@@ -2,7 +2,7 @@
   "name": "Calico",
   "windows_use_single_network": true,
 
-  "cniVersion": "0.3.0",
+  "cniVersion": "0.3.1",
   "type": "calico",
   "mode": "__MODE__",
 
@@ -18,9 +18,7 @@
   "capabilities": {"dns": true},
 
   "DNS":  {
-    "Nameservers":  [
-      "10.96.0.10"
-    ],
+    "Nameservers":  [__DNS_NAME_SERVERS__],
     "Search":  [
       "svc.cluster.local"
     ]

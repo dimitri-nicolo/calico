@@ -14,8 +14,8 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20200813041938-ebd7ec100f42
 	github.com/prometheus/client_golang v1.1.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/vishvananda/netlink v1.0.0
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+	github.com/vishvananda/netlink v1.0.1-0.20181108222139-023a6dafdcdf
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
@@ -23,9 +23,10 @@ require (
 )
 
 replace (
+	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20200820000356-6a0cc29deb6e
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200819042550-cdf2f2d05707
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200824042320-e6499d7cc552
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200818223838-6dd792140b9c
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200819172331-d0a598db45ea

@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 # This script is run from the main TigeraCalico directory.
 . .\config.ps1
@@ -25,8 +25,8 @@ if($env:CALICO_NETWORKING_BACKEND = "windows-bgp")
   rm peerings.ps1 -ErrorAction SilentlyContinue
   rm blocks.ps1 -ErrorAction SilentlyContinue
 
-  # Run the tigera-confd binary.
-  & ..\tigera-calico.exe -confd -confd-confdir="$PSScriptRoot"
+  # Run the calico-confd binary.
+  & ..\calico-node.exe -confd -confd-confdir="$PSScriptRoot"
 } else {
   Write-Host "Windows BGP is disabled, not running confd."
   while($True) {

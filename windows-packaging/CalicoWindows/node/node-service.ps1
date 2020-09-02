@@ -1,12 +1,26 @@
-# Copyright (c) 2018 Tigera, Inc. All rights reserved.
+# Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# This script is run from the main TigeraCalico folder.
+# This script is run from the main CalicoWindows folder.
 . .\config.ps1
 
 ipmo .\libs\calico\calico.psm1
 ipmo .\libs\hns\hns.psm1
 
 $lastBootTime = Get-LastBootTime
+$Stored = Get-StoredLastBootTime
+Write-Host "StoredLastBootTime $Stored, CurrentLastBootTime $lastBootTime"
 
 $timeout = $env:STARTUP_VALID_IP_TIMEOUT
 
@@ -101,6 +115,8 @@ $env:CALICO_NODENAME_FILE = ".\nodename"
 
 # We use this setting as a trigger for the other scripts to proceed.
 Set-StoredLastBootTime $lastBootTime
+$Stored = Get-StoredLastBootTime
+Write-Host "Stored new lastBootTime $Stored"
 
 # Run the startup script whenever kubelet (re)starts. This makes sure that we refresh our Node annotations if
 # kubelet recreates the Node resource.
@@ -109,7 +125,7 @@ while ($True)
 {
     try
     {
-        # Run tigera-calico.exe if kubelet starts/restarts
+        # Run calico-node.exe if kubelet starts/restarts
         $currentKubeletPid = (Get-Process -Name kubelet -ErrorAction Stop).id
         if ($currentKubeletPid -NE $kubeletPid)
         {
@@ -117,7 +133,7 @@ while ($True)
             $kubeletPid = $currentKubeletPid
             while ($true)
             {
-                .\tigera-calico.exe -startup
+                .\calico-node.exe -startup
                 if ($LastExitCode -EQ 0)
                 {
                     Write-Host "Calico node initialisation succeeded; monitoring kubelet for restarts..."

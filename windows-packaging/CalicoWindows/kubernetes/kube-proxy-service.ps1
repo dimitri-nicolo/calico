@@ -1,18 +1,29 @@
+# Copyright (c) 2020 Tigera, Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http:#www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Param(
     [string]$NetworkName = "Calico"
 )
 
-# Import the Calico and HNS libraries, included in the package.
-ipmo -Force c:\TigeraCalico\libs\calico\calico.psm1
-ipmo -Force c:\TigeraCalico\libs\hns\hns.psm1
+# Import HNS libraries, included in the package.
+ipmo -Force c:\CalicoWindows\libs\hns\hns.psm1
 
-# Wait for Calico to create the vSwitch.  This prevents kube-proxy's API server
-# connection from being dropped when the vSwitch is created.
-Wait-ForCalicoInit
+. c:\CalicoWindows\config.ps1
 
-. c:\TigeraCalico\config.ps1
+Write-Host "Running kub-proxy service."
 
-# Now, wait for the Calico network to be created when the first pod is networked.
+# Now, wait for the Calico network to be created.
 Write-Host "Waiting for HNS network $NetworkName to be created..."
 while (-Not (Get-HnsNetwork | ? Name -EQ $NetworkName)) {
     Write-Debug "Still waiting for HNS network..."
@@ -29,6 +40,10 @@ if ($kubeProxyVer -match "v([0-9])\.([0-9]+)") {
     $kubeProxyGE114 = ($major -GT 1 -OR $major -EQ 1 -AND $minor -GE 14)
 }
 
+# Determine the windows version and build number for DSR support.
+$OSInfo = (Get-ComputerInfo  | select WindowsVersion, OsBuildNumber)
+$PlatformSupportDSR = (($OSInfo.WindowsVersion -as [int]) -GE 1903 -And ($OSInfo.OsBuildNumber -as [int]) -GE 18317)
+
 # Build up the arguments for starting kube-proxy.
 $argList = @(`
     "--hostname-override=$env:NODENAME", `
@@ -38,10 +53,12 @@ $argList = @(`
 )
 $extraFeatures = @()
 
-if ($kubeProxyGE114) {
-    Write-Host "Detected kube-proxy >= 1.14, enabling DSR feature gate."
+if ($kubeProxyGE114 -And $PlatformSupportDSR) {
+    Write-Host "Detected kube-proxy >= 1.14 and WindowsOSVersion >= 1903 WindowsBuildNumber >= 18317, enabling DSR feature gate."
     $extraFeatures += "WinDSR=true"
     $argList += "--enable-dsr=true"
+} else {
+    Write-Host "DSR feature is not supported."
 }
 
 $network = (Get-HnsNetwork | ? Name -EQ $NetworkName)
@@ -73,11 +90,8 @@ if ($policyLists) {
     $policyLists | Remove-HnsPolicyList
 }
 
+Write-Host "Start to run c:\k\kube-proxy.exe"
 # We'll also pick up a network name env var from the Calico config file.  Override it
 # since hte value in the config file may be a regex.
 $env:KUBE_NETWORK=$NetworkName
-Start-Process `
-    -FilePath c:\k\kube-proxy.exe `
-    -ArgumentList $argList `
-    -RedirectStandardOutput C:\k\kube-proxy.out.log `
-    -RedirectStandardError C:\k\kube-proxy.err.log
+c:\k\kube-proxy.exe $argList

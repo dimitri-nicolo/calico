@@ -1,33 +1,21 @@
+
+## Cluster configuration:
+
 # KUBE_NETWORK should be set to a regular expression that matches the HNS network(s) used for pods.
-# The default, "Calico.*", is correct for Calico CNI.  For flannel, the network is typically called "cbr0" or
-# "flannel.<VSID>".
+# The default, "Calico.*", is correct for Calico CNI. 
 $env:KUBE_NETWORK = "Calico.*"
 
 # Set this to one of the following values:
-# - "windows-bgp" for Calico BGP networking using the Windows BGP router.
 # - "vxlan" for Calico VXLAN networking
-# - "none" to disable the Calico CNI plugin (so that you can use flannel or another plugin).
-$env:CALICO_NETWORKING_BACKEND="windows-bgp"
+# - "windows-bgp" for Calico BGP networking using the Windows BGP router.
+# - "none" to disable the Calico CNI plugin (so that you can use another plugin).
+$env:CALICO_NETWORKING_BACKEND="vxlan"
 
-## CNI configuration, only used for the "windows-bgp" and "vxlan" networking backends.
-
-# Place to install the CNI plugin to.  Should match kubelet's --cni-bin-dir.
-$env:CNI_BIN_DIR = "c:\k\cni"
-# Place to install the CNI config to.  Should be located in kubelet's --cni-conf-dir.
-$env:CNI_CONF_DIR = "c:\k\cni\config"
-$env:CNI_CONF_FILENAME = "10-calico.conf"
-# IPAM type to use with Calico's CNI plugin.  One of "calico-ipam" or "host-local".
-$env:CNI_IPAM_TYPE = "calico-ipam"
 # Set to match your Kubernetes service CIDR.
-$env:K8s_SERVICE_CIDR = "10.96.0.0/12"
+$env:K8S_SERVICE_CIDR = "<your service cidr>"
+$env:DNS_NAME_SERVERS = "<your dns server ips>"
+$env:DNS_SEARCH = "svc.cluster.local"
 
-## VXLAN-specific configuration.
-
-# The VXLAN VNI / VSID.  Must match the VXLANVNI felix configuration parameter used
-# for Linux nodes.
-$env:VXLAN_VNI = "4096"
-# Prefix used when generating MAC addresses for virtual NICs.
-$env:VXLAN_MAC_PREFIX = "0E-2A"
 
 ## Datastore configuration:
 
@@ -43,6 +31,26 @@ $env:ETCD_ENDPOINTS = "<your etcd endpoints>"
 $env:ETCD_KEY_FILE = ""
 $env:ETCD_CERT_FILE = ""
 $env:ETCD_CA_CERT_FILE = ""
+
+
+## CNI configuration, only used for the "vxlan" networking backends.
+
+# Place to install the CNI plugin to.  Should match kubelet's --cni-bin-dir.
+$env:CNI_BIN_DIR = "c:\k\cni"
+# Place to install the CNI config to.  Should be located in kubelet's --cni-conf-dir.
+$env:CNI_CONF_DIR = "c:\k\cni\config"
+$env:CNI_CONF_FILENAME = "10-calico.conf"
+# IPAM type to use with Calico's CNI plugin.  One of "calico-ipam" or "host-local".
+$env:CNI_IPAM_TYPE = "calico-ipam"
+
+## VXLAN-specific configuration.
+
+# The VXLAN VNI / VSID.  Must match the VXLANVNI felix configuration parameter used
+# for Linux nodes.
+$env:VXLAN_VNI = "4096"
+# Prefix used when generating MAC addresses for virtual NICs.
+$env:VXLAN_MAC_PREFIX = "0E-2A"
+
 
 ## Node configuration.
 
@@ -61,8 +69,6 @@ $env:CALICO_K8S_NODE_REF = $env:NODENAME
 # after a reboot.
 $env:STARTUP_VALID_IP_TIMEOUT = 90
 
-## BGP/VXLAN configuration.
-
 # The IP of the node; the default will auto-detect a usable IP in most cases.
 $env:IP = "autodetect"
 
@@ -78,7 +84,6 @@ $env:CALICO_LOG_DIR = "$PSScriptRoot\logs"
 $env:FELIX_LOGSEVERITYFILE = "none"
 # Disable syslog logging, which is not supported on Windows.
 $env:FELIX_LOGSEVERITYSYS = "none"
-
 # confd logs to screen at info level by default.  Uncomment this line to override the log
 # level.
 #$env:BGP_LOGSEVERITYSCREEN = "debug"
