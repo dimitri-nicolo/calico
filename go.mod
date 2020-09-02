@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/apparentlymart/go-cidr v1.0.1
+	github.com/aws/aws-sdk-go v1.34.16 // indirect
 
 	// Elastic repo for ECK v1.0.1
 	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
