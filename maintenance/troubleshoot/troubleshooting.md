@@ -6,9 +6,9 @@ canonical_url: '/maintenance/troubleshoot/troubleshooting'
 
 ### Logs and diagnostics
 
-To collect diagnostics, download and install `{{include.cli}}` somewhere in your `$PATH`. We recommend installing it as a kubectl plugin by [following these directions]({{site.baseurl}}/maintenance/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host).
+To collect diagnostics, download and install `calicoctl` somewhere in your `$PATH`. We recommend installing it as a kubectl plugin by [following these directions]({{site.baseurl}}/maintenance/clis/calicoctl/install#install-calicoctl-as-a-kubectl-plugin-on-a-single-host).
 
-Then, create a diagnostics bundle by running the following command:
+Assuming you installed the binary as a kubectl plugin, you can then create a diagnostics bundle by running the following command:
 
 ```
 kubectl calico cluster diags
