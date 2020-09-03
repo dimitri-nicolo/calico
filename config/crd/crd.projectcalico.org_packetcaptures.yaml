@@ -36,9 +36,10 @@ spec:
             description: PacketCaptureSpec contains the values of the packet capture.
             properties:
               selector:
-                description: "The selector is an expression used to pick pick out
-                  the endpoints that the policy should be applied to. \n Selector
-                  expressions follow this syntax: \n \tlabel == \"string_literal\"
+                description: "The selector is an expression used to pick out the endpoints
+                  that the policy should be applied to.  The selector will only match
+                  endpoints in the same namespace as the PacketCapture resource. \n
+                  Selector expressions follow this syntax: \n \tlabel == \"string_literal\"
                   \ ->  comparison, e.g. my_label == \"foo bar\" \tlabel != \"string_literal\"
                   \  ->  not equal; also matches if label is not present \tlabel in
                   { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is

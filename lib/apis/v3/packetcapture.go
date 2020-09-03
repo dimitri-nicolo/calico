@@ -25,8 +25,9 @@ type PacketCapture struct {
 
 // PacketCaptureSpec contains the values of the packet capture.
 type PacketCaptureSpec struct {
-	// The selector is an expression used to pick pick out the endpoints that the policy should
-	// be applied to.
+	// The selector is an expression used to pick out the endpoints that the policy should
+	// be applied to.  The selector will only match endpoints in the same namespace as the
+	// PacketCapture resource.
 	//
 	// Selector expressions follow this syntax:
 	//
