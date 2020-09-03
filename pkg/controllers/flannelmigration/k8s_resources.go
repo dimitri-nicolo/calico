@@ -225,6 +225,7 @@ func (p k8spod) RunPodOnNodeTillComplete(k8sClientset *kubernetes.Clientset, nam
 					SecurityContext: &v1.SecurityContext{Privileged: &privileged},
 				},
 			},
+			Tolerations:   []v1.Toleration{{Operator: v1.TolerationOpExists}},  // Tolerate everything
 			HostNetwork:   hostNetwork,
 			NodeName:      nodeName,
 			RestartPolicy: v1.RestartPolicyNever,
@@ -489,7 +490,7 @@ func (n k8snode) execCommandInPod(k8sClientset *kubernetes.Clientset, namespace,
 		return "", fmt.Errorf("Failed to execute command in pod. Pod %s is not ready.", pod.Name)
 	}
 
-	cmdArgs := []string{"exec", pod.Name, fmt.Sprintf("--namespace=%s", namespace), fmt.Sprintf("-c=%s", containerName)}
+	cmdArgs := []string{"exec", pod.Name, fmt.Sprintf("--namespace=%s", namespace), fmt.Sprintf("-c=%s", containerName), "--"}
 	cmdArgs = append(cmdArgs, args...)
 	out, err := exec.Command("/usr/bin/kubectl", cmdArgs...).CombinedOutput()
 	if err != nil {
