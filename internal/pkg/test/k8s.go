@@ -84,8 +84,9 @@ func (c *K8sFakeClient) CalicoFake() *k8stesting.Fake {
 }
 
 type cluster struct {
-	id          string
-	annotations map[string]string
+	id                      string
+	annotations             map[string]string
+	managedClusterConnected calicov3.ManagedClusterStatusValue
 }
 
 type managedClusters struct {
@@ -130,11 +131,12 @@ func (mc *managedClusters) Get(id string) *cluster {
 	return mc.cs[id]
 }
 
-func (mc *managedClusters) Add(id, name string, annotations map[string]string) {
+func (mc *managedClusters) Add(id, name string, annotations map[string]string, status calicov3.ManagedClusterStatusValue) {
 	// We now use the resource name as the ID
 	mc.cs[name] = &cluster{
-		id:          name,
-		annotations: annotations,
+		id:                      name,
+		annotations:             annotations,
+		managedClusterConnected: status,
 	}
 
 	mc.version++
@@ -149,6 +151,14 @@ func (mc *managedClusters) Add(id, name string, annotations map[string]string) {
 			UID:             k8stypes.UID(id),
 			ResourceVersion: mc.versionStr(),
 			Annotations:     annotations,
+		},
+		Status:calicov3.ManagedClusterStatus{
+			Conditions: []calicov3.ManagedClusterStatusCondition{
+				{
+					Status: status,
+					Type:   "ManagedClusterConnected",
+				},
+			},
 		},
 	}
 
@@ -226,6 +236,14 @@ func (mc *managedClusters) listReactor(action k8stesting.Action) (
 				Name: c.id,
 				UID:  k8stypes.UID(id),
 			},
+			Status: calicov3.ManagedClusterStatus{
+				Conditions: []calicov3.ManagedClusterStatusCondition{
+					{
+						Status: c.managedClusterConnected,
+						Type:   "ManagedClusterConnected",
+					},
+				},
+			},
 		})
 	}
 
@@ -253,6 +271,14 @@ func (mc *managedClusters) getReactor(action k8stesting.Action) (handled bool, r
 			UID:         k8stypes.UID(cluster.id),
 			Annotations: cluster.annotations,
 		},
+		Status: calicov3.ManagedClusterStatus{
+			Conditions: []calicov3.ManagedClusterStatusCondition{
+				{
+					Status: cluster.managedClusterConnected,
+					Type:   "ManagedClusterConnected",
+				},
+			},
+		},
 	}
 
 	return true, managedCluster, nil
@@ -269,7 +295,18 @@ func (mc *managedClusters) updateReactor(action k8stesting.Action) (handled bool
 		return true, nil, errors.Errorf("Missing mocked cluster")
 	}
 
-	mc.cs[managedCluster.Name] = &cluster{id: managedCluster.Name, annotations: managedCluster.Annotations}
+	var managedClusterConnectedStatus calicov3.ManagedClusterStatusValue
+	for _, c := range managedCluster.Status.Conditions {
+		if c.Type == calicov3.ManagedClusterStatusTypeConnected {
+			managedClusterConnectedStatus = c.Status
+		}
+	}
+
+	mc.cs[managedCluster.Name] = &cluster{
+		id:                      managedCluster.Name,
+		annotations:             managedCluster.Annotations,
+		managedClusterConnected: managedClusterConnectedStatus,
+	}
 
 	return true, managedCluster, nil
 }
@@ -284,15 +321,21 @@ func (c *K8sFakeClient) WaitForManagedClustersWatched() {
 }
 
 // AddCluster adds a cluster resource
-func (c *K8sFakeClient) AddCluster(id, name string, annotations map[string]string) error {
+func (c *K8sFakeClient) AddCluster(id, name string, annotations map[string]string, status ...calicov3.ManagedClusterStatusValue) error {
 	c.clusters.Lock()
 	defer c.clusters.Unlock()
 
+	var connectionStatus calicov3.ManagedClusterStatusValue
+	if len(status) == 1 {
+		connectionStatus = status[0]
+	} else {
+		connectionStatus = calicov3.ManagedClusterStatusValueUnknown
+	}
 	if c.clusters.Get(id) != nil {
 		return errors.Errorf("cluster id %s already present", id)
 	}
 
-	c.clusters.Add(id, name, annotations)
+	c.clusters.Add(id, name, annotations, connectionStatus)
 	return nil
 }
 

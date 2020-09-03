@@ -7,6 +7,8 @@ package server
 
 import (
 	"context"
+	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sync"
 
 	. "github.com/onsi/ginkgo"
@@ -93,6 +95,7 @@ var _ = Describe("Clusters", func() {
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
 		})
 
+
 		It("should add a cluster before watch restarted due to an error", func() {
 			Expect(len(clusters.List())).To(Equal(1))
 			k8sAPI.BlockWatches()
@@ -107,4 +110,32 @@ var _ = Describe("Clusters", func() {
 			wg.Wait()
 		})
 	})
+
+	When("new watch", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		clusterName := "sample-restart-cluster"
+
+		It("should set ManagedClusterConnected status to false if it is true during startup.", func() {
+			Expect(len(clusters.List())).To(Equal(2))
+			Expect(k8sAPI.AddCluster(clusterName, clusterName, nil, calicov3.ManagedClusterStatusValueTrue)).ShouldNot(HaveOccurred())
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = clusters.watchK8s(ctx, nil)
+			}()
+
+			Eventually(func() calicov3.ManagedClusterStatusValue {
+				c, _ := k8sAPI.ManagedClusters().Get(clusterName, metav1.GetOptions{})
+				return c.Status.Conditions[0].Status
+			}).Should(Equal(calicov3.ManagedClusterStatusValueFalse))
+			Expect(len(clusters.List())).To(Equal(3))
+		})
+
+		It("should stop watch", func() {
+			cancel()
+			wg.Wait()
+		})
+	})
+
 })
