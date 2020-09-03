@@ -16,6 +16,8 @@ package intdataplane
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,6 +31,7 @@ import (
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
+	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/rules"
@@ -56,12 +59,23 @@ type nameData struct {
 	namesToNotify set.Set
 }
 
+func TimestampToTime(ts []uint8) time.Time {
+	log.Debugf("DNS-LATENCY: ts=%v", ts)
+	var tv unix.Timeval
+	err := binary.Read(bytes.NewReader(ts), binary.BigEndian, &tv)
+	if err != nil {
+		log.WithError(err).Panic("binary.Read failed")
+	}
+	log.Debugf("DNS-LATENCY: tv=%v", tv)
+	return time.Unix(tv.Sec, tv.Usec*1000)
+}
+
 type domainInfoStore struct {
 	// Channel that we write to when we want DNS response capture to stop.
 	stopChannel chan struct{}
 
 	// Channel on which we receive captured DNS responses (beginning with the IP header).
-	msgChannel chan []byte
+	msgChannel chan nfnetlink.DataWithTimestamp
 
 	// Channel that we write to when new information is available for a domain name.
 	domainInfoChanges chan *domainInfoChanged
@@ -94,6 +108,11 @@ type domainInfoStore struct {
 
 	// Activity logging.
 	collector collector.Collector
+
+	// Handling of DNS request/response timestamps, so that we can measure and report DNS
+	// latency.
+	timestampExpected bool
+	requestTimestamp  map[uint16]time.Time
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -129,6 +148,8 @@ func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, conf
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
 		collector:            config.Collector,
+		timestampExpected:    config.DNSLogsLatency,
+		requestTimestamp:     make(map[uint16]time.Time),
 	}
 	return s
 }
@@ -142,7 +163,7 @@ func (s *domainInfoStore) Start() {
 	// thread can handle a burst of DNS response packets without becoming blocked by the reading
 	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
 	// know that works; even though we probably won't need so much capacity for the DNS case.
-	s.msgChannel = make(chan []byte, 1000)
+	s.msgChannel = make(chan nfnetlink.DataWithTimestamp, 1000)
 	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
 
 	// Ensure that the directory for the persistent file exists.
@@ -170,7 +191,7 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 			// in the next line is clearly a v4 assumption, and some of the code inside
 			// `nfnetlink.SubscribeDNS` also looks v4-specific.
-			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Lazy)
+			packet := gopacket.NewPacket(msg.Data, layers.LayerTypeIPv4, gopacket.Lazy)
 			if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
 				log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
 			} else {
@@ -183,14 +204,18 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			dns := &layers.DNS{}
 			err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
 			if err == nil {
-				if s.collector != nil {
-					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
-						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
-					} else {
-						log.Warning("Not logging non-IPv4 DNS packet")
+				latencyIfKnown := s.processForLatency(dns, msg.Timestamp)
+				if dns.QR == true {
+					// It's a DNS response.
+					if s.collector != nil {
+						if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+							s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
+						} else {
+							log.Warning("Not logging non-IPv4 DNS packet")
+						}
 					}
+					s.processDNSPacket(dns)
 				}
-				s.processDNSPacket(dns)
 			} else {
 				log.WithError(err).Debug("No DNS layer")
 			}
@@ -647,5 +672,43 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 		s.gcTrigger = false
 	}
 
+	return
+}
+
+func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp []uint8) (latencyIfKnown *time.Duration) {
+	if len(timestamp) == 0 {
+		// No timestamp on this packet.
+		if s.timestampExpected {
+			msgType := "request"
+			if dns.QR {
+				msgType = "response"
+			}
+			log.Warnf("DNS-LATENCY: Missing timestamp on DNS %v with ID %v", msgType, dns.ID)
+		}
+	} else if dns.QR == false {
+		// It's a request.
+		if _, exists := s.requestTimestamp[dns.ID]; exists {
+			log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", dns.ID)
+		} else {
+			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", dns.ID)
+			s.requestTimestamp[dns.ID] = TimestampToTime(timestamp)
+		}
+	} else {
+		// It's a response.
+		if requestTime, exists := s.requestTimestamp[dns.ID]; exists {
+			latency := TimestampToTime(timestamp).Sub(requestTime)
+			log.Debugf("DNS-LATENCY: %v for ID %v", latency, dns.ID)
+			delete(s.requestTimestamp, dns.ID)
+			latencyIfKnown = &latency
+		} else {
+			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", dns.ID)
+		}
+	}
+	for id, requestTime := range s.requestTimestamp {
+		if time.Since(requestTime) > 10*time.Second {
+			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
+			delete(s.requestTimestamp, dns.ID)
+		}
+	}
 	return
 }

@@ -1,9 +1,10 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
 	"net"
+	"time"
 
 	"github.com/google/gopacket/layers"
 
@@ -15,5 +16,5 @@ type Collector interface {
 	ReportingChannel() chan<- *proto.DataplaneStats
 	SubscribeToNflog()
 	SetDNSLogReporter(reporter DNSLogReporterInterface)
-	LogDNS(src, dst net.IP, dns *layers.DNS)
+	LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration)
 }

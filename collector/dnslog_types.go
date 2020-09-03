@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -20,11 +20,12 @@ import (
 )
 
 type DNSUpdate struct {
-	ClientIP net.IP
-	ClientEP *calc.EndpointData
-	ServerIP net.IP
-	ServerEP *calc.EndpointData
-	DNS      *layers.DNS
+	ClientIP       net.IP
+	ClientEP       *calc.EndpointData
+	ServerIP       net.IP
+	ServerEP       *calc.EndpointData
+	DNS            *layers.DNS
+	LatencyIfKnown *time.Duration
 }
 
 type EndpointMetadataWithIP struct {
@@ -39,11 +40,24 @@ type DNSMeta struct {
 	RRSetsString string
 }
 
+type DNSLatency struct {
+	// Number of successful latency measurements contributing to
+	// the following mean and max.
+	Count int `json:"count"`
+
+	// Mean latency.
+	Mean time.Duration `json:"mean"`
+
+	// Max latency.
+	Max time.Duration `json:"max"`
+}
+
 type DNSSpec struct {
 	RRSets       DNSRRSets
 	Servers      map[EndpointMetadataWithIP]DNSLabels
 	ClientLabels DNSLabels
 	DNSStats
+	Latency DNSLatency
 }
 
 type DNSSpecEncoded struct {
@@ -51,6 +65,7 @@ type DNSSpecEncoded struct {
 	Servers      []DNSServer `json:"servers"`
 	ClientLabels DNSLabels   `json:"clientLabels"`
 	DNSStats
+	Latency DNSLatency `json:"latency"`
 }
 
 func (a *DNSSpec) Merge(b DNSSpec) {
@@ -63,6 +78,18 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 	}
 	a.ClientLabels = intersectLabels(a.ClientLabels, b.ClientLabels)
 	a.Count += b.Count
+
+	// Latency merging.
+	if b.Latency.Count > 0 {
+		a.Latency.Mean = time.Duration(
+			(int64(a.Latency.Mean)*int64(a.Latency.Count) + int64(b.Latency.Mean)*int64(b.Latency.Count)) /
+				int64(a.Latency.Count+b.Latency.Count),
+		)
+	}
+	if int64(b.Latency.Max) > int64(a.Latency.Max) {
+		a.Latency.Max = b.Latency.Max
+	}
+	a.Latency.Count += b.Latency.Count
 }
 
 func (a *DNSSpec) MarshalJSON() ([]byte, error) {
@@ -74,6 +101,7 @@ func (a *DNSSpec) Encode() *DNSSpecEncoded {
 		RRSets:       a.RRSets,
 		ClientLabels: a.ClientLabels,
 		DNSStats:     a.DNSStats,
+		Latency:      a.Latency,
 	}
 	for e, l := range a.Servers {
 		b.Servers = append(b.Servers, DNSServer{e, l})
@@ -406,6 +434,7 @@ type DNSLog struct {
 	QType           DNSType           `json:"qtype"`
 	RCode           DNSResponseCode   `json:"rcode"`
 	RRSets          DNSRRSets         `json:"rrsets"`
+	Latency         DNSLatency        `json:"latency"`
 }
 
 type QName string
@@ -440,6 +469,7 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		QType:           d.Question.Type,
 		RCode:           d.ResponseCode,
 		RRSets:          e.RRSets,
+		Latency:         e.Latency,
 	}
 
 	if d.ClientMeta.IP != flowLogFieldNotIncluded {

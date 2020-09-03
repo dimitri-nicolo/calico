@@ -16,6 +16,7 @@ package intdataplane_test
 
 import (
 	"net"
+	"time"
 
 	"github.com/projectcalico/felix/capture"
 
@@ -41,7 +42,7 @@ func (_ *mockCollector) SubscribeToNflog() {}
 
 func (_ *mockCollector) Start() {}
 
-func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS) {}
+func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {}
 
 func (_ *mockCollector) SetDNSLogReporter(reporter collector.DNSLogReporterInterface) {}
 

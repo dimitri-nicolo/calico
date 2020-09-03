@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/gopacket/layers"
 )
@@ -28,7 +29,7 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate, kind DNSAggregationKind) (DNSMet
 	}
 	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
-	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, serverLabels, update.DNS)
+	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, serverLabels, update.DNS, update.LatencyIfKnown)
 	meta := newDNSMetaFromSpecAndGoPacket(aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, kind), update.DNS, spec)
 
 	return meta, spec, nil
@@ -43,7 +44,7 @@ func aggregateEndpointMetadataWithIP(em EndpointMetadataWithIP, kind DNSAggregat
 	return em
 }
 
-func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWithIP, serverLabels DNSLabels, dns *layers.DNS) DNSSpec {
+func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWithIP, serverLabels DNSLabels, dns *layers.DNS, latencyIfKnown *time.Duration) DNSSpec {
 	spec := DNSSpec{
 		RRSets:       make(DNSRRSets),
 		Servers:      make(map[EndpointMetadataWithIP]DNSLabels),
@@ -57,6 +58,11 @@ func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWit
 	}
 	spec.Servers[serverEM] = serverLabels
 	spec.ClientLabels = clientLabels
+	if latencyIfKnown != nil {
+		spec.Latency.Count = 1
+		spec.Latency.Max = *latencyIfKnown
+		spec.Latency.Mean = *latencyIfKnown
+	}
 	return spec
 }
 

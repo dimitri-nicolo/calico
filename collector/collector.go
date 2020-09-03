@@ -632,7 +632,7 @@ func (c *collector) SetDNSLogReporter(reporter DNSLogReporterInterface) {
 	c.dnsLogReporter = reporter
 }
 
-func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
+func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {
 	if c.dnsLogReporter == nil {
 		return
 	}
@@ -645,12 +645,16 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
 	}
 	log.Debugf("Src %v -> Server %v", src, serverEP)
 	log.Debugf("Dst %v -> Client %v", dst, clientEP)
+	if latencyIfKnown != nil {
+		log.Debugf("DNS-LATENCY: Log %v", *latencyIfKnown)
+	}
 	update := DNSUpdate{
-		ClientIP: dst,
-		ClientEP: clientEP,
-		ServerIP: src,
-		ServerEP: serverEP,
-		DNS:      dns,
+		ClientIP:       dst,
+		ClientEP:       clientEP,
+		ServerIP:       src,
+		ServerEP:       serverEP,
+		DNS:            dns,
+		LatencyIfKnown: latencyIfKnown,
 	}
 	if err := c.dnsLogReporter.Log(update); err != nil {
 		log.WithError(err).WithFields(log.Fields{

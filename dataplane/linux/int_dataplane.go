@@ -118,6 +118,20 @@ func init() {
 	processStartTime = time.Now()
 }
 
+func EnableTimestamping() error {
+	s, err := unix.Socket(unix.AF_INET, unix.SOCK_RAW, unix.IPPROTO_RAW)
+	if err != nil || s < 0 {
+		return fmt.Errorf("Failed to create raw socket: %v", err)
+	}
+
+	err = unix.SetsockoptInt(s, unix.SOL_SOCKET, unix.SO_TIMESTAMP, 1)
+	if err != nil {
+		return fmt.Errorf("Failed to set SO_TIMESTAMP socket option: %v", err)
+	}
+
+	return nil
+}
+
 type Config struct {
 	Hostname string
 
@@ -203,6 +217,7 @@ type Config struct {
 	// Config for DNS policy.
 	DNSCacheFile         string
 	DNSCacheSaveInterval time.Duration
+	DNSLogsLatency       bool
 
 	LookPathOverride func(file string) (string, error)
 
@@ -317,6 +332,15 @@ const (
 )
 
 func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
+
+	if config.DNSLogsLatency {
+		if err := EnableTimestamping(); err != nil {
+			log.WithError(err).Warning("Couldn't enable timestamping, so DNS latency will not be measured")
+		} else {
+			log.Info("Timestamping enabled, so DNS latency will be measured")
+		}
+	}
+
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
