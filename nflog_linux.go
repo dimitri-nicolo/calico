@@ -264,7 +264,7 @@ func getNflogPacketData(m []byte) (packetData []byte, err error) {
 	}
 	for _, attr := range attrs {
 		if attr.Attr.Type == nfnl.NFULA_TIMESTAMP {
-			log.Infof("DNS-LATENCY: NFULA_TIMESTAMP: %v", attr.Value)
+			log.Infof("DNS-LATENCY: NFULA_TIMESTAMP: %T %v", attr.Value, attr.Value)
 		}
 	}
 	for _, attr := range attrs {
