@@ -1623,39 +1623,41 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 		Context("Pod added", func() {
 			When("the Pod has multiple calico interfaces", func() {
 				It("returns an event for each WorkloadEndpoint for the Pod", func() {
-					testWatchWorkloadEndpoints(&k8sapi.Pod{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "simplePod",
-							Namespace: "testNamespace",
-							Annotations: map[string]string{
-								nettypes.NetworkAttachmentAnnot: "cali1,cal2",
-								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
-									{
-										Name:      "calico-default-network",
-										Interface: "ens4",
-										IPs:       []string{"192.168.91.113"},
-										Mac:       "9e:e7:7e:9d:8f:e0",
-									},
-									{
-										Name:      "cali1",
-										Interface: "net1",
-										IPs:       []string{"192.168.91.114"},
-										Mac:       "7f:e7:3e:9d:8f:a0",
-									},
-									{
-										Name:      "cali2",
-										Interface: "net2",
-										IPs:       []string{"192.168.91.115"},
-										Mac:       "2a:e7:7e:9d:8f:a3",
-									},
-								}),
+					testWatchWorkloadEndpoints([]*k8sapi.Pod{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "simplePod",
+								Namespace: "testNamespace",
+								Annotations: map[string]string{
+									nettypes.NetworkAttachmentAnnot: "cali1,cal2",
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "cali1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "7f:e7:3e:9d:8f:a0",
+										},
+										{
+											Name:      "cali2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "2a:e7:7e:9d:8f:a3",
+										},
+									}),
+								},
 							},
-						},
-						Spec: k8sapi.PodSpec{
-							NodeName: "test-node",
-						},
-						Status: k8sapi.PodStatus{
-							PodIP: "192.168.91.113",
+							Spec: k8sapi.PodSpec{
+								NodeName: "test-node",
+							},
+							Status: k8sapi.PodStatus{
+								PodIP: "192.168.91.113",
+							},
 						},
 					}, []*apiv3.WorkloadEndpoint{
 						{
