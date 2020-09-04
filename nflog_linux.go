@@ -24,7 +24,12 @@ const (
 
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
-func SubscribeDNS(groupNum int, bufSize int, ch chan<- []byte, done <-chan struct{}) error {
+type DataWithTimestamp struct {
+	Data      []byte
+	Timestamp []uint8
+}
+
+func SubscribeDNS(groupNum int, bufSize int, ch chan<- DataWithTimestamp, done <-chan struct{}) error {
 	log.Infof("Subscribe to NFLOG group %v for DNS responses", groupNum)
 	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true)
 	if err != nil {
@@ -229,7 +234,7 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 	}()
 }
 
-func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<- []byte) {
+func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<- DataWithTimestamp) {
 	// Start another goroutine for parsing netlink messages into DNS response data.
 	go func() {
 		defer close(ch)
@@ -243,28 +248,29 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 				logCtx.Debugf("%v messages from DNS response channel", len(res))
 				for _, m := range res {
 					msg := nfnl.DeserializeNfGenMsg(m)
-					packetData, err := getNflogPacketData(m[msg.Len():])
+					packetData, timestamp, err := getNflogPacketData(m[msg.Len():])
 					if err != nil {
 						logCtx.Warnf("Error parsing NFLOG %v", err)
 						continue
 					}
 					logCtx.Debugf("DNS response length %v", len(packetData))
-					ch <- packetData
+					ch <- DataWithTimestamp{Data: packetData, Timestamp: timestamp}
 				}
 			}
 		}
 	}()
 }
 
-func getNflogPacketData(m []byte) (packetData []byte, err error) {
+func getNflogPacketData(m []byte) (packetData []byte, timestamp []uint8, err error) {
 	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
 	err = nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
-		return packetData, err
+		return
 	}
 	for _, attr := range attrs {
 		if attr.Attr.Type == nfnl.NFULA_TIMESTAMP {
 			log.Infof("DNS-LATENCY: NFULA_TIMESTAMP: %T %v", attr.Value, attr.Value)
+			timestamp = attr.Value
 		}
 	}
 	for _, attr := range attrs {
