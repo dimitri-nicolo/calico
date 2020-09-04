@@ -375,19 +375,19 @@ func (m *endpointManager) CompleteDeferredWork() error {
 				egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(t, false))
 			}
 			logCxt.Warnf("song 01  before flatten %+v", ingressRules)
-	                for i, rules := range ingressRules {
-                          for j, rule := range rules {
-		            logCxt.Warnf("hns ingress rule %d,%d : %+v", i, j, *rule)
-                          }
-	                }
+			for i, rules := range ingressRules {
+				for j, rule := range rules {
+					logCxt.Warnf("hns ingress rule %d,%d : %+v", i, j, *rule)
+				}
+			}
 
 			// Flatten any tiers.
 			flatIngressRules := flattenTiers(ingressRules)
 			flatEgressRules := flattenTiers(egressRules)
 			logCxt.Warnf("song after flatten %+v", ingressRules)
-	                for i, rule := range flatIngressRules {
-		            logCxt.Warnf("hns ingress rule %d : %+v", i, *rule)
-	                }
+			for i, rule := range flatIngressRules {
+				logCxt.Warnf("hns ingress rule %d : %+v", i, *rule)
+			}
 
 			// Finally, for RS3 only, add default allow rule with a host-scope to allow traffic through
 			// the host windows firewall

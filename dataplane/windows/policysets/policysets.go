@@ -122,7 +122,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	}
 
 	debug := log.GetLevel() >= log.DebugLevel
-        debug = true
+	debug = true
 
 	var lastRule *hns.ACLPolicy
 	for _, setId := range setIds {
@@ -158,7 +158,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 			memberCopy := *member
 			memberCopy.Priority = currentPriority
 			rules = append(rules, &memberCopy)
-                        log.Warnf("song get %+v", memberCopy)
+			log.Warnf("song get %+v", memberCopy)
 
 			lastRule = &memberCopy
 		}
@@ -348,7 +348,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	default:
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
-       logCxt.WithField("action", ruleCopy.Action).Warnf("song rule action. action string %s, %+v", strings.ToLower(ruleCopy.Action), aclPolicy)
+	logCxt.WithField("action", ruleCopy.Action).Warnf("song rule action. action string %s, %+v", strings.ToLower(ruleCopy.Action), aclPolicy)
 
 	// Protocol
 	//
@@ -492,9 +492,9 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 			}
 		}
 	}
-        for i, rule := range aclPolicies {
-            logCxt.Warnf("song final acl policy %d rule : %+v", i, *rule)
-        }
+	for i, rule := range aclPolicies {
+		logCxt.Warnf("song final acl policy %d rule : %+v", i, *rule)
+	}
 
 	return aclPolicies, nil
 }

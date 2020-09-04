@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.1 // indirect
-	github.com/Microsoft/hcsshim v0.8.6
 	github.com/Microsoft/hcsshim v0.8.9
 	github.com/aws/aws-sdk-go v1.31.15
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
@@ -46,6 +45,7 @@ require (
 	github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5
 	github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be
 	github.com/vishvananda/netlink v1.0.0
+	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
@@ -65,12 +65,12 @@ require (
 )
 
 replace (
+	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200818223838-6dd792140b9c
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200819172331-d0a598db45ea
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
-	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for
