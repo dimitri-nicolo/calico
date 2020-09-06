@@ -389,11 +389,6 @@ func (m *endpointManager) CompleteDeferredWork() error {
 				logCxt.Warnf("hns ingress rule %d : %+v", i, *rule)
 			}
 
-			// Finally, for RS3 only, add default allow rule with a host-scope to allow traffic through
-			// the host windows firewall
-			flatIngressRules = append(flatIngressRules, m.policysetsDataplane.NewHostRule(true))
-			flatEgressRules = append(flatEgressRules, m.policysetsDataplane.NewHostRule(false))
-
 			// Make sure priorities are ascending.
 			rewritePriorities(flatIngressRules)
 			rewritePriorities(flatEgressRules)
