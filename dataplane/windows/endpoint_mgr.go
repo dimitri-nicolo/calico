@@ -468,10 +468,7 @@ func (m *endpointManager) markAllEndpointForRefresh() {
 // as an endpoint policy update (this actually applies the rules to the dataplane).
 func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpointId string, inboundRules, outboundRules []*hns.ACLPolicy) error {
 	logCxt := log.WithFields(log.Fields{"id": workloadId, "endpointId": endpointId})
-	logCxt.WithFields(log.Fields{
-		"inboundPolicyIds":  inboundPolicyIds,
-		"outboundPolicyIds": outboundPolicyIds,
-	}).Info("Applying endpoint rules")
+	logCxt.Info("Applying endpoint rules")
 
 	rules := make([]*hns.ACLPolicy, 0, len(inboundRules)+len(outboundRules)+1)
 

@@ -18,7 +18,7 @@ import (
 
 func flattenTiers(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
 	if len(tiers) == 0 {
-		panic("Ran out of rules")
+		log.Panic("Ran out of rules")
 	}
 	if len(tiers) == 1 {
 		return tiers[0]

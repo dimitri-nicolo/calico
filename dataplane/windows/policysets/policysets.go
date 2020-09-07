@@ -302,6 +302,11 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 		return nil, ErrNotSupported
 	}
 
+	if strings.ToLower(pRule.Action) == "log" {
+		log.WithField("rule", pRule).Info("Skipping rule because it has log action (currently unsupported).")
+		return nil, ErrNotSupported
+	}
+
 	// Filter the Src and Dst CIDRs to only the IP version that we're rendering
 	var filteredAll bool
 	ruleCopy := *pRule
@@ -341,7 +346,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 		aclPolicy.Action = hns.Allow
 	case "deny":
 		aclPolicy.Action = hns.Block
-	case "next-tier", "pass", "log":
+	case "next-tier", "pass":
 		aclPolicy.Action = ActionPass
 	default:
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
