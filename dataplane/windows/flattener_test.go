@@ -107,7 +107,7 @@ func TestFlatten(t *testing.T) {
 		{Action: hns.Allow, RemotePorts: "12-15"},
 	}))
 
-	t.Log("Should recurse")
+	t.Log("Should recurse with non-overlapping pass on second tier")
 	Expect(flattenTiers([][]*hns.ACLPolicy{
 		{
 			{Action: policysets.ActionPass, RemoteAddresses: "10.0.0.0/16,11.0.0.0/24"},
@@ -123,13 +123,34 @@ func TestFlatten(t *testing.T) {
 		},
 	})).To(Equal([]*hns.ACLPolicy{
 		// First pass rule
-		{Action: hns.Allow, RemoteAddresses: "10.0.11.0/28"},
-		{Action: hns.Block, RemoteAddresses: "10.0.10.0/28"},
-		{Action: hns.Allow,
-			RemoteAddresses: "10.0.0.0/16,11.0.0.0/24",
-			LocalAddresses:  "12.0.0.0/8"},
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24,11.0.0.0/24"},
+		{Action: hns.Allow, RemoteAddresses: "10.0.0.0/16,11.0.0.0/24", LocalAddresses: "12.0.0.0/8"},
 		// Second pass rule
-		{Action: hns.Allow, RemoteAddresses: "10.0.11.0/28"},
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/26"},
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/26", LocalAddresses: "12.0.0.0/8"},
+	}))
+
+	t.Log("Should recurse with overlapping pass on second tier")
+	Expect(flattenTiers([][]*hns.ACLPolicy{
+		{
+			{Action: policysets.ActionPass, RemoteAddresses: "10.0.0.0/16,11.0.0.0/24"},
+			{Action: policysets.ActionPass, RemoteAddresses: "10.0.10.0/26"},
+		},
+		{{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24,11.0.0.0/8"},
+			{Action: policysets.ActionPass, RemoteAddresses: "10.0.10.0/24"},
+			{Action: hns.Allow, LocalAddresses: "12.0.0.0/8"},
+		},
+		{
+			{Action: hns.Allow, RemoteAddresses: "10.0.11.0/28"},
+			{Action: hns.Block, RemoteAddresses: "10.0.10.0/28"},
+		},
+	})).To(Equal([]*hns.ACLPolicy{
+		// First pass rule
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24,11.0.0.0/24"},
+		{Action: hns.Block, RemoteAddresses: "10.0.10.0/28"},
+		{Action: hns.Allow, RemoteAddresses: "10.0.0.0/16,11.0.0.0/24", LocalAddresses: "12.0.0.0/8"},
+		// Second pass rule
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/26"},
 		{Action: hns.Block, RemoteAddresses: "10.0.10.0/28"},
 		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/26", LocalAddresses: "12.0.0.0/8"},
 	}))
