@@ -158,7 +158,6 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 			memberCopy := *member
 			memberCopy.Priority = currentPriority
 			rules = append(rules, &memberCopy)
-			log.Warnf("song get %+v", memberCopy)
 
 			lastRule = &memberCopy
 		}
@@ -228,7 +227,7 @@ func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Ru
 
 // convertPolicyToRules converts the provided inbound and outbound proto rules into hns rules.
 func (s *PolicySets) convertPolicyToRules(policyId string, inboundRules []*proto.Rule, outboundRules []*proto.Rule) (hnsRules []*hns.ACLPolicy) {
-	log.WithField("policyId", policyId).Warn("song Converting policy to HNS rules.")
+	log.WithField("policyId", policyId).Debug("Converting policy to HNS rules.")
 
 	inbound := s.protoRulesToHnsRules(policyId, inboundRules, true)
 	hnsRules = append(hnsRules, inbound...)
@@ -277,7 +276,7 @@ func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.R
 // Rules with: Negative match criteria, Actions other than 'allow' or 'deny'and ICMP type/codes.
 //
 func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
-	log.WithField("policyId", policyId).Warn("song protoRuleToHnsRules")
+	log.WithField("policyId", policyId).Debug("protoRuleToHnsRules")
 
 	// Check IpVersion
 	if pRule.IpVersion != 0 && pRule.IpVersion != proto.IPVersion(ipVersion) {
@@ -343,12 +342,10 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	case "deny":
 		aclPolicy.Action = hns.Block
 	case "next-tier", "pass", "log":
-		logCxt.WithField("action", ruleCopy.Action).Warnf("song rule with pass action. %+v", ruleCopy)
 		aclPolicy.Action = ActionPass
 	default:
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
-	logCxt.WithField("action", ruleCopy.Action).Warnf("song rule action. action string %s, %+v", strings.ToLower(ruleCopy.Action), aclPolicy)
 
 	// Protocol
 	//
@@ -491,9 +488,6 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 				}
 			}
 		}
-	}
-	for i, rule := range aclPolicies {
-		logCxt.Warnf("song final acl policy %d rule : %+v", i, *rule)
 	}
 
 	return aclPolicies, nil

@@ -374,20 +374,10 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			for _, t := range egressPolNames {
 				egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(t, false))
 			}
-			logCxt.Warnf("song 01  before flatten %+v", ingressRules)
-			for i, rules := range ingressRules {
-				for j, rule := range rules {
-					logCxt.Warnf("hns ingress rule %d,%d : %+v", i, j, *rule)
-				}
-			}
 
 			// Flatten any tiers.
 			flatIngressRules := flattenTiers(ingressRules)
 			flatEgressRules := flattenTiers(egressRules)
-			logCxt.Warnf("song after flatten %+v", ingressRules)
-			for i, rule := range flatIngressRules {
-				logCxt.Warnf("hns ingress rule %d : %+v", i, *rule)
-			}
 
 			// Make sure priorities are ascending.
 			rewritePriorities(flatIngressRules)
@@ -478,10 +468,10 @@ func (m *endpointManager) markAllEndpointForRefresh() {
 // as an endpoint policy update (this actually applies the rules to the dataplane).
 func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpointId string, inboundRules, outboundRules []*hns.ACLPolicy) error {
 	logCxt := log.WithFields(log.Fields{"id": workloadId, "endpointId": endpointId})
-	// logCxt.WithFields(log.Fields{
-	// 	"inboundPolicyIds":  inboundPolicyIds,
-	// 	"outboundPolicyIds": outboundPolicyIds,
-	// }).Info("Applying endpoint rules")
+	logCxt.WithFields(log.Fields{
+		"inboundPolicyIds":  inboundPolicyIds,
+		"outboundPolicyIds": outboundPolicyIds,
+	}).Info("Applying endpoint rules")
 
 	rules := make([]*hns.ACLPolicy, 0, len(inboundRules)+len(outboundRules)+1)
 
@@ -506,10 +496,6 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 
 	endpoint := &hns.HNSEndpoint{}
 	endpoint.Id = endpointId
-
-	for i, rule := range rules {
-		logCxt.Warnf("hns rule %d : %+v", i, *rule)
-	}
 
 	if err := endpoint.ApplyACLPolicy(rules...); err != nil {
 		logCxt.WithError(err).Warning("Failed to apply rules. This operation will be retried.")

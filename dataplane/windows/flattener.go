@@ -67,8 +67,6 @@ func appendCombinedRules(newRules []*hns.ACLPolicy, secondTier []*hns.ACLPolicy,
 // Calculates r1 && r2 and uses the action/ID from r2.
 func combineRules(r1, r2 *hns.ACLPolicy) *hns.ACLPolicy {
 	combined := *r2
-	log.Warnf("song combine r1: %+v", *r1)
-	log.Warnf("song combine r2: %+v", *r2)
 
 	if r1.Protocol != 256 {
 		if r2.Protocol == 256 {
