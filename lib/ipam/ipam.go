@@ -454,8 +454,6 @@ func (s *blockAssignState) findOrClaimBlock(ctx context.Context, minFreeIps int)
 				logCtx.Debugf("Block '%s' has %d free ips which is less than %d ips required.", cidr.String(), block.NumFreeAddresses(), minFreeIps)
 				break
 			}
-
-			s.datastoreRetryCount++
 		}
 	}
 
@@ -562,6 +560,19 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 	config, err := c.GetIPAMConfig(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Merge in any global config, if it exists. We use the more restrictive value between
+	// the global max block limit, and the limit provided on this particular request.
+	if config.MaxBlocksPerHost > 0 && maxNumBlocks > 0 && maxNumBlocks > config.MaxBlocksPerHost {
+		// The global config is more restrictive, so use it instead.
+		maxNumBlocks = config.MaxBlocksPerHost
+	} else if maxNumBlocks == 0 {
+		// No per-request value, so use the global one.
+		maxNumBlocks = config.MaxBlocksPerHost
+	}
+	if maxNumBlocks > 0 {
+		logCtx.Debugf("Host must not use more than %d blocks", maxNumBlocks)
 	}
 
 	s := &blockAssignState{
@@ -1111,6 +1122,7 @@ func (c ipamClient) ReleaseHostAffinities(ctx context.Context, host string, must
 		return err
 	}
 
+	var storedError error
 	versions := []int{4, 6}
 	for _, version := range versions {
 		blockCIDRs, _, err := c.blockReaderWriter.getAffineBlocks(ctx, hostname, version, nil)
@@ -1119,17 +1131,28 @@ func (c ipamClient) ReleaseHostAffinities(ctx context.Context, host string, must
 		}
 
 		for _, blockCIDR := range blockCIDRs {
-			err := c.ReleaseAffinity(ctx, blockCIDR, hostname, mustBeEmpty)
-			if err != nil {
-				if _, ok := err.(errBlockClaimConflict); ok {
-					// Claimed by a different host.
-				} else {
-					return err
+			logCtx := log.WithField("cidr", blockCIDR)
+			for i := 0; i < datastoreRetries; i++ {
+				err := c.blockReaderWriter.releaseBlockAffinity(ctx, host, blockCIDR, mustBeEmpty)
+				if err != nil {
+					if _, ok := err.(errBlockClaimConflict); ok {
+						// Claimed by a different host.
+					} else if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
+						// Block does not exist - ignore.
+					} else if _, ok := err.(cerrors.ErrorResourceUpdateConflict); ok {
+						logCtx.WithError(err).Debug("CAS error releasing block affinity - retry")
+						continue
+					} else {
+						// Store the error for later so we can return it.
+						// We don't want to return just yet so we can do a best-effort
+						// attempt at releasing the other CIDRs for this host.
+						storedError = err
+					}
 				}
 			}
 		}
 	}
-	return nil
+	return storedError
 }
 
 // ReleasePoolAffinities releases affinity for all blocks within
@@ -1522,7 +1545,11 @@ func (c ipamClient) GetIPAMConfig(ctx context.Context) (config *IPAMConfig, err 
 		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
 			// IPAMConfig has not been explicitly set.  Return
 			// a default IPAM configuration.
-			config = &IPAMConfig{AutoAllocateBlocks: true, StrictAffinity: false}
+			config = &IPAMConfig{
+				AutoAllocateBlocks: true,
+				StrictAffinity:     false,
+				MaxBlocksPerHost:   0,
+			}
 			err = nil
 		} else {
 			log.Errorf("Error getting IPAMConfig: %v", err)
@@ -1561,6 +1588,13 @@ func (c ipamClient) SetIPAMConfig(ctx context.Context, cfg IPAMConfig) error {
 		return errors.New("Cannot disable 'StrictAffinity' and 'AutoAllocateBlocks' at the same time")
 	}
 
+	if cfg.MaxBlocksPerHost > 0 && !cfg.StrictAffinity {
+		// MaxBlocksPerHost always takes effect before StrictAffinity,
+		// so require the user to be explicit in order to prevent confusing behavior, and to
+		// ensure that our code behaves consistently even in places where MaxBlocksPerHost isn't checked.
+		return errors.New("MaxBlocksPerHost requires StrictAffinity to be enabled")
+	}
+
 	// Get revision if resource already exists
 	old, err := c.client.Get(ctx, model.IPAMConfigKey{}, "")
 	if err != nil {
@@ -1591,6 +1625,7 @@ func (c ipamClient) convertIPAMConfigToBackend(cfg *IPAMConfig) *model.IPAMConfi
 	return &model.IPAMConfig{
 		StrictAffinity:     cfg.StrictAffinity,
 		AutoAllocateBlocks: cfg.AutoAllocateBlocks,
+		MaxBlocksPerHost:   cfg.MaxBlocksPerHost,
 	}
 }
 
@@ -1598,6 +1633,7 @@ func (c ipamClient) convertBackendToIPAMConfig(cfg *model.IPAMConfig) *IPAMConfi
 	return &IPAMConfig{
 		StrictAffinity:     cfg.StrictAffinity,
 		AutoAllocateBlocks: cfg.AutoAllocateBlocks,
+		MaxBlocksPerHost:   cfg.MaxBlocksPerHost,
 	}
 }
 
