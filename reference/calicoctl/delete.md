@@ -24,7 +24,7 @@ command.
 
 ```
 Usage:
-  calicoctl delete ( (<KIND> [<NAME>]) |
+  calicoctl delete ( (<KIND> [<NAME...>]) |
                    --filename=<FILE>) [--recursive] [--skip-empty]
                    [--skip-not-exists] [--config=<CONFIG>] [--namespace=<NS>]
 

@@ -92,9 +92,9 @@ The geeky details of what you get:
 {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:VXLAN,Routing:Calico,Datastore:Kubernetes' %}
 
    > **Note**: {{site.prodname}} networking cannot currently be installed on the EKS control plane nodes. As a result the control plane nodes
-   > will not be able to initiate network connections to {{site.prodname}} networked pods. (This is a general limitation of EKS's custom networking support,
+   > will not be able to initiate network connections to {{site.prodname}} pods. (This is a general limitation of EKS's custom networking support,
    > not specific to {{site.prodname}}.) As a workaround, trusted pods that require control plane nodes to connect to them, such as those implementing
-   > admission controller webhooks, can include `hostNetwork: true` in their pod spec. See the Kuberentes API
+   > admission controller webhooks, can include `hostNetwork:true` in their pod spec. See the Kuberentes API
    > {% include open-new-window.html text='pod spec' url='https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#podspec-v1-core' %}
    > definition for more information on this setting.
    {: .alert .alert-info }
@@ -111,7 +111,7 @@ Before you get started, make sure you have downloaded and configured the {% incl
    eksctl create cluster --name my-calico-cluster --without-nodegroup
    ```
 
-1. Since this cluster will use Calico for networking, you must delete the `aws-node` daemon set to disable AWS VPC networking for pods.
+1. Since this cluster will use {{site.prodname}} for networking, you must delete the `aws-node` daemon set to disable AWS VPC networking for pods.
 
    ```bash
    kubectl delete daemonset -n kube-system aws-node
@@ -155,16 +155,15 @@ Before you get started, make sure you have downloaded and configured the {% incl
    kubectl create -f {{ "/manifests/eks/custom-resources-calico-cni.yaml" | absolute_url }}
    ```
 
-1. Add nodes to the cluster.
+1. Finally, add nodes to the cluster.
 
    ```bash
-   eksctl create nodegroup --cluster my-calico-cluster --node-type t3.xlarge --node-ami auto
+   eksctl create nodegroup --cluster my-calico-cluster --node-type t3.xlarge --node-ami auto --max-pods-per-node 100
    ```
 
-   > **Tip**: See `eksctl create nodegroup --help` for the full set of node group options.
-   {: .alert .alert-success}
+   > **Tip**: Without the `--max-pods-per-node` option above, EKS will limit the {% include open-new-window.html text='number of pods based on node-type' url='https://github.com/awslabs/amazon-eks-ami/blob/master/files/eni-max-pods.txt' %}. See `eksctl create nodegroup --help` for the full set of node group options.
 
-1. Monitor progress with the following command:
+3. Monitor progress with the following command:
 
    ```
    watch kubectl get tigerastatus
@@ -202,7 +201,8 @@ The geeky details of what you get:
 ### Next steps
 
 - [Configure access to {{site.prodname}} Manager]({{site.baseurl}}/getting-started/cnx/access-the-manager)
-- {% include open-new-window.html text='Video: Everything you need to know about Kubernetes pod networking with AWS and EKS' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-pod-networking-on-aws/' %}
-- [Get started with Kubernetes network policy]({{ site.baseurl }}/security/kubernetes-network-policy)
+
+**Recommended**
+- {% include open-new-window.html text='Video: Everything you need to know about Kubernetes pod networking on AWS' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-pod-networking-on-aws/' %}
 - [Get started with {{site.prodname}} network policy]({{ site.baseurl }}/security/calico-enterprise-policy)
 - [Enable default deny for Kubernetes pods]({{ site.baseurl }}/security/kubernetes-default-deny)

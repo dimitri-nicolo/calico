@@ -36,6 +36,26 @@ section:
       path: /getting-started/openshift/requirements
     - title: Installation
       path: /getting-started/openshift/installation/
+  - title: Calico Enterprise for Windows
+    path: /getting-started/windows-calico/
+    section:
+    - title: Limitations and known issues
+      path: /getting-started/windows-calico/limitations
+    - title: Quickstart
+      path: /getting-started/windows-calico/quickstart
+    - title: Standard install
+      path: /getting-started/windows-calico/
+      section:
+      - title: Requirements
+        path: /getting-started/windows-calico/requirements
+      - title: Install Calico Enterprise for Windows
+        path: /getting-started/windows-calico/standard
+    - title: Create kubeconfig for Windows nodes
+      path: /getting-started/windows-calico/kubeconfig
+    - title: Start and stop Calico Enterprise for Windows services
+      path: /getting-started/windows-calico/maintain
+    - title: Troubleshoot Calico Enterprise for Windows
+      path: /getting-started/windows-calico/troubleshoot  
   - title: Install from a private registry
     path: /getting-started/private-registry/
     section:

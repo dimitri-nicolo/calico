@@ -17,10 +17,12 @@ url: https://docs.tigera.io
 
 prodname: Calico Enterprise
 prodnamedash: calico-enterprise
+prodnameWindows: Calico Enterprise for Windows
 tseeprodname: Tigera Secure EE
 tseeprodnamedash: tigera-secure-ee
 nodecontainer: cnx-node
 repository: projectcalico/calico
+
 noderunning: calico-node
 
 # DEPRECATED: This list of imageNames is not to be used or updated.

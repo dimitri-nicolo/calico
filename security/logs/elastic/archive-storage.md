@@ -50,7 +50,7 @@ This how-to guide uses the following {{site.prodname}} features:
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
-     name: tigera-secure
+     name: tigera-secure
    spec:
      additionalStores:
        s3:
@@ -84,7 +84,7 @@ This how-to guide uses the following {{site.prodname}} features:
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
-     name: tigera-secure
+     name: tigera-secure
    spec:
      additionalStores:
        syslog:
@@ -131,7 +131,7 @@ This how-to guide uses the following {{site.prodname}} features:
    apiVersion: operator.tigera.io/v1
    kind: LogCollector
    metadata:
-     name: tigera-secure
+     name: tigera-secure
    spec:
      additionalStores:
        splunk:

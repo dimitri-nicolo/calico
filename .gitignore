@@ -33,3 +33,6 @@ _includes/charts/*/values.yaml
 
 # Generated file by make targets.
 helm-tests/helm-tests.coverprofile
+
+# ignore changes during local website development
+.jekyll-cache

@@ -10,7 +10,7 @@
     version: master
     registry: quay.io
   calico:
-    minor_version: v3.15
+    minor_version: v3.16
     archive_path: archive
   components:
     cnx-manager:

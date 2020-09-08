@@ -21,7 +21,7 @@ section:
     path: /networking/mtu
   - title: Custom BGP configuration
     path: /networking/custom-bgp-config
-  - title: Configure workload access outside cluster
+  - title: Configure outgoing NAT
     path: /networking/workloads-outside-cluster
   - title: Direct outbound traffic through egress gateways
     path: /networking/egress-gateway

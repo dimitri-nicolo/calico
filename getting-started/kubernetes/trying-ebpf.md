@@ -22,8 +22,8 @@ The new eBPF dataplane mode has several advantages over standard linux networkin
   * Preserves external client source IP addresses all the way to the pod.
   * Supports DSR (Direct Server Return) for more efficient service routing.
   * Uses less CPU than kube-proxy to keep the dataplane in sync.
-  
-Trying out the tech preview will give you a taste of these benefits and an opportunity to give feedback to the {{site.prodname}} team. 
+
+Trying out the tech preview will give you a taste of these benefits and an opportunity to give feedback to the {{site.prodname}} team.
 
 To learn more and see performance metrics from our test environment, see the blog, {% include open-new-window.html text='Introducing the Calico eBPF dataplane' url='https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/' %}.
 
@@ -54,7 +54,7 @@ In the tech preview release, eBPF mode has the following pre-requisites:
 - Single-homed hosts; eBPF mode currently assumes a single "main" host IP and interface.
 - IPv4 only.  The tech preview release does not support IPv6.
 - Kubernetes API Datastore only.
-- Typha is not supported in the tech preview. 
+- Typha is not supported in the tech preview.
 - The base [requirements]({{site.baseurl}}/getting-started/kubernetes/requirements) also apply.
 
 ### How to
@@ -66,7 +66,7 @@ In the tech preview release, eBPF mode has the following pre-requisites:
 
 #### Set up a suitable cluster
 
-We recommend using `kubeadm` to bootstrap a suitable cluster on AWS.  
+We recommend using `kubeadm` to bootstrap a suitable cluster on AWS.
 
 1. In AWS, create a controller node and at least 2 worker nodes in the same VPC subnet.  Use Ubuntu 19.10 as the image.
 
@@ -118,16 +118,16 @@ We recommend using `kubeadm` to bootstrap a suitable cluster on AWS.
 
 #### Install {{site.prodname}} on nodes
 
-For the tech preview, only the Kubernetes API Datastore is supported.  Since {{site.prodname}} replaces `kube-proxy` in eBPF mode, it requires the IP and port of your API server to be set in its config map. 
+For the tech preview, only the Kubernetes API Datastore is supported.  Since {{site.prodname}} replaces `kube-proxy` in eBPF mode, it requires the IP and port of your API server to be set in its config map.
 
 1. Download the following {{site.prodname}} install manifest.
 
    ```bash
    curl {{ "/manifests/calico-bpf.yaml" | absolute_url }} -O
    ```
-   
+
    The manifest is configured to:
-    
+
    * use the Kubernetes API Datastore
    * turn on BPF mode
    * use no encapsulation (which requires using a single subnet in AWS).
@@ -171,21 +171,21 @@ For the tech preview, only the Kubernetes API Datastore is supported.  Since {{s
      veth_mtu: "<MTU>"
      ...
    ```
-   
+
 1. Disable `kube-proxy` on your cluster.  The following command adds a node selector to the `kube-proxy` daemon set that won't match anything:
 
    ```bash
    kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": "true"}}}}}'
-   ```  
-   
+   ```
+
    Since the selector won't match anything, `kube-proxy` won't run anywhere but it can be easily re-enabled by removing the selector.
-   
+
 1. Apply the {{site.prodname}} manifest using the following command.
 
    ```bash
    kubectl apply -f calico-bpf.yaml
    ```
-   
+
 1. Verify that the calico-node pods start and become ready and that the `kube-proxy` pods shut down:
    ```bash
    watch kubectl get po -n kube-system
@@ -204,7 +204,7 @@ For the tech preview, only the Kubernetes API Datastore is supported.  Since {{s
    kube-apiserver-host-name                        1/1     Running   0          46m
    kube-controller-manager-host-name               1/1     Running   0          46m
    kube-scheduler-host-name                        1/1     Running   0          46m
-   ``` 
+   ```
 
 #### Try out DSR mode
 
@@ -216,7 +216,7 @@ DSR mode is disabled by default; to enable it, set the `BPFExternalServiceMode` 
 kubectl set env -n kube-system ds/calico-node FELIX_BPFExternalServiceMode="DSR"
 ```
 
-#### Toggle between eBPF and the standard linux networking pipeline 
+#### Toggle between eBPF and the standard linux networking pipeline
 
 After following the above instructions you'll have a cluster running in eBPF mode.  If you'd like to switch to the standard linux networking pipeline mode for comparison purposes:
 
@@ -224,7 +224,7 @@ After following the above instructions you'll have a cluster running in eBPF mod
    ```bash
    kubectl set env -n kube-system ds/calico-node FELIX_BPFENABLED="false"
    ```
-   
+
 1. To re-enable the Kubernetes `kube-proxy` you can use the following command to reverse the node selector change we made above:
    ```bash
    kubectl patch ds -n kube-system kube-proxy --type merge -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": null}}}}}'
@@ -236,8 +236,8 @@ To re-enable BPF mode:
 
    ```bash
    kubectl patch ds -n kube-system kube-proxy -p '{"spec":{"template":{"spec":{"nodeSelector":{"non-calico": "true"}}}}}'
-   ```  
-   
+   ```
+
 1. Re-enable eBPF mode:
    ```bash
    kubectl set env -n kube-system ds/calico-node FELIX_BPFENABLED="true"

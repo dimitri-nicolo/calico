@@ -126,7 +126,7 @@ Familiarity with [Calico tiered policy]({{site.baseurl}}/security/tiered-policy)
 
 2. Create a GlobalNetworkPolicy for address group mappings.
 
-    For example, a GlobalNetworkPolicy can select a set of pods that require egress access to external workloads. In the following GlobalNetworkPolicy, the firewall controller creates an address group named, ‘default.production-microservice1’ in the Fortigate firewall. The members of ‘default.production-microservice1’ address group include IP addresses of nodes. Each node can host one or more pods whose label selector match with “"env == 'prod' && role == 'microservice1'". Each GlobalNetworkPolicy maps to an address group in FortiGate Firewall.
+    For example, a GlobalNetworkPolicy can select a set of pods that require egress access to external workloads. In the following GlobalNetworkPolicy, the firewall controller creates an address group named, `default.production-microservice1` in the Fortigate firewall. The members of `default.production-microservice1` address group include IP addresses of nodes. Each node can host one or more pods whose label selector match with `env == 'prod' && role == 'microservice1'`. Each GlobalNetworkPolicy maps to an address group in FortiGate Firewall.
 
     ```
     apiVersion: projectcalico.org/v3
@@ -146,7 +146,7 @@ Familiarity with [Calico tiered policy]({{site.baseurl}}/security/tiered-policy)
 
 1. Log in to the Fortigate Firewall user interface.
 2. Under Policy & Objects, click Addresses.
-3. Verify that your Kubernetes-related address objects and address group objects are created with the following comments “Managed by Tigera {{site.prodname}}”.
+3. Verify that your Kubernetes-related address objects and address group objects are created with the following comments "Managed by Tigera {{site.prodname}}".
 
 
 ### Above and beyond

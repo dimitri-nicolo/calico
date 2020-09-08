@@ -246,7 +246,7 @@ as described in the section above.
    ```
    git add _data/release-notes/<VERSION>-release-notes.md
    ```
-
+            
 1. Commit your changes. For example:
 
    ```

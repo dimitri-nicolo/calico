@@ -183,7 +183,7 @@ You may have noticed that the bulk of the above instructions are about provision
 
 ##### Kubespray
 
-{% include open-new-window.html text='Kubespray' url='https://kubespray.io/' %} is a tool for provisioning and managing Kubernetes clusters with support for multiple clouds including Google Compute Engine.  Calico is the default networking provider, or you can set the `kube_network_plugin` variable to `calico`. See the Kubespray docs for more details. See the {% include open-new-window.html text='Kubespray docs' url='https://kubespray.io/#/?id=network-plugins' %} for more details.
+{% include open-new-window.html text='Kubespray' url='https://github.com/kubernetes-sigs/kubespray' %} is a tool for provisioning and managing Kubernetes clusters with support for multiple clouds including Google Compute Engine.  Calico is the default networking provider, or you can set the `kube_network_plugin` variable to `calico`. See the Kubespray docs for more details. See the {% include open-new-window.html text='Kubespray docs' url='https://github.com/kubernetes-sigs/kubespray#network-plugins' %} for more details.
 
 ### Next steps
 

@@ -26,11 +26,6 @@ spec:
         prometheus.io/scrape: 'true'
         prometheus.io/port: {{ .Values.node.prometheusMetricsPort | quote }}
 {{- end }}
-        # This, along with the CriticalAddonsOnly toleration below,
-        # marks the pod as a critical add-on, ensuring it gets
-        # priority scheduling and that its resources are reserved
-        # if it ever gets evicted.
-        scheduler.alpha.kubernetes.io/critical-pod: ''
         # This contains a hash of the {{include "variant_name" . | lower}}-config ConfigMap
         # and can be updated to trigger a rolling update if the ConfigMap is updated.
         calico-configmap-hash: {{ tuple "calico-config.yaml" . | include "calico.hash" }}
@@ -68,6 +63,11 @@ spec:
         - name: upgrade-ipam
           image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
+          envFrom:
+          - configMapRef:
+              # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+              name: kubernetes-services-endpoint
+              optional: true
           env:
 {{- if .Values.bpf }}
             # Overrides for kubernetes API server host/port. Needed in BPF mode.
@@ -90,6 +90,11 @@ spec:
         - name: install-cni
           image: {{ join ":" (list .Values.cni.image .Values.cni.tag) }}
           command: ["/opt/cni/bin/install"]
+          envFrom:
+          - configMapRef:
+              # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+              name: kubernetes-services-endpoint
+              optional: true
           env:
 {{- if .Values.bpf }}
             # Overrides for kubernetes API server host/port. Needed in BPF mode.
@@ -165,6 +170,11 @@ spec:
         - name: calico-node
           image: {{ join ":" (list .Values.node.image .Values.node.tag) }}
 {{ tuple .Values.node.resources | include "calico.resourceLimits" | indent 10 -}}
+          envFrom:
+          - configMapRef:
+              # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+              name: kubernetes-services-endpoint
+              optional: true
           env:
 {{- if .Values.bpf }}
             # Overrides for kubernetes API server host/port. Needed in BPF mode.
@@ -256,7 +266,7 @@ spec:
               value: "{{- if .Values.bpf -}} Never {{- else if .Values.vxlan -}} Never {{- else -}} Always {{- end -}}"
             # Enable or Disable VXLAN on the default IP pool.
             - name: CALICO_IPV4POOL_VXLAN
-              value: "{{- if .Values.vxlan -}} CrossSubnet {{- else -}} Never {{- end -}}"
+              value: "{{- if .Values.vxlan -}} Always {{- else -}} Never {{- end -}}"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
               valueFrom:
@@ -265,6 +275,12 @@ spec:
                   key: veth_mtu
             # Set MTU for the VXLAN tunnel device.
             - name: FELIX_VXLANMTU
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower}}-config
+                  key: veth_mtu
+            # Set MTU for the Wireguard tunnel device.
+            - name: FELIX_WIREGUARDMTU
               valueFrom:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
@@ -318,6 +334,11 @@ spec:
             # Cluster type to identify the deployment type
             - name: CLUSTER_TYPE
               value: "k8s"
+{{- end }}
+{{- if and (eq .Values.network "calico") (.Values.vxlan) }}
+            # Disable AWS source-destination check on nodes.
+            - name: FELIX_AWSSRCDSTCHECK
+              value: Disable
 {{- end }}
 {{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks") }}
             # The default IPv4 pool to create on startup if none exists. Pod IPs will be
@@ -408,7 +429,7 @@ spec:
               command:
               - /bin/calico-node
               - -felix-live
-{{- if and (eq .Values.network "calico") (not .Values.flannel_migration) }}
+{{- if and (eq .Values.network "calico") (not .Values.flannel_migration) (not .Values.vxlan) }}
               - -bird-live
 {{- end }}
             periodSeconds: 10
@@ -419,9 +440,11 @@ spec:
             exec:
               command:
               - /bin/calico-node
-              - -bird-ready
               - -felix-ready
+{{- if and (not .Values.flannel_migration) (not .Values.vxlan) }}
+              - -bird-ready
               - -bgp-metrics-ready
+{{- end }}
 {{- else }}
             exec:
               command:
@@ -466,13 +489,13 @@ spec:
 {{- end }}
             - name: policysync
               mountPath: /var/run/nodeagent
-{{- if .Values.bpf }}
-            # We need to mount the BPF filesystem at /sys/fs/bpf and we need that mount to persist
-            # even if {{ include "nodeName" . }} is restarted.
+            # For eBPF mode, we need to be able to mount the BPF filesystem at /sys/fs/bpf so we mount in the
+            # parent directory.
             - name: sysfs
               mountPath: /sys/fs/
+              # Bidirectional means that, if we mount the BPF filesystem at /sys/fs/bpf it will propagate to the host.
+              # If the host is known to mount that filesystem already then Bidirectional can be omitted.
               mountPropagation: Bidirectional
-{{- end }}
       volumes:
         # Used by cnx-node.
         - name: lib-modules
@@ -489,7 +512,6 @@ spec:
             path: /run/xtables.lock
             type: FileOrCreate
 {{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
-{{- if .Values.bpf }}
         - name: sysfs
           hostPath:
             path: /sys/fs/
@@ -506,7 +528,6 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
-{{- end }}
 {{- if eq .Values.datastore "etcd" }}
         # Mount in the etcd TLS secrets with mode 400.
         # See https://kubernetes.io/docs/concepts/configuration/secret/

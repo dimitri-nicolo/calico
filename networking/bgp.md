@@ -1,16 +1,16 @@
 ---
 title: Configure BGP peering
-description: Configure BGP peering for public cloud and on-premises deployments with full mesh, node-specific peering, ToR and/or Calico route reflectors.
+description: Configure BGP peering with full mesh, node-specific peering, ToR, and/or Calico route reflectors.
 canonical_url: '/networking/bgp'
 ---
 
 ### Big picture
 
-Configure border gateway protocol (BGP) peering with network infrastructure to distribute routing information.
+Configure BGP (Border Gateway Protocol) between Calico nodes or peering with network infrastructure to distribute routing information.
 
 ### Value
 
-{{site.prodname}} nodes can exchange routing information over BGP to enable reachability for {{site.prodname}} networked workloads without the need for encapsulation.
+{{site.prodname}} nodes can exchange routing information over BGP to enable reachability for {{site.prodname}} networked workloads (Kubernetes pods or OpenStack VMs). In an on-premises deployment this allows you to make your workloads first-class citizen across the rest of your network. In public cloud deployments, it provides an efficient way of distributing routing information within your cluster, and is often used in conjunction with IPIP overlay or cross-subnet modes.
 
 ### Features
 
@@ -26,23 +26,28 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### BGP
 
-**BGP** is a standard protocol for exchanging routing information between two routers in a network. Each router running BGP has one or more **BGP peers** - other routers which they are communicating with over BGP. You can configure {{site.prodname}} nodes to peer with each other, with route reflectors, and with top-of-rack (ToR) routers.
+**BGP** is a standard protocol for exchanging routing information between routers in a network. Each router running BGP has one or more **BGP peers** - other routers which they are communicating with over BGP. You can think of {{site.prodname}} networking as providing a virtual router on each of your nodes. You can configure {{site.prodname}} nodes to peer with each other, with route reflectors, or with top-of-rack (ToR) routers.
 
 #### Common BGP topologies
 
 There are many ways to configure a BGP network depending on your environment. Here are some common ways it is done with {{site.prodname}}.
 
-#### Topologies for public cloud
+#### Full-mesh
 
-{{site.prodname}}’s default behavior is to create a **full-mesh** of internal BGP (iBGP) connections where each node peers with each other. This design works great for small and medium-size deployments (< 100 nodes) in public cloud, but you can hit performance bottlenecks at around 100 nodes.
+When BGP is enabled, {{site.prodname}}’s default behavior is to create a **full-mesh** of internal BGP (iBGP) connections where each node peers with each other. This allows {{site.prodname}} to operate over any L2 network, whether public cloud or private cloud, or, if IPIP is [configured]({{site.baseurl}}/networking/vxlan-ipip), to operate as an overlay over any network that does not block IPIP traffic. {{site.prodname}} does not use BGP for VXLAN overlays.
 
-To build large clusters in public cloud, **BGP route reflectors** can be used to reduce the number of BGP peerings used on each node. In this model, some nodes act as route reflectors and are configured to establish a full mesh amongst themselves. Other nodes are then configured to peer with a subset of those route reflectors.
+>**Note**: Most public clouds support IPIP. The notable exception is Azure, which blocks IPIP traffic. So if you want to run Calico as an overlay network in Azure, you must [configure {{site.prodname}} to use VXLAN]({{site.baseurl}}/networking/vxlan-ipip).
+{: .alert .alert-info}
 
-You can also run {{site.prodname}} on public cloud without BGP or route reflectors using {{site.prodname}}’s **VXLAN cross subnet capabilities**. For more information, see [Configure overlay networking]({{site.baseurl}}/networking/vxlan-ipip).
+Full-mesh works great for small and medium-size deployments of say 100 nodes or less, but at significantly larger scales full-mesh becomes less efficient, and we recommend using route reflectors.
 
-#### Topologies for on-premises deployments
+#### Route reflectors
 
-In **on-premises deployments**, you control the physical infrastructure, so you can configure {{site.prodname}} to peer directly with it. Typically, this involves disabling {{site.prodname}}’s default full-mesh behavior, and instead peer {{site.prodname}} with your L3 ToR router. There are many ways to build an on-premises BGP network. How you configure your autonomous systems is up to you - {{site.prodname}} works well with both iBGP and eBGP configurations. 
+To build large clusters of internal BGP (iBGP), **BGP route reflectors** can be used to reduce the number of BGP peerings used on each node. In this model, some nodes act as route reflectors and are configured to establish a full mesh amongst themselves. Other nodes are then configured to peer with a subset of those route reflectors (typically 2 for redundancy), reducing the total number BGP peering connections compared to full-mesh.
+
+#### Top of Rack (ToR)
+
+In **on-premises deployments**, you can configure {{site.prodname}} to peer directly with your physical network infrastructure. Typically, this involves disabling {{site.prodname}}’s default full-mesh behavior, and instead peer {{site.prodname}} with your L3 ToR routers. There are many ways to build an on-premises BGP network. How you configure your BGP is up to you - {{site.prodname}} works well with both iBGP and eBGP configurations, and you can effectively treat {{site.prodname}} like any other router in your netwok design.
 
 Depending on your topology, you may also consider using BGP route reflectors within each rack. However, this is typically needed only if the number of nodes in each L2 domain is large (> 100).
 
@@ -53,6 +58,8 @@ For a deeper look at common on-premises deployment models, see [Calico over IP F
 [calicoctl]({{ site.baseurl }}/maintenance/clis/calicoctl/install) must be installed and configured.
 
 ### How to
+>**Note**: Significantly changing {{site.prodname}}'s BGP topology, such as changing from full-mesh to peering with ToRs, may result in temporary loss of pod network connectivity during the reconfiguration process. It is recommended to only make such changes during a maintenance window.
+{: .alert .alert-danger}
 
 - [Disable the default BGP node-to-node mesh](#disable-the-default-bgp-node-to-node-mesh)
 - [Configure a global BGP peer](#configure-a-global-bgp-peer)
@@ -70,7 +77,7 @@ The default **node-to-node BGP mesh** must be turned off to enable other BGP top
 Run the following command to disable the BGP full-mesh:
 
 ```
-calicoctl patch bgpconfiguration default -p '{"spec": {"nodeToNodeMeshEnabled": “false”}}'
+calicoctl patch bgpconfiguration default -p '{"spec": {"nodeToNodeMeshEnabled": "false"}}'
 ```
 
 >**Note**: If the default BGP configuration resource does not exist, you need to create it first. See [BGP configuration]({{site.baseurl}}/reference/resources/bgpconfig) for more information.
@@ -105,7 +112,7 @@ metadata:
 spec:
   peerIP: 192.20.30.40
   asNumber: 64567
-  nodeSelector: rack == ‘rack-1’
+  nodeSelector: rack == 'rack-1'
 ```
 #### Configure a node to act as a route reflector
 
@@ -114,7 +121,7 @@ spec:
 To configure a node to be a route reflector with cluster ID 244.0.0.1, run the following command.
 
 ```
-calicoctl patch node my-node -p '{"spec": {“bgp”: {"routeReflectorClusterID": “244.0.0.1”}}}'
+calicoctl patch node my-node -p '{"spec": {"bgp": {"routeReflectorClusterID": "244.0.0.1"}}}'
 ```
 
 Typically, you will want to label this node to indicate that it is a route reflector, allowing it to be easily selected by a BGPPeer resource. You can do this with kubectl. For example:
@@ -131,7 +138,7 @@ metadata:
   name: peer-with-route-reflectors
 spec:
   nodeSelector: all()
-  peerSelector: route-reflector == ‘true’
+  peerSelector: route-reflector == 'true'
 ```
 
 #### View BGP peering status for a node
@@ -174,7 +181,7 @@ kubectl calico bgp peers <NODE_NAME>
 By default, all Calico nodes use the 64512 autonomous system, unless a per-node AS has been specified for the node. You can change the global default for all nodes by modifying the default **BGPConfiguration** resource. The following example command sets the global default AS number to **64513**.
 
 ```
-calicoctl patch bgpconfiguration default -p '{"spec": {"asNumber": “64513”}}'
+calicoctl patch bgpconfiguration default -p '{"spec": {"asNumber": "64513"}}'
 ```
 
 >**Note**: If the default BGP configuration resource does not exist, you need to create it first. See [BGP configuration]({{site.baseurl}}/reference/resources/bgpconfig) for more information.
@@ -185,7 +192,7 @@ calicoctl patch bgpconfiguration default -p '{"spec": {"asNumber": “64513”}}
 You can configure an AS for a particular node by modifying the node object using `calicoctl`. For example, the following command changes the node named **node-1** to belong to **AS 64514**.
 
 ```
-calicoctl patch node node-1 -p '{"spec": {"bgp": {“asNumber”: “64514”}}}'
+calicoctl patch node node-1 -p '{"spec": {"bgp": {"asNumber": "64514"}}}'
 ```
 ### Above and beyond
 

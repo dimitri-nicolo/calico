@@ -78,7 +78,7 @@ The geeky details of what you get:
 
 ##### Kubespray
 
-{% include open-new-window.html text='Kubespray' url='https://kubespray.io/' %} is a tool for provisioning and managing Kubernetes clusters with support for multiple clouds including Amazon Web Services. {{site.prodname}} is the default networking provider, or you can set the `kube_network_plugin` variable to `calico`. See the {% include open-new-window.html text='Kubespray docs' url='https://kubespray.io/#/?id=network-plugins' %} for more details.
+{% include open-new-window.html text='Kubespray' url='https://github.com/kubernetes-sigs/kubespray' %} is a tool for provisioning and managing Kubernetes clusters with support for multiple clouds including Amazon Web Services. {{site.prodname}} is the default networking provider, or you can set the `kube_network_plugin` variable to `calico`. See the {% include open-new-window.html text='Kubespray docs' url='https://github.com/kubernetes-sigs/kubespray#network-plugins' %} for more details.
 
 ### Next steps
 

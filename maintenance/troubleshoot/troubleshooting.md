@@ -202,7 +202,7 @@ desired [Golang duration](https://godoc.org/time#Duration).
 ### GlobalAlert reports error "Trying to create too many buckets"
 
 ```
-“Trying to create too many buckets. Must be less than or equal to: [10000] but was [10001]. This limit can be set by changing the [search.max_buckets] cluster level setting."
+"Trying to create too many buckets. Must be less than or equal to: [10000] but was [10001]. This limit can be set by changing the [search.max_buckets] cluster level setting."
 ```
 
 The GlobalAlert system has a hard limit of 10000 aggregation keys per

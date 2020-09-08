@@ -122,6 +122,11 @@ spec:
         - containerPort: 5473
           name: {{include "typha_service_name" . }}
           protocol: TCP
+        envFrom:
+        - configMapRef:
+            # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+            name: kubernetes-services-endpoint
+            optional: true
         env:
   {{- if eq .Values.network "ecs" }}
           - name: FELIX_INTERFACEPREFIX

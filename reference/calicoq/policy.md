@@ -14,10 +14,10 @@ named policy, comprising:
   disallowed as data sources or destinations).
 
 (For example, if you have a database and a webserver, you might have a policy
-that says `policy selector: role==‘db’; rule: allow from role == ‘webserver’`.
+that says `policy selector: role=='db'; rule: allow from role == 'webserver'`.
 
-Then the “policy applies to” selector is `role == ‘db’` and the “policy’s rule
-selector” is `role == ‘webserver’`.)
+Then the "policy applies to" selector is `role == 'db'` and the "policy's rule
+selector" is `role == 'webserver'`.)
 
 It shows output that is equivalent to running `calicoq eval <selector>` for the
 policy's `spec.selector` and for any `selector` or `notSelector` expressions in
