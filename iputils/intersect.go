@@ -17,45 +17,15 @@ package iputils
 import (
 	"sort"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/felix/iptree"
 )
 
 func IntersectCIDRs(aStrs []string, bStrs []string) (out []string) {
 	aCIDRs := parseCIDRs(aStrs)
 	bCIDRs := parseCIDRs(bStrs)
 
-	intersection := set.New()
-
-	for _, a := range aCIDRs {
-		for _, b := range bCIDRs {
-			if a.Prefix() == b.Prefix() {
-				// Same length prefix, compare IPs.
-				if a.Addr() == b.Addr() {
-					intersection.Add(a)
-				}
-			} else if a.Prefix() < b.Prefix() {
-				// See if a contains b.
-				aNet := a.ToIPNet()
-				if aNet.Contains(b.ToIPNet().IP) {
-					// a contains b so intersection is b
-					intersection.Add(b)
-				}
-			} else {
-				// See if b contains a.
-				bNet := b.ToIPNet()
-				if bNet.Contains(a.ToIPNet().IP) {
-					// b contains a so intersection is a
-					intersection.Add(a)
-				}
-			}
-		}
-	}
-
-	intersection.Iter(func(item interface{}) error {
-		out = append(out, item.(ip.CIDR).String())
-		return set.RemoveItem
-	})
+	intersection := iptree.Intersect(aCIDRs, bCIDRs)
+	out = intersection.CoveringCIDRStrings()
 
 	// Sort the output for determinism both in testing and in rule generation.
 	sort.Strings(out)
@@ -63,9 +33,10 @@ func IntersectCIDRs(aStrs []string, bStrs []string) (out []string) {
 	return
 }
 
-func parseCIDRs(in []string) (out []ip.CIDR) {
+func parseCIDRs(in []string) (out *iptree.IPTree) {
+	out = iptree.New(4)
 	for _, s := range in {
-		out = append(out, ip.MustParseCIDROrIP(s))
+		out.AddCIDRString(s)
 	}
 	return
 }

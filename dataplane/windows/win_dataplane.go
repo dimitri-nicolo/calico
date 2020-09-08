@@ -232,7 +232,7 @@ func (d *WindowsDataplane) RecvMessage() (interface{}, error) {
 // to the managers for processing. After managers have had a chance to process the updates
 // the loop will call Apply() to actually apply changes to the dataplane.
 func (d *WindowsDataplane) loopUpdatingDataplane() {
-	log.Debug("Started windows dataplane driver loop")
+	log.Info("Started windows dataplane driver loop")
 
 	healthTicks := time.NewTicker(healthInterval).C
 	d.reportHealth()

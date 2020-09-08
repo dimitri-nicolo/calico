@@ -27,6 +27,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+const ActionPass hns.ActionType = "pass"
+
 // IPSetCache is our interface to the IP sets tracker.
 type IPSetCache interface {
 	GetIPSetMembers(ipsetID string) []string
@@ -120,11 +122,12 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	}
 
 	debug := log.GetLevel() >= log.DebugLevel
+	debug = true
 
 	var lastRule *hns.ACLPolicy
 	for _, setId := range setIds {
 		if debug {
-			log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Debug(
+			log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Warn(
 				"Gathering per-direction rules for policy set")
 		}
 
@@ -163,10 +166,6 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	// Apply a default block rule for this direction at the end of the policy
 	currentPriority++
 	rules = append(rules, s.NewRule(isInbound, currentPriority))
-
-	// Finally, for RS3 only, add default allow rule with a host-scope to allow traffic through
-	// the host windows firewall
-	rules = append(rules, s.NewHostRule(isInbound))
 
 	return
 }
@@ -303,6 +302,11 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 		return nil, ErrNotSupported
 	}
 
+	if strings.ToLower(pRule.Action) == "log" {
+		log.WithField("rule", pRule).Info("Skipping rule because it has log action (currently unsupported).")
+		return nil, ErrNotSupported
+	}
+
 	// Filter the Src and Dst CIDRs to only the IP version that we're rendering
 	var filteredAll bool
 	ruleCopy := *pRule
@@ -342,9 +346,8 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 		aclPolicy.Action = hns.Allow
 	case "deny":
 		aclPolicy.Action = hns.Block
-	case "next-tier", "pass", "log":
-		logCxt.WithField("action", ruleCopy.Action).Info("This rule action is not supported, rule will be skipped")
-		return nil, ErrNotSupported
+	case "next-tier", "pass":
+		aclPolicy.Action = ActionPass
 	default:
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
@@ -363,7 +366,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	}
 
 	//
-	// Source Neworks and IPSets
+	// Source Networks and IPSets
 	//
 	var localAddresses []string
 	var remoteAddresses []string

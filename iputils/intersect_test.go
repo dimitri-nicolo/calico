@@ -26,7 +26,8 @@ func TestIntersectCIDRs(t *testing.T) {
 		Name        string
 		as, bs, exp []string
 	}{
-		{"zero", []string{"0.0.0.0/0"}, []string{"128.0.0.0/1", "0.0.0.0/1"}, []string{"128.0.0.0/1", "0.0.0.0/1"}},
+		{"one empty", []string{}, []string{"128.0.0.0/1", "0.0.0.0/1"}, nil},
+		{"zero", []string{"0.0.0.0/0"}, []string{"128.0.0.0/1", "0.0.0.0/1"}, []string{"0.0.0.0/0"}},
 		{"self", []string{"10.0.0.1"}, []string{"10.0.0.1"}, []string{"10.0.0.1/32"}},
 		{"different format", []string{"10.0.0.1/32"}, []string{"10.0.0.1"}, []string{"10.0.0.1/32"}},
 		{"smallest wins", []string{"10.0.1.0/24"}, []string{"10.0.1.128/25"}, []string{"10.0.1.128/25"}},

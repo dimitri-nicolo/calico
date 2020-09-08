@@ -66,6 +66,7 @@ type PolicySetsDataplane interface {
 	NewRule(isInbound bool, priority uint16) *hns.ACLPolicy
 	GetPolicySetRules(setIds []string, isInbound bool) (rules []*hns.ACLPolicy)
 	ProcessIpSetUpdate(ipSetId string) []string
+	NewHostRule(bool) *hns.ACLPolicy
 }
 
 // policySet holds the state for a particular Policy set.
