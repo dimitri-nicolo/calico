@@ -166,7 +166,7 @@ func getPolicyPreview(preview string) (*PolicyPreview, error) {
 }
 
 func validatePolicyPreview(policyPreview PolicyPreview) bool {
-	if policyPreview.Verb == "" || &policyPreview.NetworkPolicy == nil {
+	if policyPreview.Verb == "" || policyPreview.NetworkPolicy == nil {
 		return false
 	}
 	switch policyPreview.Verb {

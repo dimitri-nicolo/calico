@@ -212,24 +212,30 @@ var _ = Describe("Test flowlog request validation functions", func() {
 	})
 	Context("Test that the validatePolicyPreview function behaves as expected", func() {
 		It("should return true when passed a PolicyPreview with the verb create", func() {
-			policyPreview := PolicyPreview{Verb: "create"}
+			policyPreview := PolicyPreview{Verb: "create", NetworkPolicy: &v3.NetworkPolicy{}}
 			valid := validatePolicyPreview(policyPreview)
 			Expect(valid).To(BeTrue())
 		})
 
 		It("should return true when passed a PolicyPreview with the verb update", func() {
-			policyPreview := PolicyPreview{Verb: "update"}
+			policyPreview := PolicyPreview{Verb: "update", NetworkPolicy: &v3.NetworkPolicy{}}
 			valid := validatePolicyPreview(policyPreview)
 			Expect(valid).To(BeTrue())
 		})
 
 		It("should return true when passed a PolicyPreview with the verb delete", func() {
-			policyPreview := PolicyPreview{Verb: "delete"}
+			policyPreview := PolicyPreview{Verb: "delete", NetworkPolicy: &v3.NetworkPolicy{}}
 			valid := validatePolicyPreview(policyPreview)
 			Expect(valid).To(BeTrue())
 		})
 
 		It("should return false when passed a PolicyPreview with the verb read", func() {
+			policyPreview := PolicyPreview{Verb: "read", NetworkPolicy: &v3.NetworkPolicy{}}
+			valid := validatePolicyPreview(policyPreview)
+			Expect(valid).To(BeFalse())
+		})
+
+		It("should return false when passed a PolicyPreview with the verb create and no network policy", func() {
 			policyPreview := PolicyPreview{Verb: "read"}
 			valid := validatePolicyPreview(policyPreview)
 			Expect(valid).To(BeFalse())
