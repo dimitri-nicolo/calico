@@ -128,5 +128,11 @@ func alertLogQueryFromAlertResource(res api.AlertResource) elastic.Query {
 	if res.SourceNamespace != "" {
 		queries = append(queries, elastic.NewMatchQuery(api.AlertLogSourceNamespace, res.SourceNamespace))
 	}
+	if res.DestNamespace != "" {
+		queries = append(queries, elastic.NewMatchQuery(api.AlertLogDestNamespace, res.DestNamespace))
+	}
+	if res.Alert != "" {
+		queries = append(queries, elastic.NewMatchQuery(api.AlertLogAlert, res.Alert))
+	}
 	return elastic.NewBoolQuery().Must(queries...)
 }
