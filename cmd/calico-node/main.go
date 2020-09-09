@@ -131,9 +131,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		cfg.ConfDir = "/etc/calico/confd"
-		cfg.KeepStageFile = *confdKeep
-		cfg.Onetime = *confdRunOnce
 		confd.Run(cfg)
 	} else if *runAllocateTunnelAddrs {
 		logrus.SetFormatter(&logutils.Formatter{Component: "tunnel-ip-allocator"})
