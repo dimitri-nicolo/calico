@@ -1979,6 +1979,26 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.CaptureDir != nil {
+		in, out := &in.CaptureDir, &out.CaptureDir
+		*out = new(string)
+		**out = **in
+	}
+	if in.CaptureMaxSizeBytes != nil {
+		in, out := &in.CaptureMaxSizeBytes, &out.CaptureMaxSizeBytes
+		*out = new(int)
+		**out = **in
+	}
+	if in.CaptureRotationSeconds != nil {
+		in, out := &in.CaptureRotationSeconds, &out.CaptureRotationSeconds
+		*out = new(int)
+		**out = **in
+	}
+	if in.CaptureMaxFiles != nil {
+		in, out := &in.CaptureMaxFiles, &out.CaptureMaxFiles
+		*out = new(int)
+		**out = **in
+	}
 	if in.AWSSrcDstCheck != nil {
 		in, out := &in.AWSSrcDstCheck, &out.AWSSrcDstCheck
 		*out = new(AWSSrcDstCheckOption)

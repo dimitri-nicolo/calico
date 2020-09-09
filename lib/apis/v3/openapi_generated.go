@@ -5746,6 +5746,34 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"captureDir": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CaptureDir controls directory to store file capture. [Default: /var/log/calico/pcap]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"captureMaxSizeBytes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CaptureMaxSizeBytes controls the max size of a file capture. [Default: 10000000]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"captureRotationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CaptureRotationSeconds controls the time rotation of a packet capture. [Default: 3600]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"captureMaxBackups": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CaptureMaxFiles controls number of rotated capture file to keep. [Default: 2]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"awsSrcDstCheck": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Set source-destination-check on AWS EC2 instances. Accepted value must be one of \"DoNothing\", \"Enabled\" or \"Disabled\". [Default: DoNothing]",

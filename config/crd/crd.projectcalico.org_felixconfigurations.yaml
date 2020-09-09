@@ -114,6 +114,26 @@ spec:
                   logs are emitted to the BPF trace pipe, accessible with the command
                   `tc exec bpf debug`. [Default: Off].'
                 type: string
+              captureDir:
+                description: 'CaptureDir controls directory to store file capture.
+                  [Default: /var/log/calico/pcap]'
+                minLength: 1
+                type: string
+              captureMaxBackups:
+                description: 'CaptureMaxFiles controls number of rotated capture file
+                  to keep. [Default: 2]'
+                minimum: 1
+                type: integer
+              captureMaxSizeBytes:
+                description: 'CaptureMaxSizeBytes controls the max size of a file
+                  capture. [Default: 10000000]'
+                minimum: 1
+                type: integer
+              captureRotationSeconds:
+                description: 'CaptureRotationSeconds controls the time rotation of
+                  a packet capture. [Default: 3600]'
+                minimum: 1
+                type: integer
               chainInsertMode:
                 description: 'ChainInsertMode controls whether Felix hooks the kernel''s
                   top-level iptables chains by inserting a rule at the top of the

@@ -558,6 +558,22 @@ type FelixConfigurationSpec struct {
 	// WireguardMTU controls the MTU on the Wireguard interface. See Configuring MTU [Default: 1420]
 	WireguardMTU *int `json:"wireguardMTU,omitempty"`
 
+	// +kubebuilder:validation:MinLength=1
+	// CaptureDir controls directory to store file capture. [Default: /var/log/calico/pcap]
+	CaptureDir *string `json:"captureDir,omitempty" validate:"omitempty,gt=0"`
+
+	// +kubebuilder:validation:Minimum=1
+	// CaptureMaxSizeBytes controls the max size of a file capture. [Default: 10000000]
+	CaptureMaxSizeBytes *int `json:"captureMaxSizeBytes,omitempty" validate:"omitempty,gt=0"`
+
+	// +kubebuilder:validation:Minimum=1
+	// CaptureRotationSeconds controls the time rotation of a packet capture. [Default: 3600]
+	CaptureRotationSeconds *int `json:"captureRotationSeconds,omitempty" validate:"omitempty,gt=0"`
+
+	// +kubebuilder:validation:Minimum=1
+	// CaptureMaxFiles controls number of rotated capture file to keep. [Default: 2]
+	CaptureMaxFiles *int `json:"captureMaxBackups,omitempty" validate:"omitempty,gt=0"`
+
 	// Set source-destination-check on AWS EC2 instances. Accepted value must be one of "DoNothing", "Enabled" or "Disabled".
 	// [Default: DoNothing]
 	AWSSrcDstCheck *AWSSrcDstCheckOption `json:"awsSrcDstCheck,omitempty" validate:"omitempty,oneof=DoNothing Enable Disable"`
