@@ -75,7 +75,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			req := &http.Request{Header: http.Header{"Authorization": []string{"Bearer deadbeef"}}}
 			uut.ServeHTTP(rr, req)
 
-			Expect(rr.Code).To(Equal(http.StatusForbidden), fmt.Sprintf("Token deadbeef authentication failed"))
+			Expect(rr.Code).To(Equal(http.StatusForbidden), "Token deadbeef authentication failed")
 			Expect(dhh.serveCalled).To(BeFalse())
 		})
 	})

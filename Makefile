@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
-GO_BUILD_VER    ?= v0.38
+GO_BUILD_VER    ?= v0.45
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
@@ -107,13 +107,8 @@ ifndef RELEASE_BUILD
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building es-proxy...
-	# configure git to use ssh instead of https so that go mod can pull private libraries.
-	# note this will require the user have their SSH agent running and configured with valid private keys
-	# but the Makefile logic here will load the local SSH agent into the container automatically.
-	mkdir -p .go-build-cache && \
 	$(DOCKER_GO_BUILD) \
-		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
+		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
 				( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | \
 	                grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
@@ -217,12 +212,9 @@ fv-no-setup:
 		       ./test/run_test.sh
 
 .PHONY: clean
-clean: clean-bin clean-build-image
-clean-build-image:
+clean:
 	-docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1
-
-clean-bin:
-	-rm -rf $(BINDIR) bin
+	-rm -rf $(BINDIR) .go-pkg-cache
 
 
 .PHONY: signpost

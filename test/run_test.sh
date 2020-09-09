@@ -31,7 +31,7 @@ function run_fvs()
 		--rm \
 		--net=host \
 		-v ${GOMOD_CACHE}/..:/go/pkg:rw \
-		-v ${PACKAGE_ROOT}/.go-build-cache:/home/user/.cache/go-build:rw \
+		-v ${PACKAGE_ROOT}/.go-pkg-cache:/home/user/.cache/go-build:rw \
 		-v ${PACKAGE_ROOT}:/${PACKAGE_NAME}:rw \
 		-v ${PACKAGE_ROOT}/report:/report:rw \
 		-e LOCAL_USER_ID=$(id -u) \
