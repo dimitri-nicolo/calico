@@ -47,7 +47,7 @@ In order to install images from your private registry, you must first pull the i
 
 Before applying `tigera-operator.yaml`, modify registry references to use your custom registry:
 
-```
+```bash
 {% if page.registry != "quay.io/" -%}
 sed -ie "s?{{ page.registry }}.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-operator.yaml
 {% endif -%}
@@ -55,19 +55,27 @@ sed -ie "s?quay.io.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-operator.yaml
 ```
 {% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
 
+Next, ensure that an image pull secret has been configured for your custom registry. Set the enviroment variable `PRIVATE_REGISTRY_PULL_SECRET` to the secret name.
+Then add the image pull secret to the operator deployment spec:
+
+```bash
+sed -ie "/serviceAccountName: tigera-operator/a \      imagePullSecrets:\n\      - name: $PRIVATE_REGISTRY_PULL_SECRET"  tigera-operator.yaml
+```
+
 If you are installing Prometheus operator as part of {{ site.prodname }}, then before applying `tigera-prometheus-operator.yaml`, modify registry references to use your custom registry:
 
-```
+```bash
 {% if page.registry != "quay.io/" -%}
 sed -ie "s?{{ page.registry }}.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-prometheus-operator.yaml
 {% endif -%}
 sed -ie "s?quay.io.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" tigera-prometheus-operator.yaml
+sed -ie "/serviceAccountName: calico-prometheus-operator/a \      imagePullSecrets:\n\      - name: $PRIVATE_REGISTRY_PULL_SECRET"  tigera-prometheus-operator.yaml
 ```
 {% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
 
 Before applying `custom-resources.yaml`, modify registry references to use your custom registry:
 
-```
+```bash
 {% if page.registry != "quay.io/" -%}
 sed -ie "s?{{ page.registry }}.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" custom-resources.yaml
 {% endif -%}
@@ -77,7 +85,7 @@ sed -ie "s?quay.io.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" custom-resources.yaml
 
 For <b>Openshift</b>, after downloading all manifests modify the following to use your custom registry:
 
-```
+```bash
 {% if page.registry != "quay.io/" -%}
 sed -ie "s?{{ page.registry }}.*/?$PRIVATE_REGISTRY/$IMAGE_PATH/?" manifests/02-tigera-operator.yaml
 {% endif -%}

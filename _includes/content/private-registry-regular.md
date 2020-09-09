@@ -47,28 +47,37 @@ In order to install images from your private registry, you must first pull the i
 
 Before applying `tigera-operator.yaml`, modify registry references to use your custom registry:
 
-```
+```bash
 {% if page.registry != "quay.io/" -%}
 sed -ie "s?{{ page.registry }}?$PRIVATE_REGISTRY?g" tigera-operator.yaml
 {% endif -%}
 sed -ie "s?quay.io?$PRIVATE_REGISTRY?g" tigera-operator.yaml
 ```
+
+Next, ensure that an image pull secret has been configured for your custom registry. Set the enviroment variable `PRIVATE_REGISTRY_PULL_SECRET` to the secret name.
+Then add the image pull secret to the operator deployment spec:
+
+```bash
+sed -ie "/serviceAccountName: tigera-operator/a \      imagePullSecrets:\n\      - name: $PRIVATE_REGISTRY_PULL_SECRET"  tigera-operator.yaml
+```
+
 {% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
 
 If you are installing Prometheus operator as part of {{ site.prodname }}, then before applying `tigera-prometheus-operator.yaml`, modify registry references to use your custom registry:
 
-```
+```bash
 {% if page.registry != "quay.io/" -%}
 sed -ie "s?{{ page.registry }}?$PRIVATE_REGISTRY?g" tigera-prometheus-operator.yaml
 {% endif -%}
 sed -ie "s?quay.io?$PRIVATE_REGISTRY?g" tigera-prometheus-operator.yaml
+sed -ie "/serviceAccountName: calico-prometheus-operator/a \      imagePullSecrets:\n\      - name: $PRIVATE_REGISTRY_PULL_SECRET"  tigera-prometheus-operator.yaml
 ```
 {% comment %} The second 'sed' should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
 
 
 Before applying `custom-resources.yaml`, modify registry references to use your custom registry:
 
-```
+```bash
 sed -ie "s?quay.io?$PRIVATE_REGISTRY?g" custom-resources.yaml
 ```
 {% comment %} This step should be removed once operator launches Prometheus & Alertmanager {% endcomment %}
