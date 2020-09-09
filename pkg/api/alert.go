@@ -29,6 +29,7 @@ type Alert struct {
 	Description     string           `json:"description"`
 	Severity        int64            `json:"severity"`
 	Time            time.Time        `json:"time"`
+	Alert           string           `json:"alert"`
 	Record          AlertRecordField `json:"record"`
 }
 
@@ -77,6 +78,7 @@ func (a *Alert) UnmarshalJSON(data []byte) error {
 		Description     string           `json:"description"`
 		Severity        int64            `json:"severity"`
 		Time            interface{}      `json:"time"`
+		Alert           string           `json:"alert"`
 		Record          AlertRecordField `json:"record"`
 	}{}
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -92,6 +94,7 @@ func (a *Alert) UnmarshalJSON(data []byte) error {
 	} else {
 		return fmt.Errorf("Error parsing time %v, error=%v", s.Time, err)
 	}
+	a.Alert = s.Alert
 	a.Record = s.Record
 	return nil
 }
