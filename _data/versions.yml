@@ -19,6 +19,9 @@
     voltron:
       image: tigera/voltron
       version: master
+    guardian:
+      image: tigera/guardian
+      version: master
     cnx-apiserver:
       image: tigera/cnx-apiserver
       version: master
