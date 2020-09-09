@@ -14,6 +14,8 @@ import (
 	api "github.com/tigera/lma/pkg/api"
 )
 
+// Anomaly detection results indices.
+// NOTE that inbound/outbound-service-bytes jobs share the same index.
 const (
 	PortScanJobIndex               = ".ml-anomalies-custom-port_scan_pods"
 	InboundConnectionSpikeJobIndex = ".ml-anomalies-custom-inbound_connection_spike"
@@ -27,7 +29,7 @@ func (c *client) GetADLogs(ctx context.Context, start, end *time.Time) <-chan *a
 	return c.SearchADLogs(ctx, nil, start, end)
 }
 
-// Issue an Elasticsearch query that matches alert logs.
+// Issue an Elasticsearch query that matches anomaly detection logs.
 func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, start, end *time.Time) <-chan *api.ADResult {
 	resultChan := make(chan *api.ADResult, DefaultADPageSize)
 	adIndices := getADJobIndices(c)
@@ -71,7 +73,7 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 			}
 			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
-			// define function that pushes the search results into the channel.
+			// Push the search results into the channel.
 			for _, hit := range res.Hits.Hits {
 				var m map[string]interface{}
 				if err := json.Unmarshal(hit.Source, &m); err != nil {
@@ -80,13 +82,13 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 					continue
 				}
 
+				// Unmarshal the data into the correct log type.
 				resultType, ok := m[api.ADLogResultType].(string)
 				if !ok {
 					log.Warn("Error getting anomaly detection result type field")
 					resultChan <- &api.ADResult{Err: fmt.Errorf("Error getting anomaly detection result type field")}
 					continue
 				}
-
 				switch resultType {
 				case api.ADRecordResultType:
 					var d api.ADRecordLog

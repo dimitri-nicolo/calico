@@ -67,7 +67,7 @@ func (c *client) SearchAlertLogs(ctx context.Context, filter *api.AlertLogsSelec
 			}
 			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
-			// define function that pushes the search results into the channel.
+			// Pushes the search results into the channel.
 			for _, hit := range res.Hits.Hits {
 				var a api.Alert
 				if err := json.Unmarshal(hit.Source, &a); err != nil {

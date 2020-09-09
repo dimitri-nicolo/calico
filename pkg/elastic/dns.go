@@ -67,7 +67,7 @@ func (c *client) SearchDNSLogs(ctx context.Context, filter *api.DNSLogsSelection
 			}
 			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
-			// define function that pushes the search results into the channel.
+			// Pushes the search results into the channel.
 			for _, hit := range res.Hits.Hits {
 				var d api.DNSLog
 				if err := json.Unmarshal(hit.Source, &d); err != nil {

@@ -70,6 +70,7 @@ type AlertLogReportHandler interface {
 	SearchAlertLogs(ctx context.Context, filter *AlertLogsSelection, start, end *time.Time) <-chan *AlertResult
 }
 
+// Custom unmarshalling for alerts, because the time field requires special attention.
 func (a *Alert) UnmarshalJSON(data []byte) error {
 	s := &struct {
 		Type            string           `json:"type"`
@@ -108,27 +109,27 @@ func parseTime(obj interface{}) (time.Time, error) {
 		return time.Unix(0, tInt*int64(time.Millisecond)), nil
 	}
 
-	// Try converting from float.
+	// Try converting from float (golang sometimes unmarshals ints as floats).
 	if tFloat, ok := obj.(float64); ok {
 		tInt := int64(tFloat)
 		return time.Unix(0, tInt*int64(time.Millisecond)), nil
 	}
 
-	// If 'time' is not a long, try parsing it as a string.
+	// If 'time' is not numerical, try parsing it as a string.
 	if tStr, ok := obj.(string); ok {
 		t, err := parseTimeString(tStr)
 		if err != nil {
 			return time.Now(), fmt.Errorf("Error parsing time string %s, error=%v", tStr, err)
 		}
 		return t, nil
-	} else {
-		return time.Now(), fmt.Errorf("Error parsing time %v", obj)
 	}
+
+	return time.Now(), fmt.Errorf("Error parsing time %v", obj)
 }
 
 // Try to parse a string into a time object.
 // NOTE: this function only tries the time formats currently used in our systems.
-// If a time is defined in a different format, an error is raised.
+// If a time is defined in a different format (even if it's legitimate), an error is raised.
 func parseTimeString(s string) (time.Time, error) {
 	// Check if 'time' is in 'yyyy-MM-ddThh:mm:ss:SSSSSSZ' format
 	layout := "2006-01-02T15:04:05.000000Z"

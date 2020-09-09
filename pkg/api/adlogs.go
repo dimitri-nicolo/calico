@@ -19,6 +19,8 @@ const (
 )
 
 const (
+	// The anomaly detection indices contain several different document types.
+	// This represents result_type="record".
 	ADRecordResultType = "record"
 )
 
