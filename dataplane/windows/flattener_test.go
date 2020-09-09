@@ -154,4 +154,22 @@ func TestFlatten(t *testing.T) {
 		{Action: hns.Block, RemoteAddresses: "10.0.10.0/28"},
 		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/26", LocalAddresses: "12.0.0.0/8"},
 	}))
+
+	t.Log("Should block with pass in last tier")
+	Expect(flattenTiers([][]*hns.ACLPolicy{
+		{
+			{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24", LocalPorts: "6000"},
+			{Action: policysets.ActionPass, RemoteAddresses: "10.0.10.0/24"},
+		},
+		{
+			{Action: hns.Block, RemoteAddresses: "10.0.10.1/32", LocalPorts: "6379"},
+			{Action: policysets.ActionPass, RemoteAddresses: "10.0.10.2/32", LocalPorts: "6380, 6381"},
+			{Action: hns.Block, RemoteAddresses: "10.0.0.0/8", LocalPorts: "6390-6400"},
+		},
+	})).To(Equal([]*hns.ACLPolicy{
+		{Action: hns.Allow, RemoteAddresses: "10.0.10.0/24", LocalPorts: "6000"},
+		{Action: hns.Block, RemoteAddresses: "10.0.10.1/32", LocalPorts: "6379"},
+		{Action: hns.Block, RemoteAddresses: "10.0.10.2/32", LocalPorts: "6380, 6381"},
+		{Action: hns.Block, RemoteAddresses: "10.0.10.0/24", LocalPorts: "6390-6400"},
+	}))
 }
