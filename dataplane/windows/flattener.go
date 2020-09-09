@@ -20,6 +20,25 @@ func flattenTiers(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
 	if len(tiers) == 0 {
 		log.Panic("Ran out of rules")
 	}
+
+	lastTier := tiers[len(tiers)-1]
+	// For last tier, no further flattening is required.
+	// However, there could still be rules with `pass` action
+	// which should be `passed` to `default-deny`. Pre-process
+	// last tier before running flattenTiersRecurse.
+	for _, r := range lastTier {
+		if r.Action == policysets.ActionPass {
+			r.Action = hns.Block
+		}
+	}
+
+	return flattenTiersRecurse(tiers)
+}
+
+func flattenTiersRecurse(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
+	if len(tiers) == 0 {
+		log.Panic("Ran out of rules")
+	}
 	if len(tiers) == 1 {
 		return tiers[0]
 	}
@@ -48,7 +67,7 @@ func flattenTiers(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
 	tiers = tiers[1:]
 	tiers[0] = newFirstTier
 
-	return flattenTiers(tiers)
+	return flattenTiersRecurse(tiers)
 }
 
 func appendCombinedRules(newRules []*hns.ACLPolicy, secondTier []*hns.ACLPolicy, rule *hns.ACLPolicy) []*hns.ACLPolicy {
