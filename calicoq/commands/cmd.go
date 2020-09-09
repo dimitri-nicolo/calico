@@ -5,6 +5,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
@@ -24,6 +25,7 @@ func NewEvalCmd(configFile string) (cbs *EvalCmd) {
 		done:       make(chan bool),
 		matches:    make(map[interface{}][]string),
 		rcc:        NewRemoteClusterHandler(),
+		lock:       sync.Mutex{},
 	}
 	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
 	return cbs
@@ -99,7 +101,14 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 // names of the selectors that matched them.
 func (cbs *EvalCmd) GetMatches() map[interface{}][]string {
 	<-cbs.done
-	return cbs.matches
+	cbs.lock.Lock()
+	// Copy the matches so they don't get updated while the caller is iterating through them
+	matchesCopy := make(map[interface{}][]string)
+	for k, v := range cbs.matches {
+		matchesCopy[k] = v
+	}
+	defer cbs.lock.Unlock()
+	return matchesCopy
 }
 
 type EvalCmd struct {
@@ -108,6 +117,7 @@ type EvalCmd struct {
 	dispatcher    *dispatcher.Dispatcher
 	index         *labelindex.InheritIndex
 	matches       map[interface{}][]string
+	lock          sync.Mutex // Protect index and matches
 
 	// Remote cluster handler is used to output errors associated with failures to connect to a configured
 	// remote cluster.
@@ -140,6 +150,8 @@ func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 	if update.Value == nil {
 		return true
 	}
+	cbs.lock.Lock()
+	defer cbs.lock.Unlock()
 	switch k := update.Key.(type) {
 	case model.WorkloadEndpointKey:
 		v := update.Value.(*model.WorkloadEndpoint)
