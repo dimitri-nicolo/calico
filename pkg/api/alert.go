@@ -23,12 +23,23 @@ type AlertResult struct {
 }
 
 type Alert struct {
-	Type            string    `json:"type"`
-	SourceNamespace string    `json:"source_namespace"`
-	DestNamespace   string    `json:"dest_namespace"`
-	Description     string    `json:"description"`
-	Severity        int64     `json:"severity"`
-	Time            time.Time `json:"time"`
+	Type            string           `json:"type"`
+	SourceNamespace string           `json:"source_namespace"`
+	DestNamespace   string           `json:"dest_namespace"`
+	Description     string           `json:"description"`
+	Severity        int64            `json:"severity"`
+	Time            time.Time        `json:"time"`
+	Record          AlertRecordField `json:"record"`
+}
+
+// Represents the 'record' field of an alert
+type AlertRecordField struct {
+	SourceNameAggr  *string `json:"source_name_aggr"`
+	SourceNamespace *string `json:"source_namespace"`
+	DestNamespace   *string `json:"dest_namespace"`
+	HostKeyword     *string `json:"host.keyword"`
+	DestNameAggr    *string `json:"dest_name_aggr"`
+	Count           *int64  `json:"count"`
 }
 
 type AlertLogsSelection struct {
@@ -60,12 +71,13 @@ type AlertLogReportHandler interface {
 
 func (a *Alert) UnmarshalJSON(data []byte) error {
 	s := &struct {
-		Type            string      `json:"type"`
-		SourceNamespace string      `json:"source_namespace"`
-		DestNamespace   string      `json:"dest_namespace"`
-		Description     string      `json:"description"`
-		Severity        int64       `json:"severity"`
-		Time            interface{} `json:"time"`
+		Type            string           `json:"type"`
+		SourceNamespace string           `json:"source_namespace"`
+		DestNamespace   string           `json:"dest_namespace"`
+		Description     string           `json:"description"`
+		Severity        int64            `json:"severity"`
+		Time            interface{}      `json:"time"`
+		Record          AlertRecordField `json:"record"`
 	}{}
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
@@ -80,6 +92,7 @@ func (a *Alert) UnmarshalJSON(data []byte) error {
 	} else {
 		return fmt.Errorf("Error parsing time %v, error=%v", s.Time, err)
 	}
+	a.Record = s.Record
 	return nil
 }
 
