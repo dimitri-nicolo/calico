@@ -206,6 +206,15 @@ rules:
       - cronjobs
     verbs:
       - '*'
+  # The Tigera API server needs to be registered.
+  - apiGroups:
+      - apiregistration.k8s.io
+    resources:
+      - apiservices
+    verbs:
+      - get
+      - create
+      - update
   - apiGroups:
       - projectcalico.org
     resources:
