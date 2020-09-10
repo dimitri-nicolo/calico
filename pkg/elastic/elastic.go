@@ -36,6 +36,9 @@ type Client interface {
 	api.BenchmarksGetter
 	api.AuditLogReportHandler
 	api.FlowLogReportHandler
+	api.AlertLogReportHandler
+	api.DNSLogReportHandler
+	api.ADLogReportHandler
 	api.ReportRetriever
 	api.ReportStorer
 	api.ListDestination
@@ -196,7 +199,11 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 }
 
 func (c *client) ClusterIndex(index, postfix string) string {
-	return fmt.Sprintf("%s.%s.%s", index, c.indexSuffix, postfix)
+	if postfix != "" {
+		return fmt.Sprintf("%s.%s.%s", index, c.indexSuffix, postfix)
+	} else {
+		return fmt.Sprintf("%s.%s", index, c.indexSuffix)
+	}
 }
 
 func (c *client) Backend() *elastic.Client {
