@@ -313,6 +313,11 @@ func collectNodeDiags(dir, sinceFlag string) {
 				CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route", common.CalicoNamespace, p),
 				FilePath: fmt.Sprintf("%s/iproute.txt", curNodeDir),
 			},
+			{
+				Info:     fmt.Sprintf("Collect CNI logs for the node %s", p),
+				CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- find /var/log/calico/cni/ -type f -exec cat {} ;", common.CalicoNamespace, p),
+				FilePath: fmt.Sprintf("%s/cni.log", curNodeDir),
+			},
 		})
 
 	}
