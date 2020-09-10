@@ -1,0 +1,7 @@
+apiVersion: projectcalico.org/v3
+kind: PacketCapture
+metadata:
+  name: sample-capture-manager
+  namespace: tigera-manager
+spec:
+  selector: k8s-app == "tigera-manager"
