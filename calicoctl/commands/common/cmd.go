@@ -16,7 +16,7 @@ func ExecCmd(cmdStr string) (*bytes.Buffer, error) {
 	var result bytes.Buffer
 
 	parts := strings.Fields(cmdStr)
-	log.Debugf("cmd tokens: [%+v]\n", parts)
+	log.Debugf("cmd tokens: [%+v]", parts)
 
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("no command to execute")
@@ -59,7 +59,7 @@ func ExecCmdWriteToFile(c Cmd) {
 	}
 
 	parts := strings.Fields(c.CmdStr)
-	log.Debugf("cmd tokens: [%+v]\n", parts)
+	log.Debugf("cmd tokens: [%+v]", parts)
 
 	log.Debugf("Executing command: %+v ... ", c.CmdStr)
 	content, err := exec.Command(parts[0], parts[1:]...).CombinedOutput()

@@ -559,3 +559,40 @@ func Test_validateAndPrint(t *testing.T) {
 		})
 	}
 }
+
+func Test_extractPodName(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantEmpty bool
+	}{
+		{
+			name:      "Should return pod name",
+			input:     `pod/calico-node-6x5lx`,
+			wantEmpty: false,
+		},
+		{
+			name:      "Should return empty string (no resources found)",
+			input:     `No resources found.`,
+			wantEmpty: true,
+		},
+		{
+			name: "Should return empty string (no connection)",
+			input: `The connection to the server localhost:8080 was refused - did you specify the right host or port?
+`,
+			wantEmpty: true,
+		},
+		{
+			name:      "Should return empty string (no output)",
+			input:     ``,
+			wantEmpty: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if out := extractPodName(tt.input); (out == "") != tt.wantEmpty {
+				t.Errorf("extractPodName() error = %v, wantEmpty %v", out, tt.wantEmpty)
+			}
+		})
+	}
+}

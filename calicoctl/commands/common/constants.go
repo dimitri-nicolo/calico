@@ -4,4 +4,5 @@ package common
 const (
 	CalicoNamespace         = "calico-system"
 	TigeraOperatorNamespace = "tigera-operator"
+	LabelCalicoNode         = "k8s-app=calico-node"
 )

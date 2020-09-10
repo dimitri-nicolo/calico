@@ -39,7 +39,7 @@ var (
 // kernal, static, device, etc.
 func Peers(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl bgp peers <NODE_NAME> [--config=<CONFIG>]
+  calicoctl bgp peers <NAME> [--config=<CONFIG>]
 
 Options:
   -h --help                Show this screen.
@@ -48,7 +48,8 @@ Options:
                            [default: ` + constants.DefaultConfigPath + `]
 
 Description:
-  The bgp peers command prints BGP related information about a given node's peers.
+  The bgp peers command prints BGP related information about a given node's peers. For the
+  NAME parameter, you can provide either the node name or pod name of the node instance. 
 `
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
@@ -58,31 +59,58 @@ Description:
 		return nil
 	}
 
-	name := parsedArgs["<NODE_NAME>"]
+	name := parsedArgs["<NAME>"]
 	return showPeers(name.(string))
 }
 
 // Internal function for BGP peers subcommand.
-func showPeers(nodeName string) error {
+func showPeers(input string) error {
+	// We ultimately need the pod name to remote exec into the pod and extract BGP stats
+	var podName string
 	// Ensure node name is valid format; we want to ensure user does not inject additional shell commands
 	// using the node name argument
-	node := argutils.ValidateResourceName(nodeName)
+	nodeName := argutils.ValidateResourceName(input)
 
 	// Ensure kubectl command is available (since we need it to access BGP information)
 	if err := common.KubectlExists(); err != nil {
 		return fmt.Errorf("missing dependency: %s", err)
 	}
 
-	// Ensure the node actually exists
-	_, err := common.ExecCmd(fmt.Sprintf("kubectl get pod %s -n %s", node, common.CalicoNamespace))
+	// First, assume user supplied a host node name; attempt to locate corresponding pod name. We do this first
+	// because we think users will more likely use host node name with this command. Use -o name to output just
+	// the name.
+	// If this command is successful it will simply output something like "pod/calico-node-pz6kx". If nothing was
+	// found it will return empty output.
+	log.Debugf("First attempt, assume user provided node name [%s] ... try to determine pod name", nodeName)
+	output, err := common.ExecCmd(fmt.Sprintf(
+		"kubectl get pods -n %s -l %s --field-selector spec.nodeName=%s -o name",
+		common.CalicoNamespace,
+		common.LabelCalicoNode,
+		nodeName,
+	))
+	// Stop if we get an error
 	if err != nil {
-		return fmt.Errorf("Could not retrieve node with name %s: %s", node, err)
+		return fmt.Errorf("Could not retrieve node with host node name %s: %s", nodeName, err)
+	}
+
+	extractedPodName := extractPodName(output.String())
+	// If above failed, determine whether user supplied a valid pod name directly
+	if extractedPodName == "" {
+		log.Debugln("Could not find pod name based on node name.")
+		log.Debugf("Second attempt, assume user provided pod name [%s] ... verify it is valid", nodeName)
+		_, err = common.ExecCmd(fmt.Sprintf("kubectl get pod %s -n %s", nodeName, common.CalicoNamespace))
+		if err != nil {
+			return fmt.Errorf("Could not retrieve node with pod name %s: %s", nodeName, err)
+		}
+		podName = nodeName
+	} else {
+		podName = extractedPodName
 	}
 
 	// Connect to node and access BIRD command interface in order to extract BGP info.
 	birdCmd := "birdcl -s /var/run/calico/bird.ctl -v -r show protocols all"
-	output, err := common.ExecCmd(
-		fmt.Sprintf("kubectl exec %s -n %s -- %s", node, common.CalicoNamespace, birdCmd),
+	output, err = common.ExecCmd(
+		fmt.Sprintf("kubectl exec %s -n %s -- %s", podName, common.CalicoNamespace, birdCmd),
 	)
 	if err != nil {
 		return fmt.Errorf("Could not retrieve info for BPG peers: %s", err)
@@ -95,6 +123,19 @@ func showPeers(nodeName string) error {
 	fmt.Print(sb.String())
 
 	return nil
+}
+
+// Extract the pod name from the provided output (expected to be from kubectl).
+func extractPodName(output string) string {
+	if len(output) > 0 {
+		tokens := strings.Split(output, "/")
+		n := len(tokens)
+		// Expect output with format "pod/calico-node-6x5lx"
+		if n >= 1 && tokens[0] == "pod" {
+			return tokens[n-1]
+		}
+	}
+	return ""
 }
 
 // Validate and transform output from BIRD according to our needs (e.g. filter out rows we don't want).
