@@ -622,7 +622,7 @@ endif
 	$(MAKE) release-windows-archive
 
 ## Produces the Windows ZIP archive for the release.
-release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs
+release-windows-archive $(WINDOWS_ARCHIVE): ensure-version-defined
 	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
@@ -680,17 +680,23 @@ node-test-at: release-prereqs
 	   chmod +rx /tmp/goss && \
 	   /tmp/goss --gossfile /tmp/goss.yaml validate'
 
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
+ensure-version-defined:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+
+ensure-local-build-not-defined:
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
+
+ensure-calico-version-release-defined:
 ifndef CALICO_VERSION_RELEASE
 	$(error CALICO_VERSION_RELEASE is undefined - run using make release CALICO_VERSION_RELEASE=vX.Y.Z)
 endif
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs: ensure-version-defined ensure-local-build-not-defined ensure-calico-version-release-defined
 
 ###############################################################################
 # Image build/push
