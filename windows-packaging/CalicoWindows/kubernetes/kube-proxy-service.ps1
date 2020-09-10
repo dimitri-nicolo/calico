@@ -16,10 +16,12 @@ Param(
     [string]$NetworkName = "Calico"
 )
 
-# Import HNS libraries, included in the package.
-ipmo -Force c:\CalicoWindows\libs\hns\hns.psm1
+$baseDir = "$PSScriptRoot\.."
 
-. c:\CalicoWindows\config.ps1
+# Import HNS libraries, included in the package.
+ipmo -Force $baseDir\libs\hns\hns.psm1
+
+. $baseDir\config.ps1
 
 Write-Host "Running kub-proxy service."
 

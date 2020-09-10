@@ -23,7 +23,7 @@ $env:DNS_SEARCH = "svc.cluster.local"
 $env:CALICO_DATASTORE_TYPE = "<your datastore type>"
 
 # Set KUBECONFIG to the path of your kubeconfig file.
-$env:KUBECONFIG = "c:\k\config"
+$env:KUBECONFIG = "$PSScriptRoot\calico-kube-config"
 
 # For the "etcdv3" datastore only: set ETCD_ENDPOINTS, format: "http://<host>:<port>,..."
 $env:ETCD_ENDPOINTS = "<your etcd endpoints>"

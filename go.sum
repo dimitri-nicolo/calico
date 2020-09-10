@@ -706,8 +706,8 @@ github.com/tigera/cni-plugin-private v1.11.1-0.20200824042320-e6499d7cc552 h1:Sg
 github.com/tigera/cni-plugin-private v1.11.1-0.20200824042320-e6499d7cc552/go.mod h1:emw8X27j+8XL7THEd3ZXny1rWYUB2u8QpqBsgVCfXk8=
 github.com/tigera/confd-private v1.0.1-0.20200820000356-6a0cc29deb6e h1:T/zV+zIqPMFX9X6MbV4sR9ZA/3Srs6Jd7ODoAKTnad8=
 github.com/tigera/confd-private v1.0.1-0.20200820000356-6a0cc29deb6e/go.mod h1:zf2ma9xotCOLAUFKnv0N57foqW9EXNKEvdUFl/JEqbI=
-github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223 h1:FDyLVsL36KW1Ik+9cYGMo54WX2kwj5E2ujaoAGozrFs=
-github.com/tigera/felix-private v0.0.0-20200820184256-c6940ca3c223/go.mod h1:bhxrvPjcQaD8dTJdBlwVnPWH0FUh5T/EvVnp4i+wzvE=
+github.com/tigera/felix-private v0.0.0-20200909101102-08164b5d9016 h1:BJkDxiWcJJcYmYi95BiFQLInPFv9mmHsLK86kCj5XjE=
+github.com/tigera/felix-private v0.0.0-20200909101102-08164b5d9016/go.mod h1:oizMCLeQ7wTPpk/3+8NQp7p7p7VS1dpKuxcUSYO4jd4=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200818223838-6dd792140b9c h1:WBFM23tb+VbbzDjGlcJCAdvw4HbiWtifw3EpWL1szV8=
@@ -740,6 +740,8 @@ github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936/go.mod h1:ZjcWmF
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc h1:R83G5ikgLMxrBvLh22JhdfI8K6YXEPHx5P03Uu3DRs4=
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc/go.mod h1:ZjcWmFBXmLKZu9Nxj3WKYEafiSqer2rnvPr0en9UNpI=
 github.com/vmware/govmomi v0.20.3/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
+github.com/willf/bitset v1.1.11 h1:N7Z7E9UvjW+sGsEl7k/SJrvY2reP1A07MrGuCjIOjRE=
+github.com/willf/bitset v1.1.11/go.mod h1:83CECat5yLh5zVOf4P1ErAgKA5UDvKtgyUABdr3+MjI=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xlab/handysort v0.0.0-20150421192137-fb3537ed64a1/go.mod h1:QcJo0QPSfTONNIgpN5RA8prR7fF8nkF6cTWTcNerRO8=
