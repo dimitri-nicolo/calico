@@ -4,6 +4,9 @@ description: Review requirements for the standard install for Calico Enterprise 
 canonical_url: '/getting-started/windows-calico/requirements'
 ---
 
+**Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
+{: .alert .alert-warning}
+
 ### About {{site.prodnameWindows}}
 
 Because the Kubernetes and {{site.prodname}} control components do not run on Windows yet, a hybrid Linux/Windows cluster is required. {{site.prodnameWindows}} standard installation is distributed as a **.zip archive**. 
@@ -12,9 +15,12 @@ Because the Kubernetes and {{site.prodname}} control components do not run on Wi
 
 ✓ Install: Manifest install for Kubernetes clusters
 
-✓ Platforms: Kubernetes, EKS
+✓ Platforms: Kubernetes, EKS, AWS
 
-✓ Networking: Calico CNI with VXLAN, or other supported CNI
+✓ Networking: 
+  - Kubernetes, on-premises: Calico CNI with BGP or VXLAN
+  - EKS: VPC CNI, or Calico CNI with BGP or VXLAN
+  - AWS: VPC CNI only
 
 ### Requirements
 
@@ -24,12 +30,13 @@ The following table summarizes the networking options and considerations.
 
 | Networking              | Components                                                   | **Value/Content**                                            |
 | ----------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| {{site.prodname}} VXLAN | Windows CNI plugin:<br/>calico.exe<br /><br />Linux: {{site.prodname}} for policy and networking | {{site.prodname}}'s VXLAN overlay, supports:<br/><br />- VXLAN overlay, which can traverse most networks.<br/>- Auto-configured node-to-node routing<br/>- {{site.prodname}} IPAM and IP aggregation (with some limitations)<br/>- Both etcd and Kubernetes API datastore drivers<br/>**Note**: VXLAN runs on UDP port 4789 (this is the only port supported by Windows), remember to open that port between your {{site.prodname}} hosts in any firewalls / security groups. |
+| {{site.prodname}} BGP   | Windows CNI plugin:<br /><br />calico.exeLinux: {{site.prodname}} for policy and networking | {{site.prodname}}'s native networking approach, supports:<br/>- Auto-configured node-to-node BGP mesh over an L2 fabric<br/>- Peering with external routers for an L3 fabric<br/>- {{site.prodname}} IPAM and IP aggregation (with some limitations)<br/>- Route reflectors (including the new in-cluster route reflector introduced in {{site.prodname}} v3.3). **Note**: Windows node cannot act as route reflectors.<br/>- Kubernetes API datastore driver<br/><br />**AWS users**: If running on AWS, you must disable the source/dest check on your EC2 instances so that hosts can forward traffic on behalf of pods. |
+| {{site.prodname}} VXLAN | Windows CNI plugin:<br/>calico.exe<br /><br />Linux: {{site.prodname}} for policy and networking | {{site.prodname}}'s VXLAN overlay, supports:<br/><br />- VXLAN overlay, which can traverse most networks.<br/>- Auto-configured node-to-node routing<br/>- {{site.prodname}} IPAM and IP aggregation (with some limitations)<br/>- Kubernetes API datastore driver<br/>**Note**: VXLAN runs on UDP port 4789 (this is the only port supported by Windows), remember to open that port between your {{site.prodname}} hosts in any firewalls / security groups. |
 | Cloud provider          | Windows CNI plugin: win-bridge.exe<br /><br />Linux: {{site.prodname}} policy-only | A useful fallback, particularly if you have a Kubernetes cloud provider that automatically installs inter-host routes. {{site.prodname}} has been tested with the standard **win-bridge.exe** CNI plugin so it should work with any networking provider that ultimately uses win-bridge.exe to network the pod (such as the Azure CNI plugin and cloud provider). |
 
 #### Datastores
 
-Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Windows node/Kubernetes cluster must be the same as the datastore for the Linux control node. (You cannot mix datastores in a {{site.prodnameWindows}} implementation.)
+Kubernetes datastore (kdd) only.
 
 #### Kubernetes version 
 
@@ -46,7 +53,12 @@ Earlier versions may work, but we do not actively test {{site.prodnameWindows}} 
 - Windows versions:
   - Windows Server 1903 (AKA 19H1) build 18317 or greater
   - Windows Server 2019 / 1809 (RS5) or greater, with [some limitations]({{site.baseurl}}/getting-started/windows-calico/limitations)
+  - Windows Server 2019 with DSR support:
+    - OS 1809: Build 17763.1432, binary version: 10.0.17763.1432
+    - OS 1903: Build 18362.1049, binary version: 10.0.18362.1049
+    - OS 1909: Build 18363.1049, binary version: 10.0.18363.1049
 - Powershell for the installer
+- If you are using {{site.prodname}} BGP networking, the RemoteAccess service must be installed for the Windows BGP Router.
 - Windows nodes support only a single IP pool type (so, if using a VXLAN pool, you should only use VXLAN throughout the cluster).
 - TLS v1.2 enabled. For example:
 
