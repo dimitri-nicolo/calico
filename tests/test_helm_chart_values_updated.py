@@ -57,6 +57,8 @@ EXCLUDED_IMAGES = [
     'firewall-integration',
     'license-agent',
     'tigera-cni',
+    'egress-gateway',
+    'guardian',
 
     # third party images
     'elasticsearch',
