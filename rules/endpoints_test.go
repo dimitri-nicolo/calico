@@ -963,7 +963,7 @@ var _ = Describe("Endpoints", func() {
 						true,
 						nil,
 						nil,
-						nil,
+						NotAnEgressGateway,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
 							Name: "cali-tw-cali1234",
@@ -974,7 +974,8 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: DropAction{}},
 
-								{Action: ClearMarkAction{Mark: 0x8}},
+								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
 							},
@@ -988,8 +989,9 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: DropAction{}},
 
-								{Action: ClearMarkAction{Mark: 0x8}},
+								{Action: ClearMarkAction{Mark: 0x88}},
 								dropIPIPRule,
+								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
 							},
@@ -1014,7 +1016,7 @@ var _ = Describe("Endpoints", func() {
 						true,
 						nil,
 						nil,
-						nil,
+						NotAnEgressGateway,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
 							Name: "cali-tw-cali1234",
@@ -1025,7 +1027,8 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: DropAction{}},
 
-								{Action: ClearMarkAction{Mark: 0x8}},
+								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
 							},
@@ -1039,8 +1042,9 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: DropAction{}},
 
-								{Action: ClearMarkAction{Mark: 0x8}},
+								{Action: ClearMarkAction{Mark: 0x88}},
 								dropVXLANRule,
+								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
 							},
@@ -1066,7 +1070,7 @@ var _ = Describe("Endpoints", func() {
 						true,
 						nil,
 						nil,
-						nil,
+						NotAnEgressGateway,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
 							Name: "cali-tw-cali1234",
@@ -1077,7 +1081,8 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: DropAction{}},
 
-								{Action: ClearMarkAction{Mark: 0x8}},
+								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
 							},
@@ -1091,7 +1096,8 @@ var _ = Describe("Endpoints", func() {
 								{Match: Match().ConntrackState("INVALID"),
 									Action: DropAction{}},
 
-								{Action: ClearMarkAction{Mark: 0x8}},
+								{Action: ClearMarkAction{Mark: 0x88}},
+								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{Action: DropAction{},
 									Comment: []string{"Drop if no profiles matched"}},
 							},
