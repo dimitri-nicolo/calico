@@ -122,24 +122,38 @@ function GetPlatformType()
 function GetBackendType()
 {
     param(
+      [parameter(Mandatory=$true)] $CalicoNamespace,
       [parameter(Mandatory=$false)] $KubeConfigPath = "$RootDir\calico-kube-config"
     )
 
-    $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org default -o jsonpath='{.spec.ipipEnabled}' -n calico-system
+    $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org default -o jsonpath='{.spec.ipipEnabled}' -n $CalicoNamespace
     if ($encap -EQ "true") {
         throw "{{site.prodname}} on Linux has IPIP enabled. IPIP is not supported on Windows nodes."
     }
 
-    $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org -o jsonpath='{.spec.vxlanEnabled}' -n calico-system
+    $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org -o jsonpath='{.spec.vxlanEnabled}' -n $CalicoNamespace
     if ($encap -EQ "true") {
         return ("vxlan")
     }
     return ("bgp")
 }
 
+function GetCalicoNamespace() {
+    param(
+      [parameter(Mandatory=$false)] $KubeConfigPath = "c:\\k\\config"
+    )
+
+    $name=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get ns calico-system
+    if ([string]::IsNullOrEmpty($name)) {
+        return ("kube-system")
+    }
+    return ("calico-system")
+}
+
 function GetCalicoKubeConfig()
 {
     param(
+      [parameter(Mandatory=$true)] $CalicoNamespace,
       [parameter(Mandatory=$false)] $SecretName = "calico-node",
       [parameter(Mandatory=$false)] $KubeConfigPath = "c:\\k\\config"
     )
@@ -151,12 +165,12 @@ function GetCalicoKubeConfig()
         Import-Module $eksAWSToolsModulePath
     }
 
-    $name=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get secret -n calico-system | findstr $SecretName | % { $_.Split(" ") | select -first 1 }
+    $name=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get secret -n $CalicoNamespace | findstr $SecretName | % { $_.Split(" ") | select -first 1 }
     if ([string]::IsNullOrEmpty($name)) {
         throw "$SecretName service account does not exist."
     }
-    $ca=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get secret/$name -o jsonpath='{.data.ca\.crt}' -n calico-system
-    $tokenBase64=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get secret/$name -o jsonpath='{.data.token}' -n calico-system
+    $ca=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get secret/$name -o jsonpath='{.data.ca\.crt}' -n $CalicoNamespace
+    $tokenBase64=c:\k\kubectl.exe --kubeconfig=$KubeConfigPath get secret/$name -o jsonpath='{.data.token}' -n $CalicoNamespace
     $token=[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($tokenBase64))
 
     $server=findstr https:// $KubeConfigPath
@@ -234,33 +248,42 @@ if ($platform -EQ "azure") {
     $Backend="none"
     SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="none"'
     SetConfigParameters -OldString 'KUBE_NETWORK = "Calico.*"' -NewString 'KUBE_NETWORK = "azure.*"'
-    GetCalicoKubeConfig
+
+    $calicoNs = GetCalicoNamespace
+    GetCalicoKubeConfig -CalicoNamespace $calicoNs -SecretName 'calico-windows'
 }
 if ($platform -EQ "eks") {
     $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
     Write-Host "Setup {{installName}} for EKS, node name $awsNodeName ..."
-    $Backend="none"
+    $Backend = "none"
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
     SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="none"'
     SetConfigParameters -OldString 'KUBE_NETWORK = "Calico.*"' -NewString 'KUBE_NETWORK = "vpc.*"'
-    GetCalicoKubeConfig -KubeConfigPath C:\ProgramData\kubernetes\kubeconfig
+
+    $calicoNs = GetCalicoNamespace -KubeConfigPath C:\ProgramData\kubernetes\kubeconfig
+    GetCalicoKubeConfig -CalicoNamespace $calicoNs -SecretName 'calico-node' -KubeConfigPath C:\ProgramData\kubernetes\kubeconfig
 }
 if ($platform -EQ "ec2") {
     $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
     Write-Host "Setup {{installName}} for aws, node name $awsNodeName ..."
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
-    GetCalicoKubeConfig
-    $Backend=GetBackEndType
+
+    $calicoNs = GetCalicoNamespace
+    GetCalicoKubeConfig -CalicoNamespace $calicoNs
+    $Backend = GetBackendType -CalicoNamespace $calicoNs
+
     Write-Host "Backend networking is $Backend"
     if ($Backend -EQ "bgp") {
         SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="windows-bgp"'
     }
 }
 if ($platform -EQ "bare-metal") {
-    GetCalicoKubeConfig
-    $Backend=GetBackEndType
+    $calicoNs = GetCalicoNamespace
+    GetCalicoKubeConfig -CalicoNamespace $calicoNs
+    $Backend = GetBackendType -CalicoNamespace $calicoNs
+
     Write-Host "Backend networking is $Backend"
     if ($Backend -EQ "bgp") {
         SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="windows-bgp"'
