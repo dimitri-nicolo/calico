@@ -26,7 +26,6 @@ curl {{ "/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml" | a
 curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute_url }} -o manifests/02-role-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-serviceaccount-tigera-operator.yaml" | absolute_url }} -o manifests/02-serviceaccount-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-configmap-calico-resources.yaml" | absolute_url }} -o manifests/02-configmap-calico-resources.yaml
-curl {{ "/manifests/ocp/tigera-operator/02-configmap-tigera-install-script.yaml" | absolute_url }} -o manifests/02-configmap-tigera-install-script.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-tigera-operator.yaml" | absolute_url }} -o manifests/02-tigera-operator.yaml
 curl {{ "/manifests/ocp/misc/00-namespace-tigera-prometheus.yaml" | absolute_url }} -o manifests/00-namespace-tigera-prometheus.yaml
 curl {{ "/manifests/ocp/prometheus-operator/04-clusterrolebinding-prometheus.yaml" | absolute_url }} -o manifests/04-clusterrolebinding-prometheus.yaml
