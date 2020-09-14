@@ -20,32 +20,128 @@ This how-to guide uses the following {{site.prodname}} features:
 ### Before you begin...
 
 - Verify the operating system(s) running on the nodes in the cluster {% include open-new-window.html text='support WireGuard' url='https://www.wireguard.com/install/' %}.
+-  WireGuard in {{site.prodname}} requires node IP addresses to establish secure tunnels between nodes. {{site.prodname}} can automatically detect IP address of a node using [IP Setting]({{site.baseurl}}/reference/node/configuration#ip-setting) and [IP autodetection method]({{site.baseurl}}/reference/node/configuration#ip-autodetection-methods) in [calico/node]({{site.baseurl}}/reference/node/configuration) resource.
+    - For operator based installation, set the `nodeAddressAutodetectionV4` or `nodeAddressAutodetectionV6` in the [installation]({{site.baseurl}}/reference/installation/api) to applicable [autodetection method]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection)
 
 > **Note**: WireGuard in {{site.prodname}} does not support IPv6 at this time. Also, encryption using WireGuard is not supported if `CALICO_NETWORKING_BACKEND=none` (e.g. managed Kubernetes platforms EKS, AKS and GKE).
 {: .alert .alert-info}
 
-### How to enable WireGuard for the cluster
+### How to
 
-1. Install WireGuard on cluster nodes using {% include open-new-window.html text='instructions for your operating system' url='https://www.wireguard.com/install/' %}. Note that you may need to reboot your nodes after installing WireGuard to make the kernel modules available on your system.
+- [Install WireGuard](#install-wireguard)
+- [Enable WireGuard for a cluster](#enable-wireguard-for-a-cluster)
+- [Disable WireGuard for an individual node](#disable-wireguard-for-an-individual-node)
+- [Disable WireGuard for a cluster](#disable-wireguard-for-a-cluster)
 
-    > **Note**: Nodes that do not support WireGuard will not be secured by WireGuard tunnels, even if traffic running on the node to and from the pods goes to nodes that do support WireGuard.
+#### Install WireGuard
+
+Install WireGuard on cluster nodes using {% include open-new-window.html text='instructions for your operating system' url='https://www.wireguard.com/install/' %}. Note that you may need to reboot your nodes after installing WireGuard to make the kernel modules available on your system.
+
+   Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
+{% tabs %}
+<label:EKS,active:true>
+<%
+To install WireGuard on the default Amazon Machine Image (AMI):
+
+   ```bash
+   sudo yum install kernel-devel-`uname -r` -y
+   sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y
+   sudo curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
+   sudo yum install wireguard-dkms wireguard-tools -y
+   ```
+%>
+<label:OpenShift>
+<%
+To install WireGuard for OpenShift v4.3:
+
+   1. Create MachineConfig for WireGuard.
+   ```bash
+   cat <<EOF > mc-wg-worker.yaml
+   apiVersion: machineconfiguration.openshift.io/v1
+   kind: MachineConfig
+   metadata:
+     labels:
+       machineconfiguration.openshift.io/role: worker
+     name: 10-kvc-wireguard-kmod
+   spec:
+     config:
+   EOF
+   ```
+
+   2. Create base Ignition config.
+   ```bash
+   cat <<EOF > ./wg-config.ign
+   {
+     "ignition": { "version": "2.2.0" },
+     "systemd": {
+       "units": [{
+         "name": "require-kvc-wireguard-kmod.service",
+         "enabled": true,
+         "contents": "[Unit]\nRequires=kmods-via-containers@wireguard-kmod.service\n[Service]\nType=oneshot\nExecStart=/usr/bin/true\n\n[Install]\nWantedBy=multi-user.target"
+       }]
+     }
+   }
+   EOF
+   ```
+
+   3. Configure files.
+   ```bash
+   FAKEROOT=$(mktemp -d)
+   git clone https://github.com/kmods-via-containers/kmods-via-containers
+   cd kmods-via-containers
+   make install DESTDIR=${FAKEROOT}/usr/local CONFDIR=${FAKEROOT}/etc/
+   cd ..
+   git clone https://github.com/realgaurav/kvc-wireguard-kmod
+   cd kvc-wireguard-kmod
+   make install DESTDIR=${FAKEROOT}/usr/local CONFDIR=${FAKEROOT}/etc/
+   cd ..
+   ```
+
+   4. Configure RPMs for kernel-core, kernel-devel and kernel-modules for the host kernel (can be found by running uname -r on the host). Update `$FAKEROOT/etc/kvc/wireguard-kmod.conf` for the RPM location.
+
+   5. Get RHEL Entitlement data from your own RHEL8 system.
+   ```bash
+   [your-rhel8-host] # tar -czf subs.tar.gz /etc/pki/entitlement/ /etc/rhsm/ /etc/yum.repos.d/redhat.repo
+   ```
+
+   6. Copy the contents in the workspace and use the following command to add it to the MachineConfig.
+   ```bash
+   tar -x -C ${FAKEROOT} -f subs.tar.gz
+   ```
+
+   7. Get filetranspiler to generate the usable machine-config.
+   ```bash
+   git clone https://github.com/ashcrow/filetranspiler
+   ./filetranspiler/filetranspile -i ./wg-config.ign -f ${FAKEROOT} --format=yaml --dereference-symlinks | sed 's/^/     /' | (cat mc-wg-worker.yaml -) > mc-wg.yaml
+   ```
+
+   8. With with the KUBECONFIG set, run the following command to apply the MachineConfig created.
+   ```bash
+   oc create -f mc-wg.yaml
+   ```
+%>
+{% endtabs %}
+
+#### Enable WireGuard for a cluster
+
+   > **Note**: Nodes that do not support WireGuard will not be secured by WireGuard tunnels, even if traffic running on the node to and from the pods goes to nodes that do support WireGuard.
    {: .alert .alert-info}
 
-1. Enable WireGuard encryption across all the nodes using the following command.
+Enable WireGuard encryption across all the nodes using the following command.
 
-    ```bash
+   ```bash
 kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"wireguardEnabled":true}}'
-    ```
+   ```
 
-   For OpenShift, add the Felix configuration with WireGuard enabled [under custom resources]({{ site.baseurl }}/getting-started/openshift/installation/index#provide-additional-configuration).
+   For OpenShift, add the Felix configuration with WireGuard enabled [under custom resources]({{ site.baseurl }}/getting-started/openshift/installation/index#provide-additional-configuration). To enable WireGuard at the time of installation using operator, add the felixconfiguration to [custom-resources]({{ site.baseurl }}/reference/installation/api).
 
    > **Note**: The above command can be used to change other WireGuard attributes. For a list of other WireGuard parameters and configuration evaluation, see the [Felix configuration]({{ site.baseurl }}/reference/resources/felixconfig#felix-configuration-definition).
    {: .alert .alert-info}
 
-1. We recommend that you review and modify the MTU used by Calico networking when WireGuard is enabled to increase network performance. Follow the instructions in the [Configure MTU to maximize network performance]({{ site.baseurl }}/networking/mtu) guide to set the MTU to a value appropriate for your network.
+We recommend that you review and modify the MTU used by Calico networking when WireGuard is enabled to increase network performance. Follow the instructions in the [Configure MTU to maximize network performance]({{site.baseurl}}/networking/mtu) guide to set the MTU to a value appropriate for your network.
 
 
-### How to disable WireGuard for an individual node
+#### Disable WireGuard for an individual node
 
 To disable WireGuard on a specific node with WireGuard installed, modify the node-specific Felix configuration. For example:
 
@@ -61,7 +157,7 @@ kubectl patch felixconfiguration node.my-node --type='merge' -p '{"spec":{"wireg
 
 With the above command, Calico will not encrypt any of the pod traffic to or from node `my-node`.
 
-### How to disable WireGuard for the cluster
+#### Disable WireGuard for the cluster
 
 To disable WireGuard on all nodes modify the default Felix configuration. For example:
 
@@ -69,7 +165,7 @@ To disable WireGuard on all nodes modify the default Felix configuration. For ex
 kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"wireguardEnabled":false}}'
   ```
 
-#### Troubleshoot
+### Troubleshoot
 
 To verify that the nodes are configured for WireGuard encryption, check the node status set by Felix using `kubectl`. For example:
 
@@ -81,6 +177,13 @@ To verify that the nodes are configured for WireGuard encryption, check the node
      wireguardPublicKey: jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY=
      ...
    ```
+
+### Limitations
+
+Encryption functionality using WireGuard has not been verified on all the supported platforms. Certain traffic flows, for example pod to node traffic, will not work when encryption is enabled. The following lists such limitations of this feature:
+
+* Amazon EKS: Pod to Node traffic doesn't work when using {% include open-new-window.html text='AWS VPC CNI' url='https://github.com/aws/amazon-vpc-cni-k8s' %}. For in-cluster pod traffic encrytion when using AWS VPC CNI, use version 1.7+
+* AKS, GKE and IKS: While Pod to pod traffic encryption may work, it hasn't been fully verified.
 
 ### Above and beyond
 

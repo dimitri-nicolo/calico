@@ -182,8 +182,8 @@ section:
       path: /security/high-connection-workloads
     - title: Defend against DoS attacks
       path: /security/defend-dos-attack
-  - title: Encrypt in-cluster pod traffic 
-    path: /security/encrypt-cluster-pod-traffic   
+  - title: Encrypt in-cluster pod traffic
+    path: /security/encrypt-cluster-pod-traffic
 - title: Secure Calico Enterprise component communications
   path: /security/comms/
   section:
