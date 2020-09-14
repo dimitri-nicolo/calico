@@ -88,6 +88,44 @@ var localWlEp1 = WorkloadEndpoint{
 	},
 }
 
+var localWlEp1OnlyLabels = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali1",
+	Mac:   mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32")},
+	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128")},
+	Labels: map[string]string{
+		"id":                          "capture-loc-ep-1",
+		"label":                       "a",
+		"projectcalico.org/namespace": "default",
+	},
+	Ports: []EndpointPort{
+		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
+		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
+		{Name: "udpport", Protocol: numorstring.ProtocolFromStringV1("udp"), Port: 9091},
+	},
+}
+var localWlEp2OnlyLabels = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali1",
+	Mac:   mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32")},
+	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128")},
+	Labels: map[string]string{
+		"id":                          "capture-loc-ep-2",
+		"label":                       "b",
+		"projectcalico.org/namespace": "default",
+	},
+	Ports: []EndpointPort{
+		{Name: "tcpport", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 8080},
+		{Name: "tcpport2", Protocol: numorstring.ProtocolFromStringV1("tcp"), Port: 1234},
+		{Name: "udpport", Protocol: numorstring.ProtocolFromStringV1("udp"), Port: 9091},
+	},
+}
 var localWlEp1WithLabelsButNoProfiles = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali1",

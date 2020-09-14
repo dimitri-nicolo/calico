@@ -34,7 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-GO_BUILD_VER?=v0.45
+GO_BUILD_VER?=v0.46
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins
@@ -446,6 +446,10 @@ check-typha-pins:
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
 
+.PHONY: golangci-lint
+golangci-lint: $(GENERATED_FILES)
+	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
+
 ###############################################################################
 # Unit Tests
 ###############################################################################
@@ -455,7 +459,7 @@ UT_PACKAGES_TO_SKIP?=fv,k8sfv,bpf/ut
 .PHONY: ut
 ut combined.coverprofile: $(SRC_FILES) build-bpf
 	@echo Running Go UTs.
-	$(DOCKER_GO_BUILD) ./utils/run-coverage -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
+	$(DOCKER_GO_BUILD_CGO) ./utils/run-coverage -skipPackage $(UT_PACKAGES_TO_SKIP) $(GINKGO_ARGS)
 
 ###############################################################################
 # FV Tests
@@ -463,7 +467,7 @@ ut combined.coverprofile: $(SRC_FILES) build-bpf
 fv/fv.test: $(SRC_FILES)
 	# We pre-build the FV test binaries so that we can run them
 	# outside a container and allow them to interact with docker.
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@'
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@'
 
 REMOTE_DEPS=fv/infrastructure/crds
 

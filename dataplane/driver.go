@@ -23,6 +23,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/projectcalico/felix/capture"
+
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -339,6 +341,13 @@ func StartDataplaneDriver(configParams *config.Config,
 			Collector:            collector,
 			DNSCacheFile:         configParams.DNSCacheFile,
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
+
+			PacketCapture: capture.Config{
+				Directory:       configParams.CaptureDir,
+				MaxSizeBytes:    configParams.CaptureMaxSizeBytes,
+				RotationSeconds: configParams.CaptureRotationSeconds,
+				MaxFiles:        configParams.CaptureMaxFiles,
+			},
 		}
 
 		if configParams.BPFExternalServiceMode == "dsr" {

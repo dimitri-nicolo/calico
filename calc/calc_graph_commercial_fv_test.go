@@ -110,6 +110,111 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	},
 ).withName("host ep2, policy")
 
+// local endpoint key for captures
+var localWlEpCaptureKey1 = WorkloadEndpointKey{
+	Hostname: localHostname, OrchestratorID: "orch", WorkloadID: "wl1-capture", EndpointID: "ep1",
+}
+
+// local endpoint key for captures
+var localWlEpCaptureKey2 = WorkloadEndpointKey{
+	Hostname: localHostname, OrchestratorID: "orch", WorkloadID: "wl2-capture", EndpointID: "ep2",
+}
+
+// local endpoint ids for captures
+var localWlEp1CaptureId = "orch/wl1-capture/ep1"
+var localWlEp2CaptureId = "orch/wl2-capture/ep2"
+
+// packet capture that select two local endpoints
+var withCaptureSelectAll = withLocalEndpointsForCapture.withKVUpdates(
+	KVPair{Key: CaptureAllKey, Value: CaptureAllValue},
+).withCapturesUpdates(proto.PacketCaptureUpdate{
+	Id: &proto.PacketCaptureID{
+		Name:      CaptureAllValue.Name,
+		Namespace: CaptureAllValue.Namespace,
+	},
+	Endpoint: &proto.WorkloadEndpointID{
+		WorkloadId:     localWlEpCaptureKey1.WorkloadID,
+		OrchestratorId: localWlEpCaptureKey1.OrchestratorID,
+		EndpointId:     localWlEpCaptureKey1.EndpointID,
+	},
+},
+	proto.PacketCaptureUpdate{
+		Id: &proto.PacketCaptureID{
+			Name:      CaptureAllValue.Name,
+			Namespace: CaptureAllValue.Namespace,
+		},
+		Endpoint: &proto.WorkloadEndpointID{
+			WorkloadId:     localWlEpCaptureKey2.WorkloadID,
+			OrchestratorId: localWlEpCaptureKey2.OrchestratorID,
+			EndpointId:     localWlEpCaptureKey2.EndpointID,
+		},
+	},
+).withName("with capture all()")
+
+// local endpoints update for capture
+var withLocalEndpointsForCapture = initialisedStore.withKVUpdates(
+	KVPair{Key: localWlEpCaptureKey1, Value: &localWlEp1OnlyLabels},
+	KVPair{Key: localWlEpCaptureKey2, Value: &localWlEp2OnlyLabels},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+).withEndpoint(localWlEp1CaptureId, []mock.TierInfo{}).withEndpoint(localWlEp2CaptureId, []mock.TierInfo{}).withName("with local endpoints for capture")
+
+// packet capture that select a single local endpoints
+var withCaptureSelectA = withLocalEndpointsForCapture.withKVUpdates(
+	KVPair{Key: CaptureSelectionKey, Value: CaptureSelectAValue},
+).withCapturesUpdates(proto.PacketCaptureUpdate{
+	Id: &proto.PacketCaptureID{
+		Name:      CaptureSelectAValue.Name,
+		Namespace: CaptureSelectAValue.Namespace,
+	},
+	Endpoint: &proto.WorkloadEndpointID{
+		WorkloadId:     localWlEpCaptureKey1.WorkloadID,
+		OrchestratorId: localWlEpCaptureKey1.OrchestratorID,
+		EndpointId:     localWlEpCaptureKey1.EndpointID,
+	},
+},
+).withName("with capture select label")
+
+// two packet captures that select twice a local endpoints
+var withCaptureSelectTwice = withLocalEndpointsForCapture.withKVUpdates(
+	KVPair{Key: CaptureSelectionKey, Value: CaptureSelectAValue},
+	KVPair{Key: CaptureAllKey, Value: CaptureAllValue},
+).withCapturesUpdates(proto.PacketCaptureUpdate{
+	Id: &proto.PacketCaptureID{
+		Name:      CaptureSelectAValue.Name,
+		Namespace: CaptureSelectAValue.Namespace,
+	},
+	Endpoint: &proto.WorkloadEndpointID{
+		WorkloadId:     localWlEpCaptureKey1.WorkloadID,
+		OrchestratorId: localWlEpCaptureKey1.OrchestratorID,
+		EndpointId:     localWlEpCaptureKey1.EndpointID,
+	}},
+	proto.PacketCaptureUpdate{
+		Id: &proto.PacketCaptureID{
+			Name:      CaptureAllValue.Name,
+			Namespace: CaptureAllValue.Namespace,
+		},
+		Endpoint: &proto.WorkloadEndpointID{
+			WorkloadId:     localWlEpCaptureKey1.WorkloadID,
+			OrchestratorId: localWlEpCaptureKey1.OrchestratorID,
+			EndpointId:     localWlEpCaptureKey1.EndpointID,
+		},
+	},
+	proto.PacketCaptureUpdate{
+		Id: &proto.PacketCaptureID{
+			Name:      CaptureAllValue.Name,
+			Namespace: CaptureAllValue.Namespace,
+		},
+		Endpoint: &proto.WorkloadEndpointID{
+			WorkloadId:     localWlEpCaptureKey2.WorkloadID,
+			OrchestratorId: localWlEpCaptureKey2.OrchestratorID,
+			EndpointId:     localWlEpCaptureKey2.EndpointID,
+		},
+	},
+).withName("with capture select an endpoint twice")
+
 // Policy ordering tests.  We keep the names of the policies the same but we
 // change their orders to check that order trumps name.
 var commLocalEp1WithOneTierPolicy123 = commercialPolicyOrderState(
@@ -816,6 +921,11 @@ var remoteEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	},
 ).withName("2 remote endpoints")
 
+var localEpAndRemoteEpWithCapture = withPolicyAndTier.withKVUpdates(
+	// Two local endpoints with overlapping IPs.
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+	KVPair{Key: remoteWlEpKey3, Value: &remoteWlEp3},
+)
 var commercialTests = []StateList{
 	// Empty should be empty!
 	{},
@@ -928,6 +1038,18 @@ var commercialTests = []StateList{
 
 	// DNS Policy unit tests.
 	{withDNSPolicy, withDNSPolicyNoDupe, withDNSPolicy2, withDNSPolicy3},
+
+	// Select all local endpoints for capture
+	{withCaptureSelectAll},
+
+	// Select a single local endpoints for capture
+	{withCaptureSelectA},
+
+	// Select an endpoint twice
+	{withCaptureSelectTwice},
+
+	// Select all states
+	{withCaptureSelectAll, withCaptureSelectA, withCaptureSelectTwice},
 
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints

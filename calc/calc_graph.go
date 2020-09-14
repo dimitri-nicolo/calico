@@ -102,6 +102,12 @@ type ipsecCallbacks interface {
 	OnIPSecTunnelRemoved(tunnelAddr ip.Addr)
 }
 
+// packetCaptureCallbacks will be called when a match activates/deactivates a selection for a packet capture
+type packetCaptureCallbacks interface {
+	OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey)
+	OnPacketCaptureInactive(key model.ResourceKey, endpoint model.WorkloadEndpointKey)
+}
+
 type PipelineCallbacks interface {
 	ipSetUpdateCallbacks
 	rulesUpdateCallbacks
@@ -111,6 +117,7 @@ type PipelineCallbacks interface {
 	routeCallbacks
 	vxlanCallbacks
 	ipsecCallbacks
+	packetCaptureCallbacks
 }
 
 type endpointPolicyCache interface {
@@ -340,6 +347,34 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		egressSelectorPool.OnEgressSelectorAdded = activeRulesCalc.OnEgressSelectorAdded
 		egressSelectorPool.OnEgressSelectorRemoved = activeRulesCalc.OnEgressSelectorRemoved
 	}
+
+	// The packet capture calculator matches local endpoints against packet captures and profiles to figure
+	// out which packet captures are active on this host.
+	//           Dispatcher (all updates)
+	//                /         \
+	//               /           \  All Host/Workload Endpoints
+	//              /             \
+	//             /            Dispatcher (local updates)
+	//            /                      |
+	//            |                       \  Local Host/Workload
+	//            |                        \ Endpoints only
+	//           / \                        \
+	// Profiles /   \ All PacketCaptures     \
+	//         /     \                        \
+	//         \      \                        \
+	//          \      \                        |
+	//           \      |                      /
+	//            \     |                     /
+	//             \    |                    /
+	//              \   |                   /
+	//              Packet Capture Calculator
+	//                   |
+	//                   | Start/Stop Locally active packet captures
+	//                  <dataplane>
+	//
+
+	packetCaptureCalculator := NewPacketCaptureCalculator(callbacks)
+	packetCaptureCalculator.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
 
 	// Register for host IP updates.
 	//

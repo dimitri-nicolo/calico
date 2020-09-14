@@ -23,6 +23,8 @@ service PolicySync {
   //  - VXLANTunnelEndpointUpdate
   //  - VXLANTunnelEndpointRemove
   //  - ConfigUpdate
+  //  - PacketCaptureUpdate
+  //  - PacketCaptureRemove
   //
   // The ConfigUpdate payload is only sent if the receiver has features enabled that
   // require it. Furthermore, the ConfigUpdate message will only contain the configuration
@@ -145,6 +147,11 @@ message ToDataplane {
     WireguardEndpointUpdate wireguard_endpoint_update = 27;
     // WireguardEndpointRemove is sent to undo wireguard on the host.
     WireguardEndpointRemove wireguard_endpoint_remove = 28;
+
+    // PacketCaptureUpdate is sent to setup packetcapture.
+    PacketCaptureUpdate packet_capture_update = 128;
+    // PacketCaptureRemove is sent to stop packetcapture.
+    PacketCaptureRemove packet_capture_remove = 129;
   }
 }
 
@@ -716,3 +723,19 @@ message WireguardEndpointRemove {
   // The name of the wireguard host.
   string hostname = 1;
 }
+
+message PacketCaptureUpdate {
+  PacketCaptureID id = 1;
+  WorkloadEndpointID endpoint = 2;
+}
+
+message PacketCaptureRemove {
+  PacketCaptureID id = 1;
+  WorkloadEndpointID endpoint = 2;
+}
+
+message PacketCaptureID {
+  string name = 1;
+  string namespace = 2;
+}
+

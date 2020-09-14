@@ -28,7 +28,8 @@ RUN apt-get update && apt-get install -y \
     # Felix FV tests require these
     wget \
     ethtool \
-    tcpdump
+    tcpdump \
+    libpcap-dev
 
 ARG FV_BINARY=calico-felix-amd64
 

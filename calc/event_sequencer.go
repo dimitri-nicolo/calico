@@ -92,6 +92,8 @@ type EventSequencer struct {
 	pendingIPSecBlacklistRemoves set.Set
 	pendingWireguardUpdates      map[string]*model.Wireguard
 	pendingWireguardDeletes      set.Set
+	pendingPacketCaptureUpdates  map[string]*proto.PacketCaptureUpdate
+	pendingPacketCaptureRemovals map[string]*proto.PacketCaptureRemove
 
 	// Sets to record what we've sent downstream.  Updated whenever we flush.
 	sentIPSets          set.Set
@@ -105,6 +107,7 @@ type EventSequencer struct {
 	sentRoutes          set.Set
 	sentVTEPs           set.Set
 	sentWireguard       set.Set
+	sentPacketCapture   set.Set
 
 	Callback EventHandler
 }
@@ -155,6 +158,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingIPSecBlacklistRemoves: set.New(),
 		pendingWireguardUpdates:      map[string]*model.Wireguard{},
 		pendingWireguardDeletes:      set.New(),
+		pendingPacketCaptureUpdates:  map[string]*proto.PacketCaptureUpdate{},
+		pendingPacketCaptureRemovals: map[string]*proto.PacketCaptureRemove{},
 
 		// Sets to record what we've sent downstream.  Updated whenever we flush.
 		sentIPSets:          set.New(),
@@ -168,6 +173,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		sentRoutes:          set.New(),
 		sentVTEPs:           set.New(),
 		sentWireguard:       set.New(),
+		sentPacketCapture:   set.New(),
 	}
 	return buf
 }
@@ -639,6 +645,44 @@ func memberToProto(member labelindex.IPSetMember) string {
 	return ""
 }
 
+func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey) {
+	id := buf.packetCaptureKey(key, endpoint)
+	delete(buf.pendingPacketCaptureRemovals, id)
+	buf.pendingPacketCaptureUpdates[id] = &proto.PacketCaptureUpdate{
+		Id: &proto.PacketCaptureID{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		}, Endpoint: &proto.WorkloadEndpointID{
+			OrchestratorId: endpoint.OrchestratorID,
+			WorkloadId:     endpoint.WorkloadID,
+			EndpointId:     endpoint.EndpointID,
+		},
+	}
+}
+
+// packetCaptureKey constructs the key to store pending PacketCaptureRemovals and PacketCaptureUpdates
+// It is formed from the PacketCapture namespace, name and WorkloadEndpointID. This is required as
+// PacketCapture is a namespaced resource
+func (buf *EventSequencer) packetCaptureKey(key model.ResourceKey, endpoint model.WorkloadEndpointKey) string {
+	return fmt.Sprintf("%s/%s-%s", key.Namespace, key.Name, endpoint.WorkloadID)
+}
+
+func (buf *EventSequencer) OnPacketCaptureInactive(key model.ResourceKey, endpoint model.WorkloadEndpointKey) {
+	id := buf.packetCaptureKey(key, endpoint)
+	delete(buf.pendingPacketCaptureUpdates, id)
+	if buf.sentPacketCapture.Contains(id) {
+		buf.pendingPacketCaptureRemovals[id] = &proto.PacketCaptureRemove{
+			Id: &proto.PacketCaptureID{
+				Name:      key.Name,
+				Namespace: key.Namespace,
+			}, Endpoint: &proto.WorkloadEndpointID{
+				OrchestratorId: endpoint.OrchestratorID,
+				WorkloadId:     endpoint.WorkloadID,
+				EndpointId:     endpoint.EndpointID,
+			}}
+	}
+}
+
 func (buf *EventSequencer) Flush() {
 	// Flush (rare) config changes first, since they may trigger a restart of the process.
 	buf.flushReadyFlag()
@@ -673,6 +717,10 @@ func (buf *EventSequencer) Flush() {
 
 	// Flush IPSec bindings, these have no particular ordering with other updates.
 	buf.flushIPSecBindings()
+
+	// Flush PacketCaptures, these have no particular ordering with other updates.
+	buf.flushPacketCaptureRemovals()
+	buf.flushPacketCaptureUpdates()
 
 	// Flush (rare) cluster-wide updates.  There's no particular ordering to these so we might
 	// as well do deletions first to minimise occupancy.
@@ -1041,6 +1089,22 @@ func (buf *EventSequencer) flushRouteRemoves() {
 	})
 	buf.pendingRouteDeletes.Clear()
 	log.Debug("Done flushing route deletes")
+}
+
+func (buf *EventSequencer) flushPacketCaptureUpdates() {
+	for key, value := range buf.pendingPacketCaptureUpdates {
+		buf.Callback(value)
+		buf.sentPacketCapture.Add(key)
+		delete(buf.pendingPacketCaptureUpdates, key)
+	}
+}
+
+func (buf *EventSequencer) flushPacketCaptureRemovals() {
+	for key, value := range buf.pendingPacketCaptureRemovals {
+		buf.Callback(value)
+		buf.sentPacketCapture.Discard(key)
+		delete(buf.pendingPacketCaptureRemovals, key)
+	}
 }
 
 func cidrToIPPoolID(cidr ip.CIDR) string {

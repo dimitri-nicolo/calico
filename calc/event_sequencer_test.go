@@ -411,6 +411,84 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 	})
 })
 
+var _ = Describe("PacketCaptures update/remove", func() {
+	var uut *calc.EventSequencer
+	var recorder *dataplaneRecorder
+
+	BeforeEach(func() {
+		uut = calc.NewEventSequencer(&dummyConfigInterface{})
+		recorder = &dataplaneRecorder{}
+		uut.Callback = recorder.record
+	})
+
+	It("should flush latest update", func() {
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{
+			&proto.PacketCaptureUpdate{
+				Id: &proto.PacketCaptureID{
+					Name:      CaptureAllValue.Name,
+					Namespace: CaptureAllValue.Namespace,
+				},
+				Endpoint: &proto.WorkloadEndpointID{
+					WorkloadId: Wep1Key.WorkloadID,
+				},
+			}}))
+	})
+
+	It("should coalesce add + remove", func() {
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureInactive(CaptureAllKey, Wep1Key)
+		uut.Flush()
+		Expect(recorder.Messages).To(BeNil())
+	})
+
+	It("should coalesce remove + add", func() {
+		uut.OnPacketCaptureInactive(CaptureAllKey, Wep1Key)
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{
+			&proto.PacketCaptureUpdate{
+				Id: &proto.PacketCaptureID{
+					Name:      CaptureAllValue.Name,
+					Namespace: CaptureAllValue.Namespace,
+				},
+				Endpoint: &proto.WorkloadEndpointID{
+					WorkloadId: Wep1Key.WorkloadID,
+				},
+			}}))
+	})
+
+	It("should send remove for flushed packet captures", func() {
+		uut.OnPacketCaptureActive(CaptureAllKey, Wep1Key)
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{&proto.PacketCaptureUpdate{
+			Id: &proto.PacketCaptureID{
+				Name:      CaptureAllValue.Name,
+				Namespace: CaptureAllValue.Namespace,
+			},
+			Endpoint: &proto.WorkloadEndpointID{
+				WorkloadId: Wep1Key.WorkloadID,
+			},
+		}}))
+		// Clear messages
+		recorder.Messages = make([]interface{}, 0)
+
+		uut.OnPacketCaptureInactive(CaptureAllKey, Wep1Key)
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{&proto.PacketCaptureRemove{
+			Id: &proto.PacketCaptureID{
+				Name:      CaptureAllValue.Name,
+				Namespace: CaptureAllValue.Namespace,
+			},
+			Endpoint: &proto.WorkloadEndpointID{
+				WorkloadId: Wep1Key.WorkloadID,
+			},
+		}}))
+	})
+})
+
 type dataplaneRecorder struct {
 	Messages []interface{}
 }

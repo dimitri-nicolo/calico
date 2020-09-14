@@ -390,6 +390,12 @@ type Config struct {
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
 
+	// Config for packet capturing
+	CaptureDir             string `config:"string;/var/log/calico/pcap"`
+	CaptureMaxSizeBytes    int    `config:"int;10000000"`
+	CaptureRotationSeconds int    `config:"int;3600"`
+	CaptureMaxFiles        int    `config:"int;2"`
+
 	Variant string `config:"string;CalicoEnterprise"`
 
 	// State tracking.

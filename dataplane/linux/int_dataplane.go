@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/felix/capture"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -124,8 +126,7 @@ type Config struct {
 	IPIPMTU              int
 	VXLANMTU             int
 
-	MaxIPSetSize int
-
+	MaxIPSetSize                   int
 	IptablesBackend                string
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
@@ -208,6 +209,8 @@ type Config struct {
 	KubeClientSet *kubernetes.Clientset
 
 	FeatureDetectOverrides map[string]string
+
+	PacketCapture capture.Config
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -721,6 +724,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		})
 	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard)
 	dp.RegisterManager(dp.wireguardManager) // IPv4-only
+
+	captureManager := newCaptureManager(capture.NewActiveCaptures(config.PacketCapture),
+		config.RulesConfig.WorkloadIfacePrefixes)
+	dp.RegisterManager(captureManager)
 
 	if config.IPv6Enabled {
 		mangleTableV6 := iptables.NewTable(

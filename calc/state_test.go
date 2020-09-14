@@ -53,6 +53,8 @@ type State struct {
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
+	ExpectedCaptureUpdates               set.Set
+	ExpectedCaptureRemovals              set.Set
 }
 
 func (s State) String() string {
@@ -81,6 +83,8 @@ func NewState() State {
 		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
+		ExpectedCaptureUpdates:               set.New(),
+		ExpectedCaptureRemovals:              set.New(),
 	}
 }
 
@@ -119,8 +123,15 @@ func (s State) Copy() State {
 	}
 
 	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
+	if s.ExpectedCaptureUpdates != nil {
+		s.ExpectedCaptureUpdates.Iter(func(item interface{}) error {
+			cpy.ExpectedCaptureUpdates.Add(item)
+			return nil
+		})
+	}
 
 	cpy.Name = s.Name
+
 	return cpy
 }
 
@@ -284,6 +295,14 @@ func (s State) withVTEPs(vteps ...proto.VXLANTunnelEndpointUpdate) (newState Sta
 func (s State) withRoutes(routes ...proto.RouteUpdate) (newState State) {
 	newState = s.Copy()
 	newState.ExpectedRoutes = set.FromArray(routes)
+	return newState
+}
+
+func (s State) withCapturesUpdates(updates ...proto.PacketCaptureUpdate) (newState State) {
+	newState = s.Copy()
+	if updates != nil {
+		newState.ExpectedCaptureUpdates.AddAll(updates)
+	}
 	return newState
 }
 

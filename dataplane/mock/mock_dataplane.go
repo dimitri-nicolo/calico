@@ -51,6 +51,7 @@ type MockDataplane struct {
 	serviceAccounts                map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
 	namespaces                     map[proto.NamespaceID]*proto.NamespaceUpdate
 	config                         map[string]string
+	activePacketCaptures           set.Set
 	numEvents                      int
 }
 
@@ -139,6 +140,13 @@ func (d *MockDataplane) ActiveIPSecBlacklist() set.Set {
 	defer d.Unlock()
 
 	return d.activeIPSecBlacklist.Copy()
+}
+
+func (d *MockDataplane) ActivePacketCaptureUpdates() set.Set {
+	d.Lock()
+	defer d.Unlock()
+
+	return d.activePacketCaptures.Copy()
 }
 
 func (d *MockDataplane) EndpointToProfiles() map[string][]string {
@@ -261,6 +269,7 @@ func NewMockDataplane() *MockDataplane {
 		endpointToAllPolicyIDs:         make(map[string][]proto.PolicyID),
 		serviceAccounts:                make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
 		namespaces:                     make(map[proto.NamespaceID]*proto.NamespaceUpdate),
+		activePacketCaptures:           set.New(),
 	}
 	return s
 }
@@ -463,6 +472,14 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.VXLANTunnelEndpointRemove:
 		Expect(d.activeVTEPs).To(HaveKey(event.Node), "delete for unknown VTEP")
 		delete(d.activeVTEPs, event.Node)
+	case *proto.PacketCaptureUpdate:
+		Expect(d.activePacketCaptures.Contains(fmt.Sprintf("%+v", *event))).To(BeFalse(),
+			"Received PacketCaptureUpdate for already-existing entry")
+		d.activePacketCaptures.Add(fmt.Sprintf("%+v", *event))
+	case *proto.PacketCaptureRemove:
+		Expect(d.activePacketCaptures.Contains(fmt.Sprintf("%+v", *event))).To(BeTrue(),
+			"Received PacketCaptureRemove for non-existent entry")
+		d.activePacketCaptures.Discard(fmt.Sprintf("%+v", *event))
 	case *proto.IPSecTunnelAdd:
 		Expect(d.activeIPSecTunnels.Contains(event.TunnelAddr)).To(BeFalse(),
 			"Received IPSecTunnelAdd for already-existing tunnel")
