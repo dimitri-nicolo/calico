@@ -33,6 +33,7 @@ const (
 	// ClusterHeaderField represents the request header key used to determine
 	// which cluster to proxy for
 	ClusterHeaderField = "x-cluster-id"
+	DefaultReadTimeout = 45 * time.Second
 )
 
 // ClusterHeaderFieldCanon represents the request header key used to determine which
@@ -123,9 +124,10 @@ func New(k8s K8sInterface, authenticator authentication.Authenticator, opts ...O
 	cfg.BuildNameToCertificate()
 
 	srv.http = &http.Server{
-		Addr:      srv.addr,
-		Handler:   srv.proxyMux,
-		TLSConfig: cfg,
+		Addr:        srv.addr,
+		Handler:     srv.proxyMux,
+		TLSConfig:   cfg,
+		ReadTimeout: DefaultReadTimeout,
 	}
 
 	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
