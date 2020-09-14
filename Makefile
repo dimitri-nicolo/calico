@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.45
+GO_BUILD_VER?=v0.46
 
 GIT_USE_SSH = true
 
@@ -581,6 +581,9 @@ ifndef BRANCH_NAME
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+
+golangci-lint: $(GENERATED_FILES)
+	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
 ###############################################################################
 # Release
