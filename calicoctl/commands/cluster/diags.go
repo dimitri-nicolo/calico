@@ -315,6 +315,26 @@ func collectNodeDiags(dir, sinceFlag string) {
 			},
 		})
 
+		// Collect all of the CNI logs
+		output, err := common.ExecCmd(fmt.Sprintf(
+			"kubectl exec -n %s -t %s -- ls /var/log/calico/cni",
+			common.CalicoNamespace,
+			p,
+		))
+		if err != nil {
+			fmt.Printf("Error listing the Calico CNI logs at /var/log/calico/cni/: %s\n", err)
+			// Skip to the next node
+			continue
+		}
+
+		cniLogFiles := strings.Split(strings.TrimSpace(output.String()), "\n")
+		for _, logFile := range cniLogFiles {
+			common.ExecCmdWriteToFile(common.Cmd{
+				Info:     fmt.Sprintf("Collect CNI log %s for the node %s", logFile, p),
+				CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- cat /var/log/calico/cni/%s", common.CalicoNamespace, p, logFile),
+				FilePath: fmt.Sprintf("%s/%s.log", curNodeDir, logFile),
+			})
+		}
 	}
 }
 
