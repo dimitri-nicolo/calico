@@ -25,7 +25,6 @@ LABEL name="Calico CLI tool" \
       maintainer="maintainers@projectcalico.org"
 
 ADD bin/calicoctl-linux-amd64 /calicoctl
-ADD bin/calicoctl-wait-linux-amd64 /calicoctl-wait
 
 # Enterprise version is not Apache licensed and doesn't have a LICENSE file
 #RUN mkdir /licenses
