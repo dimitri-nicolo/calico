@@ -21,6 +21,11 @@ metadata:
 rules:
   - apiGroups: [""]
     resources:
+      - secrets
+    verbs:
+      - get
+  - apiGroups: [""]
+    resources:
       - pods
     verbs:
       - list
@@ -93,19 +98,9 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: ENABLED_CONTROLLERS
-              value: "fortigate"
+              value: "fortinet"
             - name: LOG_LEVEL
               value: "info"
-            - name: FW_HOSTNAME
-              valueFrom:
-                configMapKeyRef:
-                  name: tigera-firewall-controller
-                  key: tigera.firewall.host
-            - name: FW_APIKEY
-              valueFrom:
-                secretKeyRef:
-                  name: tigera-firewall-controller
-                  key: apikey
             - name: FW_INSECURE_SKIP_VERIFY
               value: "true"
             - name: FW_POLICY_SELECTOR_EXPRESSION
@@ -118,6 +113,23 @@ spec:
                 configMapKeyRef:
                   name: tigera-firewall-controller
                   key: tigera.firewall.addressSelection
+            - name: FW_FORTIGATE_CONFIG_PATH
+              value: "/etc/tigera/fortigate-configs.yaml"
+            - name: FW_FORTIMGR_CONFIG_PATH
+              value: "/etc/tigera/fortimgr-configs.yaml"
+          volumeMounts:
+            - name: firewall-configuration
+              mountPath: /etc/tigera/
+      volumes:
+        - name: firewall-configuration
+          configMap:
+            defaultMode: 420
+            items:
+              - key: tigera.firewall.fortigate
+                path: fortigate-configs.yaml
+              - key: tigera.firewall.fortimgr
+                path: fortimgr-configs.yaml
+            name: tigera-firewall-controller-configs
 
 ---
 apiVersion: projectcalico.org/v3
