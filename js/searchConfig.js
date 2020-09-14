@@ -189,6 +189,14 @@
                 `;
             }
 
+            if (hit.hierarchy.lvl4) {
+                currentHtml += `
+                    <a href="${hit.url}" class="search-result__subsubcategory">
+                        ${hit._highlightResult.hierarchy.lvl4.value}
+                    </a>
+                `;
+            }
+
             if (hit.content) {
                 currentHtml += `
                     <a href="${hit.url}" class="search-result__content">
