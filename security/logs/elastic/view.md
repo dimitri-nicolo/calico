@@ -35,7 +35,7 @@ kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-t
 ## Accessing logs from the Elasticsearch API
 
 You can access the logs from the
-[Elasticsearch Search API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search.html)
+[Elasticsearch Search API](https://www.elastic.co/guide/en/elasticsearch/reference/current/search.html){:target="_blank"}
 under the following indices.
 
 - **Flow logs**: `tigera_secure_ee_flows*`

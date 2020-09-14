@@ -81,8 +81,8 @@ spec:
 ### Creating a New Alerting Rule
 
 Creating a new alerting rule is straightforward once you figure out what you
-want your rule to look for. Check [alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
-and [Queries](https://prometheus.io/docs/querying/examples/) for more
+want your rule to look for. Check [alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/){:target="_blank"}
+and [Queries](https://prometheus.io/docs/querying/examples/){:target="_blank"} for more
 information.
 
 #### New Alerting Rule for Monitoring Calico Node
@@ -270,7 +270,7 @@ to store metrics persistently.
 
 The sample manifests do not define a Storage spec. This means that if you
 use the default manifest, Prometheus will be deployed with a `emptyDir`
-volume. Using a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+volume. Using a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/){:target="_blank"}
 supported by Kubernetes is strongly recommended.
 
 The Prometheus third party resource defined by the Prometheus Operator
@@ -291,7 +291,7 @@ parameters:
 ```
 
    > **Tip**: Refer to the
-   > [Kubernetes documentation on StorageClasses](https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner)
+   > [Kubernetes documentation on StorageClasses](https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner){:target="_blank"}
    > for a list of alternatives and some sample manifests. You may need to configure
    > a provisioner or cloud provider integration.
    {: .alert .alert-success}
@@ -335,7 +335,7 @@ spec:
 ```
 
 Prometheus Operator also supports other manual storage provisioning
-mechanisms. More information can be found [here](https://github.com/coreos/prometheus-operator/blob/c3eb679265b73210e1af1512fb2a99cf67b3c5cf/Documentation/user-guides/storage.md)
+mechanisms. More information can be found [here](https://github.com/coreos/prometheus-operator/blob/c3eb679265b73210e1af1512fb2a99cf67b3c5cf/Documentation/user-guides/storage.md){:target="_blank"}
 
 Combining storage resource with proper retention time for metrics will ensure
 that Prometheus will use the storage effectively. The `retention` field is used

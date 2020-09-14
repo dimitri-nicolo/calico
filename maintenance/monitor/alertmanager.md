@@ -7,7 +7,7 @@ canonical_url: /maintenance/monitor/alertmanager
 Alertmanager is used by {{site.prodname}} to route alerts from Prometheus to the administrators.
 It handles routing, deduplicating, grouping, silencing and inhibition of alerts.
 
-More detailed information about Alertmanager is available in the [upstream documentation](https://prometheus.io/docs/alerting/configuration).
+More detailed information about Alertmanager is available in the [upstream documentation](https://prometheus.io/docs/alerting/configuration){:target="_blank"}.
 
 #### Updating the AlertManager config
 
@@ -47,7 +47,7 @@ More detailed information about Alertmanager is available in the [upstream docum
   (usually named `alertmanager-<your-alertmanager-instance-name>`).
 
 For more advice on writing alertmanager configuration files, see the
-[alertmanager configuration](https://prometheus.io/docs/alerting/configuration/) documentation.
+[alertmanager configuration](https://prometheus.io/docs/alerting/configuration/){:target="_blank"} documentation.
 
 #### Configure Inhibition Rules
 
@@ -99,5 +99,5 @@ receivers:
 ```
 
 More information, including descriptions of the various options can be found under the
-[route section](https://prometheus.io/docs/alerting/configuration/#route)
+[route section](https://prometheus.io/docs/alerting/configuration/#route){:target="_blank"}
 of the Alertmanager Configuration guide.

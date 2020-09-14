@@ -25,7 +25,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Password protection on BGP sessions
 
-Password protection is a [standardized](https://tools.ietf.org/html/rfc5925) optional
+Password protection is a [standardized](https://tools.ietf.org/html/rfc5925){:target="_blank"} optional
 feature of BGP sessions.  The effect is that the two peers at either end of a BGP session
 can only communicate, and exchange routing information, if they are both configured with
 the same password.

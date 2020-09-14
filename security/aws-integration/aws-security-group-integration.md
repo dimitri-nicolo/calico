@@ -111,7 +111,6 @@ The following commands gather the required information of a particular EKS clust
    CONTROL_PLANE_SG=$(aws ec2 describe-security-groups --filters Name=tag:aws:cloudformation:logical-id,Values=ControlPlaneSecurityGroup Name=vpc-id,Values=${VPC_ID} --query "SecurityGroups[0].GroupId" --output text)
    ```
   >**Note**: Commands above apply only to EKS clusters with unmanaged nodegroups i.e. {% include open-new-window.html text='eksctl without --managed' url='https://eksctl.io/usage/eks-managed-nodes/' %} option.
-  {: .alert .alert-info}
 
 **kops cluster**
 

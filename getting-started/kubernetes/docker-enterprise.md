@@ -12,10 +12,10 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 **Docker requirements**
 
-- A compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux. See [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
+- A compatible [Docker Enterprise](https://docs.docker.com/ee/){:target="_blank"} installation on Linux. See [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/){:target="_blank"}. For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
   - During the installation of UCP, you must set the flag `--unmanaged-cni` so UCP does not install the default Calico networking plugin.
 
-- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html) for details.
+- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html){:target="_blank"} for details.
 
 **{{site.prodname}} requirements**
 
@@ -25,12 +25,12 @@ Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
 
 - [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise)
 
-- Install the UCP client bundle for accessing the cluster. See [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).
+- Install the UCP client bundle for accessing the cluster. See [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/){:target="_blank"}.
 
 - After installing the "Universal Control Plane (UCP)", enable the option "Allow all authenticated users,
   including service accounts, to schedule on all nodes, including UCP managers and DTR nodes."
 
-- Install `kubectl` CLI tool. See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+- Install `kubectl` CLI tool. See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/){:target="_blank"}.
 
 ### How to
 

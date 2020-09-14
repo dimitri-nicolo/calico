@@ -35,7 +35,7 @@ For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following
 may be used to specify the resource type on the CLI:
 `globalnetworkset`, `globalnetworksets`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/){:target="_blank"}, the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `globalnetworkset.projectcalico.org`, `globalnetworksets.projectcalico.org` and abbreviations such as
 `globalnetworkset.p` and `globalnetworksets.p`.

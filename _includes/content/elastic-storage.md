@@ -8,7 +8,7 @@
    Create a StorageClass with that name providing persistent storage that meets the requirements.
 
    Example 1: Local storage.  You must also provision a persistent volume in this StorageClass for each ElasticSearch node.
-   The [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)
+   The [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner){:target="_blank"}
    may be useful for this.
 
    ```

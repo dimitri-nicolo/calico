@@ -27,7 +27,7 @@ To enable DNS log filtering, follow these steps:
 ## Filter configuration files
 
 The filters defined by the ConfigMap are inserted into the fluentd configuration file.
-The [upstream fluentd documentation](https://docs.fluentd.org/filter/grep)
+The [upstream fluentd documentation](https://docs.fluentd.org/filter/grep){:target="_blank"}
 describes how to write fluentd filters.  The [DNS log schema](dns) can be referred to
 for the specification of the various fields you can filter based on.  Remember to ensure
 that the config file is properly indented in the ConfigMap.

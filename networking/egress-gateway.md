@@ -89,7 +89,7 @@ any egress gateway usage.
 
 Otherwise -- if namespace provisioning is open to users in general, or if it's desirable for egress
 gateway function to be enabled both per-namespace and per-pod -- a [Kubernetes admission
-controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) will be
+controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/){:target="_blank"} will be
 needed.  This is a task for each deployment to implement for itself, but possible approaches include
 the following.
 

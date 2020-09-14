@@ -19,7 +19,7 @@ For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following
 can be used to specify the resource type on the CLI:
 `globalalert`, `globalalerts`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/){:target="_blank"}, the following case-insensitive aliases
 can be used to specify the resource type on the CLI:
 `globalalert.projectcalico.org`, `globalalerts.projectcalico.org` and abbreviations such as
 `globalalert.p` and `globalalerts.p`.

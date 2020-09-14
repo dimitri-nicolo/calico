@@ -25,7 +25,7 @@ Choose one of the following methods for accessing the manager UI:
 
 #### Access using Kubernetes ingress
 
-Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/). This approach requires that your cluster is configured with an ingress controller to implement the `Ingress` resource.
+Kubernetes services can be exposed outside of the cluster using [the Kubernetes Ingress API](https://kubernetes.io/docs/concepts/services-networking/ingress/){:target="_blank"}. This approach requires that your cluster is configured with an ingress controller to implement the `Ingress` resource.
 
 **Basic ingress controller, no modification**
 
@@ -63,7 +63,7 @@ spec:
 
 #### Access using a LoadBalancer service
 
-Kubernetes services can be exposed outside of the cluster [by configuring type `LoadBalancer`](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/) in the service specification. This requires that your cluster be configured with a service load balancer controller to implement the external load balancer. Most managed Kubernetes platforms support this.
+Kubernetes services can be exposed outside of the cluster [by configuring type `LoadBalancer`](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/){:target="_blank"} in the service specification. This requires that your cluster be configured with a service load balancer controller to implement the external load balancer. Most managed Kubernetes platforms support this.
 
 To expose the manager using a load balancer, create the following service.
 

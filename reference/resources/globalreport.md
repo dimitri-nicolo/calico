@@ -10,7 +10,7 @@ A global report resource is a configuration for generating compliance reports. A
 
 This resource is not supported in `calicoctl`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/){:target="_blank"}, the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `globalreport.projectcalico.org`, `globalreports.projectcalico.org` and abbreviations such as
 `globalreport.p` and `globalreports.p`.

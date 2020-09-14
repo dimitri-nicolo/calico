@@ -21,7 +21,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### About the Multus-CNI plugin
 
-{{site.prodname}} uses the [Multus-CNI plugin](https://github.com/intel/multus-cni/) to create multiple {{site.prodname}} networks and multiple pod interfaces to access these networks. This extends the default network and pod interface that comes with the Calico CNI.
+{{site.prodname}} uses the [Multus-CNI plugin](https://github.com/intel/multus-cni/){:target="_blank"} to create multiple {{site.prodname}} networks and multiple pod interfaces to access these networks. This extends the default network and pod interface that comes with the Calico CNI.
 
 You install Multus on a cluster, then simply enable Multus in the {{site.prodname}} Installation resource. Using the Multus **NetworkAttachmentDefinition**, you define the new networks and reference them as an annotation in the pod resource.
 
@@ -56,7 +56,7 @@ Although the following {{site.prodname}} features are supported for your default
 - Calico Enterprise CNI plugin
   >**Note**: Verify that you are using the Calico Enterprise CNI. On AKS, EKS, and GKE, the CNI plugin used by Kubernetes may be different, which means this feature will not work.
     {: .alert .alert-info}
-- [Install Multus 3.0+ on your Kubernetes cluster](https://github.com/intel/multus-cni/)
+- [Install Multus 3.0+ on your Kubernetes cluster](https://github.com/intel/multus-cni/){:target="_blank"}
   >**Note**: Multus is installed on OpenShift 4.0+ clusters.
   {: .alert .alert-info}
 - [Install and configure calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/) or configure access to [Calico Enterprise Manager UI]({{site.baseurl}}/getting-started/cnx//access-the-manager)

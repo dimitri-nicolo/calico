@@ -22,7 +22,7 @@ next [tier]({{site.baseurl}}/reference/resources/tier), to enable hierarchical s
 For `calicoctl` [commands]({{ site.baseurl }}/reference/calicoctl/overview) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/){:target="_blank"}, the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `networkpolicy.projectcalico.org`, `networkpolicies.projectcalico.org` and abbreviations such as
 `networkpolicy.p` and `networkpolicies.p`.

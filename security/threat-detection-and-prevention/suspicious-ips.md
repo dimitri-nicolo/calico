@@ -162,7 +162,7 @@ spec:
 
 In this tutorial, we’ll walk through setting up a threat feed to search for connections to suspicious IPs. Then, we’ll use the same threat feed to block traffic to those IPs.
 
-We will use the free [FEODO botnet tracker](https://feodotracker.abuse.ch/) from abuse.ch that lists IP addresses associated with command and control servers. But the steps are the same for your commercial or internal threat feeds.
+We will use the free [FEODO botnet tracker](https://feodotracker.abuse.ch/){:target="_blank"} from abuse.ch that lists IP addresses associated with command and control servers. But the steps are the same for your commercial or internal threat feeds.
 
 If you haven’t already adjusted your [aggregation flows](#before-you-begin), we recommend it before you start.
 
@@ -308,7 +308,7 @@ We will verify the policy from the test workload that we created earlier.
    ping 8.8.8.8
    ```
 
-4. Open the [FEODO tracker list](https://feodotracker.abuse.ch/downloads/ipblocklist.txt) and choose an IP on the list to ping.
+4. Open the [FEODO tracker list](https://feodotracker.abuse.ch/downloads/ipblocklist.txt){:target="_blank"} and choose an IP on the list to ping.
    You should not get connectivity, and the pings will show up as denied traffic in the flow logs.
 
 ### Above and beyond

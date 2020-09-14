@@ -22,7 +22,7 @@ that depend on LogStorage are temporarily unavailable, including dashboards in t
 temporarily, but resumes when the LogStorage is up and running again.
 
 To retain data from your current installation (optional), ensure that the currently mounted persistent volumes
-have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/).
+have their reclaim policy set to [retain data](https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/){:target="_blank"}.
 Data retention is recommended only for users that have a valid Elasticsearch license. (Trial licenses can be invalidated
 during upgrade).
 

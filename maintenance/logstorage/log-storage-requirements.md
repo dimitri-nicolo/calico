@@ -9,7 +9,7 @@ canonical_url: /maintenance/logstorage/log-storage-requirements
 {{site.prodname}} installs an Elasticsearch cluster for storing logs internally.
 
 We use
-[Elastic Cloud on Kubernetes](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-overview.html)
+[Elastic Cloud on Kubernetes](https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-overview.html){:target="_blank"}
 to install and manage the cluster.  All you need to do is provide at least one node with suitable storage.
 
 The cluster is configured to use a StorageClass called `tigera-elasticsearch`.  You must
@@ -22,9 +22,9 @@ AWS SSD type EBS disks, or GCP PD-SSDs.
 > **Important**: Do not use Amazon EFS, it is not compatible with Elasticsearch. 
   {: .alert .alert-danger}
 
-For information on how to configure storage, please consult the [Kubernetes](https://kubernetes.io/docs/concepts/storage/storage-classes/)
-or [OpenShift](https://docs.openshift.com/container-platform/4.2/storage/understanding-persistent-storage.html) documentation.
-- If you're going to use local disks, you may find the [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)
+For information on how to configure storage, please consult the [Kubernetes](https://kubernetes.io/docs/concepts/storage/storage-classes/){:target="_blank"}
+or [OpenShift](https://docs.openshift.com/container-platform/4.2/storage/understanding-persistent-storage.html){:target="_blank"} documentation.
+- If you're going to use local disks, you may find the [sig-storage local static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner){:target="_blank"}
   useful.  It can create and manage PersistentVolumes by watching for disks mounted in a certain directory.
 - If you're planning on using cloud storage, ensure you have set up the cloud provider integration.
 
