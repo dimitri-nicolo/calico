@@ -19,17 +19,24 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Before you begin...
 
-- Verify the operating system(s) running on the nodes in the cluster {% include open-new-window.html text='support WireGuard' url='https://www.wireguard.com/install/' %}.
--  WireGuard in {{site.prodname}} requires node IP addresses to establish secure tunnels between nodes. {{site.prodname}} can automatically detect IP address of a node using [IP Setting]({{site.baseurl}}/reference/node/configuration#ip-setting) and [IP autodetection method]({{site.baseurl}}/reference/node/configuration#ip-autodetection-methods) in [calico/node]({{site.baseurl}}/reference/node/configuration) resource.
-    - For operator based installation, set the `nodeAddressAutodetectionV4` or `nodeAddressAutodetectionV6` in the [installation]({{site.baseurl}}/reference/installation/api) to applicable [autodetection method]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection)
+**Supported**
 
-> **Note**: WireGuard in {{site.prodname}} does not support IPv6 at this time. Also, encryption using WireGuard is not supported if `CALICO_NETWORKING_BACKEND=none` (e.g. managed Kubernetes platforms EKS, AKS and GKE).
-{: .alert .alert-info}
+- Kubernetes, on-premises
+- OpenShift, v4.3
+- EKS using Calico CNI only
+- IPv4 only
+
+**Required**
+
+- Operating system(s) of nodes running in the cluster must {% include open-new-window.html text='support WireGuard' url='https://www.wireguard.com/install/' %}
+- Node IP addresses to establish secure tunnels between nodes [IP Setting]({{site.baseurl}}/reference/node/configuration#ip-setting) and [IP autodetection method]({{site.baseurl}}/reference/node/configuration#ip-autodetection-methods) in [calico/node]({{site.baseurl}}/reference/node/configuration) resource.
+    - For operator based installation, set the `nodeAddressAutodetectionV4` or `nodeAddressAutodetectionV6` in the [installation]({{site.baseurl}}/reference/installation/api) to applicable [autodetection method]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection)
 
 ### How to
 
 - [Install WireGuard](#install-wireguard)
 - [Enable WireGuard for a cluster](#enable-wireguard-for-a-cluster)
+- [Verify encryption is enabled](#verify-encryption-is-enabled)
 - [Disable WireGuard for an individual node](#disable-wireguard-for-an-individual-node)
 - [Disable WireGuard for a cluster](#disable-wireguard-for-a-cluster)
 
@@ -39,7 +46,7 @@ Install WireGuard on cluster nodes using {% include open-new-window.html text='i
 
    Use the following instructions for these operating systems that are not listed on the WireGuard installation page.
 {% tabs %}
-<label:EKS,active:true>
+<label:Kubernetes-EKS,active:true>
 <%
 To install WireGuard on the default Amazon Machine Image (AMI):
 
@@ -140,6 +147,18 @@ kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"wireguardE
 
 We recommend that you review and modify the MTU used by Calico networking when WireGuard is enabled to increase network performance. Follow the instructions in the [Configure MTU to maximize network performance]({{site.baseurl}}/networking/mtu) guide to set the MTU to a value appropriate for your network.
 
+#### Verify encryption is enabled
+
+To verify that the nodes are configured for WireGuard encryption, check the node status set by Felix using `kubectl`. For example:
+
+   ```
+   $ kubectl get node <NODE-NAME> -o yaml
+   ...
+   status:
+     ...
+     wireguardPublicKey: jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY=
+     ...
+   ```
 
 #### Disable WireGuard for an individual node
 
@@ -157,33 +176,13 @@ kubectl patch felixconfiguration node.my-node --type='merge' -p '{"spec":{"wireg
 
 With the above command, Calico will not encrypt any of the pod traffic to or from node `my-node`.
 
-#### Disable WireGuard for the cluster
+#### Disable WireGuard for a cluster
 
 To disable WireGuard on all nodes modify the default Felix configuration. For example:
 
   ```bash
 kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"wireguardEnabled":false}}'
   ```
-
-### Troubleshoot
-
-To verify that the nodes are configured for WireGuard encryption, check the node status set by Felix using `kubectl`. For example:
-
-   ```
-   $ kubectl get node <NODE-NAME> -o yaml
-   ...
-   status:
-     ...
-     wireguardPublicKey: jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY=
-     ...
-   ```
-
-### Limitations
-
-Encryption functionality using WireGuard has not been verified on all the supported platforms. Certain traffic flows, for example pod to node traffic, will not work when encryption is enabled. The following lists such limitations of this feature:
-
-* Amazon EKS: Pod to Node traffic doesn't work when using {% include open-new-window.html text='AWS VPC CNI' url='https://github.com/aws/amazon-vpc-cni-k8s' %}. For in-cluster pod traffic encrytion when using AWS VPC CNI, use version 1.7+
-* AKS, GKE and IKS: While Pod to pod traffic encryption may work, it hasn't been fully verified.
 
 ### Above and beyond
 
