@@ -12,7 +12,7 @@ cr_directory: manifests_cr
 {% if archive_path and archive_path != "" %}
 {% capture calico_minor_version_with_path %}{{ archive_path }}/{{ calico_minor_version }}{% endcapture %}
 {% else %}
-{% assign calico_minor_version_with_path = {{ calico_minor_version }} %}
+{% assign calico_minor_version_with_path = calico_minor_version %}
 {% endif %}
 
 ## Prerequisite
@@ -27,7 +27,7 @@ If your cluster already has {{site.prodname}} installed, follow the [Upgrading {
 
 
 ## Upgrade Calico to {{site.prodname}}
- 
+
 > **Note**: GKE and AKS upgrades from open source Calico are not currently supported.
 {: .alert .alert-info}
 
@@ -52,7 +52,7 @@ If your cluster already has {{site.prodname}} installed, follow the [Upgrading {
 <%
 
 > **Note**: EKS upgrades from open source Calico are not production ready due to limited testing.
-> 
+>
 > When upgrading from older versions of open source Calico, delete the unused
 > deployment `calico-typha-horizontal-autoscaler` with the following command:
 >  ```
@@ -73,7 +73,7 @@ If your cluster already has {{site.prodname}} installed, follow the [Upgrading {
 __Download the new manifests__
 
 Make the manifests directories.
-   
+
 ```bash
 mkdir manifests manifests_cr
 ```
@@ -85,15 +85,15 @@ mkdir manifests manifests_cr
 {% include content/openshift-resources.md %}
 
 __Add an image pull secret__
-   
+
 {% include content/openshift-pull-secret.md %}
 
 > (Optional) If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 __Install {{site.prodname}}__
-   
+
 1. Apply the Tigera operators and custom resource definitions.
-  
+
    ```bash
    oc apply -f manifests/
    ```
@@ -101,19 +101,19 @@ __Install {{site.prodname}}__
 2. (Optional) If your cluster architecture requires any custom [{{site.prodname}} resources]({{site.baseurl}}/reference/resources) to function at startup, install them now using [calicoctl]({{site.baseurl}}/reference/calicoctl/overview).
 
 3. Apply the Tigera custom resources. For more information on configuration options available, see [the installation reference]({{site.baseurl}}/reference/installation/api).
-   
+
    ```bash
    oc apply -f manifests_cr/
    ```
 
 4. Patch installation.
-   
+
    ```bash
    oc patch installations.operator.tigera.io default --type merge -p '{"spec":{"variant":"TigeraSecureEnterprise","imagePullSecrets":[{"name":"tigera-pull-secret"}]}}'
    ```
 
 5. You can now monitor the upgrade progress with the following command:
-   
+
    ```bash
    watch oc get tigerastatus
    ```
