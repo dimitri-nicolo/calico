@@ -4,6 +4,7 @@ package apiserver
 
 import (
 	"sync"
+	"time"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -62,6 +63,7 @@ type ExtraConfig struct {
 	EnableManagedClustersCreateAPI bool
 	ManagementClusterAddr          string
 	KubernetesAPIServerConfig      *rest.Config
+	MinResourceRefreshInterval     time.Duration
 }
 
 type Config struct {
@@ -183,7 +185,7 @@ func (c completedConfig) NewRBACCalculator() (rbac.Calculator, error) {
 	// Create the rbac calculator
 	return rbac.NewCalculator(
 		resourceLister, clusterRoleGetter, clusterRoleBindingLister, roleGetter, roleBindingLister,
-		namespaceLister, tierLister,
+		namespaceLister, tierLister, c.ExtraConfig.MinResourceRefreshInterval,
 	), nil
 }
 
