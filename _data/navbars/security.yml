@@ -43,6 +43,8 @@ section:
   section:
   - title: Alerts
     path: /security/threat-detection-and-prevention/alerts
+  - title: Capture packets for debugging workloads
+    path: /security/threat-detection-and-prevention/packetcapture
   - title: Anomaly detection
     path: /security/threat-detection-and-prevention/anomaly-detection/
     section:

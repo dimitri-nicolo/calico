@@ -88,6 +88,8 @@ section:
       path: /reference/resources/networkset
     - title: Node
       path: /reference/resources/node
+    - title: Packet capture
+      path: /reference/resources/packetcapture
     - title: Profile
       path: /reference/resources/profile
     - title: Remote cluster configuration

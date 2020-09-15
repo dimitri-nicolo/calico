@@ -144,6 +144,10 @@ spec:
 | egressIPVXLANPort                  | Port to use for egress gateway VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4790` |
 | egressIPVXLANVNI                   | Virtual network ID to use for egress gateway VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4097` |
 | egressIPRoutingRulePriority        | Controls the priority value to use for the egress gateway routing rule. | int | int | `100` |
+| captureDir                         | Controls the directory where packet capture files are stored. | string | string | `/var/log/calico/pcap` |
+| captureMaxSizeBytes                | Controls the maximum size in bytes for a packet capture file before rotation. | int | int | `10000000` |
+| captureRotationSeconds             | Controls the rotation period in seconds for a packet capture file. | int | int | `3600` |
+| captureMaxFiles                    | Controls the maximum number rotated packet capture files. | int | int | `2` |
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
    ```
