@@ -1823,10 +1823,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			testutils.MustDeleteIPPool(calicoClient, ipPool6)
 		})
 
-		It("should allocate IPv4 and IPv6 addresses", func() {
+		It("should allocate IPv4 and IPv6 addresses and handle dual stack floating IPs", func() {
 			netconfCalicoIPAM := fmt.Sprintf(`
 				{
-				  "cniVersion": "%s",
+     			  "feature_control": {
+     			      "floating_ips": true
+     			  },
+     			  "cniVersion": "%s",
 				  "name": "net4",
 				  "type": "calico",
 				  "etcd_endpoints": "http://%s:2379",
@@ -1846,11 +1849,14 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
-			// Now create a K8s pod (without any IP annotations).
+			// Now create a K8s pod (without any pod IP annotations).
 			name := fmt.Sprintf("run%d", rand.Uint32())
 			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
+					Annotations: map[string]string{
+						"cni.projectcalico.org/floatingIPs": "[\"1.1.1.1\", \"2001:647f::21\"]",
+					},
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{{
@@ -1917,8 +1923,18 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Node:          hostname,
 				Endpoint:      "eth0",
 				Workload:      "",
-				ContainerID:   containerID,
-				Orchestrator:  api.OrchestratorKubernetes,
+				IPNATs: []api.IPNAT{
+					{
+						InternalIP: podIPv4.String(),
+						ExternalIP: "1.1.1.1",
+					},
+					{
+						InternalIP: podIPv6.String(),
+						ExternalIP: "2001:647f::21",
+					},
+				},
+				ContainerID:  containerID,
+				Orchestrator: api.OrchestratorKubernetes,
 			}))
 
 			// Check the pod's IP annotations.
