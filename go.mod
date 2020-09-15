@@ -22,4 +22,4 @@ require (
 	google.golang.org/grpc v1.26.0
 )
 
-replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200909145021-06f139c95d08
+replace github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200914212310-5390ca279c48
