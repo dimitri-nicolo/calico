@@ -11,7 +11,11 @@ spec:
   containers:
   - name: calicoctl
     image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master
-    command: ["/calicoctl-wait"]
+    command:
+      - /calicoctl
+    args:
+      - version
+      - --poll=1m
     env:
     - name: ETCD_ENDPOINTS
       valueFrom:
