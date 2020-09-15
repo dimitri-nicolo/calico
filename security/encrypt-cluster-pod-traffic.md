@@ -21,10 +21,10 @@ This how-to guide uses the following {{site.prodname}} features:
 
 **Supported**
 
+The following platforms using only IPv4:
 - Kubernetes, on-premises
 - OpenShift, v4.3
 - EKS using Calico CNI only
-- IPv4 only
 
 **Required**
 
