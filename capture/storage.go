@@ -5,6 +5,7 @@ package capture
 import (
 	"errors"
 	"fmt"
+	"os"
 	"syscall"
 
 	"k8s.io/utils/strings"
@@ -46,6 +47,11 @@ type activeCaptures struct {
 }
 
 func NewActiveCaptures(config Config) ActiveCaptures {
+	var err = os.MkdirAll(config.Directory, 0755)
+	if err != nil {
+		panic(err)
+	}
+
 	return &activeCaptures{
 		cache:           map[Key]Capture{},
 		deviceRef:       map[Key]string{},
