@@ -347,7 +347,7 @@ func writeCNIConfig(c config) {
 	netconf = strings.Replace(netconf, "__LOG_FILE_MAX_AGE__", getEnv("LOG_FILE_MAX_AGE", "30"), -1)
 	netconf = strings.Replace(netconf, "__LOG_FILE_MAX_COUNT__", getEnv("LOG_FILE_MAX_COUNT", "10"), -1)
 	netconf = strings.Replace(netconf, "__DATASTORE_TYPE__", getEnv("DATASTORE_TYPE", "kubernetes"), -1)
-	netconf = strings.Replace(netconf, "__KUBERNETES_NODE_NAME__", getEnv("NODENAME", nodename), -1)
+	netconf = strings.Replace(netconf, "__KUBERNETES_NODE_NAME__", getEnv("KUBERNETES_NODE_NAME", nodename), -1)
 	netconf = strings.Replace(netconf, "__KUBECONFIG_FILEPATH__", kubeconfigPath, -1)
 	netconf = strings.Replace(netconf, "__CNI_MTU__", getEnv("CNI_MTU", "1500"), -1)
 
@@ -358,23 +358,22 @@ func writeCNIConfig(c config) {
 
 	// Replace etcd datastore variables.
 	hostSecretsDir := c.CNINetDir + "/calico-tls"
-
-	etcdCertFile := fmt.Sprintf("%s/etcd-cert", hostSecretsDir)
-	if fileExists(etcdCertFile) {
+	if fileExists("/host/etc/cni/net.d/calico-tls/etcd-cert") {
+		etcdCertFile := fmt.Sprintf("%s/etcd-cert", hostSecretsDir)
 		netconf = strings.Replace(netconf, "__ETCD_CERT_FILE__", etcdCertFile, -1)
 	} else {
 		netconf = strings.Replace(netconf, "__ETCD_CERT_FILE__", "", -1)
 	}
 
-	etcdCACertFile := fmt.Sprintf("%s/etcd-ca", hostSecretsDir)
-	if fileExists(etcdCACertFile) {
+	if fileExists("/host/etc/cni/net.d/calico-tls/etcd-ca") {
+		etcdCACertFile := fmt.Sprintf("%s/etcd-ca", hostSecretsDir)
 		netconf = strings.Replace(netconf, "__ETCD_CA_CERT_FILE__", etcdCACertFile, -1)
 	} else {
 		netconf = strings.Replace(netconf, "__ETCD_CA_CERT_FILE__", "", -1)
 	}
 
-	etcdKeyFile := fmt.Sprintf("%s/etcd-key", hostSecretsDir)
-	if fileExists(etcdKeyFile) {
+	if fileExists("/host/etc/cni/net.d/calico-tls/etcd-key") {
+		etcdKeyFile := fmt.Sprintf("%s/etcd-key", hostSecretsDir)
 		netconf = strings.Replace(netconf, "__ETCD_KEY_FILE__", etcdKeyFile, -1)
 	} else {
 		netconf = strings.Replace(netconf, "__ETCD_KEY_FILE__", "", -1)

@@ -77,7 +77,7 @@ func runCniContainer(tempDir string, extraArgs ...string) error {
 		"-e", "SLEEP=false",
 		"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
 		"-e", "KUBERNETES_SERVICE_PORT=8080",
-		"-e", "NODENAME=my-node",
+		"-e", "KUBERNETES_NODE_NAME=my-node",
 		"-v", tempDir + "/bin:/host/opt/cni/bin",
 		"-v", tempDir + "/net.d:/host/etc/cni/net.d",
 		"-v", tempDir + "/serviceaccount:/var/run/secrets/kubernetes.io/serviceaccount",
@@ -258,12 +258,16 @@ PuB/TL+u2y+iQUyXxLy3
 		It("Should copy a non-hidden file", func() {
 			err = ioutil.WriteFile(tempDir+"/certs/etcd-cert", []byte("doesn't matter"), 0644)
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to write file: %v", err))
-			err = runCniContainer(tempDir, "-v", tempDir+"/certs:/calico-secrets")
+			err = runCniContainer(tempDir, "-v", tempDir+"/certs:/calico-secrets", "-e", "CNI_NETWORK_CONFIG={\"etcd_cert\": \"__ETCD_CERT_FILE__\"}")
 			Expect(err).NotTo(HaveOccurred())
 			file, err := os.Open(tempDir + "/net.d/calico-tls/etcd-cert")
 			Expect(err).NotTo(HaveOccurred())
 			err = file.Close()
 			Expect(err).NotTo(HaveOccurred())
+
+			// Expect the config to have the correct value filled in.
+			expectedConfig := "{\"etcd_cert\": \"/etc/cni/net.d/calico-tls/etcd-cert\"}"
+			expectFileContents(tempDir+"/net.d/10-calico.conflist", expectedConfig)
 		})
 	})
 })
