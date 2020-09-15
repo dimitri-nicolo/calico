@@ -55,7 +55,7 @@ request was sent and when the corresponding DNS response was received.
 
 | Name             | Datatype          | Description |
 | ---------------- | ----------------- | ----------- |
-| `count`          | long              | The number of lookups for which latency was measured.  (The same as `count` above, unless some DNS requests were missed, or [latency reporting is disabled]({{site.baseurl}}/reference/resources/felixconfig#:~:text=dnsLogsLatency).) |
+| `count`          | long              | The number of lookups for which latency was measured.  (The same as `count` above, unless some DNS requests were missed, or latency reporting is disabled - see `dnsLogsLatency` in the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig).) |
 | `mean`           | long              | Mean latency, in nanoseconds. |
 | `max`            | long              | Max latency, in nanoseconds. |
 
