@@ -1,6 +1,6 @@
 ---
 title: DNS logs
-description: Key/value pairs of DNS activity logs and how to construct queries. 
+description: Key/value pairs of DNS activity logs and how to construct queries.
 canonical_url: /security/logs/elastic/dns
 ---
 
@@ -26,6 +26,7 @@ This information should assist you in constructing queries.
 | `rcode`               | keyword           | The result code of the DNS query response (e.g. NoError, NXDomain). |
 | `rrsets`              | nested            | Detailed DNS query response data - see below. |
 | `servers`             | nested            | Details of the DNS servers that provided this response. |
+| `latency`             | nested            | Latency information for the DNS lookups that contributed to this log. |
 
 Each nested `rrsets` object contains response data for a particular name and a particular type and
 class of response information.  Its key/value pairs are as follows.
@@ -47,6 +48,16 @@ containing log.  Its key/value pairs are as follows.
 | `name_aggr`      | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The aggregated name of the DNS server pod.<br>&#x25cf;&nbsp;<code>pvt</code>: the DNS server is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the DNS server is not a pod. Its IP address does not belong to a private subnet. It is probably on the public internet.</p>{:/} |
 | `namespace`      | keyword           | Namespace of the DNS server pod, or `-` if the DNS server is not a pod. |
 | `labels`         | array of keywords | Labels applied to the DNS server pod or host endpoint; empty if there are no labels or the DNS server is not a pod or host endpoint. |
+
+The nested `latency` object provides information about the latency of the DNS lookups that
+contributed to this log.  For each lookup {{site.prodname}} measures the time between when the DNS
+request was sent and when the corresponding DNS response was received.
+
+| Name             | Datatype          | Description |
+| ---------------- | ----------------- | ----------- |
+| `count`          | long              | The number of lookups for which latency was measured.  (The same as `count` above, unless some DNS requests were missed, or [latency reporting is disabled]({{site.baseurl}}/reference/resources/felixconfig#:~:text=dnsLogsLatency).) |
+| `mean`           | long              | Mean latency, in nanoseconds. |
+| `max`            | long              | Max latency, in nanoseconds. |
 
 ## Querying on various DNS log fields
 
