@@ -383,6 +383,13 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			rewritePriorities(flatIngressRules)
 			rewritePriorities(flatEgressRules)
 
+			// Finally, add default allow rule with a host-scope to allow traffic through
+			// the host windows firewall. Required by l2bridge network.
+			// We need to add host rules after priority is rewritten because the value of the priority
+			// for a host rule depends on AclNoHostRulePriority feature support.
+			flatIngressRules = append(flatIngressRules, m.policysetsDataplane.NewHostRule(true))
+			flatEgressRules = append(flatEgressRules, m.policysetsDataplane.NewHostRule(false))
+
 			err := m.applyRules(id, endpointId, flatIngressRules, flatEgressRules)
 			if err != nil {
 				// Failed to apply, this will be rescheduled and retried
