@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -123,7 +124,8 @@ func (m Match) String() string {
 // NewCalculator creates a new RBAC Calculator.
 func NewCalculator(resourceLister ResourceLister, clusterRoleGetter ClusterRoleGetter, clusterRoleBindingLister ClusterRoleBindingLister,
 	roleGetter RoleGetter, roleBindingLister RoleBindingLister,
-	namespaceLister NamespaceLister, tierLister TierLister) Calculator {
+	namespaceLister NamespaceLister, tierLister TierLister,
+	minResourceRefreshInterval time.Duration) Calculator {
 
 	// Split out the cluster and namespaced rule resolvers - this allows us to perform namespace queries without
 	// checking cluster rules every time. For cluster specific rule resolver, use a "no-op" RuleBindingLister - this
@@ -139,11 +141,12 @@ func NewCalculator(resourceLister ResourceLister, clusterRoleGetter ClusterRoleG
 	)
 
 	return &calculator{
-		resourceLister:         resourceLister,
-		namespaceLister:        namespaceLister,
-		tierLister:             tierLister,
-		clusterRuleResolver:    clusterRuleResolver,
-		namespacedRuleResolver: namespacedRuleResolver,
+		resourceLister:             resourceLister,
+		namespaceLister:            namespaceLister,
+		tierLister:                 tierLister,
+		clusterRuleResolver:        clusterRuleResolver,
+		namespacedRuleResolver:     namespacedRuleResolver,
+		minResourceRefreshInterval: minResourceRefreshInterval,
 	}
 }
 
@@ -236,21 +239,25 @@ type calculator struct {
 
 	// This is determined at most once per request, and only in the event the request contains an unknown resource type.
 	// Once a resource type is known, the properties associated with that resource type are not expected to change.
-	resources         map[ResourceType]apiResource
-	resourcesRevision int
-	resourceLock      sync.Mutex
+	minResourceRefreshInterval time.Duration
+	resources                  map[ResourceType]apiResource
+	resourceUpdateTime         time.Time
+	resourceLock               sync.Mutex
 }
 
 // CalculatePermissions calculates the RBAC permissions for a specific user and set of resource types.
 func (c *calculator) CalculatePermissions(user user.Info, rvs []ResourceVerbs) (Permissions, error) {
 	log.Debugf("CalculatePermissions for %v using %#v", user, rvs)
 
-	// Initialise our resource types if not already initialized.
-	if err := c.maybeInitResources(); err != nil {
+	// Get the resource information - this will initialise our resource types if not already initialized.
+	resources, resourceUpdateTime, err := c.getResourceInfo()
+	if err != nil {
 		return nil, err
 	}
 
-	r := c.newUserCalculator(user)
+	// Create a new user calculator using the current set of resources. This may result in an update to the cached
+	// resource types if the calculcator does not know about a requested resource type.
+	r := c.newUserCalculator(user, resources, resourceUpdateTime)
 	for _, rv := range rvs {
 		r.updatePermissions(rv.ResourceType, rv.Verbs)
 	}
@@ -259,19 +266,27 @@ func (c *calculator) CalculatePermissions(user user.Info, rvs []ResourceVerbs) (
 	return r.permissions, utilerrors.Flatten(utilerrors.NewAggregate(r.errors))
 }
 
-// maybeInitResources initializes the registered resource cache if it has not yet been initialized.
-func (c *calculator) maybeInitResources() error {
+// getResourceInfo returns the current registered resource cache and loads from API if it has not yet been initialized.
+func (c *calculator) getResourceInfo() (map[ResourceType]apiResource, time.Time, error) {
 	c.resourceLock.Lock()
 	defer c.resourceLock.Unlock()
 	if c.resources == nil {
-		return c.loadResources()
+		if err := c.loadResources(); err != nil {
+			return nil, time.Time{}, err
+		}
 	}
-	return nil
+	return c.resources, c.resourceUpdateTime, nil
 }
 
 // loadResources loads the registered resources from the k8s API server and caches the result. The resourceLock should
 // be held by the caller.
 func (c *calculator) loadResources() error {
+	// Check we did not refresh recently. If we did, do nothing.
+	if time.Since(c.resourceUpdateTime) < c.minResourceRefreshInterval {
+		log.Debug("Resources were refreshed recently, not refreshing this time")
+		return nil
+	}
+
 	// Get the registered resource groups and types.
 	log.Debug("Querying k8s for registered resource types")
 	pr, err := c.resourceLister.ServerPreferredResources()
@@ -301,7 +316,7 @@ func (c *calculator) loadResources() error {
 	// loaded mid-query as the result of a concurrent request.
 	log.Debugf("Loaded resources: %#v", resources)
 	c.resources = resources
-	c.resourcesRevision++
+	c.resourceUpdateTime = time.Now()
 	return nil
 }
 
@@ -320,13 +335,13 @@ func (_ *emptyK8sClusterRoleBindingLister) ListClusterRoleBindings() ([]*rbacv1.
 }
 
 // newUserCalculator returns a new Calculator accumulator. This is used to gather user specific Calculator permissions.
-func (c *calculator) newUserCalculator(user user.Info) *userCalculator {
+func (c *calculator) newUserCalculator(user user.Info, resources map[ResourceType]apiResource, resourceUpdateTime time.Time) *userCalculator {
 	return &userCalculator{
-		resources:         c.resources,
-		resourcesRevision: c.resourcesRevision,
-		user:              user,
-		calculator:        c,
-		permissions:       make(Permissions),
+		resources:           resources,
+		resourcesUpdateTime: resourceUpdateTime,
+		user:                user,
+		calculator:          c,
+		permissions:         make(Permissions),
 	}
 }
 
@@ -334,7 +349,7 @@ func (c *calculator) newUserCalculator(user user.Info) *userCalculator {
 type userCalculator struct {
 	resources              map[ResourceType]apiResource
 	resourcesUpdated       bool
-	resourcesRevision      int
+	resourcesUpdateTime    time.Time
 	user                   user.Info
 	errors                 []error
 	calculator             *calculator
@@ -711,7 +726,7 @@ func (u *userCalculator) updateResources() {
 	u.calculator.resourceLock.Lock()
 	defer u.calculator.resourceLock.Unlock()
 
-	if u.calculator.resourcesRevision == u.resourcesRevision {
+	if u.calculator.resourceUpdateTime == u.resourcesUpdateTime {
 		// The cache has not been updated since the query began, so update it now.  If any errors occur the cache will
 		// not be updated and the data will remain out-of-date - this is fine, we'll simply not include the results.
 		err := u.calculator.loadResources()
@@ -724,6 +739,6 @@ func (u *userCalculator) updateResources() {
 	// Update the user-specific cache to point to the current cache.
 	log.Debug("Update user calculator to use updated cache of known resource types")
 	u.resources = u.calculator.resources
-	u.resourcesRevision = u.calculator.resourcesRevision
+	u.resourcesUpdateTime = u.calculator.resourceUpdateTime
 	return
 }

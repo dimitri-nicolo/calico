@@ -20,9 +20,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/spec"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
@@ -31,6 +34,8 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/klog"
+
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 
 	"github.com/tigera/apiserver/pkg/apiserver"
 	"github.com/tigera/apiserver/pkg/openapi"
@@ -158,6 +163,23 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		return nil, err
 	}
 
+	// Extra extra config from environments.
+	//TODO(rlb): Need to unify our logging libraries
+	logrusLevel := logrus.DebugLevel
+	if env := os.Getenv("LOGLEVEL"); env != "" {
+		logrusLevel = logutils.SafeParseLogLevel(env)
+	}
+	logrus.SetLevel(logrusLevel)
+
+	minResourceRefreshInterval := 5 * time.Second
+	if env := os.Getenv("MIN_RESOURCE_REFRESH_INTERVAL"); env != "" {
+		if dur, err := time.ParseDuration(env); err != nil {
+			return nil, err
+		} else {
+			minResourceRefreshInterval = dur
+		}
+	}
+
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
 		ExtraConfig: apiserver.ExtraConfig{
@@ -166,6 +188,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 			EnableManagedClustersCreateAPI: o.EnableManagedClustersCreateAPI,
 			ManagementClusterAddr:          o.ManagementClusterAddr,
 			KubernetesAPIServerConfig:      serverConfig.ClientConfig,
+			MinResourceRefreshInterval:     minResourceRefreshInterval,
 		},
 	}
 
