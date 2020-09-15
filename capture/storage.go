@@ -49,7 +49,7 @@ type activeCaptures struct {
 func NewActiveCaptures(config Config) ActiveCaptures {
 	var err = os.MkdirAll(config.Directory, 0755)
 	if err != nil {
-		panic(err)
+		log.WithError(err).Errorf("Failed to create capture dir %s", config.Directory)
 	}
 
 	return &activeCaptures{
