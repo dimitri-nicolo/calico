@@ -5,6 +5,7 @@ package capture
 import (
 	"errors"
 	"fmt"
+	"os"
 	"syscall"
 
 	"k8s.io/utils/strings"
@@ -45,7 +46,12 @@ type activeCaptures struct {
 	maxFiles        int
 }
 
-func NewActiveCaptures(config Config) ActiveCaptures {
+func NewActiveCaptures(config Config) (ActiveCaptures, error) {
+	var err = os.MkdirAll(config.Directory, 0755)
+	if err != nil {
+		return nil, err
+	}
+
 	return &activeCaptures{
 		cache:           map[Key]Capture{},
 		deviceRef:       map[Key]string{},
@@ -53,7 +59,7 @@ func NewActiveCaptures(config Config) ActiveCaptures {
 		maxSizeBytes:    config.MaxSizeBytes,
 		rotationSeconds: config.RotationSeconds,
 		maxFiles:        config.MaxFiles,
-	}
+	}, nil
 }
 
 func (activeCaptures *activeCaptures) Add(key Key, deviceName string) error {

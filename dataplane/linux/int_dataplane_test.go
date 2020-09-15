@@ -17,6 +17,8 @@ package intdataplane_test
 import (
 	"net"
 
+	"github.com/projectcalico/felix/capture"
+
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -101,6 +103,9 @@ var _ = Describe("Constructor test", func() {
 
 			LookPathOverride: func(file string) (string, error) {
 				return file, nil
+			},
+			PacketCapture: capture.Config{
+				Directory: "/tmp",
 			},
 		}
 	})
