@@ -60,7 +60,7 @@ Broadly speaking there are two types of ingress solutions:
 In-cluster ingress solutions use software load balancers running in pods within the cluster itself. There are many
 different ingress controllers to consider that follow this pattern, including for example the NGINX ingress controller.
 
-The advantages of this approach are that you can: 
+The advantages of this approach are that you can:
 - horizontally scale your ingress solution up to the limits of Kubernetes
 - choose the ingress controller that best suits your specific needs, for example, with particular load balancing
   algorithms, or security options.
@@ -102,7 +102,7 @@ solution is likely the better fit for you.
 
 All the above diagrams focus on connection level (L5-7) representation of ingress and services. You can learn more about
 the network level (L3-4) interactions involved in handling the connections, including which scenarios client source IP
-addresses are maintained, in the [About Kubernetes Services]({{site.baseurl/about/about-kubernetes-services}}) guide.
+addresses are maintained, in the [About Kubernetes Services]({{site.baseurl}}/about/about-kubernetes-services) guide.
 
 If you are already up to speed on how services work under the covers, here are some more complete diagrams that show details of how services are load balanced at the network layer (L3-4).
 
