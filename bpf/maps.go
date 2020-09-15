@@ -51,6 +51,9 @@ type Map interface {
 	Update(k, v []byte) error
 	Get(k []byte) ([]byte, error)
 	Delete(k []byte) error
+
+	// Size returns the maximun number of entries the table can hold.
+	Size() int
 }
 
 type MapParameters struct {
@@ -319,6 +322,10 @@ func (b *PinnedMap) EnsureExists() error {
 			Info("Loaded map file descriptor.")
 	}
 	return err
+}
+
+func (b *PinnedMap) Size() int {
+	return b.MapParameters.MaxEntries
 }
 
 type bpftoolMapMeta struct {

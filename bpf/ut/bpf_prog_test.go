@@ -50,6 +50,7 @@ import (
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/nat"
+	"github.com/projectcalico/felix/bpf/perf"
 	"github.com/projectcalico/felix/bpf/routes"
 	"github.com/projectcalico/felix/proto"
 )
@@ -187,7 +188,7 @@ func runBpfTest(t *testing.T, section string, rules [][][]*proto.Rule, testFn fu
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, progMaps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	if err != nil {
@@ -246,8 +247,8 @@ func bpftool(args ...string) ([]byte, error) {
 var (
 	mapInitOnce sync.Once
 
-	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap bpf.Map
-	allMaps                                                                              []bpf.Map
+	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap, perfMap bpf.Map
+	allMaps, progMaps                                                                             []bpf.Map
 )
 
 func initMapsOnce() {
@@ -263,6 +264,7 @@ func initMapsOnce() {
 		testStateMap = state.MapForTest(mc)
 		jumpMap = jump.MapForTest(mc)
 		affinityMap = nat.AffinityMap(mc)
+		perfMap = perf.Map(mc, "perf_evnt", 128)
 
 		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, jumpMap, affinityMap}
 		for _, m := range allMaps {
@@ -271,6 +273,22 @@ func initMapsOnce() {
 				log.WithError(err).Panic("Failed to initialise maps")
 			}
 		}
+
+		err := perfMap.EnsureExists()
+		if err != nil {
+			log.WithError(err).Panic("Failed to initialise perfMap")
+		}
+
+		progMaps = []bpf.Map{
+			natMap,
+			natBEMap,
+			ctMap,
+			rtMap,
+			jumpMap,
+			stateMap,
+			affinityMap,
+		}
+
 	})
 }
 
@@ -296,17 +314,15 @@ func cleanUpMaps() {
 	log.Info("Cleaned up all maps")
 }
 
-func bpftoolProgLoadAll(fname, bpfFsDir string) error {
+func bpftoolProgLoadAll(fname, bpfFsDir string, maps ...bpf.Map) error {
+	args := []string{"prog", "loadall", fname, bpfFsDir, "type", "classifier"}
+
+	for _, m := range maps {
+		args = append(args, "map", "name", m.GetName(), "pinned", m.Path())
+	}
+
 	log.WithField("program", fname).Debug("Loading BPF program")
-	_, err := bpftool("prog", "loadall", fname, bpfFsDir, "type", "classifier",
-		"map", "name", natMap.GetName(), "pinned", natMap.Path(),
-		"map", "name", natBEMap.GetName(), "pinned", natBEMap.Path(),
-		"map", "name", ctMap.GetName(), "pinned", ctMap.Path(),
-		"map", "name", rtMap.GetName(), "pinned", rtMap.Path(),
-		"map", "name", jumpMap.GetName(), "pinned", jumpMap.Path(),
-		"map", "name", stateMap.GetName(), "pinned", stateMap.Path(),
-		"map", "name", affinityMap.GetName(), "pinned", affinityMap.Path(),
-	)
+	_, err := bpftool(args...)
 	if err != nil {
 		return err
 	}
@@ -395,6 +411,19 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn), opts
 		log.SetLevel(topts.logLevel)
 	}
 
+	maps := make([]bpf.Map, len(progMaps))
+	copy(maps, progMaps)
+
+outter:
+	for _, m := range topts.extraMaps {
+		for i := range maps {
+			if maps[i].Path() == m.Path() {
+				continue outter
+			}
+		}
+		maps = append(maps, m)
+	}
+
 	tempDir, err := ioutil.TempDir("", "calico-bpf-")
 	Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(tempDir)
@@ -417,7 +446,7 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn), opts
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = bpftoolProgLoadAll(tempObj, bpfFsDir)
+	err = bpftoolProgLoadAll(tempObj, bpfFsDir, maps...)
 	Expect(err).NotTo(HaveOccurred())
 
 	runTest := func() {
@@ -441,8 +470,9 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn), opts
 }
 
 type testOpts struct {
-	subtests bool
-	logLevel log.Level
+	subtests  bool
+	logLevel  log.Level
+	extraMaps []bpf.Map
 }
 
 type testOption func(opts *testOpts)
@@ -456,6 +486,12 @@ func withSubtests(v bool) testOption {
 func withLogLevel(l log.Level) testOption {
 	return func(o *testOpts) {
 		o.logLevel = l
+	}
+}
+
+func withExtraMap(m bpf.Map) testOption {
+	return func(o *testOpts) {
+		o.extraMaps = append(o.extraMaps, m)
 	}
 }
 
