@@ -17,13 +17,18 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/docopt/docopt-go"
 
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/options"
+
+	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
-	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
 var VERSION, GIT_REVISION string
@@ -35,13 +40,15 @@ func init() {
 
 func Version(args []string) error {
 	doc := `Usage:
-  calicoctl version [--config=<CONFIG>]
+  calicoctl version [--config=<CONFIG>] [--poll=<POLL>]
 
 Options:
   -h --help             Show this screen.
   -c --config=<CONFIG>  Path to the file containing connection configuration in
                         YAML or JSON format.
                         [default: ` + constants.DefaultConfigPath + `]
+     --poll=<POLL>      Poll for changes to the cluster information at a frequency specified using POLL duration
+                        (e.g. 1s, 10m, 2h etc.). A value of 0 (the default) disables polling.
 
 Description:
   Display the version of calicoctl.
@@ -52,6 +59,15 @@ Description:
 	}
 	if len(parsedArgs) == 0 {
 		return nil
+	}
+
+	// Parse the poll duration.
+	var pollDuration time.Duration
+	var ci *v3.ClusterInformation
+	if poll := argutils.ArgStringOrBlank(parsedArgs, "--poll"); poll != "" {
+		if pollDuration, err = time.ParseDuration(poll); err != nil {
+			return fmt.Errorf("Invalid poll duration specified: %s", pollDuration)
+		}
 	}
 
 	fmt.Println("Client Version:   ", VERSION)
@@ -65,29 +81,56 @@ Description:
 		return err
 	}
 	ctx := context.Background()
-	ci, err := client.ClusterInformation().Get(ctx, "default", options.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("Unable to retrieve Cluster Version or Type: %s", err)
+	var pv, pt string
+	var pcv string
+
+	for {
+		if ci, err = client.ClusterInformation().Get(ctx, "default", options.GetOptions{}); err == nil {
+			v := ci.Spec.CalicoVersion
+			if v == "" {
+				v = "unknown"
+			}
+			cv := ci.Spec.CNXVersion
+			if cv == "" {
+				cv = "unknown"
+			}
+			t := ci.Spec.ClusterType
+			if t == "" {
+				t = "unknown"
+			}
+
+			if pv != v {
+				fmt.Println("Cluster Calico Version:              ", v)
+				pv = v
+			}
+			if pcv != cv {
+				fmt.Println("Cluster Calico Enterprise Version:   ", cv)
+				pcv = cv
+			}
+			if pt != t {
+				fmt.Println("Cluster Type:                        ", t)
+				pt = t
+			}
+		} else {
+			// Unable to retrieve the version.  Reset the old versions so that we re-display when we are able to
+			// determine the version again (if polling).
+			err = fmt.Errorf("Unable to retrieve Cluster Version or Type: %s", err)
+			pv = ""
+			pt = ""
+		}
+
+		if pollDuration == 0 {
+			// We are not polling, so exit.
+			break
+		}
+
+		// We are polling, so display any error that we encountered determining the version and then wait for the next
+		// iteration.
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+		time.Sleep(pollDuration)
 	}
 
-	calicoVersion := ci.Spec.CalicoVersion
-	if calicoVersion == "" {
-		calicoVersion = "unknown"
-	}
-
-	cnxVersion := ci.Spec.CNXVersion
-	if cnxVersion == "" {
-		cnxVersion = "unknown"
-	}
-
-	t := ci.Spec.ClusterType
-	if t == "" {
-		t = "unknown"
-	}
-
-	fmt.Println("Cluster Calico Version:              ", calicoVersion)
-	fmt.Println("Cluster Calico Enterprise Version:   ", cnxVersion)
-	fmt.Println("Cluster Type:                        ", t)
-
-	return nil
+	return err
 }
