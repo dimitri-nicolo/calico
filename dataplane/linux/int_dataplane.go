@@ -725,8 +725,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard)
 	dp.RegisterManager(dp.wireguardManager) // IPv4-only
 
-	captureManager := newCaptureManager(capture.NewActiveCaptures(config.PacketCapture),
-		config.RulesConfig.WorkloadIfacePrefixes)
+	var activeCaptures, err = capture.NewActiveCaptures(config.PacketCapture)
+	if err != nil {
+		log.WithError(err).Panicf("Failed create dir %s required to start packet capture", config.PacketCapture.Directory)
+	}
+	captureManager := newCaptureManager(activeCaptures, config.RulesConfig.WorkloadIfacePrefixes)
 	dp.RegisterManager(captureManager)
 
 	if config.IPv6Enabled {

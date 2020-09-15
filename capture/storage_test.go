@@ -30,14 +30,17 @@ var _ = Describe("PacketCapture Storage Tests", func() {
 
 	It("Cannot call stop with start", func() {
 		var err error
-		var activeCaptures = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir})
+		var activeCaptures capture.ActiveCaptures
+		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir})
+		Expect(err).NotTo(HaveOccurred())
 		err, _ = activeCaptures.Remove(capture.Key{CaptureName: "any"})
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("Cannot call start multiple times for the same capture", func() {
 		var err error
-		var activeCaptures = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir})
+		var activeCaptures capture.ActiveCaptures
+		activeCaptures, err = capture.NewActiveCaptures(capture.Config{RotationSeconds: 1, Directory: baseDir})
 		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, "eth0")
 		Expect(err).NotTo(HaveOccurred())
 		err = activeCaptures.Add(capture.Key{CaptureName: "any"}, "eth0")
