@@ -331,7 +331,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 					return err
 				}
 				return nil
-			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
+			}, time.Second*60, 500*time.Millisecond).Should(BeNil())
 
 			// Deleting NodeA should clean up the final block and the remaining allocations within.
 			err = k8sClient.CoreV1().Nodes().Delete(nodeA, nil)
@@ -347,7 +347,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 					return err
 				}
 				return nil
-			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
+			}, time.Second*60, 500*time.Millisecond).Should(BeNil())
 
 			Eventually(func() error {
 				// Assert all IPAM data is removed now.
