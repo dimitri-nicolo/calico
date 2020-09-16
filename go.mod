@@ -3,6 +3,8 @@ module github.com/projectcalico/app-policy
 go 1.12
 
 require (
+	github.com/coreos/bbolt v1.3.3 // indirect
+	github.com/coreos/etcd v3.3.18+incompatible // indirect
 	github.com/docopt/docopt-go v0.0.0-20160216232012-784ddc588536
 	github.com/envoyproxy/data-plane-api v0.0.0-20190513203724-4a93c6d2d917 // indirect
 	github.com/gogo/googleapis v1.0.0
@@ -24,6 +26,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200818223838-6dd792140b9c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200915233301-645e99934038
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
