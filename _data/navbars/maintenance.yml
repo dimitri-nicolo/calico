@@ -87,3 +87,5 @@ section:
     path: /maintenance/troubleshoot/troubleshooting
   - title: Component logs
     path: /maintenance/troubleshoot/component-logs
+  - title: Troubleshoot Elasticsearch
+    path: /maintenance/troubleshoot/elasticsearch
