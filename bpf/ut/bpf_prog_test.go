@@ -377,8 +377,23 @@ type bpfProgRunFn func(data []byte) (bpfRunResult, error)
 
 // runBpfUnitTest runs a small unit in isolation. It requires a small .c file
 // that wrapsthe unit and compiles into a calico_unittest section.
-func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn)) {
+func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn), opts ...testOption) {
 	RegisterTestingT(t)
+
+	topts := testOpts{
+		subtests: true,
+		logLevel: log.DebugLevel,
+	}
+
+	for _, o := range opts {
+		o(&topts)
+	}
+
+	loglevel := log.GetLevel()
+	if topts.logLevel != loglevel {
+		defer log.SetLevel(loglevel)
+		log.SetLevel(topts.logLevel)
+	}
 
 	tempDir, err := ioutil.TempDir("", "calico-bpf-")
 	Expect(err).NotTo(HaveOccurred())
@@ -405,7 +420,7 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn)) {
 	err = bpftoolProgLoadAll(tempObj, bpfFsDir)
 	Expect(err).NotTo(HaveOccurred())
 
-	t.Run(source, func(_ *testing.T) {
+	runTest := func() {
 		testFn(func(dataIn []byte) (bpfRunResult, error) {
 			res, err := bpftoolProgRun(bpfFsDir+"/calico_unittest", dataIn)
 			log.Debugf("dataIn  = %+v", dataIn)
@@ -414,7 +429,34 @@ func runBpfUnitTest(t *testing.T, source string, testFn func(bpfProgRunFn)) {
 			}
 			return res, err
 		})
-	})
+	}
+
+	if topts.subtests {
+		t.Run(source, func(_ *testing.T) {
+			runTest()
+		})
+	} else {
+		runTest()
+	}
+}
+
+type testOpts struct {
+	subtests bool
+	logLevel log.Level
+}
+
+type testOption func(opts *testOpts)
+
+func withSubtests(v bool) testOption {
+	return func(o *testOpts) {
+		o.subtests = v
+	}
+}
+
+func withLogLevel(l log.Level) testOption {
+	return func(o *testOpts) {
+		o.logLevel = l
+	}
 }
 
 // layersMatchFields matches all Exported fields and ignore the ones explicitly
