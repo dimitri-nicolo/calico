@@ -157,11 +157,10 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			apiserver.Stop()
 
 			By("Waiting for the readiness to change")
-			Eventually(func() []byte {
+			Eventually(func() string {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
-
-				return stdoutStderr
+				return string(stdoutStderr)
 			}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error reaching apiserver"))
 		})
 	})
@@ -227,7 +226,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Allocate an IPIP and VXLAN address to NodeA as well.
+			// Allocate an IPIP, VXLAN and WG address to NodeA as well.
 			handleAIPIP := "handleAIPIP"
 			attrs = map[string]string{"node": nodeA, "type": "ipipTunnelAddress"}
 			err = calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
@@ -239,6 +238,13 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			attrs = map[string]string{"node": nodeA, "type": "vxlanTunnelAddress"}
 			err = calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
 				IP: net.MustParseIP("192.168.0.3"), HandleID: &handleAVXLAN, Attrs: attrs, Hostname: nodeA,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			handleAWG := "handleAWireguard"
+			attrs = map[string]string{"node": nodeA, "type": "wireguardTunnelAddress"}
+			err = calicoClient.IPAM().AssignIP(context.Background(), ipam.AssignIPArgs{
+				IP: net.MustParseIP("192.168.0.4"), HandleID: &handleAWG, Attrs: attrs, Hostname: nodeA,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -324,7 +330,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 					return err
 				}
 				return nil
-			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
+			}, time.Second*60, 500*time.Millisecond).Should(BeNil())
 
 			// Deleting NodeA should clean up the final block and the remaining allocations within.
 			err = k8sClient.CoreV1().Nodes().Delete(nodeA, nil)
@@ -340,18 +346,30 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 					return err
 				}
 				return nil
-			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
+			}, time.Second*60, 500*time.Millisecond).Should(BeNil())
 
-			// Assert all IPAM data is removed now.
-			kvps, err := bc.List(context.Background(), model.BlockListOptions{}, "")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(kvps.KVPairs)).To(Equal(0))
-			kvps, err = bc.List(context.Background(), model.BlockAffinityListOptions{}, "")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(kvps.KVPairs)).To(Equal(0))
-			kvps, err = bc.List(context.Background(), model.IPAMHandleListOptions{}, "")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(kvps.KVPairs)).To(Equal(0))
+			Eventually(func() error {
+				// Assert all IPAM data is removed now.
+				kvps, err := bc.List(context.Background(), model.BlockListOptions{}, "")
+				if err != nil {
+					return err
+				} else if len(kvps.KVPairs) != 0 {
+					return fmt.Errorf("Expected no blocks but there are some")
+				}
+				kvps, err = bc.List(context.Background(), model.BlockAffinityListOptions{}, "")
+				if err != nil {
+					return err
+				} else if len(kvps.KVPairs) != 0 {
+					return fmt.Errorf("Expected no affinities but there are some")
+				}
+				kvps, err = bc.List(context.Background(), model.IPAMHandleListOptions{}, "")
+				if err != nil {
+					return err
+				} else if len(kvps.KVPairs) != 0 {
+					return fmt.Errorf("Expected no handles but there are some")
+				}
+				return nil
+			}, time.Second*10, 500*time.Millisecond).Should(BeNil())
 		})
 	})
 })
@@ -362,7 +380,7 @@ func assertNumBlocks(bc backend.Client, num int) error {
 		return fmt.Errorf("error querying blocks: %s", err)
 	}
 	if len(blocks.KVPairs) != num {
-		return fmt.Errorf("Expected 0 blocks, found %d. Blocks: %#v", len(blocks.KVPairs), blocks)
+		return fmt.Errorf("Expected %d blocks, found %d. Blocks: %#v", num, len(blocks.KVPairs), blocks)
 	}
 	return nil
 }
