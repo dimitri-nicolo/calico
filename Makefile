@@ -825,6 +825,7 @@ build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS
 	zip -r "../$(WINDOWS_ARCHIVE)" TigeraCalico -x '*.git*'
 	@echo
 	@echo "Windows archive built at $(WINDOWS_ARCHIVE)"
+	rm -rf windows-packaging/TigeraCalico
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
