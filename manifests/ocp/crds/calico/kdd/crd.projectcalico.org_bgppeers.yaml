@@ -39,6 +39,8 @@ spec:
                   type: string
                 maxRestartTime:
                   type: string
+                keepOriginalNextHop:
+                  type: boolean
                 node:
                   type: string
                 nodeSelector:
