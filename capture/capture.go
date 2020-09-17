@@ -232,8 +232,9 @@ func (capture *rotatingPcapFile) cleanOlderFiles() {
 		log.WithField("CAPTURE", capture.deviceName).WithError(err).Errorf("Failed to list directory %s", capture.directory)
 	}
 
+	// Sort files in a descending order using last modification timestamp
 	sort.Slice(files, func(current, next int) bool {
-		return files[current].ModTime().Unix() > files[next].ModTime().Unix()
+		return files[current].ModTime().UnixNano() < files[next].ModTime().UnixNano()
 	})
 
 	if len(files) <= capture.maxFiles {
