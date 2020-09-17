@@ -4,6 +4,9 @@ description: Install Calico Enterprise for Windows on a Kubernetes cluster for t
 canonical_url: '/getting-started/windows-calico/quickstart'
 ---
 
+**Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
+{: .alert .alert-warning}
+
 ### Big picture
 
 Install {{site.prodnameWindows}} on your Kubernetes cluster in approximately 5 minutes.
@@ -16,22 +19,25 @@ Install {{site.prodnameWindows}} on your Kubernetes cluster in approximately 5 m
 
 **Datastore requirements**
 
-Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Windows node/Kubernetes cluster must be the same as the datastore for the Linux control node. (You cannot mix datastores in a {{site.prodnameWindows}} implementation.)
+Kubernetes datastore (kdd) only.
 
 **Kubernetes cluster requirements**
 - Kubernetes clusters with versions 1.18, 1.17, or 1.16
 
 **Windows node requirements**
-- Windows Server 1903 (AKA 19H1) build 18317 or greater, with Docker service enabled
+- Versions:  
+  - Windows Server 1809 (build Build 17763.1432 or greater)
+  - Windows Server 1903 (AKA 19H1 build 18362.1049 or greater)
+  - Windows Server 1909 (AKA 19H2 build 18362.1049 or greater), with Docker service enabled
 - Remote access to the Windows node via Remote Desktop Protocol (RDP) or Windows Remote Management (WinRM)
 - Additionally, for EKS:
-    - The VPC controllers must be installed be installed to run Windows pods.
-    - The Windows instance role must have access to `secrets` in the kube-system namespace.
+  - The VPC controllers must be installed be installed to run Windows pods
+  - The Windows instance role must have access to `secrets` in the calico-system namespace
 
 **Linux control node requirements**
-- Installed with {{site.prodname}} v3.12+
+- Installed with {{site.prodname}} v3.3
 - If {{site.prodname}} networking is being used:
-    - Networking must be VXLAN. (Note: for EKS, networking is set to none since AWS VPC networking is used.)
+    - Networking must be VXLAN. (For EKS, networking is set to `none` because AWS VPC networking is used.)
     - Strict affinity must be set to `true`
 
 ### How to
@@ -54,6 +60,8 @@ calicoctl ipam configure --strictaffinity=true
 The following steps install a Kubernetes cluster on a single Windows node, with a Linux control node.
 
 - **Kubernetes**
+  
+  The quickstart steps use VXLAN for networking. 
   
   The geeky details of what you get by default:
   {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:VXLAN,Routing:BGP,Datastore:Kubernetes' %}
@@ -92,27 +100,13 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 1. Run install-calico-windows.ps1 for your datastore with parameters for your implementation.
    You do not need to pass a parameter if the default value of the parameter is correct for you cluster.
 
-   **Kubernetes datastore (default)**
+   **Kubernetes datastore**
 
    ```powershell
    c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> \
                                  -ServiceCidr <your service cidr (default 10.96.0.0/12)> \
                                  -DNSServerIPs <your DNS service IP (default 10.96.0.10)>
    ```
-
-   **etcd datastore**
-
-   ```powershell
-   c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> \
-                                 -Datastore etcdv3
-                                 -EtcdEndpoints <your etcd endpoint ip>
-                                 -ServiceCidr <your service cidr (default 10.96.0.0/12)> \
-                                 -DNSServerIPs <your DNS server IPs (default 10.96.0.10)>
-   ```
-
-   > **Note**: You do not need to pass a parameter if the default value of the parameter is correct for you cluster.
-   {: .alert .alert-info}
-
 
 1. Verify that the {{site.prodname}} services are running.
 
@@ -133,7 +127,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 1. Install and start kubelet/kube-proxy service. Execute following powershell script/commands.
 
    ```powershell
-   C:\CalicoWindows\kubernetes\install-kube-services.ps1
+   C:\TigeraCalico\kubernetes\install-kube-services.ps1
    Start-Service -Name kubelet
    Start-Service -Name kube-proxy
    ```
@@ -191,19 +185,6 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
                                  -DNSServerIPs <your DNS service IP (default 10.96.0.10)>
    ```
 
-   **etcd datastore**
-
-   ```powershell
-   c:\install-calico-windows.ps1 -Datastore etcdv3
-                                 -EtcdEndpoints <your etcd endpoint ip>
-                                 -ServiceCidr <your service cidr (default 10.96.0.0/12)> \
-                                 -DNSServerIPs <your DNS server IPs (default 10.96.0.10)>
-   ```
-
-   > **Note**: You do not need to pass a parameter if the default value of the parameter is correct for you cluster.
-   {: .alert .alert-info}
-
-
 1. Verify that the {{site.prodname}} services are running.
 
    ```powershell
@@ -248,8 +229,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 | ------------------ | --------------------------------------------------------- |-------------|
 | KubeVersion        | Version of Kubernetes binaries to use. If value is empty string (default), the {{site.prodnameWindows}} installation script does not download Kubernetes binaries and run Kubernetes service. Use the default for managed public cloud. | "" |
 | DownloadOnly       | Download without installing {{site.prodnameWindows}}. Set to `yes` to manually install and configure {{site.prodnameWindows}}. For example, {{site.prodnameWindows}} the hard way. | no |
-| Datastore          | {{site.prodnameWindows}} datastore type [`kubernetes` or `etcdv3`] for reading endpoints and policy information. | kubernetes |
-| EtcdEndpoints      | Comma-delimited list of etcd connection endpoints. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`. Valid only if `Datastore` is set to `etcdv3`. | "" |
+| Datastore          | {{site.prodnameWindows}} datastore type [`kubernetes`] for reading endpoints and policy information. | kubernetes |
 | ServiceCidr        | Service IP range of the Kubernetes cluster. Not required for most managed Kubernetes clusters. Note: EKS has non-default value. | 10.96.0.0/12 |
 | DNSServerIPs       | Comma-delimited list of DNS service IPs used by Windows pod. Not required for most managed Kubernetes clusters. Note: EKS has a non-default value. | 10.96.0.10 |
 

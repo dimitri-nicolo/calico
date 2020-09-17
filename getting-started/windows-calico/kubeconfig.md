@@ -4,13 +4,16 @@ description: Configure kubeconfig for Calico Enterprise for Windows.
 canonical_url: '/getting-started/windows-calico/kubeconfig'
 ---
 
+**Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
+{: .alert .alert-warning}
+
 ### Big picture
 
 Create kubeconfig for Windows nodes.
 
 ### How to
 
-Because Kubernetes on Windows cannot run {{site.prodname}} in a pod with an auto-provisioned service account, {{site.prodname}} requires a kubeconfig file to access the API server. This section describes how to find an existing `calico-node` service account used by {{site.prodname}} on Linux side, and then to export the service account token as a kubeconfig file for {{site.prodname}} to use.
+Because Kubernetes on Windows cannot run {{site.prodname}} in a pod with an auto-provisioned service account, {{site.prodname}} requires a kubeconfig file to access the API server. This section describes how to find an existing `calico-node` service account used by {{site.prodname}} on the Linux side, and export the service account token as a kubeconfig file for {{site.prodname}} to use.
 
 >**Note**: In general, the node kubeconfig as used by kubelet does not have enough permissions to access {{site.prodname}}-specific resources.
 {: .alert .alert-info}
@@ -70,4 +73,4 @@ users:
     token: ${token}
 EOF
 ```
-Copy this config file to the windows node `C:\CalicoWindows\calico-kube-config` and set the KUBECONFIG environment variable in `config.ps1` to point to it.
+Copy this config file to the windows node `C:\TigeraCalico\calico-kube-config` and set the KUBECONFIG environment variable in `config.ps1` to point to it.

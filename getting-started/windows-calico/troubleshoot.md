@@ -4,14 +4,17 @@ description: Help for troubleshooting Calico Enterprise for Windows issues.
 canonical_url: /getting-started/windows-calico/troubleshoot
 ---
 
+**Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
+{: .alert .alert-warning}
+
 ### Useful troubleshooting commands
 
 **Examine the HNS network(s)**
 
 When using the {{site.prodname}} CNI plugin, each {{site.prodname}} IPAM block (or the single podCIDR in host-local IPAM mode), is represented as a HNS l2bridge network. Use the following command to inspect the networks.
 
-```
-PS C:\> ipmo c:\CalicoWindows\libs\hns\hns.psm1
+```powershell
+PS C:\> ipmo c:\TigeraCalico\libs\hns\hns.psm1
 PS C:\> Get-HNSNetwork
 ```
 
@@ -19,8 +22,8 @@ PS C:\> Get-HNSNetwork
 
 Use the following command to view the HNS endpoints on the system. There should be one HNS endpoint per pod networked with {{site.prodname}}:
 
-```
-PS C:\> ipmo c:\CalicoWindows\libs\hns\hns.psm1
+```powershell
+PS C:\> ipmo c:\TigeraCalico\libs\hns\hns.psm1
 PS C:\> Get-HNSEndpoint
 ```
 
@@ -38,14 +41,14 @@ This can be caused by a mismatch between a cloud provider (such as the AWS cloud
 
 This is a known Windows issue that Microsoft is working on. The route to the metadata server is lost when the vSwitch is created. As a workaround, manually add the route back by running:
 
-```
+```powershell
 PS C:\> New-NetRoute -DestinationPrefix 169.254.169.254/32
 -InterfaceIndex <interface-index>
 ```
 
 Where <interface-index> is the index of the "vEthernet (Ethernet 2)" device as shown by
 
-```
+```powershell
 PS C:\> Get-NetAdapter
 ```
 #### Installation stalls at "Waiting for {{site.prodname}} initialization to finish"
@@ -63,7 +66,7 @@ After rebooting the Windows node, pods fail to schedule, and the kubelet log has
 
 The error, "The request was aborted: Could not create SSL/TLS secure channel", often means that Windows does not support TLS v1.2 (which is required by many websites) by default. To enable TLS v1.2, run the following command:
 
-```
+```powershell
 PS C:\> [Net.ServicePointManager]::SecurityProtocol = `
 [Net.SecurityProtocolType]::Tls12
 ```
@@ -77,7 +80,7 @@ If using AWS, check that the source/dest check is disabled on the interfaces ass
 
 If using {{site.prodname}} networking, check that the {{site.prodname}} IP pool you are using has IPIP mode disabled (set to "Never). IPIP is not supported on Windows. To check the IP pool, you can use `calicoctl`:
 
-```
+```bash
 $ calicoctl get ippool -o yaml
 apiVersion: projectcalico.org/v3
 items:
@@ -104,3 +107,65 @@ If the error includes 'loading config file "<path-to-kubeconfig>"', follow the i
 #### Felix starts, but does not output logs
 
 By default, Felix waits to connect to the datastore before logging (in case the datastore configuration intentionally disables logging). To start logging at startup, update the [FELIX_LOGSEVERITYSCREEN environment variable]({{site.baseurl}}/reference/felix/configuration#general-configuration) to "info" or "debug" level.
+
+#### {{site.prodname}} BGP mode: connectivity issues, Linux calico/node pods report unready
+
+Check the detailed health output that shows which health check failed:
+
+```
+kubectl describe pod -n kube-system <calico-node-pod>
+```
+
+If the health check reports a BGP peer failure, check the IP address of the peer is either an
+expected IP of a node or an external BGP peer. If the IP of the failed peering is a Windows node:
+
+- Check that the node is up a reachable over IP
+- Check that the RemoteAccess service is installed and running:
+
+  ```powershell
+  PS C:\> Get-Service | ? Name -EQ RemoteAccess
+  ``` 
+- Check the logs for the confd service in the configured log directory for errors
+(default C:\TigeraCalico\logs).
+
+**Examine BGP state on a Windows host**
+
+The Windows BGP router exposes its configuration and state as Powershell commandlets.
+
+**To show BGP peers**:
+
+```powershell
+PS C:\> Get-BgpPeer
+PeerName LocalIPAddress PeerIPAddress PeerASN OperationMode ConnectivityStatus
+-------- -------------- ------------- ------- ------------- ------------------
+Mesh_172_20_48_43 172.20.55.101 172.20.48.43 64512 Mixed Connected
+Mesh_172_20_51_170 172.20.55.101 172.20.51.170 64512 Mixed Connected
+Mesh_172_20_54_3 172.20.55.101 172.20.54.3 64512 Mixed Connected
+Mesh_172_20_58_252 172.20.55.101 172.20.58.252 64512 Mixed Connected
+For an established peering, the ConnectivityStatus column should be "Connected".
+```
+**To examine routes learned from other hosts**:
+
+```powershell
+PS C:\> Get-BgpRouteInformation -Type all
+DestinationNetwork NextHop LearnedFromPeer State LocalPref MED
+------------------ ------- --------------- ----- --------- ---
+10.243.128.192/26 172.20.58.252 Mesh_172_20_58_252 Best 100
+10.244.115.128/26 172.20.48.43 Mesh_172_20_48_43 Best 100
+10.244.128.192/26 172.20.58.252 Mesh_172_20_58_252 Best 100
+```
+For active routes, the State should show as "Best". Routes with State equal to "Unresolved"
+indicate that the BGP router could not resolve a route to the peer and the route will not be
+used. This can occur if the networking state changes after the BGP router is started;
+restarting the BGP router may solve the problem:
+```powershell
+PS C:\> Restart-Service RemoteAccess
+```
+To see the routes being exported by this host:
+```powershell
+PS C:\> (Get-BgpCustomRoute).Network
+10.243.214.152/29
+10.243.214.160/29
+10.243.214.168/29
+10.244.42.0/26
+```
