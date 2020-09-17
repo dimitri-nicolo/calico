@@ -199,11 +199,19 @@ func buildFlowLogQuery(start, end *time.Time, sourceNamespaces, destNamespaces [
 		queries = append(queries, withinTimeRange)
 	}
 
+	// Add the namespace queries. We care about flows where either source or destination match, so if searching for
+	// both use the Should operator.
+	namespaceQueries := []elastic.Query{}
 	if len(sourceNamespaces) != 0 {
-		queries = append(queries, buildTermsQuery("source_namespace", sourceNamespaces))
+		namespaceQueries = append(namespaceQueries, buildTermsQuery("source_namespace", sourceNamespaces))
 	}
 	if len(destNamespaces) != 0 {
-		queries = append(queries, buildTermsQuery("dest_namespace", destNamespaces))
+		namespaceQueries = append(namespaceQueries, buildTermsQuery("dest_namespace", destNamespaces))
+	}
+	if len(namespaceQueries) == 1 {
+		queries = append(queries, namespaceQueries[0])
+	} else if len(namespaceQueries) == 2 {
+		queries = append(queries, elastic.NewBoolQuery().Should(namespaceQueries...))
 	}
 
 	return elastic.NewBoolQuery().Must(queries...)
