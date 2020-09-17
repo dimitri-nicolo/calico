@@ -26,6 +26,10 @@ spec:
               type: object
             spec:
               properties:
+                allowIPIPPacketsFromWorkloads:
+                  type: boolean
+                allowVXLANPacketsFromWorkloads:
+                  type: boolean
                 awsSrcDstCheck:
                   enum:
                     - DoNothing
@@ -217,6 +221,8 @@ spec:
                 interfaceExclude:
                   type: string
                 interfacePrefix:
+                  type: string
+                interfaceRefreshInterval:
                   type: string
                 ipipEnabled:
                   type: boolean
