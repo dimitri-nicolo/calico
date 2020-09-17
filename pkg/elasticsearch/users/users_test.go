@@ -87,6 +87,10 @@ var _ = Describe("ElasticseachUsers", func() {
 										Privileges: []string{"read"},
 									},
 									{
+										Names:      []string{"tigera_secure_ee_flows.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
 										Names:      []string{"tigera_secure_ee_compliance_reports.managed-cluster.*"},
 										Privileges: []string{"create_index", "write", "view_index_metadata", "read"},
 									},
@@ -231,6 +235,10 @@ var _ = Describe("ElasticseachUsers", func() {
 									},
 									{
 										Names:      []string{"tigera_secure_ee_benchmark_results.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_flows.cluster.*"},
 										Privileges: []string{"read"},
 									},
 									{
