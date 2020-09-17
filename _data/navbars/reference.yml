@@ -9,22 +9,30 @@ section:
   section:
   - title: Overview
     path: /reference/calicoctl/overview
-  - title: create
-    path: /reference/calicoctl/create
-  - title: replace
-    path: /reference/calicoctl/replace
   - title: apply
     path: /reference/calicoctl/apply
+  - title: bgp
+    path: /reference/calicoctl/bgp
+    section:
+    - title: Overview
+      path: /reference/calicoctl/bgp/overview
+    - title: peers
+      path: /reference/calicoctl/bgp/peers
+  - title: cluster
+    path: /reference/calicoctl/cluster
+    section:
+    - title: Overview
+      path: /reference/calicoctl/cluster/overview
+    - title: peers
+      path: /reference/calicoctl/cluster/diags
+  - title: convert
+    path: /reference/calicoctl/convert
+  - title: create
+    path: /reference/calicoctl/create
   - title: delete
     path: /reference/calicoctl/delete
   - title: get
     path: /reference/calicoctl/get
-  - title: patch
-    path: /reference/calicoctl/patch
-  - title: label
-    path: /reference/calicoctl/label
-  - title: convert
-    path: /reference/calicoctl/convert
   - title: ipam
     path: /reference/calicoctl/ipam/
     section:
@@ -36,6 +44,8 @@ section:
       path: /reference/calicoctl/ipam/show
     - title: configure
       path: /reference/calicoctl/ipam/configure
+  - title: label
+    path: /reference/calicoctl/label
   - title: node
     path: /reference/calicoctl/node/
     section:
@@ -49,6 +59,10 @@ section:
       path: /reference/calicoctl/node/diags
     - title: checksystem
       path: /reference/calicoctl/node/checksystem
+  - title: patch
+    path: /reference/calicoctl/patch
+  - title: replace
+    path: /reference/calicoctl/replace
   - title: version
     path: /reference/calicoctl/version
 - title: Resource definitions
