@@ -700,8 +700,8 @@ github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814 h1:d3s/0EKVB1Bs
 github.com/tigera/licensing v1.0.1-0.20200617233549-fa90126a1814/go.mod h1:wDxI3VdCK5+hYHNpMF0l0nQDLsbz8lA5BylIJPHAAKw=
 github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5 h1:WeS+3sfbfEm4Off/sl2NwlYPNKlAxN7QScopiB5I29A=
 github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
-github.com/tigera/lma v0.0.0-20200915233327-c4ca78642886 h1:9YHL+FSJ2tj18KvQRNew8eFSUVO14xtPNqVeeZ7gkQQ=
-github.com/tigera/lma v0.0.0-20200915233327-c4ca78642886/go.mod h1:8stAMBDb/06BjjHq61huLe1MIivi0rxsbzK26GZjpzw=
+github.com/tigera/lma v0.0.0-20200916190405-0ddb3181942e h1:muKrIYYLzN7dvG7bf8IJYXOXAj+DrnYogrHpIdfFzgw=
+github.com/tigera/lma v0.0.0-20200916190405-0ddb3181942e/go.mod h1:rIOLEt/tRahij66PW2wgwJlqjtZ8eAIJlbNuRL0t9e0=
 github.com/tigera/nfnetlink v0.0.0-20190401090543-2623d65568be/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20200916030424-b2754ccfc118/go.mod h1:LR58Ho33/6hZGH1RxLczahlYPjN9TlmMmKzy504E2jk=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
