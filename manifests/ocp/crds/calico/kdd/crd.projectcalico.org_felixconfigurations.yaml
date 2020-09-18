@@ -54,6 +54,18 @@ spec:
                   type: string
                 bpfLogLevel:
                   type: string
+                captureDir:
+                  minLength: 1
+                  type: string
+                captureMaxBackups:
+                  minimum: 1
+                  type: integer
+                captureMaxSizeBytes:
+                  minimum: 1
+                  type: integer
+                captureRotationSeconds:
+                  minimum: 1
+                  type: integer
                 chainInsertMode:
                   type: string
                 cloudWatchLogsAggregationKindForAllowed:
