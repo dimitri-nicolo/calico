@@ -133,6 +133,7 @@ metadata:
   namespace: tigera-guardian
 spec:
   selector: k8s-app == 'tigera-guardian'
+  order: 1
   tier: allow-tigera
   types:
     - Ingress
