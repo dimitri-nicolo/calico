@@ -339,14 +339,14 @@ rules:
   verbs: ["get","watch","list"]
 ```
 
-##### User has full control over NetworkPolicy resources in a specific tier
+#### User has full control over NetworkPolicy resources in a specific tier
 
 In this example, the `ClusterRole` is used to provide full access control of Calico NetworkPolicy
 resource types in the **net-sec** tier.
 -  If this is bound to a user using a `ClusterRoleBinding`, then the user has full access of these
    policies across all namespaces.
 -  If this is bound to a user using a `RoleBinding`, then the user has full access of these
-   policies within a specific namespace. (This is useful because you only need this one `ClusterRol`e to be
+   policies within a specific namespace. (This is useful because you only need this one `ClusterRole` to be
    defined, but it can be "reused" for users in different namespaces using a `RoleBinding`).
 
 > **Note**: The Kubernetes NetworkPolicy resources are bound to the default tier, and so this `ClusterRole`
