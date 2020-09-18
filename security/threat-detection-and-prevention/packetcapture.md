@@ -50,14 +50,15 @@ Capturing live traffic will start by creating a [PacketCapture]({{site.baseurl}}
 
 Create a yaml file containing one or more packet captures and apply the packet capture to your cluster.
 
-   ```shell
-   kubectl apply -f <your_packet_capture_filename>
-   ```
+```shell
+kubectl apply -f <your_packet_capture_filename>
+```
+
 In order to stop capturing traffic, delete the packet capture from your cluster.
 
-   ```shell
-   kubectl delete -f <your_packet_capture_filename>
-   ```
+```shell
+kubectl delete -f <your_packet_capture_filename>
+```
 **Examples of selecting workloads**
 
 Following is a basic example to select a single workload that has the label `k8s-app` with value `nginx`.
@@ -93,14 +94,15 @@ Packet Captures files will be rotated either when reaching maximum size or when 
 
 For example, in order to extend the time rotation to one day, the command below can be used:
 
-   ```shell
-   kubectl patch felixconfiguration default -p '{"spec":{"captureRotationSeconds":"86400"}}'
-   ```
+```shell
+kubectl patch felixconfiguration default -p '{"spec":{"captureRotationSeconds":"86400"}}'
+```
+
 #### Enforce RBAC for Packet Capture
 
 Packet Capture permissions are enforced using the standard Kubernetes RBAC based on Role and RoleBindings within a namespace.
 
-For example, in order to allow user jane to create/delete/get/list packet captures, the command below can be used:
+For example, in order to allow user jane to create/delete/get/list/update/watch packet captures for a specific namespace, the command below can be used:
  
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -111,7 +113,7 @@ metadata:
 rules:
 - apiGroups: ["projectcalico.org"] 
   resources: ["packetcaptures"]
-  verbs: ["get", "delete", "create", "list"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -134,17 +136,26 @@ Capture files will be stored on the host mounted volume used for calico nodes. T
 
 To access the capture files locally, you must extract the files from the Fluentd pods similar to the below commands:
 
-   ```shell
-   kubectl get pods -A -l <REPLACE_WITH_LABEL_SELECTOR> -o jsonpath="{..nodeName}"
-   ```
+```shell
+kubectl get pods -A -l <REPLACE_WITH_LABEL_SELECTOR> -o jsonpath="{..nodeName}"
+```
 
-   ```shell
-   kubectl get pods -ntigera-fluentd --no-headers --field-selector spec.nodeName="<REPLACE_WITH_NODE_NAME>"
-   ```
+```shell
+kubectl get pods -ntigera-fluentd --no-headers --field-selector spec.nodeName="<REPLACE_WITH_NODE_NAME>"
+```
 
-   ```shell
-   kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:/var/log/calico/pcap/sample/sample-capture/ /tmp/sample/sample-capture/"
-   ```
+```shell
+kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sample-capture/ .
+```
+
+Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
+The active packet capture file will be identified using the following schema {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
+
+Packet capture files will not be deleted after a capture has stopped. The following command can be used to clean up capture files:
+
+```shell
+kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"
+```
 
 #### Troubleshooting
 

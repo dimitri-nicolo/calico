@@ -272,6 +272,17 @@ still contribute to the denied packet metrics as just described.
 For more information on how to use and set these variables, refer to
 [Connections from Node to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-node-to-typha-kubernetes).
 
+#### PacketCapture configuration
+
+The following parameters fine tune packet capture rotation:
+
+| Configuration parameter | Environment variable             | Description | Schema |
+| ----------------------- | -------------------------------- | ----------- | ------ |
+| `CaptureDir`            | `FELIX_CAPTUREDIR`               | Controls the directory where packet capture files are stored. Example: `/var/log/calico/pcap` | string |
+| `CaptureMaxSizeBytes`   | `FELIX_CAPTUREMAXSIZEBYTES`      | Controls the maximum size in bytes for a packet capture file before rotation. | int |
+| `CaptureRotationSeconds`| `FELIX_CAPTUREMAXROTATIONSECONDS`| Controls the rotation period in seconds for a packet capture file. | int |
+| `CaptureMaxFiles`       | `FELIX_CAPTUREMAXFILES`          | Controls the maximum number rotated packet capture files. | int |
+
 ### Environment variables
 
 The highest priority of configuration is that read from environment
