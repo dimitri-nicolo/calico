@@ -1,10 +1,9 @@
-module github.com/tigera/honeypod-recommendation
+module github.com/tigera/honeypod-controller
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2
-	//github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200826003057-05f425c79e8c
-	//github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200909031343-e24ceeb5cc73
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200909161544-33181291211a
+	//github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200821192134-40a1646d6e9e
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
 	k8s.io/api => k8s.io/api v0.17.2
 
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -33,9 +32,10 @@ replace (
 require (
 	github.com/projectcalico/libcalico-go v1.7.3 // indirect
 	github.com/sirupsen/logrus v1.6.0
-	github.com/tigera/lma v0.0.0-20200909215637-e214c5a9cc07
+	github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	k8s.io/client-go v11.0.0+incompatible // indirect
+	k8s.io/apimachinery v0.17.3
+	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v1.0.0
 )
 

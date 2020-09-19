@@ -58,8 +58,9 @@ KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 #   overriding the value with the only platform supported ATM.
 VALIDARCHES = amd64
 
-BUILD_IMAGE_SERVER=tigera/honeypod-controller
-GCR_REPO?=gcr.io/unique-caldron-775/cnx
+BUILD_IMAGE_CONTROLLER=honeypod-controller
+#GCR_REPO?=gcr.io/unique-caldron-775/cnx
+GCR_REPO?=gcr.io/tigera-security-research
 
 PUSH_IMAGE_PREFIXES?=$(GCR_REPO)/
 RELEASE_IMAGES?=
@@ -101,13 +102,7 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o
 .PHONY: clean
 clean:
 	rm -rf bin \
-	       docker-image/server/bin \
 	       docker-image/controller/bin \
-	       docker-image/snapshotter/bin \
-	       docker-image/reporter/bin \
-	       docker-image/scaleloader/bin \
-	       docker-image/benchmarker/bin \
-	       docker-image/benchmarker/cfg \
 	       tmp/kube-bench \
 	       release-notes-* \
 	       .go-pkg-cache \
@@ -153,16 +148,11 @@ gen-files: bin/report-type-gen
 ###############################################################################
 # Building the images
 ###############################################################################
-.PHONY: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_SERVER)-$(ARCH)
 .PHONY: $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_CONTROLLER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_SNAPSHOTTER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_REPORTER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_SCALELOADER)-$(ARCH)
-.PHONY: $(BUILD_IMAGE_BENCHMARKER) $(BUILD_IMAGE_BENCHMARKER)-$(ARCH)
 .PHONY: images
 .PHONY: image
 
-images image: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_BENCHMARKER)
+images image: $(BUILD_IMAGE_CONTROLLER)
 
 # Build the images for the target architecture
 .PHONY: images-all
@@ -198,14 +188,7 @@ unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
 push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGE_PREFIXES)))
 
 sub-single-push-%:
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG)-$(ARCH))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG)-$(ARCH))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
-endif
 
 ## push all archs
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
@@ -216,27 +199,13 @@ push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIF
 sub-manifest-%:
 	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
 	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))"
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))"
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))"
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))"
-endif
 
 ## push default amd64 arch where multi-arch manifest is not supported
 push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
 sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SHAPSHOTTER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
-endif
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -244,26 +213,12 @@ endif
 ## tag images of one arch
 tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGE_PREFIXES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
 sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG)-$(ARCH))
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG)-$(ARCH))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
-endif
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))
-ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
-	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
-endif
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -313,6 +268,22 @@ go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 		--enable=goimports \
 		--enable=errcheck \
 		--vendor ./...
+
+###########################
+# Better Test
+###########################
+.PHONY: bt
+bt: 
+	-kubectl delete -f controller.yaml
+	-kubectl apply -f controller.yaml
+	-sleep 10
+
+POD_NAME=$(shell kubectl get pods -n tigera-intrusion-detection|grep Running| grep honeypod | cut - -c 1-25 | head -n 1)
+#bt-terminal: bt
+bt-terminal: 
+	-kubectl cp bin/controller-amd64 $(POD_NAME):/controller  -n tigera-intrusion-detection
+	-urxvt -e bash -c "kubectl exec -it $(POD_NAME)  -n tigera-intrusion-detection /bin/bash"
+
 
 ###############################################################################
 # Tests
@@ -437,11 +408,7 @@ stop-kubernetes-master:
 
 ## checks that we can get the version
 version: images
-	docker run --rm $(BUILD_IMAGE_SERVER):latest-$(ARCH) --version
 	docker run --rm $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version
-	docker run --rm $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version
 
 ## Builds the code and runs all tests.
 ci: images-all version static-checks ut
@@ -513,15 +480,7 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	docker run --rm $(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_CONTROLLER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm $(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/$(BUILD_IMAGE_BENCHMARKER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_BENCHMARKER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
+	#docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SERVER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
 
 	# TODO: Some sort of quick validation of the produced binaries.
 
@@ -554,16 +513,8 @@ release-publish: release-prereqs
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
 release-publish-latest: release-prereqs
 	# Check latest versions match.
-	if ! docker run $(BUILD_IMAGE_SERVER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_SERVER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_SERVER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_SERVER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 	if ! docker run $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 	if ! docker run quay.io/$(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
 	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
@@ -639,8 +590,8 @@ help:
 	@echo "Builds:"
 	@echo
 	@echo "  make all           Build all the binary packages."
-	@echo "  make images        Build $(BUILD_IMAGE_SERVER), $(BUILD_IMAGE_CONTROLLER),"
-	@echo "                     $(BUILD_IMAGE_SNAPSHOTTER) and $(BUILD_IMAGE_REPORTER) docker images."
+	@echo "  make images        Build$(BUILD_IMAGE_CONTROLLER)"
+	@echo "                     docker image."
 	@echo
 	@echo "Tests:"
 	@echo

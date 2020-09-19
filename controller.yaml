@@ -17,7 +17,8 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: controller 
-        image: gcr.io/tigera-security-research/controller_prod:latest
+        imagePullPolicy: "Always"
+        image: gcr.io/tigera-security-research/honeypod-controller:latest-amd64
         env:
         - name: CLUSTER_NAME
           value: cluster
@@ -64,6 +65,11 @@ spec:
           #- mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           #name: intrusion-detection-controller-token-csg8d
           #readOnly: true
+        - mountPath: /pcap
+          name: pcap
+          readOnly: true
+        - mountPath: /snort
+          name: snort
       volumes:
       - name: elastic-ca-cert-volume
         secret:
@@ -76,4 +82,11 @@ spec:
           #secret:
           #defaultMode: 420
           #secretName: intrusion-detection-controller-token-csg8d
+      - name: pcap
+        hostPath:
+          path: /var/log/calico/pcap/
+          type: Directory 
+      - name: snort
+        emptyDir: {}
+
 
