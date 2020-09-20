@@ -562,11 +562,11 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZGmS0R0G2V6lLTawuNLmYXOhgBn8K7qClxJjj7A9A=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
-github.com/tigera/apiserver v0.0.0-20200915233019-dcf61a109eed h1:eUsBmpo32aqMWRujZuar1v4cl+r96BDck06AtvjGSTI=
-github.com/tigera/apiserver v0.0.0-20200915233019-dcf61a109eed/go.mod h1:NVarBT4FSm1/V06OXP0AlQrsqkO/4haycoyt1W+DYoo=
+github.com/tigera/apiserver v0.0.0-20200919005711-2934765f2efa h1:PyqDLFZfc4STYkMjyqJ+mr/kFJMRPFIwMoOvwTIdkG4=
+github.com/tigera/apiserver v0.0.0-20200919005711-2934765f2efa/go.mod h1:5KPkOMTyIRYpkeidBrYbl+swpM++0t9y0db358UXQWI=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200915233301-645e99934038 h1:8zRcIQ+EVcD5gi3vkiSpL3CVAgVBaIATSrJx49p/gmM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20200915233301-645e99934038/go.mod h1:XY6QJ8t0s/48gYiY1PxLdLVvWjbzH/fyKMWoIZZSrWA=
-github.com/tigera/licensing v1.0.1-0.20200717030248-d332677c2ce5/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
+github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
