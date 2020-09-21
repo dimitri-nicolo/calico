@@ -277,7 +277,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertPcapFiles(baseDir, []outputFile{
 			{
 				Name: fmt.Sprintf("%s.pcap", baseName),
-				Size: 0,
+				Size: capture.GlobalHeaderLen,
 			},
 		})
 	}, 10)
