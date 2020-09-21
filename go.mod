@@ -22,7 +22,7 @@ require (
 	github.com/nmrshll/go-cp v0.0.0-20180115193924-61436d3b7cfa
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.1
-	github.com/projectcalico/libcalico-go v1.7.2-0.20200917183058-1de9c1579a93
+	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/prometheus/common v0.4.1
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
@@ -47,6 +47,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200915233301-645e99934038
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200921215509-6b4c1f93d5eb
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
