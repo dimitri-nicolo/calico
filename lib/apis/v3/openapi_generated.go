@@ -5767,7 +5767,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
-					"captureMaxBackups": {
+					"captureMaxFiles": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CaptureMaxFiles controls number of rotated capture file to keep. [Default: 2]",
 							Type:        []string{"integer"},

@@ -572,7 +572,7 @@ type FelixConfigurationSpec struct {
 
 	// +kubebuilder:validation:Minimum=1
 	// CaptureMaxFiles controls number of rotated capture file to keep. [Default: 2]
-	CaptureMaxFiles *int `json:"captureMaxBackups,omitempty" validate:"omitempty,gt=0"`
+	CaptureMaxFiles *int `json:"captureMaxFiles,omitempty" validate:"omitempty,gt=0"`
 
 	// Set source-destination-check on AWS EC2 instances. Accepted value must be one of "DoNothing", "Enabled" or "Disabled".
 	// [Default: DoNothing]
