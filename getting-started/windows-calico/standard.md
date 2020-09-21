@@ -21,6 +21,7 @@ Extend your Kubernetes deployment to Windows environments.
 
 - Install and configure [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
 - Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/requirements)
+- If using {{site.prodname}} networking, make sure the kubeconfig file used by kubelet is copied to each Windows node as `config` in directory **c:\k**.
 - Download {{site.prodnameWindows}} and Kubernetes binaries to each Windows nodes to prepare for install:
 
   On each of your Windows nodes, download and run {{site.prodnameWindows}} installation scripts:

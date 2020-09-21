@@ -131,7 +131,7 @@ function GetBackendType()
         throw "{{site.prodname}} on Linux has IPIP enabled. IPIP is not supported on Windows nodes."
     }
 
-    $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org -o jsonpath='{.spec.vxlanEnabled}' -n $CalicoNamespace
+    $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org default -o jsonpath='{.spec.vxlanEnabled}' -n $CalicoNamespace
     if ($encap -EQ "true") {
         return ("vxlan")
     }
@@ -234,6 +234,7 @@ Write-Host "Download {{installName}} release..."
 DownloadFile -Url $ReleaseBaseURL/$ReleaseFile -Destination c:\{{zipFileName}}
 {%- endif %}
 
+Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
 Write-Host "Unzip {{installName}} release..."
 Expand-Archive $CalicoZip c:\
 

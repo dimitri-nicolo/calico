@@ -47,6 +47,14 @@ Earlier versions may work, but we do not actively test {{site.prodnameWindows}} 
 #### Linux platform 
 
 - At least one Linux Kubernetes worker node to run {{site.prodname}}'s cluster-wide components that meets [Linux system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements), and is installed with {{site.prodname}} v3.12.0+
+- VXLAN or BGP without encapsulation is supported if using {{site.prodname}} networking. IPIP (default encapsulation mode) is not supported. Use the following command to turn off IPIP.
+```bash
+kubectl patch felixconfiguration default -p '{"spec":{"ipipEnabled":false}}'
+```
+- If using {{site.prodname}} IPAM, strict affinity of IPAM configuration must be set to `true`.
+```bash
+calicoctl ipam configure --strictaffinity=true
+```
 
 #### Windows platform 
 

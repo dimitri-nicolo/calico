@@ -177,6 +177,14 @@ spec:
 
 The destination selector is moved into the policy selector, so this policy is only rendered for workloads that have the `role: webserver` label. In addition, the rule is simplified so that it only matches on the source of the traffic. Depending on the number of webserver pods, this change can reduce the dataplane resource usage by several orders of magnitude.
 
+### Network policy with tiers
+
+Because of the way the Windows dataplane handles rules, the following limitations are required to avoid performance issues:
+
+- Tiers: maximum of 5
+- `pass` rules: maximum of 10 per tier
+- If each tier contains a large number of rules, and has pass rules, you may need to reduce the number of tiers further.
+
 ### Next steps
 
 - [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
