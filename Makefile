@@ -1,5 +1,7 @@
 PACKAGE_NAME?=github.com/projectcalico/typha
-GO_BUILD_VER=v0.45
+GO_BUILD_VER=v0.47
+
+SEMAPHORE_PROJECT_ID=$(SEMAPHORE_TYPHA_PRIVATE_PROJECT_ID)
 
 GIT_USE_SSH = true
 
@@ -67,7 +69,8 @@ clean:
 		build \
 		report/*.xml \
 		release-notes-* \
-		vendor
+		vendor \
+		Makefile.common*
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
