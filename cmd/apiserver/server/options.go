@@ -165,8 +165,8 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 
 	// Extra extra config from environments.
 	//TODO(rlb): Need to unify our logging libraries
-	logrusLevel := logrus.DebugLevel
-	if env := os.Getenv("LOGLEVEL"); env != "" {
+	logrusLevel := logrus.InfoLevel
+	if env := os.Getenv("LOG_LEVEL"); env != "" {
 		logrusLevel = logutils.SafeParseLogLevel(env)
 	}
 	logrus.SetLevel(logrusLevel)
