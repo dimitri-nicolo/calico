@@ -152,9 +152,13 @@ func (capture *rotatingPcapFile) open() error {
 	capture.writer = pcapgo.NewWriter(capture.output)
 	if info == nil {
 		capture.currentSize = 0
+		if err = capture.writeHeader(); err != nil {
+			return err
+		}
 	} else {
 		capture.currentSize = int(info.Size())
 	}
+
 	return err
 }
 
@@ -167,7 +171,7 @@ func (capture *rotatingPcapFile) tryToRotate() error {
 	// We do not rotate if a previous rotation was just issued
 	// or if no traffic was written
 	var diff = time.Since(capture.lastRotation)
-	if capture.currentSize != 0 && (diff.Seconds() >= float64(capture.rotationSeconds)) {
+	if capture.currentSize > GlobalHeaderLen && (diff.Seconds() >= float64(capture.rotationSeconds)) {
 		// When a size based rotation was been currently issued
 		// we need to wait rotationSeconds until we rotate
 		// in order to avoid small file creation
@@ -261,11 +265,6 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	for {
 		select {
 		case packet := <-packets:
-			// write global header only when traffic is being captured
-			if err = capture.writeHeader(); err != nil {
-				return err
-			}
-
 			if packet == nil {
 				continue
 			}
@@ -275,9 +274,6 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 				log.WithField("CAPTURE", capture.deviceName).Debug("Will exceed maxSize. Will invoke rotation")
 				if err = capture.tryToRotate(); err != nil {
 					log.WithError(err).WithField("CAPTURE", capture.deviceName).Error("Could not rotate file")
-					return err
-				}
-				if err = capture.writeHeader(); err != nil {
 					return err
 				}
 			}
