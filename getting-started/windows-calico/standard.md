@@ -19,18 +19,30 @@ Extend your Kubernetes deployment to Windows environments.
 
 **Required**
 
-- Install and configure [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
 - Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/requirements)
-- If using {{site.prodname}} networking, make sure the kubeconfig file used by kubelet is copied to each Windows node as `config` in directory **c:\k**.
+- You will need the {{site.prodnameWindows}} zip archive provided to you by your support representative.
+- If using {{site.prodname}} networking:
+   - Copy the kubeconfig file (used by kubelet) to each Windows node to the file, `c:\k\config`.
+   - Install and configure [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
 - Download {{site.prodnameWindows}} and Kubernetes binaries to each Windows nodes to prepare for install:
 
-  On each of your Windows nodes, download and run {{site.prodnameWindows}} installation scripts:
-
+- On each of your Windows nodes, prepare the Windows node for {{site.prodnameWindows}} installation:
+   - Enable TLS v1.2:
+  ```powershell
+  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   ```
+   - Copy the {{site.prodnameWindows}} zip archive to `c:\tigera-calico-windows.zip`
+   - Download the {{site.prodnameWindows}} installation script:
+  ```powershell
   Invoke-WebRequest {{ "/scripts/install-calico-windows.ps1" | absolute_url }} -OutFile c:\install-calico-windows.ps1
+  ```
+   - Run the {{site.prodnameWindows}} installation script:
+  ```powershell
   c:\install-calico-windows.ps1 -DownloadOnly yes -KubeVersion <your Kubernetes version>
   ```
-  cd into `c:\TigeraCalico`, you will see the calico-node.exe binary, install scripts, and other files.
+  For example, `c:\install-calico-windows.ps1 -DownloadOnly yes -KubeVersion 1.17.9`
+
+  After these steps, run `ls c:\TigeraCalico` and you will see the calico-node.exe binary, install scripts, and other files.
 
 ### How to
 
@@ -60,8 +72,8 @@ To get around this for `kube-proxy`:
 
 1. Use `kubectl` to retrieve the DaemonSet.
 
-   ```
-    kubectl get ds kube-proxy -n kube-system -o yaml > kube-proxy.yaml
+   ```bash
+   kubectl get ds kube-proxy -n kube-system -o yaml > kube-proxy.yaml
    ```
 1. Modify the `kube-proxy.yaml` file to include a node selector that selects only Linux nodes:
 
@@ -76,7 +88,7 @@ To get around this for `kube-proxy`:
    ```
 1. Apply the updated manifest.
 
-   ```
+   ```bash
    kubectl apply -f kube-proxy.yaml
    ``` 
    
@@ -159,23 +171,23 @@ adjust other kube-proxy parameters.
 1. [Install Calico Enterprise for networking and policy]({{site.baseurl}}/getting-started/kubernetes/self-managed-on-prem) for kdd.
 1. Disable the default {{site.prodname}} IP-in-IP networking (which is not compatible with Windows), by modifying the {{site.prodname}} manifest, and setting the `CALICO_IPV4POOL_IPIP` environment variable to "Never" before applying the manifest.
 
-   If you do apply the manifest with the incorrect value, changing the manifest and re-applying will have no effect. To adjust the already-created IP pool, you can use `calicoctl` to get it:
+   If you do apply the manifest with the incorrect value, changing the manifest and re-applying will have no effect. To adjust the already-created IP pool:
    ```bash
-   calicoctl get ippool -o yaml > ippool.yaml
+   kubectl get ippool -o yaml > ippool.yaml
    ```
-   Then, modify ippool.yaml to set the ipipMode setting and then apply the update:
+   Then, modify ippool.yaml by setting the `ipipMode` to `Never` and then apply the updated manifest:
    ```bash
-   calicoctl apply -f ippool.yaml
+   kubectl apply -f ippool.yaml
    ```
 **If using {{site.prodname}} VXLAN networking** 
 
-1. Modify VXLAN as described in [Overlay Networking]({{site.baseurl}}/networking/vxlan-ipip#how-to) guide. Note the following:
+1. Modify your IP pools as described in [Overlay Networking]({{site.baseurl}}/networking/vxlan-ipip#how-to) guide. Note the following:
    - Windows can support only a single type of IP pool so it is important that you use only a single VXLAN IP pool in this mode.
    - Windows supports only VXLAN on port 4789 and VSID >=4096. {{site.prodname}}'s default (on Linux and Windows) is to use port 4789 and VSID 4096.
 
-1. Apply the manifest using `calicoctl`, and verify that you have a single pool with `VXLANMODE Always`. 
+1. Apply the manifest using `kubectl`, and verify that you have a single pool with `VXLANMODE Always`.
    ```bash
-   calicoctl get ippool -o wide
+   kubectl get ippool -o wide
    ```
   
 1. For Linux control nodes using {{site.prodname}} networking, strict affinity must be set to `true`.
