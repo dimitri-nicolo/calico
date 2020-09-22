@@ -21,16 +21,23 @@ Extend your Kubernetes deployment to Windows environments.
 
 - Install and configure [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
 - Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/requirements)
-- If using {{site.prodname}} networking, make sure the kubeconfig file used by kubelet is copied to each Windows node as `config` in directory **c:\k**.
+- You will need the {{site.prodnameWindows}} zip archive provided to you by your support representative.
+- If using {{site.prodname}} networking, make sure the kubeconfig file used by kubelet is copied to each Windows node to the file `c:\k\config`.
 - Download {{site.prodnameWindows}} and Kubernetes binaries to each Windows nodes to prepare for install:
 
-  On each of your Windows nodes, download and run {{site.prodnameWindows}} installation scripts:
-
-  ```
+- On each of your Windows nodes, download the {{site.prodnameWindows}} installation artifacts and Kubernetes binaries to prepare for install:
+   - Copy the {{site.prodnameWindows}} zip archive to `c:\tigera-calico-windows.zip`
+   - Download the {{site.prodnameWindows}} installation script:
+  ```powershell
   Invoke-WebRequest {{ "/scripts/install-calico-windows.ps1" | absolute_url }} -OutFile c:\install-calico-windows.ps1
+  ```
+   - Run the {{site.prodnameWindows}} installation script:
+  ```powershell
   c:\install-calico-windows.ps1 -DownloadOnly yes -KubeVersion <your Kubernetes version>
   ```
-  cd into `c:\TigeraCalico`, you will see the calico-node.exe binary, install scripts, and other files.
+  For example, `c:\install-calico-windows.ps1 -DownloadOnly yes -KubeVersion 1.17.9`
+
+  Once these steps are complete, run `ls c:\TigeraCalico` and you will see the calico-node.exe binary, install scripts, and other files.
 
 ### How to
 
@@ -60,8 +67,8 @@ To get around this for `kube-proxy`:
 
 1. Use `kubectl` to retrieve the DaemonSet.
 
-   ```
-    kubectl get ds kube-proxy -n kube-system -o yaml > kube-proxy.yaml
+   ```bash
+   kubectl get ds kube-proxy -n kube-system -o yaml > kube-proxy.yaml
    ```
 1. Modify the `kube-proxy.yaml` file to include a node selector that selects only Linux nodes:
 
@@ -76,7 +83,7 @@ To get around this for `kube-proxy`:
    ```
 1. Apply the updated manifest.
 
-   ```
+   ```bash
    kubectl apply -f kube-proxy.yaml
    ``` 
    
