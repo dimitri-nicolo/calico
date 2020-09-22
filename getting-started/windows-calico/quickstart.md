@@ -75,11 +75,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
   <label:Kubernetes,active:true>
   <%
 
-1. Prepare directory for Kubernetes files on Windows node.
-
-   ```powershell
-   mkdir c:\k
-   ```
+1. Setup a Kubernetes cluster with {% include open-new-window.html text='Windows nodes' url='https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/adding-windows-nodes/' %}.
 
 1. Copy the Kubernetes kubeconfig file from the master node (default location $HOME/.kube/config), to the file `c:\k\config.`
 
