@@ -25,7 +25,11 @@ Extend your Kubernetes deployment to Windows environments.
 - If using {{site.prodname}} networking, make sure the kubeconfig file used by kubelet is copied to each Windows node to the file `c:\k\config`.
 - Download {{site.prodnameWindows}} and Kubernetes binaries to each Windows nodes to prepare for install:
 
-- On each of your Windows nodes, download the {{site.prodnameWindows}} installation artifacts and Kubernetes binaries to prepare for install:
+- On each of your Windows nodes, prepare the Windows node for {{site.prodnameWindows}} installation:
+   - Enable TLS v1.2:
+  ```powerhsell
+  [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  ```
    - Copy the {{site.prodnameWindows}} zip archive to `c:\tigera-calico-windows.zip`
    - Download the {{site.prodnameWindows}} installation script:
   ```powershell
