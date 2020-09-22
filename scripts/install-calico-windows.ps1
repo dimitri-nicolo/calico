@@ -234,6 +234,11 @@ Write-Host "Download {{installName}} release..."
 DownloadFile -Url $ReleaseBaseURL/$ReleaseFile -Destination c:\{{zipFileName}}
 {%- endif %}
 
+if ((Get-Service | where Name -Like 'Calico*' | where Status -EQ Running) -NE $null) {
+    Write-Host "Calico services are still running. In order to re-run the installation script, stop the CalicoNode and CalicoFelix services or uninstall them by running: $RootDir\uninstall-calico.ps1"
+    Exit
+}
+
 Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
 Write-Host "Unzip {{installName}} release..."
 Expand-Archive $CalicoZip c:\
