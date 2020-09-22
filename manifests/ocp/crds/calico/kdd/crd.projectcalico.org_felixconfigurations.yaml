@@ -57,7 +57,7 @@ spec:
                 captureDir:
                   minLength: 1
                   type: string
-                captureMaxBackups:
+                captureMaxFiles:
                   minimum: 1
                   type: integer
                 captureMaxSizeBytes:

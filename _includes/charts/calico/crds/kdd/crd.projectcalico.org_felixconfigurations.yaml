@@ -119,7 +119,7 @@ spec:
                   [Default: /var/log/calico/pcap]'
                 minLength: 1
                 type: string
-              captureMaxBackups:
+              captureMaxFiles:
                 description: 'CaptureMaxFiles controls number of rotated capture file
                   to keep. [Default: 2]'
                 minimum: 1
