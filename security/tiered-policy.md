@@ -89,7 +89,7 @@ Use `kubectl` to create, modify or delete tiers. For example, to create a tier c
    apiVersion: projectcalico.org/v3
    kind: Tier
    metadata:
-     name: internal-access
+     name: devops
    spec:
      order: 100
    ```
