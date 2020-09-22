@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"k8s.io/kubernetes/pkg/proxy"
 
 	log "github.com/sirupsen/logrus"
 
@@ -147,6 +149,28 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData, ip [16]byte) (EndpointMet
 	}
 
 	return em, nil
+}
+
+func getFlowLogService(svc proxy.ServicePortName) FlowService {
+	if svc.Name == "" {
+		return FlowService{
+			Namespace: flowLogFieldNotIncluded,
+			Name:      flowLogFieldNotIncluded,
+			Port:      flowLogFieldNotIncluded,
+		}
+	} else if svc.Port == "" {
+		// A single port for a service may not have a name.
+		return FlowService{
+			Namespace: svc.Namespace,
+			Name:      svc.Name,
+			Port:      flowLogFieldNotIncluded,
+		}
+	}
+	return FlowService{
+		Namespace: svc.Namespace,
+		Name:      svc.Name,
+		Port:      svc.Port,
+	}
 }
 
 func getFlowLogEndpointLabels(ed *calc.EndpointData) map[string]string {

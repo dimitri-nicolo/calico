@@ -46,6 +46,7 @@ type flowLogAggregator struct {
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	includePolicies      bool
+	includeService       bool
 	maxOriginalIPsSize   int
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
@@ -114,6 +115,11 @@ func (c *flowLogAggregator) IncludePolicies(b bool) FlowLogAggregator {
 	return c
 }
 
+func (c *flowLogAggregator) IncludeService(b bool) FlowLogAggregator {
+	c.includeService = b
+	return c
+}
+
 func (c *flowLogAggregator) MaxOriginalIPsSize(s int) FlowLogAggregator {
 	c.maxOriginalIPsSize = s
 	return c
@@ -138,7 +144,7 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 	}
 
 	log.WithField("update", mu).Debug("Flow Log Aggregator got Metric Update")
-	flowMeta, err := NewFlowMeta(mu, c.current)
+	flowMeta, err := NewFlowMeta(mu, c.current, c.includeService)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -193,14 +193,15 @@ func serializeCloudWatchFlowLog(f *FlowLog) string {
 	}
 
 	flowExtrasStr := flowExtrasToString(f.FlowExtras)
-	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
+	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
 		f.StartTime.Unix(), f.EndTime.Unix(),
 		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, f.SrcMeta.AggregatedName, srcLabels,
 		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, f.DstMeta.AggregatedName, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Reporter,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
-		f.Action, policyStr, flowExtrasStr)
+		f.Action, policyStr, flowExtrasStr,
+		f.DstService.Namespace, f.DstService.Name, f.DstService.Port)
 }
 
 func (c *cloudWatchDispatcher) Initialize() error {

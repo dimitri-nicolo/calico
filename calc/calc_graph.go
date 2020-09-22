@@ -476,7 +476,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 
 	if cache != nil {
 
-		// The lookup cache, caches endpoint and policy information.
+		// The lookup cache, caches endpoint (and node), networksets, policy and service information.
 		//        ...
 		//     Dispatcher (remote updates)
 		//         |
@@ -484,7 +484,8 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		//         |
 		//       lookup cache
 		//
-		cache.epCache.RegisterWith(remoteEndpointDispatcher)
+		cache.epCache.RegisterWith(allUpdDispatcher, remoteEndpointDispatcher)
+		cache.svcCache.RegisterWith(allUpdDispatcher)
 
 		// The lookup cache, caches policy information for prefix lookups. Hook into the
 		// ActiveRulesCalculator to receive local active policy/profile information.

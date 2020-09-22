@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -111,62 +111,62 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 			startTime := time.Date(2017, 11, 17, 20, 1, 0, 0, time.UTC)
 			endTime := time.Date(2017, 11, 17, 20, 2, 0, 0, time.UTC)
 
-			By("skipping aggergation")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowDefault)
+			By("skipping aggregation, not including service")
+			flowMeta, err = NewFlowMeta(muWithEndpointMetaWithService, FlowDefault, false)
 			Expect(err).To(BeNil())
 			flowLabels = FlowLabels{}
 			flowPolicies = make(FlowPolicies)
 			flowExtras = flowExtrasRef{}
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* - wep default nginx-412354-5123451 nginx-412354-* - 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* - wep default nginx-412354-5123451 nginx-412354-* - 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow - - 0 - - -"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowLabels = FlowLabels{SrcLabels: map[string]string{"test-app": "true"}, DstLabels: map[string]string{"k8s-app": "true"}}
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, true, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* [test-app=true] wep default nginx-412354-5123451 nginx-412354-* [k8s-app=true] 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* [test-app=true] wep default nginx-412354-5123451 nginx-412354-* [k8s-app=true] 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow - - 0 - - -"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on source port")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowSourcePort)
+			flowMeta, err = NewFlowMeta(muWithEndpointMetaWithService, FlowSourcePort, true)
 			Expect(err).To(BeNil())
 			flowLabels = FlowLabels{}
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* - wep default nginx-412354-5123451 nginx-412354-* - 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* - wep default nginx-412354-5123451 nginx-412354-* - 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 foo-ns foo-svc foo-port"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowLabels = FlowLabels{SrcLabels: map[string]string{"test-app": "true"}, DstLabels: map[string]string{"k8s-app": "true"}}
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, true, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* [test-app=true] wep default nginx-412354-5123451 nginx-412354-* [k8s-app=true] 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 iperf-4235-* [test-app=true] wep default nginx-412354-5123451 nginx-412354-* [k8s-app=true] 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 foo-ns foo-svc foo-port"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on prefix name")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowPrefixName)
+			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowPrefixName, true)
 			Expect(err).To(BeNil())
 			flowLabels = FlowLabels{}
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 - - -"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
-			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, FlowPrefixName)
+			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, FlowPrefixName, true)
 			Expect(err).To(BeNil())
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 net - - pvt - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 net - - pvt - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 - - -"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			muWithoutPublicDstEndpointMeta := muWithoutDstEndpointMeta
 			muWithoutPublicDstEndpointMeta.tuple.dst = ipStrTo16Byte("198.17.8.43")
-			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, FlowPrefixName)
+			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, FlowPrefixName, true)
 			Expect(err).To(BeNil())
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - net - - pub - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system - iperf-4235-* - net - - pub - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - - 0 - - -"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on prefix name and reporting original source IPs")
-			flowMeta, err = NewFlowMeta(muWithOrigSourceIPs, FlowPrefixName)
+			flowMeta, err = NewFlowMeta(muWithOrigSourceIPs, FlowPrefixName, true)
 			Expect(err).To(BeNil())
 			flowExtras = NewFlowExtrasRef(muWithOrigSourceIPs, testMaxBoundedSetSize)
 			flowLog = testSerialize(flowMeta, flowLabels, flowPolicies, flowStats, flowExtras, startTime, endTime, false, false)
-			expectedFlowLog = "1510948860 1510948920 net - - pvt - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - [1.0.0.1] 1"
+			expectedFlowLog = "1510948860 1510948920 net - - pvt - wep default - nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow - [1.0.0.1] 1 - - -"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 		})
 	})

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 package metrics
 
 import (
@@ -21,6 +21,10 @@ const (
 	None Aggregation = iota
 	BySourcePort
 	ByPodPrefix
+)
+
+const (
+	NoService = "- - -"
 )
 
 // The expected policies for the flow.
@@ -168,9 +172,12 @@ func (t *FlowTester) PopulateFromFlowLogs(flowLogsOutput string) error {
 // each host: "allow" or "deny"; or "" if the flow isn't
 // explicitly allowed or denied on that host (which means that
 // there won't be a flow log).
-func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP string, numMatchingMetas, numFlowsPerMeta int, actionsPolicies []ExpectedPolicy) error {
+func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, numMatchingMetas, numFlowsPerMeta int, actionsPolicies []ExpectedPolicy) error {
 
 	var errs []string
+
+	// Validate input.
+	Expect(actionsPolicies).To(HaveLen(len(t.felixes)), "ActionsPolicies should be specified for each felix instance monitored by the FlowTester")
 
 	// Host loop.
 	for ii, handling := range actionsPolicies {
@@ -190,9 +197,9 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP string, numMatchin
 		// Build a FlowMeta with the metadata and IPs that we are looking for.
 		var template string
 		if dstIP != "" {
-			template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0"
+			template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc
 		} else {
-			template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0"
+			template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc
 		}
 		fl := &collector.FlowLog{}
 		err := fl.Deserialize(template)
@@ -247,13 +254,17 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP string, numMatchin
 
 func (t *FlowTester) CheckAllFlowsAccountedFor() error {
 	// Finally check that there are no remaining flow logs that we did not expect.
+	var errs []string
 	for ii := range t.felixes {
 		for meta, count := range t.flowsCompleted[ii] {
 			if count != 0 {
-				return errors.New(fmt.Sprintf("Unexpected flow logs (%d) for %v",
-					count, meta))
+				errs = append(errs, fmt.Sprintf("Unexpected flow logs (%d) for %v", count, meta))
 			}
 		}
 	}
-	return nil
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(errs, "\n==============\n"))
 }

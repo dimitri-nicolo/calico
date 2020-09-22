@@ -12,6 +12,9 @@ import (
 
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/felix/stringutils"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -112,20 +115,28 @@ type EndpointLookupsCache struct {
 	epMutex       sync.RWMutex
 	ipToEndpoints map[[16]byte][]*EndpointData
 	endpointToIps map[model.Key]set.Set
+
+	// Node relationship data.
+	//TODO(rlb): We should just treat this as an endpoint
+	nodes         map[string]v3.NodeSpec
+	nodeIPToNames map[[16]byte][]string
 }
 
 func NewEndpointLookupsCache() *EndpointLookupsCache {
 	ec := &EndpointLookupsCache{
+		epMutex:       sync.RWMutex{},
 		ipToEndpoints: map[[16]byte][]*EndpointData{},
 		endpointToIps: map[model.Key]set.Set{},
-		epMutex:       sync.RWMutex{},
+		nodeIPToNames: make(map[[16]byte][]string),
+		nodes:         make(map[string]v3.NodeSpec),
 	}
 	return ec
 }
 
-func (ec *EndpointLookupsCache) RegisterWith(remoteEndpointDispatcher *dispatcher.Dispatcher) {
+func (ec *EndpointLookupsCache) RegisterWith(allUpdateDisp *dispatcher.Dispatcher, remoteEndpointDispatcher *dispatcher.Dispatcher) {
 	remoteEndpointDispatcher.Register(model.WorkloadEndpointKey{}, ec.OnUpdate)
 	remoteEndpointDispatcher.Register(model.HostEndpointKey{}, ec.OnUpdate)
+	allUpdateDisp.Register(model.ResourceKey{}, ec.OnResourceUpdate)
 }
 
 // OnEndpointTierUpdate is called by the PolicyResolver when it figures out tiers that apply
@@ -278,6 +289,28 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 		return
 	}
 	log.Debugf("Updating endpoint cache with remote endpoint data %v", epUpdate.Key)
+	return
+}
+
+// OnResourceUpdate is the callback method registered with the allUpdates dispatcher. We filter out everything except
+// node updates.
+func (ec *EndpointLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
+	switch k := update.Key.(type) {
+	case model.ResourceKey:
+		switch k.Kind {
+		case v3.KindNode:
+			if update.Value == nil {
+				ec.removeNode(k.Name)
+			} else {
+				ec.addOrUpdateNode(k.Name, update.Value.(*v3.Node))
+			}
+		default:
+			log.Debugf("Ignoring update for resource: %s", k)
+		}
+	default:
+		log.Errorf("Ignoring unexpected update: %v %#v",
+			reflect.TypeOf(update.Key), update)
+	}
 	return
 }
 
@@ -459,6 +492,18 @@ func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool)
 	return nil, ok
 }
 
+func (ec *EndpointLookupsCache) GetNode(ip [16]byte) (string, bool) {
+	ec.epMutex.Lock()
+	defer ec.epMutex.Unlock()
+
+	if nodes, ok := ec.nodeIPToNames[ip]; ok && len(nodes) == 1 {
+		log.Debugf("IP %v corresponds to node %s", ip, nodes[0])
+		return nodes[0], true
+	}
+	log.Debugf("IP %v does not correspond to a known node IP", ip)
+	return "", false
+}
+
 // endpointName is a convenience function to return a printable name for an endpoint.
 func endpointName(key model.Key) (name string) {
 	switch k := key.(type) {
@@ -539,4 +584,79 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 		lines = append(lines, endpointName(key), ": ", strings.Join(ipStr, ","))
 	}
 	return strings.Join(lines, "\n")
+}
+
+// addOrUpdateNode tracks IP to node mappings.
+func (ec *EndpointLookupsCache) addOrUpdateNode(name string, node *v3.Node) {
+	ec.epMutex.Lock()
+	defer ec.epMutex.Unlock()
+
+	if existing, ok := ec.nodes[name]; ok {
+		if reflect.DeepEqual(existing, node.Spec) {
+			// Service data has not changed. Do nothing.
+			return
+		}
+
+		// Service data has changed, keep the logic simple by removing the old service and re-adding the new one.
+		ec.handleNode(name, existing, ec.removeNodeMap)
+	}
+
+	ec.handleNode(name, node.Spec, ec.addNodeMap)
+	ec.nodes[name] = node.Spec
+}
+
+// removeNode tracks removal of a node from the IP mappings.
+func (ec *EndpointLookupsCache) removeNode(name string) {
+	ec.epMutex.Lock()
+	defer ec.epMutex.Unlock()
+
+	if existing, ok := ec.nodes[name]; ok {
+		ec.handleNode(name, existing, ec.removeNodeMap)
+		delete(ec.nodes, name)
+	}
+}
+
+// handleNode handles the mappings for a node. The supplied operator is used to either add or remove the mappings.
+func (ec *EndpointLookupsCache) handleNode(name string, node v3.NodeSpec, nodeOp func(name string, ip [16]byte)) {
+	if node.BGP != nil && node.BGP.IPv4Address != "" {
+		if nodeIP, ok := IPStringToArray(node.BGP.IPv4Address); ok {
+			nodeOp(name, nodeIP)
+		}
+	}
+
+	if node.BGP != nil && node.BGP.IPv4IPIPTunnelAddr != "" {
+		if nodeIP, ok := IPStringToArray(node.BGP.IPv4IPIPTunnelAddr); ok {
+			nodeOp(name, nodeIP)
+		}
+	}
+
+	if node.IPv4VXLANTunnelAddr != "" {
+		if nodeIP, ok := IPStringToArray(node.IPv4VXLANTunnelAddr); ok {
+			nodeOp(name, nodeIP)
+		}
+	}
+
+	if node.Wireguard != nil && node.Wireguard.InterfaceIPv4Address != "" {
+		if nodeIP, ok := IPStringToArray(node.Wireguard.InterfaceIPv4Address); ok {
+			nodeOp(name, nodeIP)
+		}
+	}
+}
+
+// removeNodeMap removes a single node <-> IP mapping.
+func (ec *EndpointLookupsCache) removeNodeMap(name string, ip [16]byte) {
+	names := stringutils.RemoveValue(ec.nodeIPToNames[ip], name)
+	if len(names) == 0 {
+		// No more services for the cluster IP, so just remove the cluster IP to service mapping
+		delete(ec.nodeIPToNames, ip)
+	} else {
+		ec.nodeIPToNames[ip] = names
+	}
+}
+
+// addNodeMap adds a single node <-> IP mapping.
+func (ec *EndpointLookupsCache) addNodeMap(name string, ip [16]byte) {
+	if !stringutils.InSlice(ec.nodeIPToNames[ip], name) {
+		ec.nodeIPToNames[ip] = append(ec.nodeIPToNames[ip], name)
+	}
 }

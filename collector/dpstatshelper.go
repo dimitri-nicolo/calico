@@ -172,7 +172,8 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				configParams.FlowLogsFileEnabledForAllowed &&
 				configParams.FlowLogsFileAggregationKindForAllowed == configParams.CloudWatchLogsAggregationKindForAllowed &&
 				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
-				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies {
+				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies &&
+				!configParams.FlowLogsFileIncludeService {
 				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
 				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileAllow = true
@@ -194,7 +195,8 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				configParams.FlowLogsFileEnabledForDenied &&
 				configParams.FlowLogsFileAggregationKindForDenied == configParams.CloudWatchLogsAggregationKindForDenied &&
 				configParams.FlowLogsFileIncludeLabels == configParams.CloudWatchLogsIncludeLabels &&
-				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies {
+				configParams.FlowLogsFileIncludePolicies == configParams.CloudWatchLogsIncludePolicies &&
+				!configParams.FlowLogsFileIncludeService {
 				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
 				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileDeny = true
@@ -212,6 +214,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
+				IncludeService(configParams.FlowLogsFileIncludeService).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
@@ -223,6 +226,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
+				IncludeService(configParams.FlowLogsFileIncludeService).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
