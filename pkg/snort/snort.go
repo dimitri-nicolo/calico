@@ -30,6 +30,7 @@ type Snort struct {
 }
 
 func ParseSnort(reader_str string) ([]Snort, error) {
+    //We will do generic splits of the Snort result for now
     list := strings.Split(reader_str,"\n\n")
     var result []Snort
     for _, item := range list {
@@ -48,6 +49,7 @@ func ParseSnort(reader_str string) ([]Snort, error) {
 }
 
 func FilterSnort(SnortList []Snort) ([]Snort, error) {
+     //We use a global Snortlist to keep track of Snort entries that we already send to elastic.
      var tmpList []Snort
      if len(GlobalSnort) == 0 {
          GlobalSnort = append(GlobalSnort, SnortList...)
@@ -56,6 +58,7 @@ func FilterSnort(SnortList []Snort) ([]Snort, error) {
      for _, items := range SnortList {
 	 found := 0
          for _, items2 := range GlobalSnort {
+             //We are matching the Timestamp, Source and Destinaton of the Snort entry for uniqueness.
 	     if items.Date_Src_Dst == items2.Date_Src_Dst {
 	         found = 1
 	     }
@@ -64,7 +67,6 @@ func FilterSnort(SnortList []Snort) ([]Snort, error) {
              tmpList = append(tmpList, items)
          }
      }
-     //fmt.Println(tmpList)
      GlobalSnort = append(GlobalSnort, tmpList...)
      return tmpList, nil
 }

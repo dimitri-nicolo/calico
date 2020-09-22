@@ -11,9 +11,8 @@ import (
 	"path/filepath"
 	"io/ioutil"
 	"strings"
-	//"html"
 
-	//log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	//rule "github.com/tigera/honeypod-recommendation/pkg/rule"
 	//model "github.com/tigera/honeypod-recommendation/pkg/model"
         api "github.com/tigera/lma/pkg/api"
@@ -28,32 +27,33 @@ import (
 
 const (
     Index           = "tigera_secure_ee_events.cluster"
-    PacketCapture  = "capture-honey"
+    PacketCapture   = "capture-honey"
 )
 
-func GetNodeName() string {
+func GetNodeName() (string, error) {
+    //Retrieve KubeConfig in Pod
     config, err := rest.InClusterConfig()
     if err != nil {
-	fmt.Println("bad rest")
-        return ""
+        return "", fmt.Errorf("Error retrieving cluster config for GetNodeName(): %v", err)
     }
-    clientset, err := kubernetes.NewForConfig(config)
+    //Generate KubeApi client
+    client, err := kubernetes.NewForConfig(config)
     if err != nil {
-	fmt.Println("bad config")
-	return ""
+        return "", fmt.Errorf("Error getting KubeAPI client for GetNodeName(): %v", err)
     }
+    //Get node name by using Get pod on our own pod
     hostname := os.Getenv("HOSTNAME")
-    fmt.Println("Hostname: ", hostname)
-    pod, err := clientset.CoreV1().Pods("tigera-intrusion-detection").Get(hostname, metav1.GetOptions{})
+    log.Info("Honeypod Controller hostname: ", hostname)
+    pod, err := client.CoreV1().Pods("tigera-intrusion-detection").Get(hostname, metav1.GetOptions{})
     if err != nil {
-	fmt.Println("bad clientset",err)
-        return ""
+	    return "", fmt.Errorf("Error getting NodeName for GetNodeName(): %v", err)
     }
-    return pod.Spec.NodeName
+    return pod.Spec.NodeName, nil
 }
 
 func SendEvents(SnortList []snort.Snort, p hp.HoneypodLogProcessor, e api.AlertResult) error {
 
+    //Iterate list of Snort alerts and send them to Elasticsearch
     for _, alert := range SnortList {
         snort_description := fmt.Sprintf("[Snort] Signature Triggered on %s/%s", *e.Record.DestNamespace, *e.Record.DestNameAggr)
         json_res := map[string]interface{}{
@@ -72,111 +72,104 @@ func SendEvents(SnortList []snort.Snort, p hp.HoneypodLogProcessor, e api.AlertR
             },
             "time" : time.Now(),
         }
-        fmt.Println(json_res)
+        //fmt.Println(json_res)
         res, err := p.Client.Backend().Index().Index(Index).Id("").BodyJson(json_res).Do(p.Ctx)
+
+	//If theres any issue sending the snort alert to ES, we log and exit
         if err != nil {
-            fmt.Println("Send Failed", err)
+            log.WithError(err).Error("Error sending Snort alert")
+	    return err
         }
-        fmt.Println(res)
+	log.Info("Snort alert sent: ", res)
     }
     return nil
 }
-func loop(p hp.HoneypodLogProcessor, node string) error {
+func Loop(p hp.HoneypodLogProcessor, node string) error {
     //We only look at the past 10min of alerts
     endTime := time.Now()
     startTime := endTime.Add(-10 * time.Minute)
-    fmt.Println("Querying Elasticsearch for new Alerts.")
+    log.Info("Querying Elasticsearch for new Alerts")
 
     for e := range p.LogHandler.SearchAlertLogs(p.Ctx, nil, &startTime, &endTime) {
         if e.Err != nil {
-	    fmt.Println("Search failed")
+	    log.WithError(e.Err).Error("Failed querying alert logs")
 	    return e.Err
 	}
-	//fmt.Println(e.SourceNamespace)
-	//fmt.Println(e.DestNamespace)
-
-	//fmt.Println("Type: ", e.Type)
-	//fmt.Println("Description: ", e.Description)
-	//fmt.Println("Alert: ", e.Alert.Alert)
-	//fmt.Println("Record SourceNameAggr: ", *e.Record.SourceNameAggr)
-	//fmt.Println("Record SourceNamespace: ", *e.Record.SourceNamespace)
-	//fmt.Println("Record DestNamespace:", *e.Record.DestNamespace)
-	//fmt.Println("Record DestNameAggr: ", *e.Record.DestNameAggr)
-	//fmt.Println("Record HostKeyword: ", *e.Record.HostKeyword)
 
 	//Skip alerts thats not Honeypod related and not on our node
 	if strings.Contains(e.Alert.Alert, "honeypod.") == false || *e.Record.HostKeyword != node {
             continue
 	}
-
-        fmt.Println("Valid alert Found: ", e.Alert)
+        log.Info("Valid alert Found: ", e.Alert)
 
 	s := fmt.Sprintf("/pcap/%s/%s/%s", *e.Record.DestNamespace, PacketCapture, *e.Record.DestNameAggr)
-	//fmt.Println(s)
 
 	//Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
 	if _, err := os.Stat("/pcap/"); os.IsNotExist(err) {
-	    fmt.Println("/pcap directory missing.")
+	    log.WithError(err).Error("/pcap directory missing")
 	    return err
 	}
         matches, err := filepath.Glob(s)
 	if err != nil {
-	    fmt.Println("/pcap file.")
+	    log.WithError(err).Error("Failed to match pcap files")
 	    return err
 	}
 
-	fmt.Println("Scanning: ", matches)
+	log.Info("Honeypod Controller scanning: ", matches)
 	for _ , match := range matches {
 	    output := fmt.Sprintf("/snort/%s", *e.Record.DestNameAggr)
             if _, err := os.Stat(output); os.IsNotExist(err) {
                 err = os.Mkdir(output, 755)
 	        if err != nil {
-	           fmt.Println("can't create snort folder")
+	           fmt.Errorf("can't create snort folder")
                 }
 	    }
 	    cmd := exec.Command("snort", "-q", "-k", "none", "-c", "/etc/snort/snort.conf", "-r", match, "-l", output)
-	    //fmt.Println("Exec: ", cmd.String())
 	    var out bytes.Buffer
 	    cmd.Stdout = &out
 	    err := cmd.Run()
 	    if err != nil {
-	        fmt.Println("exec failed")
+                log.WithError(err).Error("Error running Snort on pcap: ", output)
 	    }
-	    fmt.Println(out.String())
+	    log.Info("Signature Triggered: ", out.String())
 	}
         matches, err = filepath.Glob("/snort/*")
 	if err != nil {
-	    fmt.Println("/snort file.")
+	    log.WithError(err).Error("Error matching snort directory")
 	}
-	fmt.Println(matches)
+	log.Info("Snort Directory found: ", matches)
 	for _, match := range matches {
 	    path := fmt.Sprintf("%s/alert", match)
 	    if _, err := os.Stat(path); os.IsNotExist(err) {
-	        fmt.Println(path, " missing.")
+	        log.WithError(err).Error("Error file missing: ", path)
+		continue
 	    }
 	    reader, err := ioutil.ReadFile(path)
 	    if err != nil {
-	        fmt.Println("Read Error")
+	        log.WithError(err).Error("Error reading file: ", path)
+		continue
 	    }
-	    //fmt.Println(string(reader))
 	    reader_str := string(reader)
 	    SnortList, err := snort.ParseSnort(reader_str)
 	    if err != nil {
-                fmt.Println("Parse Error")
+	        log.WithError(err).Error("Error parsing Snort alert: ", path)
+		continue
 	    }
 	    FilterList, err := snort.FilterSnort(SnortList)
 	    if err != nil {
-                fmt.Println("Filter Error")
+	        log.WithError(err).Error("Error filtering Snort alert")
+		continue
 	    }
 	    w := *e
 	    err = SendEvents(FilterList, p, w)
 	    if err != nil {
-	        fmt.Println("SendEvent Failed.")
+	        log.WithError(err).Error("Error sending Snort alert")
+		continue
 	    }
 	}
 
     }
-    fmt.Println("Loop Completed.")
+    log.Info("Honeypod controller loop completed")
 
     return nil
 }
@@ -184,7 +177,7 @@ func loop(p hp.HoneypodLogProcessor, node string) error {
 func main() {
 
     //Get Default Elastic client config, then modify URL
-    fmt.Println("Retrieving Elastic Client.")
+    log.Info("Honeypod Controller started")
     cfg := elastic.MustLoadConfig()
     cfg.ElasticURI = "https://tigera-secure-es-http.tigera-elasticsearch.svc:9200"
     cfg.ParsedElasticURL, _ = url.Parse(cfg.ElasticURI)
@@ -192,44 +185,43 @@ func main() {
     //Try to connect to Elasticsearch
     c, err := elastic.NewFromConfig(cfg)
     if err != nil {
-        fmt.Println("Failed to initiate ES client.")
+        log.WithError(err).Error("Failed to initiate ES client.")
 	return
     }
     //Set up context
     ctx := context.Background()
 
     //Check if required index exists
-    //index := "tigera_secure_ee_events.cluster"
     exists, err := c.Backend().IndexExists(Index).Do(context.Background())
-    if err != nil {
-        fmt.Println("Index can't be accessed")
-	return
-    }
-    if exists != true {
-        fmt.Println("Index does not exist")
+    if err != nil || !exists {
+        log.WithError(err).Error("Error unable to access Index: ", Index)
 	return
     }
 
+    //Create HoneypodLogProcessor
     p, err := hp.NewHoneypodLogProcessor(c, ctx)
     if err != nil {
-       fmt.Println("Unable to create HoneypodLog Processor")
+       log.WithError(err).Error("Unable to create HoneypodLog Processor")
        return
     }
-    node := GetNodeName()
-    if node == "" {
-       fmt.Println("Didn't get node name.")
+    //Retrieve controller's running Nodename
+    node,err := GetNodeName()
+    if err != nil {
+       log.WithError(err).Error("Error getting Nodename")
+       return
     }
-    fmt.Println(node)
-
+    //Start controller loop
     for {
-        err = loop(p, node)
+        err = Loop(p, node)
 	if err != nil {
-            fmt.Println("ded loop")
-	    break
+            log.WithError(err).Error("Error running controller loop")
+	    return
 	}
-	timer,err := time.ParseDuration("10m")
+	//Sleep for 10 minutues and run controller loop again
+	timer, err := time.ParseDuration("10m")
 	if err != nil {
-	    fmt.Println("bad time")
+            log.WithError(err).Error("Error setting timer")
+	    return
 	}
 	time.Sleep(timer)
     }
