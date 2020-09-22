@@ -20,7 +20,6 @@ Because the Kubernetes and {{site.prodname}} control components do not run on Wi
 ✓ Networking: 
   - Kubernetes, on-premises: Calico CNI with BGP or VXLAN
   - EKS: VPC CNI, or Calico CNI with BGP or VXLAN
-  - AWS: VPC CNI only
 
 ### Requirements
 
