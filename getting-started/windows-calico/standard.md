@@ -22,13 +22,13 @@ Extend your Kubernetes deployment to Windows environments.
 - Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/requirements)
 - You will need the {{site.prodnameWindows}} zip archive provided to you by your support representative.
 - If using {{site.prodname}} networking:
-   - Make sure the kubeconfig file used by kubelet is copied to each Windows node to the file `c:\k\config`.
+   - Copy the kubeconfig file (used by kubelet) to each Windows node to the file, `c:\k\config`.
    - Install and configure [calicoctl]({{site.baseurl}}/maintenance/clis/calicoctl/install)
 - Download {{site.prodnameWindows}} and Kubernetes binaries to each Windows nodes to prepare for install:
 
 - On each of your Windows nodes, prepare the Windows node for {{site.prodnameWindows}} installation:
    - Enable TLS v1.2:
-  ```powerhsell
+  ```powershell
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   ```
    - Copy the {{site.prodnameWindows}} zip archive to `c:\tigera-calico-windows.zip`
@@ -42,7 +42,7 @@ Extend your Kubernetes deployment to Windows environments.
   ```
   For example, `c:\install-calico-windows.ps1 -DownloadOnly yes -KubeVersion 1.17.9`
 
-  Once these steps are complete, run `ls c:\TigeraCalico` and you will see the calico-node.exe binary, install scripts, and other files.
+  After these steps, run `ls c:\TigeraCalico` and you will see the calico-node.exe binary, install scripts, and other files.
 
 ### How to
 
@@ -175,7 +175,7 @@ adjust other kube-proxy parameters.
    ```bash
    kubectl get ippool -o yaml > ippool.yaml
    ```
-   Then, modify ippool.yaml to set the ipipMode setting and then apply the updated manifest:
+   Then, modify ippool.yaml by setting the `ipipMode` to `Never` and then apply the updated manifest:
    ```bash
    kubectl apply -f ippool.yaml
    ```
