@@ -42,8 +42,6 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "tigera-operator"
-            - name: TIGERA_OPERATOR_INIT_IMAGE_VERSION
-              value: {{.Values.tigeraOperator.version}}
           envFrom:
             - configMapRef:
                 name: kubernetes-services-endpoint

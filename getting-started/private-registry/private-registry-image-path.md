@@ -5,7 +5,6 @@ canonical_url: '/getting-started/private-registry/private-registry-image-path'
 ---
 
 {% assign operator = site.data.versions.first.tigera-operator %}
-{% assign operator-init = site.data.versions.first.tigera-operator-init %}
 
 ### Big picture
 

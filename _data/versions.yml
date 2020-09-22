@@ -5,10 +5,6 @@
     image: tigera/operator
     version: master
     registry: quay.io
-  tigera-operator-init:
-    image: tigera/operator-init
-    version: master
-    registry: quay.io
   calico:
     minor_version: v3.16
     archive_path: archive
