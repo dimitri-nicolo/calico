@@ -149,7 +149,7 @@ func (c *captureManager) CompleteDeferredWork() error {
 					// being marked as down and the capture was not deleted,
 					// it will start the capture
 					var err = c.activePacketCaptures.Add(value.(capture.Key), ifaceName)
-					if err != capture.ErrDuplicate {
+					if err != nil && err != capture.ErrDuplicate {
 						log.WithField("CAPTURE", value.(capture.Key).CaptureName).WithError(err).Error("Failed to start capture")
 					}
 				})
@@ -160,7 +160,7 @@ func (c *captureManager) CompleteDeferredWork() error {
 					// being marked as up and the capture was not deleted,
 					// it will stop the capture
 					var err, _ = c.activePacketCaptures.Remove(value.(capture.Key))
-					if err != capture.ErrNotFound {
+					if err != nil && err != capture.ErrNotFound {
 						log.WithField("CAPTURE", value.(capture.Key).CaptureName).WithError(err).Error("Failed to stop capture")
 					}
 				})
