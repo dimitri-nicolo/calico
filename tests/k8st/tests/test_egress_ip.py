@@ -376,7 +376,7 @@ EOF
         _log.info("Client IPs: %r", client_ip)
         self.assertIn(client_ip, [expected_egress_ip])
 
-    def setup_client_server_gateway(self, client_node):
+    def setup_client_server_gateway(self, gateway_node):
         """
         Setup client , server and gateway pod and validate server sees gateway ip as source ip.
         """
@@ -387,7 +387,7 @@ EOF
         server.wait_running()
 
         # Create egress gateway, with an IP from that pool.
-        gateway = self.create_gateway_pod(client_node, "gw", self.egress_cidr)
+        gateway = self.create_gateway_pod(gateway_node, "gw", self.egress_cidr)
 
         client_ns = "default"
         client = NetcatClientTCP(client_ns, "test1", node="kind-worker", labels={"app": "client"}, annotations={
