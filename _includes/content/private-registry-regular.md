@@ -6,7 +6,6 @@ In order to install images from your private registry, you must first pull the i
 
    ```bash
    docker pull {{ operator.registry }}/{{ operator.image }}:{{ operator.version }}
-   docker pull {{ operator-init.registry }}/{{ operator-init.image }}:{{ operator-init.version }}
    {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%} {% endif -%}
@@ -19,7 +18,6 @@ In order to install images from your private registry, you must first pull the i
 
    ```bash
    docker tag {{ operator.registry }}/{{ operator.image }}:{{ operator.version }} $PRIVATE_REGISTRY/{{ operator.image }}:{{ operator.version }}
-   docker tag {{ operator-init.registry }}/{{ operator-init.image }}:{{ operator-init.version }} $PRIVATE_REGISTRY/{{ operator-init.image }}:{{ operator-init.version }}
    {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%} {% endif -%}
@@ -32,7 +30,6 @@ In order to install images from your private registry, you must first pull the i
 
    ```bash
    docker push $PRIVATE_REGISTRY/{{ operator.image }}:{{ operator.version }}
-   docker push $PRIVATE_REGISTRY/{{ operator-init.image }}:{{ operator-init.version }}
    {% for component in site.data.versions.first.components -%}
    {% if component[1].image -%}
    docker push $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}
