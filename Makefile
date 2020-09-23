@@ -1,5 +1,7 @@
 PACKAGE_NAME=github.com/projectcalico/calicoctl
-GO_BUILD_VER=v0.45
+GO_BUILD_VER=v0.47
+
+SEMAPHORE_PROJECT_ID=$(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID)
 
 GIT_USE_SSH = true
 
@@ -54,7 +56,7 @@ LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(GIT_VERSION) \
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} \;
-	rm -rf .go-pkg-cache bin build certs *.tar vendor
+	rm -rf .go-pkg-cache bin build certs *.tar vendor Makefile.common*
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH) || true
 ifeq ($(ARCH),amd64)
@@ -341,7 +343,7 @@ stop-kubernetes-master:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: mod-download build-all static-checks test image-all
+ci: mod-download build-all static-checks test
 
 ## Avoid unplanned go.sum updates
 .PHONY: undo-go-sum check-dirty
@@ -362,7 +364,8 @@ check-dirty: undo-go-sum
 ###############################################################################
 .PHONY: cd
 ## Deploys images to registry
-cd: check-dirty
+cd: check-dirty image-all
+
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
