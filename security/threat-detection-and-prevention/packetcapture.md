@@ -1,5 +1,5 @@
 ---
-title: Capture packets for debugging workloads
+title: Packet capture
 description: Capture live traffic for debugging microservices and application interaction.
 canonical_url: /security/threat-detection-and-prevention/packetcapture
 ---
@@ -25,7 +25,7 @@ This how-to guide uses the following {{site.prodname}} features:
 Libpcap file format, also known as [pcap](https://wiki.wireshark.org/Development/LibpcapFileFormat), is the main file 
 format used for capturing traffic by network tools.
 
-### Before you begin...
+### Before you begin
 
 **FAQ**
 
@@ -38,13 +38,12 @@ This feature is in a technical preview stage. PacketCapture does not support:
 
 ### How To
 
-- [Capturing live traffic](#capturing-live-traffic)
-- [Configure Packet Capture rotation](#configure-packet-capture-rotation)
-- [Enforce RBAC for Packet Capture](#enforce-rbac-for-packet-capture)
+- [Capture live traffic](#capture-live-traffic)
+- [Configure packet capture rotation](#configure-packet-capture-rotation)
+- [Enforce RBAC for packet capture](#enforce-rbac-for-packet-capture)
 - [Access packet capture files](#access-packet-capture-files)
-- [Troubleshooting](#troubleshooting)
 
-#### Capturing live traffic
+#### Capture live traffic
 
 Capturing live traffic will start by creating a [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource.
 
@@ -85,7 +84,7 @@ spec:
   selector: all()
 ```
 
-#### Configure Packet Capture rotation
+#### Configure packet capture rotation
 
 Live traffic will be stored as pcap files that will be rotated by size and time. All packet capture files rotate using
 parameters defined in [FelixConfig]({{site.baseurl}}/reference/resources/felixconfig).
@@ -98,7 +97,7 @@ For example, in order to extend the time rotation to one day, the command below 
 kubectl patch felixconfiguration default -p '{"spec":{"captureRotationSeconds":"86400"}}'
 ```
 
-#### Enforce RBAC for Packet Capture
+#### Enforce RBAC for packet capture
 
 Packet Capture permissions are enforced using the standard Kubernetes RBAC based on Role and RoleBindings within a namespace.
 
@@ -149,14 +148,10 @@ kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sam
 ```
 
 Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
-The active packet capture file will be identified using the following schema {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
+The active packet capture file will be identified using the following schema: {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
 
 Packet capture files will not be deleted after a capture has stopped. The following command can be used to clean up capture files:
 
 ```shell
 kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"
 ```
-
-#### Troubleshooting
-
-To troubleshoot packet capture, see [Troubleshooting]({{site.baseurl}}/maintenance/troubleshoot/troubleshooting)

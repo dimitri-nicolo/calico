@@ -1,6 +1,7 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+title: Compliance
+description: Get reports on Kubernetes workloads and environments for regulatory compliance.
+canonical_url: '/compliance/index'
 show_read_time: false
 show_toc: false
 ---

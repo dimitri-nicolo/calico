@@ -1,0 +1,15 @@
+title: "Compliance and security"
+path: /compliance/
+order: 7
+section:
+- title: Compliance reports
+  path: /security/compliance-reports/
+  section:
+  - title: Configure compliance reports
+    path: /security/compliance-reports/overview
+  - title: Configure compliance reports for managed cloud providers
+    path: /security/compliance-managed-cloud
+- title: CIS benchmark reports
+  path: /security/compliance-reports-cis
+- title: Encrypt data in transit
+  path: /security/encrypt-cluster-pod-traffic

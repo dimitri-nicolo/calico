@@ -1,6 +1,7 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+title: Performance and scaling
+description: As you move into production, review performance and scaling methods.
+canonical_url: '/maintenance/index'
 show_read_time: false
 show_toc: false
 ---

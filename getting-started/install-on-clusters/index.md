@@ -1,6 +1,6 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+description: Install Calico Enterprise on clusters.
+canonical_url: '/getting-started/install-on-clusters/'
 show_read_time: false
 show_toc: false
 ---

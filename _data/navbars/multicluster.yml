@@ -1,0 +1,25 @@
+title: "Multi-cluster management"
+path: /multicluster/
+order: 5
+section:
+- title: Configure multi-cluster management
+  path: /maintenance/mcm/configure
+- title: Fine-tune multi-cluster management for production
+  path: /maintenance/mcm/fine-tune-deployment
+- title: Change a cluster type
+  path: /maintenance/mcm/change-cluster-type
+- title: Federate identity endpoints and services
+  path: /networking/federation/
+  section:
+  - title: Overview
+    path: /networking/federation/overview
+  - title: Create kubeconfig files
+    path: /networking/federation/kubeconfig
+  - title: Configure access to remote clusters
+    path: /networking/federation/configure-rcc
+  - title: Configure federated services
+    path: /networking/federation/services-controller
+  - title: Example AWS configuration
+    path: /networking/federation/aws
+  - title: Query remote clusters with calicoq
+    path: /networking/federation/calicoq

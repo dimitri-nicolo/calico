@@ -23,8 +23,8 @@ section:
     path: /networking/custom-bgp-config
   - title: Configure outgoing NAT
     path: /networking/workloads-outside-cluster
-  - title: Direct outbound traffic through egress gateways
-    path: /networking/egress-gateway
+- title: Egress access controls
+  path: /networking/egress-gateway
 - title: Customize IP address management
   path: /networking/ipam
   section:
@@ -50,18 +50,3 @@ section:
      path: /networking/change-block-size  
    - title: Restrict a pod to use an IP address in a specific range
      path: /networking/legacy-firewalls
-- title: Federation for Kubernetes
-  path: /networking/federation/
-  section:
-  - title: Overview
-    path: /networking/federation/overview
-  - title: Create kubeconfig files
-    path: /networking/federation/kubeconfig
-  - title: Configure access to remote clusters
-    path: /networking/federation/configure-rcc
-  - title: Configure federated services
-    path: /networking/federation/services-controller
-  - title: Example AWS configuration
-    path: /networking/federation/aws
-  - title: Query remote clusters with calicoq
-    path: /networking/federation/calicoq
