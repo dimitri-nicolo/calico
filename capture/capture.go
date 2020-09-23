@@ -27,6 +27,9 @@ const GlobalHeaderLen = 24
 // maxSizePerPacket represents the max size captured per packet
 const maxSizePerPacket = 65536
 
+// Timeout used for non-blocking read for capturing packets for a network interface
+const defaultReadTimeout = 1 * time.Second
+
 // Capture starts/stops a packet capture for an active interface
 type Capture interface {
 	Start() error
@@ -332,7 +335,7 @@ func (capture *rotatingPcapFile) writeHeader() error {
 func (capture *rotatingPcapFile) Start() error {
 	var err error
 
-	capture.handle, err = pcap.OpenLive(capture.deviceName, int32(maxSizePerPacket), false, -1)
+	capture.handle, err = pcap.OpenLive(capture.deviceName, int32(maxSizePerPacket), false, defaultReadTimeout)
 	if err != nil {
 		return err
 	}
