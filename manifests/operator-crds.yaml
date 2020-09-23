@@ -2,6 +2,7 @@
 layout: null
 ---
 
-{% helm tigera-operator --execute-dir templates/crds %}
-# todo: fix bug where empty tag doesn't render
+{% helm tigera-operator --execute-dir templates/crds --execute-dir charts/tigera-prometheus-operator/templates/crds %}
+# use the includeCoreChart flag to prevent the calico CRDs from being included
+includeCoreChart: true
 {% endhelm %}
