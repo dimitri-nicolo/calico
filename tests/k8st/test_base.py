@@ -266,6 +266,9 @@ class TestBase(TestCase):
             if node_ds.status.updated_number_scheduled == node_ds.status.desired_number_scheduled:
                 break
 
+        # Wait until all calico-node pods are ready.
+        kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n kube-system --timeout=300s")
+
     def scale_deployment(self, deployment, ns, replicas):
         return kubectl("scale deployment %s -n %s --replicas %s" %
                        (deployment, ns, replicas)).strip()
