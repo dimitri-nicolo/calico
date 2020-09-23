@@ -1,19 +1,17 @@
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: ui-needed-listers
+  name: ui-required
 rules:
-- apiGroups: ["networking.k8s.io","extensions",""]
-  resources: ["networkpolicies","namespaces"]
-  verbs: ["watch","list"]
+# UI users need access to authorizationreviews and authenticationreviews.
 - apiGroups: ["projectcalico.org"]
-  resources: ["tiers","tier.networkpolicies","tier.globalnetworkpolicies","globalnetworksets"]
-  verbs: ["watch","list"]
+  resources: ["authorizationreviews", "authenticationreviews"]
+  verbs: ["create"]
 
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ui-traffic-stats
 rules:
@@ -29,22 +27,22 @@ rules:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: <USER>-ui-needed-lister
+  name: <USER>-ui-required
 subjects:
-- kind: User
-  name: <USER>
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: <USER>
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: ui-needed-listers
+  name: ui-required
   apiGroup: rbac.authorization.k8s.io
 
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: <USER>-ui-traffic-stats
 subjects:

@@ -49,7 +49,7 @@ To specify per-tier RBAC for the {{site.prodname}} network policy and {{site.pro
 
 ```
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tier-default-reader
 rules:
@@ -98,10 +98,13 @@ kubectl create clusterrolebinding permissive-binding \
 ```
 #### Create minimum permissions for all non-Admin users
 
-All users using {{site.prodname}} Manager should be able to list and watch tiers, policies, networksets, and licenses. 
+All users using {{site.prodname}} Manager should be able to create authorizationreviews and authorizationrequests as well as access
+license information through the services/proxy https:tigera-api:8080.   
 
 1. Download the [min-ui-user-rbac.yaml manifest]({{ "/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-ui-user-rbac.yaml" | absolute_url }}).
    The roles and bindings in this file provide a minimum starting point for setting up RBAC for your users according to your specific security requirements.
+   This manifest provides basic RBAC to view some statistical data in the UI but does not provide permissions to 
+   view or modify any network policy related configuration.
 
 1. Run the following command to replace <USER> with the name or email of the user you are providing permissions to:
 
@@ -205,7 +208,7 @@ In this example, we give user 'john' permission to read the default tier.
 
 ```yaml
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tier-default-reader
 rules:
@@ -221,7 +224,7 @@ rules:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: read-tier-default-global
 subjects:
@@ -267,7 +270,7 @@ To provide permission to user 'john' to read policies under 'net-sec' tier, use 
 
 ```yaml
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   # "namespace" omitted since ClusterRoles are not namespaced
   name: tier-net-sec-reader
@@ -284,7 +287,7 @@ rules:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: read-tier-net-sec-global
 subjects:
@@ -304,7 +307,7 @@ tier. This has the effect of making the net-sec tier visible in the {{site.prodn
 
 ```yaml
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: net-sec-tier-visible
 rules:
@@ -320,7 +323,7 @@ In this example, the `ClusterRole` is used to provide read access to all policy 
 
 ```yaml
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: all-tier-policy-reader
 rules:
@@ -355,7 +358,7 @@ resource types in the **net-sec** tier.
 
 ```yaml
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: net-sec-tier-policy-cruder
 rules:
