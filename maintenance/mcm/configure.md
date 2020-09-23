@@ -329,6 +329,5 @@ You have now successfully completed the setup for multi-cluster management.
 
 ### Next steps
 
-- To create federated tiers and policies, see [Federate tiers and policies]({{site.baseurl}}/reference/alpha/federation/installation)
 - When you are ready to fine-tune your multi-cluster management deployment for production, see [Fine-tune multi-cluster management]({{site.baseurl}}/maintenance/mcm/fine-tune-deployment)
 - To change an existing {{site.prodname}} standalone cluster to a management or managed cluster, see [Change cluster types]({{site.baseurl}}/maintenance/mcm/change-cluster-type)
