@@ -24,9 +24,12 @@ This is required for applying manifests. The easiest way to grant permissions is
 
 Ensure that your AKS cluster meets the following requirements.
 
-  - Azure CNI networking plugin is used with transparent mode
+  - Azure CNI networking plugin is used with transparent mode.
   - Network policy is not set.
   This avoids conflicts between other network policy providers in the cluster and {{site.prodname}}.
+
+> **Note**: Azure CLI does not support setting Azure CNI network plugin to transparent mode. Users are required to use ARM template to create cluster as outlined below.
+{: .alert .alert-info}
 
 ##### Using Azure Resource Manager (ARM) template
 
@@ -51,19 +54,6 @@ AKS clusters created using {% include open-new-window.html text='ARM templates' 
     "networkMode": "transparent"
    }
    ```
-
-##### Using Azure CLI
-
-1. Create cluster using `az aks create` with the option `--network-plugin azure`.
-
-1. Create the following daemon set to update Azure CNI plugin so that it operates in transparent mode.
-
-   ```sh
-   kubectl apply -f https://raw.githubusercontent.com/jonielsen/istioworkshop/master/03-TigeraSecure-Install/bridge-to-transparent.yaml
-   ```
-
-> **Note**: After the manifest is applied, nodes are rebooted one by one with the status, `SchedulingDisabled`. Wait until all nodes are in `Ready` status before continuing to the next step.
-{: .alert .alert-info}
 
 ### How to
 
