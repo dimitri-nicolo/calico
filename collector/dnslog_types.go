@@ -81,6 +81,10 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 
 	// Latency merging.
 	if b.Latency.Count > 0 {
+		// If the mean and count so far are M1 and C1, the sum of those latency measurements
+		// was M1*C1.  If we're now combining that with a new set, with mean M2 and count
+		// C2, the overall sum is M1*C1 + M2*C2, and the overall count is C1+C2, so the new
+		// overall mean is...
 		a.Latency.Mean = time.Duration(
 			(int64(a.Latency.Mean)*int64(a.Latency.Count) + int64(b.Latency.Mean)*int64(b.Latency.Count)) /
 				int64(a.Latency.Count+b.Latency.Count),

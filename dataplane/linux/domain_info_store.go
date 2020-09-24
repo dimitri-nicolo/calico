@@ -704,6 +704,9 @@ func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp []uint8) 
 			log.Warnf("DNS-LATENCY: Missed DNS request/timestamp for response with ID %v", dns.ID)
 		}
 	}
+
+	// Check for any request timestamps that are now unfeasibly old, and discard those so that
+	// our map occupancy does not increase over time.
 	for id, requestTime := range s.requestTimestamp {
 		if time.Since(requestTime) > 10*time.Second {
 			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", id)
