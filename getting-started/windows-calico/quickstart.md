@@ -57,7 +57,7 @@ calicoctl ipam configure --strictaffinity=true
 
 #### Install {{site.prodnameWindows}}
 
-The following steps install a Kubernetes cluster on a single Windows node, with a Linux control node.
+The following steps install a Kubernetes cluster on a single Windows node, with a [minimum]({{site.baseurl}}/getting-started/kubernetes/requirements#node-requirements) of 4 Linux worker nodes.
 
 - **Kubernetes**
   

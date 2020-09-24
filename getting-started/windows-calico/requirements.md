@@ -45,7 +45,7 @@ Earlier versions may work, but we do not actively test {{site.prodnameWindows}} 
 
 #### Linux platform 
 
-- At least one Linux Kubernetes worker node to run {{site.prodname}}'s cluster-wide components that meets [Linux system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements), and is installed with {{site.prodname}} v3.12.0+
+- At least four Linux Kubernetes worker nodes to run {{site.prodname}}'s cluster-wide components that meets [Linux system requirements]({{site.baseurl}}/getting-started/kubernetes/requirements), and are installed with {{site.prodname}} v3.12.0+
 - VXLAN or BGP without encapsulation is supported if using {{site.prodname}} networking. IPIP (default encapsulation mode) is not supported. Use the following command to turn off IPIP.
 ```bash
 kubectl patch felixconfiguration default -p '{"spec":{"ipipEnabled":false}}'
@@ -54,6 +54,9 @@ kubectl patch felixconfiguration default -p '{"spec":{"ipipEnabled":false}}'
 ```bash
 calicoctl ipam configure --strictaffinity=true
 ```
+
+>**Note**: {{site.prodnameWindows}} requires four Linux worker nodes in order to meet high-availability requirements for Typha.
+{: .alert .alert-info}
 
 #### Windows platform 
 

@@ -30,6 +30,20 @@
 - In order to properly run Elasticsearch, nodes must be configured according to the
   [Elasticsearch system configuration documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/system-config.html){:target="_blank"}
 
+- The Typha autoscaler requires a minimum number of Linux worker nodes based on total number of schedulable nodes.
+
+  | Total schedulable nodes | Required Linux nodes for Typha replicas |
+  |-------------------------|-----------------------------------------|
+  | 1                       | 1
+  | 2                       | 2
+  | 3                       | 3
+  | up to 250               | 4
+  | up to 500               | 5
+  | up to 1000              | 6
+  | up to 1500              | 7
+  | up to 2000              | 8
+  | 2000 or more            | 10
+
 ## Key/value store
 
 {{site.prodname}} {{page.version}} requires a key/value store accessible by all
