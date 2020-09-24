@@ -497,6 +497,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		pcap.Done()
 
+		assertPcapFiles(baseDir, []outputFile{
+			{
+				Name: fmt.Sprintf("%s.pcap", baseName),
+				Size: capture.GlobalHeaderLen + 1*(dummyPacketDataSize()+capture.PacketInfoLen),
+			},
+		})
+
 		// Write again
 		var packets2 = make(chan gopacket.Packet)
 		defer close(packets2)
@@ -509,8 +516,7 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 
 		// Write 1 packet
 		packets2 <- packet
-
-		pcap.Done()
+		defer pcap.Done()
 
 		assertPcapFiles(baseDir, []outputFile{
 			{
