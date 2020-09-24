@@ -37,9 +37,11 @@ walk through the process of enabling jobs using Kibana.  Refer to the
 1. Note that your Kibana credentials may not be the same as you use to access {{site.prodname}}.
    A default user `elastic` is created and stored in `tigera-secure-es-elastic-user` secret to be used during installation. You can obtain the password using the following command:
 
+      {%- raw %}
       ```
    kubectl -n tigera-elasticsearch get secret tigera-secure-es-elastic-user -o go-template='{{.data.elastic | base64decode}}' && echo
       ```
+      {% endraw %}
 
 1. Click "Machine Learning" in the left-hand menu.
 
