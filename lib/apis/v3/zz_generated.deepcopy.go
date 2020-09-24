@@ -1934,6 +1934,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.DNSLogsLatency != nil {
+		in, out := &in.DNSLogsLatency, &out.DNSLogsLatency
+		*out = new(bool)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)

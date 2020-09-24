@@ -519,6 +519,9 @@ type FelixConfigurationSpec struct {
 	// the flush interval, and emits a WARNING log with that count at the same time as it
 	// flushes the buffered DNS logs.  [Default: 0, meaning no limit]
 	DNSLogsFilePerNodeLimit *int `json:"dnsLogsFilePerNodeLimit,omitempty"`
+	// DNSLogsLatency indicates to include measurements of DNS request/response latency in each DNS log.
+	// [Default: true]
+	DNSLogsLatency *bool `json:"dnsLogsLatency,omitempty"`
 
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.
