@@ -827,6 +827,24 @@ build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS
 	@echo "Windows archive built at $(WINDOWS_ARCHIVE)"
 	rm -rf windows-packaging/TigeraCalico
 
+RELEASE_TAG_REGEX := ^v([0-9]{1,}\.){2}[0-9]{1,}$$
+WINDOWS_GCS_BUCKET := gs://tigera-windows/dev/
+
+# This target is just for Calico Enterprise. OS has a different release process.
+# When merging, keep the 'release-windows-archive' target in private.
+#
+# This target builds the Windows installation zip file and uploads it to GCS.
+# If the git tag is a release tag (i.e. has the form vX.Y.Z) then it goes into
+# the GCS bucket for releases; otherwise the zip file goes into the dev bucket.
+push-windows-archive-gcs: build-windows-archive
+ifneq ($(shell echo ${GIT_VERSION} | grep -E "${RELEASE_TAG_REGEX}"),)
+	@echo "GIT_VERSION is a release tag; using release bucket location for Windows artifact"
+	$(eval WINDOWS_GCS_BUCKET := gs://tigera-windows/)
+endif
+	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
+	gsutil cp dist/tigera-calico-windows-$(GIT_VERSION).zip $(WINDOWS_GCS_BUCKET)
+	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
+
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
 

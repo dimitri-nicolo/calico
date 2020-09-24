@@ -74,12 +74,14 @@ blocks:
 
 # If tests passed, then build and push images.
 # We'll only do this on non-PR builds, where we have credentials to do so.
-- name: "Push images (non-PR builds only)"
+- name: "Push images and Windows installation zip file (non-PR builds only)"
   dependencies: ["Tests"]
   task:
     secrets:
       # Mount a secret for pulling images from GCR.
       - name: google-service-account-for-gcr
+      # Mount a secret so we can push Windows zip files to GCS. 
+      - name: gcp-registry-pusher-service-account
     prologue:
       commands:
         # Correct permissions since they are too open by default:
@@ -99,8 +101,11 @@ blocks:
       - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
     - name: "make windows"
       commands:
-      - if [ -z SEMAPHORE_GIT_PR_NUMBER ]; then make build-windows-archive; fi
-      - artifact push workflow ${WINDOWS_ZIP_WILDCARD} --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+      - |
+        if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then
+          make push-windows-archive-gcs
+          artifact push workflow ${WINDOWS_ZIP_WILDCARD} --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+        fi
       env_vars:
         - name: SEMAPHORE_ARTIFACT_EXPIRY
           value: 1w
