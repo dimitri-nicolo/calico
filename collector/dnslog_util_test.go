@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -144,7 +144,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 		var serverEM EndpointMetadataWithIP
 
 		It("sets count to 1", func() {
-			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{})
+			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{}, nil)
 			Expect(spec.Count).Should(BeNumerically("==", 1))
 		})
 
@@ -162,7 +162,8 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeNS, Data: []byte("6"), NS: []byte("ns1.tigera.io.")},
 					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeNS, Data: []byte("5"), NS: []byte("ns2.tigera.io.")},
 				},
-			})
+			},
+				nil)
 
 			expected := DNSRRSets{
 				{Name: "www1.tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeA)}: {
@@ -182,7 +183,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 		})
 
 		It("initializes servers", func() {
-			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{})
+			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{}, nil)
 			Expect(spec.Servers).ShouldNot(BeNil())
 		})
 

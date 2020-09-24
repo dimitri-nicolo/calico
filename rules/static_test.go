@@ -229,6 +229,9 @@ var _ = Describe("Static", func() {
 								// DNS response capture.
 								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+								// DNS request capture.
+								{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 								// Per-prefix workload jump rules.
 								{Match: Match().InInterface("cali+"),
 									Action: JumpAction{Target: ChainFromWorkloadDispatch}},
@@ -249,8 +252,11 @@ var _ = Describe("Static", func() {
 							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&Chain{
 								Name: "cali-INPUT",
 								Rules: []Rule{
-									//DNS response capture.
+									// DNS response capture.
 									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+									// DNS request capture.
+									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// Forward check chain.
@@ -284,8 +290,11 @@ var _ = Describe("Static", func() {
 							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&Chain{
 								Name: "cali-INPUT",
 								Rules: []Rule{
-									//DNS response capture.
+									// DNS response capture.
 									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+									// DNS request capture.
+									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// Per-prefix workload jump rules.  Note use of goto so that we
@@ -332,6 +341,10 @@ var _ = Describe("Static", func() {
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
+									// DNS request capture.
+									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+
 									// Non-workload traffic, send to host chains.
 									{Action: ClearMarkAction{Mark: 0xf0}},
 									{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
@@ -357,6 +370,10 @@ var _ = Describe("Static", func() {
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
+
+									// DNS request capture.
+									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// Non-workload traffic, send to host chains.
 									{Action: ClearMarkAction{Mark: 0xf0}},

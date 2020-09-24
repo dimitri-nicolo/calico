@@ -341,6 +341,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			Collector:            collector,
 			DNSCacheFile:         configParams.DNSCacheFile,
 			DNSCacheSaveInterval: configParams.DNSCacheSaveInterval,
+			DNSLogsLatency:       configParams.DNSLogsLatency,
 
 			PacketCapture: capture.Config{
 				Directory:       configParams.CaptureDir,

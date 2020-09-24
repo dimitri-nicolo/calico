@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -1087,7 +1087,7 @@ var _ = Describe("DNS logging", func() {
 		c.SetDNSLogReporter(r)
 	})
 	It("should get client and server endpoint data", func() {
-		c.LogDNS(net2.ParseIP(netSetIp1Str), net2.ParseIP(localIp1Str), nil)
+		c.LogDNS(net2.ParseIP(netSetIp1Str), net2.ParseIP(localIp1Str), nil, nil)
 		Expect(r.updates).To(HaveLen(1))
 		update := r.updates[0]
 		Expect(update.ClientEP).NotTo(BeNil())

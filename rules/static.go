@@ -217,6 +217,14 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	// late because of the packet already having been accepted.
 	inputRules = append(inputRules, r.dnsSnoopingRules("", ipVersion)...)
 
+	// Similar rules to snoop DNS requests from a local Calico-networked client to a local
+	// host-networked DNS server.
+	for _, prefix := range r.WorkloadIfacePrefixes {
+		log.WithField("ifacePrefix", prefix).Debug("Adding DNS request snooping rules")
+		ifaceMatch := prefix + "+"
+		inputRules = append(inputRules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
+	}
+
 	if ipVersion == 4 && r.IPIPEnabled {
 		// IPIP is enabled, filter incoming IPIP packets to ensure they come from a
 		// recognised host and are going to a local address on the host.  We use the protocol
@@ -541,6 +549,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
 		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
+		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules,
 			Rule{
 				Match:  Match().InInterface(ifaceMatch),
@@ -586,15 +595,51 @@ func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint
 		}
 		var baseMatch MatchCriteria
 		if ifaceMatch != "" {
-			// Forwarding to a local workload: match on workload prefix.
+			// DNS response FORWARD/OUTPUT to Calico-networked client workload: match on workload prefix.
 			baseMatch = Match().OutInterface(ifaceMatch)
 		} else {
-			// Response directly to the local host, so there is no outgoing interface.
+			// DNS response INPUT to host-networked client workload, so there is no outgoing interface.
 			baseMatch = Match()
 		}
 		rules = append(rules,
 			Rule{
 				Match: baseMatch.Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(server.Port).ConntrackOrigDst(server.IP),
+				Action: NflogAction{
+					Group:       NFLOGDomainGroup,
+					Prefix:      "DNS",
+					SizeEnabled: r.EnableNflogSize,
+					// Traditional DNS over UDP has a maximum size of 512 bytes,
+					// but we need to allow for headers as well (Ethernet, IP
+					// and UDP); 1024 will amply cover what we need.
+					Size: 1024,
+				},
+			},
+		)
+	}
+	return
+}
+
+// Similar rules for snooping DNS requests, which we do only so that we can access the timestamp on
+// each request and hence calculate the latency of each DNS request/response pair.
+func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
+	for _, server := range r.DNSTrustedServers {
+		if (ipVersion == 4) && strings.Contains(server.IP, ":") {
+			continue
+		}
+		if (ipVersion == 6) && !strings.Contains(server.IP, ":") {
+			continue
+		}
+		var baseMatch MatchCriteria
+		if ifaceMatch != "" {
+			// DNS request FORWARD/INPUT from a Calico-networked client workload: match on workload prefix.
+			baseMatch = Match().InInterface(ifaceMatch)
+		} else {
+			// DNS request OUTPUT from a host-networked client workload, so there is no incoming interface.
+			baseMatch = Match()
+		}
+		rules = append(rules,
+			Rule{
+				Match: baseMatch.Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(server.Port).ConntrackOrigDst(server.IP),
 				Action: NflogAction{
 					Group:       NFLOGDomainGroup,
 					Prefix:      "DNS",
@@ -665,6 +710,9 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 			},
 		)
 	}
+
+	// Add rules to snoop DNS requests from a host-networked client workload.
+	rules = append(rules, r.dnsRequestSnoopingRules("", ipVersion)...)
 
 	// If we reach here, the packet is not going to a workload so it must be going to a
 	// host endpoint. It also has no endpoint mark so it must be going from a process.

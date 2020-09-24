@@ -179,6 +179,12 @@ POD2DAEMON_REPO?=github.com/projectcalico/pod2daemon
 update-pod2daemon-pin:
 	$(call update_pin,github.com/projectcalico/pod2daemon,$(POD2DAEMON_REPO),$(POD2DAEMON_BRANCH))
 
+NFNETLINK_BRANCH?=$(PIN_BRANCH)
+NFNETLINK_REPO?=github.com/tigera/nfnetlink
+
+update-nfnetlink-pin:
+	$(call update_pin,github.com/tigera/nfnetlink,$(NFNETLINK_REPO),$(NFNETLINK_BRANCH))
+
 ###############################################################################
 # Building the binary
 ###############################################################################

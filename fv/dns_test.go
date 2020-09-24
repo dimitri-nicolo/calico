@@ -59,13 +59,15 @@ var _ = Describe("DNS Policy", func() {
 		saveFile                       string
 		saveFileMappedOutsideContainer bool
 
-		enableLogs bool
+		enableLogs    bool
+		enableLatency bool
 	)
 
 	BeforeEach(func() {
 		saveFile = "/dnsinfo/dnsinfo.txt"
 		saveFileMappedOutsideContainer = true
 		enableLogs = true
+		enableLatency = true
 	})
 
 	logAndReport := func(out string, err error) error {
@@ -136,13 +138,32 @@ var _ = Describe("DNS Policy", func() {
 			canWgetMicrosoft()
 		})
 
-		It("should emit DNS logs", func() {
+		It("should emit DNS logs with latency", func() {
 			logFile := path.Join(dnsDir, "dns.log")
 			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
-			logs, err := ioutil.ReadFile(logFile)
+			logBytes, err := ioutil.ReadFile(logFile)
 			Expect(err).NotTo(HaveOccurred())
+			logs := string(logBytes)
 			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
 			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
+			Expect(logs).To(MatchRegexp(`"latency":{"count":[1234]`))
+		})
+
+		Context("with DNS latency disabled", func() {
+			BeforeEach(func() {
+				enableLatency = false
+			})
+
+			It("should emit DNS logs without latency", func() {
+				logFile := path.Join(dnsDir, "dns.log")
+				Eventually(logFile, "10s", "1s").Should(BeARegularFile())
+				logBytes, err := ioutil.ReadFile(logFile)
+				Expect(err).NotTo(HaveOccurred())
+				logs := string(logBytes)
+				Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
+				Expect(logs).To(ContainSubstring(`"qtype":"A"`))
+				Expect(logs).To(MatchRegexp(`"latency":{"count":0`))
+			})
 		})
 
 		Context("with DNS logs disabled", func() {
@@ -165,8 +186,9 @@ var _ = Describe("DNS Policy", func() {
 		It("should emit DNS logs", func() {
 			logFile := path.Join(dnsDir, "dns.log")
 			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
-			logs, err := ioutil.ReadFile(logFile)
+			logBytes, err := ioutil.ReadFile(logFile)
 			Expect(err).NotTo(HaveOccurred())
+			logs := string(logBytes)
 			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
 			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
 		})
@@ -200,6 +222,10 @@ var _ = Describe("DNS Policy", func() {
 		if enableLogs {
 			// Default for this is false.  Set "true" to enable.
 			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
+		}
+		if !enableLatency {
+			// Default for this is true.  Set "false" to disable.
+			opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
 		}
 		// This file tests that Felix writes out its DNS mappings file on shutdown, so we
 		// need to stop Felix gracefully.

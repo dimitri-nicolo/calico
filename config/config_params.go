@@ -315,6 +315,7 @@ type Config struct {
 	DNSLogsFileAggregationKind int           `config:"int(0:1);1"`
 	DNSLogsFileIncludeLabels   bool          `config:"bool;true"`
 	DNSLogsFilePerNodeLimit    int           `config:"int;0"`
+	DNSLogsLatency             bool          `config:"bool;true"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
