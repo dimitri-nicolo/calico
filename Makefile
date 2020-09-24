@@ -1,5 +1,7 @@
 PACKAGE_NAME=github.com/projectcalico/kube-controllers
-GO_BUILD_VER=v0.45
+GO_BUILD_VER=v0.47
+
+SEMAPHORE_PROJECT_ID=$(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID)
 
 GIT_USE_SSH = true
 
@@ -67,6 +69,7 @@ clean:
 	rm -f tests/crds.yaml
 	rm -rf tests/crds
 	rm -rf vendor
+	rm Makefile.common*
 
 ###############################################################################
 # Updating pins
