@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.1 // indirect
 	github.com/Microsoft/hcsshim v0.8.9
-	github.com/aws/aws-sdk-go v1.31.15
+	github.com/aws/aws-sdk-go v1.34.31
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/containernetworking/plugins v0.8.5
 	github.com/davecgh/go-spew v1.1.1
