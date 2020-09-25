@@ -36,3 +36,5 @@ helm-tests/helm-tests.coverprofile
 
 # ignore changes during local website development
 .jekyll-cache
+
+_includes/charts/tigera-operator/charts/
