@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/apparentlymart/go-cidr v1.0.1
-	github.com/aws/aws-sdk-go v1.34.16 // indirect
 
 	// Elastic repo for ECK v1.0.1
 	github.com/elastic/cloud-on-k8s v0.0.0-20200204083752-bcb7468838a8
@@ -38,8 +37,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200922010040-dca46f251d2f
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200924183131-3d4679db069c
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200925042325-64d46aaa0ce4
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200925184623-eb508b5f4b64
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200924133416-b5139952b4bc
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
