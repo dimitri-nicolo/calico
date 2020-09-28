@@ -100,7 +100,7 @@ func (e ErroredField) String() string {
 
 func (e ErrorValidation) Error() string {
 	if len(e.ErroredFields) == 0 {
-		return fmt.Sprintf("unknown validation error: %v", e)
+		return "unknown validation error"
 	} else if len(e.ErroredFields) == 1 {
 		f := e.ErroredFields[0]
 		return fmt.Sprintf("error with field %s", f)
