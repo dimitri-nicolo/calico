@@ -32,19 +32,3 @@ the upgrade.
 {: .alert .alert-info}
 
 {% include content/upgrade-operator-simple.md upgradeFrom="Enterprise" %}
-
-## Upgrade from 3.2 or below to 3.3 or later
-
-Remove unused policies in your cluster
-
-   If your cluster is a **managed** cluster, apply this manifest.
-
-   ```bash
-   kubectl delete -f {{ "/manifests/default-tier-policies-managed.yaml" | absolute_url }}
-   ```
-
-   For other clusters, use this manifest.
-
-   ```bash
-   kubectl delete -f {{ "/manifests/default-tier-policies.yaml" | absolute_url }}
-   ```
