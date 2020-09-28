@@ -1,0 +1,201 @@
+{
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "MFbpxnQBD1twgEeQFIeS",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.network.ssh",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-1-*"
+          },
+          "description" : "[Honeypod] Attempted SSH connection by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:16:36.612Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "MVbpxnQBD1twgEeQFIeS",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.network.ssh",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-3-6b97f5d974-*"
+          },
+          "description" : "[Honeypod] Attempted SSH connection by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:16:36.612Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "MlbpxnQBD1twgEeQFIea",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.vuln.svc",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-node-0",
+            "dest_name_aggr" : "tigera-internal-4-5d8d5ff947-*"
+          },
+          "description" : "[Honeypod] Vulnerable service (MySQL) accessed by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:16:36.424Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "M1bpxnQBD1twgEeQFIei",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.ip.enum",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-1-*"
+          },
+          "description" : "[Honeypod] Pod subnet IP enumeration by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:16:36.757Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "NFbpxnQBD1twgEeQFIes",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.port.scan",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "count" : 912,
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-1-*"
+          },
+          "description" : "[Honeypod] Pod subnet port scan by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:16:37.142Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "NVbpxnQBD1twgEeQFIfh",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.fake.svc",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-3-6b97f5d974-*"
+          },
+          "description" : "[Honeypod] Fake debug service accessed by default/attacker-app-774579d456-* on port 8080",
+          "time" : "2020-09-25T20:16:37.312Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "dFbtxnQBD1twgEeQqql6",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.vuln.svc",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-node-0",
+            "dest_name_aggr" : "tigera-internal-4-5d8d5ff947-*"
+          },
+          "description" : "[Honeypod] Vulnerable service (MySQL) accessed by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:21:36.424Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "dVbtxnQBD1twgEeQqql6",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.network.ssh",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-1-*"
+          },
+          "description" : "[Honeypod] Attempted SSH connection by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:21:36.612Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "dlbtxnQBD1twgEeQqql6",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.network.ssh",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-3-6b97f5d974-*"
+          },
+          "description" : "[Honeypod] Attempted SSH connection by default/attacker-app-774579d456-*",
+          "time" : "2020-09-25T20:21:36.612Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "d1btxnQBD1twgEeQqqm8",
+        "_score" : 1.0,
+        "_source" : {
+          "severity" : 100,
+          "alert" : "honeypod.fake.svc",
+          "record" : {
+            "source_name_aggr" : "attacker-app-774579d456-*",
+            "source_namespace" : "default",
+            "dest_namespace" : "tigera-internal",
+            "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+            "dest_name_aggr" : "tigera-internal-3-6b97f5d974-*"
+          },
+          "description" : "[Honeypod] Fake debug service accessed by default/attacker-app-774579d456-* on port 8080",
+          "time" : "2020-09-25T20:21:37.312Z",
+          "type" : "alert"
+        }
+      }

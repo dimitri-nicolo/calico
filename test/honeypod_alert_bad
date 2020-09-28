@@ -1,0 +1,13 @@
+{
+    "severity" : 100,
+    "alert" : "just.some.random.alert",
+    "record" : {
+      "source_name_aggr" : "Nope",
+      "source_namespace" : "defaault",
+      "dest_namespace" : "tigera-internal",
+      "dest_name_aggr" : "ignore-me"
+    },
+    "description" : "This is not a honeypod alert",
+    "time" : "2021-09-25T20:16:37.312Z",
+    "type" : "alert"
+}

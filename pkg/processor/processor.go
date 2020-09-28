@@ -2,16 +2,17 @@ package processor
 
 import (
         "context"
-	_ "fmt"
-        _ "time"
-	_ "net/url"
-	_ "os"
-	_ "path/filepath"
 
-	//log "github.com/sirupsen/logrus"
 	api "github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"
 
+)
+
+const (
+    Index           = "tigera_secure_ee_events.cluster"
+    PacketCapture   = "capture-honey"
+    PcapPath        = "/pcap"
+    SnortPath       = "/snort"
 )
 
 type HoneypodLogProcessor struct {

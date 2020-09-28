@@ -30,8 +30,11 @@ replace (
 )
 
 require (
-	github.com/projectcalico/libcalico-go v1.7.3 // indirect
+	github.com/onsi/ginkgo v1.10.1
+	github.com/onsi/gomega v1.7.1
+	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.6.0
+	github.com/stretchr/testify v1.4.0
 	github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	k8s.io/apimachinery v0.17.3

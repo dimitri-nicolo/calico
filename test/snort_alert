@@ -1,0 +1,220 @@
+{
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "bVbwxnQBD1twgEeQOtFa",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Classification: A Network Trojan was detected] [Priority: 1] ",
+              "Descripton" : "[**] [1:50446:1] MALWARE-CNC Win.Downloader.TeamBot outbound cnc connection [**]",
+              "Flags" : "PROTO:006 TTL:64 TOS:0x0 ID:248 IpLen:20 DgmLen:204 DF",
+              "Occurance" : "09/25-20:16:12.834454 192.168.218.210:40658 -> 192.168.218.202:8080",
+              "Other" : "***A**** Seq: 0x6346B7B2  Ack: 0x6E1D3385  Win: 0xFE80  TcpLen: 32"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:24:26.456581825Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "blbwxnQBD1twgEeQOtFl",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000000:0] ICMP Echo Request [**]",
+              "Flags" : "PROTO:001 TTL:47 TOS:0x0 ID:55581 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:16:41.985387 192.168.218.210 -> 192.168.218.202",
+              "Other" : "Type:8  Code:0  ID:55620   Seq:0  ECHO"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:24:26.468209803Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "b1bwxnQBD1twgEeQOtFs",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000001:0] ICMP Echo Reply [**]",
+              "Flags" : "PROTO:001 TTL:64 TOS:0x0 ID:18513 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:16:41.985397 192.168.218.202 -> 192.168.218.210",
+              "Other" : "Type:0  Code:0  ID:55620  Seq:0  ECHO REPLY"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:24:26.475147332Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "cFbwxnQBD1twgEeQOtF1",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Classification: A Network Trojan was detected] [Priority: 1] ",
+              "Descripton" : "[**] [1:50446:1] MALWARE-CNC Win.Downloader.TeamBot outbound cnc connection [**]",
+              "Flags" : "PROTO:006 TTL:64 TOS:0x0 ID:55277 IpLen:20 DgmLen:204 DF",
+              "Occurance" : "09/25-20:20:21.433026 192.168.218.210:41466 -> 192.168.218.202:8080",
+              "Other" : "***A**** Seq: 0x862EAA9B  Ack: 0x25B9D4B3  Win: 0xFE80  TcpLen: 32"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:24:26.484360739Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "cVbwxnQBD1twgEeQOtF7",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000000:0] ICMP Echo Request [**]",
+              "Flags" : "PROTO:001 TTL:45 TOS:0x0 ID:14167 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:20:55.856448 192.168.218.210 -> 192.168.218.202",
+              "Other" : "Type:8  Code:0  ID:33532   Seq:0  ECHO"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:24:26.49066614Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "clbwxnQBD1twgEeQOtGB",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000001:0] ICMP Echo Reply [**]",
+              "Flags" : "PROTO:001 TTL:64 TOS:0x0 ID:23533 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:20:55.856457 192.168.218.202 -> 192.168.218.210",
+              "Other" : "Type:0  Code:0  ID:33532  Seq:0  ECHO REPLY"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:24:26.496872764Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "9VbmxnQBD1twgEeQ-oaF",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000000:0] ICMP Echo Request [**]",
+              "Flags" : "PROTO:001 TTL:53 TOS:0x0 ID:58824 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:06:31.104155 192.168.218.210 -> 192.168.218.202",
+              "Other" : "Type:8  Code:0  ID:9721   Seq:0  ECHO"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:14:20.292278975Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "9lbmxnQBD1twgEeQ-oaN",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000001:0] ICMP Echo Reply [**]",
+              "Flags" : "PROTO:001 TTL:64 TOS:0x0 ID:15121 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:06:31.104176 192.168.218.202 -> 192.168.218.210",
+              "Other" : "Type:0  Code:0  ID:9721  Seq:0  ECHO REPLY"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:14:20.300265315Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "91bmxnQBD1twgEeQ-oaT",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Classification: A Network Trojan was detected] [Priority: 1] ",
+              "Descripton" : "[**] [1:50446:1] MALWARE-CNC Win.Downloader.TeamBot outbound cnc connection [**]",
+              "Flags" : "PROTO:006 TTL:64 TOS:0x0 ID:46673 IpLen:20 DgmLen:204 DF",
+              "Occurance" : "09/25-20:10:25.238392 192.168.218.210:39540 -> 192.168.218.202:8080",
+              "Other" : "***A**** Seq: 0x649CEBAF  Ack: 0x3B397CDE  Win: 0xFE80  TcpLen: 32"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:14:20.30665548Z",
+          "type" : "alert"
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_events.cluster",
+        "_type" : "_doc",
+        "_id" : "-FbmxnQBD1twgEeQ-oaY",
+        "_score" : 1.0,
+        "_source" : {
+          "alert" : "honeypod-controller.snort",
+          "description" : "[Snort] Signature Triggered on tigera-internal/tigera-internal-3-6b97f5d974-*",
+          "record" : {
+            "snort" : {
+              "Category" : "[Priority: 0] ",
+              "Descripton" : "[**] [1:1000000:0] ICMP Echo Request [**]",
+              "Flags" : "PROTO:001 TTL:45 TOS:0x0 ID:20411 IpLen:20 DgmLen:28",
+              "Occurance" : "09/25-20:10:53.753462 192.168.218.210 -> 192.168.218.202",
+              "Other" : "Type:8  Code:0  ID:4586   Seq:0  ECHO"
+            }
+          },
+          "severity" : 100,
+          "time" : "2020-09-25T20:14:20.311720764Z",
+          "type" : "alert"
+        }
+      }

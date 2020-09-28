@@ -1,0 +1,14 @@
+{
+    "severity" : 100,
+    "alert" : "honeypod.fake.svc",
+    "record" : {
+      "source_name_aggr" : "attacker-app-774579d456-*",
+      "source_namespace" : "default",
+      "dest_namespace" : "tigera-internal",
+      "host.keyword" : "garwood-bz-n990-kadm-infra-0",
+      "dest_name_aggr" : "tigera-internal-3-6b97f5d974-*"
+    },
+    "description" : "[Honeypod] Fake debug service accessed by default/attacker-app-774579d456-* on port 8080",
+    "time" : "2020-09-25T20:16:37.312Z",
+    "type" : "alert"
+}

@@ -6,15 +6,10 @@ import (
 	"time"
 	"net/url"
 	"os"
-	"os/exec"
-	"bytes"
 	"path/filepath"
-	"io/ioutil"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	//rule "github.com/tigera/honeypod-recommendation/pkg/rule"
-	//model "github.com/tigera/honeypod-recommendation/pkg/model"
         api "github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"
 
@@ -23,11 +18,6 @@ import (
 	"k8s.io/client-go/rest"
 	"github.com/tigera/honeypod-controller/pkg/snort"
         hp "github.com/tigera/honeypod-controller/pkg/processor"
-)
-
-const (
-    Index           = "tigera_secure_ee_events.cluster"
-    PacketCapture   = "capture-honey"
 )
 
 func GetNodeName() (string, error) {
@@ -51,39 +41,22 @@ func GetNodeName() (string, error) {
     return pod.Spec.NodeName, nil
 }
 
-func SendEvents(SnortList []snort.Snort, p hp.HoneypodLogProcessor, e api.AlertResult) error {
-
-    //Iterate list of Snort alerts and send them to Elasticsearch
-    for _, alert := range SnortList {
-        snort_description := fmt.Sprintf("[Snort] Signature Triggered on %s/%s", *e.Record.DestNamespace, *e.Record.DestNameAggr)
-        json_res := map[string]interface{}{
-            "severity": 100,
-            "description": snort_description,
-            "alert": "honeypod-controller.snort",
-            "type" : "alert",
-            "record": map[string]interface{}{
-	        "snort": map[string]interface{}{
-			"Descripton": alert.SigName,
-			"Category": alert.Category,
-			"Occurance": alert.Date_Src_Dst,
-			"Flags": alert.Flags,
-			"Other": alert.Other,
-		},
-            },
-            "time" : time.Now(),
-        }
-        //fmt.Println(json_res)
-        res, err := p.Client.Backend().Index().Index(Index).Id("").BodyJson(json_res).Do(p.Ctx)
-
-	//If theres any issue sending the snort alert to ES, we log and exit
-        if err != nil {
-            log.WithError(err).Error("Error sending Snort alert")
-	    return err
-        }
-	log.Info("Snort alert sent: ", res)
+func GetPcaps(e *api.AlertResult, path string) ([]string, error) {
+    var matches []string
+    s := fmt.Sprintf("%s/%s/%s/%s", path, *e.Record.DestNamespace, hp.PacketCapture, *e.Record.DestNameAggr)
+    //Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
+    if _, err := os.Stat(path); os.IsNotExist(err) {
+        log.WithError(err).Error("/pcap directory missing")
+        return matches, err
     }
-    return nil
+    matches, err := filepath.Glob(s)
+    if err != nil {
+        log.WithError(err).Error("Failed to match pcap files")
+        return matches, err
+    }
+    return matches, nil
 }
+
 func Loop(p hp.HoneypodLogProcessor, node string) error {
     //We only look at the past 10min of alerts
     endTime := time.Now()
@@ -102,72 +75,25 @@ func Loop(p hp.HoneypodLogProcessor, node string) error {
 	}
         log.Info("Valid alert Found: ", e.Alert)
 
-	s := fmt.Sprintf("/pcap/%s/%s/%s", *e.Record.DestNamespace, PacketCapture, *e.Record.DestNameAggr)
-
-	//Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
-	if _, err := os.Stat("/pcap/"); os.IsNotExist(err) {
-	    log.WithError(err).Error("/pcap directory missing")
-	    return err
-	}
-        matches, err := filepath.Glob(s)
+	//Retrieve Pcap locations
+	pcapArray, err := GetPcaps(e, hp.PcapPath)
 	if err != nil {
-	    log.WithError(err).Error("Failed to match pcap files")
-	    return err
+            log.WithError(e.Err).Error("Failed to retrieve Pcaps")
+	    continue
 	}
 
-	log.Info("Honeypod Controller scanning: ", matches)
-	for _ , match := range matches {
-	    output := fmt.Sprintf("/snort/%s", *e.Record.DestNameAggr)
-            if _, err := os.Stat(output); os.IsNotExist(err) {
-                err = os.Mkdir(output, 755)
-	        if err != nil {
-	           fmt.Errorf("can't create snort folder")
-                }
-	    }
-	    cmd := exec.Command("snort", "-q", "-k", "none", "-c", "/etc/snort/snort.conf", "-r", match, "-l", output)
-	    var out bytes.Buffer
-	    cmd.Stdout = &out
-	    err := cmd.Run()
+	log.Info("Honeypod Controller scanning: ", pcapArray)
+	//Run snort on each pcap and send new alerts to Elasticsearch
+	for _ , pcap := range pcapArray {
+            err := snort.ScanSnort(e, pcap, hp.SnortPath)
 	    if err != nil {
-                log.WithError(err).Error("Error running Snort on pcap: ", output)
+                log.WithError(e.Err).Error("Failed to run snort on pcap")
 	    }
-	    log.Info("Signature Triggered: ", out.String())
 	}
-        matches, err = filepath.Glob("/snort/*")
+	err = snort.ProcessSnort(e, p, hp.SnortPath)
 	if err != nil {
-	    log.WithError(err).Error("Error matching snort directory")
+            log.WithError(e.Err).Error("Failed to process snort on pcap")
 	}
-	log.Info("Snort Directory found: ", matches)
-	for _, match := range matches {
-	    path := fmt.Sprintf("%s/alert", match)
-	    if _, err := os.Stat(path); os.IsNotExist(err) {
-	        log.WithError(err).Error("Error file missing: ", path)
-		continue
-	    }
-	    reader, err := ioutil.ReadFile(path)
-	    if err != nil {
-	        log.WithError(err).Error("Error reading file: ", path)
-		continue
-	    }
-	    reader_str := string(reader)
-	    SnortList, err := snort.ParseSnort(reader_str)
-	    if err != nil {
-	        log.WithError(err).Error("Error parsing Snort alert: ", path)
-		continue
-	    }
-	    FilterList, err := snort.FilterSnort(SnortList)
-	    if err != nil {
-	        log.WithError(err).Error("Error filtering Snort alert")
-		continue
-	    }
-	    w := *e
-	    err = SendEvents(FilterList, p, w)
-	    if err != nil {
-	        log.WithError(err).Error("Error sending Snort alert")
-		continue
-	    }
-	}
-
     }
     log.Info("Honeypod controller loop completed")
 
@@ -192,9 +118,9 @@ func main() {
     ctx := context.Background()
 
     //Check if required index exists
-    exists, err := c.Backend().IndexExists(Index).Do(context.Background())
+    exists, err := c.Backend().IndexExists(hp.Index).Do(context.Background())
     if err != nil || !exists {
-        log.WithError(err).Error("Error unable to access Index: ", Index)
+        log.WithError(err).Error("Error unable to access Index: ", hp.Index)
 	return
     }
 
@@ -225,16 +151,4 @@ func main() {
 	}
 	time.Sleep(timer)
     }
-
-    //fmt.Println("get settings")
-    //settings, err := c.Backend().IndexGetSettings(index).Do(context.Background())
-    //if err != nil {
-    //    fmt.Println("settings bad")
-    //}
-    //indexSettings := settings[index].Settings["index"].(map[string]interface{})
-    //for key,value := range indexSettings {
-	//    fmt.Println(key)
-	//   fmt.Println(value)
-    //}
-    //fmt.Println("done3")
 }

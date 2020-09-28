@@ -6,7 +6,7 @@ LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
 TYPHA_REPO               = github.com/tigera/typha-private
 
-#build: ut
+build: ut
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -291,7 +291,7 @@ bt-terminal:
 .PHONY: ut
 ut combined.coverprofile: run-elastic
 	@echo Running Go UTs.
-	$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
+	#$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
 
 ## Run elasticsearch as a container (tigera-elastic)
 run-elastic: stop-elastic
@@ -534,6 +534,11 @@ endif
 ###############################################################################
 .PHONY: ut-no-cover
 ut-no-cover: $(SRC_FILES)
+	@echo Running Go UTs without coverage.
+	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -r $(GINKGO_OPTIONS)
+
+.PHONY: fv
+fv: 
 	@echo Running Go UTs without coverage.
 	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -r $(GINKGO_OPTIONS)
 
