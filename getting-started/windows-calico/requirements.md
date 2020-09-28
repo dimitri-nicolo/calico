@@ -33,6 +33,9 @@ The following table summarizes the networking options and considerations.
 | {{site.prodname}} VXLAN | Windows CNI plugin:<br/>calico.exe<br /><br />Linux: {{site.prodname}} for policy and networking | {{site.prodname}}'s VXLAN overlay, supports:<br/><br />- VXLAN overlay, which can traverse most networks.<br/>- Auto-configured node-to-node routing<br/>- {{site.prodname}} IPAM and IP aggregation (with some limitations)<br/>- Kubernetes API datastore driver<br/>**Note**: VXLAN runs on UDP port 4789 (this is the only port supported by Windows), remember to open that port between your {{site.prodname}} hosts in any firewalls / security groups. |
 | Cloud provider          | Windows CNI plugin: win-bridge.exe<br /><br />Linux: {{site.prodname}} policy-only | A useful fallback, particularly if you have a Kubernetes cloud provider that automatically installs inter-host routes. {{site.prodname}} has been tested with the standard **win-bridge.exe** CNI plugin so it should work with any networking provider that ultimately uses win-bridge.exe to network the pod (such as the Azure CNI plugin and cloud provider). |
 
+> **Note**: If Calico CNI with VXLAN is used, BGP must be disabled. See the [installation reference]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.BGPOption).
+{: .alert .alert-info}
+
 #### Datastores
 
 Kubernetes datastore (kdd) only.

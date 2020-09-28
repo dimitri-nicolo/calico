@@ -75,7 +75,12 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
   <label:Kubernetes,active:true>
   <%
 
-1. Setup a Kubernetes cluster with {% include open-new-window.html text='Windows nodes' url='https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/adding-windows-nodes/' %}.
+1. Setup a {{site.prodname}} Kubernetes cluster with {% include open-new-window.html text='Windows nodes' url='https://docs.microsoft.com/en-us/virtualization/windowscontainers/kubernetes/getting-started-kubernetes-windows' %}.
+
+1. Disable BGP since we are using VXLAN:
+   ```bash
+   kubectl patch installation default --type=merge -p '{"spec": {"calicoNetwork": {"bgp": "Disabled"}}}'
+   ```
 
 1. Copy the Kubernetes kubeconfig file from the master node (default location $HOME/.kube/config), to the file `c:\k\config.`
 

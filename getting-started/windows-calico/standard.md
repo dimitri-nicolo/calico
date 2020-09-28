@@ -179,23 +179,26 @@ adjust other kube-proxy parameters.
    ```bash
    kubectl apply -f ippool.yaml
    ```
+
 **If using {{site.prodname}} VXLAN networking** 
 
 1. Modify your IP pools as described in [Overlay Networking]({{site.baseurl}}/networking/vxlan-ipip#how-to) guide. Note the following:
    - Windows can support only a single type of IP pool so it is important that you use only a single VXLAN IP pool in this mode.
    - Windows supports only VXLAN on port 4789 and VSID >=4096. {{site.prodname}}'s default (on Linux and Windows) is to use port 4789 and VSID 4096.
-
 1. Apply the manifest using `kubectl`, and verify that you have a single pool with `VXLANMODE Always`.
    ```bash
    kubectl get ippool -o wide
    ```
-  
-1. For Linux control nodes using {{site.prodname}} networking, strict affinity must be set to `true`.
-This is required to prevent Linux nodes from borrowing IP addresses from Windows nodes:
-
+1. Disable BGP routing by updating the Installation instance:
    ```bash
-   calicoctl ipam configure --strictaffinity=true
+   kubectl patch installation default --type=merge -p '{"spec": {"calicoNetwork": {"bgp": "Disabled"}}}'
    ```
+
+For Linux control nodes using {{site.prodname}} networking, strict affinity must be set to `true`.
+This is required to prevent Linux nodes from borrowing IP addresses from Windows nodes:
+```bash
+calicoctl ipam configure --strictaffinity=true
+```
 
 #### Install Calico and Kubernetes on Windows nodes
 
