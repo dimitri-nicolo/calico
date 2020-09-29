@@ -1275,7 +1275,7 @@ func (c *client) recheckPeerConfig() {
 	}
 }
 
-// updateChache will update a cache entry. It returns true if the entry was
+// updateCache will update a cache entry. It returns true if the entry was
 // updated and false if there was an error or if the cache was already
 // up-to-date.
 func (c *client) updateCache(updateType api.UpdateType, kvp *model.KVPair) bool {
