@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 package config_test
 
 import (
-	. "github.com/projectcalico/typha/pkg/config"
+	"github.com/projectcalico/typha/pkg/config"
 
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -23,7 +23,7 @@ import (
 
 var _ = DescribeTable("Environment parameter parsing",
 	func(environ []string, expected map[string]string) {
-		actual := LoadConfigFromEnvironment(environ)
+		actual := config.LoadConfigFromEnvironment(environ)
 		Expect(actual).To(Equal(expected))
 	},
 	Entry("Empty", []string{}, map[string]string{}),
