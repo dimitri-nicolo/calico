@@ -1,7 +1,9 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.46
+GO_BUILD_VER?=v0.47
 
 GIT_USE_SSH = true
+
+SEMAPHORE_PROJECT_ID=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
 
 ###############################################################################
 # Download and include Makefile.common
@@ -167,6 +169,8 @@ clean:
 	rm -rf dist
 	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
 	rm -rf config/
+	rm -rf vendor
+	rm Makefile.common*
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true

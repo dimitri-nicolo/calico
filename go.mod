@@ -8,11 +8,11 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/pkg/errors v0.9.1
-	github.com/projectcalico/cni-plugin v3.8.2+incompatible
-	github.com/projectcalico/felix v3.8.5+incompatible
-	github.com/projectcalico/libcalico-go v1.7.3
+	github.com/projectcalico/cni-plugin v1.11.1-0.20200811150549-55fa20e1ad20
+	github.com/projectcalico/felix v0.0.0-20200924080351-1f7f81f6ebf3
+	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
-	github.com/projectcalico/typha v0.7.3-0.20200813041938-ebd7ec100f42
+	github.com/projectcalico/typha v0.7.3-0.20200928112754-bade8a5ca4ab
 	github.com/prometheus/client_golang v1.1.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/vishvananda/netlink v1.0.1-0.20181108222139-023a6dafdcdf
@@ -31,6 +31,7 @@ replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200923000356-eb6bfff8d6f5
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200921215509-6b4c1f93d5eb
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200921235757-379c47ce65d0
+
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
