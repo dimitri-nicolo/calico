@@ -505,6 +505,7 @@ kind-k8st-run-test: calico_test.created
 	    -v ${HOME}/.kube/kind-config-kind:/root/.kube/config \
 	    -v $(CURDIR)/kubectl:/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
+	    -e K8ST_RIG=$(K8ST_RIG) \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \

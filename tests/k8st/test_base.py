@@ -22,6 +22,7 @@ from unittest import TestCase
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
+from utils.utils import DOCKER_RUN_NET_ARG
 from utils.utils import retry_until_success, run, kubectl
 
 logger = logging.getLogger(__name__)
@@ -279,7 +280,11 @@ TestBase.dual_tor = False
 class Container(object):
 
     def __init__(self, image, args, flags=""):
-        self.id = run("docker run --rm -d %s %s %s" % (flags, image, args)).strip().split("\n")[-1].strip()
+        self.id = run("docker run --rm -d %s %s %s %s" % (
+            DOCKER_RUN_NET_ARG,
+            flags,
+            image,
+            args)).strip().split("\n")[-1].strip()
         self._ip = None
 
     def kill(self):

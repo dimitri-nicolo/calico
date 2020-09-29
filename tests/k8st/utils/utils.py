@@ -25,6 +25,8 @@ import time
 _log = logging.getLogger(__name__)
 
 ROUTER_IMAGE = os.getenv("ROUTER_IMAGE", "calico/bird:latest")
+K8ST_RIG = os.getenv("K8ST_RIG", "")
+DOCKER_RUN_NET_ARG = "--net=kind" if K8ST_RIG == "vanilla" else ""
 
 
 # Helps with printing diags after a test.
@@ -61,7 +63,11 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
     run("df -h")
 
     # Setup external node: use privileged mode for setting routes.
-    run("docker run -d --privileged --name %s %s" % (name, ROUTER_IMAGE))
+    run("docker run -d --privileged %s --name %s %s" % (
+        DOCKER_RUN_NET_ARG,
+        name,
+        ROUTER_IMAGE)
+    )
 
     # Check how much space there is inside the container.  We may need
     # to retry this, as it may take a while for the image to download

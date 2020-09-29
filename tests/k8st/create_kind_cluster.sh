@@ -96,13 +96,13 @@ if dual_stack; then
     curl -L https://github.com/song-jiang/kind/releases/download/dualstack-1.17.0/kind -o ${KIND}
 else
     echo "Download latest upstream kind executable"
-    curl -L https://github.com/kubernetes-sigs/kind/releases/download/v0.7.0/kind-linux-amd64 -o ${KIND}
+    curl -L https://github.com/kubernetes-sigs/kind/releases/download/v0.8.1/kind-linux-amd64 -o ${KIND}
 fi
 chmod +x ${KIND}
 
 echo "Create kind cluster"
 if dual_stack; then
-    ${KIND} create cluster --image songtjiang/kindnode-dualstack:1.17.0 --config - <<EOF
+    ${KIND} -v 1 create cluster --image songtjiang/kindnode-dualstack:1.17.0 --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
