@@ -10,8 +10,8 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
 	github.com/joho/godotenv v1.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.9.0
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega v1.10.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/projectcalico/felix v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/libcalico-go v1.7.2
@@ -25,7 +25,6 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200401174654-e694b7bb0875
 	golang.org/x/mod v0.3.0 // indirect
 	golang.org/x/tools v0.0.0-20200601175630-2caf76543d99 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 
 	// k8s.io/api v0.17.2 is at 16d7abae0d2a
@@ -39,7 +38,7 @@ require (
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200925042325-64d46aaa0ce4
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200925184623-eb508b5f4b64
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200928214016-e039b0f3a5f7
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200924133416-b5139952b4bc
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
 	// temporary fix.
