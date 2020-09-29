@@ -4,11 +4,11 @@ go 1.14
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200925184623-eb508b5f4b64
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200928214016-e039b0f3a5f7
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200924133416-b5139952b4bc
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20200921231118-75f006459034
-	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200926080844-fe4f8cf17845
+	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20200929080855-ef9e19e0dbdd
 	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200924190600-eab01c04498d
 
 	k8s.io/api => k8s.io/api v0.17.2
@@ -41,8 +41,8 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/olivere/elastic/v7 v7.0.6
-	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.9.0
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/common v0.4.1
 	github.com/sirupsen/logrus v1.4.2
