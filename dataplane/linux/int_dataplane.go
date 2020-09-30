@@ -1157,13 +1157,21 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 	}
 
 	for _, t := range d.iptablesRawTables {
+		// Do not RPF check what is marked as to be skipped by RPF check.
 		rpfRules := []iptables.Rule{{
 			Match:  iptables.Match().MarkMatchesWithMask(tc.MarkSeenBypassSkipRPF, tc.MarkSeenBypassSkipRPFMask),
 			Action: iptables.ReturnAction{},
 		}}
 
+		// For anything we approved for forward, permit accept_local as it is
+		// traffic encapped for NodePort, ICMP replies etc. - stuff we trust.
+		rpfRules = append(rpfRules, iptables.Rule{
+			Match:  iptables.Match().MarkMatchesWithMask(tc.MarkSeenBypassForward, tc.MarksMask).RPFCheckPassed(true),
+			Action: iptables.ReturnAction{},
+		})
+
 		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, tc.MarkSeen, tc.MarkSeenMask,
-			d.config.RulesConfig.OpenStackSpecialCasesEnabled, true)...)
+			d.config.RulesConfig.OpenStackSpecialCasesEnabled, false)...)
 
 		rpfChain := []*iptables.Chain{{
 			Name:  rules.ChainNamePrefix + "RPF",
