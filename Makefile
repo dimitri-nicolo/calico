@@ -81,7 +81,7 @@ PKG_VERSION_BUILD_DATE?=$(shell date -u +'%FT%T%z' || echo '<unknown>')
 PKG_VERSION_GIT_DESCRIPTION?=$(shell git describe --tags 2>/dev/null || echo '<unknown>')
 PKG_VERSION_GIT_REVISION?=$(shell git rev-parse --short HEAD || echo '<unknown>')
 
-# Linker flags for building Compliance Server.
+# Linker flags for building Honeypod Controller.
 #
 # We use -X to insert the version information into the placeholder variables
 # in the buildinfo package.
@@ -96,7 +96,7 @@ LDFLAGS:=-ldflags "\
 		-B 0x$(BUILD_ID)"
 
 NON_SRC_DIRS = test
-# All Compliance Server go files.
+# All Honeypod Controller go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print)
 
 .PHONY: clean
@@ -147,7 +147,7 @@ images-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) images ARCH=$*
 
-# Build the tigera/honeypod-controller docker image, which contains only Compliance controller.
+# Build the tigera/honeypod-controller docker image.
 $(BUILD_IMAGE_CONTROLLER): bin/controller-$(ARCH) register
 	rm -rf docker-image/controller/bin
 	mkdir -p docker-image/controller/bin
@@ -561,7 +561,7 @@ update-tools:
 	go get -u github.com/onsi/ginkgo/ginkgo
 
 help:
-	@echo "Compliance Components Makefile"
+	@echo "Honeypod Controller Components Makefile"
 	@echo
 	@echo "Dependencies: docker 1.12+; go 1.8+"
 	@echo
