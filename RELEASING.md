@@ -233,12 +233,6 @@ as described in the section above.
 
 1. Add the new version to the correct release section in `_data/versions.yml`.
 
-1. Update the AUTHORS.md file. This will require `GITHUB_TOKEN` be set in your environment.
-
-   ```
-   make update-authors
-   ```
-
 1. Follow the steps in [writing release notes](#release-notes) to generate or update candidate release notes.
 
    Then, add the newly created release note file to git.
@@ -254,19 +248,6 @@ as described in the section above.
    ```
 
 1. Push your branch and open a pull request to the upstream release-calient-vX.Y branch. Get it reviewed and wait for it to pass CI.
-
-1. Run the following on your local branch in order to build the release
-   at the newly created commit.
-
-   ```
-   make release
-   ```
-
-   Then, publish the tag and release to github.
-
-   ```
-   make release-publish
-   ```
 
 1. Merge the PR. 
 
