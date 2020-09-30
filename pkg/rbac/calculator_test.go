@@ -167,8 +167,7 @@ var _ = Describe("RBAC calculator tests", func() {
 	It("handles errors in the ClusterRole enumeration from ClusterRoleBinding", func() {
 		mock.ClusterRoleBindings = []string{"test"}
 		res, err := calc.CalculatePermissions(myUser, allResourceVerbs)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("ClusterRole(test) does not exist"))
+		Expect(err).NotTo(HaveOccurred())
 		expectPresentButEmpty(res, allResourceVerbs)
 	})
 
@@ -183,8 +182,7 @@ var _ = Describe("RBAC calculator tests", func() {
 	It("handles errors in the ClusterRole enumeration from RoleBinding", func() {
 		mock.RoleBindings = map[string][]string{"ns1": {"test"}}
 		res, err := calc.CalculatePermissions(myUser, allResourceVerbs)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("ClusterRole(test) does not exist"))
+		Expect(err).NotTo(HaveOccurred())
 		expectPresentButEmpty(res, allResourceVerbs)
 	})
 

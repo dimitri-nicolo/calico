@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -662,13 +663,26 @@ func (u *userCalculator) getGettableNamespaces() []string {
 // getClusterRules returns the cluster rules that apply to the user.
 func (u *userCalculator) getClusterRules() []rbacv1.PolicyRule {
 	if u.clusterRules == nil {
-		if rules, err := u.calculator.clusterRuleResolver.RulesFor(u.user, ""); err != nil {
-			log.WithError(err).Debug("Failed to list cluster-wide rules for user")
-			u.errors = append(u.errors, err)
-			u.clusterRules = make([]rbacv1.PolicyRule, 0)
-		} else {
-			u.clusterRules = rules
+		// ClusterRuleResolver returns aggregated errors when matching rules
+		rules, errors := u.calculator.clusterRuleResolver.RulesFor(u.user, "")
+		if errors != nil {
+			log.WithError(errors).Debug("Failed to list cluster-wide rules for user")
+			// Filter out NotFound error for any missing cluster role to match the k8s API
+			var curatedError = utilerrors.FilterOut(errors, func(err error) bool {
+				return k8serrors.IsNotFound(err)
+			})
+			if curatedError != nil {
+				u.errors = append(u.errors, curatedError)
+			}
 		}
+
+		// Set matched rules
+		if rules != nil {
+			u.clusterRules = rules
+		} else {
+			u.clusterRules = make([]rbacv1.PolicyRule, 0)
+		}
+
 		log.Debugf("getClusterRules returns %v", u.clusterRules)
 	}
 
@@ -684,8 +698,14 @@ func (u *userCalculator) getNamespacedRules() map[string][]rbacv1.PolicyRule {
 			u.errors = append(u.errors, err)
 		} else {
 			for _, n := range namespaces {
-				if rules, err := u.calculator.namespacedRuleResolver.RulesFor(u.user, n.Name); err != nil {
-					u.errors = append(u.errors, err)
+				rules, errors := u.calculator.namespacedRuleResolver.RulesFor(u.user, n.Name)
+
+				// Filter out NotFound error for any missing cluster role to match the k8s API
+				var curatedError = utilerrors.FilterOut(errors, func(err error) bool {
+					return k8serrors.IsNotFound(err)
+				})
+				if curatedError != nil {
+					u.errors = append(u.errors, curatedError)
 				} else if len(rules) > 0 {
 					u.namespacedRules[n.Name] = rules
 				}

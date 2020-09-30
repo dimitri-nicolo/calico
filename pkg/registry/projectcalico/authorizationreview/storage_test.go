@@ -268,4 +268,108 @@ var _ = Describe("RBAC calculator tests", func() {
 			},
 		}))
 	})
+
+	It("missing cluster role binding", func() {
+		mock.ClusterRoleBindings = []string{"missing", "allow-all"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"allow-all": {{Verbs: []string{"*"}, Resources: []string{"*"}, APIGroups: []string{"*"}}},
+		}
+
+		res, err := rest.Create(myContext, &projectcalico.AuthorizationReview{
+			Spec: v3.AuthorizationReviewSpec{
+				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
+					{
+						APIGroup:  "",
+						Resources: []string{"namespaces", "pods"},
+						Verbs:     []string{"create", "delete"},
+					},
+					{
+						APIGroup:  "projectcalico.org",
+						Resources: []string{"networkpolicies"},
+						// Try some duplicates to make sure they are contracted.
+						Verbs: []string{"patch", "create", "delete", "patch", "delete"},
+					},
+				},
+			},
+		}, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		ar := res.(*projectcalico.AuthorizationReview)
+		// Verbs other than get for namespace use cluster scoped if appropriate and will not expand across namespaces.
+		Expect(ar.Status.AuthorizedResourceVerbs).To(HaveLen(3))
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]v3.AuthorizedResourceVerbs{
+			{
+				APIGroup: "",
+				Resource: "namespaces",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb: "create",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "", Namespace: ""},
+						},
+					},
+					{
+						Verb: "delete",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "", Namespace: ""},
+						},
+					},
+				},
+			},
+			{
+				APIGroup: "",
+				Resource: "pods",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb: "create",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "", Namespace: ""},
+						},
+					},
+					{
+						Verb: "delete",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "", Namespace: ""},
+						},
+					},
+				},
+			},
+			{
+				APIGroup: "projectcalico.org",
+				Resource: "networkpolicies",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb: "create",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "default", Namespace: ""},
+							{Tier: "tier1", Namespace: ""},
+							{Tier: "tier2", Namespace: ""},
+							{Tier: "tier3", Namespace: ""},
+							{Tier: "tier4", Namespace: ""},
+						},
+					},
+					{
+						Verb: "delete",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "default", Namespace: ""},
+							{Tier: "tier1", Namespace: ""},
+							{Tier: "tier2", Namespace: ""},
+							{Tier: "tier3", Namespace: ""},
+							{Tier: "tier4", Namespace: ""},
+						},
+					},
+					{
+						Verb: "patch",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Tier: "default", Namespace: ""},
+							{Tier: "tier1", Namespace: ""},
+							{Tier: "tier2", Namespace: ""},
+							{Tier: "tier3", Namespace: ""},
+							{Tier: "tier4", Namespace: ""},
+						},
+					},
+				},
+			},
+		}))
+	})
 })

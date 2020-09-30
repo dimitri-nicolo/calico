@@ -4,6 +4,9 @@ package mock
 import (
 	"fmt"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	log "github.com/sirupsen/logrus"
 
 	core_v1 "k8s.io/api/core/v1"
@@ -130,7 +133,7 @@ func (m *MockClient) GetClusterRole(name string) (*rbac_v1.ClusterRole, error) {
 	rules := m.ClusterRoles[name]
 	if rules == nil {
 		log.Debug("GetClusterRole returning error")
-		return nil, fmt.Errorf("ClusterRole(%s) does not exist", name)
+		return nil, k8serrors.NewNotFound(schema.ParseGroupResource("clusterrole.rbac.authorization.k8s.io"), name)
 	}
 
 	log.Debug("GetClusterRole returning no error")
