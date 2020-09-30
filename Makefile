@@ -59,8 +59,8 @@ KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 VALIDARCHES = amd64
 
 BUILD_IMAGE_CONTROLLER=honeypod-controller
-#GCR_REPO?=gcr.io/unique-caldron-775/cnx
-GCR_REPO?=gcr.io/tigera-security-research
+GCR_REPO?=gcr.io/unique-caldron-775/cnx
+#GCR_REPO?=gcr.io/tigera-security-research
 
 PUSH_IMAGE_PREFIXES?=$(GCR_REPO)/
 RELEASE_IMAGES?=

@@ -1,5 +1,5 @@
 #FROM ubuntu:18.04 as ubuntu
-FROM gcr.io/tigera-security-research/honeypod-snort 
+FROM gcr.io/unique-caldron-775/cnx/honeypod-snort 
 
 #FROM scratch
 
