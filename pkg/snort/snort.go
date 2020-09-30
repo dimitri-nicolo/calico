@@ -72,7 +72,7 @@ func ScanSnort(e *api.AlertResult, pcap string, outpath string) error {
     //We setup the directory for the snort alert result to be stored in
     output := fmt.Sprintf("%s/%s", outpath, *e.Record.DestNameAggr)
     if _, err := os.Stat(output); os.IsNotExist(err) {
-        err = os.Mkdir(output, 755)
+        err = os.Mkdir(output, 0755)
         if err != nil {
            log.WithError(err).Error("can't create snort folder")
 	   return err

@@ -70,7 +70,7 @@ func Loop(p hp.HoneypodLogProcessor, node string) error {
 	}
 
 	//Skip alerts thats not Honeypod related and not on our node
-	if strings.Contains(e.Alert.Alert, "honeypod.") == false || *e.Record.HostKeyword != node {
+	if !strings.Contains(e.Alert.Alert, "honeypod.") || *e.Record.HostKeyword != node {
             continue
 	}
         log.Info("Valid alert Found: ", e.Alert)

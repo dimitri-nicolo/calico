@@ -2,6 +2,7 @@
 
 package processor
 
+/*
 const ipSetMapping = `{
     "properties": {
         "created_at": {
@@ -25,7 +26,7 @@ const domainNameSetMapping = `{
         }
     }
 }`
-
+*/
 const EventMapping = `{
     "properties" : {
         "alert" : {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuite name="HoneypodController Suite" tests="6" failures="0" errors="0" time="3.185">
+      <testcase name="Test Honeypod Controller Processor Test Should be able to create index mapping to Elastisearch" classname="HoneypodController Suite" time="0.26525128"></testcase>
+      <testcase name="Test Honeypod Controller Processor Test Should be able to create 1 event to Elastisearch" classname="HoneypodController Suite" time="0.076832168"></testcase>
+      <testcase name="Test Honeypod Controller Processor Test Should be able retrieve 1 alert from Elasticsearch(empty)" classname="HoneypodController Suite" time="0.817673799"></testcase>
+      <testcase name="Test Honeypod Controller Processor Test Should be able to create 1 Honeypod event to Elastisearch" classname="HoneypodController Suite" time="0.013945379"></testcase>
+      <testcase name="Test Honeypod Controller Processor Test should be able to retrieve Honeypod Event in Elasticsearch and find relevant pcap" classname="HoneypodController Suite" time="0.994893295"></testcase>
+      <testcase name="Test Honeypod Controller Processor Test should be able to simulate a snort scan and find scan result" classname="HoneypodController Suite" time="1.016001861"></testcase>
+  </testsuite>

@@ -103,7 +103,6 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o
 clean:
 	rm -rf bin \
 	       docker-image/controller/bin \
-	       tmp/kube-bench \
 	       release-notes-* \
 	       .go-pkg-cache \
 	       vendor
@@ -132,18 +131,6 @@ bin/controller-$(ARCH): $(SRC_FILES) local_build
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/controller was not statically linked"; false ) )'
 
-
-###############################################################################
-# Building the report files
-###############################################################################
-
-.PHONY: gen-files
-## Force rebuild of the report generator tool and the default report manifests
-gen-files: bin/report-type-gen
-	rm -rf ./output/default
-	mkdir -p ./output/default/manifests
-	mkdir -p ./output/default/json
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c './bin/report-type-gen generate'
 
 ###############################################################################
 # Building the images
@@ -291,7 +278,7 @@ bt-terminal:
 .PHONY: ut
 ut combined.coverprofile: run-elastic
 	@echo Running Go UTs.
-	#$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
+	$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
 
 ## Run elasticsearch as a container (tigera-elastic)
 run-elastic: stop-elastic
@@ -534,11 +521,6 @@ endif
 ###############################################################################
 .PHONY: ut-no-cover
 ut-no-cover: $(SRC_FILES)
-	@echo Running Go UTs without coverage.
-	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -r $(GINKGO_OPTIONS)
-
-.PHONY: fv
-fv: 
 	@echo Running Go UTs without coverage.
 	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -r $(GINKGO_OPTIONS)
 
