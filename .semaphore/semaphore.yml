@@ -5,13 +5,22 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: Setup 
+  - name: Honeypod-controller
     task:
       jobs:
-        - name: clone build
+        - name: job
           commands:
             - chmod 0600 ~/.keys/*
             - ssh-add ~/.keys/*
             - 'git config --global --add url."git@github.com:".insteadOf "https://github.com/"'
             - checkout
-            - make image
+            - sudo apt-get update || true
+            - sudo apt-get -y --only-upgrade install google-cloud-sdk
+            - 'export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/secrets/gcp-registry-pusher-service-account.json}'
+            - 'gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"'
+            - gcloud auth configure-docker --quiet
+            - make image run-elastic ut-no-cover tag-images push IMAGETAG=latest
+      secrets:
+        - name: marvin-github-ssh-private-key
+        - name: gcp-registry-pusher-service-account
+      env_vars: []
