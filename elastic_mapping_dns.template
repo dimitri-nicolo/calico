@@ -149,6 +149,20 @@
             "type": "keyword"
           }
         }
+      },
+      "latency": {
+        "type": "nested",
+        "properties": {
+          "count": {
+            "type": "long"
+          },
+          "mean": {
+            "type": "long"
+          },
+          "max": {
+            "type": "long"
+          }
+        }
       }
     }
   }
