@@ -14,6 +14,9 @@
 
 package argutils
 
+import "C"
+import "strconv"
+
 // ArgStringOrBlank returns the requested argument as a string, or as a blank
 // string if the argument is not present.
 func ArgStringOrBlank(args map[string]interface{}, argName string) string {
@@ -40,4 +43,24 @@ func ArgBoolOrFalse(args map[string]interface{}, argName string) bool {
 		return args[argName].(bool)
 	}
 	return false
+}
+
+// ArgString returns the requested argument as a string, or as a blank
+// string if the argument is not present or the type does not match
+func ArgString(args map[string]interface{}, argName string) string {
+	if args[argName] != nil {
+		var param = args[argName]
+		switch v := param.(type) {
+		default:
+			return ""
+		case int:
+			return strconv.Itoa(v)
+		case string:
+			return v
+		case bool:
+			return strconv.FormatBool(v)
+		}
+	}
+
+	return ""
 }
