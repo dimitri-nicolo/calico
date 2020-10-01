@@ -338,7 +338,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 		id := mc.ObjectMeta.Name
 
 		if startupSync && mc.Status.Conditions != nil {
-			updateClusterStatus = getClustersWithConnectedStatus(mc)
+			updateClusterStatus = getClustersWithConnectedStatus(mc, updateClusterStatus)
 		}
 
 		mc := &jclust.ManagedCluster{
@@ -565,16 +565,12 @@ func proxyVoidDirector(*http.Request) {
 }
 
 // getClustersWithConnectedStatus returns clusters with MangedClusterConnected status True.
-func getClustersWithConnectedStatus(mc apiv3.ManagedCluster) map[string]struct{} {
-	updateClusterStatus := make(map[string]struct{})
-	clusterConnected := false
+func getClustersWithConnectedStatus(mc apiv3.ManagedCluster, updateClusterStatus map[string]struct{}) map[string]struct{} {
 	for _, c := range mc.Status.Conditions {
 		if c.Type == calicov3.ManagedClusterStatusTypeConnected && c.Status == calicov3.ManagedClusterStatusValueTrue {
-			clusterConnected = true
+			updateClusterStatus[mc.ObjectMeta.Name] = struct{}{}
+			return updateClusterStatus
 		}
-	}
-	if clusterConnected {
-		updateClusterStatus[mc.ObjectMeta.Name] = struct{}{}
 	}
 	return updateClusterStatus
 }
