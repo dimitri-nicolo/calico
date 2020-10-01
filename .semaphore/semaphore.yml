@@ -10,5 +10,8 @@ blocks:
       jobs:
         - name: clone build
           commands:
+            - chmod 0600 ~/.keys/*
+            - ssh-add ~/.keys/*
+            - 'git config --global --add url."git@github.com:".insteadOf "https://github.com/"'
             - checkout
             - make image
