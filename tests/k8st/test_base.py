@@ -329,16 +329,14 @@ class Pod(object):
 %s
 EOF
 """ % yaml)
-        elif annotations:
-            # Caller wants specified image, plus annotations.
+        else:
+            # Build YAML with specified namespace, name and image.
             pod = {
                 "apiVersion": "v1",
                 "kind": "Pod",
                 "metadata": {
-                    "annotations": annotations,
                     "name": name,
                     "namespace": ns,
-                    "labels": labels,
                 },
                 "spec": {
                     "containers": [
@@ -352,13 +350,15 @@ EOF
             }
             if node:
                 pod["spec"]["nodeName"] = node
+            if annotations:
+                pod["metadata"]["annotations"] = annotations
+            if labels:
+                pod["metadata"]["labels"] = labels
             kubectl("""apply -f - <<'EOF'
 %s
 EOF
 """ % json.dumps(pod))
-        else:
-            # Caller just wants the specified image.
-            kubectl("run %s -n %s --generator=run-pod/v1 --image=%s" % (name, ns, image))
+
         self.name = name
         self.ns = ns
         self._ip = None
