@@ -10,6 +10,7 @@ import (
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -128,7 +129,7 @@ var _ = Describe("Clusters", func() {
 			Eventually(func() calicov3.ManagedClusterStatusValue {
 				c, _ := k8sAPI.ManagedClusters().Get(clusterName, metav1.GetOptions{})
 				return c.Status.Conditions[0].Status
-			}).Should(Equal(calicov3.ManagedClusterStatusValueFalse))
+			}, 10*time.Second, 1*time.Second).Should(Equal(calicov3.ManagedClusterStatusValueFalse))
 			Expect(len(clusters.List())).To(Equal(3))
 		})
 
