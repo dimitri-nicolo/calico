@@ -257,6 +257,8 @@ class TestBase(TestCase):
         api.replace_namespaced_daemon_set(ds, ns, node_ds)
 
         # Wait until the DaemonSet reports that all nodes have been updated.
+        last_number = 0
+        iterations_with_no_change = 0
         while True:
             time.sleep(10)
             node_ds = api.read_namespaced_daemon_set_status("calico-node", "kube-system")
@@ -265,6 +267,13 @@ class TestBase(TestCase):
                       node_ds.status.desired_number_scheduled)
             if node_ds.status.updated_number_scheduled == node_ds.status.desired_number_scheduled:
                 break
+            if node_ds.status.updated_number_scheduled == last_number:
+                iterations_with_no_change += 1
+                if iterations_with_no_change == 4:
+                    run("docker exec kind-control-plane conntrack -L", allow_fail=True)
+            else:
+                last_number = node_ds.status.updated_number_scheduled
+                iterations_with_no_change = 0
 
         # Wait until all calico-node pods are ready.
         kubectl("wait pod --for=condition=Ready -l k8s-app=calico-node -n kube-system --timeout=300s")
