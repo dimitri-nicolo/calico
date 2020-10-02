@@ -196,6 +196,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetList":                        schema_libcalico_go_lib_apis_v3_NetworkSetList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec":                        schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                                  schema_libcalico_go_lib_apis_v3_Node(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress":                           schema_libcalico_go_lib_apis_v3_NodeAddress(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":                           schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig":                  schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                              schema_libcalico_go_lib_apis_v3_NodeList(ref),
@@ -8769,6 +8770,27 @@ func schema_libcalico_go_lib_apis_v3_Node(ref common.ReferenceCallback) common.O
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_NodeAddress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeAddress represents an address assigned to a node.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"address": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Address is a string representation of the actual address.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"address"},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8944,11 +8966,24 @@ func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec"),
 						},
 					},
+					"addresses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Addresses list address that a client can reach the node at.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
 	}
 }
 
