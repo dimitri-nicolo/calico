@@ -419,7 +419,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    app: backend 
+    app: backend
   name: %s
   namespace: %s
 spec:
@@ -506,32 +506,32 @@ class NetcatClientTCP(Pod):
         self.last_output = ""
 
     def can_connect(self, ip, port, command="nc"):
-        if not self.check_connected(ip, port, command):
+        try:
+            self.check_connected(ip, port, command)
+            _log.info("'%s' connected, as expected", self.name)
+        except subprocess.CalledProcessError:
+            _log.exception("Failed to access server")
             _log.warning("'%s' failed to connect, when connection was expected", self.name)
             stop_for_debug()
             raise self.ConnectionError
-        _log.info("'%s' connected, as expected", self.name)
 
     def cannot_connect(self, ip, port, command="nc"):
-        if self.check_connected(ip, port, command):
+        try:
+            self.check_connected(ip, port, command)
             _log.warning("'%s' unexpectedly connected", self.name)
             stop_for_debug()
             raise self.ConnectionError
-        _log.info("'%s' failed to connect, as expected", self.name)
+        except subprocess.CalledProcessError:
+            _log.info("'%s' failed to connect, as expected", self.name)
 
     def check_connected(self, ip, port, command="nc"):
-        try:
-            self.last_output = ""
-            if command == "nc":
-                self.last_output = self.execute("nc -w 2 %s %d </dev/null" % (ip, port))
-            elif command == "wget":
-                self.last_output = self.execute("wget -T 2 %s:%d -O -" % (ip, port))
-            else:
-                raise Exception('recieved invalid command')
-        except subprocess.CalledProcessError:
-            _log.exception("Failed to access server")
-            return False
-        return True
+        self.last_output = ""
+        if command == "nc":
+            self.last_output = self.execute("nc -w 2 %s %d </dev/null" % (ip, port))
+        elif command == "wget":
+            self.last_output = self.execute("wget -T 2 %s:%d -O -" % (ip, port))
+        else:
+            raise Exception('received invalid command')
 
     def get_last_output(self):
         return self.last_output
