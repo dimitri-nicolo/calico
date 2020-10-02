@@ -52,7 +52,7 @@ HP_IGNORE_LOCAL_DIRS="/v2.0/"
 RELEASE_STREAM := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title' | grep --only-matching --extended-regexp '(v[0-9]+\.[0-9]+)|master')
 
 CHART?=calico
-REGISTRY?=gcr.io/unique-caldron-775/cnx/
+REGISTRY?=$(shell $(YAML_CMD) r _config.yml "defaults[0].values.registry")
 DOCS_TEST_CONTAINER?=tigera/docs-test
 
 # Use := so that these V_ variables are computed only once per make run.
@@ -496,17 +496,27 @@ bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
+YQ_RELEASE=https://github.com/mikefarah/yq/releases/download/3.4.0/yq_linux_amd64
+bin/yq.v2:
+	mkdir -p bin
+	wget -q $(YQ_RELEASE) -O $@
+	chmod +x $@
+
 ###############################################################################
 # Helm
 ###############################################################################
+# Container for generating values.
+# Pass in as an empty string to use the native ruby installation on the host (e.g. make values.yaml CONTAINERIZED='')
+CONTAINERIZED_VALUES?=docker run --rm \
+	  -v $$PWD:/calico \
+	  -w /calico \
+	  ruby:2.5
+
 # Build values.yaml for all charts
 .PHONY: values.yaml
 values.yaml: _includes/charts/tigera-prometheus-operator/values.yaml _includes/charts/tigera-operator/values.yaml
 _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
-	docker run --rm \
-	  -v $$PWD:/calico \
-	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
+	$(CONTAINERIZED_VALUES) ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
 # The following chunk of conditionals sets the Version of the helm chart. 
 # Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
