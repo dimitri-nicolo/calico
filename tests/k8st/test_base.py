@@ -236,6 +236,9 @@ class TestBase(TestCase):
         return None
 
     def update_ds_env(self, ds, ns, env_vars):
+        # Before restarting, check how the control node routes to the API server.
+        run("docker exec kind-control-plane iptables-save -c -t nat", allow_fail=True)
+
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
         node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=True)
