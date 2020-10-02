@@ -446,6 +446,10 @@ type FelixConfigurationSpec struct {
 	FlowLogsFileIncludeLabels *bool `json:"flowLogsFileIncludeLabels,omitempty"`
 	// FlowLogsFileIncludePolicies is used to configure if policy information are included in a Flow log entry written to file.
 	FlowLogsFileIncludePolicies *bool `json:"flowLogsFileIncludePolicies,omitempty"`
+	// FlowLogsFileIncludeService is used to configure if the destination service is included in a Flow log entry written to file.
+	// The service information can only be included if the flow was explicitly determined to be directed at the service (e.g.
+	// when the pre-DNAT destination corresponds to the service ClusterIP and port).
+	FlowLogsFileIncludeService *bool `json:"flowLogsFileIncludeService,omitempty"`
 	// FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
 	// allowed connections. [Default: 2 - pod prefix name based aggregation].
 	// Accepted values are 0, 1 and 2.
