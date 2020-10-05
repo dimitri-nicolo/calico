@@ -1,32 +1,7 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2020 Tigera Inc. All rights reserved.
 
 package processor
 
-/*
-const ipSetMapping = `{
-    "properties": {
-        "created_at": {
-              "type": "date",
-              "format": "strict_date_optional_time"
-        },
-        "ips": {
-            "type": "ip_range"
-        }
-    }
-}`
-
-const domainNameSetMapping = `{
-    "properties": {
-        "created_at": {
-            "type": "date",
-            "format": "strict_date_optional_time"
-        },
-        "domains": {
-            "type": "keyword"
-        }
-    }
-}`
-*/
 const EventMapping = `{
     "properties" : {
         "alert" : {
