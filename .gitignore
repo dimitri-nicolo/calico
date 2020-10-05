@@ -1,2 +1,11 @@
 *.swp
 .go-pkg-cache/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+/Godeps/

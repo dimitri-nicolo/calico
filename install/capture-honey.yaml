@@ -5,3 +5,4 @@ metadata:
   namespace: tigera-internal
 spec:
   selector: all()
+---

@@ -21,11 +21,6 @@ type HoneypodLogProcessor struct {
     Client elastic.Client
 }
 
-/*
-type HoneypodLogProcessorSpec struct {
-    AlertLogsSelection *api.AlertLogsSelection `yaml:"alertLogsSelection,omitempty" validate:"omitempty"`
-}*/
-
 func NewHoneypodLogProcessor(c elastic.Client, ctx context.Context) (HoneypodLogProcessor, error) {
     return HoneypodLogProcessor{LogHandler: c, Ctx: ctx, Client: c}, nil
 }

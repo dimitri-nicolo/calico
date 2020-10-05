@@ -1,7 +1,6 @@
 module github.com/tigera/honeypod-controller
 
 replace (
-	//github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200617214044-dd9aed324aa2
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200821192134-40a1646d6e9e
 	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
 	k8s.io/api => k8s.io/api v0.17.2

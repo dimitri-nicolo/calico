@@ -17,7 +17,7 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: controller 
-        imagePullPolicy: "Always"
+        imagePullPolicy: "IfNotPresent"
         image: gcr.io/tigera-security-research/honeypod-controller:latest-amd64
         env:
         - name: CLUSTER_NAME
@@ -53,18 +53,10 @@ spec:
           value: /etc/ssl/elastic/ca.pem
         - name: ES_CA_CERT
           value: /etc/ssl/elastic/ca.pem
-        - name: ES_CURATOR_BACKEND_CERT
-          value: /etc/ssl/elastic/ca.pem
-        - name: ELASTIC_REPLICAS
-          value: "0"
-        - name: ELASTIC_SHARDS
-          value: "1"
         volumeMounts:
         - mountPath: /etc/ssl/elastic/
           name: elastic-ca-cert-volume
-          #- mountPath: /var/run/secrets/kubernetes.io/serviceaccount
-          #name: intrusion-detection-controller-token-csg8d
-          #readOnly: true
+          readOnly: true
         - mountPath: /pcap
           name: pcap
           readOnly: true
@@ -78,14 +70,10 @@ spec:
           - key: tls.crt
             path: ca.pem
           secretName: tigera-secure-es-http-certs-public
-          #- name: intrusion-detection-controller-token-csg8d
-          #secret:
-          #defaultMode: 420
-          #secretName: intrusion-detection-controller-token-csg8d
       - name: pcap
         hostPath:
           path: /var/log/calico/pcap/
           type: Directory 
       - name: snort
         emptyDir: {}
-
+---
