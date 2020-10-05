@@ -15,6 +15,22 @@ _log = logging.getLogger(__name__)
 # If we add more test cases for other feature, we would need to refactor overlay mode setup and
 # make it easier for each test case to configure it.
 
+def patch_ippool(name, vxlanMode=None, ipipMode=None):
+    assert vxlanMode is not None
+    assert ipipMode is not None
+    json_str = calicoctl("get ippool %s -o json" % name)
+    node_dict = json.loads(json_str)
+    old_ipipMode = node_dict['spec']['ipipMode']
+    old_vxlanMode = node_dict['spec']['vxlanMode']
+
+    calicoctl("""patch ippool %s --patch '{"spec":{"vxlanMode": "%s", "ipipMode": "%s"}}'""" % (
+        name,
+        vxlanMode,
+        ipipMode,
+    ))
+    _log.info("Updated vxlanMode of %s from %s to %s, ipipMode from %s to %s",
+              name, old_vxlanMode, vxlanMode, old_ipipMode, ipipMode)
+
 class _TestEgressIP(TestBase):
 
     def setUp(self):
@@ -544,19 +560,14 @@ class TestEgressIPNoOverlay(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
 
-        # Enable egress IP.
+        # Enable non-overlay and egress IP.
+        patch_ippool("default-ipv4-ippool",
+                     vxlanMode="Never",
+                     ipipMode="Never")
         newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
                   "FELIX_IPINIPENABLED": "false",
                   "FELIX_VXLANENABLED": "false"}
         self.update_ds_env("calico-node", "kube-system", newEnv)
-
-        json_str = calicoctl("get ippool default-ipv4-ippool -o json")
-        node_dict = json.loads(json_str)
-        self.old_ipip_mode = node_dict['spec']['ipipMode']
-        self.old_vxlan_mode = node_dict['spec']['vxlanMode']
-
-        calicoctl("""patch ippool default-ipv4-ippool --patch '{"spec":{"ipipMode": "Never", "vxlanMode": "Never"}}'""")
-        _log.info("Update ipipMode of default ippool from %s to Never, vxlanMode from %s to Never", self.old_ipip_mode, self.old_vxlan_mode)
 
         # Create egress IP pool.
         self.egress_cidr = "10.10.10.0/29"
@@ -578,19 +589,14 @@ class TestEgressIPWithIPIP(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
 
-        # Enable egress IP.
+        # Enable IP-IP and egress IP.
+        patch_ippool("default-ipv4-ippool",
+                     vxlanMode="Never",
+                     ipipMode="Always")
         newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
                   "FELIX_IPINIPENABLED": "true",
                   "FELIX_VXLANENABLED": "false"}
         self.update_ds_env("calico-node", "kube-system", newEnv)
-
-        json_str = calicoctl("get ippool default-ipv4-ippool -o json")
-        node_dict = json.loads(json_str)
-        self.old_ipip_mode = node_dict['spec']['ipipMode']
-        self.old_vxlan_mode = node_dict['spec']['vxlanMode']
-
-        calicoctl("""patch ippool default-ipv4-ippool --patch '{"spec":{"ipipMode": "Always", "vxlanMode": "Never"}}'""")
-        _log.info("Update ipipMode of default ippool from %s to Always, vxlanMode from %s to Never", self.old_ipip_mode, self.old_vxlan_mode)
 
         # Create egress IP pool.
         self.egress_cidr = "10.10.10.0/29"
@@ -608,24 +614,20 @@ EOF
 """ % self.egress_cidr)
         self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
 
+
 class TestEgressIPWithVXLAN(_TestEgressIP):
 
     def setUp(self):
         super(_TestEgressIP, self).setUp()
 
-        # Enable egress IP.
+        # Enable VXLAN and egress IP.
+        patch_ippool("default-ipv4-ippool",
+                     vxlanMode="Always",
+                     ipipMode="Never")
         newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
                   "FELIX_IPINIPENABLED": "false",
                   "FELIX_VXLANENABLED": "true"}
         self.update_ds_env("calico-node", "kube-system", newEnv)
-
-        json_str = calicoctl("get ippool default-ipv4-ippool -o json")
-        node_dict = json.loads(json_str)
-        self.old_ipip_mode = node_dict['spec']['ipipMode']
-        self.old_vxlan_mode = node_dict['spec']['vxlanMode']
-
-        calicoctl("""patch ippool default-ipv4-ippool --patch '{"spec":{"vxlanMode": "Always", "ipipMode": "Never"}}'""")
-        _log.info("Update vxlanMode of default ippool from %s to Always, ipipMode from %s to Never", self.old_vxlan_mode, self.old_ipip_mode)
 
         # Create egress IP pool.
         self.egress_cidr = "10.10.10.0/29"
