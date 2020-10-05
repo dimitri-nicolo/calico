@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 package config_test
 
 import (
-	. "github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/config"
 
 	"path"
 	"runtime"
@@ -38,7 +38,7 @@ LogSeveritySys=DEBUG`
 
 var _ = DescribeTable("File parameter parsing",
 	func(fileContent string, expected map[string]string) {
-		actual, err := LoadConfigFileData([]byte(fileContent))
+		actual, err := config.LoadConfigFileData([]byte(fileContent))
 		Expect(err).To(BeNil())
 		Expect(actual).To(Equal(expected))
 	},
@@ -60,7 +60,7 @@ var _ = DescribeTable("File load tests",
 	func(filename string, expected map[string]string, errExpected bool) {
 		myDir := myDir()
 		path := path.Join(myDir, "testdata", filename)
-		value, err := LoadConfigFile(path)
+		value, err := config.LoadConfigFile(path)
 		if errExpected {
 			Expect(err).ToNot(BeNil())
 		} else {

@@ -22,7 +22,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 
-	. "github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/testutils"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 
@@ -103,7 +103,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 	BeforeEach(func() {
 		fcFields = fieldsByName(v3.FelixConfigurationSpec{})
 
-		cpFields = fieldsByName(Config{})
+		cpFields = fieldsByName(config.Config{})
 		for _, name := range cpFieldsToIgnore {
 			delete(cpFields, name)
 		}
@@ -154,9 +154,9 @@ func fieldsByName(example interface{}) map[string]reflect.StructField {
 }
 
 var _ = Describe("Config override empty", func() {
-	var cp *Config
+	var cp *config.Config
 	BeforeEach(func() {
-		cp = New()
+		cp = config.New()
 	})
 
 	It("should allow config override", func() {
@@ -168,7 +168,7 @@ var _ = Describe("Config override empty", func() {
 
 	Describe("with a param set", func() {
 		BeforeEach(func() {
-			_, err := cp.UpdateFrom(map[string]string{"BPFEnabled": "true"}, DatastorePerHost)
+			_, err := cp.UpdateFrom(map[string]string{"BPFEnabled": "true"}, config.DatastorePerHost)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -184,7 +184,7 @@ var _ = Describe("Config override empty", func() {
 
 			By("Ignoring a lower-priority config update")
 			// Env vars get converted to lower-case before calling UpdateFrom.
-			changed, err = cp.UpdateFrom(map[string]string{"bpfenabled": "true"}, EnvironmentVariable)
+			changed, err = cp.UpdateFrom(map[string]string{"bpfenabled": "true"}, config.EnvironmentVariable)
 			Expect(changed).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cp.BPFEnabled).To(BeFalse())
@@ -194,7 +194,7 @@ var _ = Describe("Config override empty", func() {
 	Describe("with env var set", func() {
 		BeforeEach(func() {
 			// Env vars get converted to lower-case before calling UpdateFrom.
-			changed, err := cp.UpdateFrom(map[string]string{"bpfenabled": "true"}, EnvironmentVariable)
+			changed, err := cp.UpdateFrom(map[string]string{"bpfenabled": "true"}, config.EnvironmentVariable)
 			Expect(changed).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cp.BPFEnabled).To(BeTrue())
@@ -209,24 +209,24 @@ var _ = Describe("Config override empty", func() {
 	})
 })
 
-var nilServerPortSlice []ServerPort
+var nilServerPortSlice []config.ServerPort
 
 var _ = DescribeTable("Config parsing",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
-		config := New()
-		_, err := config.UpdateFrom(map[string]string{key: value},
-			EnvironmentVariable)
-		configPtr := reflect.ValueOf(config)
+		cfg := config.New()
+		_, err := cfg.UpdateFrom(map[string]string{key: value},
+			config.EnvironmentVariable)
+		configPtr := reflect.ValueOf(cfg)
 		configElem := configPtr.Elem()
 		fieldRef := configElem.FieldByName(key)
 		newVal := fieldRef.Interface()
 		Expect(newVal).To(Equal(expected))
 		if len(errorExpected) > 0 && errorExpected[0] {
 			Expect(err).To(HaveOccurred())
-			Expect(config.Err).To(HaveOccurred())
+			Expect(cfg.Err).To(HaveOccurred())
 		} else {
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Err).NotTo(HaveOccurred())
+			Expect(cfg.Err).NotTo(HaveOccurred())
 		}
 	},
 
@@ -380,41 +380,41 @@ var _ = DescribeTable("Config parsing",
 	Entry("PrometheusProcessMetricsEnabled", "PrometheusProcessMetricsEnabled", "false", false),
 
 	Entry("FailsafeInboundHostPorts old syntax", "FailsafeInboundHostPorts", "1,2,3,4",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 1},
 			{Protocol: "tcp", Port: 2},
 			{Protocol: "tcp", Port: 3},
 			{Protocol: "tcp", Port: 4},
 		}),
 	Entry("FailsafeOutboundHostPorts old syntax", "FailsafeOutboundHostPorts", "1,2,3,4",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 1},
 			{Protocol: "tcp", Port: 2},
 			{Protocol: "tcp", Port: 3},
 			{Protocol: "tcp", Port: 4},
 		}),
 	Entry("FailsafeInboundHostPorts new syntax", "FailsafeInboundHostPorts", "tcp:1,udp:2",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 1},
 			{Protocol: "udp", Port: 2},
 		}),
 	Entry("FailsafeOutboundHostPorts new syntax", "FailsafeOutboundHostPorts", "tcp:1,udp:2",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 1},
 			{Protocol: "udp", Port: 2},
 		}),
 	Entry("FailsafeInboundHostPorts mixed syntax", "FailsafeInboundHostPorts", "1,udp:2",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 1},
 			{Protocol: "udp", Port: 2},
 		}),
 	Entry("FailsafeOutboundHostPorts mixed syntax", "FailsafeOutboundHostPorts", "1,udp:2",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 1},
 			{Protocol: "udp", Port: 2},
 		}),
 	Entry("FailsafeInboundHostPorts bad syntax -> defaulted", "FailsafeInboundHostPorts", "foo:1",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 22},
 			{Protocol: "udp", Port: 68},
 			{Protocol: "tcp", Port: 179},
@@ -428,7 +428,7 @@ var _ = DescribeTable("Config parsing",
 		true,
 	),
 	Entry("FailsafeInboundHostPorts too many parts -> defaulted", "FailsafeInboundHostPorts", "tcp:1:bar",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 22},
 			{Protocol: "udp", Port: 68},
 			{Protocol: "tcp", Port: 179},
@@ -442,11 +442,11 @@ var _ = DescribeTable("Config parsing",
 		true,
 	),
 
-	Entry("FailsafeInboundHostPorts none", "FailsafeInboundHostPorts", "none", []ProtoPort(nil)),
-	Entry("FailsafeOutboundHostPorts none", "FailsafeOutboundHostPorts", "none", []ProtoPort(nil)),
+	Entry("FailsafeInboundHostPorts none", "FailsafeInboundHostPorts", "none", []config.ProtoPort(nil)),
+	Entry("FailsafeOutboundHostPorts none", "FailsafeOutboundHostPorts", "none", []config.ProtoPort(nil)),
 
 	Entry("FailsafeInboundHostPorts empty", "FailsafeInboundHostPorts", "",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "tcp", Port: 22},
 			{Protocol: "udp", Port: 68},
 			{Protocol: "tcp", Port: 179},
@@ -459,7 +459,7 @@ var _ = DescribeTable("Config parsing",
 		},
 	),
 	Entry("FailsafeOutboundHostPorts empty", "FailsafeOutboundHostPorts", "",
-		[]ProtoPort{
+		[]config.ProtoPort{
 			{Protocol: "udp", Port: 53},
 			{Protocol: "udp", Port: 67},
 			{Protocol: "tcp", Port: 179},
@@ -506,21 +506,21 @@ var _ = DescribeTable("Config parsing",
 	Entry("DNSTrustedServers default",
 		"DNSTrustedServers", "",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 	Entry("Trust 1 server IP",
 		"DNSTrustedServers", "1.2.3.4",
-		[]ServerPort{{IP: "1.2.3.4", Port: 53}}),
+		[]config.ServerPort{{IP: "1.2.3.4", Port: 53}}),
 	Entry("Trust 2 server IPs",
 		"DNSTrustedServers", "1.2.3.4,42.5.6.7",
-		[]ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "42.5.6.7", Port: 53}}),
+		[]config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "42.5.6.7", Port: 53}}),
 	Entry("Trust kube-dns service",
 		"DNSTrustedServers", "k8s-service:kube-dns",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 	Entry("Trust kube-dns and an IP",
 		"DNSTrustedServers", "k8s-service:kube-dns,42.5.6.7",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{{IP: "42.5.6.7", Port: 53}}),
+		[]config.ServerPort{{IP: "42.5.6.7", Port: 53}}),
 	Entry("Disable trusting DNS servers",
 		"DNSTrustedServers", "none",
 		nilServerPortSlice),
@@ -528,38 +528,38 @@ var _ = DescribeTable("Config parsing",
 		"DNSTrustedServers", "k8s-servce:kube-dns,42.5.6.7",
 		// Parse error -> default.
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 	Entry("DNSTrustedServers syntax error 2",
 		"DNSTrustedServers", "4245.5.699.7",
 		// Parse error -> default.
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 	Entry("DNSTrustedServers IPv4 address with port",
 		"DNSTrustedServers", "10.25.3.4:536",
-		[]ServerPort{{IP: "10.25.3.4", Port: 536}}),
+		[]config.ServerPort{{IP: "10.25.3.4", Port: 536}}),
 	Entry("DNSTrustedServers IPv6 address with port",
 		"DNSTrustedServers", "[fd10:25::2]:536",
-		[]ServerPort{{IP: "fd10:25::2", Port: 536}}),
+		[]config.ServerPort{{IP: "fd10:25::2", Port: 536}}),
 	Entry("DNSTrustedServers IPv6 address with non-numeric port",
 		"DNSTrustedServers", "[fd10:25::2]:que",
 		// Parse error -> default.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 	Entry("DNSTrustedServers IPv6 address with negative port",
 		"DNSTrustedServers", "[fd10:25::2]:-34",
 		// Parse error -> default.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 	Entry("DNSTrustedServers IPv6 address with too large port",
 		"DNSTrustedServers", "[fd10:25::2]:70000",
 		// Parse error -> default.
-		[]ServerPort{}),
+		[]config.ServerPort{}),
 )
 
 var _ = DescribeTable("Config parsing with Kubernetes service lookup",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
-		config := New()
-		saveGetKubernetesService := GetKubernetesService
-		defer func() { GetKubernetesService = saveGetKubernetesService }()
-		GetKubernetesService = func(namespace, name string) (*v1.Service, error) {
+		cfg := config.New()
+		saveGetKubernetesService := config.GetKubernetesService
+		defer func() { config.GetKubernetesService = saveGetKubernetesService }()
+		config.GetKubernetesService = func(namespace, name string) (*v1.Service, error) {
 			if namespace == "openshift-dns" && name == "openshift-dns" {
 				return &v1.Service{Spec: v1.ServiceSpec{
 					ClusterIP: "10.96.0.12",
@@ -580,47 +580,47 @@ var _ = DescribeTable("Config parsing with Kubernetes service lookup",
 			}
 			return nil, fmt.Errorf("No such service")
 		}
-		_, err := config.UpdateFrom(map[string]string{key: value},
-			EnvironmentVariable)
-		configPtr := reflect.ValueOf(config)
+		_, err := cfg.UpdateFrom(map[string]string{key: value},
+			config.EnvironmentVariable)
+		configPtr := reflect.ValueOf(cfg)
 		configElem := configPtr.Elem()
 		fieldRef := configElem.FieldByName(key)
 		newVal := fieldRef.Interface()
 		Expect(newVal).To(Equal(expected))
 		if len(errorExpected) > 0 && errorExpected[0] {
 			Expect(err).To(HaveOccurred())
-			Expect(config.Err).To(HaveOccurred())
+			Expect(cfg.Err).To(HaveOccurred())
 		} else {
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Err).NotTo(HaveOccurred())
+			Expect(cfg.Err).NotTo(HaveOccurred())
 		}
 	},
 
 	Entry("Trust kube-dns service",
 		"DNSTrustedServers", "k8s-service:kube-dns",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{{IP: "10.96.0.45", Port: 54}}),
+		[]config.ServerPort{{IP: "10.96.0.45", Port: 54}}),
 	Entry("Trust kube-dns and an IP",
 		"DNSTrustedServers", "k8s-service:kube-dns,42.5.6.7",
 		// No IP for kube-dns, because UT does not run in Kubernetes environment.
-		[]ServerPort{{IP: "10.96.0.45", Port: 54}, {IP: "42.5.6.7", Port: 53}}),
+		[]config.ServerPort{{IP: "10.96.0.45", Port: 54}, {IP: "42.5.6.7", Port: 53}}),
 	Entry("IPv6 service with port override",
 		"DNSTrustedServers", "k8s-service:kube-dns-v6:5369",
-		[]ServerPort{{IP: "fd20:99::34", Port: 5369}}),
+		[]config.ServerPort{{IP: "fd20:99::34", Port: 5369}}),
 	Entry("IPv6 service with port specified by service",
 		"DNSTrustedServers", "k8s-service:kube-dns-v6",
-		[]ServerPort{{IP: "fd20:99::34", Port: 5367}}),
+		[]config.ServerPort{{IP: "fd20:99::34", Port: 5367}}),
 	Entry("IPv4 service with port override",
 		"DNSTrustedServers", "k8s-service:kube-dns:51",
-		[]ServerPort{{IP: "10.96.0.45", Port: 51}}),
+		[]config.ServerPort{{IP: "10.96.0.45", Port: 51}}),
 	Entry("OpenShift settings",
 		"DNSTrustedServers", "k8s-service:openshift-dns/openshift-dns",
-		[]ServerPort{{IP: "10.96.0.12", Port: 546}}),
+		[]config.ServerPort{{IP: "10.96.0.12", Port: 546}}),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",
 	func(clusterType, metadataAddr, metadataPort, ifacePrefixes interface{}, expected bool) {
-		c := New()
+		c := config.New()
 		values := make(map[string]string)
 		if clusterType != nil {
 			values["ClusterType"] = clusterType.(string)
@@ -634,7 +634,7 @@ var _ = DescribeTable("OpenStack heuristic tests",
 		if ifacePrefixes != nil {
 			values["InterfacePrefix"] = ifacePrefixes.(string)
 		}
-		_, err := c.UpdateFrom(values, EnvironmentVariable)
+		_, err := c.UpdateFrom(values, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.OpenstackActive()).To(Equal(expected))
 	},
@@ -659,10 +659,10 @@ var _ = DescribeTable("OpenStack heuristic tests",
 )
 
 var _ = Describe("DatastoreConfig tests", func() {
-	var c *Config
+	var c *config.Config
 	Describe("with IPIP enabled", func() {
 		BeforeEach(func() {
-			c = New()
+			c = config.New()
 			c.DatastoreType = "k8s"
 			c.IpInIpEnabled = true
 		})
@@ -672,7 +672,7 @@ var _ = Describe("DatastoreConfig tests", func() {
 	})
 	Describe("with IPIP disabled", func() {
 		BeforeEach(func() {
-			c = New()
+			c = config.New()
 			c.DatastoreType = "k8s"
 			c.IpInIpEnabled = false
 		})
@@ -683,7 +683,7 @@ var _ = Describe("DatastoreConfig tests", func() {
 
 	Describe("with the configuration set only from the common calico configuration", func() {
 		BeforeEach(func() {
-			c = New()
+			c = config.New()
 			c.SetLoadClientConfigFromEnvironmentFunction(func() (*apiconfig.CalicoAPIConfig, error) {
 				return &apiconfig.CalicoAPIConfig{
 					Spec: apiconfig.CalicoAPIConfigSpec{
@@ -709,13 +709,13 @@ var _ = Describe("DatastoreConfig tests", func() {
 	})
 	Describe("without setting the DatastoreType and setting the etcdv3 suboptions through the felix configuration", func() {
 		BeforeEach(func() {
-			c = New()
+			c = config.New()
 			_, err := c.UpdateFrom(map[string]string{
 				"EtcdEndpoints": "http://localhost:1234",
 				"EtcdKeyFile":   testutils.TestDataFile("etcdkeyfile.key"),
 				"EtcdCertFile":  testutils.TestDataFile("etcdcertfile.cert"),
 				"EtcdCaFile":    testutils.TestDataFile("etcdcacertfile.cert"),
-			}, EnvironmentVariable)
+			}, config.EnvironmentVariable)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("sets the etcd suboptions", func() {
@@ -729,7 +729,7 @@ var _ = Describe("DatastoreConfig tests", func() {
 	})
 	Describe("with the configuration set from the common calico configuration and the felix configuration", func() {
 		BeforeEach(func() {
-			c = New()
+			c = config.New()
 
 			c.SetLoadClientConfigFromEnvironmentFunction(func() (*apiconfig.CalicoAPIConfig, error) {
 				return &apiconfig.CalicoAPIConfig{
@@ -751,7 +751,7 @@ var _ = Describe("DatastoreConfig tests", func() {
 				"EtcdKeyFile":   testutils.TestDataFile("etcdkeyfile.key"),
 				"EtcdCertFile":  testutils.TestDataFile("etcdcertfile.cert"),
 				"EtcdCaFile":    testutils.TestDataFile("etcdcacertfile.cert"),
-			}, EnvironmentVariable)
+			}, config.EnvironmentVariable)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		It("sets the configuration to what the felix configuration is", func() {
@@ -767,8 +767,8 @@ var _ = Describe("DatastoreConfig tests", func() {
 
 var _ = DescribeTable("Config validation",
 	func(settings map[string]string, ok bool) {
-		cfg := New()
-		_, err := cfg.UpdateFrom(settings, ConfigFile)
+		cfg := config.New()
+		_, err := cfg.UpdateFrom(settings, config.ConfigFile)
 		log.WithError(err).Info("UpdateFrom result")
 		if err == nil {
 			err = cfg.Validate()
@@ -837,8 +837,8 @@ var _ = DescribeTable("Config validation",
 
 var _ = DescribeTable("Config InterfaceExclude",
 	func(excludeList string, expected []*regexp.Regexp) {
-		cfg := New()
-		_, err := cfg.UpdateFrom(map[string]string{"InterfaceExclude": excludeList}, EnvironmentVariable)
+		cfg := config.New()
+		_, err := cfg.UpdateFrom(map[string]string{"InterfaceExclude": excludeList}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		regexps := cfg.InterfaceExclude
 		Expect(regexps).To(Equal(expected))
@@ -875,13 +875,13 @@ var _ = DescribeTable("Config InterfaceExclude",
 )
 
 var _ = Describe("IPSec PSK parameters test", func() {
-	var c *Config
+	var c *config.Config
 	psk := "pre-shared-key"
 	pskFile := "./tmp-psk-file-ut"
 
 	Describe("with IPSec PSK File", func() {
 		BeforeEach(func() {
-			c = New()
+			c = config.New()
 			err := ioutil.WriteFile(pskFile, []byte(psk), 0600)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -911,11 +911,11 @@ var _ = Describe("IPSec PSK parameters test", func() {
 	})
 
 	It("should ignore IPIP params if IPsec is turned on", func() {
-		cfg := New()
+		cfg := config.New()
 		_, err := cfg.UpdateFrom(map[string]string{
 			"IpInIpEnabled":    "true",
 			"IpInIpTunnelAddr": "10.0.0.1",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.IpInIpTunnelAddr.String()).To(Equal("10.0.0.1"))
 		Expect(cfg.IpInIpEnabled).To(BeTrue())
@@ -924,7 +924,7 @@ var _ = Describe("IPSec PSK parameters test", func() {
 
 		_, err = cfg.UpdateFrom(map[string]string{
 			"IPSecMode": "PSK",
-		}, DatastoreGlobal)
+		}, config.DatastoreGlobal)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.IpInIpTunnelAddr).To(BeNil())
 		Expect(cfg.IpInIpEnabled).To(BeFalse())
@@ -935,8 +935,8 @@ var _ = Describe("IPSec PSK parameters test", func() {
 
 var _ = DescribeTable("CloudWatchLogs config validation",
 	func(settings map[string]string, ok bool) {
-		cfg := New()
-		cfg.UpdateFrom(settings, ConfigFile)
+		cfg := config.New()
+		cfg.UpdateFrom(settings, config.ConfigFile)
 		err := cfg.Validate()
 		log.WithError(err).Info("Validation result")
 		if !ok {
@@ -967,15 +967,15 @@ var _ = DescribeTable("CloudWatchLogs config validation",
 )
 
 var _ = Describe("CloudWatch deprecated config fields", func() {
-	var c *Config
+	var c *config.Config
 
 	BeforeEach(func() {
-		c = New()
+		c = config.New()
 	})
 
 	It("should preferentially take the value of FlowLogsFlushInterval over CloudWatchLogsFlushInterval", func() {
 		By("setting no values and default value of FlowLogsFlushInterval is used")
-		_, err := c.UpdateFrom(map[string]string{}, EnvironmentVariable)
+		_, err := c.UpdateFrom(map[string]string{}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsFlushInterval).To(Equal(300 * time.Second))
 		Expect(c.FlowLogsFlushInterval).To(Equal(300 * time.Second))
@@ -983,7 +983,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting CloudWatchLogsFlushInterval and checking that value is used")
 		changed, err := c.UpdateFrom(map[string]string{
 			"CloudWatchLogsFlushInterval": "800",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsFlushInterval).To(Equal(800 * time.Second))
 		Expect(c.FlowLogsFlushInterval).To(Equal(800 * time.Second))
@@ -992,7 +992,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting both FlowLogsFlushInterval and checking for FlowLogsFlushInterval value")
 		changed, err = c.UpdateFrom(map[string]string{
 			"FlowLogsFlushInterval": "600",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsFlushInterval).To(Equal(600 * time.Second))
 		Expect(c.FlowLogsFlushInterval).To(Equal(600 * time.Second))
@@ -1002,7 +1002,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		changed, err = c.UpdateFrom(map[string]string{
 			"CloudWatchLogsFlushInterval": "500",
 			"FlowLogsFlushInterval":       "600",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsFlushInterval).To(Equal(600 * time.Second))
 		Expect(c.FlowLogsFlushInterval).To(Equal(600 * time.Second))
@@ -1012,7 +1012,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		changed, err = c.UpdateFrom(map[string]string{
 			"CloudWatchLogsFlushInterval": "600",
 			"FlowLogsFlushInterval":       "500",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsFlushInterval).To(Equal(500 * time.Second))
 		Expect(c.FlowLogsFlushInterval).To(Equal(500 * time.Second))
@@ -1021,7 +1021,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 
 	It("should combine the value of CloudWatchLogsEnableHostEndpoint and FlowLogsEnableHostEndpoint", func() {
 		By("setting no values and default value of FlowLogsEnableHostEndpoint is used")
-		_, err := c.UpdateFrom(map[string]string{}, EnvironmentVariable)
+		_, err := c.UpdateFrom(map[string]string{}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
 		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
@@ -1029,7 +1029,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting CloudWatchLogsEnableHostEndpoint to true and checking value is now true")
 		changed, err := c.UpdateFrom(map[string]string{
 			"CloudWatchLogsEnableHostEndpoint": "true",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
 		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
@@ -1038,7 +1038,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting CloudWatchLogsEnableHostEndpoint to false and checking value is now false")
 		changed, err = c.UpdateFrom(map[string]string{
 			"CloudWatchLogsEnableHostEndpoint": "false",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
 		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
@@ -1047,7 +1047,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting FlowLogsEnableHostEndpoint to true and checking value is now true")
 		changed, err = c.UpdateFrom(map[string]string{
 			"FlowLogsEnableHostEndpoint": "true",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
 		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
@@ -1056,7 +1056,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting CloudWatchLogsEnableHostEndpoint to true and checking value is still true")
 		changed, err = c.UpdateFrom(map[string]string{
 			"CloudWatchLogsEnableHostEndpoint": "true",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
 		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
@@ -1065,7 +1065,7 @@ var _ = Describe("CloudWatch deprecated config fields", func() {
 		By("setting FlowLogsEnableHostEndpoint to false and checking value is now false")
 		changed, err = c.UpdateFrom(map[string]string{
 			"FlowLogsEnableHostEndpoint": "false",
-		}, EnvironmentVariable)
+		}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
 		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
