@@ -19,16 +19,16 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/encap"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -40,6 +40,8 @@ import (
 
 // Kubernetes will have a profile for each of the namespaces that is configured.
 // We expect:  default, kube-system, kube-public, namespace-1, namespace-2, kube-node-lease.
+// We could also get k8s services and endpoints, but tests that use this set of resources
+// will either need filter them out or disclude them in the syncer configuration.
 func defaultKubernetesResource() []model.KVPair {
 	var out []model.KVPair
 	// Add resources for the namespaces we expect in the cluster.
@@ -179,7 +181,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 
 	Describe("Felix syncer functionality", func() {
 		It("should receive the synced after return all current data", func() {
-			syncer := felixsyncer.New(be, config.Spec, syncTester, true)
+			syncer := felixsyncer.New(be, config.Spec, syncTester, false, true)
 			syncer.Start()
 			expectedCacheSize := 0
 
@@ -641,7 +643,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			// We need to create a new syncTester and syncer.
 			current := syncTester.GetCacheEntries()
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, true)
+			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
 			syncer.Start()
 
 			// Verify the data is the same as the data from the previous cache.  We got the cache in the previous
@@ -680,7 +682,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (KDD only)", testutil
 
 	It("should handle IPAM blocks properly for host-local IPAM", func() {
 		config.Spec.K8sUsePodCIDR = true
-		syncer := felixsyncer.New(be, config.Spec, syncTester, true)
+		syncer := felixsyncer.New(be, config.Spec, syncTester, false, true)
 		syncer.Start()
 
 		// Verify we start a resync.
@@ -719,7 +721,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (passive mode)", test
 	})
 
 	It("should only receive config updates when in passive mode", func() {
-		syncer := felixsyncer.New(be, config.Spec, syncTester, false)
+		syncer := felixsyncer.New(be, config.Spec, syncTester, false, false)
 		syncer.Start()
 
 		// Verify we start a resync.

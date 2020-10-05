@@ -346,7 +346,7 @@ func CreateClientAndSyncer(cfg apiconfig.KubeConfig) (*k8s.KubeClient, *cb, api.
 		Lock:       &sync.Mutex{},
 		updateChan: updateChan,
 	}
-	syncer := felixsyncer.New(c, caCfg, callback, true)
+	syncer := felixsyncer.New(c, caCfg, callback, false, true)
 	return c.(*k8s.KubeClient), &callback, syncer
 }
 

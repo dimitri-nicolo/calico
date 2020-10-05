@@ -46,7 +46,8 @@ func commonSanitizer(callersUpdate *api.Update) *api.Update {
 
 	// We expect two kinds of `model.Resource` over the Felix syncer:
 	// Nodes and Profiles.  We don't care about anything more than the
-	// spec.
+	// spec.  We could also get k8s services and endpoints, but tests that use this commonSanitizer
+	// will either need filter out these resources, or disclude them in the syncer configuration.
 	switch key := u.KVPair.Key.(type) {
 	case model.ResourceKey:
 		log.Infof("model.ResourceKey = %v", key)
@@ -127,7 +128,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, true)
+			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -270,7 +271,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, true)
+			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -383,7 +384,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, config.Spec, syncTester, true)
+			syncer = felixsyncer.New(be, config.Spec, syncTester, false, true)
 			syncer.Start()
 
 			By("Checking status is updated to resync in progress")
@@ -694,7 +695,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 
 				By("Creating and starting a syncer")
 				syncTester = testutils.NewSyncerTester()
-				syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, true)
+				syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
 				syncer.Start()
 
 				By("Checking status is updated to sync'd at start of day")
@@ -770,7 +771,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 			BeforeEach(func() {
 				By("Creating and starting a syncer")
 				syncTester = testutils.NewSyncerTester()
-				syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, true)
+				syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
 				syncer.Start()
 
 				By("Checking status is updated to sync'd at start of day")
@@ -924,7 +925,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 					restartCallbackCalled = true
 					restartCallbackMsg = reason
 				})
-				syncer = felixsyncer.New(localBackend, localConfig.Spec, restartMonitor, true)
+				syncer = felixsyncer.New(localBackend, localConfig.Spec, restartMonitor, false, true)
 				syncer.Start()
 
 				By("Checking status is updated to sync'd at start of day")
@@ -1366,7 +1367,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 						syncTester = testutils.NewSyncerTester()
 
 						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, true)
+						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
 						defer os.Unsetenv("KUBERNETES_MASTER")
 						syncer.Start()
 
@@ -1410,7 +1411,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 						syncTester = testutils.NewSyncerTester()
 
 						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, true)
+						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
 						defer os.Unsetenv("KUBERNETES_MASTER")
 						syncer.Start()
 
@@ -1432,7 +1433,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 						syncTester = testutils.NewSyncerTester()
 
 						os.Setenv("KUBERNETES_MASTER", k8sConfig.Spec.K8sAPIEndpoint)
-						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, true)
+						syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester, false, true)
 						defer os.Unsetenv("KUBERNETES_MASTER")
 						syncer.Start()
 
