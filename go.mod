@@ -16,7 +16,7 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/golang/protobuf v1.4.2
-	github.com/google/gopacket v1.1.17
+	github.com/google/gopacket v1.1.18
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/gophercloud/gophercloud v0.4.0 // indirect
@@ -68,8 +68,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200924131826-5c5f99461e0c
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20200924133416-b5139952b4bc
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201006011052-870eb72b48d5
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/vishvananda/netlink => github.com/tigera/netlink v0.0.0-20180628131144-3fd955dd6320
 
