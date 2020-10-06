@@ -72,7 +72,7 @@ blocks:
       jobs:
         - name: Foss Checks
           commands:
-            - if [ -z "${PULL_REQUEST_NUMBER}" ]; then make foss-checks; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make foss-checks; fi
 
   - name: 'Push Images (non-PR builds only)'
     dependencies: ["UTs", "FVs", "Foss Checks"]
