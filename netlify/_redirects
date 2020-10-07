@@ -3,6 +3,7 @@
 /latest/* /:splat 301
 
 # forcing the /version since it results in going back to root or 404
+/v3.3 /v3.3/about/about-calico-enterprise/ 301
 /v3.2 /v3.2/introduction/ 301
 /v3.1 /v3.1/introduction/ 301
 /v3.0 /v3.0/introduction/ 301
@@ -14,4 +15,4 @@
 /v2.3 /v2.3/introduction/ 301
 /v2.2 /v2.2/introduction/ 301
 /v2.1 /v2.1/introduction/ 301
-/master /master/introduction/ 301
+/master /master/about/about-calico-enterprise/ 301
