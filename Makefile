@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/apiserver
-GO_BUILD_VER    ?= v0.45
+GO_BUILD_VER    ?= v0.47
 GOMOD_VENDOR    := true
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = lint-cache-dir vendor goimports
@@ -9,6 +9,11 @@ LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
+
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
+
+# Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
+SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_LMA_PROJECT_ID) $(SEMAPHORE_COMPLIANCE_PROJECT_ID) $(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID)
 
 build: image
 
@@ -418,8 +423,10 @@ fv-kdd: vendor/.up-to-date run-kubernetes-server hack-lib
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-hack-lib
-	rm -rf vendor/
-	rm -rf .lint-cache
+	rm -rf vendor \
+		   .lint-cache \
+		   Makefile.common*
+
 clean-build-image:
 	docker rmi -f tigera/cnx-apiserver > /dev/null 2>&1 || true
 
