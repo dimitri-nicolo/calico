@@ -771,8 +771,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZGmS0R0G2V6lLTawuNLmYXOhgBn8K7qClxJjj7A9A=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
-github.com/tigera/apiserver v0.0.0-20201007173900-a6df2352584b h1:8OwAkpjcYeSbMreMT6Ap5Wembf7UCTTVPmQsClUxRBI=
-github.com/tigera/apiserver v0.0.0-20201007173900-a6df2352584b/go.mod h1:K6rwySjuJrM+ujlmJ/4ODC2c2lsSS9iLf/OVcPE5gHM=
+github.com/tigera/apiserver v0.0.0-20201007181940-f3ac5c08450f h1:VCjVVJUjVUTHJybgJOTTczCOYf5ts5uBDX8Rul018Fk=
+github.com/tigera/apiserver v0.0.0-20201007181940-f3ac5c08450f/go.mod h1:+YaePcHze+7EVUD56uH+LGbAme0TkABo1A8NKpo7GQo=
 github.com/tigera/compliance v0.0.0-20201007180436-2db906b3af8e h1:CtTcusE8DVdi+NjCPgN5H72+DtS5YOjVGZTlE450k/c=
 github.com/tigera/compliance v0.0.0-20201007180436-2db906b3af8e/go.mod h1:hY9VWX+s4VNR4SGaxpyJ5KfU9uQxqB0Ad6S/OS5eUAA=
 github.com/tigera/felix-private v0.0.0-20201006200045-211001baed56 h1:K+7unvXq0WrFs8aJWbLQ5WSLmQI9MPfWKHLDbw1Jf8k=
@@ -781,8 +781,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1 h1:g
 github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1/go.mod h1:tots0PLC1yjgvKhTIHhnXW8JtFt5GhVDogynKRMa+Wg=
 github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028 h1:JWiqSKp2VJAVpPnrQrG/K/BGFobkveICtcVU39ECSK0=
 github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
-github.com/tigera/lma v0.0.0-20201007173206-d3a3e8af345a h1:04u0TZNIBzhhYyh00nr0SIAP0h9k4atnLOjoEEIDAgc=
-github.com/tigera/lma v0.0.0-20201007173206-d3a3e8af345a/go.mod h1:eHBGgNsSRRuzhDbAnO1IVywGJhyHqvSTCG1OqL4ghOI=
+github.com/tigera/lma v0.0.0-20201007183014-cdc2c0786ae0 h1:OlODBci2zX6nl6dMMp+z2QBq6V0s4jPGUIueoJNgGoU=
+github.com/tigera/lma v0.0.0-20201007183014-cdc2c0786ae0/go.mod h1:E2/Cf/MdZP1chF28BB7K2C2Nkd1Y3LcwQMQMy1PHB1k=
 github.com/tigera/nfnetlink v0.0.0-20200924132602-36c9ad9d6392/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20201006011052-870eb72b48d5/go.mod h1:BROTX4zHZeiO3nG0t2tKByvXrbVBvwNbjFD4x5zNAX8=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec h1:AmoEvWAO3nDx1MEcMzPh+GzOOIA5Znpv6++c7bePPY0=
