@@ -1,10 +1,15 @@
 PACKAGE_NAME            ?= github.com/tigera/compliance
-GO_BUILD_VER            ?= v0.45
+GO_BUILD_VER            ?= v0.47
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
 LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
 FELIX_REPO               = github.com/tigera/felix-private
 TYPHA_REPO               = github.com/tigera/typha-private
+
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_COMPLIANCE_PROJECT_ID)
+
+# Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
+SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID)
 
 build: ut
 
@@ -116,7 +121,8 @@ clean:
 	       tmp/kube-bench \
 	       release-notes-* \
 	       .go-pkg-cache \
-	       vendor
+	       vendor \
+	       Makefile.common*
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
@@ -604,7 +610,7 @@ check-dirty: undo-go-sum
 	fi
 
 ## Deploys images to registry
-cd: check-dirty
+cd: check-dirty images-all
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
