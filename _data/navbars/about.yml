@@ -3,15 +3,15 @@ description: /about/
 path: /about/
 order: 0
 section:
-- title: Calico Enterprise
-  path: /about/about-calico-enterprise
-- title: Networking
-  path: /about/about-networking
-- title: Kubernetes Networking
-  path: /about/about-kubernetes-networking
-- title: Network Policy
-  path: /about/about-network-policy
-- title: Kubernetes Services
-  path: /about/about-kubernetes-services
-- title: Kubernetes Ingress
-  path: /about/about-kubernetes-ingress
+  - title: Adopt a zero trust network model for security
+    path: /security/adopt-zero-trust   
+  - title: Networking
+    path: /about/about-networking
+  - title: Kubernetes Networking
+    path: /about/about-kubernetes-networking
+  - title: Network Policy
+    path: /about/about-network-policy
+  - title: Kubernetes Services
+    path: /about/about-kubernetes-services
+  - title: Kubernetes Ingress
+    path: /about/about-kubernetes-ingress

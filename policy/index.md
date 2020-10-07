@@ -1,6 +1,7 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+title: Policy
+description: Learn all about Calico Enterprise policy including policy lifecycle and automation.
+canonical_url: '/policy/index'
 show_read_time: false
 show_toc: false
 ---

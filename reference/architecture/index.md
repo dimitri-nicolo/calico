@@ -1,6 +1,7 @@
 ---
 title: Architecture
-description: Understand Calico components, network design, and the data path between workloads.
+description: Calico Enterprise component architecture diagram, network design, and the data path between workloads.
+canonical_url: '/reference/architecture/index'
 show_read_time: false
 show_toc: false
 ---

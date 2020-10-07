@@ -1,6 +1,7 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+title: Visibility
+description: Visibility into all network fraffic with Kubernetes context.
+canonical_url: '/visibility/index'
 show_read_time: false
 show_toc: false
 ---

@@ -1,6 +1,6 @@
 ---
-title: Encrypt in-cluster pod traffic
-description: Enable WireGuard for state-of-the-art encryption between pods for Calico Enterprise clusters.
+title: Encrypt data in transit
+description: Enable WireGuard for state-of-the-art cryptographic security between pods for Calico clusters.
 ---
 
 ### Big picture

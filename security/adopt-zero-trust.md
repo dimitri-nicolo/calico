@@ -1,5 +1,7 @@
 ---
 title: Adopt a zero trust network model for security
+description: Adopt a zero trust network model to secure workloads and hosts in your cloud-native strategy.
+canonical_url: '/security/adopt-zero-trust'
 ---
 
 ### Big picture

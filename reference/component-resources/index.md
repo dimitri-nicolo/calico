@@ -1,6 +1,7 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+title: Component resources
+description: Reference content for Calico Enterprise component resources.
+canonical_url: '/reference/component-resources/index'
 show_read_time: false
 show_toc: false
 ---

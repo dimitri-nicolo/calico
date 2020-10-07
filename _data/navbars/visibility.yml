@@ -1,0 +1,42 @@
+title: "Troubleshooting and visibility"
+path: /visibility/
+order: 4
+section:  
+- title: Alerts
+  path: /security/threat-detection-and-prevention/alerts
+- title: Packet capture
+  path: /security/threat-detection-and-prevention/packetcapture  
+- title: Elasticsearch logs
+  path: /security/logs/elastic/
+  section:
+  - title: Overview
+    path: /security/logs/elastic/overview
+  - title: Configure RBAC for Elasticsearch logs and events
+    path: /security/logs/rbac-elasticsearch
+  - title: Access Elasticsearch logs
+    path: /security/logs/elastic/view
+  - title: Configure flow logs
+    path: /security/logs/elastic/
+    section: 
+    - title: Flow log data types
+      path: /security/logs/elastic/datatypes
+    - title: Filter flow logs
+      path: /security/logs/elastic/filtering
+    - title: Flow log aggregation
+      path: /security/logs/elastic/aggregation  
+  - title: Audit logs
+    path: /security/logs/elastic/ee-audit
+  - title: DNS logs
+    path: /security/logs/elastic/dns
+  - title: Filter DNS logs
+    path: /security/logs/elastic/filtering-dns  
+  - title: BGP logs
+    path: /security/logs/elastic/bgp
+  - title: Configure data retention
+    path: /security/logs/retention
+  - title: Archive logs
+    path: /security/logs/elastic/archive-storage
+- title: iptables logs
+  path: /security/logs/iptables
+- title: Troubleshoot Elasticsearch
+  path: /maintenance/troubleshoot/elasticsearch

@@ -1,5 +1,5 @@
 ---
-title: Tor-VPN feeds and Dashboard 
+title: Anonymization attacks
 description: Detect and analyse malicious anonymization activity using Tor-VPN feeds.
 canonical_url: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard
 ---
@@ -72,4 +72,4 @@ In this section we will look at how to add Tor and VPN feeds to {{site.prodname}
 ### Above and beyond
 
 * See [GlobalThreatFeed]({{site.baseurl}}/reference/resources/globalthreatfeed) resource definition for all configuration options.
-* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-IPs)
+* Check example to Trace and block Suspicious IPs [Here]({{site.baseurl}}/security/threat-detection-and-prevention/suspicious-ips)

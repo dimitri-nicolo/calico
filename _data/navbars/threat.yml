@@ -1,0 +1,25 @@
+title: "Threat defense"
+path: /threat/
+order: 6
+section:
+- title: Anomaly detection
+  path: /security/threat-detection-and-prevention/anomaly-detection/
+  section:
+  - title: Overview
+    path: /security/threat-detection-and-prevention/anomaly-detection/overview
+  - title: Enable anomaly detection
+    path: /security/threat-detection-and-prevention/anomaly-detection/enabling
+  - title: View anomalies
+    path: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
+  - title: Anomaly detection job descriptions
+    path: /security/threat-detection-and-prevention/anomaly-detection/job-descriptions
+  - title: Customize anomaly detection jobs
+    path: /security/threat-detection-and-prevention/anomaly-detection/customizing
+- title: Suspicious IPs
+  path: /security/threat-detection-and-prevention/suspicious-ips
+- title: Suspicious domains
+  path: /security/threat-detection-and-prevention/suspicious-domains
+- title: External IP addresses that access clusters
+  path: /security/ingress
+- title: Anonymization attacks  
+  path: /security/threat-detection-and-prevention/tor-vpn-feed-and-dashboard

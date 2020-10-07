@@ -1,26 +1,22 @@
-title: "Install Calico Enterprise"
+title: "Install and upgrade"
 path: /getting-started/
 order: 1
-section:
-- title: Kubernetes
-  path: /getting-started/kubernetes/
+section: 
+- title: Install on clusters
+  path: /getting-started/install-on-clusters/ 
   section:
-  - title: Quickstart
-    path: /getting-started/kubernetes/quickstart
-  - title: Options for installing Calico Enterprise
-    path: /getting-started/options-install  
-  - title: Managed public cloud
-    path: /getting-started/kubernetes/managed-public-cloud/
+  - title: OpenShift
+    path: /getting-started/openshift/
     section:
-    - title: Amazon Elastic Kubernetes Service (EKS)
-      path: /getting-started/kubernetes/managed-public-cloud/eks
-    - title: Google Kubernetes Engine (GKE)
-      path: /getting-started/kubernetes/managed-public-cloud/gke
-    - title: Microsoft Azure Kubernetes Service (AKS)
-      path: /getting-started/kubernetes/managed-public-cloud/aks
-  - title: Self-managed
-    path: /getting-started/kubernetes/self-managed-on-prem/
+    - title: System requirements
+      path: /getting-started/openshift/requirements
+    - title: Installation
+      path: /getting-started/openshift/installation/ 
+  - title: Kubernetes
+    path: /getting-started/kubernetes/
     section:
+    - title: Options for installing Calico Enterprise
+      path: /getting-started/options-install  
     - title: Standard
       path: /getting-started/kubernetes/self-managed-on-prem/generic-install
     - title: Docker Enterprise
@@ -29,49 +25,26 @@ section:
       path: /getting-started/kubernetes/self-managed-on-prem/helm
     - title: Rancher Kubernetes Engine
       path: /getting-started/kubernetes/self-managed-on-prem/rancher
-  - title: OpenShift
-    path: /getting-started/openshift/
-    section:
-    - title: System requirements
-      path: /getting-started/openshift/requirements
-    - title: Installation
-      path: /getting-started/openshift/installation/
-  - title: Calico Enterprise for Windows
-    path: /getting-started/windows-calico/
-    section:
-    - title: Limitations and known issues
-      path: /getting-started/windows-calico/limitations
-    - title: Quickstart
-      path: /getting-started/windows-calico/quickstart
-    - title: Basic policy demo
-      path: /getting-started/windows-calico/demo
-    - title: Standard install
-      path: /getting-started/windows-calico/requirements
-      section:
-      - title: Requirements
-        path: /getting-started/windows-calico/requirements
-      - title: Install Calico Enterprise for Windows
-        path: /getting-started/windows-calico/standard
-    - title: Create kubeconfig for Windows nodes
-      path: /getting-started/windows-calico/kubeconfig
-    - title: Start and stop Calico Enterprise for Windows services
-      path: /getting-started/windows-calico/maintain
-    - title: Troubleshoot Calico Enterprise for Windows
-      path: /getting-started/windows-calico/troubleshoot  
+  - title: AKS 
+    path: /getting-started/kubernetes/managed-public-cloud/aks
+  - title: EKS 
+    path: /getting-started/kubernetes/managed-public-cloud/eks
+  - title: GKE
+    path: /getting-started/kubernetes/managed-public-cloud/gke
+  - title: Quickstart
+    path: /getting-started/kubernetes/quickstart 
   - title: Install from a private registry
     path: /getting-started/private-registry/
     section:
-      - title: Install using default directories
-        path: /getting-started/private-registry/private-registry-regular
-      - title: Install using custom directories
-        path: /getting-started/private-registry/private-registry-image-path
-  - title: Configure storage for logs and reports
-    path: /getting-started/create-storage
+    - title: Install using default directories
+      path: /getting-started/private-registry/private-registry-regular
+    - title: Install using custom directories
+      path: /getting-started/private-registry/private-registry-image-path
   - title: Get a license
     path: /getting-started/calico-enterprise
   - title: System requirements
-    path: /getting-started/kubernetes/requirements
-- title: Non-cluster hosts
+    path: /getting-started/kubernetes/requirements 
+- title: Install on non-cluster hosts
   path: /getting-started/bare-metal/
   section:
   - title: About non-cluster hosts
@@ -85,11 +58,41 @@ section:
       path: /getting-started/bare-metal/installation/container
     - title: Binary install
       path: /getting-started/bare-metal/installation/binary
-
-- title: Calico Enterprise Manager user interface
-  path: /getting-started/cnx/
+- title: Calico Enterprise for Windows
+  path: /getting-started/windows-calico/
   section:
-  - title: Configure access to Calico Enterprise Manager
-    path: /getting-started/cnx/access-the-manager
-  - title: Configure user authentication and log in
-    path: /getting-started/cnx/create-user-login
+  - title: Limitations and known issues
+    path: /getting-started/windows-calico/limitations
+  - title: Quickstart
+    path: /getting-started/windows-calico/quickstart
+  - title: Basic policy demo
+    path: /getting-started/windows-calico/demo
+  - title: Standard install
+    path: /getting-started/windows-calico/standard
+    section:
+    - title: Requirements
+      path: /getting-started/windows-calico/requirements
+    - title: Install Calico Enterprise for Windows
+      path: /getting-started/windows-calico/standard
+  - title: Create kubeconfig for Windows nodes
+    path: /getting-started/windows-calico/kubeconfig
+  - title: Start and stop Calico Enterprise for Windows services
+    path: /getting-started/windows-calico/maintain
+  - title: Troubleshoot Calico Enterprise for Windows
+    path: /getting-started/windows-calico/troubleshoot
+- title: Upgrade
+  path: /maintenance/upgrading
+  section:
+  - title: OpenShift
+    path: /maintenance/openshift-upgrade
+  - title: Kubernetes
+    path: /maintenance/kubernetes-upgrade-tsee/
+    section:
+    - title: Operator upgrade
+      path: /maintenance/kubernetes-upgrade-tsee/operator
+    - title: Helm
+      path: /maintenance/helm-upgrade-tsee
+  - title: Upgrade from Calico to Calico Enterprise
+    path: /maintenance/upgrade-to-tsee  
+- title: Install a patch release
+  path: /maintenance/manifest-archive

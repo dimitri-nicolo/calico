@@ -1,6 +1,7 @@
 ---
-title: Federated endpoint identity and services
-description: Steps to configure federation for clusters and cross-cluster service discovery.
+title: Calico Enterprise node (cnx-node)
+description: Learn about the components that comprise the cnx-node.
+canonical_url: '/reference/node/index'
 show_read_time: false
 show_toc: false
 ---
