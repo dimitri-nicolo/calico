@@ -1,10 +1,12 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
-GO_BUILD_VER    ?= v0.45
+GO_BUILD_VER    ?= v0.47
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 FELIX_REPO       = github.com/tigera/felix-private
 TYPHA_REPO       = github.com/tigera/typha-private
 LOCAL_CHECKS     = mod-download
+
+SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_ES_PROXY_IMAGE_PROJECT_ID)
 
 build: es-proxy
 
@@ -214,7 +216,7 @@ fv-no-setup:
 .PHONY: clean
 clean:
 	-docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1
-	-rm -rf $(BINDIR) .go-pkg-cache
+	-rm -rf $(BINDIR) .go-pkg-cache Makefile.common*
 
 
 .PHONY: signpost
@@ -254,7 +256,7 @@ check-dirty: undo-go-sum
 	fi
 
 ## Deploys images to registry
-cd: check-dirty
+cd: check-dirty image-all
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif

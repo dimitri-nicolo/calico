@@ -1,4 +1,6 @@
-.*
+.go-build-cache
+.go-pkg-cache
+.idea
 *.tar
 report
 cmd/server/server
