@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -33,27 +34,35 @@ type Authenticator interface {
 	Authenticate(token string) (user.Info, int, error)
 }
 
-// Return an authenticator that is made from either environment flags or files present on the drive.
-
-// We do not reuse a calico client and instead make a separate client. The reason for this is that the authentication
-// is based on the authorization header. If you were to use the calico client, you would have to make a new client
-// config for each incoming header and add logic to separate the basic and the token header again.
-func ConfigureAuthenticator() (Authenticator, error) {
+// New creates and returns an implementation of the Authenticator, creating the necessary rest.Config from the path defined
+// in the ENV variable KUBECONFIG. If KUBECONFIG is not defined, the default behaviour of clientcmd.BuildConfigFromFlags
+// is used.
+func New() (Authenticator, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		return nil, errors.New("unable to configure an authn client")
 	}
 
+	return NewWithConfig(config)
+}
+
+// NewWithConfig creates a new Authenticator using the given rest.Config.
+//
+// Note that rest.Config is used solely to get the cluster URI and a transport for the cluster to create an http client
+// that can communicate with the kubernetes API.
+func NewWithConfig(config *rest.Config) (Authenticator, error) {
 	transport, err := rest.TransportFor(config)
 	if err != nil {
-		return nil, errors.New("unable to create transport for authn client")
+		return nil, fmt.Errorf("failed to extract the transport from the rest config: %w", err)
 	}
 
 	uri, err := url.Parse(config.Host)
 	if err != nil {
-		return nil, errors.New("unable to determine configure the address of the api-server")
+		return nil, fmt.Errorf("failed to parse host address: %w", err)
 	}
+
 	uri.Path = authenticationURI
+
 	return &authenticator{
 		client: &http.Client{
 			Transport: transport,
