@@ -187,6 +187,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetList":                        schema_libcalico_go_lib_apis_v3_NetworkSetList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec":                        schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                                  schema_libcalico_go_lib_apis_v3_Node(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress":                           schema_libcalico_go_lib_apis_v3_NodeAddress(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":                           schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeControllerConfig":                  schema_libcalico_go_lib_apis_v3_NodeControllerConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                              schema_libcalico_go_lib_apis_v3_NodeList(ref),
@@ -5840,6 +5841,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"flowLogsFileIncludeService": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsFileIncludeService is used to configure if the destination service is included in a Flow log entry written to file. The service information can only be included if the flow was explicitly determined to be directed at the service (e.g. when the pre-DNAT destination corresponds to the service ClusterIP and port).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"flowLogsFileAggregationKindForAllowed": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
@@ -5969,6 +5977,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Description: "Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs.  [Default: 0, meaning no limit]",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"dnsLogsLatency": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsLatency indicates to include measurements of DNS request/response latency in each DNS log. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"windowsNetworkName": {
@@ -9070,6 +9085,27 @@ func schema_libcalico_go_lib_apis_v3_Node(ref common.ReferenceCallback) common.O
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_NodeAddress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeAddress represents an address assigned to a node.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"address": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Address is a string representation of the actual address.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"address"},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -9245,11 +9281,24 @@ func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec"),
 						},
 					},
+					"addresses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Addresses list address that a client can reach the node at.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeAddress", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.NodeWireguardSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
 	}
 }
 
