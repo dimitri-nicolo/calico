@@ -36,7 +36,7 @@ def release():
 
     # replace index.html default version
     index_html = open('index.html').read()
-    index_html = index_html.replace('master/introduction', '%s/introduction' % new_version)
+    index_html = index_html.replace('master/about/about-calico-enterprise', '%s/about/about-calico-enterprise' % new_version)
     updated = open('index.html', 'w')
     updated.write(index_html)
     updated.close()
