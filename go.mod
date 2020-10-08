@@ -12,6 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.4.0
 	github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028
 	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
 	k8s.io/api v0.17.3
