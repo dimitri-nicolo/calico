@@ -435,11 +435,16 @@ guard-ssh-forwarding-bug:
 
 LMA_REPO=github.com/tigera/lma
 LMA_BRANCH=$(PIN_BRANCH)
+APISERVER_REPO=github.com/tigera/apiserver
+APISERVER_BRANCH=$(PIN_BRANCH)
 
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin
+update-apiserver-pin:
+	$(call update_pin,$(APISERVER_REPO),$(APISERVER_REPO),$(APISERVER_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin update-apiserver-pin
 ###############################################################################
 
 ###############################################################################

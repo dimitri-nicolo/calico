@@ -56,7 +56,7 @@ func MustGetRESTClient(config *config.Config) RESTClientFactory {
 	client := RESTClientHolder{}
 	client.multiClusterForwardingCA = config.MultiClusterForwardingCA
 	client.multiClusterForwardingEndpoint = config.MultiClusterForwardingEndpoint
-	authenticator, err := authentication.ConfigureAuthenticator()
+	authenticator, err := authentication.New()
 	if err != nil {
 		log.WithError(err).Panic("Unable to create auth configuration")
 	}
@@ -155,7 +155,7 @@ func (c *RESTClientHolder) mustAddCluster(clusterID, caPath, host string) {
 		log.WithError(err).Panic("Failed to load Calico client")
 	}
 
-	authenticator, err := authentication.ConfigureAuthenticator()
+	authenticator, err := authentication.New()
 	if err != nil {
 		log.WithError(err).Panic("Unable to create auth configuration")
 	}
