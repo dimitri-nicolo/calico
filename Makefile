@@ -522,11 +522,13 @@ endif
 .PHONY: ut-no-cover
 ut-no-cover: $(SRC_FILES)
 	@echo Running Go UTs without coverage.
+	export ELASTIC_URI=http://127.0.0.1:9200
 	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -r $(GINKGO_OPTIONS)
 
 .PHONY: ut-watch
 ut-watch: $(SRC_FILES)
 	@echo Watching go UTs for changes...
+	export ELASTIC_URI=http://127.0.0.1:9200
 	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo watch -r $(GINKGO_OPTIONS)
 
 # Launch a browser with Go coverage stats for the whole project.

@@ -10,20 +10,22 @@ blocks:
       jobs:
         - name: job
           commands:
-            - chmod 0600 ~/.keys/*
-            - ssh-add ~/.keys/*
-            - 'git config --global --add url."git@github.com:".insteadOf "https://github.com/"'
-            - checkout
-            - sudo apt-get update || true
-            - sudo apt-get -y --only-upgrade install google-cloud-sdk
-            - 'export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/secrets/gcp-registry-pusher-service-account.json}'
-            - 'gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"'
-            - gcloud auth configure-docker --quiet
-
-        - name: job2
-            - cd honeypod-controller
             - make ci
+        - name: 'job2 '
+          commands:
+            - make cd
       secrets:
         - name: marvin-github-ssh-private-key
         - name: gcp-registry-pusher-service-account
       env_vars: []
+      prologue:
+        commands:
+          - chmod 0600 ~/.keys/*
+          - ssh-add ~/.keys/*
+          - 'git config --global --add url."git@github.com:".insteadOf "https://github.com/"'
+          - sudo apt-get update || true
+          - sudo apt-get -y --only-upgrade install google-cloud-sdk
+          - 'export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/secrets/gcp-registry-pusher-service-account.json}'
+          - 'gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"'
+          - gcloud auth configure-docker --quiet
+          - checkout
