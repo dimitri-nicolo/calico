@@ -19,7 +19,10 @@ blocks:
             - 'export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/secrets/gcp-registry-pusher-service-account.json}'
             - 'gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"'
             - gcloud auth configure-docker --quiet
-            - make image run-elastic ut-no-cover tag-images push IMAGETAG=latest
+
+        - name: job2
+            - cd honeypod-controller
+            - make ci
       secrets:
         - name: marvin-github-ssh-private-key
         - name: gcp-registry-pusher-service-account
