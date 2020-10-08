@@ -581,8 +581,8 @@ github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZ
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
 github.com/tigera/apiserver v0.0.0-20201008163230-aba2eda177ed h1:Cn5h069mlkdh9Y4cG18Z5LVFUqp9/dHWz2f8xHMO8cQ=
 github.com/tigera/apiserver v0.0.0-20201008163230-aba2eda177ed/go.mod h1:BggIUsNFgyynMmAkmecsnMzc7BYCcwZRtWbIflIjp9g=
-github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1 h1:gNL5Jpeev60oTNQOLW/xlcp7zwjrNGNsgzRC52domgc=
-github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1/go.mod h1:tots0PLC1yjgvKhTIHhnXW8JtFt5GhVDogynKRMa+Wg=
+github.com/tigera/libcalico-go-private v1.7.2-0.20201008222938-a3b2b2cb7d37 h1:vzvDgiCld+O05KWGP3eSUGI/r6T4WQ3oMYo2QT7p5BU=
+github.com/tigera/libcalico-go-private v1.7.2-0.20201008222938-a3b2b2cb7d37/go.mod h1:tots0PLC1yjgvKhTIHhnXW8JtFt5GhVDogynKRMa+Wg=
 github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
 github.com/timakin/bodyclose v0.0.0-20190721030226-87058b9bfcec/go.mod h1:Qimiffbc6q9tBWlVV6x0P9sat/ao1xEkREYPPj9hphk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
