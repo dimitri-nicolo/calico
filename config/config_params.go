@@ -299,6 +299,7 @@ type Config struct {
 	FlowLogsFileMaxFileSizeMB             int    `config:"int;100"`
 	FlowLogsFileAggregationKindForAllowed int    `config:"int(0:3);2"`
 	FlowLogsFileAggregationKindForDenied  int    `config:"int(0:3);1"`
+	FlowLogsFileIncludeService            bool   `config:"bool;false"`
 	FlowLogsFileIncludeLabels             bool   `config:"bool;false"`
 	FlowLogsFileIncludePolicies           bool   `config:"bool;false"`
 	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
