@@ -5,6 +5,7 @@ package intdataplane
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -250,12 +251,12 @@ var _ = Describe("Domain Info Store", func() {
 			Eventually(func() bool {
 				monitorMutex.Lock()
 				defer monitorMutex.Unlock()
-				return expectedSeen
+				result := expectedSeen && reflect.DeepEqual(expectedDomainIPs, expectedIPs)
+				if result {
+					expectedSeen = false
+				}
+				return result
 			}).Should(BeTrue())
-			monitorMutex.Lock()
-			defer monitorMutex.Unlock()
-			Expect(expectedDomainIPs).To(Equal(expectedIPs))
-			expectedSeen = false
 		}
 
 		BeforeEach(func() {
