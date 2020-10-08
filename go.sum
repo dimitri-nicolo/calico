@@ -566,6 +566,7 @@ github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DM
 github.com/storageos/go-api v0.0.0-20180912212459-343b3eff91fc/go.mod h1:ZrLn+e0ZuF3Y65PNF6dIwbJPZqfmtCXxFm9ckv0agOY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+github.com/stretchr/objx v0.2.0 h1:Hbg2NidpLE8veEBkEZTL3CvlkUIVzuU9jDplZO54c48=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
 github.com/stretchr/testify v0.0.0-20151208002404-e3a8ff8ce365/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
@@ -578,8 +579,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340 h1:TxZGmS0R0G2V6lLTawuNLmYXOhgBn8K7qClxJjj7A9A=
 github.com/tigera/apimachinery-private v0.0.0-20200210212631-f989df51e340/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZg=
-github.com/tigera/apiserver v0.0.0-20201007181940-f3ac5c08450f h1:VCjVVJUjVUTHJybgJOTTczCOYf5ts5uBDX8Rul018Fk=
-github.com/tigera/apiserver v0.0.0-20201007181940-f3ac5c08450f/go.mod h1:+YaePcHze+7EVUD56uH+LGbAme0TkABo1A8NKpo7GQo=
+github.com/tigera/apiserver v0.0.0-20201008163230-aba2eda177ed h1:Cn5h069mlkdh9Y4cG18Z5LVFUqp9/dHWz2f8xHMO8cQ=
+github.com/tigera/apiserver v0.0.0-20201008163230-aba2eda177ed/go.mod h1:BggIUsNFgyynMmAkmecsnMzc7BYCcwZRtWbIflIjp9g=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1 h1:gNL5Jpeev60oTNQOLW/xlcp7zwjrNGNsgzRC52domgc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1/go.mod h1:tots0PLC1yjgvKhTIHhnXW8JtFt5GhVDogynKRMa+Wg=
 github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028/go.mod h1:/QGxxU2fWzHn7PzivQYd0Rdx6CZd87E/Q01F/Y0X1NI=
