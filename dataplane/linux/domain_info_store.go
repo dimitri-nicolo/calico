@@ -34,6 +34,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/collector"
+	fc "github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -113,6 +115,11 @@ type domainInfoStore struct {
 	// latency.
 	timestampExpected bool
 	requestTimestamp  map[uint16]time.Time
+
+	// Handling additional DNS mapping lifetime.
+	epoch    int
+	extraTTL time.Duration
+	resetC   chan struct{}
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -150,6 +157,9 @@ func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, conf
 		collector:            config.Collector,
 		timestampExpected:    config.DNSLogsLatency,
 		requestTimestamp:     make(map[uint16]time.Time),
+		epoch:                config.DNSCacheEpoch,
+		extraTTL:             config.DNSExtraTTL,
+		resetC:               make(chan struct{}),
 	}
 	return s
 }
@@ -182,6 +192,29 @@ func (s *domainInfoStore) Start() {
 	gcTimerC := time.NewTicker(s.gcInterval).C
 
 	go s.loop(saveTimerC, gcTimerC)
+}
+
+// Dynamically handle changes to DNSCacheEpoch and DNSExtraTTL.
+func (s *domainInfoStore) OnUpdate(msg interface{}) {
+	switch msg := msg.(type) {
+	case *proto.ConfigUpdate:
+		felixConfig := fc.New()
+		felixConfig.UpdateFrom(msg.Config, fc.DatastorePerHost)
+		s.mutex.Lock()
+		defer s.mutex.Unlock()
+		if _, specified := msg.Config["DNSCacheEpoch"]; specified && felixConfig.DNSCacheEpoch != s.epoch {
+			s.epoch = felixConfig.DNSCacheEpoch
+			s.resetC <- struct{}{}
+		}
+		if _, specified := msg.Config["DNSExtraTTL"]; specified && felixConfig.DNSExtraTTL != s.extraTTL {
+			s.extraTTL = felixConfig.DNSExtraTTL
+		}
+	}
+}
+
+func (s *domainInfoStore) CompleteDeferredWork() error {
+	// Nothing to do, we don't defer any work.
+	return nil
 }
 
 func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
@@ -227,6 +260,8 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			}
 		case <-gcTimerC:
 			_ = s.collectGarbage()
+		case <-s.resetC:
+			s.expireAllMappings()
 		}
 	}
 }
@@ -386,6 +421,21 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	}
 }
 
+func (s *domainInfoStore) expireAllMappings() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// For each mapping...
+	for name := range s.mappings {
+		// ...discard all of its values.
+		s.mappings[name].values = make(map[string]*valueData)
+		s.signalDomainInfoChange(name, "epoch change")
+	}
+
+	// Trigger a GC to reclaim the memory that we can.
+	s.gcTrigger = true
+}
+
 func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
 	if rec.Class != layers.DNSClassIN {
 		log.Debugf("Ignore DNS response with class %v", rec.Class)
@@ -444,6 +494,10 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		log.Debugf("Ignoring zero IP (%v -> %v TTL %v)", name, value, ttl)
 		return
 	}
+
+	// Add on extra TTL, if configured.
+	ttl = time.Duration(int64(ttl) + int64(s.extraTTL))
+
 	// Impose a minimum TTL of 2 seconds - i.e. ensure that the mapping that we store here will
 	// not expire for at least 2 seconds.  Otherwise TCP connections that should succeed will
 	// fail if they involve a DNS response with TTL 1.  In detail:
@@ -462,6 +516,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	if int64(ttl) < int64(2*time.Second) {
 		ttl = 2 * time.Second
 	}
+
 	makeTimer := func() *time.Timer {
 		return time.AfterFunc(ttl, func() {
 			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}

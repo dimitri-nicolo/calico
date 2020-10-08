@@ -391,6 +391,8 @@ type Config struct {
 	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
+	DNSCacheEpoch        int           `config:"int;0;local"`     // local is temporary here, so as not to break UT
+	DNSExtraTTL          time.Duration `config:"seconds;0;local"` // local is temporary here, so as not to break UT
 
 	// Config for packet capturing
 	CaptureDir             string `config:"string;/var/log/calico/pcap"`
