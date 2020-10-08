@@ -15,7 +15,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/projectcalico/felix v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/typha v0.7.3-0.20200923041032-20f8fcf25d9b
+	github.com/projectcalico/typha v0.7.3-0.20201002171413-c49ad3ac90c1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.5
@@ -37,7 +37,7 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20200929231221-5d7ced3df558
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20200930153430-a1fd1c6a72d2
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201006200045-211001baed56
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201005223636-e17ed7aae6e1
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201006011052-870eb72b48d5
 	// We need to hold back prometheus/client_golang to avoid a build failure. This is hopefully a
