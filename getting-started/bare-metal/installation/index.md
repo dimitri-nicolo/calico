@@ -1,5 +1,5 @@
 ---
-title: Install on non-cluster hosts.
+title: Install on non-cluster hosts
 description: Enforce security on hosts by installing Calico Enterprise.
 show_read_time: false
 show_toc: false

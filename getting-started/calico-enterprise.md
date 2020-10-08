@@ -51,19 +51,19 @@ spec:
     Kubernetes
   </div>
   <div class="col-xs-6 col-md-3" style="text-align:center">
-    <a href="{{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/eks" class="thumbnail">
+    <a href="{{site.baseurl}}/getting-started/kubernetes/eks" class="thumbnail">
       <img src="{{site.baseurl}}/images/icon-aws-amazon-eks.svg" alt="Amazon EKS" width="75%">
     </a>
     Amazon EKS
   </div>
   <div class="col-xs-6 col-md-3" style="text-align:center">
-    <a href="{{site.baseurl}}/getting-started/kubernetes/managed-public-cloud/aks" class="thumbnail">
+    <a href="{{site.baseurl}}/getting-started/kubernetes/aks" class="thumbnail">
       <img src="{{site.baseurl}}/images/icon-azure-kubernetes-services.svg" alt="Azure AKS" width="85%">
     </a>
     Azure AKS
   </div>
   <div class="col-xs-6 col-md-3" style="text-align:center">
-    <a href="{{site.baseurl}}/getting-started/kubernetes/self-managed-on-prem/docker-enterprise" class="thumbnail">
+    <a href="{{site.baseurl}}/getting-started/kubernetes/docker-enterprise" class="thumbnail">
       <img src="{{site.baseurl}}/images/Docker-R-Logo-08-2018-Monochomatic-RGB_Vertical-x3.jpg" alt="Docker Enterprise" width="98%">
     </a>
     Docker Enterprise

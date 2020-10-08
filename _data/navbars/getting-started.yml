@@ -18,19 +18,19 @@ section:
     - title: Options for installing Calico Enterprise
       path: /getting-started/options-install  
     - title: Standard
-      path: /getting-started/kubernetes/self-managed-on-prem/generic-install
+      path: /getting-started/kubernetes/generic-install
     - title: Docker Enterprise
-      path: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
+      path: /getting-started/kubernetes/docker-enterprise
     - title: Helm
-      path: /getting-started/kubernetes/self-managed-on-prem/helm
+      path: /getting-started/kubernetes/helm
     - title: Rancher Kubernetes Engine
-      path: /getting-started/kubernetes/self-managed-on-prem/rancher
+      path: /getting-started/kubernetes/rancher
   - title: AKS 
-    path: /getting-started/kubernetes/managed-public-cloud/aks
+    path: /getting-started/kubernetes/aks
   - title: EKS 
-    path: /getting-started/kubernetes/managed-public-cloud/eks
+    path: /getting-started/kubernetes/eks
   - title: GKE
-    path: /getting-started/kubernetes/managed-public-cloud/gke
+    path: /getting-started/kubernetes/gke
   - title: Quickstart
     path: /getting-started/kubernetes/quickstart 
   - title: Install from a private registry
@@ -68,12 +68,12 @@ section:
   - title: Basic policy demo
     path: /getting-started/windows-calico/demo
   - title: Standard install
-    path: /getting-started/windows-calico/standard
+    path: /getting-started/windows-calico/standard-install/
     section:
     - title: Requirements
       path: /getting-started/windows-calico/requirements
     - title: Install Calico Enterprise for Windows
-      path: /getting-started/windows-calico/standard
+      path: /getting-started/windows-calico/standard-install/standard
   - title: Create kubeconfig for Windows nodes
     path: /getting-started/windows-calico/kubeconfig
   - title: Start and stop Calico Enterprise for Windows services

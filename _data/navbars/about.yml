@@ -1,5 +1,5 @@
 title: "About"
-description: /about/
+description: Learn about Kubernetes, and how to adopt a zero trust network model for security.
 path: /about/
 order: 0
 section:
@@ -7,11 +7,11 @@ section:
     path: /security/adopt-zero-trust   
   - title: Networking
     path: /about/about-networking
-  - title: Kubernetes Networking
+  - title: Kubernetes networking
     path: /about/about-kubernetes-networking
-  - title: Network Policy
+  - title: Network policy
     path: /about/about-network-policy
-  - title: Kubernetes Services
+  - title: Kubernetes services
     path: /about/about-kubernetes-services
-  - title: Kubernetes Ingress
+  - title: Kubernetes ingress
     path: /about/about-kubernetes-ingress

@@ -1,36 +1,29 @@
 ---
-title: Install Calico Enterprise on Docker Enterprise
-description: Install Calico Enterprise using Docker EE for self-managed on-premises deployments.
-canonical_url: /getting-started/kubernetes/self-managed-on-prem/docker-enterprise
+title: Install Calico Enterprise on a Rancher Kubernetes Engine cluster
+description: Install Calico Enterprise on a Rancher Kubernetes Engine cluster.
+canonical_url: '/getting-started/kubernetes/rancher'
 ---
 
 ### Big picture
 
-Install {{site.prodname}} in a Docker Enterprise deployed Kubernetes cluster.
+Install {{side.prodname}} as the required CNI for networking and/or network policy on Rancher-deployed clusters.
 
 ### Before you begin
 
-**Docker requirements**
+**Required**
 
-- A compatible [Docker Enterprise](https://docs.docker.com/ee/) installation on Linux. See [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/). For a test environment, a minimum of 3 nodes is required. For a production environment, additional nodes should be deployed.
-  - During the installation of UCP, you must set the flag `--unmanaged-cni` so UCP does not install the default Calico networking plugin.
+- A compatible {% include open-new-window.html text='Rancher Kubernetes Engine cluster' url='https://rancher.com/docs/rke/latest/en/' %}
+  - Configure your cluster with a {% include open-new-window.html text='Cluster Config File' url='https://rancher.com/docs/rancher/v2.x/en/cluster-provisioning/rke-clusters/options/#cluster-config-file' %} and specify {% include open-new-window.html text='no network plugin' url='https://rancher.com/docs/rke/latest/en/config-options/add-ons/network-plugins/' %} by setting `plugin: none` under `network` in your configuration file.
 
-- See [Docker Reference Architecture: Docker EE Best Practices and Design Considerations](https://docs.mirantis.com/docker-enterprise/v3.0/dockeree-ref-arch/deploy-manage/best-practices-design.html) for details.
+- RKE cluster meets the [{{side.prodname}} requirements]({{site.baseurl}}/getting-started/kubernetes/requirements)
 
-**{{site.prodname}} requirements**
+- [Credentials for the Tigera private registry and a license key]({{site.baseurl}}/getting-started/calico-enterprise).
 
-- Your Docker Enterprise cluster meets the {{site.prodname}} [system requirements](../requirements).
+- A `kubectl` environment with access to your cluster
+  - Use {% include open-new-window.html text='Rancher kubectl Shell' url='https://rancher.com/docs/rancher/v2.x/en/cluster-admin/cluster-access/kubectl/' %} for access
+  - Ensure you have the {% include open-new-window.html text='Kubeconfig file that was generated when you created the cluster' url='https://rancher.com/docs/rke/latest/en/installation/#save-your-files' %}.
 
-- If using a private registry, familiarize yourself with this guide on [using a private registry]({{site.baseurl}}/getting-started/private-registry).
-
-- [Credentials for the Tigera private registry and a license key](../../../getting-started/calico-enterprise)
-
-- Install the UCP client bundle for accessing the cluster. See [Docker Universal Control Plane CLI-Based Access](https://docs.docker.com/ee/ucp/user-access/cli/).
-
-- After installing the "Universal Control Plane (UCP)", enable the option "Allow all authenticated users,
-  including service accounts, to schedule on all nodes, including UCP managers and DTR nodes."
-
-- Install `kubectl` CLI tool. See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+- If using a Kubeconfig file locally, {% include open-new-window.html text='install and set up the Kubectl CLI tool' url='https://kubernetes.io/docs/tasks/tools/install-kubectl/' %}.
 
 ### How to
 
@@ -39,17 +32,12 @@ The geeky details of what you get:
 
 - [Install {{site.prodname}}](#install-calico-enterprise)
 - [Install the {{site.prodname}} license](#install-the-calico-enterprise-license)
-- [Secure {{site.prodname}} with network policy](#secure-calico-enterprise-with-network-policy)
+- [Secure {{site.prodname}} components with network policy](#secure-calico-enterprise-components-with-network-policy)
+
 
 #### Install {{site.prodname}}
 
-1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage)
-
-1. Install Docker EE specific role bindings
-
-   ```
-   kubectl create -f {{ "/manifests/docker-enterprise/bindings.yaml" | absolute_url }}
-   ```
+1. [Configure a storage class for {{site.prodname}}.]({{site.baseurl}}/getting-started/create-storage).
 
 1. Install the Tigera operator and custom resource definitions.
 
@@ -67,8 +55,6 @@ The geeky details of what you get:
    ```
 
 1. Install your pull secret.
-
-   If pulling images directly from `quay.io/tigera`, you will likely want to use the credentials provided to you by your Tigera support representative. If using a private registry, use your private registry credentials instead.
 
    ```
    kubectl create secret generic tigera-pull-secret \
@@ -108,7 +94,7 @@ watch kubectl get tigerastatus
 
 When all components show a status of `Available`, proceed to the next section.
 
-#### Secure {{site.prodname}} with network policy
+#### Secure {{site.prodname}} components with network policy
 
 To secure {{site.prodname}} component communications, install the following set of network policies.
 
@@ -125,7 +111,7 @@ kubectl create -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
 
 **Recommended - Networking**
 
-- The default networking uses IP in IP with BPG routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
+- The default networking uses IP in IP encapsulation with BPG routing. For all networking options, see [Determine best networking option]({{site.baseurl}}/networking/determine-best-networking).
 
 **Recommended - Security**
 

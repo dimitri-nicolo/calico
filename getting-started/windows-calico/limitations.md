@@ -188,4 +188,4 @@ Because of the way the Windows dataplane handles rules, the following limitation
 ### Next steps
 
 - [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
-- [Standard install]({{site.baseurl}}/getting-started/windows-calico/standard)
+- [Standard install]({{site.baseurl}}/getting-started/windows-calico/standard-install/standard)

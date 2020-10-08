@@ -1,6 +1,7 @@
 ---
 title: Protect Kubernetes nodes
-Description: Protect Kubernetes nodes with host endpoints managed by Calico Enterprise
+description: Protect Kubernetes nodes with host endpoints managed by Calico Enterprise.
+canonical_url: '/security/kubernetes-nodes'
 ---
 
 ### Big picture

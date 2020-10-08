@@ -77,4 +77,4 @@ calicoctl ipam configure --strictaffinity=true
 
 ### Next steps
 
-[Install Calico Enterprise for Windows]({{site.baseurl}}/getting-started/windows-calico/standard)
+[Install Calico Enterprise for Windows]({{site.baseurl}}/getting-started/windows-calico/standard-install/standard)

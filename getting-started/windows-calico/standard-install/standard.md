@@ -1,7 +1,7 @@
 ---
 title: Install Calico Enterprise for Windows
-description: Install Calico Enterprise for Windows to enable a workload-to-workload Zero Trust model that protects modern business and legacy applications.
-canonical_url: '/getting-started/windows-calico/standard'
+description: Install Calico Enterprise for Windows to enable a workload-to-workload Zero Trust model.
+canonical_url: '/getting-started/windows-calico/standard-install/standard'
 ---
 
 **Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
@@ -168,7 +168,7 @@ adjust other kube-proxy parameters.
 
 **If using {{site.prodname}} BGP networking** 
 
-1. [Install Calico Enterprise for networking and policy]({{site.baseurl}}/getting-started/kubernetes/self-managed-on-prem) for kdd.
+1. [Install Calico Enterprise for networking and policy]({{site.baseurl}}/getting-started/kubernetes/) for kdd.
 1. Disable the default {{site.prodname}} IP-in-IP networking (which is not compatible with Windows), by modifying the {{site.prodname}} manifest, and setting the `CALICO_IPV4POOL_IPIP` environment variable to "Never" before applying the manifest.
 
    If you do apply the manifest with the incorrect value, changing the manifest and re-applying will have no effect. To adjust the already-created IP pool:

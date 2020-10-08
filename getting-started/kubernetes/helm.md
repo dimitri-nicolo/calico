@@ -1,6 +1,7 @@
 ---
 title: Helm
 description: Install Calico Enterprise using Helm application package manager.
+canonical_url: '/getting-started/kubernetes/helm'
 ---
 
 ### Big picture
