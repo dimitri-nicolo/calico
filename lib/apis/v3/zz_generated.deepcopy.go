@@ -1899,6 +1899,16 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.DNSCacheEpoch != nil {
+		in, out := &in.DNSCacheEpoch, &out.DNSCacheEpoch
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSExtraTTL != nil {
+		in, out := &in.DNSExtraTTL, &out.DNSExtraTTL
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.DNSLogsFlushInterval != nil {
 		in, out := &in.DNSLogsFlushInterval, &out.DNSLogsFlushInterval
 		*out = new(metav1.Duration)
