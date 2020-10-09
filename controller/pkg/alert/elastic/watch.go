@@ -476,9 +476,9 @@ func actionTransformCode(name string) string {
 		return [
 			'_doc': ctx.payload._value.stream()
 				.map(t -> {[
-					'time': ctx.trigger.scheduled_time,
+					'time': ctx.trigger.scheduled_time.toEpochSecond(),
 					'type': params.type,
-                    'alert': %q,
+					'alert': %q,
 					'description': description(t),
 					'severity': params.severity,
 					'record': t
