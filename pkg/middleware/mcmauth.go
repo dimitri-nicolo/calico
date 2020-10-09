@@ -97,7 +97,7 @@ func createClusterConfig(clusterID, voltronCAPath string) auth.K8sAuthInterface 
 	cfg := mustCreateClusterConfig(clusterID, voltronCAPath)
 	k8sClient := k8s.NewForConfigOrDie(cfg)
 
-	authenticator, err := authentication.ConfigureAuthenticator()
+	authenticator, err := authentication.New()
 	if err != nil {
 		log.WithError(err).Panic("Unable to create auth configuration")
 	}
