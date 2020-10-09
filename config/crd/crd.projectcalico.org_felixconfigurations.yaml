@@ -247,6 +247,11 @@ spec:
                 type: string
               disableConntrackInvalidCheck:
                 type: boolean
+              dnsCacheEpoch:
+                description: 'An arbitrary number that can be changed, at runtime,
+                  to tell Felix to discard all its learnt DNS information. [Default:
+                  0].'
+                type: integer
               dnsCacheFile:
                 description: 'The name of the file that Felix uses to preserve learnt
                   DNS information when restarting. [Default: "/var/run/calico/felix-dns-cache.txt"].'
@@ -254,6 +259,11 @@ spec:
               dnsCacheSaveInterval:
                 description: 'The periodic interval at which Felix saves learnt DNS
                   information to the cache file. [Default: 60s].'
+                type: string
+              dnsExtraTTL:
+                description: 'Extra time, in seconds, to keep IPs and alias names
+                  that are learnt from DNS, in addition to each name or IP''s advertised
+                  TTL. [Default: 0].'
                 type: string
               dnsLogsFileAggregationKind:
                 description: 'DNSLogsFileAggregationKind is used to choose the type
