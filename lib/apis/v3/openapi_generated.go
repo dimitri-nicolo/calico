@@ -5625,7 +5625,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"dnsExtraTTL": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Extra time, in seconds, to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. [Default: 0].",
+							Description: "Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. [Default: 0s].",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

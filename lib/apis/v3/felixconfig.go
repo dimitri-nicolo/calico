@@ -496,8 +496,8 @@ type FelixConfigurationSpec struct {
 	// An arbitrary number that can be changed, at runtime, to tell Felix to discard all its
 	// learnt DNS information. [Default: 0].
 	DNSCacheEpoch *int `json:"dnsCacheEpoch,omitempty"`
-	// Extra time, in seconds, to keep IPs and alias names that are learnt from DNS, in addition
-	// to each name or IP's advertised TTL. [Default: 0].
+	// Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name
+	// or IP's advertised TTL. [Default: 0s].
 	DNSExtraTTL *metav1.Duration `json:"dnsExtraTTL,omitempty" configv1timescale:"seconds"`
 
 	// DNSLogsFlushInterval configures the interval at which Felix exports DNS logs.

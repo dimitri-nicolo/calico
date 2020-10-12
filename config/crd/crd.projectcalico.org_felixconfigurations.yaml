@@ -261,9 +261,9 @@ spec:
                   information to the cache file. [Default: 60s].'
                 type: string
               dnsExtraTTL:
-                description: 'Extra time, in seconds, to keep IPs and alias names
-                  that are learnt from DNS, in addition to each name or IP''s advertised
-                  TTL. [Default: 0].'
+                description: 'Extra time to keep IPs and alias names that are learnt
+                  from DNS, in addition to each name or IP''s advertised TTL. [Default:
+                  0s].'
                 type: string
               dnsLogsFileAggregationKind:
                 description: 'DNSLogsFileAggregationKind is used to choose the type
