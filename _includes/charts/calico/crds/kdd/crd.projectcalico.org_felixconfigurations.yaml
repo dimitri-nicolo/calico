@@ -3,9 +3,6 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: (devel)
-  creationTimestamp: null
   name: felixconfigurations.crd.projectcalico.org
 spec:
   group: crd.projectcalico.org
@@ -296,6 +293,10 @@ spec:
                 description: 'DNSLogsFlushInterval configures the interval at which
                   Felix exports DNS logs. [Default: 300s]'
                 type: string
+              dnsLogsLatency:
+                description: 'DNSLogsLatency indicates to include measurements of
+                  DNS request/response latency in each DNS log. [Default: true]'
+                type: boolean
               dnsTrustedServers:
                 description: 'The DNS servers that Felix should trust. Each entry
                   here must be `<ip>[:<port>]` - indicating an explicit DNS server
@@ -462,6 +463,13 @@ spec:
               flowLogsFileIncludePolicies:
                 description: FlowLogsFileIncludePolicies is used to configure if policy
                   information are included in a Flow log entry written to file.
+                type: boolean
+              flowLogsFileIncludeService:
+                description: FlowLogsFileIncludeService is used to configure if the
+                  destination service is included in a Flow log entry written to file.
+                  The service information can only be included if the flow was explicitly
+                  determined to be directed at the service (e.g. when the pre-DNAT
+                  destination corresponds to the service ClusterIP and port).
                 type: boolean
               flowLogsFileMaxFileSizeMB:
                 description: FlowLogsFileMaxFileSizeMB sets the max size in MB of
