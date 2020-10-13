@@ -27,6 +27,15 @@ Makefile.common.$(MAKE_BRANCH):
 	rm -f Makefile.common.*
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
+# Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
+MOCKERY_FILE_PATHS= \
+	pkg/api/EventFetcher \
+	pkg/api/ListDestination \
+	pkg/elastic/Client \
+	pkg/elastic/ClusterContextClientFactory \
+	pkg/auth/RBACAuthorizer \
+	pkg/rbac/FlowHelper
+
 ifdef LMA_PATH
 EXTRA_DOCKER_ARGS += -v $(LMA_PATH):/go/src/github.com/tigera/lma:ro
 endif

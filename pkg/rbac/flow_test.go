@@ -3,321 +3,270 @@ package rbac_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	authzv1 "k8s.io/api/authorization/v1"
-
+	"github.com/stretchr/testify/mock"
 	"github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/rbac"
+
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-type mockAuthorizer struct {
-	authorized []authzv1.ResourceAttributes
-	calls      []authzv1.ResourceAttributes
-}
-
-func (m *mockAuthorizer) Authorize(attr *authzv1.ResourceAttributes) (bool, error) {
-	m.calls = append(m.calls, *attr)
-	for _, a := range m.authorized {
-		if a == *attr {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 var _ = Describe("FlowHelper tests", func() {
+	var mockAuthorizer *auth.MockRBACAuthorizer
+	BeforeEach(func() {
+		mockAuthorizer = new(auth.MockRBACAuthorizer)
+	})
 	It("caches unauthorized results", func() {
-
-		m := &mockAuthorizer{}
-		rh := rbac.NewCachedFlowHelper(m)
+		usr := &user.DefaultInfo{}
+		rh := rbac.NewCachedFlowHelper(usr, mockAuthorizer)
+		mockAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(401, nil).Times(4)
 
 		By("checking permissions requiring 4 lookups")
 		Expect(rh.CanListHostEndpoints()).To(BeFalse())
 		Expect(rh.CanListNetworkSets("ns1")).To(BeFalse())
 		Expect(rh.CanListPods("ns1")).To(BeFalse())
 		Expect(rh.CanListGlobalNetworkSets()).To(BeFalse())
-		Expect(m.calls).To(HaveLen(4))
 
 		By("checking the same permissions with cached results")
 		Expect(rh.CanListHostEndpoints()).To(BeFalse())
 		Expect(rh.CanListNetworkSets("ns1")).To(BeFalse())
 		Expect(rh.CanListPods("ns1")).To(BeFalse())
 		Expect(rh.CanListGlobalNetworkSets()).To(BeFalse())
-		Expect(m.calls).To(HaveLen(4))
+
+		mockAuthorizer.AssertExpectations(GinkgoT())
 	})
 
-	It("handles global network policies", func() {
-		ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|tier1.gnp|allow", 0)
-		Expect(ok).To(BeTrue())
+	DescribeTable(
+		"CanListPolicy with global network policies",
+		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
+			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|tier1.gnp|allow", 0)
+			Expect(ok).Should(BeTrue())
 
-		By("Checking with no get access to tier")
-		m := &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.globalnetworkpolicies",
-			}},
-		}
-		rh := rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeFalse())
-		Expect(m.calls).To(HaveLen(1)) // Fails at first check
+			expectedCalls(mockAuthorizer)
+			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
+			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+		},
+		TableEntry{
+			Description: "Returns false without get access to tiers",
+			Parameters: []interface{}{
+				false,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(401, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to specific tier",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(200, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.globalnetworkpolicies"},
+						mock.Anything).Return(401, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.globalnetworkpolicies", Name: "tier1.*"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to tiers",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(200, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.globalnetworkpolicies"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+	)
 
-		By("Checking with wildcard")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.globalnetworkpolicies",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(2)) // Succeeds at second check
+	DescribeTable(
+		"CanListPolicy with staged global network policies",
+		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
+			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|staged:tier1.gnp|allow", 0)
+			Expect(ok).Should(BeTrue())
 
-		By("Checking with specific tier allowed")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.globalnetworkpolicies",
-				Name:     "tier1.*",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(3)) // Succeeds at third check
-	})
+			expectedCalls(mockAuthorizer)
+			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
+			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+		},
+		TableEntry{
+			Description: "Returns false without get access to tiers",
+			Parameters: []interface{}{
+				false,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(401, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to specific tier",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(200, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.stagedglobalnetworkpolicies"},
+						mock.Anything).Return(401, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.stagedglobalnetworkpolicies", Name: "tier1.*"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to tiers",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(200, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "list", Group: "projectcalico.org", Resource: "tier.stagedglobalnetworkpolicies"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+	)
 
-	It("handles staged global network policies", func() {
-		ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|staged:tier1.gnp|allow", 0)
-		Expect(ok).To(BeTrue())
+	DescribeTable(
+		"CanListPolicy with network policies",
+		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
+			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/tier1.np|allow", 0)
+			Expect(ok).Should(BeTrue())
 
-		By("Checking with no get access to tier")
-		m := &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.stagedglobalnetworkpolicies",
-			}},
-		}
-		rh := rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeFalse())
-		Expect(m.calls).To(HaveLen(1)) // Fails at first check
+			expectedCalls(mockAuthorizer)
+			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
+			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+		},
+		TableEntry{
+			Description: "Returns false without get access to tiers",
+			Parameters: []interface{}{
+				false,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(401, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to specific tier",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(200, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
+						mock.Anything).Return(401, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies", Name: "tier1.*"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to tiers",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Verb: "get", Group: "projectcalico.org", Resource: "tiers", Name: "tier1"},
+						mock.Anything).Return(200, nil)
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "tier.networkpolicies"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+	)
 
-		By("Checking with wildcard")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.stagedglobalnetworkpolicies",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(2)) // Succeeds at second check
+	DescribeTable(
+		"CanListPolicy with kubernetes network policies",
+		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
+			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/knp.default.np|allow", 0)
+			Expect(ok).Should(BeTrue())
 
-		By("Checking with specific tier allowed")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.stagedglobalnetworkpolicies",
-				Name:     "tier1.*",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(3)) // Succeeds at third check
-	})
+			expectedCalls(mockAuthorizer)
+			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
+			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+		},
+		TableEntry{
+			Description: "Returns false without get access to tiers",
+			Parameters: []interface{}{
+				false,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "networking.k8s.io", Resource: "networkpolicies"},
+						mock.Anything).Return(401, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to specific tier",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "networking.k8s.io", Resource: "networkpolicies"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+	)
 
-	It("handles network policies", func() {
-		ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/tier1.np|allow", 0)
-		Expect(ok).To(BeTrue())
+	DescribeTable(
+		"CanListPolicy with staged kubernetes network policies",
+		func(expectedCan bool, expectedCalls func(mockAuthorizer *auth.MockRBACAuthorizer)) {
+			ph, ok := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/staged:knp.default.np|allow", 0)
+			Expect(ok).Should(BeTrue())
 
-		By("Checking with no get access to tier")
-		m := &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.networkpolicies",
-			}},
-		}
-		rh := rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeFalse())
-		Expect(m.calls).To(HaveLen(1)) // Fails at first check
-
-		By("Checking with wildcard")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:      "list",
-				Group:     "projectcalico.org",
-				Resource:  "tier.networkpolicies",
-				Namespace: "ns1",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(2)) // Succeeds at second check
-
-		By("Checking with specific tier allowed")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:      "list",
-				Group:     "projectcalico.org",
-				Resource:  "tier.networkpolicies",
-				Name:      "tier1.*",
-				Namespace: "ns1",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(3)) // Succeeds at third check
-	})
-
-	It("handles staged network policies", func() {
-		ph, ok := api.PolicyHitFromFlowLogPolicyString("0|tier1|ns1/staged:tier1.np|allow", 0)
-		Expect(ok).To(BeTrue())
-
-		By("Checking with no get access to tier")
-		m := &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "list",
-				Group:    "projectcalico.org",
-				Resource: "tier.stagednetworkpolicies",
-			}},
-		}
-		rh := rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeFalse())
-		Expect(m.calls).To(HaveLen(1)) // Fails at first check
-
-		By("Checking with wildcard")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:      "list",
-				Group:     "projectcalico.org",
-				Resource:  "tier.stagednetworkpolicies",
-				Namespace: "ns1",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(2)) // Succeeds at second check
-
-		By("Checking with specific tier allowed")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:     "get",
-				Group:    "projectcalico.org",
-				Resource: "tiers",
-				Name:     "tier1",
-			}, {
-				Verb:      "list",
-				Group:     "projectcalico.org",
-				Resource:  "tier.stagednetworkpolicies",
-				Name:      "tier1.*",
-				Namespace: "ns1",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(3)) // Succeeds at third check
-	})
-
-	It("handles kubernetes network policies", func() {
-		ph, ok := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/knp.default.np|allow", 0)
-		Expect(ok).To(BeTrue())
-
-		By("Checking with different namespace")
-		m := &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:      "list",
-				Group:     "networking.k8s.io",
-				Resource:  "networkpolicies",
-				Namespace: "ns2",
-			}},
-		}
-		rh := rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeFalse())
-		Expect(m.calls).To(HaveLen(1))
-
-		By("Checking with same namespace")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:      "list",
-				Group:     "networking.k8s.io",
-				Resource:  "networkpolicies",
-				Namespace: "ns1",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(1))
-	})
-
-	It("handles staged kubernetes network policies", func() {
-		ph, ok := api.PolicyHitFromFlowLogPolicyString("0|default|ns1/staged:knp.default.np|allow", 0)
-		Expect(ok).To(BeTrue())
-
-		By("Checking with different namespace")
-		m := &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:      "list",
-				Group:     "projectcalico.org",
-				Resource:  "stagedkubernetesnetworkpolicies",
-				Namespace: "ns2",
-			}},
-		}
-		rh := rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeFalse())
-		Expect(m.calls).To(HaveLen(1))
-
-		By("Checking with same namespace")
-		m = &mockAuthorizer{
-			authorized: []authzv1.ResourceAttributes{{
-				Verb:      "list",
-				Group:     "projectcalico.org",
-				Resource:  "stagedkubernetesnetworkpolicies",
-				Namespace: "ns1",
-			}},
-		}
-		rh = rbac.NewCachedFlowHelper(m)
-		Expect(rh.CanListPolicy(&ph)).To(BeTrue())
-		Expect(m.calls).To(HaveLen(1))
-	})
+			expectedCalls(mockAuthorizer)
+			rh := rbac.NewCachedFlowHelper(&user.DefaultInfo{}, mockAuthorizer)
+			Expect(rh.CanListPolicy(&ph)).To(Equal(expectedCan))
+		},
+		TableEntry{
+			Description: "Returns false without get access to tiers",
+			Parameters: []interface{}{
+				false,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "stagedkubernetesnetworkpolicies"},
+						mock.Anything).Return(401, nil)
+				},
+			},
+		},
+		TableEntry{
+			Description: "Returns true with get access to tiers and list access to specific tier",
+			Parameters: []interface{}{
+				true,
+				func(mockAuthorizer *auth.MockRBACAuthorizer) {
+					mockAuthorizer.On("Authorize", mock.Anything,
+						&authzv1.ResourceAttributes{Namespace: "ns1", Verb: "list", Group: "projectcalico.org", Resource: "stagedkubernetesnetworkpolicies"},
+						mock.Anything).Return(200, nil)
+				},
+			},
+		},
+	)
 })

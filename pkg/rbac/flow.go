@@ -3,6 +3,8 @@ package rbac
 
 import (
 	"github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/auth"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	log "github.com/sirupsen/logrus"
 
@@ -52,12 +54,9 @@ type FlowHelper interface {
 	CanListPolicy(p *api.PolicyHit) (bool, error)
 }
 
-type RBACAuthorizer interface {
-	Authorize(*authzv1.ResourceAttributes) (bool, error)
-}
-
-func NewCachedFlowHelper(authorizer RBACAuthorizer) FlowHelper {
+func NewCachedFlowHelper(usr user.Info, authorizer auth.RBACAuthorizer) FlowHelper {
 	return &flowHelper{
+		usr:             usr,
 		authorizer:      authorizer,
 		authorizedCache: make(map[authzv1.ResourceAttributes]bool),
 	}
@@ -127,7 +126,8 @@ func (r flowHelper) CanListNetworkSets(namespace string) (bool, error) {
 
 // flowHelper implements the FlowHelper interface.
 type flowHelper struct {
-	authorizer      RBACAuthorizer
+	usr             user.Info
+	authorizer      auth.RBACAuthorizer
 	authorizedCache map[authzv1.ResourceAttributes]bool
 }
 
@@ -220,50 +220,25 @@ func (r flowHelper) authorized(rh resources.ResourceHelper, verb, namespace, nam
 
 	// Check if the user is authorized to perform the action.
 	log.Debugf("Checking if user action is authorized: %v", ra)
-	canDo, err := r.authorizer.Authorize(&ra)
+	status, err := r.authorizer.Authorize(r.usr, &ra, nil)
 	if err != nil {
 		log.WithError(err).Info("Unable to check permissions")
 		return false, err
 	}
+	canDo := status == 200
 
 	log.Debugf("Authorized=%v", canDo)
 	r.authorizedCache[ra] = canDo
 	return canDo, nil
 }
 
-type mockAuthorizer struct {
-	authorizedNamespacesByResource map[string][]string
-}
-
-func (m *mockAuthorizer) Authorize(attr *authzv1.ResourceAttributes) (bool, error) {
-	if ns, ok := m.authorizedNamespacesByResource[attr.Resource]; ok {
-		for _, n := range ns {
-			if n == "" || n == attr.Namespace {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
 type alwaysAllowAuthorizer struct{}
 
-func (m *alwaysAllowAuthorizer) Authorize(attr *authzv1.ResourceAttributes) (bool, error) {
-	return true, nil
+func (m *alwaysAllowAuthorizer) Authorize(usr user.Info, resources *authzv1.ResourceAttributes, nonResources *authzv1.NonResourceAttributes) (status int, err error) {
+	return 200, nil
 }
 
 // NewAlwaysAllowFlowHelper returns an flow helper that always authorizes a request.
 func NewAlwaysAllowFlowHelper() FlowHelper {
-	return NewCachedFlowHelper(&alwaysAllowAuthorizer{})
-}
-
-// NewMockFlowHelper returns a mock flow helper that authorizes based on the supplied map. This is implemented to be
-// quick to use in tests rather than overly elaborate covering all scenarios.
-//
-// The map is keyed off resource type (e.g. pods, tiers) and the value is the slice of namespaces that are authorized.
-// Use an empty namespace to authorize all namespaces, or to authorize cluster scoped resources.
-func NewMockFlowHelper(resources map[string][]string) FlowHelper {
-	return NewCachedFlowHelper(&mockAuthorizer{
-		authorizedNamespacesByResource: resources,
-	})
+	return NewCachedFlowHelper(&user.DefaultInfo{Name: "Always Authenticated"}, &alwaysAllowAuthorizer{})
 }
