@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/testutils"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -49,6 +50,7 @@ var _ = Describe("Domain Info Store", func() {
 			testutils.MakeCNAME("cNAME2.com", "cname_3.com"),
 			testutils.MakeCNAME("cname_3.com", "a.com"),
 		}
+		lastTTL time.Duration
 	)
 
 	// Program a DNS record as an "answer" type response.
@@ -89,20 +91,29 @@ var _ = Describe("Domain Info Store", func() {
 		})
 	}
 
+	defaultConfig := &Config{
+		DNSCacheFile:         "/dnsinfo",
+		DNSCacheSaveInterval: time.Minute,
+	}
+
 	// Create a new datastore.
-	domainStoreCreateEx := func(capacity int) {
+	domainStoreCreateEx := func(capacity int, config *Config) {
 		domainChannel := make(chan *domainInfoChanged, capacity)
-		config := &Config{
-			DNSCacheFile:         "/dnsinfo",
-			DNSCacheSaveInterval: time.Minute,
-		}
-		// For UT purposes, arrange that mappings always appear to have expired when UT code
-		// calls processMappingExpiry.
-		domainStore = newDomainInfoStoreWithShims(domainChannel, config, func(time.Time) bool { return true })
+		// For UT purposes, don't actually run any expiry timers, but arrange that mappings
+		// always appear to have expired when UT code calls processMappingExpiry.
+		domainStore = newDomainInfoStoreWithShims(
+			domainChannel,
+			config,
+			func(ttl time.Duration, _ func()) *time.Timer {
+				lastTTL = ttl
+				return nil
+			},
+			func(time.Time) bool { return true },
+		)
 	}
 	domainStoreCreate := func() {
 		// Create domain info store with 100 capacity for changes channel.
-		domainStoreCreateEx(100)
+		domainStoreCreateEx(100, defaultConfig)
 	}
 
 	// Basic validation tests that add/expire one or two DNS records of A and AAAA type to the data store.
@@ -262,7 +273,7 @@ var _ = Describe("Domain Info Store", func() {
 		BeforeEach(func() {
 			expectedSeen = false
 			killMonitor = make(chan struct{})
-			domainStoreCreateEx(0)
+			domainStoreCreateEx(0, defaultConfig)
 			monitorRunning.Add(1)
 			go monitor("*.microsoft.com", domainStore.domainInfoChanges)
 		})
@@ -426,6 +437,60 @@ var _ = Describe("Domain Info Store", func() {
 			It("should get that IP for *.google.com", func() {
 				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
 			})
+		})
+	})
+
+	Context("with 10s extra TTL", func() {
+		BeforeEach(func() {
+			domainStoreCreateEx(100, &Config{
+				DNSExtraTTL:   10 * time.Second,
+				DNSCacheEpoch: 1,
+			})
+			programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
+		})
+
+		It("delivers the IP when queried", func() {
+			Expect(domainStore.GetDomainIPs("update.google.com")).To(Equal([]string{"1.2.3.5"}))
+		})
+
+		It("created the mapping with 10s expiry", func() {
+			Expect(lastTTL).To(Equal(10 * time.Second))
+		})
+
+		Context("with an epoch change", func() {
+			BeforeEach(func() {
+				domainStore.OnUpdate(&proto.ConfigUpdate{
+					Config: map[string]string{"DNSCacheEpoch": "2"},
+				})
+				log.Info("Injected epoch change")
+			})
+
+			It("quickly removes the mapping", func() {
+				// Note, Eventually by default allows up to 1 second.
+				Eventually(func() []string {
+					domainStore.loopIteration(nil, nil)
+					return domainStore.GetDomainIPs("update.google.com")
+				}).Should(BeEmpty())
+			})
+		})
+	})
+
+	Context("with dynamic config update for 1h extra TTL", func() {
+		BeforeEach(func() {
+			domainStoreCreate()
+			domainStore.OnUpdate(&proto.ConfigUpdate{
+				Config: map[string]string{"DNSExtraTTL": "3600"},
+			})
+			log.Info("Updated extra TTL to 1h")
+			programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
+		})
+
+		It("delivers the IP when queried", func() {
+			Expect(domainStore.GetDomainIPs("update.google.com")).To(Equal([]string{"1.2.3.5"}))
+		})
+
+		It("created the mapping with 1h expiry", func() {
+			Expect(lastTTL).To(Equal(1 * time.Hour))
 		})
 	})
 })

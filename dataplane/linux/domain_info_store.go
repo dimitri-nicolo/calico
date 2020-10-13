@@ -100,6 +100,9 @@ type domainInfoStore struct {
 	mappingExpiryChannel chan *domainMappingExpired
 	expiryTimePassed     func(time.Time) bool
 
+	// Shim for starting and returning a timer that will call `onExpiry` after `ttl`.
+	makeExpiryTimer func(ttl time.Duration, onExpiry func()) *time.Timer
+
 	// Persistence.
 	saveFile     string
 	saveInterval time.Duration
@@ -137,12 +140,21 @@ type domainMappingExpired struct {
 }
 
 func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Config) *domainInfoStore {
-	return newDomainInfoStoreWithShims(domainInfoChanges, config, func(expiryTime time.Time) bool {
-		return expiryTime.Before(time.Now())
-	})
+	return newDomainInfoStoreWithShims(
+		domainInfoChanges,
+		config,
+		time.AfterFunc,
+		func(expiryTime time.Time) bool {
+			return expiryTime.Before(time.Now())
+		})
 }
 
-func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, config *Config, expiryTimePassed func(time.Time) bool) *domainInfoStore {
+func newDomainInfoStoreWithShims(
+	domainInfoChanges chan *domainInfoChanged,
+	config *Config,
+	makeExpiryTimer func(time.Duration, func()) *time.Timer,
+	expiryTimePassed func(time.Time) bool,
+) *domainInfoStore {
 	log.Info("Creating domain info store")
 	s := &domainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
@@ -151,6 +163,7 @@ func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, conf
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
 		expiryTimePassed:     expiryTimePassed,
+		makeExpiryTimer:      makeExpiryTimer,
 		saveFile:             config.DNSCacheFile,
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
@@ -159,7 +172,9 @@ func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, conf
 		requestTimestamp:     make(map[uint16]time.Time),
 		epoch:                config.DNSCacheEpoch,
 		extraTTL:             config.DNSExtraTTL,
-		resetC:               make(chan struct{}),
+		// Capacity 1 here is to allow UT to test the use of this channel without
+		// needing goroutines.
+		resetC: make(chan struct{}, 1),
 	}
 	return s
 }
@@ -203,10 +218,12 @@ func (s *domainInfoStore) OnUpdate(msg interface{}) {
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 		if _, specified := msg.Config["DNSCacheEpoch"]; specified && felixConfig.DNSCacheEpoch != s.epoch {
+			log.Info("Update epoch and send trigger to clear cache")
 			s.epoch = felixConfig.DNSCacheEpoch
 			s.resetC <- struct{}{}
 		}
 		if _, specified := msg.Config["DNSExtraTTL"]; specified && felixConfig.DNSExtraTTL != s.extraTTL {
+			log.Infof("Extra TTL is now %v", felixConfig.DNSExtraTTL)
 			s.extraTTL = felixConfig.DNSExtraTTL
 		}
 	}
@@ -219,50 +236,54 @@ func (s *domainInfoStore) CompleteDeferredWork() error {
 
 func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
-		select {
-		case msg := <-s.msgChannel:
-			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
-			// in the next line is clearly a v4 assumption, and some of the code inside
-			// `nfnetlink.SubscribeDNS` also looks v4-specific.
-			packet := gopacket.NewPacket(msg.Data, layers.LayerTypeIPv4, gopacket.Lazy)
-			if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
-				log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
-			} else {
-				log.Debug("No IPv4 layer")
-			}
+		s.loopIteration(saveTimerC, gcTimerC)
+	}
+}
 
-			// Decode the packet as DNS.  Don't just use LayerTypeDNS here, because that
-			// requires port 53.  Here we want to parse as DNS regardless of the port
-			// number.
-			dns := &layers.DNS{}
-			err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
-			if err == nil {
-				latencyIfKnown := s.processForLatency(dns, msg.Timestamp)
-				if dns.QR == true {
-					// It's a DNS response.
-					if s.collector != nil {
-						if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
-							s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
-						} else {
-							log.Warning("Not logging non-IPv4 DNS packet")
-						}
-					}
-					s.processDNSPacket(dns)
-				}
-			} else {
-				log.WithError(err).Debug("No DNS layer")
-			}
-		case expiry := <-s.mappingExpiryChannel:
-			s.processMappingExpiry(expiry.name, expiry.value)
-		case <-saveTimerC:
-			if err := s.saveMappingsV1(); err != nil {
-				log.WithError(err).Warning("Failed to save mappings to file")
-			}
-		case <-gcTimerC:
-			_ = s.collectGarbage()
-		case <-s.resetC:
-			s.expireAllMappings()
+func (s *domainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
+	select {
+	case msg := <-s.msgChannel:
+		// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
+		// in the next line is clearly a v4 assumption, and some of the code inside
+		// `nfnetlink.SubscribeDNS` also looks v4-specific.
+		packet := gopacket.NewPacket(msg.Data, layers.LayerTypeIPv4, gopacket.Lazy)
+		if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+			log.Debugf("src %v dst %v", ipv4.SrcIP, ipv4.DstIP)
+		} else {
+			log.Debug("No IPv4 layer")
 		}
+
+		// Decode the packet as DNS.  Don't just use LayerTypeDNS here, because that
+		// requires port 53.  Here we want to parse as DNS regardless of the port
+		// number.
+		dns := &layers.DNS{}
+		err := dns.DecodeFromBytes(packet.TransportLayer().LayerPayload(), gopacket.NilDecodeFeedback)
+		if err == nil {
+			latencyIfKnown := s.processForLatency(dns, msg.Timestamp)
+			if dns.QR == true {
+				// It's a DNS response.
+				if s.collector != nil {
+					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
+					} else {
+						log.Warning("Not logging non-IPv4 DNS packet")
+					}
+				}
+				s.processDNSPacket(dns)
+			}
+		} else {
+			log.WithError(err).Debug("No DNS layer")
+		}
+	case expiry := <-s.mappingExpiryChannel:
+		s.processMappingExpiry(expiry.name, expiry.value)
+	case <-saveTimerC:
+		if err := s.saveMappingsV1(); err != nil {
+			log.WithError(err).Warning("Failed to save mappings to file")
+		}
+	case <-gcTimerC:
+		_ = s.collectGarbage()
+	case <-s.resetC:
+		s.expireAllMappings()
 	}
 }
 
@@ -518,7 +539,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	}
 
 	makeTimer := func() *time.Timer {
-		return time.AfterFunc(ttl, func() {
+		return s.makeExpiryTimer(ttl, func() {
 			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
 		})
 	}
