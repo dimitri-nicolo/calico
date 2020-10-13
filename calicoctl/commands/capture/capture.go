@@ -21,20 +21,30 @@ const GetPodByNodeName = "kubectl get pods -n %s --no-headers --field-selector s
 
 // Commands is wrapper over the query
 type Commands struct {
-	Query Query
+	CmdExecutor CmdExecutor
 }
 
-// Query will execute a command and return its output and its error
-type Query interface {
+// NewCommands returns new capture Commands that use kubectl
+func NewCommands(cmd *KubectlCmd) Commands {
+	return Commands{CmdExecutor: cmd}
+}
+
+// CmdExecutor will execute a command and return its output and its error
+type CmdExecutor interface {
 	Execute(cmdStr string) (string, error)
 }
 
-// KubectlQuery is a kubectl wrapper for any query that will be executed
-type KubectlQuery struct {
+// KubectlCmd is a kubectl wrapper for any query that will be executed
+type KubectlCmd struct {
 	KubeConfig string
 }
 
-func (k *KubectlQuery) Execute(cmdStr string) (string, error) {
+// NewKubectlCmd return a CmdExecutor that uses kubectl
+func NewKubectlCmd(kubeConfigPath string) *KubectlCmd {
+	return &KubectlCmd{KubeConfig: kubeConfigPath}
+}
+
+func (k *KubectlCmd) Execute(cmdStr string) (string, error) {
 	var out, err = common.ExecCmd(strings.Replace(cmdStr, "kubectl", fmt.Sprintf("kubectl --kubeconfig %s",k.KubeConfig), 1))
 	if out != nil {
 		return out.String(), err
@@ -68,7 +78,7 @@ func (cmd *Commands) ResolveEntryPoints(captureDir, captureName, captureNs strin
 // Copy will copy capture files from the entryPods from entryNamespace under captureDir/captureNamespace/captureName at destination
 func (cmd *Commands) Copy(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir, destination string) error {
 	for _, pod := range entryPods {
-		output, err := cmd.Query.Execute(fmt.Sprintf(
+		output, err := cmd.CmdExecutor.Execute(fmt.Sprintf(
 			CopyCommand,
 			entryNamespace,
 			pod,
@@ -91,7 +101,7 @@ func (cmd *Commands) Copy(entryPods []string, entryNamespace, captureName, captu
 // Clean will clean capture files from the entryPods from entryNamespace located at captureDir/captureNamespace/captureName
 func (cmd *Commands) Clean(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir string) error {
 	for _, pod := range entryPods {
-		output, err := cmd.Query.Execute(fmt.Sprintf(
+		output, err := cmd.CmdExecutor.Execute(fmt.Sprintf(
 			CleanCommand,
 			entryNamespace,
 			pod,
@@ -110,7 +120,7 @@ func (cmd *Commands) Clean(entryPods []string, entryNamespace, captureName, capt
 }
 
 func (cmd *Commands) resolveNodeNames(captureDir, captureName, captureNs string) ([]string, error) {
-	output, err := cmd.Query.Execute(GetCalicoNodesCommand)
+	output, err := cmd.CmdExecutor.Execute(GetCalicoNodesCommand)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +130,7 @@ func (cmd *Commands) resolveNodeNames(captureDir, captureName, captureNs string)
 	for _, entry := range entries {
 		if len(entry) != 0 {
 			var calicoNode = strings.Split(entry, "   ")
-			_, err := cmd.Query.Execute(fmt.Sprintf(FindCaptureFileCommand, common.CalicoNamespace, calicoNode[0], captureDir, captureNs, captureName))
+			_, err := cmd.CmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, common.CalicoNamespace, calicoNode[0], captureDir, captureNs, captureName))
 			if err != nil {
 				log.Debugf("No capture files are found under %s/%s/%s for %s on node %s", captureDir, captureNs, captureName, calicoNode[0], calicoNode[1])
 				continue
@@ -134,7 +144,7 @@ func (cmd *Commands) resolveNodeNames(captureDir, captureName, captureNs string)
 }
 
 func (cmd *Commands) resolveEntryPod(nodeName, namespace string) (string, error) {
-	output, err := cmd.Query.Execute(fmt.Sprintf(
+	output, err := cmd.CmdExecutor.Execute(fmt.Sprintf(
 		GetPodByNodeName,
 		namespace,
 		nodeName,

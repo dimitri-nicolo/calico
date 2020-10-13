@@ -92,9 +92,7 @@ Description:
 	}
 
 	var failure int
-	var captureCmd = capture.Commands{Query: &capture.KubectlQuery{
-		KubeConfig: kubeConfigPath,
-	}}
+	var captureCmd = capture.NewCommands(capture.NewKubectlCmd(kubeConfigPath))
 
 	var name = argutils.ArgString(parsedArgs, "<NAME>")
 	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "--copy")

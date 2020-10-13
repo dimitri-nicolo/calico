@@ -47,7 +47,7 @@ func TestCommands_Copy(t *testing.T) {
 		// setup capture commands
 		var mock = MockQuery{}
 		var captureCmd = capture.Commands{
-			Query: &mock,
+			CmdExecutor: &mock,
 		}
 
 		// mock the execute command to return the output specified
@@ -83,7 +83,7 @@ func TestCommands_Clean(t *testing.T) {
 		// setup capture commands
 		var mock = MockQuery{}
 		var captureCmd = capture.Commands{
-			Query: &mock,
+			CmdExecutor: &mock,
 		}
 
 		// mock the execute command to return the output specified
@@ -146,7 +146,7 @@ calico-node2   node2`
 		// setup capture commands
 		var mock = MockQuery{}
 		var captureCmd = capture.Commands{
-			Query: &mock,
+			CmdExecutor: &mock,
 		}
 
 		// mock the execute command to return the output specified
