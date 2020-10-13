@@ -2,20 +2,34 @@
 package server_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
+	authzv1 "k8s.io/api/authorization/v1"
+
+	"k8s.io/apiserver/pkg/authentication/user"
+
+	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/tigera/apiserver/pkg/client/clientset_generated/clientset/fake"
+
+	"github.com/tigera/lma/pkg/api"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/elastic"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	v3 "github.com/tigera/apiserver/pkg/apis/projectcalico/v3"
+
+	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
-	"github.com/tigera/lma/pkg/api"
 )
 
 func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedReportData {
@@ -81,16 +95,73 @@ var (
 	}
 )
 
-var _ = Describe("List tests with Gettable Report and ReportType", func() {
-	It("", func() {
+var _ = Describe("List", func() {
+	var mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory
+	var mockESFactory *elastic.MockClusterContextClientFactory
+
+	var mockAuthenticator *authentication.MockAuthenticator
+	var mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
+	var mockESClient *elastic.MockClient
+
+	BeforeEach(func() {
+		mockClientSetFactory = new(datastore.MockClusterCtxK8sClientFactory)
+		mockESFactory = new(elastic.MockClusterContextClientFactory)
+
+		mockAuthenticator = new(authentication.MockAuthenticator)
+		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
+		mockESClient = new(elastic.MockClient)
+	})
+
+	AfterEach(func() {
+		mockClientSetFactory.AssertExpectations(GinkgoT())
+		mockESFactory.AssertExpectations(GinkgoT())
+		mockAuthenticator.AssertExpectations(GinkgoT())
+		mockRBACAuthorizer.AssertExpectations(GinkgoT())
+		mockESClient.AssertExpectations(GinkgoT())
+	})
+
+	It("tests can list with Gettable Report and ReportType", func() {
 		By("Starting a test server")
-		t := startTester()
+
+		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, 0, nil)
+
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "Get",
+		}, mock.Anything).Return(0, nil)
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryGet",
+		}, mock.Anything).Return(0, nil)
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "get", Group: "projectcalico.org", Resource: "globalreporttypes", Name: "inventoryNoGo",
+		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "list", Group: "projectcalico.org", Resource: "globalreports",
+		}, mock.Anything).Return(0, nil)
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "somethingelse",
+		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+
+		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
+		mockESClient.On("RetrieveArchivedReportTypeAndNames", mock.Anything, mock.Anything).Return([]api.ReportTypeAndName{
+			{ReportTypeName: reportGetTypeGet.ReportTypeName, ReportName: reportGetTypeGet.ReportName},
+			{ReportTypeName: reportGetTypeNoGet.ReportTypeName, ReportName: reportGetTypeNoGet.ReportName},
+			{ReportTypeName: reportNoGetTypeNoGet.ReportTypeName, ReportName: reportNoGetTypeNoGet.ReportName},
+		}, nil)
+
+		mockESClient.On("RetrieveArchivedReportSummaries", mock.Anything, mock.Anything).Return(&api.ArchivedReportSummaries{
+			Count:   3,
+			Reports: []*api.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet},
+		}, nil)
+
+		mockESFactory.On("ClientForCluster", mock.Anything).Return(mockESClient, nil)
+
+		calicoCli := fake.NewSimpleClientset(&reportTypeGettable, &reportTypeNotGettable)
+		mockClientSetFactory.On("ClientSetForCluster", mock.Anything).Return(datastore.NewClientSet(nil, calicoCli.ProjectcalicoV3()), nil)
+
+		t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
 
 		By("Setting responses")
-		t.summaries = []*api.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
-		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
-		}
 
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
@@ -130,21 +201,19 @@ var _ = Describe("List tests with Gettable Report and ReportType", func() {
 		By("Stopping the server")
 		t.stop()
 	})
-})
 
-var _ = Describe("List tests with Gettable Report and ReportType but no List", func() {
-	It("", func() {
+	It("returns unauthorized if the user is not authorized to list reports", func() {
+		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, 0, nil)
+
+		mockRBACAuthorizer := new(lmaauth.MockRBACAuthorizer)
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "list", Group: "projectcalico.org", Resource: "globalreports",
+		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+
+		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
 		By("Starting a test server")
-		t := startTester()
-
-		By("Setting tester to refuse List access")
-		t.listRBACControl = ""
-
-		By("Setting responses")
-		t.summaries = []*api.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
-		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
-		}
+		t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
 
 		By("Running a list query")
 		t.list(http.StatusUnauthorized, nil)
@@ -152,69 +221,26 @@ var _ = Describe("List tests with Gettable Report and ReportType but no List", f
 		By("Stopping the server")
 		t.stop()
 	})
-})
 
-var _ = Describe("List tests with Not Gettable ReportType", func() {
-	It("", func() {
-		By("Starting a test server")
-		t := startTester()
-
-		By("Setting responses to")
-		t.summaries = []*api.ArchivedReportData{reportGetTypeGet, reportNoGetTypeNoGet, reportGetTypeNoGet}
-		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeNotGettable, reportTypeGettable},
-		}
-
-		By("Running a list query")
-		t.list(http.StatusOK, []server.Report{
-			{
-				Id:          reportGetTypeGet.UID(),
-				Name:        reportGetTypeGet.ReportName,
-				Type:        reportGetTypeGet.ReportTypeName,
-				StartTime:   now,
-				EndTime:     nowPlusHour,
-				UISummary:   map[string]interface{}{"foobar": "hello-100-goodbye"},
-				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
-				DownloadFormats: []server.Format{
-					{
-						Name:        "boo.csv",
-						Description: "This is a boo file",
-					},
-					{
-						Name:        "bar.csv",
-						Description: "This is a bar file",
-					},
-				},
-				GenerationTime: now,
-			},
-			{
-				Id:              reportGetTypeNoGet.UID(),
-				Name:            reportGetTypeNoGet.ReportName,
-				Type:            reportGetTypeNoGet.ReportTypeName,
-				StartTime:       now,
-				EndTime:         nowPlusHour,
-				UISummary:       map[string]interface{}{"foobar": "hello-100-goodbye"},
-				DownloadURL:     "",
-				DownloadFormats: nil,
-				GenerationTime:  now,
-			},
-		})
-
-		By("Stopping the server")
-		t.stop()
-	})
-})
-
-var _ = Describe("List tests with none available", func() {
 	It("Can handle list queries with no items", func() {
-		By("Starting a test server")
-		t := startTester()
+		mockAuthenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{}, 0, nil)
 
-		By("Setting responses to contain no items")
-		t.summaries = []*api.ArchivedReportData{reportNoGetTypeNoGet, reportNoGetTypeNoGet}
-		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeGettable},
-		}
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "list", Group: "projectcalico.org", Resource: "globalreports",
+		}, mock.Anything).Return(0, nil)
+		mockRBACAuthorizer.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
+			Verb: "get", Group: "projectcalico.org", Resource: "globalreports", Name: "somethingelse",
+		}, mock.Anything).Return(403, fmt.Errorf("nogo"))
+
+		mockClientSetFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
+		mockESClient.On("RetrieveArchivedReportTypeAndNames", mock.Anything, mock.Anything).Return([]api.ReportTypeAndName{
+			{ReportTypeName: reportNoGetTypeNoGet.ReportTypeName, ReportName: reportNoGetTypeNoGet.ReportName},
+		}, nil)
+
+		mockESFactory.On("ClientForCluster", mock.Anything).Return(mockESClient, nil)
+
+		t := startTester(mockClientSetFactory, mockESFactory, mockAuthenticator)
 
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{})

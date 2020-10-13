@@ -25,7 +25,7 @@ func MustLoadReportConfig(cfg *config.Config) *Config {
 	reportCfg := mustReadReportConfigFromEnv()
 
 	// Get the calico client and pull the named report and corresponding report type.
-	client := datastore.MustGetCalicoClient()
+	client := datastore.MustGetClientSet()
 
 	reportCfg.Report, err = client.GlobalReports().Get(reportCfg.ReportName, metav1.GetOptions{})
 	if err != nil {

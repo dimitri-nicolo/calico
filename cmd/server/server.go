@@ -8,13 +8,19 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/caimeo/iniflags"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/caimeo/iniflags"
+
+	"github.com/tigera/apiserver/pkg/authentication"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/compliance/pkg/tls"
 	"github.com/tigera/compliance/pkg/version"
+	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/elastic"
+
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"k8s.io/klog"
@@ -47,7 +53,9 @@ func main() {
 	cfg.InitializeLogging()
 
 	// Create the elastic and Calico clients.
-	restClient := datastore.MustGetRESTClient(cfg)
+	restConfig := datastore.MustGetConfig()
+	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.MultiClusterForwardingCA,
+		cfg.MultiClusterForwardingEndpoint)
 	// Set up tls certs
 	altIPs := []net.IP{net.ParseIP("127.0.0.1")}
 	if err := tls.GenerateSelfSignedCertsIfNeeded("localhost", nil, altIPs, *certPath, *keyPath); err != nil {
@@ -55,7 +63,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := server.New(restClient, server.NewStandardRbacHelperFactory(restClient), ":"+*apiPort, *keyPath, *certPath)
+	authenticator, err := authentication.New()
+	if err != nil {
+		log.WithError(err).Panic("Unable to create authenticator")
+	}
+
+	if cfg.DexEnabled {
+		dex, err := auth.NewDexAuthenticator(
+			cfg.DexIssuer,
+			cfg.DexClientID,
+			cfg.DexUsernameClaim,
+			[]auth.DexOption{
+				auth.WithGroupsClaim(cfg.DexGroupsClaim),
+				auth.WithJWKSURL(cfg.DexJWKSURL),
+				auth.WithUsernamePrefix(cfg.DexUsernamePrefix),
+				auth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+			}...)
+
+		if err != nil {
+			log.WithError(err).Panic("Unable to create dex authenticator")
+		}
+		authenticator = auth.NewAggregateAuthenticator(dex, authenticator)
+	}
+
+	esClientFactory := elastic.NewClusterContextClientFactory(elastic.MustLoadConfig())
+	s := server.New(k8sClientFactory, esClientFactory, authenticator, ":"+*apiPort, *keyPath, *certPath)
 
 	s.Start()
 

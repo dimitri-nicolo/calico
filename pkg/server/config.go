@@ -28,8 +28,13 @@ func (s *server) getReportTypes(clusterID string) (map[string]*v3.ReportTypeSpec
 		return s.reportTypes, nil
 	}
 
+	cs, err := s.csFactory.ClientSetForCluster(clusterID)
+	if err != nil {
+		return nil, err
+	}
+
 	// Get the latest set of report types.
-	grt, err := s.rcf.CalicoClient(clusterID).GlobalReportTypes().List(v1.ListOptions{})
+	grt, err := cs.GlobalReportTypes().List(v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

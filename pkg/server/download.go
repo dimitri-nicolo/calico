@@ -45,10 +45,17 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	reportName := parts[0]
 	reportTypeName := parts[1]
 
+	authorizer, err := s.csFactory.RBACAuthorizerForCluster(clusterID)
+	if err != nil {
+		log.Errorf("Failed to create authorizer: %s", err.Error())
+		http.Error(response, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	// Create an RBAC helper to see if we can download this report
 	//TODO(rlb): Should add test to verify no ES calls are made when the user is not authorized.
-	rbac := s.rhf.NewReportRbacHelper(request)
-	if allow, err := rbac.CanViewReport(reportTypeName, reportName); err != nil {
+	rbacHelper := NewReportRbacHelper(authorizer, request)
+	if allow, err := rbacHelper.CanViewReport(reportTypeName, reportName); err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
 		return
@@ -58,8 +65,14 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 		return
 	}
 
+	esClient, err := s.esFactory.ClientForCluster(clusterID)
+	if err != nil {
+		log.WithError(err).Error("failed to create elasticsearch client")
+		http.Error(response, "Internal Server Error", http.StatusInternalServerError)
+	}
+
 	// Download the report.
-	r, err := s.rcf.ESClient(clusterID).RetrieveArchivedReport(uid)
+	r, err := esClient.RetrieveArchivedReport(uid)
 	if err != nil {
 		if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
 			http.Error(response, "Report does not exist", http.StatusNotFound)

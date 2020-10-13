@@ -1,12 +1,15 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/lma/pkg/auth"
+
+	lmaauth "github.com/tigera/lma/pkg/auth"
+
 	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apiserver/pkg/endpoints/request"
 )
 
 type ReportRbacHelper interface {
@@ -23,34 +26,18 @@ type ReportRbacHelper interface {
 type reportRbacHelper struct {
 	canGetReportTypeByName map[string]bool
 	canGetReportByName     map[string]bool
-	Request                *http.Request
-	rcf                    datastore.RESTClientFactory
-}
-
-type K8sAuthInterface interface {
-	Authorize(*http.Request) (int, error)
-}
-
-type RbacHelperFactory interface {
-	NewReportRbacHelper(*http.Request) ReportRbacHelper
-}
-
-type standardRbacHelperFactory struct {
-	rcf datastore.RESTClientFactory
+	request                *http.Request
+	authorizer             lmaauth.RBACAuthorizer
 }
 
 // newReportRbacHelper returns a new initialized reportRbacHelper.
-func (f *standardRbacHelperFactory) NewReportRbacHelper(req *http.Request) ReportRbacHelper {
+func NewReportRbacHelper(authorizer lmaauth.RBACAuthorizer, req *http.Request) ReportRbacHelper {
 	return &reportRbacHelper{
 		canGetReportTypeByName: make(map[string]bool),
 		canGetReportByName:     make(map[string]bool),
-		Request:                req,
-		rcf:                    f.rcf,
+		request:                req,
+		authorizer:             authorizer,
 	}
-}
-
-func NewStandardRbacHelperFactory(rcf datastore.RESTClientFactory) RbacHelperFactory {
-	return &standardRbacHelperFactory{rcf: rcf}
 }
 
 // CanViewReport returns true if the caller is allowed to view/download a specific report/report-type.
@@ -161,12 +148,12 @@ func (l *reportRbacHelper) canGetReportType(reportTypeName string) (bool, error)
 
 // checkAuthorized returns true if the request is allowed for the resources described in provided attributes
 func (l *reportRbacHelper) checkAuthorized(atr authzv1.ResourceAttributes) (bool, error) {
+	usr, ok := request.UserFrom(l.request.Context())
+	if !ok {
+		return false, fmt.Errorf("no user found in request context")
+	}
 
-	ctx := auth.NewContextWithReviewResource(l.Request.Context(), &atr)
-	req := l.Request.WithContext(ctx)
-
-	clusterID := req.Header.Get(datastore.XClusterIDHeader)
-	stat, err := l.rcf.K8sAuth(clusterID).Authorize(req)
+	stat, err := l.authorizer.Authorize(usr, &atr, nil)
 
 	switch stat {
 	case 0:
