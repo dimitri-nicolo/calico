@@ -9,3 +9,4 @@
 /controller/cmd/controller/controller
 vendor
 controller/Makefile.common*
+.vscode
