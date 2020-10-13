@@ -21,8 +21,8 @@ import (
 
 func Capture(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl captured-packets (--copy |--clean ) <NAME>
-                [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--dest=<DEST>] [--log-level=<level>]
+  calicoctl captured-packets ( copy | clean ) <NAME>
+                [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--dest=<DEST>]
 
 Examples:
   # Copies capture files for packet capture from default namespace in the current directory.
@@ -36,7 +36,6 @@ Options:
   -a --all-namespaces      If present, list the requested packet capture(s) across all namespaces.
   -d --dest=<DEST>         If present, uses the directory specified as the destination.
   -h --help                Show this screen.
-  -l --log-level=<level>   Set log level to debug, warn, info or panic.
   -c --config=<CONFIG>     Path to the file containing connection configuration in
                            YAML or JSON format.
                            [default: ` + constants.DefaultConfigPath + `]
@@ -53,18 +52,6 @@ Description:
 
 	if len(parsedArgs) == 0 {
 		return nil
-	}
-
-	// Setup log level
-	if logLevel := parsedArgs["--log-level"]; logLevel != nil {
-		parsedLogLevel, err := log.ParseLevel(logLevel.(string))
-		if err != nil {
-			return fmt.Errorf("Unknown log level: %s, expected one of: \n"+
-				"panic, fatal, error, warn, info, debug.\n", logLevel)
-		} else {
-			log.SetLevel(parsedLogLevel)
-			log.Infof("Log level set to %v", parsedLogLevel)
-		}
 	}
 
 	// Ensure kubectl command is available
@@ -95,8 +82,8 @@ Description:
 	var captureCmd = capture.NewCommands(capture.NewKubectlCmd(kubeConfigPath))
 
 	var name = argutils.ArgString(parsedArgs, "<NAME>")
-	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "--copy")
-	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "--clean")
+	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
+	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
 
 	for _, ns := range namespaces {
 		log.Debugf("Retrieve capture files for: %s/%s", ns, name)

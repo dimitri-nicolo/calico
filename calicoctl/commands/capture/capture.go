@@ -18,15 +18,17 @@ const GetCalicoNodesCommand = "kubectl get pod -o=custom-columns=NAME:.metadata.
 const FindCaptureFileCommand = "kubectl exec -n %s %s -- stat %s/%s/%s"
 // GetPodByNodeName is a kubectl command that will be executed to retrieve a pod scheduled on a node
 const GetPodByNodeName = "kubectl get pods -n %s --no-headers --field-selector spec.nodeName=%s -o=custom-columns=NAME:..metadata.name"
+// Namespace used to execute commands inside pods
+const entryNamespace = "tigera-fluentd"
 
-// Commands is wrapper over the query
-type Commands struct {
-	CmdExecutor CmdExecutor
+// commands is wrapper over the CmdExecutor
+type commands struct {
+	cmdExecutor CmdExecutor
 }
 
-// NewCommands returns new capture Commands that use kubectl
-func NewCommands(cmd *KubectlCmd) Commands {
-	return Commands{CmdExecutor: cmd}
+// NewCommands returns new capture commands that use kubectl
+func NewCommands(cmd CmdExecutor) commands {
+	return commands{cmdExecutor: cmd}
 }
 
 // CmdExecutor will execute a command and return its output and its error
@@ -34,18 +36,18 @@ type CmdExecutor interface {
 	Execute(cmdStr string) (string, error)
 }
 
-// KubectlCmd is a kubectl wrapper for any query that will be executed
-type KubectlCmd struct {
-	KubeConfig string
+// kubectlCmd is a kubectl wrapper for any query that will be executed
+type kubectlCmd struct {
+	kubeConfig string
 }
 
 // NewKubectlCmd return a CmdExecutor that uses kubectl
-func NewKubectlCmd(kubeConfigPath string) *KubectlCmd {
-	return &KubectlCmd{KubeConfig: kubeConfigPath}
+func NewKubectlCmd(kubeConfigPath string) *kubectlCmd {
+	return &kubectlCmd{kubeConfig: kubeConfigPath}
 }
 
-func (k *KubectlCmd) Execute(cmdStr string) (string, error) {
-	var out, err = common.ExecCmd(strings.Replace(cmdStr, "kubectl", fmt.Sprintf("kubectl --kubeconfig %s",k.KubeConfig), 1))
+func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
+	var out, err = common.ExecCmd(strings.Replace(cmdStr, "kubectl", fmt.Sprintf("kubectl --kubeconfig %s",k.kubeConfig), 1))
 	if out != nil {
 		return out.String(), err
 	}
@@ -53,7 +55,7 @@ func (k *KubectlCmd) Execute(cmdStr string) (string, error) {
 }
 
 // ResolveEntryPoints will resolve capture files and match any fluentD pods that have been scheduled on the same node
-func (cmd *Commands) ResolveEntryPoints(captureDir, captureName, captureNs string) ([]string, string) {
+func (cmd *commands) ResolveEntryPoints(captureDir, captureName, captureNs string) ([]string, string) {
 	var locations []string
 
 	var nodeNames, err = cmd.resolveNodeNames(captureDir, captureName, captureNs)
@@ -62,7 +64,6 @@ func (cmd *Commands) ResolveEntryPoints(captureDir, captureName, captureNs strin
 		return locations, ""
 	}
 
-	const entryNamespace = "tigera-fluentd"
 	for _, nodeName := range nodeNames {
 		var pod, err = cmd.resolveEntryPod(nodeName, entryNamespace)
 		if err != nil {
@@ -76,17 +77,9 @@ func (cmd *Commands) ResolveEntryPoints(captureDir, captureName, captureNs strin
 }
 
 // Copy will copy capture files from the entryPods from entryNamespace under captureDir/captureNamespace/captureName at destination
-func (cmd *Commands) Copy(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir, destination string) error {
+func (cmd *commands) Copy(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir, destination string) error {
 	for _, pod := range entryPods {
-		output, err := cmd.CmdExecutor.Execute(fmt.Sprintf(
-			CopyCommand,
-			entryNamespace,
-			pod,
-			captureDir,
-			captureNamespace,
-			captureName,
-			destination,
-		))
+		output, err := cmd.copyCaptureFiles(entryNamespace, pod, captureDir, captureNamespace, captureName, destination)
 		if err != nil {
 			log.WithError(err).Warnf("Could not copy capture files for %s/%s from %s/%s", captureNamespace, captureName, entryNamespace, pod)
 			return err
@@ -98,17 +91,23 @@ func (cmd *Commands) Copy(entryPods []string, entryNamespace, captureName, captu
 	return nil
 }
 
+func (cmd *commands) copyCaptureFiles(entryNamespace string, pod string, captureDir string, captureNamespace string, captureName string, destination string) (string, error) {
+	output, err := cmd.cmdExecutor.Execute(fmt.Sprintf(
+		CopyCommand,
+		entryNamespace,
+		pod,
+		captureDir,
+		captureNamespace,
+		captureName,
+		destination,
+	))
+	return output, err
+}
+
 // Clean will clean capture files from the entryPods from entryNamespace located at captureDir/captureNamespace/captureName
-func (cmd *Commands) Clean(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir string) error {
+func (cmd *commands) Clean(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir string) error {
 	for _, pod := range entryPods {
-		output, err := cmd.CmdExecutor.Execute(fmt.Sprintf(
-			CleanCommand,
-			entryNamespace,
-			pod,
-			captureDir,
-			captureNamespace,
-			captureName,
-		))
+		output, err := cmd.cleanCaptureFiles(entryNamespace, pod, captureDir, captureNamespace, captureName)
 		if err != nil {
 			log.WithError(err).Warnf("Could not clean capture files for %s/%s from %s/%s", captureNamespace, captureName, entryNamespace, pod)
 			return err
@@ -119,8 +118,20 @@ func (cmd *Commands) Clean(entryPods []string, entryNamespace, captureName, capt
 	return nil
 }
 
-func (cmd *Commands) resolveNodeNames(captureDir, captureName, captureNs string) ([]string, error) {
-	output, err := cmd.CmdExecutor.Execute(GetCalicoNodesCommand)
+func (cmd *commands) cleanCaptureFiles(entryNamespace string, pod string, captureDir string, captureNamespace string, captureName string) (string, error) {
+	output, err := cmd.cmdExecutor.Execute(fmt.Sprintf(
+		CleanCommand,
+		entryNamespace,
+		pod,
+		captureDir,
+		captureNamespace,
+		captureName,
+	))
+	return output, err
+}
+
+func (cmd *commands) resolveNodeNames(captureDir, captureName, captureNs string) ([]string, error) {
+	output, err := cmd.cmdExecutor.Execute(GetCalicoNodesCommand)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +141,7 @@ func (cmd *Commands) resolveNodeNames(captureDir, captureName, captureNs string)
 	for _, entry := range entries {
 		if len(entry) != 0 {
 			var calicoNode = strings.Split(entry, "   ")
-			_, err := cmd.CmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, common.CalicoNamespace, calicoNode[0], captureDir, captureNs, captureName))
+			_, err := cmd.cmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, common.CalicoNamespace, calicoNode[0], captureDir, captureNs, captureName))
 			if err != nil {
 				log.Debugf("No capture files are found under %s/%s/%s for %s on node %s", captureDir, captureNs, captureName, calicoNode[0], calicoNode[1])
 				continue
@@ -143,8 +154,8 @@ func (cmd *Commands) resolveNodeNames(captureDir, captureName, captureNs string)
 	return nodes, nil
 }
 
-func (cmd *Commands) resolveEntryPod(nodeName, namespace string) (string, error) {
-	output, err := cmd.CmdExecutor.Execute(fmt.Sprintf(
+func (cmd *commands) resolveEntryPod(nodeName, namespace string) (string, error) {
+	output, err := cmd.cmdExecutor.Execute(fmt.Sprintf(
 		GetPodByNodeName,
 		namespace,
 		nodeName,

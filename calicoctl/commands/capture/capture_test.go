@@ -46,9 +46,7 @@ func TestCommands_Copy(t *testing.T) {
 	for _,entry := range tables {
 		// setup capture commands
 		var mock = MockQuery{}
-		var captureCmd = capture.Commands{
-			CmdExecutor: &mock,
-		}
+		var captureCmd = capture.NewCommands(&mock)
 
 		// mock the execute command to return the output specified
 		mock.On("Execute", entry.cmdInput).Return(entry.cmdOutput, entry.cmdErr)
@@ -82,9 +80,7 @@ func TestCommands_Clean(t *testing.T) {
 	for _,entry := range tables {
 		// setup capture commands
 		var mock = MockQuery{}
-		var captureCmd = capture.Commands{
-			CmdExecutor: &mock,
-		}
+		var captureCmd = capture.NewCommands(&mock)
 
 		// mock the execute command to return the output specified
 		mock.On("Execute", entry.cmdInput).Return(entry.cmdOutput, entry.cmdErr)
@@ -145,9 +141,7 @@ calico-node2   node2`
 	for _,entry := range tables {
 		// setup capture commands
 		var mock = MockQuery{}
-		var captureCmd = capture.Commands{
-			CmdExecutor: &mock,
-		}
+		var captureCmd = capture.NewCommands(&mock)
 
 		// mock the execute command to return the output specified
 		mock.On("Execute", capture.GetCalicoNodesCommand).Return(entry.getCalicoNodesOutput, nil)
