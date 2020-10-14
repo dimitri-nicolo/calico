@@ -12,3 +12,11 @@ if [ "${SYSLOG_AUDIT_LOG}" == "true" ]; then
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_tsee_audit/out-syslog.conf
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_kube_audit/out-syslog.conf
 fi
+if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then
+  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_ids_events/out-syslog.conf
+fi
+
+# Append additional output matcher config (for IDS events) when SYSLOG forwarding is turned on
+if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then
+  cat /fluentd/etc/fluent_output_syslog_optional.conf >> /fluentd/etc/fluent.conf
+fi

@@ -25,6 +25,7 @@ COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY fluent_output.conf /fluentd/etc/fluent_output.conf
 COPY fluent_output_optional.conf /fluentd/etc/fluent_output_optional.conf
+COPY fluent_output_syslog_optional.conf /fluentd/etc/fluent_output_syslog_optional.conf
 COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
 COPY filters /fluentd/etc/filters
@@ -36,21 +37,29 @@ ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 ENV BIRD_LOG_FILE=/var/log/calico/bird/current
 ENV BIRD6_LOG_FILE=/var/log/calico/bird6/current
+ENV IDS_EVENT_LOG_FILE=/var/log/calico/ids/events.log
+
 ENV POS_DIR=/var/log/calico
+
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
 ENV ELASTIC_FLUSH_INTERVAL=5s
+
 ENV KUBE_AUDIT_LOG=/var/log/calico/audit/kube-audit.log
 ENV KUBE_AUDIT_POS=${POS_DIR}/kube-audit.log.pos
+
 ENV ELASTIC_INDEX_SUFFIX=cluster
+
 ENV S3_FLUSH_INTERVAL=5s
 ENV S3_STORAGE=false
+
 ENV ELASTIC_FLOWS_INDEX_SHARDS=1
 ENV ELASTIC_FLOWS_INDEX_REPLICAS=0
 ENV ELASTIC_DNS_INDEX_SHARDS=1
 ENV ELASTIC_DNS_INDEX_REPLICAS=0
 ENV ELASTIC_AUDIT_INDEX_REPLICAS=0
 ENV ELASTIC_TEMPLATE_OVERWRITE=true
+
 ENV SYSLOG_PACKET_SIZE=1024
 
 COPY readiness.sh /bin/
@@ -86,6 +95,7 @@ RUN mkdir /fluentd/etc/output_tsee_audit
 RUN mkdir /fluentd/etc/output_kube_audit
 RUN mkdir /fluentd/etc/output_compliance_reports
 RUN mkdir /fluentd/etc/output_bgp
+RUN mkdir /fluentd/etc/output_ids_events
 
 EXPOSE 24284
 
