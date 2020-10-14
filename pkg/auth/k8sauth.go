@@ -3,6 +3,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -40,7 +41,7 @@ type k8sauth struct {
 // updated with the appropriate status and a message with details.
 func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req, stat, err := authentication.AuthenticateRequest(ka.authenticator, req)
+		req, stat, err := ka.Authenticate(req)
 		if err != nil {
 			log.WithError(err).Debug("Kubernetes authn failure")
 			http.Error(w, err.Error(), stat)
@@ -64,7 +65,7 @@ func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 // message with details.
 func (ka *k8sauth) KubernetesAuthn(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		req, stat, err := authentication.AuthenticateRequest(ka.authenticator, req)
+		req, stat, err := ka.Authenticate(req)
 		if err != nil {
 			log.WithError(err).Debug("Kubernetes auth failure")
 			http.Error(w, err.Error(), stat)
@@ -171,4 +172,39 @@ func FromContextGetReviewResource(ctx context.Context) (*authzv1.ResourceAttribu
 func FromContextGetReviewNonResource(ctx context.Context) (*authzv1.NonResourceAttributes, bool) {
 	nra, ok := ctx.Value(NonResourceAttributeKey).(*authzv1.NonResourceAttributes)
 	return nra, ok
+}
+
+// aggregateAuthenticator will authenticate the provided authenticator args in order. If an authenticator returns an
+// HTTP 421 misdirected error code, it tries the next, until it it reaches an authenticator that can authenticate
+// the authorization header.
+type aggregateAuthenticator struct {
+	authenticators []authentication.Authenticator
+}
+
+// Authenticate will authenticate based on its provided authenticators. If an authenticator returns an HTTP 421 misdirected
+// error code, it tries the next, until it it reaches an authenticator that can authenticate the authorization header.
+func (a *aggregateAuthenticator) Authenticate(token string) (k8suser.Info, int, error) {
+	if a.authenticators == nil || len(a.authenticators) == 0 {
+		return nil, 500, errors.New("authenticator was not configured correctly")
+	}
+	for _, auth := range a.authenticators {
+		if auth != nil {
+			usr, stat, err := auth.Authenticate(token)
+			if stat != 421 {
+				return usr, stat, err
+			}
+		}
+	}
+	return nil, 401, errors.New("no authenticator can authenticate user")
+}
+
+// NewAggregateAuthenticator will create an authenticator that combines multiple authenticators into one.
+func NewAggregateAuthenticator(authenticators ...authentication.Authenticator) authentication.Authenticator {
+	var auths []authentication.Authenticator
+	for _, a := range authenticators {
+		if a != nil {
+			auths = append(auths, a)
+		}
+	}
+	return &aggregateAuthenticator{auths}
 }

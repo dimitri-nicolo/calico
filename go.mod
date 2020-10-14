@@ -29,6 +29,7 @@ replace (
 )
 
 require (
+	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/olivere/elastic/v7 v7.0.6
 	github.com/onsi/ginkgo v1.14.1
@@ -36,7 +37,9 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.2
+	github.com/stretchr/testify v1.4.0
 	github.com/tigera/apiserver v0.0.0-20201009181127-0a204605c07c
+	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
 	k8s.io/apiserver v0.17.3
