@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -9,12 +9,13 @@ import (
 )
 
 var protoNames = map[int]string{
-	1:  "icmp",
-	6:  "tcp",
-	17: "udp",
-	4:  "ipip",
-	50: "esp",
-	58: "icmp6",
+	1:   "icmp",
+	6:   "tcp",
+	17:  "udp",
+	4:   "ipip",
+	50:  "esp",
+	58:  "icmp6",
+	132: "sctp",
 }
 
 // FlowLogJSONOutput represents the JSON representation of a flow log.
@@ -25,21 +26,24 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP        *string                  `json:"source_ip"`
-	SourceName      string                   `json:"source_name"`
-	SourceNameAggr  string                   `json:"source_name_aggr"`
-	SourceNamespace string                   `json:"source_namespace"`
-	SourcePort      *int64                   `json:"source_port"`
-	SourceType      string                   `json:"source_type"`
-	SourceLabels    *FlowLogLabelsJSONOutput `json:"source_labels"`
-	DestIP          *string                  `json:"dest_ip"`
-	DestName        string                   `json:"dest_name"`
-	DestNameAggr    string                   `json:"dest_name_aggr"`
-	DestNamespace   string                   `json:"dest_namespace"`
-	DestPort        *int64                   `json:"dest_port"`
-	DestType        string                   `json:"dest_type"`
-	DestLabels      *FlowLogLabelsJSONOutput `json:"dest_labels"`
-	Proto           string                   `json:"proto"`
+	SourceIP             *string                  `json:"source_ip"`
+	SourceName           string                   `json:"source_name"`
+	SourceNameAggr       string                   `json:"source_name_aggr"`
+	SourceNamespace      string                   `json:"source_namespace"`
+	SourcePort           *int64                   `json:"source_port"`
+	SourceType           string                   `json:"source_type"`
+	SourceLabels         *FlowLogLabelsJSONOutput `json:"source_labels"`
+	DestIP               *string                  `json:"dest_ip"`
+	DestName             string                   `json:"dest_name"`
+	DestNameAggr         string                   `json:"dest_name_aggr"`
+	DestNamespace        string                   `json:"dest_namespace"`
+	DestServiceNamespace string                   `json:"dest_service_namespace"`
+	DestServiceName      string                   `json:"dest_service_name"`
+	DestServicePort      string                   `json:"dest_service_port"`
+	DestPort             *int64                   `json:"dest_port"`
+	DestType             string                   `json:"dest_type"`
+	DestLabels           *FlowLogLabelsJSONOutput `json:"dest_labels"`
+	Proto                string                   `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
@@ -111,6 +115,9 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.DestName = l.DstMeta.Name
 	out.DestNameAggr = l.DstMeta.AggregatedName
 	out.DestNamespace = l.DstMeta.Namespace
+	out.DestServiceNamespace = l.DstService.Namespace
+	out.DestServiceName = l.DstService.Name
+	out.DestServicePort = l.DstService.Port
 	out.DestType = string(l.DstMeta.Type)
 	if l.DstLabels == nil {
 		out.DestLabels = nil
@@ -241,6 +248,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Namespace:      o.DestNamespace,
 		Name:           o.DestName,
 		AggregatedName: o.DestNameAggr,
+	}
+	fl.DstService = FlowService{
+		Namespace: o.DestServiceNamespace,
+		Name:      o.DestServiceName,
+		Port:      o.DestServicePort,
 	}
 	if o.DestLabels == nil {
 		fl.DstLabels = nil

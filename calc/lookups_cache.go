@@ -1,8 +1,10 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package calc
 
 import (
+	"k8s.io/kubernetes/pkg/proxy"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -20,6 +22,7 @@ type LookupsCache struct {
 	polCache *PolicyLookupsCache
 	epCache  *EndpointLookupsCache
 	nsCache  *NetworksetLookupsCache
+	svcCache *ServiceLookupsCache
 }
 
 func NewLookupsCache() *LookupsCache {
@@ -27,6 +30,7 @@ func NewLookupsCache() *LookupsCache {
 		polCache: NewPolicyLookupsCache(),
 		epCache:  NewEndpointLookupsCache(),
 		nsCache:  NewNetworksetLookupsCache(),
+		svcCache: NewServiceLookupsCache(),
 	}
 	return lc
 }
@@ -43,6 +47,15 @@ func (lc *LookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool) {
 	return lc.epCache.GetEndpoint(addr)
 }
 
+// GetNode returns the node configured with the supplied address. This matches against one of the following:
+// - The node IP address
+// - The node IPIP tunnel address
+// - The node VXLAN tunnel address
+// - The node wireguard tunnel address
+func (lc *LookupsCache) GetNode(addr [16]byte) (string, bool) {
+	return lc.epCache.GetNode(addr)
+}
+
 // GetNetworkset returns the networkset information for an address.
 // It returns the first networkset it finds that contains the given address.
 func (lc *LookupsCache) GetNetworkset(addr [16]byte) (*EndpointData, bool) {
@@ -52,6 +65,16 @@ func (lc *LookupsCache) GetNetworkset(addr [16]byte) (*EndpointData, bool) {
 // GetRuleIDFromNFLOGPrefix returns the RuleID associated with the supplied NFLOG prefix.
 func (lc *LookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID {
 	return lc.polCache.GetRuleIDFromNFLOGPrefix(prefix)
+}
+
+// GetServiceFromPreNATDest looks up a service by cluster/external IP.
+func (lc *LookupsCache) GetServiceFromPreDNATDest(ipPreDNAT [16]byte, portPreDNAT int, proto int) (proxy.ServicePortName, bool) {
+	return lc.svcCache.GetServiceFromPreDNATDest(ipPreDNAT, portPreDNAT, proto)
+}
+
+// GetNodePortService looks up a service by port and protocol (assuming a node IP).
+func (lc *LookupsCache) GetNodePortService(port int, proto int) (proxy.ServicePortName, bool) {
+	return lc.svcCache.GetNodePortService(port, proto)
 }
 
 // SetMockData fills in some of the data structures for use in the test code. This should not

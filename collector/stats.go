@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gavv/monotime"
+
+	"k8s.io/kubernetes/pkg/proxy"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
@@ -324,6 +326,9 @@ type Data struct {
 	srcEp *calc.EndpointData
 	dstEp *calc.EndpointData
 
+	// The source and destination service if uniquely attributable.
+	dstSvc proxy.ServicePortName
+
 	// Indicates if this is a connection
 	isConnection bool
 
@@ -364,6 +369,7 @@ func NewData(tuple Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize in
 func (d *Data) String() string {
 	var (
 		srcName, dstName string
+		dstSvcName       string
 		osi              []net.IP
 		osiTc            int
 	)
@@ -377,15 +383,20 @@ func (d *Data) String() string {
 	} else {
 		dstName = "<unknown>"
 	}
+	if d.dstSvc.Name != "" {
+		dstSvcName = d.dstSvc.Namespace + "." + d.dstSvc.Name + "." + d.dstSvc.Port
+	} else {
+		dstSvcName = "<unknown>"
+	}
 	if d.origSourceIPs != nil {
 		osi = d.origSourceIPs.ToIPSlice()
 		osiTc = d.origSourceIPs.TotalCount()
 	}
 	return fmt.Sprintf(
-		"tuple={%v}, srcEp={%v} dstEp={%v} connTrackCtr={packets=%v bytes=%v}, "+
+		"tuple={%v}, srcEp={%v} dstEp={%v}, dstSvc={%v}, connTrackCtr={packets=%v bytes=%v}, "+
 			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
 			"origSourceIPs={ips=%v totalCount=%v}",
-		&(d.Tuple), srcName, dstName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
+		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
 		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc)
 }
@@ -642,6 +653,7 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
+		dstService:   d.dstSvc,
 		ruleIDs:      d.IngressRuleTrace.Path(),
 		isConnection: d.isConnection,
 		inMetric: MetricValue{
@@ -664,6 +676,7 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
+		dstService:   d.dstSvc,
 		ruleIDs:      d.EgressRuleTrace.Path(),
 		isConnection: d.isConnection,
 		inMetric: MetricValue{
@@ -684,6 +697,7 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
+		dstService:   d.dstSvc,
 		ruleIDs:      d.IngressRuleTrace.Path(),
 		isConnection: d.isConnection,
 		inMetric: MetricValue{
@@ -700,6 +714,7 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 		tuple:        d.Tuple,
 		srcEp:        d.srcEp,
 		dstEp:        d.dstEp,
+		dstService:   d.dstSvc,
 		ruleIDs:      d.EgressRuleTrace.Path(),
 		isConnection: d.isConnection,
 		outMetric: MetricValue{
@@ -724,6 +739,7 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 		tuple:         d.Tuple,
 		srcEp:         d.srcEp,
 		dstEp:         d.dstEp,
+		dstService:    d.dstSvc,
 		origSourceIPs: d.origSourceIPs.Copy(),
 		ruleIDs:       d.IngressRuleTrace.Path(),
 		unknownRuleID: unknownRuleID,

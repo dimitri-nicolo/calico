@@ -334,9 +334,10 @@ func (c *collector) deleteData(data *Data) {
 //
 // When processing these, we also check if the connection is flagged as a
 // destination NAT (DNAT) connection. If it is a DNAT-ed connection, we
-// process the conntrack entry after we figure out the connection's original
-// destination IP address before DNAT modified the connections' destination
-// IP/port.
+// process the conntrack entry after we figure out the DNAT-ed destination and port.
+// This is important for services where the connection will have the cluster IP as the
+// pre-DNAT-ed destination, but we want the post-DNAT workload IP and port.
+// The pre-DNAT entry will also be used to lookup service related information.
 func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	var (
 		ctTuple nfnetlink.CtTuple
@@ -350,6 +351,8 @@ func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// than the actual workload/host endpoint. To continue processing
 	// this conntrack entry, we need the actual IP address that corresponds
 	// to a Workload/Host Endpoint.
+	// TODO(rlb): OriginalTupleWithoutDNAT is a misleading name IMHO - really we are getting the final DNATed
+	//            tuple.
 	if ctEntry.IsDNAT() {
 		ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
 		if err != nil {
@@ -371,6 +374,19 @@ func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
 	if data := c.getDataAndUpdateEndpoints(tuple, entryExpired, expectedLocalEither); data != nil {
+		// Pre-DNAT service information is only available through conn track, so use this opportunity to update the
+		// dest service information if it's not already established.
+		if data.dstSvc.Name == "" {
+			if ctEntry.IsDNAT() {
+				// Destination is NATed, look up service from the pre-DNAT record.
+				origTuple := extractTupleFromCtEntryTuple(ctEntry.OriginalTuple)
+				data.dstSvc, _ = c.luc.GetServiceFromPreDNATDest(origTuple.dst, origTuple.l4Dst, tuple.proto)
+			} else if _, ok := c.luc.GetNode(tuple.dst); ok {
+				// Destination is a node, so could be a node port service.
+				data.dstSvc, _ = c.luc.GetNodePortService(tuple.l4Dst, tuple.proto)
+			}
+		}
+
 		c.applyConntrackStatUpdate(data,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,

@@ -16,6 +16,10 @@ const (
 	unsetIntField = -1
 )
 
+var (
+	emptyService = FlowService{"-", "-", "-"}
+)
+
 type FlowLogEndpointType string
 type FlowLogAction string
 type FlowLogReporter string
@@ -28,15 +32,22 @@ type EndpointMetadata struct {
 	AggregatedName string              `json:"aggregated_name"`
 }
 
-type FlowMeta struct {
-	Tuple    Tuple            `json:"tuple"`
-	SrcMeta  EndpointMetadata `json:"sourceMeta"`
-	DstMeta  EndpointMetadata `json:"destinationMeta"`
-	Action   FlowLogAction    `json:"action"`
-	Reporter FlowLogReporter  `json:"flowReporter"`
+type FlowService struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Port      string `json:"port"`
 }
 
-func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
+type FlowMeta struct {
+	Tuple      Tuple            `json:"tuple"`
+	SrcMeta    EndpointMetadata `json:"sourceMeta"`
+	DstMeta    EndpointMetadata `json:"destinationMeta"`
+	DstService FlowService      `json:"destinationService"`
+	Action     FlowLogAction    `json:"action"`
+	Reporter   FlowLogReporter  `json:"flowReporter"`
+}
+
+func newFlowMeta(mu MetricUpdate, includeService bool) (FlowMeta, error) {
 	f := FlowMeta{}
 
 	// Extract Tuple Info
@@ -54,6 +65,11 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 
 	f.SrcMeta = srcMeta
 	f.DstMeta = dstMeta
+	if includeService {
+		f.DstService = getFlowLogService(mu.dstService)
+	} else {
+		f.DstService = emptyService
+	}
 
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
@@ -68,8 +84,8 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	return f, nil
 }
 
-func newFlowMetaWithSourcePortAggregation(mu MetricUpdate) (FlowMeta, error) {
-	f, err := newFlowMeta(mu)
+func newFlowMetaWithSourcePortAggregation(mu MetricUpdate, includeService bool) (FlowMeta, error) {
+	f, err := newFlowMeta(mu, includeService)
 	if err != nil {
 		return FlowMeta{}, err
 	}
@@ -78,8 +94,8 @@ func newFlowMetaWithSourcePortAggregation(mu MetricUpdate) (FlowMeta, error) {
 	return f, nil
 }
 
-func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
-	f, err := newFlowMeta(mu)
+func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate, includeService bool) (FlowMeta, error) {
+	f, err := newFlowMeta(mu, includeService)
 	if err != nil {
 		return FlowMeta{}, err
 	}
@@ -93,8 +109,8 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	return f, nil
 }
 
-func newFlowMetaWithNoDestPortsAggregation(mu MetricUpdate) (FlowMeta, error) {
-	f, err := newFlowMeta(mu)
+func newFlowMetaWithNoDestPortsAggregation(mu MetricUpdate, includeService bool) (FlowMeta, error) {
+	f, err := newFlowMeta(mu, includeService)
 	if err != nil {
 		return FlowMeta{}, err
 	}
@@ -105,20 +121,21 @@ func newFlowMetaWithNoDestPortsAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.dst = [16]byte{}
 	f.SrcMeta.Name = flowLogFieldNotIncluded
 	f.DstMeta.Name = flowLogFieldNotIncluded
+	f.DstService.Port = flowLogFieldNotIncluded
 
 	return f, nil
 }
 
-func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind) (FlowMeta, error) {
+func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind, includeService bool) (FlowMeta, error) {
 	switch kind {
 	case FlowDefault:
-		return newFlowMeta(mu)
+		return newFlowMeta(mu, includeService)
 	case FlowSourcePort:
-		return newFlowMetaWithSourcePortAggregation(mu)
+		return newFlowMetaWithSourcePortAggregation(mu, includeService)
 	case FlowPrefixName:
-		return newFlowMetaWithPrefixNameAggregation(mu)
+		return newFlowMetaWithPrefixNameAggregation(mu, includeService)
 	case FlowNoDestPorts:
-		return newFlowMetaWithNoDestPortsAggregation(mu)
+		return newFlowMetaWithNoDestPortsAggregation(mu, includeService)
 	}
 
 	return FlowMeta{}, fmt.Errorf("aggregation kind %v not recognized", kind)
@@ -418,16 +435,16 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool, in
 
 func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
-	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies
+	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies originalSourceIPs numOriginalSourceIPs destServiceNamespace dstServiceName dstServicePort
 	// Sample entry with no aggregation and no labels.
-	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"] [1.0.0.1] 1
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"] [1.0.0.1] 1 kube-system kube-dns
 
 	var (
 		srcType, dstType FlowLogEndpointType
 	)
 
 	parts := strings.Split(fl, " ")
-	if len(parts) < 24 {
+	if len(parts) < 32 {
 		return fmt.Errorf("log %v cant be processed", fl)
 	}
 
@@ -542,6 +559,12 @@ func (f *FlowLog) Deserialize(fl string) error {
 			OriginalSourceIPs: ips,
 		}
 		f.FlowExtras.NumOriginalSourceIPs, _ = strconv.Atoi(parts[28])
+	}
+
+	f.DstService = FlowService{
+		Namespace: parts[29],
+		Name:      parts[30],
+		Port:      parts[31],
 	}
 
 	return nil

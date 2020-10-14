@@ -48,7 +48,7 @@ func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 			"key":   update.Key,
 			"value": update.Value,
 		})
-		logCxt.Debug("Validating KV pair.")
+		logCxt.Infof("Validating KV pair.")
 		validatorFunc := v1v.Validate
 		if _, isV3 := update.Key.(model.ResourceKey); isV3 {
 			logCxt.Debug("Use v3 validator")
