@@ -36,7 +36,8 @@ type RESTClientFactory interface {
 
 // Loads current cluster eagerly, loads external clusters lazily.
 type RESTClientHolder struct {
-	clientMap map[string]clusterClients
+	clientMap     map[string]clusterClients
+	authenticator authentication.Authenticator
 	sync.Mutex
 	multiClusterForwardingCA       string
 	multiClusterForwardingEndpoint string
@@ -53,23 +54,46 @@ type clusterClients struct {
 // Creates an instance of RESTClientFactory, which holds various clients.
 // Loads current cluster eagerly, loads external clusters lazily.
 func MustGetRESTClient(config *config.Config) RESTClientFactory {
-	client := RESTClientHolder{}
-	client.multiClusterForwardingCA = config.MultiClusterForwardingCA
-	client.multiClusterForwardingEndpoint = config.MultiClusterForwardingEndpoint
 	authenticator, err := authentication.New()
 	if err != nil {
 		log.WithError(err).Panic("Unable to create auth configuration")
 	}
+
+	if config.DexEnabled {
+
+		opts := []auth.DexOption{
+			auth.WithGroupsClaim(config.DexGroupsClaim),
+			auth.WithJWKSURL(config.DexJWKSURL),
+			auth.WithUsernamePrefix(config.DexUsernamePrefix),
+			auth.WithGroupsPrefix(config.DexGroupsPrefix),
+		}
+
+		dex, err := auth.NewDexAuthenticator(
+			config.DexIssuer,
+			config.DexClientID,
+			config.DexUsernameClaim,
+			opts...)
+
+		if err != nil {
+			log.WithError(err).Panic("Unable to create dex authenticator")
+		}
+		authenticator = auth.NewAggregateAuthenticator(dex, authenticator)
+	}
+
 	k8sClient := MustGetKubernetesClient()
-	client.clientMap = map[string]clusterClients{
-		DefaultCluster: {
-			MustGetCalicoClient(),
-			k8sClient,
-			elastic.MustGetElasticClient(),
-			auth.NewK8sAuth(k8sClient, authenticator),
+	return &RESTClientHolder{
+		authenticator:                  authenticator,
+		multiClusterForwardingCA:       config.MultiClusterForwardingCA,
+		multiClusterForwardingEndpoint: config.MultiClusterForwardingEndpoint,
+		clientMap: map[string]clusterClients{
+			DefaultCluster: {
+				MustGetCalicoClient(),
+				k8sClient,
+				elastic.MustGetElasticClient(),
+				auth.NewK8sAuth(k8sClient, authenticator),
+			},
 		},
 	}
-	return &client
 }
 
 // Return a ClientSet that lets you fetch Calico and Kubernetes resources from the datastore for a given cluster.
@@ -155,16 +179,11 @@ func (c *RESTClientHolder) mustAddCluster(clusterID, caPath, host string) {
 		log.WithError(err).Panic("Failed to load Calico client")
 	}
 
-	authenticator, err := authentication.New()
-	if err != nil {
-		log.WithError(err).Panic("Unable to create auth configuration")
-	}
-
 	c.clientMap[clusterID] = clusterClients{
 		client.ProjectcalicoV3(),
 		k8sClient,
 		mustCreateESClientForCluster(clusterID),
-		auth.NewK8sAuth(k8sClient, authenticator),
+		auth.NewK8sAuth(k8sClient, c.authenticator),
 	}
 }
 

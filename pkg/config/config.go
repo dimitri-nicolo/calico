@@ -76,6 +76,16 @@ type Config struct {
 
 	// Whether staged network policies should be included in the cache calculations.
 	IncludeStagedNetworkPolicies bool `envconfig:"TIGERA_COMPLIANCE_INCLUDE_STAGED_NETWORK_POLICIES" default:"false"`
+
+	// Dex settings for authentication.
+	DexEnabled       bool   `envconfig:"TIGERA_COMPLIANCE_DEX_ENABLED" default:"false"`
+	DexIssuer        string `envconfig:"TIGERA_COMPLIANCE_DEX_ISSUER" default:"https://127.0.0.1:5556/dex"`
+	DexClientID      string `envconfig:"TIGERA_COMPLIANCE_DEX_CLIENT_ID" default:"tigera-manager"`
+	DexJWKSURL       string `envconfig:"TIGERA_COMPLIANCE_DEX_JWKS_URL" default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys"`
+	DexUsernameClaim string `envconfig:"TIGERA_COMPLIANCE_DEX_USERNAME_CLAIM" default:"email"`
+	DexGroupsClaim   string `envconfig:"TIGERA_COMPLIANCE_DEX_GROUPS_CLAIM"`
+	DexUsernamePrefix   string `envconfig:"TIGERA_COMPLIANCE_DEX_USERNAME_PREFIX"`
+	DexGroupsPrefix   string `envconfig:"TIGERA_COMPLIANCE_DEX_GROUPS_PREFIX"`
 }
 
 func MustLoadConfig() *Config {
