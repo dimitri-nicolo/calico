@@ -23,6 +23,9 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `dest_name_aggr`      | keyword           | Contains one of the following values:<br />- Aggregated name of the destination pod. <br />- `pvt`: endpoint is not a pod. Its IP address belongs to a private subnet. <br />- `pub`: endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet. |
 | `dest_namespace`      | keyword           | Namespace of the destination endpoint. A `-` means the endpoint is not namespaced.|
 | `dest_port`           | long              | Destination port. Not applicable for ICMP packets. |
+| `dest_service_name`      | keyword        | Name of the destination service. A `-` means the original destination did not correspond to a known Kubernetes service (e.g. a services ClusterIP). |
+| `dest_service_namespace` | keyword        | Namespace of the destination service. A `-` means the original destination did not correspond to a known Kubernetes service (e.g. a services ClusterIP). |
+| `dest_service_port`      | keyword        | Port name of the destination service.<br />A `-` means :<br />- the original destination did not correspond to a known Kubernetes service (e.g. a services ClusterIP), or<br />- the destination port is aggregated.<br />A `*` means there are multiple service port names matching the destination port number. |
 | `dest_type`           | keyword           | Destination endpoint type. Possible values:<br />- `wep`: A workload endpoint, a pod in Kubernetes.<br />- `ns`: A Networkset. If multiple Networksets match, then the one with the longest prefix match is chosen.<br />- `net`: A Network. The IP address did not fall into a known endpoint type.|
 | `dest_labels`         | array of keywords | Labels applied to the destination pod. A hyphen indicates aggregation. |
 | `reporter`            | keyword           | - `src`: flow came from the pod that initiated the connection.<br />- `dst`: flow came from the pod that received the initial connection. |
@@ -30,7 +33,7 @@ The following table details the key/value pairs in the JSON blob, including thei
 | `num_flows_completed` | long              | Number of flows that were completed during the export interval. |
 | `num_flows_started`   | long              | Number of flows that were started during the export interval. |
 | `http_requests_allowed_in` | long         | Number of allowed incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
-| `http_requests_denied_in` | long         | Number of denied incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
+| `http_requests_denied_in`  | long         | Number of denied incoming HTTP requests during the export interval. Only [application layer policy](../../../security/app-layer-policy) enabled flows are counted. |
 | `packets_in`          | long              | Number of incoming packets since the last export. |
 | `packets_out`         | long              | Number of outgoing packets since the last export. |
 | `proto`               | keyword           | Protocol. |
