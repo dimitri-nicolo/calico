@@ -6,10 +6,14 @@ if [ ! -f /etc/fluentd/syslog/ca.pem ]; then
 fi
 if [ "${SYSLOG_FLOW_LOG}" == "true" ]; then
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_flows/out-syslog.conf
+fi
+if [ "${SYSLOG_DNS_LOG}" == "true" ]; then
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_dns/out-syslog.conf
 fi
-if [ "${SYSLOG_AUDIT_LOG}" == "true" ]; then
+if [ "${SYSLOG_AUDIT_EE_LOG}" == "true" ]; then
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_tsee_audit/out-syslog.conf
+fi
+if [ "${SYSLOG_AUDIT_KUBE_LOG}" == "true" ]; then
   cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_kube_audit/out-syslog.conf
 fi
 if [ "${SYSLOG_IDS_EVENT_LOG}" == "true" ]; then

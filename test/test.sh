@@ -94,7 +94,22 @@ EOM
 
 SYSLOG_TLS_VARS=$(cat <<EOM
 SYSLOG_FLOW_LOG=true
-SYSLOG_AUDIT_LOG=true
+SYSLOG_AUDIT_KUBE_LOG=true
+SYSLOG_IDS_EVENT_LOG=true
+SYSLOG_HOST=169.254.254.254
+SYSLOG_PORT=3665
+SYSLOG_PROTOCOL=tcp
+SYSLOG_TLS=true
+SYSLOG_VERIFY_MODE=\${OPENSSL::SSL::VERIFY_NONE}
+SYSLOG_HOSTNAME=nodename
+EOM
+)
+
+SYSLOG_TLS_VARS_ALL_LOG_TYPES=$(cat <<EOM
+SYSLOG_FLOW_LOG=true
+SYSLOG_DNS_LOG=true
+SYSLOG_AUDIT_EE_LOG=true
+SYSLOG_AUDIT_KUBE_LOG=true
 SYSLOG_IDS_EVENT_LOG=true
 SYSLOG_HOST=169.254.254.254
 SYSLOG_PORT=3665
@@ -169,6 +184,18 @@ EOM
 TMP=$(tempfile)
 ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
 checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-with-tls.env es-secure-with-syslog-with-tls "ES secure with syslog with TLS"
+
+# Test with ES secure and syslog with tls with all log types
+cat > $TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+$SYSLOG_TLS_VARS_ALL_LOG_TYPES
+EOM
+
+TMP=$(tempfile)
+ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
+checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-with-tls-all-log-types.env es-secure-with-syslog-with-tls-all-log-types "ES secure with syslog with TLS with all log types"
 
 # Test with ES secure and syslog with tls
 cat > $TEST_DIR/tmp/es-secure-with-syslog-and-s3.env << EOM
