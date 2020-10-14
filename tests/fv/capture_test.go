@@ -22,10 +22,9 @@ func init() {
 func TestCaptureArgs(t *testing.T) {
 	RegisterTestingT(t)
 
-	const usage = `Usage:
-  calicoctl captured-packets (copy |clean ) <NAME>
-                [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--dest=<DEST>]
-`
+	const usageCalicoctl = `Usage:
+  calicoctl [options] <command> [<args>...]`
+
 	var tables = []struct {
 		args []string
 		expectedOutput string
@@ -33,12 +32,11 @@ func TestCaptureArgs(t *testing.T) {
 	}{
 		{[]string{"captured-packets"}, "Invalid option", true},
 		{[]string{"captured-packets", "--any_command"}, "Invalid option", true},
+		{[]string{"captured-packets", "any_command"}, "Invalid option", true},
 		{[]string{"captured-packets", "copy"}, "Invalid option", true},
 		{[]string{"captured-packets", "clean"}, "Invalid option", true},
-		{[]string{"captured-packets", "--help"}, usage, false},
-		{[]string{"captured-packets", "-h"}, usage, false},
-		{[]string{"captured-packets", "copy", "-h"}, usage, false},
-		{[]string{"captured-packets", "clean", "-h"}, usage, false},
+		{[]string{"--help", "captured-packets"}, usageCalicoctl, false},
+		{[]string{"-h", "captured-packets"}, usageCalicoctl, false},
 	}
 
 	for _, entry := range tables {

@@ -15,8 +15,6 @@
 package utils
 
 import (
-	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -34,12 +32,9 @@ func Calicoctl(kdd bool, args ...string) string {
 
 func CalicoctlMayFail(kdd bool, args ...string) (string, error) {
 	cmd := exec.Command(calicoctl, args...)
-	cmd.Env = []string{"ETCD_ENDPOINTS=http://127.0.0.1:2379", fmt.Sprintf("PATH=%s", os.Getenv("PATH"))}
+	cmd.Env = []string{"ETCD_ENDPOINTS=http://127.0.0.1:2379"}
 	if kdd {
-		cmd.Env = []string{
-			"K8S_API_ENDPOINT=http://localhost:8080", "DATASTORE_TYPE=kubernetes",
-			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-		}
+		cmd.Env = []string{"K8S_API_ENDPOINT=http://localhost:8080", "DATASTORE_TYPE=kubernetes"}
 	}
 	out, err := cmd.CombinedOutput()
 	log.Infof("Run: calicoctl %v", strings.Join(args, " "))

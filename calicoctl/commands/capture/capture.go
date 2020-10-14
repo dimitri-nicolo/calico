@@ -19,16 +19,17 @@ const FindCaptureFileCommand = "kubectl exec -n %s %s -- stat %s/%s/%s"
 // GetPodByNodeName is a kubectl command that will be executed to retrieve a pod scheduled on a node
 const GetPodByNodeName = "kubectl get pods -n %s --no-headers --field-selector spec.nodeName=%s -o=custom-columns=NAME:..metadata.name"
 // Namespace used to execute commands inside pods
-const entryNamespace = "tigera-fluentd"
+const TigeraFluentDNS = "tigera-fluentd"
 
-// commands is wrapper over the CmdExecutor
+// commands is wrapper for available capture commands
 type commands struct {
 	cmdExecutor CmdExecutor
+	resolver Resolver
 }
 
-// NewCommands returns new capture commands that use kubectl
-func NewCommands(cmd CmdExecutor) commands {
-	return commands{cmdExecutor: cmd}
+// NewCommands returns new capture commands
+func NewCommands(cmd CmdExecutor, resolver Resolver) commands {
+	return commands{cmdExecutor: cmd, resolver: resolver}
 }
 
 // CmdExecutor will execute a command and return its output and its error
@@ -46,6 +47,24 @@ func NewKubectlCmd(kubeConfigPath string) *kubectlCmd {
 	return &kubectlCmd{kubeConfig: kubeConfigPath}
 }
 
+// Resolver will determine how to access capture files via a pod marked as Ready in the same cluster
+type Resolver interface {
+	EntryPoints(captureDir, captureName, captureNs string) []string
+}
+
+// fluentDResolver will use kubectl to resolve any fluentD pods that have a capture files
+// and are scheduled on the same node
+type fluentDResolver struct {
+	cmdExecutor CmdExecutor
+}
+
+// NewFluentDResolver returns a Resolver for fluentD pods and uses kubectl
+func NewFluentDResolver(cmd CmdExecutor) *fluentDResolver {
+	return &fluentDResolver{
+		cmdExecutor: cmd,
+	}
+}
+
 func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
 	var out, err = common.ExecCmd(strings.Replace(cmdStr, "kubectl", fmt.Sprintf("kubectl --kubeconfig %s",k.kubeConfig), 1))
 	if out != nil {
@@ -54,41 +73,34 @@ func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
 	return "", err
 }
 
-// ResolveEntryPoints will resolve capture files and match any fluentD pods that have been scheduled on the same node
-func (cmd *commands) ResolveEntryPoints(captureDir, captureName, captureNs string) ([]string, string) {
-	var locations []string
+// Copy will copy capture files capture files from fluentD pods located at captureDir/captureNamespace/captureName to destination
+func (cmd *commands) Copy(namespaces []string, name, dir, destination string) (int, []error) {
+	var errors []error
+	var successfulResults int
 
-	var nodeNames, err = cmd.resolveNodeNames(captureDir, captureName, captureNs)
-	if err != nil {
-		log.WithError(err).Warnf("Could not resolve capture files for %s/%s", captureNs, captureName)
-		return locations, ""
-	}
+	for _, ns := range namespaces {
+		log.Debugf("Retrieve capture files for: %s/%s", ns, name)
+		var entryPods = cmd.resolver.EntryPoints(dir, name, ns)
 
-	for _, nodeName := range nodeNames {
-		var pod, err = cmd.resolveEntryPod(nodeName, entryNamespace)
-		if err != nil {
-			log.WithError(err).Warnf("Could not resolve capture files for %s/%s", captureNs, captureName)
-		} else {
-			locations = append(locations, pod)
+		if len(entryPods) == 0 {
+			errors = append(errors, fmt.Errorf("failed to find capture files for %s/%s", ns, name))
+			continue
+		}
+
+		for _, pod := range entryPods {
+			output, err := cmd.copyCaptureFiles(TigeraFluentDNS, pod, dir, ns, name, destination)
+			if err != nil {
+				log.WithError(err).Warnf("Could not copy capture files for %s/%s from %s/%s", ns, name, TigeraFluentDNS, pod)
+				errors = append(errors, err)
+				continue
+			}
+			log.Infof("Copy command output %s", output)
+			fmt.Printf("Copy capture files for %s/%s to %s\n", ns, name, destination)
+			successfulResults++
 		}
 	}
 
-	return locations, entryNamespace
-}
-
-// Copy will copy capture files from the entryPods from entryNamespace under captureDir/captureNamespace/captureName at destination
-func (cmd *commands) Copy(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir, destination string) error {
-	for _, pod := range entryPods {
-		output, err := cmd.copyCaptureFiles(entryNamespace, pod, captureDir, captureNamespace, captureName, destination)
-		if err != nil {
-			log.WithError(err).Warnf("Could not copy capture files for %s/%s from %s/%s", captureNamespace, captureName, entryNamespace, pod)
-			return err
-		}
-		log.Infof("Copy command output %s", output)
-		fmt.Printf("Copy capture files for %s/%s to %s\n", captureNamespace, captureName, destination)
-	}
-
-	return nil
+	return successfulResults, errors
 }
 
 func (cmd *commands) copyCaptureFiles(entryNamespace string, pod string, captureDir string, captureNamespace string, captureName string, destination string) (string, error) {
@@ -104,18 +116,34 @@ func (cmd *commands) copyCaptureFiles(entryNamespace string, pod string, capture
 	return output, err
 }
 
-// Clean will clean capture files from the entryPods from entryNamespace located at captureDir/captureNamespace/captureName
-func (cmd *commands) Clean(entryPods []string, entryNamespace, captureName, captureNamespace, captureDir string) error {
-	for _, pod := range entryPods {
-		output, err := cmd.cleanCaptureFiles(entryNamespace, pod, captureDir, captureNamespace, captureName)
-		if err != nil {
-			log.WithError(err).Warnf("Could not clean capture files for %s/%s from %s/%s", captureNamespace, captureName, entryNamespace, pod)
-			return err
+// Clean will clean capture files from fluentD pods located at captureDir/captureNamespace/captureName
+func (cmd *commands) Clean(namespaces []string, name, dir string) (int, []error) {
+	var errors []error
+	var successfulResults int
+
+	for _, ns := range namespaces {
+		log.Debugf("Retrieve capture files for: %s/%s", ns, name)
+		var entryPods = cmd.resolver.EntryPoints(dir, name, ns)
+
+		if len(entryPods) == 0 {
+			errors = append(errors, fmt.Errorf("failed to find capture files for %s/%s", ns, name))
+			continue
 		}
-		log.Infof("Clean command output %s", output)
-		fmt.Printf("Clean capture files for %s/%s\n", captureNamespace, captureName)
+
+		for _, pod := range entryPods {
+			output, err := cmd.cleanCaptureFiles(TigeraFluentDNS, pod, dir, ns, name)
+			if err != nil {
+				log.WithError(err).Warnf("Could not clean capture files for %s/%s from %s/%s", ns, name, TigeraFluentDNS, pod)
+				errors = append(errors, err)
+				continue
+			}
+			log.Infof("Clean command output %s", output)
+			fmt.Printf("Clean capture files for %s/%s\n", ns, name)
+			successfulResults++
+		}
 	}
-	return nil
+
+	return successfulResults, errors
 }
 
 func (cmd *commands) cleanCaptureFiles(entryNamespace string, pod string, captureDir string, captureNamespace string, captureName string) (string, error) {
@@ -130,8 +158,30 @@ func (cmd *commands) cleanCaptureFiles(entryNamespace string, pod string, captur
 	return output, err
 }
 
-func (cmd *commands) resolveNodeNames(captureDir, captureName, captureNs string) ([]string, error) {
-	output, err := cmd.cmdExecutor.Execute(GetCalicoNodesCommand)
+// EntryPoints will resolve capture files and match any fluentD pods that have been scheduled on the same node
+func (r fluentDResolver) EntryPoints(captureDir, captureName, captureNs string) []string {
+	var locations []string
+
+	var nodeNames, err = r.resolveNodeNames(captureDir, captureName, captureNs)
+	if err != nil {
+		log.WithError(err).Warnf("Could not resolve capture files for %s/%s", captureNs, captureName)
+		return locations
+	}
+
+	for _, nodeName := range nodeNames {
+		var pod, err = r.resolveEntryPod(nodeName, TigeraFluentDNS)
+		if err != nil {
+			log.WithError(err).Warnf("Could not resolve capture files for %s/%s", captureNs, captureName)
+		} else {
+			locations = append(locations, pod)
+		}
+	}
+
+	return locations
+}
+
+func (r *fluentDResolver) resolveNodeNames(captureDir, captureName, captureNs string) ([]string, error) {
+	output, err := r.cmdExecutor.Execute(GetCalicoNodesCommand)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +191,7 @@ func (cmd *commands) resolveNodeNames(captureDir, captureName, captureNs string)
 	for _, entry := range entries {
 		if len(entry) != 0 {
 			var calicoNode = strings.Split(entry, "   ")
-			_, err := cmd.cmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, common.CalicoNamespace, calicoNode[0], captureDir, captureNs, captureName))
+			_, err := r.cmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, common.CalicoNamespace, calicoNode[0], captureDir, captureNs, captureName))
 			if err != nil {
 				log.Debugf("No capture files are found under %s/%s/%s for %s on node %s", captureDir, captureNs, captureName, calicoNode[0], calicoNode[1])
 				continue
@@ -154,8 +204,8 @@ func (cmd *commands) resolveNodeNames(captureDir, captureName, captureNs string)
 	return nodes, nil
 }
 
-func (cmd *commands) resolveEntryPod(nodeName, namespace string) (string, error) {
-	output, err := cmd.cmdExecutor.Execute(fmt.Sprintf(
+func (r *fluentDResolver) resolveEntryPod(nodeName, namespace string) (string, error) {
+	output, err := r.cmdExecutor.Execute(fmt.Sprintf(
 		GetPodByNodeName,
 		namespace,
 		nodeName,

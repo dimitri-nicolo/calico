@@ -20,13 +20,22 @@ func init() {
 	log.SetFormatter(&logutils.Formatter{})
 }
 
-type MockQuery struct {
+type MockCmd struct {
 	mock.Mock
 }
 
-func (m *MockQuery) Execute(cmdStr string) (string, error) {
+func (m *MockCmd) Execute(cmdStr string) (string, error) {
 	args := m.Called(cmdStr)
 	return args.String(0), args.Error(1)
+}
+
+type MockResolver struct {
+	mock.Mock
+}
+
+func (m *MockResolver) EntryPoints(captureDir, captureName, captureNs string) []string {
+	args := m.Called(captureDir, captureName, captureNs)
+	return args.Get(0).([]string)
 }
 
 const any = "any"
@@ -35,33 +44,60 @@ func TestCommands_Copy(t *testing.T) {
 	RegisterTestingT(t)
 
 	var tables = []struct {
-		cmdInput string
-		cmdOutput string
-		cmdErr error
+		namespaces            []string
+		name                  string
+		entryPointsPerCapture int
+		copyCmdOutput         string
+		copyCmdErr            error
+		expectedErrors        []error
 	}{
-		{fmt.Sprintf(capture.CopyCommand, any, any, any, any, any, any), "", fmt.Errorf(any)},
-		{fmt.Sprintf(capture.CopyCommand, any, any, any, any, any, any), "any", nil},
+		{[]string{"ns1"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any)}},
+		{[]string{"ns1"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
+		{[]string{"ns1"}, "capture", 2, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
+		{[]string{"ns1", "ns2"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
+		{[]string{"ns1", "ns2"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
+		{[]string{"ns1"}, "capture",1,  any, nil, nil},
+		{[]string{"ns1"}, "capture",0,  any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
+		{[]string{"ns1"}, "capture",2,  any, nil, nil},
+		{[]string{"ns1", "ns2"}, "capture", 1, any, nil, nil},
+		{[]string{"ns1", "ns2"}, "capture", 0, any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
+		{[]string{"ns1", "ns2"}, "capture", 2, any, nil, nil},
+		{[]string{}, "capture", 0, any, nil, nil},
 	}
 
 	for _,entry := range tables {
 		// setup capture commands
-		var mock = MockQuery{}
-		var captureCmd = capture.NewCommands(&mock)
+		var mock = MockCmd{}
+		var resolver = MockResolver{}
+		var captureCmd = capture.NewCommands(&mock, &resolver)
 
-		// mock the execute command to return the output specified
-		mock.On("Execute", entry.cmdInput).Return(entry.cmdOutput, entry.cmdErr)
+		for _, ns := range entry.namespaces {
+			var fluentDs[]string
+			for i := 1; i <= entry.entryPointsPerCapture; i++ {
+				var fluentD = fmt.Sprintf("fluentd-%s-%s-%v", ns, entry.name, i)
+				// mock the execute command to return the output specified
+				mock.On("Execute", fmt.Sprintf(capture.CopyCommand,capture.TigeraFluentDNS, fluentD, any, ns, entry.name, any)).Return(entry.copyCmdOutput, entry.copyCmdErr)
+				fluentDs = append(fluentDs, fluentD)
+			}
+			// mock the fluentD entry points
+			resolver.On("EntryPoints", any, entry.name, ns).Return(fluentDs)
+		}
 
-		// Call Copy
-		var err = captureCmd.Copy([]string{any}, any, any, any, any, any)
+		// Call Clean
+		var _, err = captureCmd.Copy(entry.namespaces, entry.name, any, any)
 
 		// Assert results
-		if entry.cmdErr != nil {
-			Expect(err).To(Equal(entry.cmdErr))
+		if entry.expectedErrors != nil {
+			Expect(err).To(Equal(entry.expectedErrors))
 		} else {
 			Expect(err).To(BeNil())
 		}
-		mock.AssertNumberOfCalls(t, "Execute", 1)
+
+		mock.AssertNumberOfCalls(t, "Execute", len(entry.namespaces) * entry.entryPointsPerCapture)
 		mock.AssertExpectations(t)
+
+		resolver.AssertNumberOfCalls(t, "EntryPoints", len(entry.namespaces))
+		resolver.AssertExpectations(t)
 	}
 }
 
@@ -69,33 +105,60 @@ func TestCommands_Clean(t *testing.T) {
 	RegisterTestingT(t)
 
 	var tables = []struct {
-		cmdInput string
-		cmdOutput string
-		cmdErr error
+		namespaces            []string
+		name                  string
+		entryPointsPerCapture int
+		cleanCmdOutput        string
+		cleanCmdErr           error
+		expectedErrors        []error
 	}{
-		{fmt.Sprintf(capture.CleanCommand, any, any, any, any, any), "", fmt.Errorf(any)},
-		{fmt.Sprintf(capture.CleanCommand, any, any, any, any, any), "any", nil},
+		{[]string{"ns1"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any)}},
+		{[]string{"ns1"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
+		{[]string{"ns1"}, "capture", 2, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
+		{[]string{"ns1", "ns2"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
+		{[]string{"ns1", "ns2"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
+		{[]string{"ns1"}, "capture",1,  any, nil, nil},
+		{[]string{"ns1"}, "capture",0,  any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
+		{[]string{"ns1"}, "capture",2,  any, nil, nil},
+		{[]string{"ns1", "ns2"}, "capture", 1, any, nil, nil},
+		{[]string{"ns1", "ns2"}, "capture", 0, any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
+		{[]string{"ns1", "ns2"}, "capture", 2, any, nil, nil},
+		{[]string{}, "capture", 0, any, nil, nil},
 	}
 
 	for _,entry := range tables {
 		// setup capture commands
-		var mock = MockQuery{}
-		var captureCmd = capture.NewCommands(&mock)
+		var mock = MockCmd{}
+		var resolver = MockResolver{}
+		var captureCmd = capture.NewCommands(&mock, &resolver)
 
-		// mock the execute command to return the output specified
-		mock.On("Execute", entry.cmdInput).Return(entry.cmdOutput, entry.cmdErr)
+		for _, ns := range entry.namespaces {
+			var fluentDs[]string
+			for i := 1; i <= entry.entryPointsPerCapture; i++ {
+				var fluentD = fmt.Sprintf("fluentd-%s-%s-%v", ns, entry.name, i)
+				// mock the execute command to return the output specified
+				mock.On("Execute", fmt.Sprintf(capture.CleanCommand,capture.TigeraFluentDNS, fluentD, any, ns, entry.name)).Return(entry.cleanCmdOutput, entry.cleanCmdErr)
+				fluentDs = append(fluentDs, fluentD)
+			}
+			// mock the fluentD entry points
+			resolver.On("EntryPoints", any, entry.name, ns).Return(fluentDs)
+		}
 
 		// Call Clean
-		var err = captureCmd.Clean([]string{any}, any, any, any, any)
+		var _, err = captureCmd.Clean(entry.namespaces, entry.name, any)
 
 		// Assert results
-		if entry.cmdErr != nil {
-			Expect(err).To(Equal(entry.cmdErr))
+		if entry.expectedErrors != nil {
+			Expect(err).To(Equal(entry.expectedErrors))
 		} else {
 			Expect(err).To(BeNil())
 		}
-		mock.AssertNumberOfCalls(t, "Execute", 1)
+
+		mock.AssertNumberOfCalls(t, "Execute", len(entry.namespaces) * entry.entryPointsPerCapture)
 		mock.AssertExpectations(t)
+
+		resolver.AssertNumberOfCalls(t, "EntryPoints", len(entry.namespaces))
+		resolver.AssertExpectations(t)
 	}
 }
 
@@ -140,8 +203,8 @@ calico-node2   node2`
 
 	for _,entry := range tables {
 		// setup capture commands
-		var mock = MockQuery{}
-		var captureCmd = capture.NewCommands(&mock)
+		var mock = MockCmd{}
+		var fluentDResolver = capture.NewFluentDResolver(&mock)
 
 		// mock the execute command to return the output specified
 		mock.On("Execute", capture.GetCalicoNodesCommand).Return(entry.getCalicoNodesOutput, nil)
@@ -163,9 +226,8 @@ calico-node2   node2`
 		}
 
 		// Call ResolveEntryPoints
-		var output, ns = captureCmd.ResolveEntryPoints(any, any, any)
+		var output = fluentDResolver.EntryPoints(any, any, any)
 		Expect(output).To(Equal(entry.expectedEntryPods))
-		Expect(ns).To(Equal("tigera-fluentd"))
 
 		mock.AssertExpectations(t)
 	}

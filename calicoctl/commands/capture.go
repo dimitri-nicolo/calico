@@ -26,15 +26,15 @@ func Capture(args []string) error {
 
 Examples:
   # Copies capture files for packet capture from default namespace in the current directory.
-  calicoctl captured-packets --copy my-capture
+  calicoctl captured-packets copy my-capture
   # Delete capture files for packet capture from default namespace still left on the system
-  calicoctl captured-packets --clean my-capture
+  calicoctl captured-packets clean my-capture
 
 Options:
   -n --namespace=<NS>      Namespace of the packet capture.
                            Uses the default namespace if not specified.
   -a --all-namespaces      If present, list the requested packet capture(s) across all namespaces.
-  -d --dest=<DEST>         If present, uses the directory specified as the destination.
+  -d --dest=<DEST>         If present, uses the directory specified as the destination. [default: .]
   -h --help                Show this screen.
   -c --config=<CONFIG>     Path to the file containing connection configuration in
                            YAML or JSON format.
@@ -78,52 +78,38 @@ Description:
 		return err
 	}
 
-	var failure int
-	var captureCmd = capture.NewCommands(capture.NewKubectlCmd(kubeConfigPath))
-
+	var cmd = capture.NewKubectlCmd(kubeConfigPath)
+	var captureCmd = capture.NewCommands(cmd, capture.NewFluentDResolver(cmd))
 	var name = argutils.ArgString(parsedArgs, "<NAME>")
+	var destination = argutils.ArgString(parsedArgs, "--dest")
 	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
 	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
+	var results int
+	var errors []error
 
-	for _, ns := range namespaces {
-		log.Debugf("Retrieve capture files for: %s/%s", ns, name)
-		var pods, podNs = captureCmd.ResolveEntryPoints(captureDir, name, ns)
+	if isCopyCommand {
+		results, errors = captureCmd.Copy(namespaces, name, captureDir, destination)
+	} else if isCleanCommand {
+		results, errors = captureCmd.Clean(namespaces, name, captureDir)
+	}
 
-		if len(pods) == 0 {
-			if !argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") {
-				return fmt.Errorf("Failed to find capture files for %s/%s \n", ns, name)
-			}
-			failure ++
-		}
-
-		if isCopyCommand {
-			var destination = resolveDestination(parsedArgs)
-			err := captureCmd.Copy(pods, podNs, name, ns, captureDir, destination)
-			if err != nil {
-				return err
-			}
-		} else if isCleanCommand {
-			err := captureCmd.Clean(pods, podNs, name,ns, captureDir)
-			if err != nil {
-				return err
-			}
+	// in case --all-namespaces is used and we have at least 1 successful result
+	// we will return 0 exit code
+	if argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") {
+		if results != 0 {
+			return nil
 		}
 	}
 
-	if failure == len(namespaces) {
-		return fmt.Errorf("Failed to find any capture files")
+	if errors != nil {
+		var result []string
+		for _, e := range errors {
+			result = append(result, e.Error())
+		}
+		return fmt.Errorf(strings.Join(result, ";"))
 	}
 
 	return nil
-}
-
-func resolveDestination(args map[string]interface{}) string {
-	var destination = argutils.ArgStringOrBlank(args, "--dest")
-	if len(destination) == 0 {
-		return "."
-	}
-
-	return destination
 }
 
 func resolveNamespaces(parsedArgs map[string]interface{}, kubeConfig string) ([]string, error) {
