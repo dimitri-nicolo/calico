@@ -259,6 +259,7 @@ func GetMapFDByPin(filename string) (MapFD, error) {
 	if errno != 0 {
 		return 0, errno
 	}
+
 	return MapFD(fd), nil
 }
 
