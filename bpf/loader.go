@@ -26,8 +26,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var BpfLoader *Loader = nil
-
 const (
 	logSize int = 524288 //512KB
 )
@@ -47,15 +45,12 @@ type ProgramInfo struct {
 }
 
 func NewLoader(maps ...Map) *Loader {
-	if BpfLoader == nil {
-		BpfLoader = &Loader{
-			programs: make(map[string]*ProgramInfo),
-			mapFds:   make(map[string]MapFD),
-		}
-		for _, pinnedMap := range maps {
-			BpfLoader.mapFds[pinnedMap.GetName()] = pinnedMap.MapFD()
-		}
-		increaseLockedMemoryQuota()
+	BpfLoader := &Loader{
+		programs: make(map[string]*ProgramInfo),
+		mapFds:   make(map[string]MapFD),
+	}
+	for _, pinnedMap := range maps {
+		BpfLoader.mapFds[pinnedMap.GetName()] = pinnedMap.MapFD()
 	}
 	return BpfLoader
 }
@@ -76,6 +71,8 @@ func (l *Loader) GetProgramMap() map[string]*ProgramInfo {
 	return l.programs
 }
 
+// Read the license section and return the license string which
+// is needed for loading the BPF program
 func ReadLicense(file *elf.File) (error, string) {
 	lsec := file.Section("license")
 	if lsec != nil {
@@ -88,6 +85,8 @@ func ReadLicense(file *elf.File) (error, string) {
 	return nil, ""
 }
 
+// Get the relocation offset and the name of the map whose FD needs to be added to the
+// BPF instruction
 func GetRelocationOffset(data, rdata []byte, file *elf.File) (error, map[uint64]string) {
 	var symbol elf.Symbol
 	var symMap map[uint64]string
@@ -118,6 +117,8 @@ func GetRelocationOffset(data, rdata []byte, file *elf.File) (error, map[uint64]
 	return nil, symMap
 
 }
+
+// Relocate the imm value in the BPF instruction with map fd
 func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
 	err, symMap := GetRelocationOffset(data, rdata, file)
 	if err != nil {
@@ -136,6 +137,7 @@ func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
 	return nil
 }
 
+// Basic validation of the ELF file
 func ValidateElfFile(filename string) (error, *elf.File, *os.File) {
 	var fileReader io.ReaderAt
 	var file *elf.File
@@ -167,6 +169,7 @@ func (l *Loader) Load(filename string) error {
 	if err != nil {
 		return errors.Errorf("Error reading license")
 	}
+	increaseLockedMemoryQuota()
 	loaded := make([]bool, len(file.Sections))
 	for i, sec := range file.Sections {
 		if sec.Type == elf.SHT_REL {

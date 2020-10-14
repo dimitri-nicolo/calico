@@ -71,6 +71,9 @@ func TestBpfProgramLoader(t *testing.T) {
 
 	err = loader.Load("test_loader.o")
 	Expect(err).NotTo(HaveOccurred())
+
+	programMap := loader.GetProgramMap()
+	Expect(len(programMap)).To(Equal(1))
 }
 
 func CompareRelocationData(temp, data []byte, symMap map[uint64]string, fd bpf.MapFD) {
