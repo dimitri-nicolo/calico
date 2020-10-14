@@ -9,7 +9,7 @@ replace (
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20201008232222-ca337afb93bc
 	github.com/tigera/apiserver => github.com/tigera/apiserver v0.0.0-20201009181127-0a204605c07c
 	github.com/tigera/compliance => github.com/tigera/compliance v0.0.0-20201009183220-ebf56f73851d
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20201009181957-07e8bc301908
+	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20201014202455-01dd28429dd9
 
 	k8s.io/api => k8s.io/api v0.17.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
