@@ -25,7 +25,7 @@ func KibanaIndexPattern(h http.Handler) http.Handler {
 			return
 		}
 
-		h.ServeHTTP(w, req.WithContext(auth.NewContextWithReviewResource(req.Context(), getResourceAttributes("cluster", name))))
+		h.ServeHTTP(w, req.WithContext(auth.NewContextWithReviewResource(req.Context(), createLMAResourceAttributes("cluster", name))))
 	})
 }
 

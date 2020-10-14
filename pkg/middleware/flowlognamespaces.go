@@ -9,11 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
+	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
+
+	"github.com/tigera/compliance/pkg/datastore"
+	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
+
+	"github.com/olivere/elastic/v7"
 
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -52,7 +57,7 @@ type Namespace struct {
 	Name string `json:"name"`
 }
 
-func FlowLogNamespaceHandler(mcmAuth MCMAuth, esClient lmaelastic.Client) http.Handler {
+func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esClient lmaelastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamespacesRequest(req)
@@ -68,10 +73,24 @@ func FlowLogNamespaceHandler(mcmAuth MCMAuth, esClient lmaelastic.Client) http.H
 			}
 			return
 		}
-		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
-		req = createRequestWithClusterKey(req, params.ClusterName)
-		rbacHelper := rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req})
-		response, err := getNamespacesFromElastic(params, esClient, rbacHelper)
+
+		k8sCli, err := k8sClientFactory.ClientSetForCluster(params.ClusterName)
+		if err != nil {
+			log.WithError(err).Error("failed to get k8s cli")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		user, ok := k8srequest.UserFrom(req.Context())
+		if !ok {
+			log.WithError(err).Error("user not found in context")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
+
+		response, err := getNamespacesFromElastic(params, esClient, flowHelper)
 		if err != nil {
 			log.WithError(err).Info("Error getting namespaces from elastic")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)

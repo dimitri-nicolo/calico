@@ -11,17 +11,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
+
+	"github.com/olivere/elastic/v7"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
+	"github.com/tigera/compliance/pkg/datastore"
+	pippkg "github.com/tigera/es-proxy/pkg/pip"
+	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/rbac"
-
-	pippkg "github.com/tigera/es-proxy/pkg/pip"
 )
 
 type FlowLogsParams struct {
@@ -122,7 +126,7 @@ const esflowIndexPrefix = "tigera_secure_ee_flows"
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(mcmAuth MCMAuth, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
+func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esClient lmaelastic.Client, pip pippkg.PIP) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -144,16 +148,30 @@ func FlowLogsHandler(mcmAuth MCMAuth, esClient lmaelastic.Client, pip pippkg.PIP
 			}
 			return
 		}
-		log.Debugf("Adding cluster to request context: %v", params.ClusterName)
-		req = createRequestWithClusterKey(req, params.ClusterName)
-		flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewCachedFlowHelper(&userAuthorizer{mcmAuth: mcmAuth, userReq: req}))
+
+		k8sCli, err := k8sClientFactory.ClientSetForCluster(params.ClusterName)
+		if err != nil {
+			log.WithError(err).Error("failed to get k8s cli")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		user, ok := k8srequest.UserFrom(req.Context())
+		if !ok {
+			log.WithError(err).Error("user not found in context")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
+		flowFilter := lmaelastic.NewFlowFilterUserRBAC(flowHelper)
+
 		var response interface{}
 		var stat int
 		if params.PolicyPreview == nil {
 			response, stat, err = getFlowLogsFromElastic(flowFilter, params, esClient)
 		} else {
-			factory := NewStandardPolicyImpactRbacHelperFactory(mcmAuth)
-			rbacHelper := factory.NewPolicyImpactRbacHelper(req)
+			rbacHelper := NewPolicyImpactRbacHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
 			response, stat, err = getPIPFlowLogsFromElastic(flowFilter, params, pip, rbacHelper)
 		}
 

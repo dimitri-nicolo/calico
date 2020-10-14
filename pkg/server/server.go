@@ -9,20 +9,21 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/tigera/lma/pkg/list"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/apiserver/pkg/authentication"
-	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
+
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/lma/pkg/auth"
-	celastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/list"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	celastic "github.com/tigera/lma/pkg/elastic"
 )
 
 var (
@@ -37,6 +38,7 @@ var (
 const (
 	shardsNotRequired   = 0
 	replicasNotRequired = 0
+	voltronServiceURL   = "https://localhost:9443"
 )
 
 func Start(cfg *Config) error {
@@ -68,14 +70,14 @@ func Start(cfg *Config) error {
 	}
 
 	if cfg.DexEnabled {
-		opts := []auth.DexOption{
-			auth.WithGroupsClaim(cfg.DexGroupsClaim),
-			auth.WithJWKSURL(cfg.DexJWKSURL),
-			auth.WithUsernamePrefix(cfg.DexUsernamePrefix),
-			auth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+		opts := []lmaauth.DexOption{
+			lmaauth.WithGroupsClaim(cfg.DexGroupsClaim),
+			lmaauth.WithJWKSURL(cfg.DexJWKSURL),
+			lmaauth.WithUsernamePrefix(cfg.DexUsernamePrefix),
+			lmaauth.WithGroupsPrefix(cfg.DexGroupsPrefix),
 		}
 
-		dex, err := auth.NewDexAuthenticator(
+		dex, err := lmaauth.NewDexAuthenticator(
 			cfg.DexIssuer,
 			cfg.DexClientID,
 			cfg.DexUsernameClaim,
@@ -83,11 +85,8 @@ func Start(cfg *Config) error {
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}
-		authenticator = auth.NewAggregateAuthenticator(dex, authenticator)
+		authenticator = lmaauth.NewAggregateAuthenticator(dex, authenticator)
 	}
-
-	mcmAuth := middleware.NewMCMAuth(authenticator, cfg.VoltronCAPath)
-	k8sAuth := mcmAuth.DefaultK8sAuth()
 
 	// Install pip mutator
 	k8sClientSet := datastore.MustGetClientSet()
@@ -98,6 +97,7 @@ func Start(cfg *Config) error {
 	if cfg.ElasticCAPath != "" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
 	}
+
 	esClient, err := celastic.New(h,
 		cfg.ElasticURL,
 		cfg.ElasticUsername,
@@ -113,68 +113,75 @@ func Start(cfg *Config) error {
 		return err
 	}
 
-	// Create the cluster aware client factory and use that to create a cluster aware lister.
-	cc := &config.Config{
-		MultiClusterForwardingCA:       cfg.VoltronCAPath,
-		MultiClusterForwardingEndpoint: middleware.VoltronServiceURL,
+	restConfig := datastore.MustGetConfig()
+
+	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, voltronServiceURL)
+	k8sCli, err := k8sClientFactory.ClientSetForCluster(datastore.DefaultCluster)
+	if err != nil {
+		panic(err)
 	}
-	factory := datastore.MustGetRESTClient(cc)
-	lister := &clusterAwareLister{factory}
+	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
 	// Create a PIP backend.
-	p := pip.New(policyCalcConfig, lister, esClient)
+	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
-
+	sm.Handle("/flowLogs",
+		middleware.RequestToResource(
+			middleware.AuthenticateRequest(authenticator,
+				middleware.AuthorizeRequest(authz,
+					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
 	switch cfg.AccessMode {
 	case InsecureMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 		sm.Handle("/recommend",
-			k8sAuth.KubernetesAuthn(
-				middleware.PolicyRecommendationHandler(mcmAuth, k8sClientSet, esClient)))
+			middleware.AuthenticateRequest(authenticator,
+				middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPattern(
-				k8sAuth.KubernetesAuthnAuthz(proxy)))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						proxy))))
 		sm.Handle("/",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(proxy)))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						proxy))))
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamespaceHandler(mcmAuth, esClient))))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
 		sm.Handle("/flowLogNames",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamesHandler(mcmAuth, esClient))))
-		sm.Handle("/flowLogs",
-			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(mcmAuth, esClient, p))))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
 	case ServiceUserMode:
 		// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 		sm.Handle("/recommend",
-			k8sAuth.KubernetesAuthn(
-				middleware.PolicyRecommendationHandler(mcmAuth, k8sClientSet, esClient)))
+			middleware.AuthenticateRequest(authenticator,
+				middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))
 		sm.Handle("/.kibana/_search",
 			middleware.KibanaIndexPattern(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 		sm.Handle("/",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 		sm.Handle("/flowLogNamespaces",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamespaceHandler(mcmAuth, esClient))))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
 		sm.Handle("/flowLogNames",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogNamesHandler(mcmAuth, esClient))))
-		sm.Handle("/flowLogs",
-			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.FlowLogsHandler(mcmAuth, esClient, p))))
+				middleware.AuthenticateRequest(authenticator,
+					middleware.AuthorizeRequest(authz,
+						middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
@@ -228,12 +235,16 @@ func addCertToCertPool(caPath string) *x509.CertPool {
 }
 
 // clusterAwareLister implements the PIP ClusterAwareLister interface. It is simply a wrapper around the
-// RESTClientFactory to instantiate the appropriate client and invoke the List method on that client.
+// ClusterCtxK8sClientFactory to instantiate the appropriate client and invoke the List method on that client.
 type clusterAwareLister struct {
-	factory datastore.RESTClientFactory
+	k8sClientFactory datastore.ClusterCtxK8sClientFactory
 }
 
 func (c *clusterAwareLister) RetrieveList(clusterID string, kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
-	clientset := c.factory.ClientSet(clusterID)
+	clientset, err := c.k8sClientFactory.ClientSetForCluster(clusterID)
+	if err != nil {
+		return nil, err
+	}
+
 	return clientset.RetrieveList(kind)
 }

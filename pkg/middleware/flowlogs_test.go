@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/tigera/lma/pkg/list"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
@@ -482,12 +484,18 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit: 1,
 			}
 
+			mockFlowHelper := new(rbac.MockFlowHelper)
+
 			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
-			flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewMockFlowHelper(map[string][]string{
-				"pods": {""}, "tier.networkpolicies": {""}, "networkpolicies": {""}, "networksets": {""}, "globalnetworksets": {""}},
-			))
+			mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+			mockFlowHelper.On("CanListPods", mock.Anything).Return(true, nil)
+			mockFlowHelper.On("CanListPolicy", mock.Anything).Return(false, nil)
+			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
 
 			searchResults, stat, err := getFlowLogsFromElastic(flowFilter, params, esClient)
+
+			mockFlowHelper.AssertExpectations(GinkgoT())
+
 			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(searchResults).To(BeAssignableToTypeOf(&lmaelastic.CompositeAggregationResults{}))
@@ -519,12 +527,18 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 				Limit:         1,
 			}
 
-			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
-			flowFilter := lmaelastic.NewFlowFilterUserRBAC(rbac.NewMockFlowHelper(map[string][]string{
-				"pods": {""}, "tier.networkpolicies": {""}, "networkpolicies": {""}, "networksets": {""}, "globalnetworksets": {""}},
-			))
+			mockFlowHelper := new(rbac.MockFlowHelper)
 
+			// Allow all except HEP and GNPs.  The first result will be exluded.  The second result will have the GNP obfuscated.
+			mockFlowHelper.On("CanListHostEndpoints").Return(false, nil)
+			mockFlowHelper.On("CanListPods", mock.Anything).Return(true, nil)
+			mockFlowHelper.On("CanListPolicy", mock.Anything).Return(false, nil)
+
+			flowFilter := lmaelastic.NewFlowFilterUserRBAC(mockFlowHelper)
 			searchResults, stat, err := getPIPFlowLogsFromElastic(flowFilter, params, pipClient, rbacHelper)
+
+			mockFlowHelper.AssertExpectations(GinkgoT())
+
 			Expect(stat).To(Equal(http.StatusOK))
 			Expect(err).To(Not(HaveOccurred()))
 
