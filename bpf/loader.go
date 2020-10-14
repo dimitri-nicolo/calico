@@ -13,7 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package bpf
 
 import (
@@ -129,7 +128,7 @@ func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
 		if fd == 0 {
 			return errors.Errorf("Map fd invalid")
 		}
-		err = bpf_relocate_insn(fd, rdata, offset)
+		err = RelocateBpfInsn(fd, rdata, offset)
 		if err != nil {
 			return err
 		}
@@ -169,7 +168,6 @@ func (l *Loader) Load(filename string) error {
 	if err != nil {
 		return errors.Errorf("Error reading license")
 	}
-	increaseLockedMemoryQuota()
 	loaded := make([]bool, len(file.Sections))
 	for i, sec := range file.Sections {
 		if sec.Type == elf.SHT_REL {
@@ -197,7 +195,7 @@ func (l *Loader) Load(filename string) error {
 				if err != nil {
 					return errors.Errorf("Error handling relocation section")
 				}
-				err, progfd := bpf_prog_load(progType, relData, relocSec.Size, license, log, logSize)
+				err, progfd := LoadBPFProgram(progType, relData, relocSec.Size, license, log, logSize)
 				if progfd < 0 {
 					return errors.Errorf("Error loading section1 %v %v", relocSec.Name, err)
 				}
@@ -224,7 +222,7 @@ func (l *Loader) Load(filename string) error {
 		}
 		progType := GetProgTypeFromSecName(sec.Name)
 		if progType != BPF_PROG_TYPE_UNSPEC {
-			err, progfd := bpf_prog_load(progType, data, sec.Size, license, log, logSize)
+			err, progfd := LoadBPFProgram(progType, data, sec.Size, license, log, logSize)
 			if progfd < 0 {
 				return err
 			}

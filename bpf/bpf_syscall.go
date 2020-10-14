@@ -681,7 +681,8 @@ func GetProgTypeFromSecName(secName string) uint32 {
 	return uint32(C.BPF_PROG_TYPE_UNSPEC)
 }
 
-func bpf_prog_load(progType uint32, data []byte, sectionSize uint64, license string, log []byte, logSize int) (error, int) {
+func LoadBPFProgram(progType uint32, data []byte, sectionSize uint64, license string, log []byte, logSize int) (error, int) {
+	increaseLockedMemoryQuota()
 	insns := (*C.struct_bpf_insn)(unsafe.Pointer(&data[0]))
 	progFd, err := C.bpf_prog_load(progType, insns, C.int(sectionSize),
 		(*C.char)(unsafe.Pointer(C.CString(license))),
@@ -697,7 +698,7 @@ func GetBpfInsn(data []byte, offset uint64) *C.struct_bpf_insn {
 	return (*C.struct_bpf_insn)(unsafe.Pointer(&data[offset]))
 }
 
-func bpf_relocate_insn(fd MapFD, data []byte, offset uint64) error {
+func RelocateBpfInsn(fd MapFD, data []byte, offset uint64) error {
 	insn := GetBpfInsn(data, offset)
 	if insn.code != (C.BPF_LD | C.BPF_IMM | C.BPF_DW) {
 		return errors.Errorf("Invaliid instruction in the relocation section")
