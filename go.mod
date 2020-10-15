@@ -2,7 +2,6 @@ module github.com/tigera/honeypod-controller
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20200821192134-40a1646d6e9e
-	github.com/tigera/lma => github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
 	k8s.io/api => k8s.io/api v0.17.2
 
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.2
@@ -33,12 +32,9 @@ require (
 	github.com/onsi/gomega v1.7.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.4.0
 	github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	k8s.io/apimachinery v0.17.3
-	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/klog v1.0.0
+	k8s.io/client-go v11.0.0+incompatible // indirect
 )
 
 go 1.14

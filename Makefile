@@ -261,9 +261,8 @@ go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 ###########################
 .PHONY: bt
 bt: 
-	-kubectl delete -f controller.yaml
-	-kubectl apply -f controller.yaml
-	-sleep 10
+	-kubectl delete -f install/controller.yaml
+	-kubectl apply -f install/controller.yaml
 
 POD_NAME=$(shell kubectl get pods -n tigera-intrusion-detection|grep Running| grep honeypod | cut - -c 1-25 | head -n 1)
 #bt-terminal: bt
@@ -398,7 +397,8 @@ version: images
 	docker run --rm $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version
 
 ## Builds the code and runs all tests.
-ci: images-all version static-checks ut
+#ci: images-all version static-checks ut
+ci: images-all static-checks ut
 
 ## Avoid unplanned go.sum updates
 .PHONY: undo-go-sum check-dirty
