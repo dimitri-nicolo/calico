@@ -116,8 +116,8 @@ type domainInfoStore struct {
 
 	// Handling of DNS request/response timestamps, so that we can measure and report DNS
 	// latency.
-	timestampExpected bool
-	requestTimestamp  map[uint16]time.Time
+	measureLatency   bool
+	requestTimestamp map[uint16]time.Time
 
 	// Handling additional DNS mapping lifetime.
 	epoch    int
@@ -168,7 +168,7 @@ func newDomainInfoStoreWithShims(
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
 		collector:            config.Collector,
-		timestampExpected:    config.DNSLogsLatency,
+		measureLatency:       config.DNSLogsLatency,
 		requestTimestamp:     make(map[uint16]time.Time),
 		epoch:                config.DNSCacheEpoch,
 		extraTTL:             config.DNSExtraTTL,
@@ -754,15 +754,16 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 }
 
 func (s *domainInfoStore) processForLatency(dns *layers.DNS, timestamp []uint8) (latencyIfKnown *time.Duration) {
+	if !s.measureLatency {
+		return
+	}
 	if len(timestamp) == 0 {
 		// No timestamp on this packet.
-		if s.timestampExpected {
-			msgType := "request"
-			if dns.QR {
-				msgType = "response"
-			}
-			log.Warnf("DNS-LATENCY: Missing timestamp on DNS %v with ID %v", msgType, dns.ID)
+		msgType := "request"
+		if dns.QR {
+			msgType = "response"
 		}
+		log.Warnf("DNS-LATENCY: Missing timestamp on DNS %v with ID %v", msgType, dns.ID)
 	} else if dns.QR == false {
 		// It's a request.
 		if _, exists := s.requestTimestamp[dns.ID]; exists {
