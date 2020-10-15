@@ -217,6 +217,8 @@ type Config struct {
 	// Config for DNS policy.
 	DNSCacheFile         string
 	DNSCacheSaveInterval time.Duration
+	DNSCacheEpoch        int
+	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
 	LookPathOverride func(file string) (string, error)
@@ -500,6 +502,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
 	dp.domainInfoStore = newDomainInfoStore(dp.domainInfoChanges, &config)
+	dp.RegisterManager(dp.domainInfoStore)
 
 	callbacks := newCallbacks()
 	dp.callbacks = callbacks
