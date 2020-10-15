@@ -35,7 +35,7 @@ func GetMapFDByID(mapID int) (MapFD, error) {
 	panic("BPF syscall stub")
 }
 
-func LoadBPFProgramFromInsns(insns asm.Insns, license string) (ProgFD, error) {
+func LoadBPFProgramFromInsns(insns asm.Insns, license string, progType uint32) (ProgFD, error) {
 	panic("BPF syscall stub")
 }
 
