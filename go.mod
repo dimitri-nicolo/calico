@@ -1,6 +1,6 @@
 module github.com/projectcalico/felix
 
-go 1.14
+go 1.15
 
 require (
 	github.com/Azure/go-autorest/autorest v0.9.3 // indirect
@@ -33,7 +33,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v0.0.0-20200929223531-dfc3c9936e90
-	github.com/projectcalico/typha v0.7.3-0.20201002171413-c49ad3ac90c1
+	github.com/projectcalico/typha v0.7.3-0.20201007232318-2dba00d728ad
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/satori/go.uuid v1.2.0
