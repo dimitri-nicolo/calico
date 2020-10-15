@@ -6,4 +6,3 @@ WORKDIR /
 
 USER 999
 ENTRYPOINT ["/controller"]
-

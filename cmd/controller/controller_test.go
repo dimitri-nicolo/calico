@@ -102,13 +102,13 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 			return
 		}
 		start := end.Add(-48 * time.Hour)
-		var res *api.AlertResult
+		var res *api.Alert
 		var result string
 		//Elastic require a bit of time to store the entry so we loop until we see the entry
 		for result == "" {
 			for alert := range p.LogHandler.SearchAlertLogs(ctx, nil, &start, &end) {
 				result = alert.Alert.Alert
-				res = alert
+				res = alert.Alert
 			}
 		}
 		Expect(result).To(Equal("honeypod.fake.svc"))
@@ -129,25 +129,26 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 			return
 		}
 		start := end.Add(-48 * time.Hour)
-		var res *api.AlertResult
+		var res *api.Alert
 		var result string
 		for result == "" {
 			for alert := range p.LogHandler.SearchAlertLogs(ctx, nil, &start, &end) {
 				result = alert.Alert.Alert
-				res = alert
+				res = alert.Alert
 			}
 		}
 		//We modify the path to snort alert due to being a test
 		snortPath := "../../test/snort"
 		//We pass our pre-create alerts to be processed
-		err = snort.ProcessSnort(res, p, snortPath)
+		err = snort.ProcessSnort(res, &p, snortPath)
 		if err != nil {
 			fmt.Println("Failed to Process snort")
 		}
 		end = time.Now()
 		start = end.Add(-10 * time.Minute)
-		//We should be seeing 3 entries, loopp until all 3 are filled
+		//We should be seeing 3 entries, loop until all 3 are filled
 		var result2 []string
+
 		for len(result2) < 3 {
 			result2 = []string{}
 			for alert := range p.LogHandler.SearchAlertLogs(ctx, nil, &start, &end) {

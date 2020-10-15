@@ -17,21 +17,15 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: controller 
-        imagePullPolicy: "IfNotPresent"
-        image: gcr.io/tigera-security-research/honeypod-controller:latest-amd64
+        imagePullPolicy: "Always"
+        image: gcr.io/unique-caldron-775/cnx/tigera/honeypod-controller:latest-amd64
         env:
-        - name: CLUSTER_NAME
-          value: cluster
-        - name: ELASTIC_INDEX_SUFFIX
-          value: cluster
         - name: ELASTIC_SCHEME
           value: https
         - name: ELASTIC_HOST
           value: tigera-secure-es-http.tigera-elasticsearch.svc
         - name: ELASTIC_PORT
           value: "9200"
-        - name: ELASTIC_ACCESS_MODE
-          value: serviceuser
         - name: ELASTIC_SSL_VERIFY
           value: "true"
         - name: ELASTIC_USER
@@ -53,6 +47,10 @@ spec:
           value: /etc/ssl/elastic/ca.pem
         - name: ES_CA_CERT
           value: /etc/ssl/elastic/ca.pem
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         volumeMounts:
         - mountPath: /etc/ssl/elastic/
           name: elastic-ca-cert-volume

@@ -4,7 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/url"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,33 +16,19 @@ import (
 
 	hp "github.com/tigera/honeypod-controller/pkg/processor"
 	"github.com/tigera/honeypod-controller/pkg/snort"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 func GetNodeName() (string, error) {
-	//Retrieve KubeConfig in Pod
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return "", fmt.Errorf("Error retrieving cluster config for GetNodeName(): %v", err)
-	}
-	//Generate KubeApi client
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", fmt.Errorf("Error getting KubeAPI client for GetNodeName(): %v", err)
-	}
 	//Get node name by using Get pod on our own pod
-	hostname := os.Getenv("HOSTNAME")
-	log.Info("Honeypod Controller hostname: ", hostname)
-	pod, err := client.CoreV1().Pods("tigera-intrusion-detection").Get(hostname, metav1.GetOptions{})
-	if err != nil {
-		return "", fmt.Errorf("Error getting NodeName for GetNodeName(): %v", err)
+	nodename := os.Getenv("NODENAME")
+	log.Info("Honeypod controller is running on node: ", nodename)
+	if nodename == "" {
+		return "", fmt.Errorf("Empty NodeName")
 	}
-	return pod.Spec.NodeName, nil
+	return nodename, nil
 }
 
-func GetPcaps(e *api.AlertResult, path string) ([]string, error) {
+func GetPcaps(e *api.Alert, path string) ([]string, error) {
 	var matches []string
 	s := fmt.Sprintf("%s/%s/%s/%s", path, *e.Record.DestNamespace, hp.PacketCapture, *e.Record.DestNameAggr)
 	//Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
@@ -58,12 +44,14 @@ func GetPcaps(e *api.AlertResult, path string) ([]string, error) {
 	return matches, nil
 }
 
-func Loop(p hp.HoneypodLogProcessor, node string) error {
+func Loop(p *hp.HoneypodLogProcessor, node string) error {
 	//We only look at the past 10min of alerts
 	endTime := time.Now()
-	startTime := endTime.Add(-10 * time.Minute)
-	log.Info("Querying Elasticsearch for new Alerts")
+	startTime := p.LastProcessingTime
+	log.Info("Querying Elasticsearch for new Alerts between:", startTime, endTime)
 
+	//We retrieve alerts from elastic and filter
+	filteredAlerts := make(map[string](*api.Alert))
 	for e := range p.LogHandler.SearchAlertLogs(p.Ctx, nil, &startTime, &endTime) {
 		if e.Err != nil {
 			log.WithError(e.Err).Error("Failed querying alert logs")
@@ -75,28 +63,38 @@ func Loop(p hp.HoneypodLogProcessor, node string) error {
 			continue
 		}
 		log.Info("Valid alert Found: ", e.Alert)
-
-		//Retrieve Pcap locations
-		pcapArray, err := GetPcaps(e, hp.PcapPath)
-		if err != nil {
-			log.WithError(e.Err).Error("Failed to retrieve Pcaps")
-			continue
-		}
-
-		log.Info("Honeypod Controller scanning: ", pcapArray)
-		//Run snort on each pcap and send new alerts to Elasticsearch
-		for _, pcap := range pcapArray {
-			err := snort.ScanSnort(e, pcap, hp.SnortPath)
-			if err != nil {
-				log.WithError(e.Err).Error("Failed to run snort on pcap")
-			}
-		}
-		err = snort.ProcessSnort(e, p, hp.SnortPath)
-		if err != nil {
-			log.WithError(e.Err).Error("Failed to process snort on pcap")
+		//Store Honeypod in buckets, using destination pod name aggregate
+		if filteredAlerts[*e.Alert.Record.DestNameAggr] == nil {
+			filteredAlerts[*e.Alert.Record.DestNameAggr] = e.Alert
 		}
 	}
+
+	//Parallel processing of Honeypod alerts`
+	for _, alert := range filteredAlerts {
+		alertCopy := alert
+		go func() {
+			//Retrieve Pcap locations
+			pcapArray, err := GetPcaps(alertCopy, hp.PcapPath)
+			if err != nil {
+				log.WithError(err).Error("Failed to retrieve Pcaps")
+			}
+			log.Info("Honeypod Controller scanning: ", pcapArray)
+			//Run snort on each pcap and send new alerts to Elasticsearch
+			for _, pcap := range pcapArray {
+				err := snort.ScanSnort(alertCopy, pcap, hp.SnortPath)
+				if err != nil {
+					log.WithError(err).Error("Failed to run snort on pcap")
+				}
+			}
+			err = snort.ProcessSnort(alertCopy, p, hp.SnortPath)
+			if err != nil {
+				log.WithError(err).Error("Failed to process snort on pcap")
+			}
+		}()
+	}
+
 	log.Info("Honeypod controller loop completed")
+	p.UpdateLastProcessTime(endTime)
 
 	return nil
 }
@@ -106,14 +104,11 @@ func main() {
 	//Get Default Elastic client config, then modify URL
 	log.Info("Honeypod Controller started")
 	cfg := elastic.MustLoadConfig()
-	cfg.ElasticURI = "https://tigera-secure-es-http.tigera-elasticsearch.svc:9200"
-	cfg.ParsedElasticURL, _ = url.Parse(cfg.ElasticURI)
 
 	//Try to connect to Elasticsearch
 	c, err := elastic.NewFromConfig(cfg)
 	if err != nil {
-		log.WithError(err).Error("Failed to initiate ES client.")
-		return
+		log.WithError(err).Panic("Failed to initiate ES client.")
 	}
 	//Set up context
 	ctx := context.Background()
@@ -121,35 +116,26 @@ func main() {
 	//Check if required index exists
 	exists, err := c.Backend().IndexExists(hp.Index).Do(context.Background())
 	if err != nil || !exists {
-		log.WithError(err).Error("Error unable to access Index: ", hp.Index)
-		return
+		log.WithError(err).Panic("Error unable to access Index: ", hp.Index)
 	}
 
 	//Create HoneypodLogProcessor
 	p, err := hp.NewHoneypodLogProcessor(c, ctx)
 	if err != nil {
-		log.WithError(err).Error("Unable to create HoneypodLog Processor")
-		return
+		log.WithError(err).Panic("Unable to create HoneypodLog Processor")
 	}
 	//Retrieve controller's running Nodename
 	node, err := GetNodeName()
 	if err != nil {
-		log.WithError(err).Error("Error getting Nodename")
-		return
+		log.WithError(err).Panic("Error getting Nodename")
 	}
 	//Start controller loop
-	for {
-		err = Loop(p, node)
+	for c := time.Tick(10 * time.Minute); ; <-c {
+		log.Info("Honeypod controller loop started")
+		snort.GlobalSnort = []snort.Snort{}
+		err = Loop(&p, node)
 		if err != nil {
 			log.WithError(err).Error("Error running controller loop")
-			return
 		}
-		//Sleep for 10 minutues and run controller loop again
-		timer, err := time.ParseDuration("10m")
-		if err != nil {
-			log.WithError(err).Error("Error setting timer")
-			return
-		}
-		time.Sleep(timer)
 	}
 }
