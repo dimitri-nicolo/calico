@@ -151,6 +151,31 @@ func ValidateElfFile(filename string) (error, *elf.File, *os.File) {
 	return nil, file, freader
 }
 
+func GetRelocationSectionData(sec *elf.Section, file *elf.File) (error, []byte, []byte, *elf.Section) {
+	if sec.Type == elf.SHT_REL {
+		data, err := sec.Data()
+		if err != nil {
+			return errors.Errorf("Error reading section data"), nil, nil, nil
+		}
+		if len(data) == 0 {
+			return nil, nil, nil, nil
+		}
+		relocSec := file.Sections[sec.Info]
+		progType := GetProgTypeFromSecName(relocSec.Name)
+		if progType != unix.BPF_PROG_TYPE_UNSPEC {
+			relData, err := relocSec.Data()
+			if err != nil {
+				return errors.Errorf("Error reading relocation data"), nil, nil, nil
+			}
+			if len(relData) == 0 {
+				return nil, nil, nil, nil
+			}
+			return nil, data, relData, relocSec
+		}
+	}
+	return nil, nil, nil, nil
+}
+
 func (l *Loader) Load(filename string) error {
 	var err error
 	err, file, fp := ValidateElfFile(filename)
@@ -164,46 +189,34 @@ func (l *Loader) Load(filename string) error {
 	}
 	loaded := make([]bool, len(file.Sections))
 	for i, sec := range file.Sections {
-		if sec.Type == elf.SHT_REL {
-			if loaded[i] == true {
+		if loaded[i] == true {
+			continue
+		}
+		err, data, relData, relocSec := GetRelocationSectionData(sec, file)
+		if err != nil {
+			return errors.Errorf("Error handling relocation section")
+		} else {
+			if data == nil && relData == nil && relocSec == nil {
 				continue
 			}
-			data, err := sec.Data()
+			err = l.Relocate(data, relData, file)
 			if err != nil {
-				return errors.Errorf("Error reading section data")
+				return errors.Errorf("Error handling relocation section")
 			}
-			if len(data) == 0 {
-				continue
-			}
-			relocSec := file.Sections[sec.Info]
+			insns := asm.GetBPFInsns(relData)
 			progType := GetProgTypeFromSecName(relocSec.Name)
-			if progType != unix.BPF_PROG_TYPE_UNSPEC {
-				relData, err := relocSec.Data()
-				if err != nil {
-					return errors.Errorf("Error reading relocation data")
-				}
-				if len(relData) == 0 {
-					continue
-				}
-				err = l.Relocate(data, relData, file)
-				if err != nil {
-					return errors.Errorf("Error handling relocation section")
-				}
-				insns := asm.GetBPFInsns(relData)
-				progFd, err := LoadBPFProgramFromInsns(insns, license, progType)
-				if progFd == 0 {
-					return errors.Errorf("Error loading section %v %v", relocSec.Name, err)
-				}
-				loaded[i] = true
-				loaded[sec.Info] = true
-				l.programs[relocSec.Name] = &ProgramInfo{
-					fd:   progFd,
-					Type: progType,
-				}
+			progFd, err := LoadBPFProgramFromInsns(insns, license, progType)
+			if progFd == 0 {
+				return errors.Errorf("Error loading section %v %v", relocSec.Name, err)
+			}
+			loaded[i] = true
+			loaded[sec.Info] = true
+			l.programs[relocSec.Name] = &ProgramInfo{
+				fd:   progFd,
+				Type: progType,
 			}
 		}
 	}
-
 	for i, sec := range file.Sections {
 		if loaded[i] == true {
 			continue
