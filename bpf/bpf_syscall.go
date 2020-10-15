@@ -29,217 +29,167 @@ import (
 
 	"github.com/projectcalico/felix/bpf/asm"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
-/*
-#include <linux/bpf.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <errno.h>
-#include <linux/perf_event.h>
-#include <sys/resource.h>
-#include <linux/unistd.h>
-
-__u64 ptr_to_u64(void *ptr)
-{
-        return (__u64) (unsigned long) ptr;
-}
-
-union bpf_attr *bpf_attr_alloc() {
-   union bpf_attr *attr = malloc(sizeof(union bpf_attr));
-   memset(attr, 0, sizeof(union bpf_attr));
-   return attr;
-}
-
-// bpf_attr_setup_obj_get sets up the bpf_attr union for use with BPF_OBJ_GET.
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_obj_get(union bpf_attr *attr, char *path, __u32 flags) {
-   attr->pathname = (__u64)(unsigned long)path;
-   attr->bpf_fd = 0;
-   attr->file_flags = flags;
-}
-
-// bpf_attr_setup_obj_get_id sets up the bpf_attr union for use with BPF_XXX_GET_FD_BY_ID.
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_obj_get_id(union bpf_attr *attr, __u32 id, __u32 flags) {
-   attr->map_id = id;
-   attr->open_flags = flags;
-}
-
-// bpf_attr_setup_obj_pin sets up the bpf_attr union for use with BPF_OBJ_PIN.
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_obj_pin(union bpf_attr *attr, char *path, __u32 fd, __u32 flags) {
-   attr->pathname = (__u64)(unsigned long)path;
-   attr->bpf_fd = fd;
-   attr->file_flags = flags;
-}
-
-// bpf_attr_setup_map_elem sets up the bpf_attr union for use with BPF_MAP_GET|UPDATE
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_map_elem(union bpf_attr *attr, __u32 map_fd, void *pointer_to_key, void *pointer_to_value, __u64 flags) {
-   attr->map_fd = map_fd;
-   attr->key = (__u64)(unsigned long)pointer_to_key;
-   attr->value = (__u64)(unsigned long)pointer_to_value;
-   attr->flags = flags;
-}
-
-// bpf_attr_setup_map_get_next_key sets up the bpf_attr union for use with BPF_MAP_GET_NEXT_KEY
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_map_get_next_key(union bpf_attr *attr, __u32 map_fd, void *key, void *next_key, __u64 flags) {
-   attr->map_fd = map_fd;
-   attr->key = (__u64)(unsigned long)key;
-   attr->next_key = (__u64)(unsigned long)next_key;
-   attr->flags = flags;
-}
-
-// bpf_attr_setup_map_elem_for_delete sets up the bpf_attr union for use with BPF_MAP_DELETE_ELEM
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_map_elem_for_delete(union bpf_attr *attr, __u32 map_fd, void *pointer_to_key) {
-   attr->map_fd = map_fd;
-   attr->key = (__u64)(unsigned long)pointer_to_key;
-}
-
-// bpf_attr_setup_load_prog sets up the bpf_attr union for use with BPF_PROG_LOAD.
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_count, void *insns, char *license, __u32 log_level, __u32 log_size, void *log_buf) {
-   attr->prog_type = prog_type;
-   attr->insn_cnt = insn_count;
-   attr->insns = (__u64)(unsigned long)insns;
-   attr->license = (__u64)(unsigned long)license;
-   attr->log_level = log_level;
-   attr->log_size = log_size;
-   attr->log_buf = (__u64)(unsigned long)log_buf;
-   attr->kern_version = 0;
-   if (log_size > 0) ((char *)log_buf)[0] = 0;
-}
-
-// bpf_attr_setup_prog_run sets up the bpf_attr union for use with BPF_PROG_TEST_RUN.
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_prog_run(union bpf_attr *attr, __u32 prog_fd,
-                             __u32 data_size_in, void *data_in,
-                             __u32 data_size_out, void *data_out,
-                             __u32 repeat) {
-   attr->test.prog_fd = prog_fd;
-   attr->test.data_size_in = data_size_in;
-   attr->test.data_size_out = data_size_out;
-   attr->test.data_in = (__u64)(unsigned long)data_in;
-   attr->test.data_out = (__u64)(unsigned long)data_out;
-   attr->test.repeat = repeat;
-}
-
-// bpf_attr_setup_get_info sets up the bpf_attr union for use with BPF_OBJ_GET_INFO_BY_FD.
-// A C function makes this easier because unions aren't easy to access from Go.
-void bpf_attr_setup_get_info(union bpf_attr *attr, __u32 map_fd,
-                             __u32 info_size, void *info) {
-   attr->info.bpf_fd = map_fd;
-   attr->info.info_len = info_size;
-   attr->info.info = (__u64)(unsigned long)info;
-}
-
-__u32 bpf_attr_prog_run_retval(union bpf_attr *attr) {
-   return attr->test.retval;
-}
-
-__u32 bpf_attr_prog_run_data_out_size(union bpf_attr *attr) {
-   return attr->test.data_size_out;
-}
-
-__u32 bpf_attr_prog_run_duration(union bpf_attr *attr) {
-   return attr->test.duration;
-}
-
-int bpf_map_call(int cmd, __u32 map_fd, void *pointer_to_key, void *pointer_to_value, __u64 flags) {
-   union bpf_attr attr = {};
-
-   attr.map_fd = map_fd;
-   attr.key = (__u64)(unsigned long)pointer_to_key;
-   attr.value = (__u64)(unsigned long)pointer_to_value;
-   attr.flags = flags;
-
-   return syscall(SYS_bpf, cmd, &attr, sizeof(attr)) == 0 ? 0 : errno;
-}
-
-int bpf_map_load_multi(__u32 map_fd,
-                       void *current_key,
-                       int max_num,
-                       int key_stride,
-                       void *keys_out,
-                       int value_stride,
-                       void *values_out) {
-   int count = 0;
-   union bpf_attr attr = {};
-   attr.map_fd = map_fd;
-   attr.key = (__u64)(unsigned long)current_key;
-   for (int i = 0; i < max_num; i++) {
-     // Load the next key from the map.
-     attr.value = (__u64)(unsigned long)keys_out;
-     int rc = syscall(SYS_bpf, BPF_MAP_GET_NEXT_KEY, &attr, sizeof(attr));
-     if (rc != 0) {
-       if (errno == ENOENT) {
-         return count; // Reached end of map.
-       }
-       return -errno;
-     }
-     // Load the corresponding value.
-     attr.key = (__u64)(unsigned long)keys_out;
-     attr.value = (__u64)(unsigned long)values_out;
-
-     rc = syscall(SYS_bpf, BPF_MAP_LOOKUP_ELEM, &attr, sizeof(attr));
-     if (rc != 0) {
-       return -errno;
-     }
-
-     keys_out+=key_stride;
-     values_out+=value_stride;
-     count++;
-   }
-   return count;
-}
-
-static int bpf_prog_load(enum bpf_prog_type prog_type,
-        const struct bpf_insn *insns, int prog_len,
-        const char *license, char *log_buf, int log_size)
-{
-        union bpf_attr attr;
-        memset(&attr, 0, sizeof(attr));
-
-        attr.prog_type = prog_type;
-        attr.insn_cnt = prog_len / sizeof(struct bpf_insn);
-        attr.insns = ptr_to_u64((void *) insns);
-        attr.license = ptr_to_u64((void *) license);
-        attr.log_buf = ptr_to_u64(log_buf);
-        attr.log_size = log_size;
-        attr.log_level = 1;
-
-        return syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
-}
-
-void bpf_relocate_insn(int fd, struct bpf_insn *insn)
-{
-        insn->src_reg = BPF_PSEUDO_MAP_FD;
-        insn->imm = fd;
-}
-
-int perf_event_open_tracepoint(int tracepoint_id, int pid, int cpu,
-                           int group_fd, unsigned long flags)
-{
-        struct perf_event_attr attr = {0,};
-        attr.type = PERF_TYPE_TRACEPOINT;
-        attr.sample_type = PERF_SAMPLE_RAW;
-        attr.sample_period = 1;
-        attr.wakeup_events = 1;
-        attr.config = tracepoint_id;
-
-        return syscall(__NR_perf_event_open, &attr, pid, cpu,
-                      group_fd, flags);
-}
-
-*/
+// #include <linux/bpf.h>
+// #include <stdlib.h>
+// #include <string.h>
+// #include <errno.h>
+// #include <unistd.h>
+// #include <sys/syscall.h>
+//
+// union bpf_attr *bpf_attr_alloc() {
+//    union bpf_attr *attr = malloc(sizeof(union bpf_attr));
+//    memset(attr, 0, sizeof(union bpf_attr));
+//    return attr;
+// }
+//
+// // bpf_attr_setup_obj_get sets up the bpf_attr union for use with BPF_OBJ_GET.
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_obj_get(union bpf_attr *attr, char *path, __u32 flags) {
+//    attr->pathname = (__u64)(unsigned long)path;
+//    attr->bpf_fd = 0;
+//    attr->file_flags = flags;
+// }
+//
+// // bpf_attr_setup_obj_get_id sets up the bpf_attr union for use with BPF_XXX_GET_FD_BY_ID.
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_obj_get_id(union bpf_attr *attr, __u32 id, __u32 flags) {
+//    attr->map_id = id;
+//    attr->open_flags = flags;
+// }
+//
+// // bpf_attr_setup_obj_pin sets up the bpf_attr union for use with BPF_OBJ_PIN.
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_obj_pin(union bpf_attr *attr, char *path, __u32 fd, __u32 flags) {
+//    attr->pathname = (__u64)(unsigned long)path;
+//    attr->bpf_fd = fd;
+//    attr->file_flags = flags;
+// }
+//
+// // bpf_attr_setup_map_elem sets up the bpf_attr union for use with BPF_MAP_GET|UPDATE
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_map_elem(union bpf_attr *attr, __u32 map_fd, void *pointer_to_key, void *pointer_to_value, __u64 flags) {
+//    attr->map_fd = map_fd;
+//    attr->key = (__u64)(unsigned long)pointer_to_key;
+//    attr->value = (__u64)(unsigned long)pointer_to_value;
+//    attr->flags = flags;
+// }
+//
+// // bpf_attr_setup_map_get_next_key sets up the bpf_attr union for use with BPF_MAP_GET_NEXT_KEY
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_map_get_next_key(union bpf_attr *attr, __u32 map_fd, void *key, void *next_key, __u64 flags) {
+//    attr->map_fd = map_fd;
+//    attr->key = (__u64)(unsigned long)key;
+//    attr->next_key = (__u64)(unsigned long)next_key;
+//    attr->flags = flags;
+// }
+//
+// // bpf_attr_setup_map_elem_for_delete sets up the bpf_attr union for use with BPF_MAP_DELETE_ELEM
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_map_elem_for_delete(union bpf_attr *attr, __u32 map_fd, void *pointer_to_key) {
+//    attr->map_fd = map_fd;
+//    attr->key = (__u64)(unsigned long)pointer_to_key;
+// }
+//
+// // bpf_attr_setup_load_prog sets up the bpf_attr union for use with BPF_PROG_LOAD.
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_load_prog(union bpf_attr *attr, __u32 prog_type, __u32 insn_count, void *insns, char *license, __u32 log_level, __u32 log_size, void *log_buf) {
+//    attr->prog_type = prog_type;
+//    attr->insn_cnt = insn_count;
+//    attr->insns = (__u64)(unsigned long)insns;
+//    attr->license = (__u64)(unsigned long)license;
+//    attr->log_level = log_level;
+//    attr->log_size = log_size;
+//    attr->log_buf = (__u64)(unsigned long)log_buf;
+//    attr->kern_version = 0;
+//    if (log_size > 0) ((char *)log_buf)[0] = 0;
+// }
+//
+// // bpf_attr_setup_prog_run sets up the bpf_attr union for use with BPF_PROG_TEST_RUN.
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_prog_run(union bpf_attr *attr, __u32 prog_fd,
+//                              __u32 data_size_in, void *data_in,
+//                              __u32 data_size_out, void *data_out,
+//                              __u32 repeat) {
+//    attr->test.prog_fd = prog_fd;
+//    attr->test.data_size_in = data_size_in;
+//    attr->test.data_size_out = data_size_out;
+//    attr->test.data_in = (__u64)(unsigned long)data_in;
+//    attr->test.data_out = (__u64)(unsigned long)data_out;
+//    attr->test.repeat = repeat;
+// }
+//
+// // bpf_attr_setup_get_info sets up the bpf_attr union for use with BPF_OBJ_GET_INFO_BY_FD.
+// // A C function makes this easier because unions aren't easy to access from Go.
+// void bpf_attr_setup_get_info(union bpf_attr *attr, __u32 map_fd,
+//                              __u32 info_size, void *info) {
+//    attr->info.bpf_fd = map_fd;
+//    attr->info.info_len = info_size;
+//    attr->info.info = (__u64)(unsigned long)info;
+// }
+//
+// __u32 bpf_attr_prog_run_retval(union bpf_attr *attr) {
+//    return attr->test.retval;
+// }
+//
+// __u32 bpf_attr_prog_run_data_out_size(union bpf_attr *attr) {
+//    return attr->test.data_size_out;
+// }
+//
+// __u32 bpf_attr_prog_run_duration(union bpf_attr *attr) {
+//    return attr->test.duration;
+// }
+//
+// int bpf_map_call(int cmd, __u32 map_fd, void *pointer_to_key, void *pointer_to_value, __u64 flags) {
+//    union bpf_attr attr = {};
+//
+//    attr.map_fd = map_fd;
+//    attr.key = (__u64)(unsigned long)pointer_to_key;
+//    attr.value = (__u64)(unsigned long)pointer_to_value;
+//    attr.flags = flags;
+//
+//    return syscall(SYS_bpf, cmd, &attr, sizeof(attr)) == 0 ? 0 : errno;
+// }
+//
+// int bpf_map_load_multi(__u32 map_fd,
+//                        void *current_key,
+//                        int max_num,
+//                        int key_stride,
+//                        void *keys_out,
+//                        int value_stride,
+//                        void *values_out) {
+//    int count = 0;
+//    union bpf_attr attr = {};
+//    attr.map_fd = map_fd;
+//    attr.key = (__u64)(unsigned long)current_key;
+//    for (int i = 0; i < max_num; i++) {
+//      // Load the next key from the map.
+//      attr.value = (__u64)(unsigned long)keys_out;
+//      int rc = syscall(SYS_bpf, BPF_MAP_GET_NEXT_KEY, &attr, sizeof(attr));
+//      if (rc != 0) {
+//        if (errno == ENOENT) {
+//          return count; // Reached end of map.
+//        }
+//        return -errno;
+//      }
+//      // Load the corresponding value.
+//      attr.key = (__u64)(unsigned long)keys_out;
+//      attr.value = (__u64)(unsigned long)values_out;
+//
+//      rc = syscall(SYS_bpf, BPF_MAP_LOOKUP_ELEM, &attr, sizeof(attr));
+//      if (rc != 0) {
+//        return -errno;
+//      }
+//
+//      keys_out+=key_stride;
+//      values_out+=value_stride;
+//      count++;
+//    }
+//    return count;
+// }
+//
 import "C"
 
 func SyscallSupport() bool {
@@ -280,8 +230,8 @@ func GetMapFDByID(mapID int) (MapFD, error) {
 const defaultLogSize = 1024 * 1024
 const maxLogSize = 128 * 1024 * 1024
 
-func LoadBPFProgramFromInsns(insns asm.Insns, license string) (fd ProgFD, err error) {
-	log.Debugf("LoadBPFProgramFromInsns(%v, %v)", insns, license)
+func LoadBPFProgramFromInsns(insns asm.Insns, license string, progType uint32) (fd ProgFD, err error) {
+	log.Debugf("LoadBPFProgramFromInsns(%v, %v, %v)", insns, license, progType)
 	increaseLockedMemoryQuota()
 
 	// Occasionally see retryable errors here, retry silently a few times before going into log-collection mode.
@@ -289,7 +239,7 @@ func LoadBPFProgramFromInsns(insns asm.Insns, license string) (fd ProgFD, err er
 	for retries := 10; retries > 0; retries-- {
 		// By default, try to load the program with logging disabled.  This has two advantages: better performance
 		// and the fact that the log cannot overflow.
-		fd, err = tryLoadBPFProgramFromInsns(insns, license, 0)
+		fd, err = tryLoadBPFProgramFromInsns(insns, license, 0, progType)
 		if err == nil {
 			log.WithField("fd", fd).Debug("Loaded program successfully")
 			return fd, nil
@@ -303,7 +253,7 @@ func LoadBPFProgramFromInsns(insns asm.Insns, license string) (fd ProgFD, err er
 	log.WithError(err).Warn("Failed to load BPF program; collecting diagnostics...")
 	var logSize uint = defaultLogSize
 	for {
-		fd, err2 := tryLoadBPFProgramFromInsns(insns, license, logSize)
+		fd, err2 := tryLoadBPFProgramFromInsns(insns, license, logSize, progType)
 		if err2 == nil {
 			// Unexpected but we'll take it.
 			log.Warn("Retry succeeded.")
@@ -322,8 +272,8 @@ func LoadBPFProgramFromInsns(insns asm.Insns, license string) (fd ProgFD, err er
 	}
 }
 
-func tryLoadBPFProgramFromInsns(insns asm.Insns, license string, logSize uint) (ProgFD, error) {
-	log.Debugf("tryLoadBPFProgramFromInsns(..., %v, %v)", license, logSize)
+func tryLoadBPFProgramFromInsns(insns asm.Insns, license string, logSize uint, progType uint32) (ProgFD, error) {
+	log.Debugf("tryLoadBPFProgramFromInsns(..., %v, %v, %v)", license, logSize, progType)
 	bpfAttr := C.bpf_attr_alloc()
 	defer C.free(unsafe.Pointer(bpfAttr))
 
@@ -340,7 +290,7 @@ func tryLoadBPFProgramFromInsns(insns asm.Insns, license string, logSize uint) (
 		defer C.free(logBuf)
 	}
 
-	C.bpf_attr_setup_load_prog(bpfAttr, unix.BPF_PROG_TYPE_SCHED_CLS, C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf)
+	C.bpf_attr_setup_load_prog(bpfAttr, (C.uint)(progType), C.uint(len(insns)), cInsnBytes, cLicense, (C.uint)(logLevel), (C.uint)(logSize), logBuf)
 	fd, _, errno := unix.Syscall(unix.SYS_BPF, unix.BPF_PROG_LOAD, uintptr(unsafe.Pointer(bpfAttr)), C.sizeof_union_bpf_attr)
 
 	if errno != 0 && errno != unix.ENOSPC /* log buffer too small */ {
@@ -671,38 +621,5 @@ func (m *MapIterator) Close() error {
 	// Don't need the finalizer any more.
 	runtime.SetFinalizer(m, nil)
 
-	return nil
-}
-
-func GetProgTypeFromSecName(secName string) uint32 {
-	if strings.HasPrefix(secName, "kprobe/") {
-		return uint32(C.BPF_PROG_TYPE_KPROBE)
-	}
-	return uint32(C.BPF_PROG_TYPE_UNSPEC)
-}
-
-func LoadBPFProgram(progType uint32, data []byte, sectionSize uint64, license string, log []byte, logSize int) (error, int) {
-	increaseLockedMemoryQuota()
-	insns := (*C.struct_bpf_insn)(unsafe.Pointer(&data[0]))
-	progFd, err := C.bpf_prog_load(progType, insns, C.int(sectionSize),
-		(*C.char)(unsafe.Pointer(C.CString(license))),
-		(*C.char)(unsafe.Pointer(&log[0])), C.int(logSize))
-	return err, int(progFd)
-}
-
-func GetBpfInsnImm(insn *C.struct_bpf_insn) uint32 {
-	return uint32(insn.imm)
-}
-
-func GetBpfInsn(data []byte, offset uint64) *C.struct_bpf_insn {
-	return (*C.struct_bpf_insn)(unsafe.Pointer(&data[offset]))
-}
-
-func RelocateBpfInsn(fd MapFD, data []byte, offset uint64) error {
-	insn := GetBpfInsn(data, offset)
-	if insn.code != (C.BPF_LD | C.BPF_IMM | C.BPF_DW) {
-		return errors.Errorf("Invaliid instruction in the relocation section")
-	}
-	C.bpf_relocate_insn(C.int(fd), insn)
 	return nil
 }

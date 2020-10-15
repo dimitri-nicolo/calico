@@ -25,6 +25,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/felix/bpf/asm"
 )
 
 func TestBpfProgramLoader(t *testing.T) {
@@ -78,11 +79,12 @@ func TestBpfProgramLoader(t *testing.T) {
 
 func CompareRelocationData(temp, data []byte, symMap map[uint64]string, fd bpf.MapFD) {
 	for offset, _ := range symMap {
-		insn := bpf.GetBpfInsn(temp, offset)
-		rinsn := bpf.GetBpfInsn(data, offset)
-		Expect(insn).NotTo(Equal(rinsn))
-		Expect(bpf.GetBpfInsnImm(insn)).NotTo(Equal(bpf.GetBpfInsnImm(rinsn)))
-		Expect(bpf.GetBpfInsnImm(rinsn)).To(Equal(uint32(fd)))
+		insn := asm.GetBpfInsn(temp, offset)
+		rinsn := asm.GetBpfInsn(data, offset)
+		res := (insn == rinsn)
+		Expect(res).NotTo(Equal(0))
+		Expect(insn.Imm()).NotTo(Equal(rinsn.Imm()))
+		Expect(rinsn.Imm()).To(Equal(int32(fd)))
 	}
 }
 

@@ -21,16 +21,12 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
-)
+	"golang.org/x/sys/unix"
 
-const (
-	logSize int = 524288 //512KB
-)
-
-const (
-	BPF_PROG_TYPE_UNSPEC = iota
+	"github.com/projectcalico/felix/bpf/asm"
 )
 
 type Loader struct {
@@ -39,7 +35,7 @@ type Loader struct {
 }
 
 type ProgramInfo struct {
-	fd   int
+	fd   ProgFD
 	Type uint32
 }
 
@@ -128,7 +124,7 @@ func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
 		if fd == 0 {
 			return errors.Errorf("Map fd invalid")
 		}
-		err = RelocateBpfInsn(fd, rdata, offset)
+		err = asm.RelocateBpfInsn(uint32(fd), rdata, offset)
 		if err != nil {
 			return err
 		}
@@ -157,8 +153,6 @@ func ValidateElfFile(filename string) (error, *elf.File, *os.File) {
 
 func (l *Loader) Load(filename string) error {
 	var err error
-	log := make([]byte, logSize)
-
 	err, file, fp := ValidateElfFile(filename)
 	defer fp.Close()
 	if err != nil {
@@ -183,7 +177,7 @@ func (l *Loader) Load(filename string) error {
 			}
 			relocSec := file.Sections[sec.Info]
 			progType := GetProgTypeFromSecName(relocSec.Name)
-			if progType != BPF_PROG_TYPE_UNSPEC {
+			if progType != unix.BPF_PROG_TYPE_UNSPEC {
 				relData, err := relocSec.Data()
 				if err != nil {
 					return errors.Errorf("Error reading relocation data")
@@ -195,14 +189,15 @@ func (l *Loader) Load(filename string) error {
 				if err != nil {
 					return errors.Errorf("Error handling relocation section")
 				}
-				err, progfd := LoadBPFProgram(progType, relData, relocSec.Size, license, log, logSize)
-				if progfd < 0 {
-					return errors.Errorf("Error loading section1 %v %v", relocSec.Name, err)
+				insns := asm.GetBPFInsns(relData)
+				progFd, err := LoadBPFProgramFromInsns(insns, license, progType)
+				if progFd == 0 {
+					return errors.Errorf("Error loading section %v %v", relocSec.Name, err)
 				}
 				loaded[i] = true
 				loaded[sec.Info] = true
 				l.programs[relocSec.Name] = &ProgramInfo{
-					fd:   int(progfd),
+					fd:   progFd,
 					Type: progType,
 				}
 			}
@@ -221,17 +216,25 @@ func (l *Loader) Load(filename string) error {
 			continue
 		}
 		progType := GetProgTypeFromSecName(sec.Name)
-		if progType != BPF_PROG_TYPE_UNSPEC {
-			err, progfd := LoadBPFProgram(progType, data, sec.Size, license, log, logSize)
-			if progfd < 0 {
-				return err
+		if progType != unix.BPF_PROG_TYPE_UNSPEC {
+			insns := asm.GetBPFInsns(data)
+			progFd, err := LoadBPFProgramFromInsns(insns, license, progType)
+			if progFd == 0 {
+				return errors.Errorf("Error loading section %v %v", sec.Name, err)
 			}
 			loaded[i] = true
 			l.programs[sec.Name] = &ProgramInfo{
-				fd:   int(progfd),
+				fd:   progFd,
 				Type: progType,
 			}
 		}
 	}
 	return nil
+}
+
+func GetProgTypeFromSecName(secName string) uint32 {
+	if strings.HasPrefix(secName, "kprobe/") {
+		return uint32(unix.BPF_PROG_TYPE_KPROBE)
+	}
+	return uint32(unix.BPF_PROG_TYPE_UNSPEC)
 }

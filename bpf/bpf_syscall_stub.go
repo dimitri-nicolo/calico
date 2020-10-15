@@ -81,15 +81,3 @@ func (m *MapIterator) Next() (k, v []byte, err error) {
 func (m *MapIterator) Close() error {
 	return nil
 }
-
-func RelocateBpfInsn(fd MapFD, data []byte, offset uint64) error {
-	panic("BPF syscall stub")
-}
-
-func LoadBPFProgram(progType uint32, data []byte, sectionSize uint64, license string, log []byte, logSize int) (error, int) {
-	panic("BPF syscall stub")
-}
-
-func GetProgTypeFromSecName(secName string) uint32 {
-	panic("BPF syscall stub")
-}

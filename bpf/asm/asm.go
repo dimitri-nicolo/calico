@@ -606,3 +606,29 @@ func (b *Block) nextInsnReachble() bool {
 		return true
 	}
 }
+
+func RelocateBpfInsn(fd uint32, data []byte, offset uint64) error {
+	var insn Insn
+	copy(insn[:], data[offset:])
+	binary.LittleEndian.PutUint32(insn[4:], fd)
+	insn[1] = uint8((1 << 4) | insn[1]&0x0f)
+	copy(data[offset:], insn[:])
+	return nil
+}
+
+func GetBpfInsn(data []byte, offset uint64) Insn {
+	var insn Insn
+	copy(insn[:], data[offset:])
+	return insn
+}
+
+func GetBPFInsns(data []byte) Insns {
+	var insns Insns
+	var insn Insn
+	for i := 0; i < len(data); i += len(insn) {
+		insn = GetBpfInsn(data, uint64(i))
+		insns = append(insns, insn)
+	}
+
+	return insns
+}

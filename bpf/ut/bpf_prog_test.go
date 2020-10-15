@@ -127,7 +127,7 @@ func TestCompileTemplateRun(t *testing.T) {
 
 func TestLoadZeroProgram(t *testing.T) {
 	RegisterTestingT(t)
-	fd, err := bpf.LoadBPFProgramFromInsns(nil, "Apache-2.0")
+	fd, err := bpf.LoadBPFProgramFromInsns(nil, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
 	if err == nil {
 		_ = fd.Close()
 	}
@@ -199,7 +199,7 @@ func runBpfTest(t *testing.T, section string, rules [][][]*proto.Rule, testFn fu
 	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), jumpMap.MapFD())
 	insns, err := pg.Instructions(rules)
 	Expect(err).NotTo(HaveOccurred())
-	polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0")
+	polProgFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
 	Expect(err).NotTo(HaveOccurred())
 	defer func() { _ = polProgFD.Close() }()
 	progFDBytes := make([]byte, 4)

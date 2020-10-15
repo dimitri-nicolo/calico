@@ -769,7 +769,7 @@ func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules [][]
 	if err != nil {
 		return fmt.Errorf("failed to generate policy bytecode: %w", err)
 	}
-	progFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0")
+	progFD, err := bpf.LoadBPFProgramFromInsns(insns, "Apache-2.0", unix.BPF_PROG_TYPE_SCHED_CLS)
 	if err != nil {
 		return fmt.Errorf("failed to load BPF policy program: %w", err)
 	}
