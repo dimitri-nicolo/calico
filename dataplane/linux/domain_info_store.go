@@ -120,9 +120,9 @@ type domainInfoStore struct {
 	requestTimestamp  map[uint16]time.Time
 
 	// Handling additional DNS mapping lifetime.
-	epoch    int
-	extraTTL time.Duration
-	resetC   chan struct{}
+	epoch, initialEpoch       int
+	extraTTL, initialExtraTTL time.Duration
+	resetC                    chan struct{}
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -170,7 +170,9 @@ func newDomainInfoStoreWithShims(
 		collector:            config.Collector,
 		timestampExpected:    config.DNSLogsLatency,
 		requestTimestamp:     make(map[uint16]time.Time),
+		initialEpoch:         config.DNSCacheEpoch,
 		epoch:                config.DNSCacheEpoch,
+		initialExtraTTL:      config.DNSExtraTTL,
 		extraTTL:             config.DNSExtraTTL,
 		// Capacity 1 here is to allow UT to test the use of this channel without
 		// needing goroutines.
@@ -213,18 +215,25 @@ func (s *domainInfoStore) Start() {
 func (s *domainInfoStore) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.ConfigUpdate:
-		felixConfig := fc.New()
-		felixConfig.UpdateFrom(msg.Config, fc.DatastorePerHost)
+		felixConfig := fc.FromConfigUpdate(msg)
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
-		if _, specified := msg.Config["DNSCacheEpoch"]; specified && felixConfig.DNSCacheEpoch != s.epoch {
-			log.Info("Update epoch and send trigger to clear cache")
-			s.epoch = felixConfig.DNSCacheEpoch
+		newEpoch := s.initialEpoch
+		if _, specified := msg.Config["DNSCacheEpoch"]; specified {
+			newEpoch = felixConfig.DNSCacheEpoch
+		}
+		if newEpoch != s.epoch {
+			log.Infof("Update epoch (%v->%v) and send trigger to clear cache", s.epoch, newEpoch)
+			s.epoch = newEpoch
 			s.resetC <- struct{}{}
 		}
-		if _, specified := msg.Config["DNSExtraTTL"]; specified && felixConfig.DNSExtraTTL != s.extraTTL {
-			log.Infof("Extra TTL is now %v", felixConfig.DNSExtraTTL)
-			s.extraTTL = felixConfig.DNSExtraTTL
+		newExtraTTL := s.initialExtraTTL
+		if _, specified := msg.Config["DNSExtraTTL"]; specified {
+			newExtraTTL = felixConfig.DNSExtraTTL
+		}
+		if newExtraTTL != s.extraTTL {
+			log.Infof("Extra TTL is now %v", newExtraTTL)
+			s.extraTTL = newExtraTTL
 		}
 	}
 }
@@ -445,6 +454,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 func (s *domainInfoStore) expireAllMappings() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	log.Info("Expire all mappings")
 
 	// For each mapping...
 	for name := range s.mappings {
