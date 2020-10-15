@@ -120,9 +120,9 @@ type domainInfoStore struct {
 	requestTimestamp  map[uint16]time.Time
 
 	// Handling additional DNS mapping lifetime.
-	epoch, initialEpoch       int
-	extraTTL, initialExtraTTL time.Duration
-	resetC                    chan struct{}
+	epoch    int
+	extraTTL time.Duration
+	resetC   chan struct{}
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -170,9 +170,7 @@ func newDomainInfoStoreWithShims(
 		collector:            config.Collector,
 		timestampExpected:    config.DNSLogsLatency,
 		requestTimestamp:     make(map[uint16]time.Time),
-		initialEpoch:         config.DNSCacheEpoch,
 		epoch:                config.DNSCacheEpoch,
-		initialExtraTTL:      config.DNSExtraTTL,
 		extraTTL:             config.DNSExtraTTL,
 		// Capacity 1 here is to allow UT to test the use of this channel without
 		// needing goroutines.
@@ -218,19 +216,13 @@ func (s *domainInfoStore) OnUpdate(msg interface{}) {
 		felixConfig := fc.FromConfigUpdate(msg)
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
-		newEpoch := s.initialEpoch
-		if _, specified := msg.Config["DNSCacheEpoch"]; specified {
-			newEpoch = felixConfig.DNSCacheEpoch
-		}
+		newEpoch := felixConfig.DNSCacheEpoch
 		if newEpoch != s.epoch {
 			log.Infof("Update epoch (%v->%v) and send trigger to clear cache", s.epoch, newEpoch)
 			s.epoch = newEpoch
 			s.resetC <- struct{}{}
 		}
-		newExtraTTL := s.initialExtraTTL
-		if _, specified := msg.Config["DNSExtraTTL"]; specified {
-			newExtraTTL = felixConfig.DNSExtraTTL
-		}
+		newExtraTTL := felixConfig.DNSExtraTTL
 		if newExtraTTL != s.extraTTL {
 			log.Infof("Extra TTL is now %v", newExtraTTL)
 			s.extraTTL = newExtraTTL
