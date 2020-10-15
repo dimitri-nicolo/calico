@@ -395,6 +395,13 @@ var baseTests = []StateList{
 		vxlanWithDupNodeIPRemoved,
 	},
 
+	{
+		nodesWithMoreIPs,
+		nodesWithMoreIPsAndDuplicates,
+		nodesWithDifferentAddressTypes,
+		nodesWithMoreIPsDeleted,
+	},
+
 	// Egress IP states.  (All private-only.)
 	{
 		endpointWithOwnEgressGateway,
