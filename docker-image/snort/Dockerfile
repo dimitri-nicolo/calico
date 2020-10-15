@@ -17,7 +17,6 @@ COPY --from=vimagick/snort /lib64/libz.so.1 /lib64/libz.so.1
 COPY --from=vimagick/snort /lib64/libdl.so.2 /lib64/libdl.so.2
 
 COPY --from=vimagick/snort /lib64/libpcre.so.1 /lib64/libpcre.so.1
-#COPY --from=vimagick/snort /lib64/ /lib64/libnghttp2.so.14
 COPY --from=vimagick/snort /lib64/libnsl.so.1 /lib64/libnsl.so.1
 COPY --from=vimagick/snort /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=vimagick/snort /lib64/libcrypto.so.10 /lib64/libcrypto.so.10
