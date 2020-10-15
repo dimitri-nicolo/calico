@@ -37,6 +37,16 @@ const (
 	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
 
 	voltronCAPathEnv = "VOLTRON_CA_PATH"
+
+	// Dex settings for authentication.
+	dexEnabledEnv        = "DEX_ENABLED"
+	dexIssuerEnv         = "DEX_ISSUER"
+	dexClientIDEnv       = "DEX_CLIENT_ID"
+	dexJWKSURLEnv        = "DEX_JWKS_URL"
+	dexUsernameClaimEnv  = "DEX_USERNAME_CLAIM"
+	dexGroupsClaimEnv    = "DEX_GROUPS_CLAIM"
+	dexUsernamePrefixEnv = "DEX_USERNAME_PREFIX"
+	dexGroupsPrefixEnv   = "DEX_GROUPS_PREFIX"
 )
 
 const (
@@ -49,6 +59,9 @@ const (
 	defaultConnRetryInterval = 500 * time.Millisecond
 	defaultConnRetries       = 30
 	defaultEnableTrace       = false
+
+	defaultUsernameClaim = "email"
+	defaultJWSKURL       = "https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys"
 )
 
 type ElasticAccessMode string
@@ -130,6 +143,16 @@ type Config struct {
 	// is necessary for establishing a connection with Voltron, when
 	// accessing other clusters.
 	VoltronCAPath string
+
+	// Dex settings for authentication.
+	DexEnabled        bool
+	DexIssuer         string
+	DexClientID       string
+	DexJWKSURL        string
+	DexUsernameClaim  string
+	DexGroupsClaim    string
+	DexUsernamePrefix string
+	DexGroupsPrefix   string
 }
 
 func NewConfigFromEnv() (*Config, error) {
@@ -188,6 +211,12 @@ func NewConfigFromEnv() (*Config, error) {
 		return nil, err
 	}
 	voltronCAPath := getEnvOrDefaultString(voltronCAPathEnv, defaultVoltronCAPath)
+
+	dexEnabled, err := getEnvOrDefaultBool(dexEnabledEnv, false)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &Config{
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
@@ -209,6 +238,14 @@ func NewConfigFromEnv() (*Config, error) {
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
 		ProxyIdleConnTimeout:      idleConnTimeout,
 		VoltronCAPath:             voltronCAPath,
+		DexEnabled:                dexEnabled,
+		DexIssuer:                 getEnv(dexIssuerEnv),
+		DexClientID:               getEnv(dexClientIDEnv),
+		DexJWKSURL:                getEnvOrDefaultString(dexJWKSURLEnv, defaultJWSKURL),
+		DexUsernameClaim:          getEnvOrDefaultString(dexUsernameClaimEnv, defaultUsernameClaim),
+		DexGroupsClaim:            getEnv(dexGroupsClaimEnv),
+		DexUsernamePrefix:         getEnv(dexUsernamePrefixEnv),
+		DexGroupsPrefix:           getEnv(dexGroupsPrefixEnv),
 	}
 	err = validateConfig(config)
 	return config, err

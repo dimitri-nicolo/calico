@@ -9,20 +9,20 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/compliance/pkg/config"
-
 	log "github.com/sirupsen/logrus"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"github.com/tigera/apiserver/pkg/authentication"
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
-	celastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/list"
-
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/lma/pkg/auth"
+	celastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/list"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -62,8 +62,31 @@ func Start(cfg *Config) error {
 		IdleConnTimeout: cfg.ProxyIdleConnTimeout,
 	}
 	proxy := handler.NewProxy(pc)
+	authenticator, err := authentication.New()
+	if err != nil {
+		log.WithError(err).Panic("Unable to create auth configuration")
+	}
 
-	mcmAuth := middleware.NewMCMAuth(cfg.VoltronCAPath)
+	if cfg.DexEnabled {
+		opts := []auth.DexOption{
+			auth.WithGroupsClaim(cfg.DexGroupsClaim),
+			auth.WithJWKSURL(cfg.DexJWKSURL),
+			auth.WithUsernamePrefix(cfg.DexUsernamePrefix),
+			auth.WithGroupsPrefix(cfg.DexGroupsPrefix),
+		}
+
+		dex, err := auth.NewDexAuthenticator(
+			cfg.DexIssuer,
+			cfg.DexClientID,
+			cfg.DexUsernameClaim,
+			opts...)
+		if err != nil {
+			log.WithError(err).Panic("Unable to create dex authenticator")
+		}
+		authenticator = auth.NewAggregateAuthenticator(dex, authenticator)
+	}
+
+	mcmAuth := middleware.NewMCMAuth(authenticator, cfg.VoltronCAPath)
 	k8sAuth := mcmAuth.DefaultK8sAuth()
 
 	// Install pip mutator
@@ -92,7 +115,7 @@ func Start(cfg *Config) error {
 
 	// Create the cluster aware client factory and use that to create a cluster aware lister.
 	cc := &config.Config{
-		MultiClusterForwardingCA: cfg.VoltronCAPath,
+		MultiClusterForwardingCA:       cfg.VoltronCAPath,
 		MultiClusterForwardingEndpoint: middleware.VoltronServiceURL,
 	}
 	factory := datastore.MustGetRESTClient(cc)

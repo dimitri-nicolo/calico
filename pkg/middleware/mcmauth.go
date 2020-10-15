@@ -46,10 +46,11 @@ type MCMAuth interface {
 }
 
 // Return an object that can provide k8s interfaces for a given cluster id.
-func NewMCMAuth(voltronCAPath string) MCMAuth {
+func NewMCMAuth(authenticator authentication.Authenticator, voltronCAPath string) MCMAuth {
 	a := mcmAuth{
 		clients:       map[string]auth.K8sAuthInterface{},
 		voltronCAPath: voltronCAPath,
+		authenticator: authenticator,
 	}
 	// Initialize the default cluster.
 	a.K8sAuth(DefaultCluster)
@@ -59,6 +60,7 @@ func NewMCMAuth(voltronCAPath string) MCMAuth {
 type mcmAuth struct {
 	clients       map[string]auth.K8sAuthInterface
 	voltronCAPath string
+	authenticator authentication.Authenticator
 	sync.RWMutex
 }
 
@@ -84,7 +86,7 @@ func (c *mcmAuth) K8sAuth(clusterID string) auth.K8sAuthInterface {
 		return k8sauth
 	}
 	c.RUnlock()
-	k8sauth := createClusterConfig(clusterID, c.voltronCAPath)
+	k8sauth := createClusterConfig(clusterID, c.voltronCAPath, c.authenticator)
 
 	c.Lock()
 	c.clients[clusterID] = k8sauth
@@ -93,15 +95,9 @@ func (c *mcmAuth) K8sAuth(clusterID string) auth.K8sAuthInterface {
 }
 
 // Adds a new k8s client to the map and also returns it.
-func createClusterConfig(clusterID, voltronCAPath string) auth.K8sAuthInterface {
+func createClusterConfig(clusterID, voltronCAPath string, authenticator authentication.Authenticator) auth.K8sAuthInterface {
 	cfg := mustCreateClusterConfig(clusterID, voltronCAPath)
 	k8sClient := k8s.NewForConfigOrDie(cfg)
-
-	authenticator, err := authentication.New()
-	if err != nil {
-		log.WithError(err).Panic("Unable to create auth configuration")
-	}
-
 	return auth.NewK8sAuth(k8sClient, authenticator)
 }
 
