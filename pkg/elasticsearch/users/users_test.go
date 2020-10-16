@@ -353,6 +353,19 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-operator": {
+						Username: "tigera-ee-operator",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-operator",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates", "manage_ilm", "read_ilm"},
+								Indices: []elasticsearch.RoleIndex{{
+									Names:      []string{"tigera_secure_ee_*"},
+									Privileges: []string{"all"},
+								}},
+							},
+						}},
+					},
 				},
 			)
 		})
