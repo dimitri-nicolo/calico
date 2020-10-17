@@ -57,8 +57,8 @@ The geeky details of what you get by default:
 1. [Prepare Windows nodes to join the Linux cluster](#prepare-windows-nodes-to-join-the-linux-cluster)
 
 **{{site.prodname}}**
-1. [Install Calico on Linux control and worker nodes](#install-calico-on-linux-control-and-worker-nodes)
-1. [Install Calico and Kubernetes on Windows nodes](#install-calico-and-kubernetes-on-windows-nodes)
+1. [Install {{site.prodname}} on Linux control and worker nodes](#install-calico-enterprise-on-linux-control-and-worker-nodes)
+1. [Install {{site.prodnameWindows}} and Kubernetes on Windows nodes](#install-calico-enterprise-for-windows-and-kubernetes-on-windows-nodes)
 
 #### Create a Linux cluster
 
@@ -164,7 +164,7 @@ adjust other kube-proxy parameters.
 
 >**Note**: The script will pause at the first stage until {{site.prodname}} is installed by following the instructions in the next section.
 
-#### Install Calico on Linux control and worker nodes
+#### Install {{site.prodname}} on Linux control and worker nodes
 
 **If using {{site.prodname}} BGP networking** 
 
@@ -202,7 +202,7 @@ This is required to prevent Linux nodes from borrowing IP addresses from Windows
 calicoctl ipam configure --strictaffinity=true
 ```
 
-#### Install Calico and Kubernetes on Windows nodes
+#### Install {{site.prodnameWindows}} and Kubernetes on Windows nodes
 
 Follow the steps below on each Windows node to install Kubernetes and {{site.prodname}}:
 

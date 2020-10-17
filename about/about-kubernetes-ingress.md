@@ -60,7 +60,7 @@ Broadly speaking there are two types of ingress solutions:
 In-cluster ingress solutions use software load balancers running in pods within the cluster itself. There are many
 different ingress controllers to consider that follow this pattern, including for example the NGINX ingress controller.
 
-The advantages of this approach are that you can: 
+The advantages of this approach are that you can:
 - horizontally scale your ingress solution up to the limits of Kubernetes
 - choose the ingress controller that best suits your specific needs, for example, with particular load balancing
   algorithms, or security options.
