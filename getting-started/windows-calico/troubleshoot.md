@@ -13,8 +13,8 @@ canonical_url: /getting-started/windows-calico/troubleshoot
 
 When using the {{site.prodname}} CNI plugin, each {{site.prodname}} IPAM block (or the single podCIDR in host-local IPAM mode), is represented as a HNS l2bridge network. Use the following command to inspect the networks.
 
-```powershell
-PS C:\> ipmo c:\TigeraCalico\libs\hns\hns.psm1
+```
+PS C:\> ipmo {{site.rootDirWindows}}\libs\hns\hns.psm1
 PS C:\> Get-HNSNetwork
 ```
 
@@ -22,8 +22,8 @@ PS C:\> Get-HNSNetwork
 
 Use the following command to view the HNS endpoints on the system. There should be one HNS endpoint per pod networked with {{site.prodname}}:
 
-```powershell
-PS C:\> ipmo c:\TigeraCalico\libs\hns\hns.psm1
+```
+PS C:\> ipmo {{site.rootDirWindows}}\libs\hns\hns.psm1
 PS C:\> Get-HNSEndpoint
 ```
 
@@ -41,14 +41,14 @@ This can be caused by a mismatch between a cloud provider (such as the AWS cloud
 
 This is a known Windows issue that Microsoft is working on. The route to the metadata server is lost when the vSwitch is created. As a workaround, manually add the route back by running:
 
-```powershell
+```
 PS C:\> New-NetRoute -DestinationPrefix 169.254.169.254/32
 -InterfaceIndex <interface-index>
 ```
 
 Where <interface-index> is the index of the "vEthernet (Ethernet 2)" device as shown by
 
-```powershell
+```
 PS C:\> Get-NetAdapter
 ```
 #### Installation stalls at "Waiting for {{site.prodname}} initialization to finish"
@@ -66,7 +66,7 @@ After rebooting the Windows node, pods fail to schedule, and the kubelet log has
 
 The error, "The request was aborted: Could not create SSL/TLS secure channel", often means that Windows does not support TLS v1.2 (which is required by many websites) by default. To enable TLS v1.2, run the following command:
 
-```powershell
+```
 PS C:\> [Net.ServicePointManager]::SecurityProtocol = `
 [Net.SecurityProtocolType]::Tls12
 ```
@@ -80,7 +80,7 @@ If using AWS, check that the source/dest check is disabled on the interfaces ass
 
 If using {{site.prodname}} networking, check that the {{site.prodname}} IP pool you are using has IPIP mode disabled (set to "Never). IPIP is not supported on Windows. To check the IP pool, you can use `calicoctl`:
 
-```bash
+```
 $ calicoctl get ippool -o yaml
 apiVersion: projectcalico.org/v3
 items:
@@ -113,8 +113,11 @@ By default, Felix waits to connect to the datastore before logging (in case the 
 Check the detailed health output that shows which health check failed:
 
 ```
-kubectl describe pod -n kube-system <calico-node-pod>
+kubectl describe pod -n calico-system <calico-node-pod>
 ```
+>**Note**: Use namespace `kube-system` instead of `calico-system` if your Calico installation is non operator-managed.
+{: .alert .alert-info}
+
 
 If the health check reports a BGP peer failure, check the IP address of the peer is either an
 expected IP of a node or an external BGP peer. If the IP of the failed peering is a Windows node:
@@ -126,7 +129,7 @@ expected IP of a node or an external BGP peer. If the IP of the failed peering i
   PS C:\> Get-Service | ? Name -EQ RemoteAccess
   ``` 
 - Check the logs for the confd service in the configured log directory for errors
-(default C:\TigeraCalico\logs).
+(default {{site.rootDirWindows}}\logs).
 
 **Examine BGP state on a Windows host**
 

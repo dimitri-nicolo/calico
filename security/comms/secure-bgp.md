@@ -48,10 +48,10 @@ To use a password on a BGP peering:
     running, so that it has a key whose value is the desired password.  Note the secret
     name and the key name.
 
-	> **Note:** BGP passwords must be 80 characters or fewer.  If a
-	> password longer than that is configured, the BGP sessions with
-	> that password will fail to be established.
-	{: .alert .alert-info}
+    > **Note:** BGP passwords must be 80 characters or fewer.  If a
+    > password longer than that is configured, the BGP sessions with
+    > that password will fail to be established.
+    {: .alert .alert-info}
 
 1.  Ensure that {{site.noderunning}} has RBAC permissions to access that secret.
 

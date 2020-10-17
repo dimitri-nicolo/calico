@@ -12,8 +12,8 @@
   {% endif %}{% if include.orch == "OpenShift" %}
   - Red Hat Enterprise Linux CoreOS
   {% endif %}{% if include.orch == "OpenStack" %}
-  - Ubuntu 16.04 and 18.04
-  - CentOS 7
+  - Ubuntu 18.04
+  - CentOS 8
   {% endif %}
 
 - {{site.prodname}} must be able to manage `cali*` interfaces on the host. When IPIP is

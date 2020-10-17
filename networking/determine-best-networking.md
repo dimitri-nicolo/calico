@@ -199,6 +199,11 @@ If you prefer to avoid dependencies on a specific cloud provider, or allocating 
 
 You can learn more about Kubernetes Networking on Google cloud, including how each of the above options works under the covers, in this short video: {% include open-new-window.html text='Everything you need to know about Kubernetes networking on Google cloud' url='https://www.projectcalico.org/everything-you-need-to-know-about-kubernetes-networking-on-google-cloud/' %}.
 
+#### IBM Cloud
+If you are using IBM Cloud then we recommend using {% include open-new-window.html text='IKS' url='https://www.ibm.com/cloud/container-service/' %}, which has Calico built in to provide cross-subnet IP-in-IP overlay.  In addition to providing network policy for pods, IKS also uses Calico network policies to {% include open-new-window.html text='secure the hosts nodes' url='https://cloud.ibm.com/docs/containers?topic=containers-network_policies#default_policy' %} within the cluster. 
+
+{% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Cross-subnet:IPIP,Routing:BGP' %}
+
 #### Anywhere
 
 The above list of environments is obviously not exhaustive. Understanding the concepts and explanations in this guide has hopefully helped you figure out what is right for your environment. If you still aren't sure then you can ask for advice through the Calico Users's Slack or Discourse forum. And remember you can run Calico in VXLAN overlay mode in almost any environment if you want to get started without worrying too deeply about the different options.

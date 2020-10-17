@@ -60,14 +60,11 @@ In this case, the IPv4 is 192.168.171.136/24; which, after applying the /24 mask
 Similarly, on Windows, you can run 
 
 ```
-PS C:\> 
-ipconfig 
+PS C:\> ipconfig 
 
-Windows IP 
-Configuration 
+Windows IP Configuration 
 
-Ethernet adapter vEthernet (Ethernet 
-2): 
+Ethernet adapter vEthernet (Ethernet 2): 
 
   Connection-specific DNS Suffix . : 
   us-west-2.compute.internal Link-local IPv6 Address . . . . 
@@ -110,7 +107,7 @@ One example is the VXLAN VNI setting. To change such parameters:
 - Delete the {{site.prodname}} HNS network:
 
    ```
-   PS C:\> Import-Module C:\TigeraCalico\libs\hns\hns.psm1
+   PS C:\> Import-Module {{site.rootDirWindows}}\libs\hns\hns.psm1
    PS C:\> Get-HNSNetwork | ? Name -EQ "{{site.prodname}}" | Remove-HNSNetwork
    ```
 - Update the configuration in `config.ps1`, run `uninstall-calico.ps1` and then `install-calico.ps1` to regenerate the CNI configuration.

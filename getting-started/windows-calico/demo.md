@@ -70,7 +70,7 @@ EOF
 Next, we'll create a client (powershell) and server (porter) pod on the Windows nodes. First the create the powershell pod.
 
 >**Note**: The powershell and porter pod manifests below use images based on `mcr.microsoft.com/windows/servercore:1809`.
-If you are using a more recent Windows Server version, update the manifests to use a [servercore image](https://hub.docker.com/_/microsoft-windows-servercore)
+If you are using a more recent Windows Server version, update the manifests to use a [servercore image](https://hub.docker.com/_/microsoft-windows-servercore){:target="_blank"}
 that matches your Windows Server version.
 {: .alert .alert-info}
 

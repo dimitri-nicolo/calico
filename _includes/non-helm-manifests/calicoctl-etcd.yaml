@@ -17,7 +17,11 @@ spec:
   containers:
   - name: calicoctl
     image: {{page.registry}}{% include component_image component="calicoctl" %}
-    command: ["/calicoctl-wait"]
+    command:
+      - /calicoctl
+    args:
+      - version
+      - --poll=1m
     env:
     - name: ETCD_ENDPOINTS
       valueFrom:

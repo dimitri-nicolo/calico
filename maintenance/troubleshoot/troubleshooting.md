@@ -121,7 +121,7 @@ If you do not see this, please check the following.
 
 #### Configure NetworkManager
 
-Configure [NetworkManager](https://help.ubuntu.com/community/NetworkManager) before
+Configure [NetworkManager](https://help.ubuntu.com/community/NetworkManager){:target="_blank"} before
 attempting to use {{site.prodname}} networking.
 
 NetworkManager manipulates the routing table for interfaces in the default network

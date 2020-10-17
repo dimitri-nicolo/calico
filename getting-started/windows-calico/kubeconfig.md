@@ -33,7 +33,7 @@ $ server=https://<server>:<port>
 Then, find the secret containing the service account token for the `calico-node` service account:
 
 ```
-$ kubectl get secret -n kube-system | grep calico-node
+$ kubectl get secret -n calico-system | grep calico-node
 ```
 Inspect the output and find the name of the token, store it in a variable:
 
@@ -43,11 +43,11 @@ $ name=calico-node-token-xxxxx
 Extract the parts of the secret, storing them in variables:
 
 ```
-$ ca=$(kubectl get secret/$name -o jsonpath='{.data.ca\.crt}' -n kube-system)
+$ ca=$(kubectl get secret/$name -o jsonpath='{.data.ca\.crt}' -n calico-system)
 
-$ token=$(kubectl get secret/$name -o jsonpath='{.data.token}' -n kube-system | base64 --decode)
+$ token=$(kubectl get secret/$name -o jsonpath='{.data.token}' -n calico-system | base64 --decode)
 
-$ namespace=$(kubectl get secret/$name -o jsonpath='{.data.namespace}' -n kube-system | base64 --decode)
+$ namespace=$(kubectl get secret/$name -o jsonpath='{.data.namespace}' -n calico-system | base64 --decode)
 ```
 Then, output the file:
 
@@ -64,7 +64,7 @@ contexts:
 - name: calico-windows@kubernetes
   context:
     cluster: kubernetes
-    namespace: kube-system
+    namespace: calico-system
     user: calico-windows
 current-context: calico-windows@kubernetes
 users:
@@ -73,4 +73,4 @@ users:
     token: ${token}
 EOF
 ```
-Copy this config file to the windows node `C:\TigeraCalico\calico-kube-config` and set the KUBECONFIG environment variable in `config.ps1` to point to it.
+Copy this config file to the windows node `{{site.rootDirWindows}}\calico-kube-config` and set the KUBECONFIG environment variable in `config.ps1` to point to it.

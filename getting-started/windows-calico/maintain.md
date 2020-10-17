@@ -7,6 +7,7 @@ canonical_url: '/getting-started/windows-calico/maintain'
 **Warning!** {{site.prodnameWindows}} is a tech preview and should not be used in production clusters. It has limited testing and contains bugs. In addition, it does not support all the features of {{site.prodname}}.
 {: .alert .alert-warning}
 
+
 ### Big picture
 
 Start, stop, and update {{site.prodnameWindows}} services on the Linux master node, and uninstall for {{site.prodnameWindows}}.
@@ -45,19 +46,19 @@ The following steps removes {{site.prodnameWindows}} (for example to change conf
 1. On each Windows node, run the uninstall script:
 
    ```
-   PS C:\TigeraCalico > .\uninstall-calico.ps1
+   PS {{site.rootDirWindows}} > .\uninstall-calico.ps1
    ```
    >**Note**: If you are uninstalling to change configuration, make sure that you run the uninstall script with the old configuration file.
    {: .alert .alert-info}
 
 #### Uninstall kubelet and kube-proxy services from Windows nodes
 
-The following steps uninstall kubelet/kube-proxy services if they were installed by running `C:\TigeraCalico\kubernetes\install-kube-services.ps1`.
+The following steps uninstall kubelet/kube-proxy services if they were installed by running `{{site.rootDirWindows}}\kubernetes\install-kube-services.ps1`.
 
 1. Remove all pods from the Windows nodes.
 1. On each Windows node, run the uninstall script:
    ```
-   PS C:\TigeraCalico\kubernetes > .\uninstall-kube-services.ps1
+   PS {{site.rootDirWindows}}\kubernetes > .\uninstall-kube-services.ps1
    ```
 
-1. If desired, delete the `TigeraCalico` directory.
+1. If desired, delete the `{{site.rootDirWindows}}` directory.
