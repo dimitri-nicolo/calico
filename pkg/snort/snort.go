@@ -195,11 +195,11 @@ func SendEvents(SnortList []Snort, p *hp.HoneypodLogProcessor, e *api.Alert) err
 			"type":        "alert",
 			"record": map[string]interface{}{
 				"snort": map[string]interface{}{
-					"Descripton": alert.SigName,
-					"Category":   alert.Category,
-					"Occurance":  alert.Date_Src_Dst,
-					"Flags":      alert.Flags,
-					"Other":      alert.Other,
+					"Description": alert.SigName,
+					"Category":    alert.Category,
+					"Occurence":   alert.Date_Src_Dst,
+					"Flags":       alert.Flags,
+					"Other":       alert.Other,
 				},
 			},
 			"time": time.Now(),
