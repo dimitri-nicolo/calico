@@ -109,7 +109,7 @@ oc get tigerastatus
 
 > **Note**: To get more information, add `-o yaml` to the above command.
 
-Next, install calicoctl and [ensure that strict affinity is true]({{site.baseurl}}/getting-started/windows-calico/quickstart#configure-strict-affinity-for-clusters-using-calico-networking):
+Next, install calicoctl and [ensure that strict affinity is true]({{site.baseurl}}/getting-started/windows-calico/quickstart#configure-strict-affinity-for-clusters-using-calico-enterprise-networking):
 
 #### Add Windows nodes to the cluster
 
