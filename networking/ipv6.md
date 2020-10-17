@@ -77,12 +77,10 @@ This how-to guide uses the following {{site.prodname}} features:
 
 1. Set up a new Kubernetes cluster with an IPv6 pod CIDR and service IP range.
 
-1. Using the [{{site.prodname}} Kubernetes install guide]({{site.baseurl}}/getting-started/kubernetes/self-managed-onprem/onpremises), download the correct {{site.prodname}} manifest for the cluster and datastore type.
-
-1.  Follow our [installation docs]({{ site.baseurl }}/getting-started/kubernetes) to install using
+1. Follow our [installation docs]({{ site.baseurl }}/getting-started/kubernetes) to install using
     the Tigera operator on your cluster.
 
-1.  When about to apply `custom-resources.yaml`, edit it first to define an IPv6 pod CIDR
+1. When about to apply `custom-resources.yaml`, edit it first to define an IPv6 pod CIDR
     pool in the `Installation` resource.  For example, like this:
 
     ```yaml
@@ -114,7 +112,7 @@ This how-to guide uses the following {{site.prodname}} features:
 If you want your workloads to have IPv6 addresses only, because you do not have IPv4 addresses or connectivity
 between your nodes, complete these additional steps to tell {{site.prodname}} not to look for any IPv4 addresses.
 
-1. Disable [IP autodetection of IPv4]({{site.baseurl}}//networking/ip-autodetection) by setting `IP` to `none`.
+1. Disable [IP autodetection of IPv4]({{site.baseurl}}/networking/ip-autodetection) by setting `IP` to `none`.
 1. Calculate the {{site.prodname}} BGP router ID for IPv6 using either of the following methods.
    - Set the environment variable `CALICO_ROUTER_ID=hash` on {{site.nodecontainer}}.
      This configures {{site.prodname}} to calculate the router ID based on the hostname.
@@ -136,33 +134,27 @@ between your nodes, complete these additional steps to tell {{site.prodname}} no
 
 1. Set up a new cluster following the Kubernetes {% include open-new-window.html text='prerequisites' url='https://kubernetes.io/docs/concepts/services-networking/dual-stack/#prerequisites' %} and {% include open-new-window.html text='enablement steps' url='https://kubernetes.io/docs/concepts/services-networking/dual-stack/#enable-ipv4-ipv6-dual-stack' %}.
 
-1. Using the [{{site.prodname}} Kubernetes install guide]({{site.baseurl}}/getting-started/kubernetes/self-managed-onprem/onpremises), download the correct {{site.prodname}} manifest for the cluster and datastore type.
+1. Follow our [installation docs]({{ site.baseurl }}/getting-started/kubernetes) to install using
+    the Tigera operator on your cluster.
 
-1. Edit the CNI config (`calico-config` ConfigMap in the manifest), and enable IPv4 and IPv6 address allocation by setting both fields to true.
+1. When about to apply `custom-resources.yaml`, edit it first to define an IPv4 and IPv6 pod CIDR
+    pool in the `Installation` resource.  For example, like this:
 
-   ```
-       "ipam": {
-           "type": "calico-ipam",
-           "assign_ipv4": "true",
-           "assign_ipv6": "true"
-       },
-   ```
-
-1. Configure IPv6 support by adding the following variable settings to the environment for the `calico-node` container:
-
-   | Variable name | Value |
-   | ------------- | ----- |
-   | `IP6`         | `autodetect` |
-   | `FELIX_IPV6SUPPORT` | `true` |
-
-1. For clusters **not** provisioned with kubeadm (see note below), configure the default IPv6 IP pool by adding the following variable setting to the environment for the `calico-node` container:
-
-   | Variable name | Value |
-   | ------------- | ----- |
-   | `CALICO_IPV6POOL_CIDR` | the same as the IPv6 range you configured as the IPv6 cluster CIDR to kube-controller-manager and kube-proxy |
-
-   >**Note**: For clusters provisioned with kubeadm, {{site.prodname}} autodetects the IPv4 and IPv6 pod CIDRs and does not require configuration.
-   {: .alert .alert-info}
+    ```yaml
+    apiVersion: operator.tigera.io/v1
+    kind: Installation
+    metadata:
+      name: default
+    spec:
+      # Install Calico Enterprise
+      variant: TigeraSecureEnterprise
+      ...
+      calicoNetwork:
+        ipPools:
+        - cidr: 192.168.0.0/16
+        - cidr: fd5f:1801::/112
+      ...
+    ```
 
 1. Apply the edited manifest with `kubectl apply -f`.
 
