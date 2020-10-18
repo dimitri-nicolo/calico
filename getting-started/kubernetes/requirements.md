@@ -15,6 +15,7 @@ We test {{site.prodname}} {{page.version}} against the following Kubernetes vers
 - 1.16
 - 1.17
 - 1.18
+- 1.19
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.

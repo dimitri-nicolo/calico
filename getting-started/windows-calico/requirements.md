@@ -15,7 +15,7 @@ Because the Kubernetes and {{site.prodname}} control components do not run on Wi
 
 ✓ Install: Manifest install for Kubernetes clusters
 
-✓ Platforms: Kubernetes, EKS, AWS
+✓ Platforms: Kubernetes, EKS
 
 ✓ Networking: 
   - Kubernetes, on-premises: Calico CNI with BGP or VXLAN
@@ -38,7 +38,7 @@ The following table summarizes the networking options and considerations.
 
 #### Datastores
 
-Kubernetes datastore (kdd) only.
+Whether you use etcd or Kubernetes datastore (kdd), the datastore for the Windows node/Kubernetes cluster must be the same as the datastore for the Linux control node. (You cannot mix datastores in a {{site.prodnameWindows}} implementation.)
 
 #### Kubernetes version 
 
@@ -73,8 +73,12 @@ calicoctl ipam configure --strictaffinity=true
 - Powershell for the installer
 - If you are using {{site.prodname}} BGP networking, the RemoteAccess service must be installed for the Windows BGP Router.
 - Windows nodes support only a single IP pool type (so, if using a VXLAN pool, you should only use VXLAN throughout the cluster).
-- TLS v1.2 enabled
+- TLS v1.2 enabled. For example:
+```
+PS C:\> [Net.ServicePointManager]::SecurityProtocol = `
+                               [Net.SecurityProtocolType]::Tls12
+```
 
 ### Next steps
 
-[Install Calico Enterprise for Windows]({{site.baseurl}}/getting-started/windows-calico/standard-install/standard)
+[Install {{site.prodnameWindows}}]({{site.baseurl}}/getting-started/windows-calico/standard-install/standard)

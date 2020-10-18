@@ -7,6 +7,13 @@ description: Learn about network policy!
 > education that is not specific to {{site.prodname}}.
 {: .alert .alert-info}
 
+Kubernetes and {{site.prodname}} provide network policy APIs to help you secure your workloads.
+
+In this guide you will learn:
+- What network policy is and why it is important.
+- The differences between Kubernetes and Calico network policies and when you might want to use each.
+- Some best practices for using network policy.
+
 ### What is network policy?
 
 Network policy is the primary tool for securing a Kubernetes network. It allows you to easily restrict the network
@@ -138,11 +145,11 @@ rules for restricting access to specific external services.
 ### Best practices for network policies
 
 #### Ingress and egress
-At a minimum it is recommended that every pod is protected by network policy ingress rules that restrict what is allowed
-to connect to the pod and on which pods. The best practice is also to define network policy egress rules that restrict
+At a minimum we recommend that every pod is protected by network policy ingress rules that restrict what is allowed
+to connect to the pod and on which ports. The best practice is also to define network policy egress rules that restrict
 the outgoing connections that are allowed by pods themselves. Ingress rules protect your pod from attacks outside of the
 pod. Egress rules help protect everything outside of the pod if the pod gets compromised, reducing the attack surface to
-make moving laterally (east-west) or to prevent exfiltrate compromised data from your cluster (north-south).
+make moving laterally (east-west) or to prevent an attacker from exfiltrating compromised data from your cluster (north-south).
 
 #### Policy schemas
 Due to the flexibility of network policy and labelling, there are often multiple different ways of labelling and writing
@@ -192,18 +199,19 @@ For example, you might use the following policy to default-deny all (non-system)
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
-  name: default-deny-except-dns
+  name: default-app-policy
 spec:
-  selector: projectcalico.org/namespace != "kube-system"
+  namespaceSelector: projectcalico.org/name != "kube-system"
   types:
   - Ingress
   - Egress
   egress:
     - action: Allow
-        destination:
+      protocol: UDP
+      destination:
+        selector: k8s-app == "kube-dns"
         ports:
         - 53
-        selector: k8s-app == "kube-dns"
 ```
 
 #### Hierarchical policy

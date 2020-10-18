@@ -176,7 +176,7 @@ seamlessly. The route reflectors are purely involved in the control of
 the network: no endpoint data passes through them.
 
 In {{site.prodname}}, this BGP component is also most commonly
-[BIRD](http://bird.network.cz/), configured as a route reflector rather
+[BIRD](http://bird.network.cz/){:target="_blank"}, configured as a route reflector rather
 than as a standard BGP client.
 
 The BGP route reflector is responsible for the following task:

@@ -34,10 +34,10 @@ section:
      path: /networking/initial-ippool
    - title: Configure IP autodetection
      path: /networking/ip-autodetection
-   - title: Enable dual stack
-     path: /networking/dual-stack
-   - title: Enable IPv6-only addressing
+   - title: Configure dual stack or IPv6 only
      path: /networking/ipv6
+   - title: Configure Kubernetes control plane to operate over IPv6
+     path: /networking/ipv6-control-plane
    - title: Add a floating IP to a pod
      path: /networking/add-floating-ip
    - title: Use specific IP address for a pod

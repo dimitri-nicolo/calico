@@ -9,7 +9,7 @@ canonical_url: '/security/comms/crypto-auth'
 If you are using the etcd datastore, we recommend enabling mutual TLS authentication on
 its connections as follows.
 
-- [Configure etcd](https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/security.md) to encrypt its
+- [Configure etcd](https://coreos.com/etcd/docs/latest/op-guide/security.html){:target="_blank"} to encrypt its
   communications with TLS and require clients to present certificates signed by the etcd certificate
   authority.
 
@@ -37,10 +37,11 @@ To do so, you must provision Typha with a server certificate with extended key u
 certificate with extended key usage `ClientAuth`. Each service will need the private key associated with their certificate.
 In addition, you must configure one of the following.
 
-- **SPIFFE identifiers** (recommended): Generate a [SPIFFE](https://github.com/spiffe/spiffe) identifier for Node,
-  and include Node's SPIFFE ID in the `URI SAN` field of its certificate.
-  Similarly, generate a [SPIFFE](https://github.com/spiffe/spiffe) identifier for Typha,
-  and include Typha's SPIFFE ID in the `URI SAN` field of its certificate.
+- **SPIFFE identifiers** (recommended): Generate a [SPIFFE](https://github.com/spiffe/spiffe){:target="_blank"} identifier for Felix,
+  set `ClientURISAN` on Typha to Felix's SPIFFE ID, and include Felix's SPIFFE ID in the `URI SAN` field
+  of its certificate. Similarly, generate a [SPIFFE](https://github.com/spiffe/spiffe){:target="_blank"} identifier for Typha,
+  set `TyphaURISAN` on Felix to Typha's SPIFFE ID, and include Typha's SPIFFE ID in the `URI SAN` field
+  of its certificate.
 
 - **Common Name identifiers**: Set a common name on the Typha certificate and a different
   common name on the Node certificate.
@@ -95,12 +96,12 @@ cluster:
 
     -  `TyphaURISAN` unset.
 
-For a [SPIFFE](https://github.com/spiffe/spiffe)-compliant deployment you can
+For a [SPIFFE](https://github.com/spiffe/spiffe){:target="_blank"}-compliant deployment you can
 follow the same procedure as above, except:
 
 1.  Choose [SPIFFE
-    Identities](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity)
-    to represent Node and Typha.
+    Identities](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity){:target="_blank"}
+    to represent Felix and Typha.
 
 1.  When generating leaf certificates for Node and Typha, put the relevant
     SPIFFE Identity in the certificate as a URI SAN.
