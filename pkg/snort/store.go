@@ -30,7 +30,7 @@ type Filters func(store *Store, alert Alert) bool
 // Uniques is a Filter that will filter out previously sent alerts
 func Uniques(store *Store, alert Alert) bool {
 	store.RLock()
-	defer store.Unlock()
+	defer store.RUnlock()
 
 	_, ok := store.sentAlerts[alert.DateSrcDst]
 	return ok
@@ -39,7 +39,7 @@ func Uniques(store *Store, alert Alert) bool {
 // Newest is a Filter that will filter out alert before the last know alert timestamp
 func Newest(store *Store, alert Alert) bool {
 	store.RLock()
-	defer store.Unlock()
+	defer store.RUnlock()
 	timestamp, err := parseTime(alert.DateSrcDst)
 	if err != nil {
 		return false

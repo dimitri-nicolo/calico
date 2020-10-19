@@ -73,7 +73,7 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 	//Parallel processing of HoneyPod alerts
 	for _, alert := range filteredAlerts {
 		// Alina: go leak routines
-		go func() {
+		go func(alert *api.Alert) {
 			//Retrieve Pcap locations
 			pcapArray, err := GetPcaps(alert, hp.PcapPath)
 			if err != nil {
@@ -91,7 +91,7 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 			if err != nil {
 				log.WithError(err).Error("Failed to process snort on pcap")
 			}
-		}()
+		}(alert)
 	}
 
 	log.Info("HoneyPod controller loop completed")
