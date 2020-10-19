@@ -1,6 +1,6 @@
 module github.com/tigera/es-proxy
 
-go 1.14
+go 1.15
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20201016121116-c31dffa412e3
