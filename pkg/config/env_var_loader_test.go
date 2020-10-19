@@ -18,13 +18,13 @@ import (
 	"github.com/projectcalico/typha/pkg/config"
 
 	. "github.com/onsi/ginkgo/extensions/table"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 )
 
 var _ = DescribeTable("Environment parameter parsing",
 	func(environ []string, expected map[string]string) {
 		actual := config.LoadConfigFromEnvironment(environ)
-		gomega.Expect(actual).To(gomega.Equal(expected))
+		Expect(actual).To(Equal(expected))
 	},
 	Entry("Empty", []string{}, map[string]string{}),
 	Entry("Malformed", []string{"foobar"}, map[string]string{}),

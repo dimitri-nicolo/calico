@@ -20,7 +20,7 @@ import (
 	"reflect"
 
 	. "github.com/onsi/ginkgo/extensions/table"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,11 +30,11 @@ var _ = DescribeTable("Config parsing",
 		_, err := cfg.UpdateFrom(map[string]string{key: value},
 			config.EnvironmentVariable)
 		newVal := reflect.ValueOf(cfg).Elem().FieldByName(key).Interface()
-		gomega.Expect(newVal).To(Equal(expected))
+		Expect(newVal).To(Equal(expected))
 		if len(errorExpected) > 0 && errorExpected[0] {
-			gomega.Expect(err).To(gomega.HaveOccurred())
+			Expect(err).To(HaveOccurred())
 		} else {
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		}
 	},
 
@@ -87,13 +87,13 @@ var _ = DescribeTable("Config validation",
 	func(settings map[string]string, ok bool) {
 		cfg := config.New()
 		_, err := cfg.UpdateFrom(settings, config.ConfigFile)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 		err = cfg.Validate()
 		log.WithError(err).Info("Validation result")
 		if !ok {
-			gomega.Expect(err).To(gomega.HaveOccurred())
+			Expect(err).To(HaveOccurred())
 		} else {
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		}
 	},
 
