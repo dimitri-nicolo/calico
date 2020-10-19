@@ -50,19 +50,19 @@ func NewLoader(maps ...Map) *Loader {
 	return BpfLoader
 }
 
-func (l *Loader) GetMapFD(mapName string) MapFD {
+func (l *Loader) MapFD(mapName string) (MapFD, error) {
 	fd, present := l.mapFds[mapName]
 	if present {
-		return fd
+		return fd, nil
 	}
-	return 0
+	return 0, errors.Errorf("Map FD not found")
 }
 
 func (l *Loader) GetFDMap() map[string]MapFD {
 	return l.mapFds
 }
 
-func (l *Loader) GetProgramMap() map[string]*ProgramInfo {
+func (l *Loader) Programs() map[string]*ProgramInfo {
 	return l.programs
 }
 
@@ -82,7 +82,7 @@ func ReadLicense(file *elf.File) (error, string) {
 
 // Get the relocation offset and the name of the map whose FD needs to be added to the
 // BPF instruction
-func GetRelocationOffset(data, rdata []byte, file *elf.File) (error, map[uint64]string) {
+func GetMapRelocations(data []byte, file *elf.File) (error, map[uint64]string) {
 	var symbol elf.Symbol
 	var symMap map[uint64]string
 	symbols, err := file.Symbols()
@@ -115,14 +115,14 @@ func GetRelocationOffset(data, rdata []byte, file *elf.File) (error, map[uint64]
 
 // Relocate the imm value in the BPF instruction with map fd
 func (l *Loader) Relocate(data, rdata []byte, file *elf.File) error {
-	err, symMap := GetRelocationOffset(data, rdata, file)
+	err, symMap := GetMapRelocations(data, file)
 	if err != nil {
 		return err
 	}
 	for offset, mapName := range symMap {
-		fd := l.GetMapFD(mapName)
-		if fd == 0 {
-			return errors.Errorf("Map fd invalid")
+		fd, err := l.MapFD(mapName)
+		if err != nil {
+			return err
 		}
 		err = asm.RelocateBpfInsn(uint32(fd), rdata, offset)
 		if err != nil {
@@ -151,11 +151,11 @@ func ValidateElfFile(filename string) (error, *elf.File, *os.File) {
 	return nil, file, freader
 }
 
-func GetRelocationSectionData(sec *elf.Section, file *elf.File) (error, []byte, []byte, *elf.Section) {
+func GetRelocationSectionData(sec *elf.Section, file *elf.File) ([]byte, []byte, *elf.Section, error) {
 	if sec.Type == elf.SHT_REL {
 		data, err := sec.Data()
 		if err != nil {
-			return errors.Errorf("Error reading section data"), nil, nil, nil
+			return nil, nil, nil, errors.Errorf("Error reading section data")
 		}
 		if len(data) == 0 {
 			return nil, nil, nil, nil
@@ -165,12 +165,12 @@ func GetRelocationSectionData(sec *elf.Section, file *elf.File) (error, []byte, 
 		if progType != unix.BPF_PROG_TYPE_UNSPEC {
 			relData, err := relocSec.Data()
 			if err != nil {
-				return errors.Errorf("Error reading relocation data"), nil, nil, nil
+				return nil, nil, nil, errors.Errorf("Error reading relocation data")
 			}
 			if len(relData) == 0 {
 				return nil, nil, nil, nil
 			}
-			return nil, data, relData, relocSec
+			return data, relData, relocSec, nil
 		}
 	}
 	return nil, nil, nil, nil
@@ -192,7 +192,7 @@ func (l *Loader) Load(filename string) error {
 		if loaded[i] == true {
 			continue
 		}
-		err, data, relData, relocSec := GetRelocationSectionData(sec, file)
+		data, relData, relocSec, err := GetRelocationSectionData(sec, file)
 		if err != nil {
 			return errors.Errorf("Error handling relocation section")
 		} else {

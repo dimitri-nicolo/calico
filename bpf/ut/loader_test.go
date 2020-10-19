@@ -48,7 +48,7 @@ func TestBpfProgramLoaderWithMultipleSections(t *testing.T) {
 	err = loader.Load("test_loader_multiple_sections.o")
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.GetProgramMap()
+	programMap := loader.Programs()
 	Expect(len(programMap)).To(Equal(2))
 
 	_, ok := programMap["kprobe/tcp_sendmsg"]
@@ -81,7 +81,7 @@ func TestBpfProgramLoaderWithoutRelocation(t *testing.T) {
 	err = loader.Load("test_loader_without_relocation.o")
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.GetProgramMap()
+	programMap := loader.Programs()
 	Expect(len(programMap)).To(Equal(1))
 	_, ok := programMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
@@ -117,7 +117,7 @@ func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
 	temp := make([]byte, len(rdata))
 	copy(temp, rdata)
 
-	err, symMap := bpf.GetRelocationOffset(data, rdata, elfFile)
+	err, symMap := bpf.GetMapRelocations(data, elfFile)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(symMap)).To(Equal(4))
 
@@ -130,7 +130,7 @@ func TestBpfProgramLoaderWithMultipleMaps(t *testing.T) {
 	err = loader.Load("test_loader_multiple_maps.o")
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.GetProgramMap()
+	programMap := loader.Programs()
 	Expect(len(programMap)).To(Equal(1))
 	_, ok := programMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
@@ -168,7 +168,7 @@ func TestBpfProgramLoader(t *testing.T) {
 	temp := make([]byte, len(rdata))
 	copy(temp, rdata)
 
-	err, symMap := bpf.GetRelocationOffset(data, rdata, elfFile)
+	err, symMap := bpf.GetMapRelocations(data, elfFile)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(symMap)).To(Equal(3))
 
@@ -181,7 +181,7 @@ func TestBpfProgramLoader(t *testing.T) {
 	err = loader.Load("test_loader.o")
 	Expect(err).NotTo(HaveOccurred())
 
-	programMap := loader.GetProgramMap()
+	programMap := loader.Programs()
 	Expect(len(programMap)).To(Equal(1))
 	_, ok := programMap["kprobe/tcp_sendmsg"]
 	Expect(ok).To(Equal(true))
@@ -201,7 +201,7 @@ func CompareRelocationData(temp, data []byte, symMap map[uint64]string, fdMap ma
 
 func GetRelocSectionData(file *elf.File) ([]byte, []byte, error) {
 	for _, sec := range file.Sections {
-		err, data, rdata, rsec := bpf.GetRelocationSectionData(sec, file)
+		data, rdata, rsec, err := bpf.GetRelocationSectionData(sec, file)
 		if err != nil {
 			return nil, nil, err
 		}
