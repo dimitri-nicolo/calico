@@ -16,28 +16,28 @@ import (
 	api "github.com/tigera/lma/pkg/api"
 )
 
-var GlobalSnort []Snort
-var LastSnortTime time.Time
+type dateSrcDst string
 
-type Snort struct {
-	SigName      string
-	Category     string
-	Date_Src_Dst string
-	Flags        string
-	Other        string
+// Alina: Does it need to be exported ?
+type Alert struct {
+	SigName    string
+	Category   string
+	DateSrcDst dateSrcDst
+	Flags      string
+	Other      string
 }
 
-func ParseSnort(reader_str string) ([]Snort, error) {
-	//We will do generic splits of the Snort result for now
-	alerts := strings.Split(reader_str, "\n\n")
-	var result []Snort
+func parse(input string) ([]Alert, error) {
+	//We will do generic splits of the Alert result for now
+	alerts := strings.Split(input, "\n\n")
+	var result []Alert
 	for _, lines := range alerts {
 		item := strings.Split(lines, "\n")
 		if len(item) >= 5 {
-			var tmp Snort
+			var tmp Alert
 			tmp.SigName = item[0]
 			tmp.Category = item[1]
-			tmp.Date_Src_Dst = item[2]
+			tmp.DateSrcDst = dateSrcDst(item[2])
 			tmp.Flags = item[3]
 			tmp.Other = item[4]
 			result = append(result, tmp)
@@ -46,32 +46,9 @@ func ParseSnort(reader_str string) ([]Snort, error) {
 	return result, nil
 }
 
-func FilterSnort(SnortList []Snort) ([]Snort, error) {
-	//We use a global Snortlist to keep track of Snort entries that we already send to elastic.
-	var tmpList []Snort
-	if len(GlobalSnort) == 0 {
-		GlobalSnort = append(GlobalSnort, SnortList...)
-		return SnortList, nil
-	}
-	for _, items := range SnortList {
-		found := 0
-		for _, items2 := range GlobalSnort {
-			//We are matching the Timestamp, Source and Destinaton of the Snort entry for uniqueness.
-			if items.Date_Src_Dst == items2.Date_Src_Dst {
-				found = 1
-			}
-		}
-		if found == 0 {
-			tmpList = append(tmpList, items)
-		}
-	}
-	GlobalSnort = append(GlobalSnort, tmpList...)
-	return tmpList, nil
-}
-
-func parseTime(timeStr string) (time.Time, error) {
-	//Convert Snort's timestampt to time.Time
-	res := strings.Split(timeStr, " ")
+func parseTime(timeStr dateSrcDst) (time.Time, error) {
+	//Convert Alert's timestamp to time.Time
+	res := strings.Split(string(timeStr), " ")
 	layout := "01/02/06-15:04:05.000000"
 	newTime, err := time.Parse(layout, res[0])
 	if err != nil {
@@ -81,39 +58,9 @@ func parseTime(timeStr string) (time.Time, error) {
 	return newTime, nil
 }
 
-func TimeFilterSnort(SnortList []Snort) ([]Snort, error) {
-	//Filter list of Snort entries for ones we already processed
-	var tmpList []Snort
-	var newestTime time.Time
-	//Extract timestamp in entries, keeping only new ones
-	for _, entry := range SnortList {
-		alertTime, err := parseTime(entry.Date_Src_Dst)
-		if err != nil {
-			continue
-		}
-		if LastSnortTime.Before(alertTime) {
-			tmpList = append(tmpList, entry)
-		}
-	}
-	//We iterate the entries again to find the newest timestamp
-	for _, entry := range SnortList {
-		alertTime, err := parseTime(entry.Date_Src_Dst)
-		if err != nil {
-			break
-		}
-		if newestTime.Before(alertTime) {
-			newestTime = alertTime
-		}
-	}
-	//Update global timestamp
-	LastSnortTime = newestTime
-
-	return tmpList, nil
-}
-
-func ScanSnort(e *api.Alert, pcap string, outpath string) error {
+func RunScanSnort(a *api.Alert, pcap string, outPath string) error {
 	//We setup the directory for the snort alert result to be stored in
-	output := fmt.Sprintf("%s/%s", outpath, *e.Record.DestNameAggr)
+	output := fmt.Sprintf("%s/%s", outPath, *a.Record.DestNameAggr)
 	err := os.MkdirAll(output, 0755)
 	if err != nil {
 		log.WithError(err).Error("Failed to create snort folder")
@@ -131,88 +78,78 @@ func ScanSnort(e *api.Alert, pcap string, outpath string) error {
 	cmd.Stdout = &out
 	err = cmd.Run()
 	if err != nil {
-		log.WithError(err).Error("Error running Snort on pcap: ", output)
+		log.WithError(err).Error("Error running Alert on pcap: ", output)
 		return err
 	}
 	log.Info("Signature Triggered")
 	return nil
 }
 
-func ProcessSnort(e *api.Alert, p *hp.HoneypodLogProcessor, outpath string) error {
+func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, store *Store) error {
 	//We look at the directory in which the snort alerts is stored
-	path := fmt.Sprintf("%s/*", outpath)
-	snortArray, err := filepath.Glob(path)
+	snortAlertDirs, err := filepath.Glob(fmt.Sprintf("%s/*", outPath))
 	if err != nil {
 		log.WithError(err).Error("Error matching snort directory")
+		return err
 	}
 
-	log.Info("Snort Directory found: ", snortArray)
-	for _, match := range snortArray {
+	log.Info("Alert Directory found: ", snortAlertDirs)
+	for _, match := range snortAlertDirs {
 		//If found, we iterate each entry, parse it and filter the ones that we already sent to elasticsearch
 		path := fmt.Sprintf("%s/alert", match)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			log.WithError(err).Error("Error file missing: ", path)
 			continue
 		}
-		reader, err := ioutil.ReadFile(path)
+		content, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.WithError(err).Error("Error reading file: ", path)
 			continue
 		}
-		reader_str := string(reader)
-		SnortList, err := ParseSnort(reader_str)
+		alerts, err := parse(string(content))
 		if err != nil {
-			log.WithError(err).Error("Error parsing Snort alert: ", path)
+			log.WithError(err).Error("Error parsing Alert alert: ", path)
 			continue
 		}
-		FilterList, err := FilterSnort(SnortList)
+		newest := store.Apply(alerts, Uniques, Newest)
+		store.Update(newest)
+		err = SendEvents(newest, p, a)
 		if err != nil {
-			log.WithError(err).Error("Error filtering Snort alert")
-			continue
-		}
-		NewestList, err := TimeFilterSnort(FilterList)
-		if err != nil {
-			log.WithError(err).Error("Error filtering Snort alert")
-			continue
-		}
-		err = SendEvents(NewestList, p, e)
-		if err != nil {
-			log.WithError(err).Error("Error sending Snort alert")
+			log.WithError(err).Error("Error sending Alert alert")
 			continue
 		}
 	}
 	return nil
 }
-func SendEvents(SnortList []Snort, p *hp.HoneypodLogProcessor, e *api.Alert) error {
+func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, a *api.Alert) error {
 
-	//Iterate list of Snort alerts and send them to Elasticsearch
-	for _, alert := range SnortList {
-		snort_description := fmt.Sprintf("[Snort] Signature Triggered on %s/%s", *e.Record.DestNamespace, *e.Record.DestNameAggr)
-		json_res := map[string]interface{}{
+	//Iterate list of Alert alerts and send them to Elasticsearch
+	for _, alert := range snortEvents {
+		description := fmt.Sprintf("[Alert] Signature Triggered on %s/%s", *a.Record.DestNamespace, *a.Record.DestNameAggr)
+		body := map[string]interface{}{
 			"severity":    100,
-			"description": snort_description,
+			"description": description,
 			"alert":       "honeypod-controller.snort",
 			"type":        "alert",
 			"record": map[string]interface{}{
 				"snort": map[string]interface{}{
 					"Description": alert.SigName,
 					"Category":    alert.Category,
-					"Occurence":   alert.Date_Src_Dst,
+					"Occurence":   alert.DateSrcDst,
 					"Flags":       alert.Flags,
 					"Other":       alert.Other,
 				},
 			},
 			"time": time.Now(),
 		}
-		//fmt.Println(json_res)
-		res, err := p.Client.Backend().Index().Index(hp.Index).Id("").BodyJson(json_res).Do(p.Ctx)
+		res, err := p.Client.Backend().Index().Index(hp.Index).Id("").BodyJson(body).Do(p.Ctx)
 
 		//If theres any issue sending the snort alert to ES, we log and exit
 		if err != nil {
-			log.WithError(err).Error("Error sending Snort alert")
+			log.WithError(err).Error("Error sending Alert alert")
 			return err
 		}
-		log.Info("Snort alert sent: ", res)
+		log.Infof("Alert alert sent: %v", res)
 	}
 	return nil
 }

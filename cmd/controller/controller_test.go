@@ -32,10 +32,10 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 	}
 	//Set up context
 	ctx := context.Background()
-	//Create HoneypodLogProcessor
-	p, err := hp.NewHoneypodLogProcessor(c, ctx)
+	//Create HoneyPodLogProcessor
+	p := hp.NewHoneyPodLogProcessor(c, ctx)
 	if err != nil {
-		fmt.Println("Failed to initiate HoneypodLogProcessor.")
+		fmt.Println("Failed to initiate HoneyPodLogProcessor.")
 		return
 	}
 	It("Should be able to create index mapping to Elastisearch", func() {
@@ -129,6 +129,7 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 			return
 		}
 		start := end.Add(-48 * time.Hour)
+		var store = snort.NewStore(start)
 		var res *api.Alert
 		var result string
 		for result == "" {
@@ -140,7 +141,7 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 		//We modify the path to snort alert due to being a test
 		snortPath := "../../test/snort"
 		//We pass our pre-create alerts to be processed
-		err = snort.ProcessSnort(res, &p, snortPath)
+		err = snort.ProcessSnort(res, p, snortPath, store)
 		if err != nil {
 			fmt.Println("Failed to Process snort")
 		}

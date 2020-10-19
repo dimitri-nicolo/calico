@@ -33,6 +33,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.6.0
 	github.com/tigera/lma v0.0.0-20200910161835-8023afc5d99f
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )
