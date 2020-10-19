@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/lma
-GO_BUILD_VER    ?= v0.47
+GO_BUILD_VER    ?= v0.49
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 LOCAL_CHECKS     = mod-download
