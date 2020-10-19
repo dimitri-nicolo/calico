@@ -138,7 +138,6 @@ func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, a *api.Alert) e
 					"Occurence":   alert.DateSrcDst,
 					"Flags":       alert.Flags,
 					"Other":       alert.Other,
-
 				},
 			},
 			"time": time.Now(),
