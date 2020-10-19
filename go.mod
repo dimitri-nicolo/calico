@@ -1,6 +1,6 @@
 module github.com/tigera/lma
 
-go 1.14
+go 1.15
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20201015143623-85a92e7c9375 // indirect
