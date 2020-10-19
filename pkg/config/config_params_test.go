@@ -87,7 +87,7 @@ var _ = DescribeTable("Config validation",
 	func(settings map[string]string, ok bool) {
 		cfg := config.New()
 		_, err := cfg.UpdateFrom(settings, config.ConfigFile)
-		gomega.Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		err = cfg.Validate()
 		log.WithError(err).Info("Validation result")
 		if !ok {
