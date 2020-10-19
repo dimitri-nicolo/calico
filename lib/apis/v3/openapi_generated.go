@@ -5809,6 +5809,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"serviceLoopPrevention": {
+						SchemaProps: spec.SchemaProps{
+							Description: "When service IP advertisement is enabled, prevent routing loops to service IPs that are not in use, by dropping or rejecting packets that do not get DNAT'd by kube-proxy. Unless set to \"Disabled\", in which case such routing loops continue to be allowed. [Default: Drop]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -7633,6 +7640,12 @@ func schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref common.ReferenceCallback
 									},
 								},
 							},
+						},
+					},
+					"deleted": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
 						},
 					},
 				},

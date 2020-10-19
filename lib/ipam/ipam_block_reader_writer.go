@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -522,6 +522,10 @@ func randomBlockGenerator(ipPool v3.IPPool, hostName string) func() *cnet.IPNet 
 		// The `big.NewInt(0)` part creates a temp variable and assigns the result of multiplication of `i` and `big.NewInt(blockSize)`
 		// Note: we are not using `i.Mul()` because that will assign the result of the multiplication to `i`, which will cause unexpected issues
 		ip := cnet.IncrementIP(baseIP, big.NewInt(0).Mul(i, blockSize))
+		if ip.IP.To16() == nil && ip.IP.To4() == nil {
+			log.Errorf("failed to generate ip(%v)", ip.IP.String())
+			return nil
+		}
 
 		ipnet := net.IPNet{ip.IP, blockMask}
 

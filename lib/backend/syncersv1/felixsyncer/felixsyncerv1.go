@@ -138,6 +138,9 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				UpdateProcessor: nil,            // No need to process the updates so pass nil
 				ClientID:        calicoClientID, // This is backed by the calico client
 			},
+			{
+				ListInterface: model.ResourceListOptions{Kind: apiv3.KindBGPConfiguration},
+			},
 		}
 		resourceTypes = append(resourceTypes, additionalTypes...)
 

@@ -499,6 +499,8 @@ func init() {
 		Entry("should accept a valid BGP externalIPs: 8.8.8.8", api.BGPConfigurationSpec{ServiceExternalIPs: []api.ServiceExternalIPBlock{{"8.8.8.8"}}}, true),
 		Entry("should reject invalid BGP clusterIPs: x.x.x.x", api.BGPConfigurationSpec{ServiceClusterIPs: []api.ServiceClusterIPBlock{{"x.x.x.x"}}}, false),
 		Entry("should reject invalid BGP externalIPs: x.x.x.x", api.BGPConfigurationSpec{ServiceExternalIPs: []api.ServiceExternalIPBlock{{"y.y.y.y"}}}, false),
+		Entry("should accept valid IPv6 BGP clusterIP", api.BGPConfigurationSpec{ServiceClusterIPs: []api.ServiceClusterIPBlock{{"fdf5:1234::102:304"}}}, true),
+		Entry("should accept valid IPv6 BGP externalIP", api.BGPConfigurationSpec{ServiceExternalIPs: []api.ServiceExternalIPBlock{{"fdf5:1234::808:808"}}}, true),
 
 		// (API) IP version.
 		Entry("should accept IP version 4", api.Rule{Action: "Allow", IPVersion: &V4}, true),
@@ -2938,6 +2940,12 @@ func init() {
 		),
 		Entry("should accept valid Wireguard interface", api.FelixConfigurationSpec{WireguardInterfaceName: "wg0"}, true),
 		Entry("should reject valid Wireguard interface", api.FelixConfigurationSpec{WireguardInterfaceName: "wg&0"}, false),
+
+		// FelixConfigurationSpec.ServiceLoopPrevention
+		Entry("should accept ServiceLoopPrevention Drop", api.FelixConfigurationSpec{ServiceLoopPrevention: "Drop"}, true),
+		Entry("should accept ServiceLoopPrevention Reject", api.FelixConfigurationSpec{ServiceLoopPrevention: "Reject"}, true),
+		Entry("should accept ServiceLoopPrevention Disabled", api.FelixConfigurationSpec{ServiceLoopPrevention: "Disabled"}, true),
+		Entry("should reject ServiceLoopPrevention Wibbly", api.FelixConfigurationSpec{ServiceLoopPrevention: "Wibbly"}, false),
 
 		// KubeControllersConfiguration validation
 		Entry("should not accept invalid HealthChecks",
