@@ -148,6 +148,9 @@ message ToDataplane {
     // WireguardEndpointRemove is sent to undo wireguard on the host.
     WireguardEndpointRemove wireguard_endpoint_remove = 28;
 
+    // GlobalBGPConfigUpdate is sent when global BGPConfiguration changes.
+    GlobalBGPConfigUpdate global_bgp_config_update = 29;
+
     // PacketCaptureUpdate is sent to setup packetcapture.
     PacketCaptureUpdate packet_capture_update = 128;
     // PacketCaptureRemove is sent to stop packetcapture.
@@ -724,6 +727,10 @@ message WireguardEndpointRemove {
   string hostname = 1;
 }
 
+message GlobalBGPConfigUpdate {
+  repeated string service_cluster_cidrs = 1;
+}
+
 message PacketCaptureUpdate {
   PacketCaptureID id = 1;
   WorkloadEndpointID endpoint = 2;
@@ -738,4 +745,3 @@ message PacketCaptureID {
   string name = 1;
   string namespace = 2;
 }
-
