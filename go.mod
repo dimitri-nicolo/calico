@@ -1,6 +1,6 @@
 module github.com/tigera/compliance
 
-go 1.14
+go 1.15
 
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
