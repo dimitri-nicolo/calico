@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,9 @@ type IPAMHandle struct {
 type IPAMHandleSpec struct {
 	HandleID string         `json:"handleID"`
 	Block    map[string]int `json:"block"`
+
+	// +optional
+	Deleted bool `json:"deleted"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

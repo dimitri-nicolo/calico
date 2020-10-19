@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,8 +115,12 @@ func IPToBigInt(ip IP) *big.Int {
 }
 
 func BigIntToIP(ipInt *big.Int) IP {
-	ip := IP{net.IP(ipInt.Bytes())}
-	return ip
+	ip := net.IP(ipInt.Bytes())
+	if ip.To4() != nil {
+		return IP{ip}
+	}
+	a := ipInt.FillBytes(make([]byte, 16))
+	return IP{net.IP(a)}
 }
 
 func IncrementIP(ip IP, increment *big.Int) IP {
