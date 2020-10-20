@@ -68,11 +68,11 @@ func RunScanSnort(a *api.Alert, pcap string, outPath string) error {
 	}
 	//Exec snort with pre-set flags, and redirect Stdout to a buffer
 	// -q                        : quiet
-	// -k none                   :
+	// -k none                   : checksum level
 	// -y                        : show year in timestamp
 	// -c /etc/snort/snort.conf  : configuration file
-	// -r $pcap                   : pcap input file/directory
-	// -l $output
+	// -r $pcap                  : pcap input file/directory
+	// -l $output                : alert output directory
 	cmd := exec.Command("snort", "-q", "-k", "none", "-y", "-c", "/etc/snort/snort.conf", "-r", pcap, "-l", output)
 	var out bytes.Buffer
 	cmd.Stdout = &out
