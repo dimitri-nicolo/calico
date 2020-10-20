@@ -1300,7 +1300,7 @@ func (fc *DataplaneConnector) handleWireguardStatUpdateFromDataplane() {
 	}
 }
 
-var handledConfigChanges = set.From("CalicoVersion", "CNXVersion", "ClusterGUID", "ClusterType")
+var handledConfigChanges = set.From("CalicoVersion", "CNXVersion", "ClusterGUID", "ClusterType", "DNSCacheEpoch", "DNSExtraTTL")
 
 func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 	defer func() {

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -42,6 +42,11 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					Name:           "test",
 					AggregatedName: "test-*",
 				},
+				DstService: FlowService{
+					Name:      "svc2",
+					Namespace: "svc2-ns",
+					Port:      "*",
+				},
 				Action:   "allow",
 				Reporter: "src",
 			},
@@ -82,7 +87,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		}
 	})
 
-	Describe("should handle emtpy fields", func() {
+	Describe("should handle empty fields", func() {
 		flowLog := FlowLog{
 			StartTime: time.Now(),
 			EndTime:   time.Now(),
@@ -133,14 +138,17 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":         nil,
-			"DestIP":           nil,
-			"SourcePort":       nil,
-			"SourceLabels":     nil,
-			"DestLabels":       nil,
-			"Policies":         nil,
-			"OrigSourceIPs":    nil,
-			"NumOrigSourceIPs": nil,
+			"SourceIP":             nil,
+			"DestIP":               nil,
+			"SourcePort":           nil,
+			"SourceLabels":         nil,
+			"DestServiceNamespace": nil,
+			"DestServiceName":      nil,
+			"DestServicePort":      nil,
+			"DestLabels":           nil,
+			"Policies":             nil,
+			"OrigSourceIPs":        nil,
+			"NumOrigSourceIPs":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
@@ -213,15 +221,18 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":         nil,
-			"DestIP":           nil,
-			"SourcePort":       nil,
-			"DestPort":         nil,
-			"SourceLabels":     nil,
-			"DestLabels":       nil,
-			"Policies":         nil,
-			"OrigSourceIPs":    nil,
-			"NumOrigSourceIPs": nil,
+			"SourceIP":             nil,
+			"DestIP":               nil,
+			"SourcePort":           nil,
+			"DestPort":             nil,
+			"DestServiceNamespace": nil,
+			"DestServiceName":      nil,
+			"DestServicePort":      nil,
+			"SourceLabels":         nil,
+			"DestLabels":           nil,
+			"Policies":             nil,
+			"OrigSourceIPs":        nil,
+			"NumOrigSourceIPs":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values

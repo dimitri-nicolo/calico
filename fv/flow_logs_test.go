@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -443,174 +444,240 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				return err
 			}
 
+			// Only report errors at the end.
+			var errs []string
+
 			// Now we tick off each FlowMeta that we expect, and check that
 			// the log(s) for each one are present and as expected.
 			switch expectation.aggregationForAllowed {
 			case AggrNone:
 				for _, source := range wlHost1 {
-					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 3, 1,
+					err = flowTester.CheckFlow(
+						"wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP,
+						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
+						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 					if err != nil {
-						return err
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; source %s; flow 1: %v", source.Name, err))
 					}
-					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
+					err = flowTester.CheckFlow(
+						"wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP,
+						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
+						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{}, // ""
 						})
 					if err != nil {
-						return err
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; source %s; flow 2: %v", source.Name, err))
 					}
 				}
-				err = flowTester.CheckFlow("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 3, 1,
+				err = flowTester.CheckFlow(
+					"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
+					"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
+					metrics.NoService, 3, 1,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
 					})
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; flow hep: %v", err))
 				}
 				if networkSetIPsSupported {
-					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 3, 1,
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
+						"ns - ns-1 ns-1", felixes[0].IP,
+						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 3, 1,
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
+						"net - - pvt", felixes[0].IP,
+						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				}
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg none; netset: %v", err))
 				}
 			case AggrBySourcePort:
 				for _, source := range wlHost1 {
-					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP,
+						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 					if err != nil {
-						return err
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; source %s; flow 1: %v", source.Name, err))
 					}
-					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP,
+						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{},
 						})
 					if err != nil {
-						return err
+						errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; source %s; flow 2: %v", source.Name, err))
 					}
 				}
-				err = flowTester.CheckFlow("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 1, 3,
+				err = flowTester.CheckFlow(
+					"wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP,
+					"hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP,
+					metrics.NoService, 1, 3,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
 					})
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; hep: %v", err))
 				}
 				if networkSetIPsSupported {
-					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
+						"ns - ns-1 ns-1", felixes[0].IP,
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = flowTester.CheckFlow("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP,
+						"net - - pvt", felixes[0].IP,
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				}
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg src port; netset: %v", err))
 				}
 			case AggrByPodPrefix:
-				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 24,
+				err = flowTester.CheckFlow(
+					"wep default - wl-host1-*", "",
+					"wep default - wl-host2-*", "",
+					metrics.NoService, 1, 24,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{}, // ""
 					})
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 1: %v", err))
 				}
-				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
+				err = flowTester.CheckFlow(
+					"wep default - wl-host1-*", "",
+					"wep default - wl-host2-*", "",
+					metrics.NoService, 1, 12,
 					[]metrics.ExpectedPolicy{
 						{}, // ""
 						{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 					})
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; flow 2: %v", err))
 				}
-				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "hep - - "+felixes[1].Hostname, "", 1, 3,
+				err = flowTester.CheckFlow(
+					"wep default - wl-host1-*", "",
+					"hep - - "+felixes[1].Hostname, "",
+					metrics.NoService, 1, 3,
 					[]metrics.ExpectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
 					})
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; hep: %v", err))
 				}
 				if networkSetIPsSupported {
-					err = flowTester.CheckFlow("wep default - wl-host2-*", "", "ns - - ns-1", "", 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default - wl-host2-*", "",
+						"ns - - ns-1", "",
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = flowTester.CheckFlow("wep default - wl-host2-*", "", "net - - pvt", "", 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default - wl-host2-*", "",
+						"net - - pvt", "",
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				}
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for allowed; agg pod prefix; netset: %v", err))
 				}
 			}
 
 			switch expectation.aggregationForDenied {
 			case AggrNone:
 				for _, source := range wlHost1 {
-					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
+					err = flowTester.CheckFlow(
+						"wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP,
+						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
+						metrics.NoService, 3, 1,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
 						})
 					if err != nil {
-						return err
+						errs = append(errs, fmt.Sprintf("Error agg for denied; agg none: %v", err))
 					}
 				}
 			case AggrBySourcePort:
 				for _, source := range wlHost1 {
-					err = flowTester.CheckFlow("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
+					err = flowTester.CheckFlow(
+						"wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP,
+						"wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP,
+						metrics.NoService, 1, 3,
 						[]metrics.ExpectedPolicy{
 							{}, // ""
 							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
 						})
 					if err != nil {
-						return err
+						errs = append(errs, fmt.Sprintf("Error agg for denied; agg source port: %v", err))
 					}
 				}
 			case AggrByPodPrefix:
-				err = flowTester.CheckFlow("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
+				err = flowTester.CheckFlow(
+					"wep default - wl-host1-*", "",
+					"wep default - wl-host2-*", "",
+					metrics.NoService, 1, 12,
 					[]metrics.ExpectedPolicy{
 						{}, // ""
 						{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
 					})
 				if err != nil {
-					return err
+					errs = append(errs, fmt.Sprintf("Error agg for denied; agg pod prefix: %v", err))
 				}
 			}
 
 			// Finally check that there are no remaining flow logs that we did not expect.
-			return flowTester.CheckAllFlowsAccountedFor()
+			err = flowTester.CheckAllFlowsAccountedFor()
+			if err != nil {
+				errs = append(errs, err.Error())
+			}
+
+			if len(errs) == 0 {
+				return nil
+			}
+
+			return errors.New(strings.Join(errs, "\n==============\n"))
 		}, "30s", "3s").ShouldNot(HaveOccurred())
 	}
 

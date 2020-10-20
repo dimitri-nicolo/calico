@@ -9,6 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"k8s.io/kubernetes/pkg/proxy"
+
 	"github.com/projectcalico/felix/calc"
 )
 
@@ -73,8 +75,9 @@ type MetricUpdate struct {
 	origSourceIPs *boundedSet
 
 	// Endpoint information.
-	srcEp *calc.EndpointData
-	dstEp *calc.EndpointData
+	srcEp      *calc.EndpointData
+	dstEp      *calc.EndpointData
+	dstService proxy.ServicePortName
 
 	// isConnection is true if this update is from an active connection.
 	isConnection bool

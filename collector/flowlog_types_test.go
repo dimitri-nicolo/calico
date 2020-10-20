@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -16,11 +16,12 @@ var _ = Describe("FlowMeta construction from MetricUpdate", func() {
 			var flowMeta FlowMeta
 			var err error
 
-			flowMeta, err = NewFlowMeta(input, aggregation)
+			flowMeta, err = NewFlowMeta(input, aggregation, true)
 			Expect(err).To(BeNil())
 			Expect(flowMeta).Should(Equal(expected))
 		},
 		Entry("full endpoints and default aggregation", muWithEndpointMeta, FlowDefault, flowMetaDefault),
+		Entry("full endpoints with service and default aggregation", muWithEndpointMetaWithService, FlowDefault, flowMetaDefaultWithService),
 		Entry("no source endpoints and default aggregation", muWithoutSrcEndpointMeta, FlowDefault, flowMetaDefaultNoSourceMeta),
 		Entry("no destination endpoints and default aggregation", muWithoutDstEndpointMeta, FlowDefault, flowMetaDefaultNoDestMeta),
 		Entry("full endpoints and source ports aggregation", muWithEndpointMeta, FlowSourcePort, flowMetaSourcePorts),
@@ -29,6 +30,7 @@ var _ = Describe("FlowMeta construction from MetricUpdate", func() {
 		Entry("no destination endpoints and prefix aggregation", muWithoutDstEndpointMeta, FlowPrefixName, flowMetaPrefixNoDestMeta),
 		Entry("no generated name and prefix aggregation", muWithEndpointMetaWithoutGenerateName, FlowPrefixName, flowMetaPrefixWithName),
 		Entry("full endpoints and dest port aggregation", muWithEndpointMeta, FlowNoDestPorts, flowMetaNoDestPorts),
+		Entry("full endpoints and dest port aggregation", muWithEndpointMetaWithService, FlowNoDestPorts, flowMetaNoDestPortsWithService),
 		Entry("no source endpoints and dest port aggregation", muWithoutSrcEndpointMeta, FlowNoDestPorts, flowMetaNoDestPortNoSourceMeta),
 		Entry("no destination and dest port aggregation", muWithoutDstEndpointMeta, FlowNoDestPorts, flowMetaNoDestPortNoDestMeta),
 	)

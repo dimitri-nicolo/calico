@@ -33,6 +33,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	"github.com/projectcalico/felix/idalloc"
+	"github.com/projectcalico/felix/proto"
 )
 
 var (
@@ -391,6 +392,8 @@ type Config struct {
 	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
+	DNSCacheEpoch        int           `config:"int;0"`
+	DNSExtraTTL          time.Duration `config:"seconds;0"`
 
 	// Config for packet capturing
 	CaptureDir             string `config:"string;/var/log/calico/pcap"`
@@ -1040,4 +1043,14 @@ type param interface {
 	GetMetadata() *Metadata
 	Parse(raw string) (result interface{}, err error)
 	setDefault(*Config)
+}
+
+func FromConfigUpdate(msg *proto.ConfigUpdate) *Config {
+	p := New()
+	// It doesn't have very great meaning for this standalone
+	// config object, but we use DatastorePerHost here, as the
+	// source, because proto.ConfigUpdate is formed by merging
+	// global and per-host datastore configuration fields.
+	p.UpdateFrom(msg.Config, DatastorePerHost)
+	return p
 }

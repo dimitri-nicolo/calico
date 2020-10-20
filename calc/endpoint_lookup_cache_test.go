@@ -1,9 +1,11 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
 package calc_test
 
 import (
 	"net"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/felix/rules"
 
@@ -21,7 +23,7 @@ var (
 	float2_0 = float64(2.0)
 )
 
-var _ = Describe("EndpointLookupsCache tests", func() {
+var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 	ec := NewEndpointLookupsCache()
 
 	DescribeTable(
@@ -484,4 +486,189 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 		Entry("ingress", true),
 		Entry("egress", false),
 	)
+})
+
+var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
+	var elc *EndpointLookupsCache
+	var updates []api.Update
+	//localIP, _ := IPStringToArray("127.0.0.1")
+	nodeIPStr := "100.0.0.0/26"
+	nodeIP, _ := IPStringToArray(nodeIPStr)
+	nodeIP2Str := "100.0.0.2/26"
+	nodeIP2, _ := IPStringToArray(nodeIP2Str)
+	nodeIP3Str := "100.0.0.3/26"
+	nodeIP3, _ := IPStringToArray(nodeIP3Str)
+	nodeIP4Str := "100.0.0.4/26"
+	nodeIP4, _ := IPStringToArray(nodeIP4Str)
+
+	BeforeEach(func() {
+		elc = NewEndpointLookupsCache()
+
+		By("adding a node and a service")
+		updates = []api.Update{{
+			KVPair: model.KVPair{
+				Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
+				Value: &v3.Node{
+					Spec: v3.NodeSpec{
+						BGP: &v3.NodeBGPSpec{
+							IPv4Address: nodeIPStr,
+						},
+					},
+				},
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		}}
+
+		for _, u := range updates {
+			elc.OnResourceUpdate(u)
+		}
+	})
+
+	It("Should handle each type of lookup", func() {
+		By("checking node IP attributable to one node")
+		node, ok := elc.GetNode(nodeIP)
+		Expect(ok).To(BeTrue())
+		Expect(node).To(Equal("node1"))
+	})
+
+	It("Should handle deletion of config", func() {
+		By("deleting all resources")
+		for _, u := range updates {
+			elc.OnResourceUpdate(api.Update{
+				KVPair:     model.KVPair{Key: u.Key},
+				UpdateType: api.UpdateTypeKVDeleted,
+			})
+		}
+
+		By("checking nodes return no results")
+		_, ok := elc.GetNode(nodeIP)
+		Expect(ok).To(BeFalse())
+	})
+
+	Describe("It should handle reconfiguring the node resources", func() {
+		BeforeEach(func() {
+			By("updating the node and adding a new node")
+			updates = []api.Update{{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
+					Value: &v3.Node{
+						Spec: v3.NodeSpec{
+							BGP: &v3.NodeBGPSpec{
+								IPv4Address: nodeIPStr,
+							},
+							IPv4VXLANTunnelAddr: nodeIPStr,
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			}, {
+				// 2nd node has duplicate main IP and also has other interface IPs assigned
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node2"},
+					Value: &v3.Node{
+						Spec: v3.NodeSpec{
+							BGP: &v3.NodeBGPSpec{
+								IPv4Address:        nodeIPStr,
+								IPv4IPIPTunnelAddr: nodeIP2Str,
+							},
+							IPv4VXLANTunnelAddr: nodeIP3Str,
+							Wireguard: &v3.NodeWireguardSpec{
+								InterfaceIPv4Address: nodeIP4Str,
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}}
+
+			for _, u := range updates {
+				elc.OnResourceUpdate(u)
+			}
+		})
+
+		It("should handle multiple assigned IPs to different nodes", func() {
+			By("checking nodes return no results for duplicate IP")
+			_, ok := elc.GetNode(nodeIP)
+			Expect(ok).To(BeFalse())
+		})
+
+		It("should handle unique IPs on new node", func() {
+			By("checking nodes returns results for unique IP")
+			node, ok := elc.GetNode(nodeIP2)
+			Expect(ok).To(BeTrue())
+			Expect(node).To(Equal("node2"))
+
+			node, ok = elc.GetNode(nodeIP3)
+			Expect(ok).To(BeTrue())
+			Expect(node).To(Equal("node2"))
+
+			node, ok = elc.GetNode(nodeIP4)
+			Expect(ok).To(BeTrue())
+			Expect(node).To(Equal("node2"))
+		})
+
+		It("should handle reconfiguring node 2 so that node 1 IP is unique again", func() {
+			By("Reconfiguring node 2")
+			elc.OnResourceUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node2"},
+					Value: &v3.Node{
+						Spec: v3.NodeSpec{
+							BGP: &v3.NodeBGPSpec{
+								IPv4Address:        nodeIP2Str,
+								IPv4IPIPTunnelAddr: nodeIP2Str,
+							},
+							IPv4VXLANTunnelAddr: nodeIP3Str,
+							Wireguard: &v3.NodeWireguardSpec{
+								InterfaceIPv4Address: nodeIP4Str,
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			})
+
+			By("checking nodes returns results for node 1 unique IP")
+			node, ok := elc.GetNode(nodeIP)
+			Expect(ok).To(BeTrue())
+			Expect(node).To(Equal("node1"))
+		})
+
+		It("should handle reconfiguring node 1 so that node 2 IPs are all unique", func() {
+			By("Reconfiguring node 1 to remove the main IP")
+			elc.OnResourceUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
+					Value: &v3.Node{
+						Spec: v3.NodeSpec{
+							BGP: &v3.NodeBGPSpec{
+								IPv4IPIPTunnelAddr: nodeIPStr,
+							},
+						},
+					},
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			})
+
+			By("checking node1 and node 2 still share an IP")
+			_, ok := elc.GetNode(nodeIP)
+			Expect(ok).To(BeFalse())
+
+			By("Reconfiguring node 1 to remove the remaining IP")
+			elc.OnResourceUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.ResourceKey{Kind: v3.KindNode, Name: "node1"},
+					Value: &v3.Node{
+						Spec: v3.NodeSpec{},
+					},
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			})
+
+			By("checking node 2 has unique IPs")
+			node, ok := elc.GetNode(nodeIP)
+			Expect(ok).To(BeTrue())
+			Expect(node).To(Equal("node2"))
+		})
+	})
 })

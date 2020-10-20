@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018,2020 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -20,7 +20,7 @@ func expectRuleAggregates(
 	pa *PolicyRulesAggregator, dir TrafficDirection, k RuleAggregateKey,
 	expectedPackets int, expectedBytes int, expectedConnections int,
 ) {
-	By("checking for the correct " + string(dir) + " packet count")
+	By("checking for the correct " + dir.String() + " packet count")
 	Expect(func() int {
 		value, ok := pa.ruleAggStats[k]
 		if !ok {
@@ -29,7 +29,7 @@ func expectRuleAggregates(
 		return getMetricCount(getDirectionalPackets(dir, value))
 	}()).To(Equal(expectedPackets))
 
-	By("checking for the correct " + string(dir) + " byte count")
+	By("checking for the correct " + dir.String() + " byte count")
 	Expect(func() int {
 		value, ok := pa.ruleAggStats[k]
 		if !ok {

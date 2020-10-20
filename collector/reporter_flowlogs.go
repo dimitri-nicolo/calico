@@ -23,6 +23,7 @@ type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
 	IncludePolicies(bool) FlowLogAggregator
+	IncludeService(bool) FlowLogAggregator
 	MaxOriginalIPsSize(int) FlowLogAggregator
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
@@ -64,7 +65,9 @@ type FlowLogsReporter struct {
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
-	stats     *tupleStore
+
+	// TODO(rlb): Not currently used
+	//stats     *tupleStore
 }
 
 const (
@@ -117,7 +120,9 @@ func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval tim
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
 		logOffset:        logOffset,
-		stats:            NewTupleStore(),
+
+		// TODO(rlb): Not currently used
+		//stats:            NewTupleStore(),
 	}
 }
 
@@ -137,7 +142,9 @@ func newFlowLogsReporterTest(dispatchers map[string]LogDispatcher, healthAggrega
 		healthAggregator: healthAggregator,
 		hepEnabled:       hepEnabled,
 		logOffset:        logOffset,
-		stats:            NewTupleStore(),
+
+		// TODO(rlb): Not currently used
+		//stats:            NewTupleStore(),
 	}
 }
 

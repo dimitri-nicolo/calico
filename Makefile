@@ -34,8 +34,7 @@
 #
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/felix
-
-GO_BUILD_VER?=v0.47
+GO_BUILD_VER?=v0.48
 
 GIT_USE_SSH = true
 LOCAL_CHECKS = check-typha-pins
