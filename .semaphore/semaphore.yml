@@ -1,48 +1,97 @@
 version: v1.0
-name: Initial Pipeline
+name: Honeypod Controller
 agent:
   machine:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: Honeypod-controller
+  - name: Build
     task:
       jobs:
-        - name: ci
+        - name: Build
           commands:
-            - make ci
+            - make image
+            - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
+            - 'cache store go-pkg-cache-${SEMAPHORE_GIT_SHA} .go-pkg-cache'
+            - 'cache store go-mod-cache-${SEMAPHORE_GIT_SHA} ${HOME}/go/pkg/mod/cache'
       secrets:
-        - name: marvin-github-ssh-private-key
-        - name: gcp-registry-pusher-service-account
+        - name: tigera-dev-ci-pull-credentials
+        - name: private-repo
       env_vars: []
       prologue:
         commands:
           - chmod 0600 ~/.keys/*
           - ssh-add ~/.keys/*
-          - 'git config --global --add url."git@github.com:".insteadOf "https://github.com/"'
-          - sudo apt-get update || true
-          - sudo apt-get -y --only-upgrade install google-cloud-sdk
-          - 'export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/secrets/gcp-registry-pusher-service-account.json}'
-          - 'gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"'
-          - gcloud auth configure-docker --quiet
+          - 'docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io'
           - checkout
-  - name: 'Block #2'
+          - 'cache restore go-pkg-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore go-mod-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+    dependencies: []
+  - name: Static Checks
     task:
+      jobs:
+        - name: Static Checks
+          commands:
+            - make static-checks
       secrets:
-        - name: gcp-registry-pusher-service-account
-        - name: marvin-github-ssh-private-key
+        - name: private-repo
+        - name: tigera-dev-ci-pull-credentials
+      env_vars: []
       prologue:
         commands:
           - chmod 0600 ~/.keys/*
           - ssh-add ~/.keys/*
-          - 'git config --global --add url."git@github.com:".insteadOf "https://github.com/"'
-          - sudo apt-get update || true
-          - sudo apt-get -y --only-upgrade install google-cloud-sdk
-          - 'export GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-$HOME/secrets/gcp-registry-pusher-service-account.json}'
-          - 'gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"'
-          - gcloud auth configure-docker --quiet
+          - 'docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io'
           - checkout
+          - 'cache restore go-pkg-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore go-mod-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+    dependencies:
+      - Build
+  - name: UT
+    task:
       jobs:
-        - name: cd
+        - name: Run UT
           commands:
-            - make cd
+            - make ut
+      secrets:
+        - name: private-repo
+        - name: tigera-dev-ci-pull-credentials
+      env_vars: []
+      prologue:
+        commands:
+          - chmod 0600 ~/.keys/*
+          - ssh-add ~/.keys/*
+          - 'docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io'
+          - checkout
+          - 'cache restore go-pkg-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore go-mod-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+    dependencies:
+      - Static Checks
+  - name: Push Images (non-PR builds only)
+    skip:
+      when: branch !~ '.+'
+    task:
+      jobs:
+        - name: Run CD
+          commands:
+            - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+            - 'if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make images-all cd CONFIRM=true; fi'
+      secrets:
+        - name: google-service-account-for-gcr
+        - name: private-repo
+      env_vars: []
+      prologue:
+        commands:
+          - chmod 0600 ~/.keys/*
+          - ssh-add ~/.keys/*
+          - 'docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io'
+          - checkout
+          - 'cache restore go-pkg-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore go-mod-cache-${SEMAPHORE_GIT_SHA}'
+          - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+    dependencies:
+      - Static Checks
+      - UT
