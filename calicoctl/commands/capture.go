@@ -5,11 +5,12 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/capture"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	"strings"
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
 
@@ -18,6 +19,8 @@ import (
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 )
+
+const defaultCaptureDir = "/var/log/calico/pcap"
 
 func Capture(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
@@ -32,7 +35,7 @@ Examples:
 
 Options:
   -n --namespace=<NS>      Namespace of the packet capture.
-                           Uses the default namespace if not specified.
+                           Uses the default namespace if not specified. [default: default]
   -a --all-namespaces      If present, list the requested packet capture(s) across all namespaces.
   -d --dest=<DEST>         If present, uses the directory specified as the destination. [default: .]
   -h --help                Show this screen.
@@ -72,30 +75,30 @@ Description:
 	}
 	log.Debugf("Resolved capture directory to %s", captureDir)
 
-	// Resolve capture namespaces
-	namespaces, err := resolveNamespaces(parsedArgs, kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	var cmd = capture.NewKubectlCmd(kubeConfigPath)
-	var captureCmd = capture.NewCommands(cmd, capture.NewFluentDResolver(cmd))
+	var captureCmd = capture.NewCommands(capture.NewKubectlCmd(kubeConfigPath))
 	var name = argutils.ArgString(parsedArgs, "<NAME>")
 	var destination = argutils.ArgString(parsedArgs, "--dest")
 	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
 	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
+	var allNamespaces = argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces")
 	var results int
 	var errors []error
+	var locations []capture.Location
+
+	locations, err = captureCmd.Resolve(captureDir, name)
+	if err != nil {
+		return err
+	}
 
 	if isCopyCommand {
-		results, errors = captureCmd.Copy(namespaces, name, captureDir, destination)
+		results, errors = captureCmd.Copy(filterByNamespace(locations, parsedArgs), destination)
 	} else if isCleanCommand {
-		results, errors = captureCmd.Clean(namespaces, name, captureDir)
+		results, errors = captureCmd.Clean(filterByNamespace(locations, parsedArgs))
 	}
 
 	// in case --all-namespaces is used and we have at least 1 successful result
 	// we will return 0 exit code
-	if argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") {
+	if allNamespaces {
 		if results != 0 {
 			return nil
 		}
@@ -112,21 +115,16 @@ Description:
 	return nil
 }
 
-func resolveNamespaces(parsedArgs map[string]interface{}, kubeConfig string) ([]string, error) {
-	var namespaces []string
-	if len(argutils.ArgStringOrBlank(parsedArgs, "--namespace")) != 0 {
-		namespaces = append(namespaces, parsedArgs["--namespace"].(string))
-	} else if argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") {
-		output, err := common.ExecCmd(fmt.Sprintf("kubectl get ns --no-headers -o=custom-columns=NAME:..metadata.name --kubeconfig %s", kubeConfig))
-		if err != nil {
-			return nil, err
+func filterByNamespace(locations []capture.Location, parsedArgs map[string]interface{}) []capture.Location {
+	var filter []capture.Location
+	for _, loc := range locations {
+		if argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") {
+			filter = append(filter, loc)
+		} else if loc.Namespace == argutils.ArgStringOrBlank(parsedArgs, "--namespace") {
+			filter = append(filter, loc)
 		}
-		namespaces = strings.Split(output.String(), "\n")
-	} else {
-		namespaces = append(namespaces, "default")
 	}
-
-	return namespaces, nil
+	return filter
 }
 
 func resolveCaptureDir(parsedArgs map[string]interface{}) (string, error) {
@@ -143,7 +141,6 @@ func resolveCaptureDir(parsedArgs map[string]interface{}) (string, error) {
 	}
 
 	if felixConfig.Spec.CaptureDir == nil {
-		const defaultCaptureDir = "/var/log/calico/pcap"
 		return defaultCaptureDir, nil
 	}
 

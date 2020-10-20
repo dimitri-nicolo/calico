@@ -4,10 +4,10 @@ package capture_test
 
 import (
 	"fmt"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/capture"
-	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
-	"github.com/stretchr/testify/mock"
 	"testing"
+
+	"github.com/projectcalico/calicoctl/calicoctl/commands/capture"
+	"github.com/stretchr/testify/mock"
 
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
@@ -29,62 +29,112 @@ func (m *MockCmd) Execute(cmdStr string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-type MockResolver struct {
-	mock.Mock
-}
-
-func (m *MockResolver) EntryPoints(captureDir, captureName, captureNs string) []string {
-	args := m.Called(captureDir, captureName, captureNs)
-	return args.Get(0).([]string)
-}
-
 const any = "any"
+const multipleNodes = `fluentD-node1
+fluentD-node2`
+const oneNode = `fluentD-node1
+`
+const zeroNodes = ``
+
+const ns1 = "ns1"
+const ns2 = "ns2"
+const defaultNs = "default"
+const pod1 = "fluentD-node1"
+const pod2 = "fluentD-node2"
 
 func TestCommands_Copy(t *testing.T) {
 	RegisterTestingT(t)
 
 	var tables = []struct {
-		namespaces            []string
-		name                  string
-		entryPointsPerCapture int
-		copyCmdOutput         string
-		copyCmdErr            error
-		expectedErrors        []error
+		locations      []capture.Location
+		copyCmdErr     map[string]error
+		expectedErrors []error
 	}{
-		{[]string{"ns1"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any)}},
-		{[]string{"ns1"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
-		{[]string{"ns1"}, "capture", 2, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
-		{[]string{"ns1", "ns2"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
-		{[]string{"ns1", "ns2"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
-		{[]string{"ns1"}, "capture",1,  any, nil, nil},
-		{[]string{"ns1"}, "capture",0,  any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
-		{[]string{"ns1"}, "capture",2,  any, nil, nil},
-		{[]string{"ns1", "ns2"}, "capture", 1, any, nil, nil},
-		{[]string{"ns1", "ns2"}, "capture", 0, any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
-		{[]string{"ns1", "ns2"}, "capture", 2, any, nil, nil},
-		{[]string{}, "capture", 0, any, nil, nil},
+		// Given a single location, copy fails for pod 1
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any)},
+		},
+		// Given a single location, copy does not fail
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+			}, map[string]error{}, nil,
+		},
+		// Given multiple locations, copy does not fail
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			}, map[string]error{}, nil,
+		},
+		// Given multiple location, copy fails for pod1
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any)},
+		},
+		// Given multiple location, copy fails for pod1 and pod2
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			}, map[string]error{pod1: fmt.Errorf(any), pod2: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any)},
+		},
+		{
+			// No locations given
+			[]capture.Location{}, map[string]error{}, nil,
+		},
 	}
 
-	for _,entry := range tables {
+	for _, entry := range tables {
 		// setup capture commands
 		var mock = MockCmd{}
-		var resolver = MockResolver{}
-		var captureCmd = capture.NewCommands(&mock, &resolver)
+		var captureCmd = capture.NewCommands(&mock)
 
-		for _, ns := range entry.namespaces {
-			var fluentDs[]string
-			for i := 1; i <= entry.entryPointsPerCapture; i++ {
-				var fluentD = fmt.Sprintf("fluentd-%s-%s-%v", ns, entry.name, i)
-				// mock the execute command to return the output specified
-				mock.On("Execute", fmt.Sprintf(capture.CopyCommand,capture.TigeraFluentDNS, fluentD, any, ns, entry.name, any)).Return(entry.copyCmdOutput, entry.copyCmdErr)
-				fluentDs = append(fluentDs, fluentD)
-			}
-			// mock the fluentD entry points
-			resolver.On("EntryPoints", any, entry.name, ns).Return(fluentDs)
+		for _, loc := range entry.locations {
+			// mock the execute command to return the output specified
+			mock.On("Execute", fmt.Sprintf(capture.CopyCommand, capture.TigeraFluentDNS, loc.Pod, any, loc.Namespace, loc.Name, any)).Return(any, entry.copyCmdErr[loc.Pod])
 		}
 
-		// Call Clean
-		var _, err = captureCmd.Copy(entry.namespaces, entry.name, any, any)
+		// Call Copy
+		var _, err = captureCmd.Copy(entry.locations, any)
 
 		// Assert results
 		if entry.expectedErrors != nil {
@@ -93,11 +143,8 @@ func TestCommands_Copy(t *testing.T) {
 			Expect(err).To(BeNil())
 		}
 
-		mock.AssertNumberOfCalls(t, "Execute", len(entry.namespaces) * entry.entryPointsPerCapture)
+		mock.AssertNumberOfCalls(t, "Execute", len(entry.locations))
 		mock.AssertExpectations(t)
-
-		resolver.AssertNumberOfCalls(t, "EntryPoints", len(entry.namespaces))
-		resolver.AssertExpectations(t)
 	}
 }
 
@@ -105,47 +152,95 @@ func TestCommands_Clean(t *testing.T) {
 	RegisterTestingT(t)
 
 	var tables = []struct {
-		namespaces            []string
-		name                  string
-		entryPointsPerCapture int
-		cleanCmdOutput        string
-		cleanCmdErr           error
-		expectedErrors        []error
+		locations      []capture.Location
+		cleanCmdErr    map[string]error
+		expectedErrors []error
 	}{
-		{[]string{"ns1"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any)}},
-		{[]string{"ns1"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
-		{[]string{"ns1"}, "capture", 2, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
-		{[]string{"ns1", "ns2"}, "capture", 1, "", fmt.Errorf(any), []error{fmt.Errorf(any), fmt.Errorf(any)}},
-		{[]string{"ns1", "ns2"}, "capture", 0, "", fmt.Errorf(any), []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
-		{[]string{"ns1"}, "capture",1,  any, nil, nil},
-		{[]string{"ns1"}, "capture",0,  any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture")}},
-		{[]string{"ns1"}, "capture",2,  any, nil, nil},
-		{[]string{"ns1", "ns2"}, "capture", 1, any, nil, nil},
-		{[]string{"ns1", "ns2"}, "capture", 0, any, nil, []error{fmt.Errorf("failed to find capture files for ns1/capture"),fmt.Errorf("failed to find capture files for ns2/capture") }},
-		{[]string{"ns1", "ns2"}, "capture", 2, any, nil, nil},
-		{[]string{}, "capture", 0, any, nil, nil},
+		// Given a single location, clean fails for pod 1
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any)},
+		},
+		// Given a single location, clean does not fail
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+			}, map[string]error{}, nil,
+		},
+		// Given multiple locations, clean does not fail
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			}, map[string]error{}, nil,
+		},
+		// Given multiple location, clean fails for pod1
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any)},
+		},
+		// Given multiple location, clean fails for pod1 and pod2
+		{
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			}, map[string]error{pod1: fmt.Errorf(any), pod2: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any)},
+		},
+		{
+			// No locations given
+			[]capture.Location{}, map[string]error{}, nil,
+		},
 	}
 
-	for _,entry := range tables {
+	for _, entry := range tables {
 		// setup capture commands
 		var mock = MockCmd{}
-		var resolver = MockResolver{}
-		var captureCmd = capture.NewCommands(&mock, &resolver)
+		var captureCmd = capture.NewCommands(&mock)
 
-		for _, ns := range entry.namespaces {
-			var fluentDs[]string
-			for i := 1; i <= entry.entryPointsPerCapture; i++ {
-				var fluentD = fmt.Sprintf("fluentd-%s-%s-%v", ns, entry.name, i)
-				// mock the execute command to return the output specified
-				mock.On("Execute", fmt.Sprintf(capture.CleanCommand,capture.TigeraFluentDNS, fluentD, any, ns, entry.name)).Return(entry.cleanCmdOutput, entry.cleanCmdErr)
-				fluentDs = append(fluentDs, fluentD)
-			}
-			// mock the fluentD entry points
-			resolver.On("EntryPoints", any, entry.name, ns).Return(fluentDs)
+		for _, loc := range entry.locations {
+			// mock the execute command to return the output specified
+			mock.On("Execute", fmt.Sprintf(capture.CleanCommand, capture.TigeraFluentDNS, loc.Pod, any, loc.Namespace, loc.Name)).Return(any, entry.cleanCmdErr[loc.Pod])
 		}
 
 		// Call Clean
-		var _, err = captureCmd.Clean(entry.namespaces, entry.name, any)
+		var _, err = captureCmd.Clean(entry.locations)
 
 		// Assert results
 		if entry.expectedErrors != nil {
@@ -154,80 +249,127 @@ func TestCommands_Clean(t *testing.T) {
 			Expect(err).To(BeNil())
 		}
 
-		mock.AssertNumberOfCalls(t, "Execute", len(entry.namespaces) * entry.entryPointsPerCapture)
+		mock.AssertNumberOfCalls(t, "Execute", len(entry.locations))
 		mock.AssertExpectations(t)
-
-		resolver.AssertNumberOfCalls(t, "EntryPoints", len(entry.namespaces))
-		resolver.AssertExpectations(t)
 	}
 }
 
-func TestCommands_ResolveEntryPoints(t *testing.T) {
+func TestCommands_Resolve(t *testing.T) {
 	RegisterTestingT(t)
 
-	const multipleNodes =
-`calico-node1   node1
-calico-node2   node2`
-	const oneNode =
-`calico-node1   node1
-`
-	const zeroNodes = ``
+	var captureInDefaultNs = fmt.Sprintf("%s/%s/%s", any, defaultNs, any)
+	var multipleCaptures = fmt.Sprintf("%s/%s/%s\n%s/%s/%s", any, defaultNs, "other", any, defaultNs, any)
+	var otherCapture = fmt.Sprintf("%s/%s/%s", any, defaultNs, "other")
+	var captureWithMultipleNs = fmt.Sprintf("%s/%s/%s\n%s/%s/%s", any, ns1, any, any, ns2, any)
 
 	var tables = []struct {
-		getCalicoNodesOutput      string
-		calicoNodesWithCapture    []string
-		calicoNodesWithoutCapture []string
-		nodesWithFluentD []string
-		nodesWithoutFluentD []string
-		expectedEntryPods []string
+		getFluentDNodesOutput string
+		findOutputPerPods     map[string]string
+		errOutputForPods      []string
+		expected              []capture.Location
 	}{
-		// two calico nodes with capture files and matching fluentD pods
-		{multipleNodes, []string{"calico-node1", "calico-node2"}, []string{}, []string{"node1", "node2"}, []string{}, []string{"pod-node1", "pod-node2"}},
-		// two calico nodes with capture files and fluentD pods on node1
-		{multipleNodes, []string{"calico-node1", "calico-node2"}, []string{}, []string{"node1"}, []string{"node2"}, []string{"pod-node1"}},
-		// two calico nodes with capture files on node1 and fluentD pods on node1
-		{multipleNodes, []string{"calico-node1"}, []string{"calico-node2"}, []string{"node1"}, []string{}, []string{"pod-node1"}},
-		// two calico nodes with capture files on node1 and no fluentD pods on node1
-		{multipleNodes, []string{"calico-node1"}, []string{"calico-node2"}, []string{}, []string{"node1"}, nil},
-		// two calico nodes with no capture files
-		{multipleNodes, []string{}, []string{"calico-node1", "calico-node2"}, []string{}, []string{}, nil},
-		// one calico node with capture files and fluentD pod on node1
-		{oneNode, []string{"calico-node1"}, []string{}, []string{"node1"}, []string{}, []string{"pod-node1"}},
-		// one calico node with capture files and no fluentD pod on node1
-		{oneNode, []string{"calico-node1"}, []string{}, []string{}, []string{"node1"}, nil},
-		// one calico node with no capture files
-		{oneNode, []string{}, []string{"calico-node1"}, []string{}, []string{}, nil},
-		// no nodes returned
-		{zeroNodes, []string{}, []string{}, []string{}, []string{}, nil},
+		// two fluentD nodes with capture files with a single capture on each in namespace default
+		{
+			multipleNodes, map[string]string{pod1: captureInDefaultNs, pod2: captureInDefaultNs}, []string{},
+			[]capture.Location{
+				{
+					Name: any, Namespace: defaultNs, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: defaultNs, Pod: pod2, Dir: any,
+				},
+			},
+		},
+		// two fluentD nodes with capture files with capture files in multiple namespaces
+		{
+			multipleNodes, map[string]string{pod1: captureWithMultipleNs, pod2: captureWithMultipleNs}, []string{},
+			[]capture.Location{
+				{
+					Name: any, Namespace: ns1, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns1, Pod: pod2, Dir: any,
+				},
+				{
+					Name: any, Namespace: ns2, Pod: pod2, Dir: any,
+				},
+			},
+		},
+		// two fluentD nodes with capture files with multiple capture files
+		{
+			multipleNodes, map[string]string{pod1: multipleCaptures, pod2: multipleCaptures}, []string{},
+			[]capture.Location{
+				{
+					Name: any, Namespace: defaultNs, Pod: pod1, Dir: any,
+				},
+				{
+					Name: any, Namespace: defaultNs, Pod: pod2, Dir: any,
+				},
+			},
+		},
+		// two fluentD nodes with capture files with another captures on each in namespace default
+		{
+			multipleNodes, map[string]string{pod1: otherCapture, pod2: otherCapture}, []string{},
+			nil,
+		},
+		// two fluentD nodes with capture files with no captures
+		{
+			multipleNodes, map[string]string{pod1: any, pod2: any}, []string{},
+			nil,
+		},
+		// two fluentD nodes that will error out
+		{
+			multipleNodes, map[string]string{}, []string{pod1, pod2},
+			nil,
+		},
+		// two fluentD nodes with capture files with a single capture on node1 in namespace default
+		{
+			multipleNodes, map[string]string{pod1: captureInDefaultNs, pod2: any}, []string{},
+			[]capture.Location{
+				{
+					Name: any, Namespace: defaultNs, Pod: pod1, Dir: any,
+				},
+			},
+		},
+		// one fluentD nodes with capture files with a single capture on node1 in namespace default
+		{
+			oneNode, map[string]string{pod1: captureInDefaultNs}, []string{},
+			[]capture.Location{
+				{
+					Name: any, Namespace: defaultNs, Pod: pod1, Dir: any,
+				},
+			},
+		},
+		// no fluentD nodes
+		{
+			zeroNodes, map[string]string{}, []string{},
+			nil,
+		},
 	}
 
-	for _,entry := range tables {
+	for _, entry := range tables {
 		// setup capture commands
 		var mock = MockCmd{}
-		var fluentDResolver = capture.NewFluentDResolver(&mock)
+		var captureCmd = capture.NewCommands(&mock)
 
 		// mock the execute command to return the output specified
-		mock.On("Execute", capture.GetCalicoNodesCommand).Return(entry.getCalicoNodesOutput, nil)
+		mock.On("Execute", capture.GetFluentDNodesCommand).Return(entry.getFluentDNodesOutput, nil)
 		// mock stat command so that it returns no error for nodes marked to have a capture
-		for _, node := range entry.calicoNodesWithCapture {
-			mock.On("Execute", fmt.Sprintf(capture.FindCaptureFileCommand, common.CalicoNamespace, node, any, any, any)).Return(any, nil)
+		for node, output := range entry.findOutputPerPods {
+			mock.On("Execute", fmt.Sprintf(capture.FindCaptureFileCommand, capture.TigeraFluentDNS, node, any)).Return(output, nil)
 		}
-		// mock stat command so that it returns an error for nodes marked not to have a capture
-		for _, node := range entry.calicoNodesWithoutCapture {
-			mock.On("Execute", fmt.Sprintf(capture.FindCaptureFileCommand, common.CalicoNamespace, node, any, any, any)).Return("", fmt.Errorf(any))
-		}
-		// mock get fluentD pods so that is returns pod-node{index} for any fluentD pod that matches the nodes
-		for _, node := range entry.nodesWithFluentD {
-			mock.On("Execute", fmt.Sprintf(capture.GetPodByNodeName, "tigera-fluentd", node)).Return(fmt.Sprintf("pod-%s", node), nil)
-		}
-		// mock get fluentD pods so that is returns an error for any fluentD pod that does matches the nodes
-		for _, node := range entry.nodesWithoutFluentD {
-			mock.On("Execute", fmt.Sprintf(capture.GetPodByNodeName, "tigera-fluentd", node)).Return("", fmt.Errorf(any))
+		// mock stat command so that it returns a error for nodes marked to fail resolving
+		for _, node := range entry.errOutputForPods {
+			mock.On("Execute", fmt.Sprintf(capture.FindCaptureFileCommand, capture.TigeraFluentDNS, node, any)).Return("", fmt.Errorf(any))
 		}
 
-		// Call ResolveEntryPoints
-		var output = fluentDResolver.EntryPoints(any, any, any)
-		Expect(output).To(Equal(entry.expectedEntryPods))
+		// Call Resolve
+		var locations, err = captureCmd.Resolve(any, any)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(locations).To(Equal(entry.expected))
 
 		mock.AssertExpectations(t)
 	}
