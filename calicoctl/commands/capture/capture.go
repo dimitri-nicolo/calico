@@ -10,10 +10,10 @@ import (
 )
 
 // CopyCommand is a kubectl command that will be executed to copy capture files from a pod
-const CopyCommand = "kubectl cp %s/%s:%s/%s/%s/ %s"
+const CopyCommand = "kubectl cp %s/%s:%s/%s/%s/ %s -c %s"
 
 // CleanCommand is a kubectl command that will executed to clean capture files from a pod
-const CleanCommand = "kubectl exec -n %s %s -- rm -r %s/%s/%s"
+const CleanCommand = "kubectl exec -n %s %s -c %s -- rm -r %s/%s/%s"
 
 // GetFluentDNodesCommand is a kubectl command that will executed retrieve the fluentD pods
 const GetFluentDNodesCommand = "kubectl get pod -o=custom-columns=NAME:.metadata.name -ntigera-fluentd -l k8s-app=fluentd-node --no-headers"
@@ -23,38 +23,17 @@ const FindCaptureFileCommand = "kubectl exec -n %s %s -- find %s -type d -maxdep
 
 // Namespace used to execute commands inside pods
 const TigeraFluentDNS = "tigera-fluentd"
+// Container name used to execute commands inside pods
+const TigeraFluentD = "fluentd"
 
 // commands is wrapper for available capture commands
 type commands struct {
-	cmdExecutor CmdExecutor
+	cmdExecutor common.CmdExecutor
 }
 
 // NewCommands returns new capture commands
-func NewCommands(cmd CmdExecutor) commands {
+func NewCommands(cmd common.CmdExecutor) commands {
 	return commands{cmdExecutor: cmd}
-}
-
-// CmdExecutor will execute a command and return its output and its error
-type CmdExecutor interface {
-	Execute(cmdStr string) (string, error)
-}
-
-// kubectlCmd is a kubectl wrapper for any query that will be executed
-type kubectlCmd struct {
-	kubeConfig string
-}
-
-// NewKubectlCmd return a CmdExecutor that uses kubectl
-func NewKubectlCmd(kubeConfigPath string) *kubectlCmd {
-	return &kubectlCmd{kubeConfig: kubeConfigPath}
-}
-
-func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
-	var out, err = common.ExecCmd(strings.Replace(cmdStr, "kubectl", fmt.Sprintf("kubectl --kubeconfig %s", k.kubeConfig), 1))
-	if out != nil {
-		return out.String(), err
-	}
-	return "", err
 }
 
 // Location maps out a capture location
@@ -96,6 +75,7 @@ func (cmd *commands) copyCaptureFiles(entryNamespace string, pod string, capture
 		captureNamespace,
 		captureName,
 		destination,
+		TigeraFluentD,
 	))
 	return output, err
 }
@@ -125,6 +105,7 @@ func (cmd *commands) cleanCaptureFiles(entryNamespace string, pod string, captur
 		CleanCommand,
 		entryNamespace,
 		pod,
+		TigeraFluentD,
 		captureDir,
 		captureNamespace,
 		captureName,

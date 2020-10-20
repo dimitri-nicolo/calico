@@ -14,7 +14,10 @@
 
 package argutils
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 // ArgStringOrBlank returns the requested argument as a string, or as a blank
 // string if the argument is not present.
@@ -44,22 +47,21 @@ func ArgBoolOrFalse(args map[string]interface{}, argName string) bool {
 	return false
 }
 
-// ArgString returns the requested argument as a string, or as a blank
-// string if the argument is not present or the type does not match
-func ArgString(args map[string]interface{}, argName string) string {
+// ArgString returns the requested argument as a string or an error
+func ArgString(args map[string]interface{}, argName string) (string, error) {
 	if args[argName] != nil {
 		var param = args[argName]
 		switch v := param.(type) {
 		default:
-			return ""
+			return "", fmt.Errorf("param %v is not string", param)
 		case int:
-			return strconv.Itoa(v)
+			return strconv.Itoa(v), nil
 		case string:
-			return v
+			return v, nil
 		case bool:
-			return strconv.FormatBool(v)
+			return strconv.FormatBool(v), nil
 		}
 	}
 
-	return ""
+	return "", fmt.Errorf("%s  has not been defined", argName)
 }

@@ -130,7 +130,7 @@ func TestCommands_Copy(t *testing.T) {
 
 		for _, loc := range entry.locations {
 			// mock the execute command to return the output specified
-			mock.On("Execute", fmt.Sprintf(capture.CopyCommand, capture.TigeraFluentDNS, loc.Pod, any, loc.Namespace, loc.Name, any)).Return(any, entry.copyCmdErr[loc.Pod])
+			mock.On("Execute", fmt.Sprintf(capture.CopyCommand, capture.TigeraFluentDNS, loc.Pod, any, loc.Namespace, loc.Name, any, capture.TigeraFluentD)).Return(any, entry.copyCmdErr[loc.Pod])
 		}
 
 		// Call Copy
@@ -236,7 +236,7 @@ func TestCommands_Clean(t *testing.T) {
 
 		for _, loc := range entry.locations {
 			// mock the execute command to return the output specified
-			mock.On("Execute", fmt.Sprintf(capture.CleanCommand, capture.TigeraFluentDNS, loc.Pod, any, loc.Namespace, loc.Name)).Return(any, entry.cleanCmdErr[loc.Pod])
+			mock.On("Execute", fmt.Sprintf(capture.CleanCommand, capture.TigeraFluentDNS, loc.Pod, capture.TigeraFluentD, any, loc.Namespace, loc.Name)).Return(any, entry.cleanCmdErr[loc.Pod])
 		}
 
 		// Call Clean

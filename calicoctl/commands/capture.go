@@ -57,43 +57,62 @@ Description:
 		return nil
 	}
 
-	// Ensure kubectl command is available
-	if err := common.KubectlExists(); err != nil {
-		return fmt.Errorf("an error occurred checking if kubctl exists: %w", err)
+	// Resolve string parameters
+	cfgStr, err := argutils.ArgString(parsedArgs, "--config")
+	if err != nil {
+		return nil
 	}
-	// Extract kubeconfig variable
-	cfg, err := clientmgr.LoadClientConfig(argutils.ArgString(parsedArgs, "--config"))
+	name, err := argutils.ArgString(parsedArgs, "<NAME>")
 	if err != nil {
 		return err
 	}
-	var kubeConfigPath = cfg.Spec.Kubeconfig
+	destination, err := argutils.ArgString(parsedArgs, "--dest")
+	if err != nil {
+		return err
+	}
+	namespace, err := argutils.ArgString(parsedArgs, "--namespace")
+	if err != nil {
+		return err
+	}
+	// Resolve boolean parameters
+	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
+	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
+	var allNamespaces = argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces")
 
 	// Resolve capture dir location
-	captureDir, err := resolveCaptureDir(parsedArgs)
+	captureDir, err := resolveCaptureDir(cfgStr)
 	if err != nil {
 		return err
 	}
 	log.Debugf("Resolved capture directory to %s", captureDir)
 
-	var captureCmd = capture.NewCommands(capture.NewKubectlCmd(kubeConfigPath))
-	var name = argutils.ArgString(parsedArgs, "<NAME>")
-	var destination = argutils.ArgString(parsedArgs, "--dest")
-	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
-	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
-	var allNamespaces = argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces")
-	var results int
-	var errors []error
-	var locations []capture.Location
-
-	locations, err = captureCmd.Resolve(captureDir, name)
+	// Ensure kubectl command is available
+	if err := common.KubectlExists(); err != nil {
+		return fmt.Errorf("an error occurred checking if kubctl exists: %w", err)
+	}
+	// Extract kubeconfig variable
+	cfg, err := clientmgr.LoadClientConfig(cfgStr)
 	if err != nil {
 		return err
 	}
 
+	// Create the capture commands
+	captureCmd := capture.NewCommands(common.NewKubectlCmd(cfg.Spec.Kubeconfig))
+
+	// Resolve the locations of the capture files
+	locations, err := captureCmd.Resolve(captureDir, name)
+	if err != nil {
+		return err
+	}
+
+	var results int
+	var errors []error
+
+	// Run copy or clean
 	if isCopyCommand {
-		results, errors = captureCmd.Copy(filterByNamespace(locations, parsedArgs), destination)
+		results, errors = captureCmd.Copy(filterByNamespace(locations, allNamespaces, namespace), destination)
 	} else if isCleanCommand {
-		results, errors = captureCmd.Clean(filterByNamespace(locations, parsedArgs))
+		results, errors = captureCmd.Clean(filterByNamespace(locations, allNamespaces, namespace))
 	}
 
 	// in case --all-namespaces is used and we have at least 1 successful result
@@ -115,21 +134,22 @@ Description:
 	return nil
 }
 
-func filterByNamespace(locations []capture.Location, parsedArgs map[string]interface{}) []capture.Location {
+func filterByNamespace(locations []capture.Location, allNamespaces bool, namespace string) []capture.Location {
+	if allNamespaces {
+		return locations
+	}
+
 	var filter []capture.Location
 	for _, loc := range locations {
-		if argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") {
-			filter = append(filter, loc)
-		} else if loc.Namespace == argutils.ArgStringOrBlank(parsedArgs, "--namespace") {
+		if loc.Namespace == namespace {
 			filter = append(filter, loc)
 		}
 	}
 	return filter
 }
 
-func resolveCaptureDir(parsedArgs map[string]interface{}) (string, error) {
-	cf := parsedArgs["--config"].(string)
-	client, err := clientmgr.NewClient(cf)
+func resolveCaptureDir(cfg string) (string, error) {
+	client, err := clientmgr.NewClient(cfg)
 	if err != nil {
 		return "", err
 	}

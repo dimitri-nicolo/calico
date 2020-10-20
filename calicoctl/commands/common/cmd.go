@@ -11,6 +11,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// CmdExecutor will execute a command and return its output and its error
+type CmdExecutor interface {
+	Execute(cmdStr string) (string, error)
+}
+
+// kubectlCmd is a kubectl wrapper for any query that will be executed
+type kubectlCmd struct {
+	kubeConfig string
+}
+
+// NewKubectlCmd return a CmdExecutor that uses kubectl
+func NewKubectlCmd(kubeConfigPath string) *kubectlCmd {
+	return &kubectlCmd{kubeConfig: kubeConfigPath}
+}
+
+func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
+	var out, err = ExecCmd(strings.Replace(cmdStr, "kubectl", fmt.Sprintf("kubectl --kubeconfig %s", k.kubeConfig), 1))
+	if out != nil {
+		return out.String(), err
+	}
+	return "", err
+}
+
+
 // ExecCmd is a convenience function that wraps exec.Command.
 func ExecCmd(cmdStr string) (*bytes.Buffer, error) {
 	var result bytes.Buffer
