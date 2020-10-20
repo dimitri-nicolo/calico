@@ -13,7 +13,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package bpf
+
+package elf
 
 import (
 	"bytes"
@@ -26,23 +27,24 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/asm"
 )
 
 type Loader struct {
 	programs map[string]*ProgramInfo
-	mapFds   map[string]MapFD
+	mapFds   map[string]bpf.MapFD
 }
 
 type ProgramInfo struct {
-	fd   ProgFD
+	fd   bpf.ProgFD
 	Type uint32
 }
 
-func NewLoader(maps ...Map) *Loader {
+func NewLoader(maps ...bpf.Map) *Loader {
 	BpfLoader := &Loader{
 		programs: make(map[string]*ProgramInfo),
-		mapFds:   make(map[string]MapFD),
+		mapFds:   make(map[string]bpf.MapFD),
 	}
 	for _, pinnedMap := range maps {
 		BpfLoader.mapFds[pinnedMap.GetName()] = pinnedMap.MapFD()
@@ -50,7 +52,7 @@ func NewLoader(maps ...Map) *Loader {
 	return BpfLoader
 }
 
-func (l *Loader) MapFD(mapName string) (MapFD, error) {
+func (l *Loader) MapFD(mapName string) (bpf.MapFD, error) {
 	fd, present := l.mapFds[mapName]
 	if present {
 		return fd, nil
@@ -58,7 +60,7 @@ func (l *Loader) MapFD(mapName string) (MapFD, error) {
 	return 0, errors.Errorf("Map FD not found")
 }
 
-func (l *Loader) GetFDMap() map[string]MapFD {
+func (l *Loader) GetFDMap() map[string]bpf.MapFD {
 	return l.mapFds
 }
 
@@ -205,7 +207,7 @@ func (l *Loader) Load(filename string) error {
 			}
 			insns := asm.GetBPFInsns(relData)
 			progType := GetProgTypeFromSecName(relocSec.Name)
-			progFd, err := LoadBPFProgramFromInsns(insns, license, progType)
+			progFd, err := bpf.LoadBPFProgramFromInsns(insns, license, progType)
 			if progFd == 0 {
 				return errors.Errorf("Error loading section %v %v", relocSec.Name, err)
 			}
@@ -231,7 +233,7 @@ func (l *Loader) Load(filename string) error {
 		progType := GetProgTypeFromSecName(sec.Name)
 		if progType != unix.BPF_PROG_TYPE_UNSPEC {
 			insns := asm.GetBPFInsns(data)
-			progFd, err := LoadBPFProgramFromInsns(insns, license, progType)
+			progFd, err := bpf.LoadBPFProgramFromInsns(insns, license, progType)
 			if progFd == 0 {
 				return errors.Errorf("Error loading section %v %v", sec.Name, err)
 			}
