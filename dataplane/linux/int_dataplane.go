@@ -752,6 +752,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.wireguardManager = newWireguardManager(cryptoRouteTableWireguard)
 	dp.RegisterManager(dp.wireguardManager) // IPv4-only
 
+	dp.RegisterManager(newServiceLoopManager(filterTableV4, ruleRenderer, 4))
+
 	var activeCaptures, err = capture.NewActiveCaptures(config.PacketCapture)
 	if err != nil {
 		log.WithError(err).Panicf("Failed create dir %s required to start packet capture", config.PacketCapture.Directory)
@@ -829,6 +831,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			callbacks))
 		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6))
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
+		dp.RegisterManager(newServiceLoopManager(filterTableV6, ruleRenderer, 6))
 	}
 
 	dp.allIptablesTables = append(dp.allIptablesTables, dp.iptablesMangleTables...)

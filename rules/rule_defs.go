@@ -68,6 +68,8 @@ const (
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"
 
+	ChainCIDRBlock = ChainNamePrefix + "cidr-block"
+
 	PolicyInboundPfx   PolicyChainNamePrefix  = ChainNamePrefix + "pi-"
 	PolicyOutboundPfx  PolicyChainNamePrefix  = ChainNamePrefix + "po-"
 	ProfileInboundPfx  ProfileChainNamePrefix = ChainNamePrefix + "pri-"
@@ -284,6 +286,7 @@ type RuleRenderer interface {
 
 	DNATsToIptablesChains(dnats map[string]string) []*iptables.Chain
 	SNATsToIptablesChains(snats map[string]string) []*iptables.Chain
+	BlockedCIDRsToIptablesChains(cidrs []string, ipVersion uint8) []*iptables.Chain
 
 	RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled, acceptLocal bool) []iptables.Rule
 }
@@ -295,6 +298,7 @@ type DefaultRuleRenderer struct {
 	inputAcceptActions []iptables.Action
 	filterAllowAction  iptables.Action
 	mangleAllowAction  iptables.Action
+	blockCIDRAction    iptables.Action
 }
 
 func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
@@ -367,6 +371,8 @@ type Config struct {
 
 	NATOutgoingAddress net.IP
 	BPFEnabled         bool
+
+	ServiceLoopPrevention string
 
 	EnableNflogSize bool
 	IPSecEnabled    bool
@@ -484,11 +490,25 @@ func NewRenderer(config Config) RuleRenderer {
 		mangleAllowAction = iptables.AcceptAction{}
 	}
 
+	// How should we block CIDRs for loop prevention?
+	var blockCIDRAction iptables.Action
+	switch config.ServiceLoopPrevention {
+	case "Drop":
+		log.Info("Packets to unknown service IPs will be dropped")
+		blockCIDRAction = iptables.DropAction{}
+	case "Reject":
+		log.Info("Packets to unknown service IPs will be rejected")
+		blockCIDRAction = iptables.RejectAction{}
+	default:
+		log.Info("Packets to unknown service IPs will be allowed to loop")
+	}
+
 	return &DefaultRuleRenderer{
 		Config:             config,
 		dropActions:        dropActions,
 		inputAcceptActions: inputAcceptActions,
 		filterAllowAction:  filterAllowAction,
 		mangleAllowAction:  mangleAllowAction,
+		blockCIDRAction:    blockCIDRAction,
 	}
 }
