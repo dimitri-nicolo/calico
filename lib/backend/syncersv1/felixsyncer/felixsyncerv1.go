@@ -140,6 +140,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			},
 			{
 				ListInterface: model.ResourceListOptions{Kind: apiv3.KindBGPConfiguration},
+				ClientID:      calicoClientID, // This is backed by the calico client
 			},
 		}
 		resourceTypes = append(resourceTypes, additionalTypes...)
