@@ -21,8 +21,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/projectcalico/libcalico-go/lib/errors"
 )
 
@@ -83,8 +81,4 @@ type IPAMHandle struct {
 	HandleID string         `json:"-"`
 	Block    map[string]int `json:"block"`
 	Deleted  bool           `json:"deleted"`
-
-	// OwnerReferences are used by the Kubernetes backend but not the etcd
-	// backend. They don't need to be stored, so nil the json tag.
-	OwnerReferences []metav1.OwnerReference `json:"-"`
 }
