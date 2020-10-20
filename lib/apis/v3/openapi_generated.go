@@ -5263,7 +5263,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"bpfDataIfacePattern": {
 						SchemaProps: spec.SchemaProps{
-							Description: "BPFDataIfacePattern is a regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network.  This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.  It should not match the workload interfaces (usually named cali...). [Default: ^(en.*|eth.*|tunl0$)]",
+							Description: "BPFDataIfacePattern is a regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network.  This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.  It should not match the workload interfaces (usually named cali...). [Default: ^(en[opsx].*|eth.*|tunl0$|wireguard.cali$)]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7398,7 +7398,7 @@ func schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"cidr", "strictAffinity", "allocations", "unallocated", "attributes", "deleted"},
+				Required: []string{"cidr", "strictAffinity", "allocations", "unallocated", "attributes"},
 			},
 		},
 		Dependencies: []string{
