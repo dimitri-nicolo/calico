@@ -158,6 +158,31 @@ if dual_stack; then
     echo
 fi
 
+# Add a stable loopback address on kind-control-plane.  See
+# https://tigera.atlassian.net/browse/BPF-755 for the detail behind
+# this.  In summary, when calico-node (or kubectl ...) connects to an
+# API server on the same node, there's a MASQUERADE in the path that
+# likes choosing our tunnel address, and the API server connection
+# will fail if that tunnel address is then removed.  This problem is
+# exposed in node(-private) ST that switches between no-overlay, IP-IP
+# and VXLAN, and the impacts include:
+#
+# - Worst case for Felix (inside calico-node) is that it sits there,
+#   non-Ready, for 15 minutes, waiting for the connection to time out.
+#   (When it does time out, something automatically retries and
+#   immediately succeeds.)
+#
+# - Another scenario is when kubectl is run as part of some
+#   teardown/cleanup, after a test case has passed, and the kubectl
+#   fails for no apparent reason.  I think this correlates to cases
+#   where the calico-nodes had just been restarted to revert to the ST
+#   suite's normal overlay mode.
+#
+# If we add a stable loopback address, as here, MASQUERADE will choose
+# that instead of the tunnel address, and thus we avoid the problem of
+# the chosen address disappearing.
+docker exec kind-control-plane ip a a 10.100.0.1/32 dev lo
+
 load_image kind-control-plane
 load_image kind-worker
 load_image kind-worker2
