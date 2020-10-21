@@ -100,6 +100,12 @@
     egress-gateway:
       image: tigera/egress-gateway
       version: master
+    honeypod:
+      image: tigera/honeypod
+      version: master
+    honeypod-exp-service:
+      image: tigera/honeypod-exp-service
+      version: master
     honeypod-controller:
       image: tigera/honeypod-controller
       version: master

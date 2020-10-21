@@ -9,17 +9,17 @@ layout: null
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tigera-internal-4
+  name: tigera-internal-db
   namespace: tigera-internal
 spec:
   selector:
     matchLabels:
-      app: tigera-internal-4
+      app: tigera-internal-db
   replicas: 1
   template:
     metadata:
       labels:
-        app: tigera-internal-4
+        app: tigera-internal-db
     spec:
       hostNetwork: false
       hostIPC: false
@@ -30,8 +30,8 @@ spec:
         runAsUser: 999
         runAsGroup: 999
       containers:
-      - name: tigera-internal-4
-        image: mysql:latest
+      - name: tigera-internal-db
+        image: mysql:8.0.22
         ports:
         - containerPort: 3306
         env:
@@ -62,7 +62,7 @@ spec:
       protocol: TCP
       targetPort: 3306
   selector:
-    app: tigera-internal-4
+    app: tigera-internal-db
 ---
 
 # Global Alert Template and Global Alert for Vulnerable Service access
@@ -75,7 +75,7 @@ spec:
   summary: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4" AND reporter="dst"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-db" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
 ---
 apiVersion: projectcalico.org/v3
@@ -86,6 +86,6 @@ spec:
   description: "[Honeypod] Vulnerable service (MySQL) accessed by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-4" AND reporter="dst"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-db" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
 ---

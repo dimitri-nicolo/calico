@@ -9,16 +9,16 @@ layout: null
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: tigera-internal-1 
+  name: tigera-internal-app
   namespace: tigera-internal
 spec:
   selector:
     matchLabels:
-      app: tigera-internal-1
+      app: tigera-internal-app
   template:
     metadata:
       labels:
-        app: tigera-internal-1
+        app: tigera-internal-app
     spec:
       hostNetwork: false
       hostIPC: false
@@ -29,8 +29,8 @@ spec:
       imagePullSecrets:
       - name: tigera-pull-secret
       containers:
-      - name: tigera-internal-1
-        image: quay.io/tigera/honeypod:v2.7.0
+      - name: tigera-internal-app
+        image: {{page.registry}}{% include component_image component="honeypod" %}
         resources:
           limits:
             memory: 200Mi
@@ -52,7 +52,7 @@ spec:
   summary: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1" AND reporter="dst"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
 ---
 apiVersion: projectcalico.org/v3
@@ -63,7 +63,7 @@ spec:
   description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1" AND reporter="dst"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
 ---
 
@@ -77,7 +77,7 @@ spec:
   summary: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1" AND reporter="dst"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
   metric: count
   condition: gte
@@ -91,7 +91,7 @@ spec:
   description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
   severity: 100
   dataSet: flows
-  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-1" AND reporter="dst"'
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
   aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
   metric: count
   condition: gte
