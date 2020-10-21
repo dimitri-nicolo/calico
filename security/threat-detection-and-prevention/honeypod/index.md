@@ -1,5 +1,5 @@
 ---
-description: Honeypods as canary threat detection
+description: Honeypods for canary threat detection
 show_read_time: false
 show_toc: false
 ---
