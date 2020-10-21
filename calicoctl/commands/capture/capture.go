@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/common"
 	log "github.com/sirupsen/logrus"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -19,9 +20,9 @@ const CleanCommand = "kubectl exec -n %s %s -c %s -- rm -r %s/%s/%s"
 const GetFluentDNodesCommand = "kubectl get pod -o=custom-columns=NAME:.metadata.name -ntigera-fluentd -l k8s-app=fluentd-node --no-headers"
 
 // FindCaptureFileCommand is a kubectl command that will be executed to determine capture files have been generated
-const FindCaptureFileCommand = "kubectl exec -n %s %s -- find %s -type d -maxdepth 2"
+const FindCaptureFileCommand = "kubectl exec -n %s %s -c %s -- find %s -type d -maxdepth 2"
 
-// Namespace used to execute commands inside pods
+// CaptureNamespace used to execute commands inside pods
 const TigeraFluentDNS = "tigera-fluentd"
 // Container name used to execute commands inside pods
 const TigeraFluentD = "fluentd"
@@ -36,12 +37,18 @@ func NewCommands(cmd common.CmdExecutor) commands {
 	return commands{cmdExecutor: cmd}
 }
 
-// Location maps out a capture location
+// Location represents the exact location of a capture file in the k8s cluster
 type Location struct {
-	Namespace string
-	Name      string
-	Pod       string
-	Dir       string
+	CaptureNamespace string
+	Name             string
+	Namespace        string
+	Pod              string
+	Container        string
+	Dir              string
+}
+
+func (l Location) RelativePath() string {
+	return path.Join(l.CaptureNamespace, l.Name)
 }
 
 // Copy will copy capture files capture files from fluentD pods located at captureDir/captureNamespace/captureName to destination
@@ -50,32 +57,32 @@ func (cmd *commands) Copy(locations []Location, destination string) (int, []erro
 	var successfulResults int
 
 	for _, loc := range locations {
-		log.Debugf("Retrieving capture files for: %s/%s", loc.Namespace, loc.Name)
+		log.Debugf("Retrieving capture files for: %s", loc.RelativePath())
 
-		output, err := cmd.copyCaptureFiles(TigeraFluentDNS, loc.Pod, loc.Dir, loc.Namespace, loc.Name, destination)
+		output, err := cmd.copyCaptureFiles(loc, destination)
 		if err != nil {
-			log.WithError(err).Warnf("Could not copy capture files for %s/%s from %s/%s", loc.Namespace, loc.Name, TigeraFluentDNS, loc.Pod)
+			log.WithError(err).Warnf("Could not copy capture files %#v", loc)
 			errors = append(errors, err)
 			continue
 		}
 		log.Infof("Copy command output %s", output)
-		fmt.Printf("Copy capture files for %s/%s to %s\n", loc.Namespace, loc.Name, destination)
+		fmt.Printf("Copy capture files for %s to %s\n", loc.RelativePath(), destination)
 		successfulResults++
 	}
 
 	return successfulResults, errors
 }
 
-func (cmd *commands) copyCaptureFiles(entryNamespace string, pod string, captureDir string, captureNamespace string, captureName string, destination string) (string, error) {
+func (cmd *commands) copyCaptureFiles(loc Location, destination string) (string, error) {
 	output, err := cmd.cmdExecutor.Execute(fmt.Sprintf(
 		CopyCommand,
-		entryNamespace,
-		pod,
-		captureDir,
-		captureNamespace,
-		captureName,
+		loc.Namespace,
+		loc.Pod,
+		loc.Dir,
+		loc.CaptureNamespace,
+		loc.Name,
 		destination,
-		TigeraFluentD,
+		loc.Container,
 	))
 	return output, err
 }
@@ -86,35 +93,36 @@ func (cmd *commands) Clean(locations []Location) (int, []error) {
 	var successfulResults int
 
 	for _, loc := range locations {
-		output, err := cmd.cleanCaptureFiles(TigeraFluentDNS, loc.Pod, loc.Dir, loc.Namespace, loc.Name)
+		output, err := cmd.cleanCaptureFiles(loc)
 		if err != nil {
-			log.WithError(err).Warnf("Could not clean capture files for %s/%s from %s/%s", loc.Namespace, loc.Name, TigeraFluentDNS, loc.Pod)
+			log.WithError(err).Warnf("Could not clean capture files for %#v", loc)
 			errors = append(errors, err)
 			continue
 		}
 		log.Infof("Clean command output %s", output)
-		fmt.Printf("Clean capture files for %s/%s\n", loc.Namespace, loc.Name)
+		fmt.Printf("Clean capture files for %s\n", loc.RelativePath())
 		successfulResults++
 	}
 
 	return successfulResults, errors
 }
 
-func (cmd *commands) cleanCaptureFiles(entryNamespace string, pod string, captureDir string, captureNamespace string, captureName string) (string, error) {
+func (cmd *commands) cleanCaptureFiles(loc Location) (string, error) {
 	output, err := cmd.cmdExecutor.Execute(fmt.Sprintf(
 		CleanCommand,
-		entryNamespace,
-		pod,
-		TigeraFluentD,
-		captureDir,
-		captureNamespace,
-		captureName,
+		loc.Namespace,
+		loc.Pod,
+		loc.Container,
+		loc.Dir,
+		loc.CaptureNamespace,
+		loc.Name,
 	))
 	return output, err
 }
 
-// Resolve will check nodes to see if capture have been generated in any namespace
-func (cmd *commands) Resolve(captureDir, captureName string) ([]Location, error) {
+// List will check nodes to see if capture files have been generated for a captureName in captureNamespace
+// The capture will be listed across all the namespaces if captureNamespace is emtpy
+func (cmd *commands) List(captureDir, captureName, captureNamespace string) ([]Location, error) {
 	output, err := cmd.cmdExecutor.Execute(GetFluentDNodesCommand)
 	if err != nil {
 		log.WithError(err).Warnf("Fail to resolve capture files for %s", captureName)
@@ -125,7 +133,7 @@ func (cmd *commands) Resolve(captureDir, captureName string) ([]Location, error)
 	var entries = strings.Split(output, "\n")
 	for _, fluentDPod := range entries {
 		if len(fluentDPod) != 0 {
-			out, err := cmd.cmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, TigeraFluentDNS, fluentDPod, captureDir))
+			out, err := cmd.cmdExecutor.Execute(fmt.Sprintf(FindCaptureFileCommand, TigeraFluentDNS, fluentDPod, TigeraFluentD, captureDir))
 			if err != nil {
 				log.Debugf("No capture files are found under %s for %s on %s", captureDir, captureName, fluentDPod)
 				continue
@@ -136,10 +144,14 @@ func (cmd *commands) Resolve(captureDir, captureName string) ([]Location, error)
 				if len(d) != 0 {
 					var matches = reg.FindAllStringSubmatch(d, -1)
 					if matches != nil {
-						log.Infof("Capture %s/%s has generated capture files on %s", matches[0][2], captureName, fluentDPod)
-						locations = append(locations, Location{
-							Name: captureName, Dir: captureDir, Pod: fluentDPod, Namespace: matches[0][2],
-						})
+						var resolvedNamespace = matches[0][2]
+						if len(captureNamespace) == 0 || captureNamespace == resolvedNamespace {
+							log.Debugf("Capture %s/%s has generated capture files on %s", resolvedNamespace, captureName, fluentDPod)
+							locations = append(locations, Location{
+								Name: captureName, Dir: captureDir, Pod: fluentDPod, CaptureNamespace: resolvedNamespace,
+								Container: TigeraFluentD, Namespace: TigeraFluentDNS,
+							})
+						}
 					}
 				}
 			}

@@ -57,7 +57,12 @@ Description:
 		return nil
 	}
 
-	// Resolve string parameters
+	// List boolean parameters
+	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
+	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
+	var allNamespaces = argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces")
+
+	// List string parameters
 	cfgStr, err := argutils.ArgString(parsedArgs, "--config")
 	if err != nil {
 		return nil
@@ -74,10 +79,10 @@ Description:
 	if err != nil {
 		return err
 	}
-	// Resolve boolean parameters
-	var isCopyCommand = argutils.ArgBoolOrFalse(parsedArgs, "copy")
-	var isCleanCommand = argutils.ArgBoolOrFalse(parsedArgs, "clean")
-	var allNamespaces = argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces")
+	// Set the namespace to an empty string so that we can list all the locations for the capture
+	if allNamespaces {
+		namespace = ""
+	}
 
 	// Resolve capture dir location
 	captureDir, err := resolveCaptureDir(cfgStr)
@@ -99,8 +104,8 @@ Description:
 	// Create the capture commands
 	captureCmd := capture.NewCommands(common.NewKubectlCmd(cfg.Spec.Kubeconfig))
 
-	// Resolve the locations of the capture files
-	locations, err := captureCmd.Resolve(captureDir, name)
+	// List the locations of the capture files
+	locations, err := captureCmd.List(captureDir, name, namespace)
 	if err != nil {
 		return err
 	}
@@ -110,9 +115,9 @@ Description:
 
 	// Run copy or clean
 	if isCopyCommand {
-		results, errors = captureCmd.Copy(filterByNamespace(locations, allNamespaces, namespace), destination)
+		results, errors = captureCmd.Copy(locations, destination)
 	} else if isCleanCommand {
-		results, errors = captureCmd.Clean(filterByNamespace(locations, allNamespaces, namespace))
+		results, errors = captureCmd.Clean(locations)
 	}
 
 	// in case --all-namespaces is used and we have at least 1 successful result
@@ -132,20 +137,6 @@ Description:
 	}
 
 	return nil
-}
-
-func filterByNamespace(locations []capture.Location, allNamespaces bool, namespace string) []capture.Location {
-	if allNamespaces {
-		return locations
-	}
-
-	var filter []capture.Location
-	for _, loc := range locations {
-		if loc.Namespace == namespace {
-			filter = append(filter, loc)
-		}
-	}
-	return filter
 }
 
 func resolveCaptureDir(cfg string) (string, error) {

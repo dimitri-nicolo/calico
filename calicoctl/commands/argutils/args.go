@@ -63,5 +63,5 @@ func ArgString(args map[string]interface{}, argName string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("%s  has not been defined", argName)
+	return "", fmt.Errorf("%s has not been defined", argName)
 }
