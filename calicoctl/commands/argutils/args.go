@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,11 @@
 // limitations under the License.
 
 package argutils
+
+import (
+	"fmt"
+	"strconv"
+)
 
 // ArgStringOrBlank returns the requested argument as a string, or as a blank
 // string if the argument is not present.
@@ -40,4 +45,23 @@ func ArgBoolOrFalse(args map[string]interface{}, argName string) bool {
 		return args[argName].(bool)
 	}
 	return false
+}
+
+// ArgString returns the requested argument as a string or an error
+func ArgString(args map[string]interface{}, argName string) (string, error) {
+	if args[argName] != nil {
+		var param = args[argName]
+		switch v := param.(type) {
+		default:
+			return "", fmt.Errorf("param %v is not string", param)
+		case int:
+			return strconv.Itoa(v), nil
+		case string:
+			return v, nil
+		case bool:
+			return strconv.FormatBool(v), nil
+		}
+	}
+
+	return "", fmt.Errorf("%s has not been defined", argName)
 }

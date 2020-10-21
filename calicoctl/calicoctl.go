@@ -29,22 +29,23 @@ func main() {
 	doc := `Usage:
   calicoctl [options] <command> [<args>...]
 
-    create       Create a resource by file, directory or stdin.
-    replace      Replace a resource by file, directory or stdin.
-    apply        Apply a resource by file, directory or stdin.  This creates a resource
-                 if it does not exist, and replaces a resource if it does exists.
-    patch        Patch a pre-exisiting resource in place.
-    delete       Delete a resource identified by file, directory, stdin or resource type and
-                 name.
-    get          Get a resource identified by file, directory, stdin or resource type and
-                 name.
-    label        Add or update labels of resources.
-    convert      Convert config files between different API versions.
-    ipam         IP address management.
-    cluster      Access cluster information.
-    bgp          Access BGP related information.
-    node         Calico node management.
-    version      Display the version of calicoctl.
+    create                   Create a resource by file, directory or stdin.
+    replace                  Replace a resource by file, directory or stdin.
+    apply                    Apply a resource by file, directory or stdin.  This creates a resource
+                             if it does not exist, and replaces a resource if it does exists.
+    patch                    Patch a pre-exisiting resource in place.
+    delete                   Delete a resource identified by file, directory, stdin or resource type and
+                             name.
+    get                      Get a resource identified by file, directory, stdin or resource type and
+                             name.
+    label                    Add or update labels of resources.
+    convert                  Convert config files between different API versions.
+    ipam                     IP address management.
+    cluster                  Access cluster information.
+    bgp                      Access BGP related information.
+    node                     Calico node management.
+    captured-packets         Capture packet file command
+    version                  Display the version of calicoctl.
 
 Options:
   -h --help               Show this screen.
@@ -114,6 +115,8 @@ Description:
 			err = commands.BGP(args)
 		case "validate":
 			err = commands.Validate(args)
+		case "captured-packets":
+			err = commands.Capture(args)
 		default:
 			err = fmt.Errorf("Unknown command: %q\n%s", command, doc)
 		}

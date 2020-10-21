@@ -23,6 +23,7 @@ require (
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/stretchr/testify v1.4.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tigera/licensing v1.0.1-0.20200915233318-8cff8a585028
 	github.com/vishvananda/netlink v0.0.0-20180501223456-f07d9d5231b9 // indirect
