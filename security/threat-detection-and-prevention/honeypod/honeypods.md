@@ -6,22 +6,22 @@ canonical_url: /security/threat-detection-and-prevention/honeypod/honeypods
 
 ### Big picture
 
-Use Honeypod to get alerts that indicate a compromised resource is present within your cluster.
+Use Honeypods to get alerts that indicate a compromised resource is present within your cluster.
 
 ### Value
 
-Honeypod is a customizable set of canary pods or resources placed in a cluster such that all defined and valid resources should never attempt to access or make connections to them. If any resources reach these Honeypods, we can automatically assume the connection is suspicious at minimum and that the source resource may have been compromised.
+Honeypods are customizable canary pods or resources placed in a cluster such that all defined and valid resources should never attempt to access or make connections to them. If any resources reach these Honeypods, we can automatically assume the connection is suspicious at minimum and that the source resource may have been compromised.
 
 ### Features
 
 This how-to guide uses the following Calico Enterprise features:
 
-- **GlobalAlerts** with **Honeypod**
+- **GlobalAlerts** with **Honeypods**
 
 ### Concepts
 
-- Honeypod is deployed on a per-cluster basis, via a set of manifests
-- The naming for all Honeypod resources is customizable
+- Honeypods are deployed on a per-cluster basis, via a set of manifests
+- The naming for all Honeypods resources are customizable
 - Any communication attempts to these pods will trigger an alert and be found in the Alerts tab of the Calico Enterprise Manager UI
 - A Kibana Dashboard is also provided for an overview of the triggered alerts
 
