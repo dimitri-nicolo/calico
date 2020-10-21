@@ -74,6 +74,12 @@ spec:
       labels:
         app: honeypod-controller
     spec:
+      hostNetwork: false
+      hostIPC: false
+      hostPID: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
       serviceAccountName: honeypod-controller
       imagePullSecrets:
       - name: tigera-pull-secret
@@ -128,6 +134,9 @@ spec:
           requests:
             cpu: 100m
             memory: 200Mi
+        securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
       volumes:
       - name: elastic-ca-cert-volume
         secret:
